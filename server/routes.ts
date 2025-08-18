@@ -488,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Live game alert generation error:", error);
     }
-  }, 60000 + Math.random() * 60000); // 1-2 minutes
+  }, 15000 + Math.random() * 15000); // 15-30 seconds for much faster alert generation
 
   // Auth routes
   app.post("/api/auth/signup", async (req, res) => {

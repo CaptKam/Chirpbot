@@ -18,7 +18,9 @@ export default function Alerts() {
 
   const { data: alerts = [], isLoading } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
-    refetchInterval: 30000, // Refetch every 30 seconds for live updates
+    refetchInterval: 2000, // Refetch every 2 seconds for ultra-fast updates
+    staleTime: 0, // Always consider data stale for maximum freshness
+    gcTime: 1000, // Minimal cache time for fastest updates (updated from deprecated cacheTime)
   });
 
   const toggleFilter = (filterId: string) => {
