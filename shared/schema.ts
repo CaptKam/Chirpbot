@@ -92,3 +92,28 @@ export type Alert = typeof alerts.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
+// Game types for live sports data
+export interface Game {
+  id: string;
+  sport: string;
+  homeTeam: {
+    id: string;
+    name: string;
+    abbreviation: string;
+  };
+  awayTeam: {
+    id: string;
+    name: string;
+    abbreviation: string;
+  };
+  startTime: string;
+  status: 'scheduled' | 'live' | 'final';
+  venue?: string;
+  isSelected?: boolean;
+}
+
+export interface GameDay {
+  date: string;
+  games: Game[];
+}

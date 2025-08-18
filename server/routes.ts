@@ -7,6 +7,7 @@ import { analyzeAlert } from "./services/openai";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
+import { liveSportsService } from "./services/live-sports";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -38,6 +39,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   }
+
+  // Games routes
+  app.get("/api/games/today", async (req, res) => {
+    try {
+      const sport = req.query.sport as string;
+      const games = await liveSportsService.getTodaysGames(sport);
+      res.json(games);
+    } catch (error) {
+      console.error('Error fetching games:', error);
+      res.status(500).json({ message: "Failed to fetch today's games" });
+    }
+  });
 
   // Teams routes
   app.get("/api/teams", async (req, res) => {
@@ -121,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get AI analysis if enabled
-      let aiContext = null;
+      let aiContext: string | undefined = undefined;
       let aiConfidence = 0;
 
       const settings = await storage.getSettingsBySport(validatedData.sport);
@@ -259,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: event.description,
         gameInfo: event.game,
         weatherData,
-        aiContext: null,
+        aiContext: undefined as string | undefined,
         aiConfidence: 0,
         sentToTelegram: false,
       };
@@ -317,7 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: event.description,
         gameInfo: event.game,
         weatherData,
-        aiContext: null,
+        aiContext: undefined as string | undefined,
         aiConfidence: 0,
         sentToTelegram: false,
       };
