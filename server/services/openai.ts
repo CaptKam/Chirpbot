@@ -16,7 +16,7 @@ export async function analyzeAlert(
   weatherData?: any
 ): Promise<AlertAnalysis> {
   try {
-    const prompt = `Analyze this sports alert briefly:
+    const prompt = `Provide strategic analysis for this sports alert:
     
 Alert Type: ${alertType}
 Sport: ${sport}  
@@ -24,14 +24,19 @@ Game: ${gameInfo.homeTeam} vs ${gameInfo.awayTeam}
 Status: ${gameInfo.status}
 Weather: ${weatherData ? `${weatherData.temperature}°F, ${weatherData.condition}` : 'Not available'}
 
-Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key impact) and 'confidence' (0-100) fields.`;
+Focus on strategic implications, betting value, or unique insights - NOT basic stats or descriptions. Examples:
+- For RISP: "Historical data shows 68% scoring rate in this situation with 2+ outs"
+- For RedZone: "Team averages 4.2 points per red zone visit this season"
+- For Weather: "Wind direction favors left-handed hitters by 15% today"
+
+Provide analysis in JSON format with 'context' (tactical insight, not basic description) and 'confidence' (0-100) fields.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
-          content: "You are a sports analytics expert. Provide very brief, concise context for sports alerts in 1-2 short sentences only. Focus on immediate impact and key insights. Always respond with valid JSON."
+          content: "You are a sports betting analyst. Provide unique strategic insights, historical data, or betting implications - NOT basic descriptions. Focus on actionable intelligence that adds value beyond the main alert. Always respond with valid JSON."
         },
         {
           role: "user",
