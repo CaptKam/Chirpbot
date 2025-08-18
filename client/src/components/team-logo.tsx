@@ -26,13 +26,13 @@ const teamNameToAbbr: Record<string, string> = {
   'Seattle Mariners': 'SEA',
   'Baltimore Orioles': 'BAL',
   'Atlanta Braves': 'ATL',
-  'Chicago White Sox': 'CWS',
+  'Chicago White Sox': 'CHW',
   'Kansas City Royals': 'KC',
   'Texas Rangers': 'TEX',
   'Colorado Rockies': 'COL',
   'Los Angeles Angels': 'LAA',
   'Cincinnati Reds': 'CIN',
-  'Arizona Diamondbacks': 'AZ',
+  'Arizona Diamondbacks': 'ARI',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
   
@@ -53,6 +53,22 @@ const teamNameToAbbr: Record<string, string> = {
   'Denver Broncos': 'DEN',
   'Las Vegas Raiders': 'LV',
   'Los Angeles Chargers': 'LAC',
+  'Los Angeles Rams': 'LAR',
+  'Seattle Seahawks': 'SEA',
+  'San Francisco 49ers': 'SF',
+  'Arizona Cardinals': 'ARI',
+  'Dallas Cowboys': 'DAL',
+  'New York Giants': 'NYG',
+  'Philadelphia Eagles': 'PHI',
+  'Washington Commanders': 'WSH',
+  'Green Bay Packers': 'GB',
+  'Chicago Bears': 'CHI',
+  'Minnesota Vikings': 'MIN',
+  'Detroit Lions': 'DET',
+  'Tampa Bay Buccaneers': 'TB',
+  'New Orleans Saints': 'NO',
+  'Atlanta Falcons': 'ATL',
+  'Carolina Panthers': 'CAR',
   
   // NBA Teams  
   'Los Angeles Lakers': 'LAL',
@@ -63,6 +79,28 @@ const teamNameToAbbr: Record<string, string> = {
   'New York Knicks': 'NYK',
   'Brooklyn Nets': 'BKN',
   'Philadelphia 76ers': 'PHI',
+  'Milwaukee Bucks': 'MIL',
+  'Toronto Raptors': 'TOR',
+  'Denver Nuggets': 'DEN',
+  'Phoenix Suns': 'PHX',
+  'Los Angeles Clippers': 'LAC',
+  'Sacramento Kings': 'SAC',
+  'Dallas Mavericks': 'DAL',
+  'San Antonio Spurs': 'SAS',
+  'Houston Rockets': 'HOU',
+  'Memphis Grizzlies': 'MEM',
+  'New Orleans Pelicans': 'NOP',
+  'Oklahoma City Thunder': 'OKC',
+  'Minnesota Timberwolves': 'MIN',
+  'Utah Jazz': 'UTA',
+  'Portland Trail Blazers': 'POR',
+  'Indiana Pacers': 'IND',
+  'Cleveland Cavaliers': 'CLE',
+  'Detroit Pistons': 'DET',
+  'Atlanta Hawks': 'ATL',
+  'Charlotte Hornets': 'CHA',
+  'Orlando Magic': 'ORL',
+  'Washington Wizards': 'WAS',
   
   // NHL Teams
   'Los Angeles Kings': 'LAK',
@@ -70,7 +108,33 @@ const teamNameToAbbr: Record<string, string> = {
   'Vegas Golden Knights': 'VGK',
   'Colorado Avalanche': 'COL',
   'Dallas Stars': 'DAL',
-  'Nashville Predators': 'NSH'
+  'Nashville Predators': 'NSH',
+  'Arizona Coyotes': 'ARI',
+  'Calgary Flames': 'CGY',
+  'Edmonton Oilers': 'EDM',
+  'Seattle Kraken': 'SEA',
+  'San Jose Sharks': 'SJS',
+  'Vancouver Canucks': 'VAN',
+  'Chicago Blackhawks': 'CHI',
+  'St. Louis Blues': 'STL',
+  'Minnesota Wild': 'MIN',
+  'Winnipeg Jets': 'WPG',
+  'Boston Bruins': 'BOS',
+  'Buffalo Sabres': 'BUF',
+  'Detroit Red Wings': 'DET',
+  'Florida Panthers': 'FLA',
+  'Montreal Canadiens': 'MTL',
+  'Ottawa Senators': 'OTT',
+  'Tampa Bay Lightning': 'TBL',
+  'Toronto Maple Leafs': 'TOR',
+  'Carolina Hurricanes': 'CAR',
+  'Columbus Blue Jackets': 'CBJ',
+  'New Jersey Devils': 'NJD',
+  'New York Islanders': 'NYI',
+  'New York Rangers': 'NYR',
+  'Philadelphia Flyers': 'PHI',
+  'Pittsburgh Penguins': 'PIT',
+  'Washington Capitals': 'WSH'
 };
 
 export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }: TeamLogoProps) {
@@ -189,10 +253,10 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
         <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">ATL</text>
       </svg>
     ),
-    'CWS': (
+    'CHW': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#27251F" stroke="#C4CED4" strokeWidth="2"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">CWS</text>
+        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">CHW</text>
       </svg>
     ),
     'TEX': (
@@ -219,10 +283,11 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
         <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">CIN</text>
       </svg>
     ),
-    'AZ': (
+    'ARI': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#A71930" stroke="#E3D4AD" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-xl font-sans">AZ</text>
+        <polygon points="35,30 65,30 50,20" fill="#E3D4AD"/>
+        <text x="50" y="65" textAnchor="middle" className="fill-white font-black text-sm font-sans">D-BACKS</text>
       </svg>
     ),
     'CLE': (
@@ -253,6 +318,130 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
         <text x="50" y="65" textAnchor="middle" className="fill-white font-black text-sm font-sans">BILLS</text>
       </svg>
     ),
+    'WSH': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#5A1414" stroke="#FFB612" strokeWidth="3"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-base font-sans">WSH</text>
+      </svg>
+    ),
+    'TEN': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#0C2340" stroke="#4B92DB" strokeWidth="3"/>
+        <polygon points="30,35 70,35 60,50 40,50" fill="#4B92DB"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-sm font-sans">TITANS</text>
+      </svg>
+    ),
+    'GB': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#203731" stroke="#FFB612" strokeWidth="3"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-xl font-sans">G</text>
+      </svg>
+    ),
+    'IND': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#002C5F" stroke="#A2AAAD" strokeWidth="2"/>
+        <polygon points="35,35 65,35 50,20" fill="#A2AAAD"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">COLTS</text>
+      </svg>
+    ),
+    'NE': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#002244" stroke="#C60C30" strokeWidth="3"/>
+        <polygon points="30,40 70,40 60,25 40,25" fill="#C60C30"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">PATS</text>
+      </svg>
+    ),
+    'MIN': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#4F2683" stroke="#FFC62F" strokeWidth="3"/>
+        <polygon points="35,30 65,30 55,45 45,45" fill="#FFC62F"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">VIKINGS</text>
+      </svg>
+    ),
+    'CAR': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#0085CA" stroke="#101820" strokeWidth="3"/>
+        <circle cx="50" cy="45" r="15" fill="none" stroke="#101820" strokeWidth="2"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">PANTHERS</text>
+      </svg>
+    ),
+    'LV': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#A5ACAF" strokeWidth="2"/>
+        <polygon points="35,30 65,30 55,50 45,50" fill="#A5ACAF"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">RAIDERS</text>
+      </svg>
+    ),
+    'DAL': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#003594" stroke="#041E42" strokeWidth="3"/>
+        <polygon points="50,20 35,45 65,45" fill="#041E42"/>
+        <polygon points="50,30 40,45 60,45" fill="#869397"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">COWBOYS</text>
+      </svg>
+    ),
+    'LAC': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#0080C6" stroke="#FFC20E" strokeWidth="3"/>
+        <polygon points="40,30 60,30 65,50 35,50" fill="#FFC20E"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">CHARGERS</text>
+      </svg>
+    ),
+    'LAR': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#003594" stroke="#FFA300" strokeWidth="3"/>
+        <circle cx="50" cy="45" r="20" fill="none" stroke="#FFA300" strokeWidth="3"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">RAMS</text>
+      </svg>
+    ),
+    'NYJ': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#125740" stroke="#FFFFFF" strokeWidth="2"/>
+        <polygon points="30,35 70,35 65,50 35,50" fill="#FFFFFF"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-sm font-sans">JETS</text>
+      </svg>
+    ),
+    'NYG': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#0B2265" stroke="#A71930" strokeWidth="3"/>
+        <text x="50" y="50" textAnchor="middle" className="fill-white font-black text-2xl font-sans">ny</text>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">GIANTS</text>
+      </svg>
+    ),
+    'TB': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#D50A0A" stroke="#FF7900" strokeWidth="3"/>
+        <polygon points="30,35 70,35 60,50 40,50" fill="#FF7900"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">BUCS</text>
+      </svg>
+    ),
+    'DEN': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#FB4F14" stroke="#002244" strokeWidth="3"/>
+        <polygon points="35,30 65,30 55,45 45,45" fill="#002244"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">BRONCOS</text>
+      </svg>
+    ),
+    'JAX': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#101820" stroke="#D7A22A" strokeWidth="3"/>
+        <circle cx="50" cy="45" r="15" fill="none" stroke="#D7A22A" strokeWidth="2"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">JAGUARS</text>
+      </svg>
+    ),
+    'NO': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#101820" stroke="#D3BC8D" strokeWidth="3"/>
+        <polygon points="30,25 70,25 70,35 30,35" fill="#D3BC8D"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-sm font-sans">SAINTS</text>
+      </svg>
+    ),
+    'CHI': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#0B162A" stroke="#C83803" strokeWidth="3"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-xl font-sans">C</text>
+      </svg>
+    ),
 
     // NBA Teams  
     'LAL': (
@@ -267,6 +456,20 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
         <circle cx="50" cy="50" r="48" fill="#007A33" stroke="#BA9653" strokeWidth="3"/>
         <circle cx="50" cy="45" r="12" fill="none" stroke="#BA9653" strokeWidth="2"/>
         <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">CELTICS</text>
+      </svg>
+    ),
+    'GSW': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#1D428A" stroke="#FFC72C" strokeWidth="3"/>
+        <polygon points="30,30 70,30 60,50 40,50" fill="#FFC72C"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">WARRIORS</text>
+      </svg>
+    ),
+    'OKC': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#007AC1" stroke="#EF3B24" strokeWidth="3"/>
+        <polygon points="40,30 60,30 65,50 35,50" fill="#EF3B24"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">THUNDER</text>
       </svg>
     ),
 
