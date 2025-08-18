@@ -133,26 +133,35 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
     const { homeTeam, awayTeam } = alert.gameInfo;
     const sport = alert.sport.toLowerCase();
     
-    // Encode team names for URL
+    // Get today's date for game-specific searches
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    // Clean team names for better matching
+    const cleanHome = homeTeam.replace(/\s+/g, '+');
+    const cleanAway = awayTeam.replace(/\s+/g, '+');
+    
+    // Encode for URL
     const encodedHome = encodeURIComponent(homeTeam);
     const encodedAway = encodeURIComponent(awayTeam);
+    const gameMatchup = encodeURIComponent(`${awayTeam} @ ${homeTeam}`);
     
     // Generate game-specific URLs for each sportsbook
     switch (sportsbook.name) {
       case "FanDuel":
-        // FanDuel uses search queries to find specific games
-        return `${sportsbook.baseUrl}/${sport}?search=${encodedAway}+${encodedHome}`;
+        // FanDuel specific game search with matchup format
+        return `${sportsbook.baseUrl}/${sport}?tab=popular&search=${gameMatchup}`;
       case "DraftKings":
-        // DraftKings also uses search to find games
-        return `${sportsbook.baseUrl}/${sport}?search=${encodedAway}+@+${encodedHome}`;
+        // DraftKings game search with @ format
+        return `${sportsbook.baseUrl}/${sport}?category=game+lines&search=${encodedAway}+%40+${encodedHome}`;
       case "Bet365":
-        // Bet365 uses a search parameter
-        return `${sportsbook.baseUrl}#/AC/B1/C1/D13/E${sport === 'mlb' ? '16' : sport === 'nfl' ? '12' : '18'}/F2/`;
+        // Bet365 sport-specific deep link with team search
+        const sportCode = sport === 'mlb' ? '16' : sport === 'nfl' ? '12' : sport === 'nba' ? '18' : '16';
+        return `${sportsbook.baseUrl}#/AC/B1/C1/D13/E${sportCode}/F2/G40/H1/I1/J1/K^${encodedHome}/`;
       case "BetRivers":
-        // BetRivers deep links to sports section with search
-        return `${sportsbook.baseUrl}/sportsbook/${sport}?search=${encodedHome}`;
+        // BetRivers with specific game search
+        return `${sportsbook.baseUrl}/sportsbook/${sport}?tab=popular&search=${gameMatchup}`;
       default:
-        return `${sportsbook.baseUrl}/${sport}`;
+        return `${sportsbook.baseUrl}/${sport}?search=${gameMatchup}`;
     }
   };
 
