@@ -532,9 +532,6 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   // Get abbreviation from prop or lookup from team name
   const teamAbbr = abbreviation || teamNameToAbbr[teamName];
   
-  // Enhanced debugging
-  console.log(`🏀 TeamLogo - Input: "${teamName}", Mapped to: "${teamAbbr}"`);
-  
   // Generic fallback logo with better styling
   const defaultLogo = (
     <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
@@ -546,13 +543,17 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   
   if (!selectedLogo) {
     console.log(`❌ No logo found for team: "${teamName}" -> "${teamAbbr}"`);
-    console.log(`Available logos:`, Object.keys(logoMap).slice(0, 15));
     return defaultLogo;
   }
   
-  console.log(`✅ Found logo for: "${teamName}" -> "${teamAbbr}"`);
+  // Add timestamp for cache busting - ensure fresh logos
+  const cacheBust = Date.now();
+  const freshLogo = React.cloneElement(selectedLogo, { 
+    key: `logo-${teamAbbr}-${cacheBust}`,
+    'data-version': 'v3-enhanced'
+  });
   
-  return selectedLogo;
+  return freshLogo;
 }
 
-// Force refresh v2.1
+// Force refresh v3.0 - Cache bust
