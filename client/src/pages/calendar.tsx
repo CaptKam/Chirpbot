@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
+import { TeamLogo } from "@/components/team-logo";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
@@ -191,13 +192,19 @@ export default function Calendar() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-chirp-blue rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm">
-                          {game.awayTeam.abbreviation}
-                        </div>
+                        <TeamLogo
+                          teamName={game.awayTeam.name}
+                          abbreviation={game.awayTeam.abbreviation}
+                          size="md"
+                          className="shadow-sm"
+                        />
                         <span className="text-chirp-dark font-bold text-lg">@</span>
-                        <div className="w-12 h-12 bg-chirp-red rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm">
-                          {game.homeTeam.abbreviation}
-                        </div>
+                        <TeamLogo
+                          teamName={game.homeTeam.name}
+                          abbreviation={game.homeTeam.abbreviation}
+                          size="md"
+                          className="shadow-sm"
+                        />
                       </div>
                     </div>
                     
