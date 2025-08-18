@@ -16,22 +16,22 @@ export async function analyzeAlert(
   weatherData?: any
 ): Promise<AlertAnalysis> {
   try {
-    const prompt = `Analyze this sports alert and provide context and confidence:
+    const prompt = `Analyze this sports alert briefly:
     
 Alert Type: ${alertType}
-Sport: ${sport}
+Sport: ${sport}  
 Game: ${gameInfo.homeTeam} vs ${gameInfo.awayTeam}
 Status: ${gameInfo.status}
 Weather: ${weatherData ? `${weatherData.temperature}°F, ${weatherData.condition}` : 'Not available'}
 
-Provide analysis in JSON format with 'context' (detailed analysis) and 'confidence' (0-100) fields.`;
+Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key impact) and 'confidence' (0-100) fields.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
-          content: "You are a sports analytics expert. Provide detailed context for sports alerts and assign confidence scores based on statistical likelihood and situational factors. Always respond with valid JSON."
+          content: "You are a sports analytics expert. Provide very brief, concise context for sports alerts in 1-2 short sentences only. Focus on immediate impact and key insights. Always respond with valid JSON."
         },
         {
           role: "user",
@@ -39,7 +39,7 @@ Provide analysis in JSON format with 'context' (detailed analysis) and 'confiden
         }
       ],
       response_format: { type: "json_object" },
-      max_tokens: 300,
+      max_tokens: 150,
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{"context": "Analysis unavailable", "confidence": 0}');
