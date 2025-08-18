@@ -1,6 +1,6 @@
 # Overview
 
-ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, the application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) and generates intelligent alerts for high-impact game situations like runners in scoring position, red zone opportunities, and clutch time scenarios. Built with a React frontend, Express backend, and in-memory storage, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities.
+ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, the application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) and generates intelligent alerts for high-impact game situations like runners in scoring position, red zone opportunities, and clutch time scenarios. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. Features persistent team monitoring that saves user game selections to the database and restores them on page reload.
 
 # User Preferences
 
@@ -25,10 +25,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Data Storage
 - **Primary Database**: PostgreSQL with Drizzle ORM
-- **Schema Design**: Four main entities - users, teams, alerts, and settings
+- **Schema Design**: Five main entities - users, teams, alerts, settings, and user_monitored_teams
+- **Persistent Monitoring**: User game selections saved to user_monitored_teams table for cross-session persistence
 - **Session Storage**: PostgreSQL-backed session management using connect-pg-simple
 - **Migration System**: Drizzle Kit for database schema migrations
-- **In-Memory Fallback**: MemStorage class for development/testing without database
+- **Storage Classes**: DatabaseStorage for production, MemStorage fallback for testing
 
 ## Authentication & Authorization
 - **Session-based Authentication**: Express sessions with secure cookie management
@@ -39,6 +40,7 @@ Preferred communication style: Simple, everyday language.
 - **WebSocket Integration**: Live alert broadcasting with automatic reconnection
 - **Alert Processing**: Real-time sports event monitoring with AI analysis
 - **Team Monitoring**: Dynamic enable/disable of team tracking with instant updates
+- **Persistent Game Selection**: User game choices automatically saved to database and restored on page reload
 
 # External Dependencies
 
