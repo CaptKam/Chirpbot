@@ -546,16 +546,7 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
     return defaultLogo;
   }
   
-  // Add visible indicator to confirm logo update is working
-  const logoWithIndicator = React.cloneElement(selectedLogo, {
-    key: `logo-${teamAbbr}-enhanced`,
-    style: { 
-      border: '2px solid #00ff00',
-      opacity: 0.9
-    }
-  });
-  
-  return logoWithIndicator;
+  return selectedLogo;
 }
 
 // Force refresh v3.0 - Cache bust
