@@ -16,18 +16,108 @@ const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
-    { key: "risp", label: "Runners in Scoring Position", description: "Alerts when team has runners on 2nd or 3rd base" },
-    { key: "homeRun", label: "Home Run Situations", description: "High-leverage at-bats with power hitters" },
-    { key: "lateInning", label: "Late Inning Pressure", description: "Critical situations in 7th inning or later" },
+    { 
+      key: "gameStateAlerts", 
+      label: "Game State Changes", 
+      description: "Critical game developments like lead changes, tie games, and momentum shifts",
+      expectation: "Get notified when games enter high-stakes situations or when the score dynamics change significantly"
+    },
+    { 
+      key: "rispAlerts", 
+      label: "Runners in Scoring Position", 
+      description: "High-pressure at-bats with runners on 2nd or 3rd base",
+      expectation: "Alert when your team has prime scoring opportunities or faces defensive pressure situations"
+    },
+    { 
+      key: "weatherAlerts", 
+      label: "Weather Impact Alerts", 
+      description: "Weather conditions affecting gameplay like wind, rain, or temperature extremes",
+      expectation: "Know when weather could impact hitting, pitching, or fielding for strategic advantages"
+    },
+    { 
+      key: "batterAlerts", 
+      label: "Power Batter Situations", 
+      description: "Key at-bats featuring star hitters in clutch moments",
+      expectation: "Never miss when your team's best hitters or opposing threats come to the plate in crucial spots"
+    },
   ],
   NFL: [
-    { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line" },
+    { 
+      key: "redZoneAlerts", 
+      label: "Red Zone Opportunities", 
+      description: "Teams driving inside the 20-yard line with scoring chances",
+      expectation: "Get alerts when teams enter prime scoring territory - perfect for following touchdown drives"
+    },
+    { 
+      key: "twoMinuteAlerts", 
+      label: "Two-Minute Warnings", 
+      description: "Critical end-of-half situations with clock management pressure",
+      expectation: "Know when games enter crunch time with strategic timeouts, hurry-up offenses, and game-winning drives"
+    },
+    { 
+      key: "fourthDownAlerts", 
+      label: "Fourth Down Conversions", 
+      description: "High-risk go-for-it situations and crucial defensive stops",
+      expectation: "Alert for momentum-shifting plays where teams risk everything on one down"
+    },
+    { 
+      key: "turnoverAlerts", 
+      label: "Turnover Situations", 
+      description: "Interceptions, fumbles, and game-changing defensive plays",
+      expectation: "Never miss the big defensive plays that can completely flip game momentum"
+    },
   ],
   NBA: [
-    { key: "clutchTime", label: "Clutch Time", description: "Final 2 minutes of close games" },
+    { 
+      key: "clutchTimeAlerts", 
+      label: "Clutch Time (Final 5 Minutes)", 
+      description: "Close games in the final stretch when every possession matters",
+      expectation: "Get notified when games are within 5 points in the last 5 minutes - prime time basketball drama"
+    },
+    { 
+      key: "overtimeAlerts", 
+      label: "Overtime Games", 
+      description: "Extra period games with sudden-death intensity",
+      expectation: "Alert when games go to overtime - every basket could be the game winner"
+    },
+    { 
+      key: "leadChangeAlerts", 
+      label: "High Lead Changes", 
+      description: "Back-and-forth games with frequent momentum swings",
+      expectation: "Know when games become shootouts with multiple lead changes indicating exciting finishes"
+    },
+    { 
+      key: "closeGameAlerts", 
+      label: "Close Game Finishes", 
+      description: "Tight contests decided in the final minutes",
+      expectation: "Get alerts for nail-biting finishes where games are decided by just a few points"
+    },
   ],
   NHL: [
-    { key: "powerPlay", label: "Power Play", description: "Man advantage situations" },
+    { 
+      key: "powerPlayAlerts", 
+      label: "Power Play Opportunities", 
+      description: "Man advantage situations with prime scoring chances",
+      expectation: "Know when teams get power plays - statistically the best time to score goals"
+    },
+    { 
+      key: "emptyNetAlerts", 
+      label: "Empty Net Situations", 
+      description: "Goalie pulled for extra attacker in desperate final minutes",
+      expectation: "Alert for high-drama moments when teams risk everything for the tying goal"
+    },
+    { 
+      key: "thirdPeriodAlerts", 
+      label: "Third Period Ties", 
+      description: "Games tied entering the final period - anyone's game",
+      expectation: "Get notified when games are deadlocked going into the final 20 minutes of regulation"
+    },
+    { 
+      key: "finalMinutesAlerts", 
+      label: "Final Minutes Close Games", 
+      description: "Tight games in the closing minutes with potential for dramatic finishes",
+      expectation: "Never miss the nail-biting final minutes when close games are decided"
+    },
   ],
 };
 
@@ -102,14 +192,9 @@ export default function Settings() {
   });
 
   const handleAlertTypeToggle = (alertType: string, enabled: boolean) => {
-    if (!settings) return;
-    
-    const updatedAlertTypes = {
-      ...settings.alertTypes,
-      [alertType]: enabled,
-    };
-    
-    updateSettingsMutation.mutate({ alertTypes: updatedAlertTypes });
+    updateSettingsMutation.mutate({
+      [alertType]: enabled
+    });
   };
 
   const handleAIToggle = (enabled: boolean) => {
@@ -231,21 +316,28 @@ export default function Settings() {
               <div className="space-y-4">
                 {ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]?.map((alertConfig) => (
                   <Card key={alertConfig.key} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-chirp-blue" data-testid={`alert-type-${alertConfig.key}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-chirp-blue mb-1" data-testid={`alert-type-${alertConfig.key}`}>
                           {alertConfig.label}
                         </h3>
-                        <p className="text-sm text-chirp-dark mt-1">
+                        <p className="text-sm text-chirp-dark mb-2">
                           {alertConfig.description}
                         </p>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-xs text-blue-800 font-medium">
+                            <span className="font-bold">What to expect:</span> {alertConfig.expectation}
+                          </p>
+                        </div>
                       </div>
-                      <Switch
-                        checked={!!(settings.alertTypes as any)[alertConfig.key]}
-                        onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
-                        data-testid={`toggle-${alertConfig.key}`}
-                        className="data-[state=checked]:bg-chirp-red"
-                      />
+                      <div className="flex-shrink-0 pt-1">
+                        <Switch
+                          checked={!!(settings as any)[alertConfig.key]}
+                          onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
+                          data-testid={`toggle-${alertConfig.key}`}
+                          className="data-[state=checked]:bg-chirp-red"
+                        />
+                      </div>
                     </div>
                   </Card>
                 ))}
