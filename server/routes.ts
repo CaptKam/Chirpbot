@@ -509,9 +509,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get today's live games from ESPN API
       const gamesData = await liveSportsService.getTodaysGames();
-      const liveGames = gamesData.games.filter(game => game.status === 'live');
+      const allGames = gamesData.games || [];
+      const liveGames = allGames.filter(game => game.status === 'live');
+      
+      // Debug: Log game data for verification
+      console.log(`Found ${allGames.length} total games, ${liveGames.length} live games`);
       
       if (liveGames.length === 0) {
+        // If no live games, check for close scheduled/final games with scores for testing
+        const gamesWithScores = allGames.filter(game => 
+          (game.status === 'final' || game.status === 'live') && 
+          (game.score?.home > 0 || game.score?.away > 0)
+        );
+        if (gamesWithScores.length > 0) {
+          console.log(`Using ${gamesWithScores.length} completed/final games for score verification`);
+          // Use these for testing score extraction
+          for (const game of gamesWithScores.slice(0, 1)) { // Just test one
+            console.log(`Score test - ${game.awayTeam.name} ${game.score?.away || 0} - ${game.score?.home || 0} ${game.homeTeam.name}`);
+          }
+        }
         return; // No live games, no alerts
       }
 
@@ -521,6 +537,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const homeScore = game.score?.home || 0;
         const awayScore = game.score?.away || 0;
         const previousState = gameStates.get(gameId);
+        
+        // Debug: Log scores to verify correct extraction
+        console.log(`Game ${game.awayTeam.name} @ ${game.homeTeam.name}: Away ${awayScore} - Home ${homeScore} (Status: ${game.status})`);
         
         // Skip if this is the first time seeing this game
         if (!previousState) {
