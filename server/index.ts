@@ -11,38 +11,39 @@ app.use(express.urlencoded({ extended: false }));
 // Session middleware with database storage for production
 const pgStore = connectPg(session);
 
-// Configure session store
-let sessionConfig;
-if (process.env.DATABASE_URL) {
-  sessionConfig = {
-    secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
-    store: new pgStore({
+// Configure session store for maximum deployment compatibility
+let sessionStore;
+try {
+  if (process.env.DATABASE_URL) {
+    sessionStore = new pgStore({
       conString: process.env.DATABASE_URL,
       createTableIfMissing: true,
-    }),
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false, // Set to false for Replit deployment
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: "lax", // Use lax for better compatibility
-    }
-  };
-} else {
-  // Fallback for development
-  sessionConfig = {
-    secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false,
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "lax",
-    }
-  };
+      ttl: 7 * 24 * 60 * 60, // 7 days in seconds
+    });
+    console.log('Using PostgreSQL session store');
+  } else {
+    console.log('Using memory session store (development)');
+  }
+} catch (error) {
+  console.error('Session store setup error:', error);
 }
+
+const sessionConfig = {
+  secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
+  store: sessionStore,
+  resave: true, // Changed to true for better persistence
+  saveUninitialized: true, // Changed to true for deployment compatibility
+  name: 'chirpbot.sid', // Unique session name
+  cookie: {
+    secure: false, // Always false for Replit
+    httpOnly: false, // False for debugging
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    sameSite: false, // Most permissive for deployment
+    domain: undefined, // Let browser handle domain
+    path: "/",
+  },
+  rolling: true, // Extend session on activity
+};
 
 app.use(session(sessionConfig));
 

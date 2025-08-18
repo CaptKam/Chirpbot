@@ -531,19 +531,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth status endpoint
+  // Auth status endpoint with enhanced debugging
   app.get("/api/auth/me", async (req, res) => {
     try {
       const session = req.session as any;
-      if (!session.userId) {
+      console.log(`Auth check - Session ID: ${req.sessionID}, User ID: ${session?.userId}, Session exists: ${!!session}`);
+      
+      if (!session || !session.userId) {
+        console.log('No valid session found');
         return res.status(401).json({ message: "Not authenticated" });
       }
 
       const user = await storage.getUser(session.userId);
       if (!user) {
+        console.log(`User not found in database: ${session.userId}`);
         return res.status(401).json({ message: "User not found" });
       }
 
+      console.log(`Auth successful for user: ${user.username}`);
       res.json({ id: user.id, username: user.username });
     } catch (error) {
       console.error("Auth check error:", error);
@@ -570,6 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
+      console.log(`Login attempt for user: ${username}`);
       
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
@@ -578,22 +584,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find user
       const user = await storage.getUserByUsername(username);
       if (!user) {
+        console.log(`User not found: ${username}`);
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
       // Check password (in production, use proper password hashing)
       if (user.password !== password) {
+        console.log(`Invalid password for user: ${username}`);
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
-      // Start session
-      (req.session as any).userId = user.id;
-      (req.session as any).username = user.username;
-
-      res.json({ 
-        id: user.id, 
-        username: user.username,
-        message: "Login successful" 
+      // Start session with regeneration for security
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+        }
+        
+        (req.session as any).userId = user.id;
+        (req.session as any).username = user.username;
+        
+        req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).json({ message: "Session error" });
+          }
+          
+          console.log(`User ${username} logged in successfully with session ID: ${req.sessionID}`);
+          res.json({ 
+            id: user.id, 
+            username: user.username,
+            message: "Login successful" 
+          });
+        });
       });
     } catch (error) {
       console.error("Login error:", error);
