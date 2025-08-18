@@ -163,7 +163,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
         };
 
-        const sent = await sendTelegramAlert(telegramConfig, alert);
+        const sent = await sendTelegramAlert(telegramConfig, {
+          ...alert,
+          aiContext: alert.aiContext || undefined
+        });
         if (sent) {
           await storage.markAlertSentToTelegram(alert.id);
         }
@@ -360,7 +363,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
         };
 
-        const sent = await sendTelegramAlert(telegramConfig, alert);
+        const sent = await sendTelegramAlert(telegramConfig, {
+          ...alert,
+          aiContext: alert.aiContext || undefined
+        });
         if (sent) {
           await storage.markAlertSentToTelegram(alert.id);
         }
@@ -446,7 +452,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
         };
 
-        const sent = await sendTelegramAlert(telegramConfig, alert);
+        const sent = await sendTelegramAlert(telegramConfig, {
+          ...alert,
+          aiContext: alert.aiContext || undefined
+        });
         if (sent) {
           await storage.markAlertSentToTelegram(alert.id);
         }
