@@ -154,9 +154,10 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
         // DraftKings game search with @ format
         return `${sportsbook.baseUrl}/${sport}?category=game+lines&search=${encodedAway}+%40+${encodedHome}`;
       case "Bet365":
-        // Bet365 sport-specific deep link with team search
-        const sportCode = sport === 'mlb' ? '16' : sport === 'nfl' ? '12' : sport === 'nba' ? '18' : '16';
-        return `${sportsbook.baseUrl}#/AC/B1/C1/D13/E${sportCode}/F2/G40/H1/I1/J1/K^${encodedHome}/`;
+        // Bet365 with NJ-specific URL structure for live games
+        const betBaseUrl = "https://www.nj.bet365.com/?_h=2fxB10_5kFJPW2ZqihjR5w%3D%3D&btsffd=1";
+        // Use search parameters to find the specific game matchup
+        return `${betBaseUrl}#/AC/B1/C1/D8/E${sport === 'mlb' ? '15' : sport === 'nfl' ? '13' : '18'}/F2/G9/I1/?search=${gameMatchup}`;
       case "BetRivers":
         // BetRivers with specific game search
         return `${sportsbook.baseUrl}/sportsbook/${sport}?tab=popular&search=${gameMatchup}`;
