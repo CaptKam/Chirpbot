@@ -39,6 +39,7 @@ function AppContent() {
     <div className="max-w-md mx-auto bg-white min-h-screen relative">
       <Switch>
         <Route path="/" component={Calendar} />
+        <Route path="/calendar" component={Calendar} />
         <Route path="/alerts" component={Alerts} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />

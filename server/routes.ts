@@ -7,6 +7,7 @@ import { analyzeAlert } from "./services/openai";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
+import { gameDataService } from "./services/games";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -230,7 +231,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sports data routes
+  // Game data routes
+  app.get("/api/games", async (req, res) => {
+    try {
+      const sport = req.query.sport as string;
+      const games = await gameDataService.getTodaysGames(sport);
+      res.json(games);
+    } catch (error) {
+      console.error("Failed to fetch games:", error);
+      res.status(500).json({ message: "Failed to fetch games" });
+    }
+  });
+
+  // Legacy sports data routes
   app.get("/api/sports/games", async (req, res) => {
     try {
       const sport = req.query.sport as string;

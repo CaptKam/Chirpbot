@@ -92,3 +92,32 @@ export type Alert = typeof alerts.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
+// Game data types
+export interface GameData {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeTeamId?: string;
+  awayTeamId?: string;
+  sport: string;
+  startTime: string;
+  status: string;
+  venue?: string;
+  weather?: {
+    temperature?: number;
+    condition?: string;
+    windSpeed?: number;
+    windDirection?: string;
+  };
+}
+
+export interface MonitoredTeam {
+  id: string;
+  name: string;
+  initials: string;
+  sport: string;
+  logoColor: string;
+  monitored: boolean;
+  externalId?: string;
+}

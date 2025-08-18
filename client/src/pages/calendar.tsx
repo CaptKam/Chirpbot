@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
@@ -6,15 +6,48 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud } from "lucide-react";
-import type { Team } from "@/types";
+import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, Calendar as CalendarIcon } from "lucide-react";
+import type { GameData, MonitoredTeam } from "@shared/schema";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
+  const [monitoredTeams, setMonitoredTeams] = useState<Record<string, boolean>>({});
 
-  const { data: teams = [], isLoading } = useQuery<Team[]>({
+  // Load monitored teams from localStorage on component mount
+  useEffect(() => {
+    const saved = localStorage.getItem('chirpbot_monitored_teams');
+    if (saved) {
+      try {
+        setMonitoredTeams(JSON.parse(saved));
+      } catch (error) {
+        console.error('Failed to load monitored teams from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save monitored teams to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('chirpbot_monitored_teams', JSON.stringify(monitoredTeams));
+  }, [monitoredTeams]);
+
+  // Fetch today's games
+  const { data: games = [], isLoading: gamesLoading } = useQuery<GameData[]>({
+    queryKey: ["/api/games", { sport: activeSport }],
+    queryFn: async ({ queryKey }) => {
+      const [url, params] = queryKey;
+      const searchParams = new URLSearchParams(params as Record<string, string>);
+      const response = await fetch(`${url}?${searchParams}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch games");
+      return response.json();
+    },
+  });
+
+  // Fetch teams for monitoring toggles
+  const { data: teams = [], isLoading: teamsLoading } = useQuery<MonitoredTeam[]>({
     queryKey: ["/api/teams", { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
@@ -27,17 +60,16 @@ export default function Calendar() {
     },
   });
 
-  const toggleMonitoringMutation = useMutation({
-    mutationFn: async ({ id, monitored }: { id: string; monitored: boolean }) => {
-      const response = await apiRequest("PATCH", `/api/teams/${id}/monitor`, { monitored });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-    },
-  });
+  const toggleTeamMonitoring = (teamName: string, monitored: boolean) => {
+    setMonitoredTeams(prev => ({
+      ...prev,
+      [teamName]: monitored
+    }));
+  };
 
-  const monitoredCount = teams.filter(team => team.monitored).length;
+  const isLoading = gamesLoading || teamsLoading;
+  const filteredGames = games.filter(game => game.sport === activeSport);
+  const monitoredCount = Object.values(monitoredTeams).filter(Boolean).length;
 
   const getWeatherIcon = (condition: string) => {
     switch (condition.toLowerCase()) {
@@ -55,19 +87,43 @@ export default function Calendar() {
     }
   };
 
-  const getGameStatus = (team: Team) => {
-    // Mock game status - in real implementation, this would come from live data
-    const statuses = [
-      { label: "Live", icon: Play, color: "bg-green-100 text-green-800", detail: "Bottom 7th • 2 outs" },
-      { label: "Scheduled", icon: Clock, color: "bg-gray-100 text-gray-800", detail: "Tomorrow 7:10 PM" },
-    ];
-    
-    return team.initials === "LAD" ? statuses[0] : statuses[1];
+  const formatGameTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
-  const getWeatherData = () => {
-    // Mock weather data - in real implementation, this would come from weather API
-    return { temperature: 72, condition: "Clear" };
+  const getStatusDisplay = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'live':
+        return { label: "Live", icon: Play, color: "bg-green-100 text-green-800" };
+      case 'final':
+        return { label: "Final", icon: Clock, color: "bg-gray-100 text-gray-800" };
+      case 'postponed':
+        return { label: "Postponed", icon: Clock, color: "bg-yellow-100 text-yellow-800" };
+      default:
+        return { label: "Scheduled", icon: Clock, color: "bg-blue-100 text-blue-800" };
+    }
+  };
+
+  const getTeamInfo = (teamName: string) => {
+    // Find team in our database or use defaults
+    const team = teams.find(t => t.name === teamName);
+    if (team) {
+      return { initials: team.initials, logoColor: team.logoColor };
+    }
+    
+    // Generate initials from team name as fallback
+    const initials = teamName.split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 3);
+      
+    return { initials, logoColor: '#1D2E5F' };
   };
 
   return (
@@ -119,14 +175,17 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* Teams List */}
-      <div className="p-4 space-y-3">
+      {/* Today's Games */}
+      <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
-            Monitor Teams
-          </h2>
+          <div className="flex items-center space-x-2">
+            <CalendarIcon className="w-5 h-5 text-chirp-blue" />
+            <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
+              Today's Games
+            </h2>
+          </div>
           <span className="text-sm font-medium text-chirp-dark">
-            {monitoredCount}/{teams.length} Active
+            {filteredGames.length} {activeSport} Games
           </span>
         </div>
 
@@ -138,8 +197,8 @@ export default function Calendar() {
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
                     <div>
-                      <div className="h-4 bg-gray-300 rounded w-32 mb-2"></div>
-                      <div className="h-3 bg-gray-300 rounded w-24"></div>
+                      <div className="h-4 bg-gray-300 rounded w-48 mb-2"></div>
+                      <div className="h-3 bg-gray-300 rounded w-32"></div>
                     </div>
                   </div>
                   <div className="w-11 h-6 bg-gray-300 rounded-full"></div>
@@ -147,64 +206,125 @@ export default function Calendar() {
               </div>
             ))}
           </div>
+        ) : filteredGames.length === 0 ? (
+          <Card className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+            <div className="text-chirp-dark">
+              <CalendarIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No {activeSport} games scheduled for today</p>
+            </div>
+          </Card>
         ) : (
           <div className="space-y-3">
-            {teams.map((team) => {
-              const gameStatus = getGameStatus(team);
-              const weather = getWeatherData();
-              const StatusIcon = gameStatus.icon;
+            {filteredGames.map((game) => {
+              const statusInfo = getStatusDisplay(game.status);
+              const StatusIcon = statusInfo.icon;
+              const homeTeamInfo = getTeamInfo(game.homeTeam);
+              const awayTeamInfo = getTeamInfo(game.awayTeam);
 
               return (
-                <Card key={team.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                        style={{ backgroundColor: team.logoColor }}
-                      >
-                        {team.initials}
+                <Card key={game.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                          style={{ backgroundColor: awayTeamInfo.logoColor }}
+                        >
+                          {awayTeamInfo.initials}
+                        </div>
+                        <span className="text-sm font-medium text-chirp-dark">@</span>
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                          style={{ backgroundColor: homeTeamInfo.logoColor }}
+                        >
+                          {homeTeamInfo.initials}
+                        </div>
                       </div>
                       <div>
-                        <h3 className="font-bold text-chirp-blue" data-testid={`team-name-${team.id}`}>
-                          {team.name}
-                        </h3>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${gameStatus.color}`}>
-                            <StatusIcon className="w-3 h-3 mr-1" />
-                            {gameStatus.label}
-                          </Badge>
-                          <Badge className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                            {getWeatherIcon(weather.condition)}
-                            <span className="ml-1">{weather.temperature}°F</span>
-                          </Badge>
-                        </div>
+                        <p className="font-bold text-chirp-blue text-sm" data-testid={`game-matchup-${game.id}`}>
+                          {game.awayTeam} vs {game.homeTeam}
+                        </p>
+                        <p className="text-xs text-chirp-dark">{formatGameTime(game.startTime)}</p>
                       </div>
                     </div>
                     
-                    <Switch
-                      checked={team.monitored}
-                      onCheckedChange={(monitored) => 
-                        toggleMonitoringMutation.mutate({ id: team.id, monitored })
-                      }
-                      data-testid={`team-toggle-${team.id}`}
-                      className="data-[state=checked]:bg-chirp-red"
-                    />
-                  </div>
-                  
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-chirp-dark">
-                        {team.initials === "SF" ? "@ Los Angeles Dodgers" : "vs San Francisco Giants"}
-                      </span>
-                      <span className="font-medium text-chirp-blue" data-testid={`game-status-${team.id}`}>
-                        {gameStatus.detail}
-                      </span>
+                    <div className="flex items-center space-x-3">
+                      <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                        <StatusIcon className="w-3 h-3 mr-1" />
+                        {statusInfo.label}
+                      </Badge>
                     </div>
                   </div>
+                  
+                  {/* Team monitoring toggles */}
+                  <div className="space-y-2 pt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs font-medium text-chirp-dark">Monitor Teams:</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between space-x-4">
+                      {/* Away team toggle */}
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div 
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                          style={{ backgroundColor: awayTeamInfo.logoColor }}
+                        >
+                          {awayTeamInfo.initials}
+                        </div>
+                        <span className="text-sm text-chirp-dark truncate flex-1">{game.awayTeam}</span>
+                        <Switch
+                          checked={monitoredTeams[game.awayTeam] || false}
+                          onCheckedChange={(monitored) => toggleTeamMonitoring(game.awayTeam, monitored)}
+                          data-testid={`team-toggle-${game.awayTeam.replace(/\s+/g, '-').toLowerCase()}`}
+                          className="data-[state=checked]:bg-chirp-red"
+                        />
+                      </div>
+                      
+                      {/* Home team toggle */}
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div 
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                          style={{ backgroundColor: homeTeamInfo.logoColor }}
+                        >
+                          {homeTeamInfo.initials}
+                        </div>
+                        <span className="text-sm text-chirp-dark truncate flex-1">{game.homeTeam}</span>
+                        <Switch
+                          checked={monitoredTeams[game.homeTeam] || false}
+                          onCheckedChange={(monitored) => toggleTeamMonitoring(game.homeTeam, monitored)}
+                          data-testid={`team-toggle-${game.homeTeam.replace(/\s+/g, '-').toLowerCase()}`}
+                          className="data-[state=checked]:bg-chirp-red"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {game.venue && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <p className="text-xs text-chirp-dark">{game.venue}</p>
+                    </div>
+                  )}
                 </Card>
               );
             })}
           </div>
+        )}
+        
+        {/* Monitor Summary */}
+        {monitoredCount > 0 && (
+          <Card className="bg-chirp-blue text-white rounded-xl shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Bell className="w-5 h-5" />
+                <span className="font-bold">Monitoring Active</span>
+              </div>
+              <span className="text-blue-200 text-sm">
+                {monitoredCount} team{monitoredCount !== 1 ? 's' : ''} monitored
+              </span>
+            </div>
+          </Card>
         )}
       </div>
     </div>
