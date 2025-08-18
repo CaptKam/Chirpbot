@@ -197,50 +197,54 @@ export function TeamLogoV5({ teamName, abbreviation, size = 'md', className = ''
   const teamAbbr = abbreviation || teamNameToAbbr[teamName];
 
   const logoMap: Record<string, JSX.Element> = {
-    // MLB Teams
+    // MLB Teams - Professional Style Logos
     'LAD': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#005A9C" stroke="#FFFFFF" strokeWidth="3"/>
-        <circle cx="50" cy="50" r="35" fill="#FFFFFF" stroke="#005A9C" strokeWidth="2"/>
-        <path d="M35 40 L35 65 L42 65 L42 57 L50 57 L50 65 L57 65 L57 40 Z" fill="#005A9C"/>
-        <path d="M60 40 L60 65 L75 50 L60 40 Z" fill="#005A9C"/>
-        <text x="50" y="75" textAnchor="middle" className="fill-white font-black text-xs">DODGERS</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Dodgers Baseball Diamond Shape */}
+        <path d="M50 10 L85 50 L50 90 L15 50 Z" fill="#005A9C" stroke="#FFFFFF" strokeWidth="2"/>
+        <path d="M50 25 L70 50 L50 75 L30 50 Z" fill="#FFFFFF"/>
+        <text x="50" y="45" textAnchor="middle" className="fill-blue-600 font-black text-lg font-serif">LA</text>
+        <text x="50" y="62" textAnchor="middle" className="fill-blue-600 font-bold text-xs font-serif">DODGERS</text>
       </svg>
     ),
     'SF': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#FD5A1E" stroke="#000000" strokeWidth="3"/>
-        <circle cx="50" cy="50" r="38" fill="#27251F" stroke="#FD5A1E" strokeWidth="2"/>
-        <polygon points="35,40 65,40 60,25 40,25" fill="#FD5A1E"/>
-        <text x="40" y="55" className="fill-orange-400 font-black text-lg font-sans">S</text>
-        <text x="55" y="55" className="fill-orange-400 font-black text-lg font-sans">F</text>
-        <text x="50" y="78" textAnchor="middle" className="fill-white font-black text-xs">GIANTS</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Giants Baseball with Bridge Arc */}
+        <circle cx="50" cy="50" r="45" fill="#FD5A1E" stroke="#27251F" strokeWidth="3"/>
+        <path d="M15 45 Q50 15 85 45" fill="none" stroke="#27251F" strokeWidth="4"/>
+        <path d="M15 45 Q50 20 85 45" fill="none" stroke="#FFFFFF" strokeWidth="2"/>
+        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">SF</text>
+        <circle cx="25" cy="45" r="2" fill="#27251F"/>
+        <circle cx="75" cy="45" r="2" fill="#27251F"/>
       </svg>
     ),
     'NYY': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#132448" stroke="#C4CED4" strokeWidth="3"/>
-        <circle cx="50" cy="50" r="38" fill="none" stroke="#C4CED4" strokeWidth="1"/>
-        <path d="M35 35 L35 65 L42 65 L42 50 L50 40 L58 50 L58 65 L65 65 L65 35 L58 35 L50 50 L42 35 Z" fill="#FFFFFF"/>
-        <circle cx="63" cy="43" r="12" fill="none" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="78" textAnchor="middle" className="fill-white font-black text-xs">YANKEES</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Yankees Top Hat Shape */}
+        <ellipse cx="50" cy="75" rx="40" ry="8" fill="#132448"/>
+        <rect x="25" y="35" width="50" height="40" fill="#132448" rx="3"/>
+        <rect x="30" y="25" width="40" height="15" fill="#132448" rx="8"/>
+        <path d="M25 65 L75 65 L75 75 L25 75 Z" fill="#C4CED4"/>
+        <text x="50" y="55" textAnchor="middle" className="fill-white font-black text-xl font-serif">NY</text>
       </svg>
     ),
     'BOS': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#BD3039" stroke="#FFFFFF" strokeWidth="3"/>
-        <circle cx="50" cy="50" r="38" fill="#0C2340" stroke="#FFFFFF" strokeWidth="2"/>
-        <circle cx="45" cy="45" r="8" fill="#FFFFFF"/>
-        <circle cx="55" cy="45" r="8" fill="#FFFFFF"/>
-        <path d="M35 55 Q50 35 65 55" fill="none" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="78" textAnchor="middle" className="fill-white font-black text-xs">RED SOX</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Red Sox Sock Shape */}
+        <path d="M30 20 L70 20 L75 30 L75 70 L70 80 L60 85 L40 85 L30 80 L25 70 L25 30 Z" fill="#BD3039" stroke="#0C2340" strokeWidth="2"/>
+        <path d="M30 25 L70 25 L70 35 L30 35 Z" fill="#FFFFFF"/>
+        <path d="M30 45 L70 45 L70 55 L30 55 Z" fill="#FFFFFF"/>
+        <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-sm font-sans">SOX</text>
       </svg>
     ),
     'CHC': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#0E3386" stroke="#CC3433" strokeWidth="3"/>
-        <circle cx="50" cy="50" r="35" fill="none" stroke="#CC3433" strokeWidth="1"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">CHC</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Cubs Bear Head Silhouette */}
+        <path d="M50 20 Q65 25 70 40 Q75 45 70 55 Q75 60 70 70 Q65 75 50 80 Q35 75 30 70 Q25 60 30 55 Q25 45 30 40 Q35 25 50 20 Z" fill="#0E3386" stroke="#CC3433" strokeWidth="2"/>
+        <circle cx="42" cy="45" r="3" fill="#FFFFFF"/>
+        <circle cx="58" cy="45" r="3" fill="#FFFFFF"/>
+        <path d="M45 55 Q50 60 55 55" fill="none" stroke="#FFFFFF" strokeWidth="2"/>
+        <text x="50" y="90" textAnchor="middle" className="fill-blue-700 font-black text-xs font-sans">CUBS</text>
       </svg>
     ),
     'MIL': (
