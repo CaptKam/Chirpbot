@@ -559,12 +559,7 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
     return defaultLogo;
   }
   
-  // TEMPORARY: Add bright yellow background to test if updates are working
-  const testLogo = React.cloneElement(selectedLogo, {
-    style: { backgroundColor: '#FFFF00', padding: '2px' }
-  });
-  
-  return testLogo;
+  return selectedLogo;
 }
 
 // Force refresh v3.0 - Cache bust
