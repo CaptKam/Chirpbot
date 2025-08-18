@@ -84,25 +84,13 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
     // MLB Teams
     'LAD': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <defs>
-          <linearGradient id="dodgers-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#005A9C" />
-            <stop offset="100%" stopColor="#0078D4" />
-          </linearGradient>
-        </defs>
-        <circle cx="50" cy="50" r="48" fill="url(#dodgers-gradient)" stroke="#FFFFFF" strokeWidth="2"/>
+        <circle cx="50" cy="50" r="48" fill="#005A9C" stroke="#FFFFFF" strokeWidth="2"/>
         <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-2xl font-sans">LA</text>
       </svg>
     ),
     'SF': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <defs>
-          <linearGradient id="giants-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FD5A1E" />
-            <stop offset="100%" stopColor="#FF8C42" />
-          </linearGradient>
-        </defs>
-        <circle cx="50" cy="50" r="48" fill="url(#giants-gradient)" stroke="#000000" strokeWidth="2"/>
+        <circle cx="50" cy="50" r="48" fill="#FD5A1E" stroke="#000000" strokeWidth="2"/>
         <text x="50" y="58" textAnchor="middle" className="fill-black font-black text-2xl font-sans">SF</text>
       </svg>
     ),
