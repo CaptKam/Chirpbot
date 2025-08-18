@@ -428,5 +428,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 60000 + Math.random() * 60000); // 1-2 minutes
 
+  // Auth routes
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      if (username.length < 3) {
+        return res.status(400).json({ message: "Username must be at least 3 characters long" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Create new user (in production, hash the password)
+      const user = await storage.createUser({ username, password });
+      
+      // Start session
+      (req.session as any).userId = user.id;
+      (req.session as any).username = user.username;
+
+      res.json({ 
+        id: user.id, 
+        username: user.username,
+        message: "Account created successfully" 
+      });
+    } catch (error) {
+      console.error("Signup error:", error);
+      res.status(500).json({ message: "Failed to create account" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      // Find user
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      // Check password (in production, use proper password hashing)
+      if (user.password !== password) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      // Start session
+      (req.session as any).userId = user.id;
+      (req.session as any).username = user.username;
+
+      res.json({ 
+        id: user.id, 
+        username: user.username,
+        message: "Login successful" 
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logout successful" });
+    });
+  });
+
+  app.get("/api/auth/user", (req, res) => {
+    const session = req.session as any;
+    if (session?.userId) {
+      res.json({ 
+        id: session.userId, 
+        username: session.username,
+        isAuthenticated: true 
+      });
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
+    }
+  });
+
   return httpServer;
 }

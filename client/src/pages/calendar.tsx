@@ -5,9 +5,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle } from "lucide-react";
+import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
+import { Link } from "wouter";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 const TEST_USER_ID = "test-user-123"; // For demo purposes
@@ -145,6 +146,17 @@ export default function Calendar() {
               LIVE
             </span>
           </div>
+          <Link href="/signup">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-white hover:text-gray-200 px-2"
+              data-testid="button-header-signup"
+            >
+              <UserPlus className="w-4 h-4 mr-1" />
+              <span className="text-xs font-medium">Sign Up</span>
+            </Button>
+          </Link>
           <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
             <Bell className="w-5 h-5" />
             <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">

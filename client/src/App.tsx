@@ -7,6 +7,8 @@ import NotFound from "./pages/not-found";
 import Calendar from "./pages/calendar";
 import Alerts from "./pages/alerts";
 import Settings from "./pages/settings";
+import Signup from "./pages/signup";
+import Login from "./pages/login";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
@@ -41,6 +43,8 @@ function AppContent() {
         <Route path="/" component={Calendar} />
         <Route path="/alerts" component={Alerts} />
         <Route path="/settings" component={Settings} />
+        <Route path="/signup" component={Signup} />
+        <Route path="/login" component={Login} />
         <Route component={NotFound} />
       </Switch>
       <BottomNavigation />
