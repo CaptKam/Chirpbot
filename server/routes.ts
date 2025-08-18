@@ -7,6 +7,7 @@ import { analyzeAlert } from "./services/openai";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
+import { fetchTodaysGames, fetchAllTodaysGames, formatGameForCalendar, SportType } from "./services/espn";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -256,6 +257,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to fetch team games:", error);
       res.status(500).json({ message: "Failed to fetch team games" });
+    }
+  });
+
+  // Real ESPN sports data endpoints
+  app.get("/api/sports/games/today", async (req, res) => {
+    try {
+      const sport = req.query.sport as SportType;
+      
+      if (!sport || !['NFL', 'MLB', 'NBA', 'NHL'].includes(sport)) {
+        return res.status(400).json({ error: "Invalid sport. Must be one of: NFL, MLB, NBA, NHL" });
+      }
+
+      const games = await fetchTodaysGames(sport);
+      const formattedGames = games.map(game => formatGameForCalendar(game, sport));
+      
+      res.json({
+        sport,
+        games: formattedGames,
+        count: formattedGames.length,
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching today's games:", error);
+      res.status(500).json({ error: "Failed to fetch today's games" });
+    }
+  });
+
+  app.get("/api/sports/games/today/all", async (req, res) => {
+    try {
+      const allGames = await fetchAllTodaysGames();
+      
+      const formattedData = Object.entries(allGames).reduce((acc, [sport, games]) => {
+        const sportKey = sport as SportType;
+        acc[sportKey] = {
+          games: games.map(game => formatGameForCalendar(game, sportKey)),
+          count: games.length
+        };
+        return acc;
+      }, {} as Record<SportType, { games: any[], count: number }>);
+
+      res.json({
+        ...formattedData,
+        lastUpdated: new Date().toISOString(),
+        totalGames: Object.values(formattedData).reduce((sum, sport) => sum + sport.count, 0)
+      });
+    } catch (error) {
+      console.error("Error fetching all today's games:", error);
+      res.status(500).json({ error: "Failed to fetch today's games" });
     }
   });
 
