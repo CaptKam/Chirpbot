@@ -20,7 +20,7 @@ const FILTER_OPTIONS = [
   { id: "ai-verified", label: "AI Verified", active: false },
 ];
 
-// Sportsbook quick actions with accurate logos
+// Sportsbook quick actions with accurate brand colors and logos
 const SPORTSBOOKS = [
   { 
     name: "FanDuel", 
@@ -28,12 +28,10 @@ const SPORTSBOOKS = [
     color: "bg-blue-600", 
     icon: "FD",
     logo: (
-      <svg viewBox="0 0 100 100" className="w-8 h-8">
-        <rect x="0" y="0" width="100" height="100" fill="#1E429F" rx="8"/>
-        <g transform="translate(50,50)">
-          <text x="0" y="-8" textAnchor="middle" className="fill-white font-bold text-lg" style={{fontFamily: 'Arial, sans-serif'}}>Fan</text>
-          <text x="0" y="8" textAnchor="middle" className="fill-white font-bold text-lg" style={{fontFamily: 'Arial, sans-serif'}}>Duel</text>
-        </g>
+      <svg viewBox="0 0 40 40" className="w-10 h-10">
+        <rect width="40" height="40" fill="#1493FF" rx="6"/>
+        <path d="M20 8 L28 12 L28 24 L20 28 L12 24 L12 12 Z" fill="#FFFFFF" opacity="0.2"/>
+        <text x="20" y="25" textAnchor="middle" className="fill-white" style={{fontSize: '14px', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif'}}>FD</text>
       </svg>
     )
   },
@@ -43,14 +41,10 @@ const SPORTSBOOKS = [
     color: "bg-green-600", 
     icon: "365",
     logo: (
-      <svg viewBox="0 0 100 100" className="w-8 h-8">
-        <rect x="0" y="0" width="100" height="100" fill="#43B02A" rx="8"/>
-        <g transform="translate(50,35)">
-          <text x="0" y="0" textAnchor="middle" className="fill-white font-bold text-sm" style={{fontFamily: 'Arial, sans-serif'}}>bet</text>
-        </g>
-        <g transform="translate(50,65)">
-          <text x="0" y="0" textAnchor="middle" className="fill-black font-bold text-2xl" style={{fontFamily: 'Arial, sans-serif', fill: '#FFD700'}}>365</text>
-        </g>
+      <svg viewBox="0 0 40 40" className="w-10 h-10">
+        <rect width="40" height="40" fill="#236C00" rx="6"/>
+        <text x="13" y="24" className="fill-white" style={{fontSize: '10px', fontWeight: 'normal', fontFamily: 'system-ui, sans-serif'}}>bet</text>
+        <text x="22" y="24" style={{fontSize: '10px', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif', fill: '#FFD700'}}>365</text>
       </svg>
     )
   },
@@ -60,11 +54,14 @@ const SPORTSBOOKS = [
     color: "bg-orange-600", 
     icon: "DK",
     logo: (
-      <svg viewBox="0 0 100 100" className="w-8 h-8">
-        <rect x="0" y="0" width="100" height="100" fill="#FF6600" rx="8"/>
-        <polygon points="30,25 70,25 65,35 60,45 40,45 35,35" fill="#FFFFFF"/>
-        <polygon points="45,45 55,45 50,60" fill="#FFFFFF"/>
-        <text x="50" y="85" textAnchor="middle" className="fill-white font-bold text-xs" style={{fontFamily: 'Arial, sans-serif'}}>DK</text>
+      <svg viewBox="0 0 40 40" className="w-10 h-10">
+        <rect width="40" height="40" fill="#F3701D" rx="6"/>
+        <rect width="40" height="40" fill="#000000" opacity="0.1" rx="6"/>
+        <g transform="translate(20,15)">
+          <polygon points="-6,-5 6,-5 4,-2 2,2 -2,2 -4,-2" fill="#FFFFFF"/>
+          <polygon points="-1,3 1,3 0,7" fill="#FFFFFF"/>
+        </g>
+        <text x="20" y="32" textAnchor="middle" className="fill-white" style={{fontSize: '8px', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif'}}>DK</text>
       </svg>
     )
   },
@@ -74,11 +71,11 @@ const SPORTSBOOKS = [
     color: "bg-purple-600", 
     icon: "BR",
     logo: (
-      <svg viewBox="0 0 100 100" className="w-8 h-8">
-        <rect x="0" y="0" width="100" height="100" fill="#1B365D" rx="8"/>
-        <path d="M15 30 Q25 20 35 30 Q45 40 55 30 Q65 20 75 30 Q85 40 95 30" stroke="#00A9CE" strokeWidth="3" fill="none"/>
-        <path d="M15 50 Q25 40 35 50 Q45 60 55 50 Q65 40 75 50 Q85 60 95 50" stroke="#00A9CE" strokeWidth="3" fill="none"/>
-        <text x="50" y="80" textAnchor="middle" className="fill-white font-bold text-xs" style={{fontFamily: 'Arial, sans-serif'}}>BR</text>
+      <svg viewBox="0 0 40 40" className="w-10 h-10">
+        <rect width="40" height="40" fill="#27388C" rx="6"/>
+        <path d="M8 15 Q15 12 22 15 Q29 18 36 15" stroke="#00B4D8" strokeWidth="2" fill="none"/>
+        <path d="M8 20 Q15 17 22 20 Q29 23 36 20" stroke="#00B4D8" strokeWidth="2" fill="none"/>
+        <text x="20" y="32" textAnchor="middle" className="fill-white" style={{fontSize: '9px', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif'}}>RIVERS</text>
       </svg>
     )
   },
