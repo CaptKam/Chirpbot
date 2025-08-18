@@ -4,56 +4,39 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Modern Sportsbook Theme 2025 ===== */
 :root {
-  --bg: #0B1220;
-  --panel: #0E1627;
-  --surface: #121A2A;
-  --brand: #3B82F6;      /* primary blue */
-  --accent: #22D3EE;     /* live/active */
-  --ok: #10B981;
-  --warn: #F59E0B;
-  --err: #EF4444;
-  --text: #E6EDF6;
-  --muted: #9AA7C0;
-  --divider: rgba(230,237,246,.08);
-
-  /* map to shadcn tokens */
-  --background: var(--bg);
-  --foreground: var(--text);
-  --card: var(--panel);
-  --card-foreground: var(--text);
-  --popover: var(--surface);
-  --popover-foreground: var(--text);
-  --primary: var(--brand);
-  --primary-foreground: #ffffff;
-  --secondary: var(--panel);
-  --secondary-foreground: var(--text);
-  --muted: #1a243a;
-  --muted-foreground: var(--muted);
-  --accent: var(--accent);
-  --accent-foreground: #001018;
-  --destructive: var(--err);
-  --destructive-foreground: #fff;
-  --border: var(--divider);
-  --input: #0f1626;
-  --ring: var(--brand);
-
-  /* charts */
-  --chart-1: var(--brand);
-  --chart-2: #10B981;
-  --chart-3: #F59E0B;
-  --chart-4: #22D3EE;
-  --chart-5: #EF4444;
-
-  --sidebar: var(--panel);
-  --sidebar-foreground: var(--text);
-  --sidebar-primary: var(--brand);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--surface);
-  --sidebar-accent-foreground: var(--text);
-  --sidebar-border: var(--divider);
-  --sidebar-ring: var(--brand);
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(220, 21%, 11%);
+  --card: hsl(220, 13%, 97%);
+  --card-foreground: hsl(220, 21%, 11%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(220, 21%, 11%);
+  --primary: hsl(220, 64%, 23%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(220, 21%, 11%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --muted: hsl(217, 33%, 95%);
+  --muted-foreground: hsl(220, 21%, 29%);
+  --accent: hsl(217, 33%, 95%);
+  --accent-foreground: hsl(220, 64%, 23%);
+  --destructive: hsl(355, 85%, 56%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --border: hsl(217, 33%, 91%);
+  --input: hsl(217, 33%, 97%);
+  --ring: hsl(220, 64%, 53%);
+  --chart-1: hsl(220, 64%, 23%);
+  --chart-2: hsl(162, 100%, 36%);
+  --chart-3: hsl(42, 93%, 56%);
+  --chart-4: hsl(147, 79%, 42%);
+  --chart-5: hsl(341, 75%, 51%);
+  --sidebar: hsl(220, 13%, 97%);
+  --sidebar-foreground: hsl(220, 21%, 11%);
+  --sidebar-primary: hsl(220, 64%, 23%);
+  --sidebar-primary-foreground: hsl(0, 0%, 100%);
+  --sidebar-accent: hsl(217, 33%, 95%);
+  --sidebar-accent-foreground: hsl(220, 64%, 23%);
+  --sidebar-border: hsl(217, 33%, 91%);
+  --sidebar-ring: hsl(220, 64%, 53%);
   
   /* ChirpBot V2 Color Palette */
   --chirp-bg: #F2F4F7;
@@ -75,7 +58,7 @@
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
-  --radius: 16px;
+  --radius: 0.75rem;
 }
 
 .dark {
