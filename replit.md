@@ -3,11 +3,12 @@
 ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, the application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) using authentic ESPN API data and generates intelligent alerts for high-impact game situations. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. 
 
 **Design System Updates (August 18, 2025):**
-- Implemented modern, bold, sports-centric design with professional color palette
-- Primary colors: #F2F4F7 (background), #1C2B5E (accent), #2387F4 (CTA blue), #F02D3A (alert red)
-- Typography: Bold uppercase headings with letter spacing, Inter font family
-- UI Components: Game cards with 12px rounded corners, shadow on hover, full-width responsive design
-- Active monitoring indicated with blue border and background
+- Implemented ultra-modern, bold alert design with dramatic visual hierarchy
+- Color Scheme: Black headers, red accents, white cards with gradient backgrounds for high-priority alerts
+- Typography: Extra-bold uppercase headings with wide letter spacing, massive 4xl-6xl font sizes for key data
+- Alert Cards: Rounded-3xl corners, centered layouts, prominent score displays with 6xl fonts
+- Visual Elements: High-contrast design, full-width backgrounds, pulsing priority indicators
+- Clean Layout: Simplified information display, bold section dividers, prominent call-to-action elements
 
 Features persistent team monitoring that saves user game selections to the database and restores them on page reload. Alert generation system correctly filters for live games only.
 

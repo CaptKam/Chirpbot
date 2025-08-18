@@ -82,64 +82,56 @@ export default function Alerts() {
 
   return (
     <div className="pb-20">
-      {/* Header */}
-      <header className="bg-chirp-blue text-white p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-chirp-red rounded-full flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
+      {/* Header - Bold & Clean */}
+      <header className="bg-black text-white p-6">
+        <div className="text-center">
+          <div className="flex items-center justify-center space-x-4 mb-3">
+            <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-4xl font-black uppercase tracking-[0.3em]">ChirpBot</h1>
           </div>
-          <div>
-            <h1 className="text-xl font-black uppercase tracking-wide">ChirpBot</h1>
-            <p className="text-blue-200 text-xs font-medium">V2 Alert System</p>
+          <div className="flex items-center justify-center space-x-6">
+            <div className="bg-red-600 px-6 py-2 rounded-full">
+              <span className="text-white text-lg font-black uppercase tracking-[0.2em]">
+                <div className="w-2 h-2 bg-red-300 rounded-full inline-block mr-2 animate-pulse"></div>
+                LIVE ALERTS
+              </span>
+            </div>
+            <div className="bg-gray-800 px-4 py-2 rounded-full text-lg font-bold">
+              {alerts.length} ACTIVE
+            </div>
           </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="bg-chirp-red px-3 py-1 rounded-full">
-            <span className="text-white text-xs font-bold uppercase tracking-wide">
-              <div className="w-1.5 h-1.5 bg-red-300 rounded-full inline-block mr-1 animate-pulse"></div>
-              LIVE
-            </span>
-          </div>
-          <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              {alerts.length}
-            </span>
-          </Button>
         </div>
       </header>
 
-      {/* Filters */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
-            Live Alerts
+      {/* Filters - Bold & Clean */}
+      <div className="bg-gray-900 p-6">
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-black uppercase tracking-[0.2em] text-white mb-4">
+            FILTER ALERTS
           </h2>
-          <Button size="sm" className="bg-chirp-red text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
-            <Filter className="w-3 h-3 mr-1" />
-            Filter
-          </Button>
-        </div>
-        <div className="flex space-x-2 overflow-x-auto">
-          {FILTER_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => toggleFilter(option.id)}
-              data-testid={`filter-${option.id}`}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap transition-colors ${
-                activeFilters.includes(option.id)
-                  ? "bg-chirp-blue text-white"
-                  : "bg-gray-100 text-chirp-dark hover:bg-gray-200"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+          <div className="flex justify-center space-x-3 overflow-x-auto">
+            {FILTER_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => toggleFilter(option.id)}
+                data-testid={`filter-${option.id}`}
+                className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wide whitespace-nowrap transition-all ${
+                  activeFilters.includes(option.id)
+                    ? "bg-red-600 text-white transform scale-105"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Alerts Feed */}
-      <div className="p-4 space-y-4">
+      <div className="bg-gray-100 min-h-screen p-6 space-y-8">
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -187,108 +179,100 @@ export default function Alerts() {
               >
                 {/* Priority Indicator */}
                 {isHighPriority && (
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="bg-red-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest animate-pulse">
-                      🚨 HIGH PRIORITY ALERT 🚨
+                  <div className="bg-red-600 text-white text-center py-3 -mx-6 -mt-6 mb-6 rounded-t-2xl">
+                    <div className="text-sm font-black uppercase tracking-[0.3em] animate-pulse">
+                      🚨 HIGH PRIORITY 🚨
                     </div>
                   </div>
                 )}
 
-                {/* Main Alert Content */}
-                <div className="mb-4">
-                  {/* Alert Type & Time */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-xl ${isHighPriority ? 'bg-red-500' : 'bg-blue-500'}`}>
-                        <AlertIcon className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-black uppercase tracking-wider text-gray-900">
-                          {alert.type === 'RISP' ? 'RISP THREAT' : alert.type}
-                        </div>
-                        <div className="text-xs text-gray-500 font-medium">
-                          {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
-                        </div>
-                      </div>
+                {/* Alert Type Header */}
+                <div className="text-center mb-6">
+                  <div className={`inline-flex items-center space-x-4 px-8 py-4 rounded-2xl ${
+                    isHighPriority ? 'bg-red-600' : 'bg-gray-900'
+                  } text-white`}>
+                    <AlertIcon className="w-8 h-8" />
+                    <div className="text-4xl font-black uppercase tracking-[0.2em]">
+                      {alert.type === 'RISP' ? 'RISP THREAT' : alert.type}
                     </div>
-                    
-                    {/* AI Confidence Badge */}
-                    {alert.aiConfidence && (
-                      <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        alert.aiConfidence > 90 
-                          ? 'bg-green-500 text-white' 
-                          : alert.aiConfidence > 75 
-                          ? 'bg-yellow-500 text-white' 
-                          : 'bg-gray-400 text-white'
-                      }`}>
-                        {alert.aiConfidence}% CONFIDENCE
-                      </div>
-                    )}
                   </div>
-
-                  {/* Game Score - Most Important Info */}
-                  {alert.gameInfo && gameScore && (
-                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl p-4 mb-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-black mb-2">
-                          {alert.gameInfo.awayTeam} {(alert.gameInfo as any)?.score?.away || 0} - {(alert.gameInfo as any)?.score?.home || 0} {alert.gameInfo.homeTeam}
-                        </div>
-                        <div className="bg-white bg-opacity-20 rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide inline-block">
-                          {alert.gameInfo.status} • LIVE
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Alert Description */}
-                  <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                    <p className="text-lg font-semibold text-gray-900 leading-relaxed" data-testid={`alert-description-${alert.id}`}>
-                      {alert.description}
-                    </p>
+                  <div className="text-sm text-gray-500 font-semibold mt-2 uppercase tracking-wide">
+                    {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
                   </div>
                 </div>
 
-                {/* AI Analysis - Prominent Display */}
+                {/* Game Score - Massive Bold Display */}
+                {alert.gameInfo && gameScore && (
+                  <div className="bg-black text-white rounded-3xl p-8 mb-6 text-center">
+                    <div className="text-6xl font-black mb-4 tracking-wider">
+                      {(alert.gameInfo as any)?.score?.away || 0} - {(alert.gameInfo as any)?.score?.home || 0}
+                    </div>
+                    <div className="text-xl font-bold mb-3 text-gray-300">
+                      {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
+                    </div>
+                    <div className="bg-red-600 rounded-full px-6 py-2 text-lg font-black uppercase tracking-widest inline-block">
+                      {alert.gameInfo.status} • LIVE
+                    </div>
+                  </div>
+                )}
+
+                {/* Alert Description - Bold & Clean */}
+                <div className="bg-gray-900 text-white rounded-2xl p-6 mb-6">
+                  <p className="text-xl font-bold leading-relaxed text-center" data-testid={`alert-description-${alert.id}`}>
+                    {alert.description}
+                  </p>
+                </div>
+
+                {/* AI Confidence - Prominent Badge */}
+                {alert.aiConfidence && (
+                  <div className="text-center mb-6">
+                    <div className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-black uppercase tracking-widest ${
+                      alert.aiConfidence > 90 
+                        ? 'bg-green-600 text-white' 
+                        : alert.aiConfidence > 75 
+                        ? 'bg-yellow-600 text-white' 
+                        : 'bg-gray-600 text-white'
+                    }`}>
+                      {alert.aiConfidence}% CONFIDENCE
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Analysis - Bold Block */}
                 {alert.aiContext && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-100 rounded-xl p-4 mb-4 border-l-4 border-blue-500">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Bot className="w-5 h-5 text-blue-600" />
-                      <span className="text-sm font-black uppercase text-blue-800 tracking-widest">
-                        AI INSIGHT
+                  <div className="bg-blue-600 text-white rounded-2xl p-6 mb-6">
+                    <div className="flex items-center justify-center space-x-3 mb-4">
+                      <Bot className="w-6 h-6" />
+                      <span className="text-lg font-black uppercase tracking-[0.2em]">
+                        AI ANALYSIS
                       </span>
                     </div>
-                    <p className="text-base font-medium text-blue-900 leading-relaxed" data-testid={`alert-ai-context-${alert.id}`}>
+                    <p className="text-lg font-semibold text-center leading-relaxed" data-testid={`alert-ai-context-${alert.id}`}>
                       {alert.aiContext}
                     </p>
                   </div>
                 )}
 
-                {/* Weather Impact */}
+                {/* Weather Impact - Clean Block */}
                 {alert.weatherData && (
-                  <div className="bg-sky-50 rounded-xl p-3 mb-4 border-l-4 border-sky-400">
-                    <div className="text-sm font-bold text-sky-800 mb-1">WEATHER IMPACT</div>
-                    <div className="text-sm text-sky-700">
+                  <div className="bg-gray-100 rounded-2xl p-4 mb-6 text-center">
+                    <div className="text-lg font-black uppercase tracking-wide text-gray-800 mb-2">
+                      WEATHER IMPACT
+                    </div>
+                    <div className="text-lg font-bold text-gray-700">
                       {alert.weatherData.temperature}°F • {alert.weatherData.condition}
                       {alert.weatherData.windSpeed && (
-                        <span> • Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}</span>
+                        <div className="mt-1">Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}</div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Bottom Actions */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <div className="text-sm font-medium text-gray-600">
-                    {alert.sport} • {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
+                {/* Bottom Info - Minimal */}
+                <div className="text-center pt-4 border-t-2 border-gray-200">
+                  <div className="text-lg font-bold text-gray-800 uppercase tracking-wide">
+                    {alert.sport}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                    data-testid={`alert-share-${alert.id}`}
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </Button>
                 </div>
               </Card>
             );
