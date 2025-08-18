@@ -196,27 +196,40 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
     // MLB Teams
     'LAD': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#005A9C" stroke="#FFFFFF" strokeWidth="2"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-2xl font-sans">LA</text>
+        <circle cx="50" cy="50" r="48" fill="#005A9C" stroke="#FFFFFF" strokeWidth="3"/>
+        <circle cx="50" cy="50" r="35" fill="#FFFFFF" stroke="#005A9C" strokeWidth="2"/>
+        <path d="M35 40 L35 65 L42 65 L42 57 L50 57 L50 65 L57 65 L57 40 Z" fill="#005A9C"/>
+        <path d="M60 40 L60 65 L75 50 L60 40 Z" fill="#005A9C"/>
+        <text x="50" y="75" textAnchor="middle" className="fill-white font-black text-xs">DODGERS</text>
       </svg>
     ),
     'SF': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#FD5A1E" stroke="#000000" strokeWidth="2"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-black font-black text-2xl font-sans">SF</text>
+        <circle cx="50" cy="50" r="48" fill="#FD5A1E" stroke="#000000" strokeWidth="3"/>
+        <circle cx="50" cy="50" r="38" fill="#27251F" stroke="#FD5A1E" strokeWidth="2"/>
+        <polygon points="35,40 65,40 60,25 40,25" fill="#FD5A1E"/>
+        <text x="40" y="55" className="fill-orange-400 font-black text-lg font-sans">S</text>
+        <text x="55" y="55" className="fill-orange-400 font-black text-lg font-sans">F</text>
+        <text x="50" y="78" textAnchor="middle" className="fill-white font-black text-xs">GIANTS</text>
       </svg>
     ),
     'NYY': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#132448" stroke="#C4CED4" strokeWidth="2"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-xl font-sans">NY</text>
+        <circle cx="50" cy="50" r="48" fill="#132448" stroke="#C4CED4" strokeWidth="3"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#C4CED4" strokeWidth="1"/>
+        <path d="M35 35 L35 65 L42 65 L42 50 L50 40 L58 50 L58 65 L65 65 L65 35 L58 35 L50 50 L42 35 Z" fill="#FFFFFF"/>
+        <circle cx="63" cy="43" r="12" fill="none" stroke="#FFFFFF" strokeWidth="3"/>
+        <text x="50" y="78" textAnchor="middle" className="fill-white font-black text-xs">YANKEES</text>
       </svg>
     ),
     'BOS': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#BD3039" stroke="#FFFFFF" strokeWidth="2"/>
-        <circle cx="50" cy="50" r="20" fill="none" stroke="#FFFFFF" strokeWidth="2"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-2xl font-sans">B</text>
+        <circle cx="50" cy="50" r="48" fill="#BD3039" stroke="#FFFFFF" strokeWidth="3"/>
+        <circle cx="50" cy="50" r="38" fill="#0C2340" stroke="#FFFFFF" strokeWidth="2"/>
+        <circle cx="45" cy="45" r="8" fill="#FFFFFF"/>
+        <circle cx="55" cy="45" r="8" fill="#FFFFFF"/>
+        <path d="M35 55 Q50 35 65 55" fill="none" stroke="#FFFFFF" strokeWidth="3"/>
+        <text x="50" y="78" textAnchor="middle" className="fill-white font-black text-xs">RED SOX</text>
       </svg>
     ),
     'CHC': (
@@ -546,7 +559,12 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
     return defaultLogo;
   }
   
-  return selectedLogo;
+  // TEMPORARY: Add bright yellow background to test if updates are working
+  const testLogo = React.cloneElement(selectedLogo, {
+    style: { backgroundColor: '#FFFF00', padding: '2px' }
+  });
+  
+  return testLogo;
 }
 
 // Force refresh v3.0 - Cache bust
