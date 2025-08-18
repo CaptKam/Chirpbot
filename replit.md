@@ -30,6 +30,13 @@ Preferred communication style: Simple, everyday language.
   - NHL: Power play, empty net, third period ties, and final minute close game alerts
 - **Performance**: Fast alert processing with immediate user preference application
 
+## Production Deployment Fixes
+- **Issue**: Login not working on deployed version due to session storage
+- **Root Cause**: Using in-memory session store which doesn't persist in production
+- **Solution**: Implemented PostgreSQL-based session storage with connect-pg-simple
+- **Configuration**: Added proper cookie settings for production HTTPS with secure and sameSite flags
+- **Database**: Created session table for persistent session management across deployments
+
 ## Authentication & Game Persistence Fix
 - **Issue**: Game selections were not persisting between login sessions
 - **Root Cause**: Frontend was using hardcoded test user ID "test-user-123" instead of actual authenticated user ID
