@@ -61,7 +61,7 @@ export default function Calendar() {
       homeTeamName: string; 
       awayTeamName: string; 
     }) => {
-      return apiRequest(`/api/user/${TEST_USER_ID}/monitored-games`, "POST", { 
+      return apiRequest("POST", `/api/user/${TEST_USER_ID}/monitored-games`, { 
         gameId, sport, homeTeamName, awayTeamName 
       });
     },
@@ -73,7 +73,7 @@ export default function Calendar() {
   // Remove game monitoring
   const removeMonitoringMutation = useMutation({
     mutationFn: async (gameId: string) => {
-      return apiRequest(`/api/user/${TEST_USER_ID}/monitored-games/${gameId}`, "DELETE");
+      return apiRequest("DELETE", `/api/user/${TEST_USER_ID}/monitored-games/${gameId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
