@@ -6,46 +6,15 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, Trophy, Calendar as CalendarIcon } from "lucide-react";
+import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud } from "lucide-react";
 import type { Team } from "@/types";
-
-// Real game data interfaces
-interface RealGame {
-  id: string;
-  sport: string;
-  homeTeam: {
-    name: string;
-    abbreviation: string;
-    score: number;
-    color: string;
-  };
-  awayTeam: {
-    name: string;
-    abbreviation: string;
-    score: number;
-    color: string;
-  };
-  venue?: {
-    name: string;
-    city: string;
-    state: string;
-  };
-  gameTime: string;
-  status: {
-    display: string;
-    isLive: boolean;
-    isCompleted: boolean;
-    type: string;
-  };
-  matchup: string;
-}
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
 
-  const { data: teams = [], isLoading: teamsLoading } = useQuery<Team[]>({
+  const { data: teams = [], isLoading } = useQuery<Team[]>({
     queryKey: ["/api/teams", { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
@@ -54,33 +23,6 @@ export default function Calendar() {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch teams");
-      return response.json();
-    },
-  });
-
-  // Fetch real games for today
-  const { data: todaysGames = [], isLoading: gamesLoading } = useQuery<RealGame[]>({
-    queryKey: ["/api/sports/games/today", { sport: activeSport }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch today's games");
-      const data = await response.json();
-      return data.games || [];
-    },
-  });
-
-  // Fetch all sports games for summary
-  const { data: allGames } = useQuery({
-    queryKey: ["/api/sports/games/today/all"],
-    queryFn: async () => {
-      const response = await fetch("/api/sports/games/today/all", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch all games");
       return response.json();
     },
   });
@@ -113,48 +55,19 @@ export default function Calendar() {
     }
   };
 
-  // Find real game for a team
-  const findTeamGame = (team: Team): RealGame | null => {
-    return todaysGames.find(game => 
-      game.homeTeam.name.toLowerCase().includes(team.name.toLowerCase()) ||
-      game.awayTeam.name.toLowerCase().includes(team.name.toLowerCase()) ||
-      game.homeTeam.abbreviation === team.initials ||
-      game.awayTeam.abbreviation === team.initials
-    ) || null;
+  const getGameStatus = (team: Team) => {
+    // Mock game status - in real implementation, this would come from live data
+    const statuses = [
+      { label: "Live", icon: Play, color: "bg-green-100 text-green-800", detail: "Bottom 7th • 2 outs" },
+      { label: "Scheduled", icon: Clock, color: "bg-gray-100 text-gray-800", detail: "Tomorrow 7:10 PM" },
+    ];
+    
+    return team.initials === "LAD" ? statuses[0] : statuses[1];
   };
 
-  const getGameStatusFromReal = (game: RealGame | null) => {
-    if (!game) {
-      return { label: "No Game", icon: CalendarIcon, color: "bg-gray-100 text-gray-600", detail: "No games today" };
-    }
-
-    if (game.status.isLive) {
-      return { 
-        label: "Live", 
-        icon: Play, 
-        color: "bg-green-100 text-green-800", 
-        detail: `${game.status.display} • ${game.homeTeam.score}-${game.awayTeam.score}` 
-      };
-    }
-    
-    if (game.status.isCompleted) {
-      return { 
-        label: "Final", 
-        icon: Trophy, 
-        color: "bg-blue-100 text-blue-800", 
-        detail: `Final • ${game.homeTeam.score}-${game.awayTeam.score}` 
-      };
-    }
-
-    const gameTime = new Date(game.gameTime);
-    const timeString = gameTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    
-    return { 
-      label: "Scheduled", 
-      icon: Clock, 
-      color: "bg-gray-100 text-gray-800", 
-      detail: `Today ${timeString}` 
-    };
+  const getWeatherData = () => {
+    // Mock weather data - in real implementation, this would come from weather API
+    return { temperature: 72, condition: "Clear" };
   };
 
   return (
@@ -217,7 +130,7 @@ export default function Calendar() {
           </span>
         </div>
 
-        {teamsLoading ? (
+        {isLoading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse">
@@ -237,8 +150,8 @@ export default function Calendar() {
         ) : (
           <div className="space-y-3">
             {teams.map((team) => {
-              const teamGame = findTeamGame(team);
-              const gameStatus = getGameStatusFromReal(teamGame);
+              const gameStatus = getGameStatus(team);
+              const weather = getWeatherData();
               const StatusIcon = gameStatus.icon;
 
               return (
@@ -260,11 +173,10 @@ export default function Calendar() {
                             <StatusIcon className="w-3 h-3 mr-1" />
                             {gameStatus.label}
                           </Badge>
-                          {teamGame && (
-                            <Badge className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                              {teamGame.venue ? `${teamGame.venue.city}` : "Unknown"}
-                            </Badge>
-                          )}
+                          <Badge className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {getWeatherIcon(weather.condition)}
+                            <span className="ml-1">{weather.temperature}°F</span>
+                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -282,7 +194,7 @@ export default function Calendar() {
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-chirp-dark">
-                        {teamGame ? teamGame.matchup : "No game scheduled"}
+                        {team.initials === "SF" ? "@ Los Angeles Dodgers" : "vs San Francisco Giants"}
                       </span>
                       <span className="font-medium text-chirp-blue" data-testid={`game-status-${team.id}`}>
                         {gameStatus.detail}
@@ -294,98 +206,6 @@ export default function Calendar() {
             })}
           </div>
         )}
-        
-        {/* Today's Games Section */}
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
-              Today's {activeSport} Games
-            </h2>
-            <span className="text-sm font-medium text-chirp-dark">
-              {todaysGames.length} {todaysGames.length === 1 ? 'Game' : 'Games'}
-            </span>
-          </div>
-
-          {gamesLoading ? (
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-16 h-8 bg-gray-300 rounded"></div>
-                      <div className="h-4 bg-gray-300 rounded w-32"></div>
-                    </div>
-                    <div className="h-4 bg-gray-300 rounded w-24"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : todaysGames.length === 0 ? (
-            <Card className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
-              <CalendarIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-              <h3 className="font-bold text-chirp-dark mb-2">No {activeSport} Games Today</h3>
-              <p className="text-sm text-gray-600">Check back later or switch to another sport.</p>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {todaysGames.map((game) => {
-                const gameStatus = getGameStatusFromReal(game);
-                const StatusIcon = gameStatus.icon;
-
-                return (
-                  <Card key={game.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="text-center">
-                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                            {game.awayTeam.abbreviation}
-                          </div>
-                          <div className="text-lg font-bold text-chirp-blue">
-                            {game.awayTeam.score}
-                          </div>
-                        </div>
-                        
-                        <div className="text-center">
-                          <div className="text-xs font-medium text-gray-500">vs</div>
-                        </div>
-                        
-                        <div className="text-center">
-                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                            {game.homeTeam.abbreviation}
-                          </div>
-                          <div className="text-lg font-bold text-chirp-blue">
-                            {game.homeTeam.score}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <Badge className={`px-2 py-1 rounded-full text-xs font-medium mb-1 ${gameStatus.color}`}>
-                          <StatusIcon className="w-3 h-3 mr-1" />
-                          {gameStatus.label}
-                        </Badge>
-                        <div className="text-xs text-gray-600">
-                          {game.venue ? `${game.venue.city}, ${game.venue.state}` : "Location TBD"}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-chirp-dark font-medium">
-                          {game.matchup}
-                        </span>
-                        <span className="text-chirp-blue">
-                          {gameStatus.detail}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
