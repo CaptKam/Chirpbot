@@ -302,6 +302,31 @@ export default function Settings() {
               </Card>
             </div>
 
+            {/* Advanced Alert Settings Link */}
+            <Card className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-chirp-blue flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Advanced Alert Settings
+                  </h3>
+                  <p className="text-sm text-chirp-dark mt-1">
+                    Configure sport-specific alerts with 16 detailed toggles
+                  </p>
+                </div>
+                <Link href="/advanced-settings">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="text-chirp-blue border-chirp-blue hover:bg-chirp-blue hover:text-white"
+                    data-testid="button-advanced-settings"
+                  >
+                    Configure
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+
             {/* Notification Settings */}
             <div>
               <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue mb-4">

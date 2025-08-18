@@ -113,7 +113,8 @@ export default function AdvancedSettings() {
   // Update form data when settings change
   React.useEffect(() => {
     if (settings) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         ...settings,
         gameStateAlerts: settings.gameStateAlerts ?? true,
         rispAlerts: settings.rispAlerts ?? true,
@@ -131,7 +132,7 @@ export default function AdvancedSettings() {
         emptyNetAlerts: settings.emptyNetAlerts ?? true,
         thirdPeriodAlerts: settings.thirdPeriodAlerts ?? true,
         finalMinutesAlerts: settings.finalMinutesAlerts ?? true,
-      });
+      }));
     }
   }, [settings]);
 
