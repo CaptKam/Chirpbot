@@ -11,12 +11,32 @@ import { liveSportsService } from "./services/live-sports";
 import { checkAlerts, generateGameContext, filterAlertsBySettings } from "./services/alertEngine";
 
 // Enhanced alert description generator for better user value
+function generateRunnerConfiguration(): string[] {
+  const bases: string[] = [];
+  const possibleBases = ['1B', '2B', '3B'];
+  
+  // Generate realistic runner configurations (1-3 runners)
+  const numRunners = Math.floor(Math.random() * 3) + 1;
+  
+  // Ensure we don't have impossible configurations (can't have runner on 2B without 1B first, etc.)
+  for (let i = 0; i < numRunners; i++) {
+    if (i === 0) bases.push('1B');
+    else if (i === 1) bases.push('2B');  
+    else if (i === 2) bases.push('3B');
+  }
+  
+  return bases;
+}
+
 function generateEnhancedDescription(alertType: string, sport: string, context: any): string {
-  const { homeTeam, awayTeam, homeScore, awayScore, scoreDiff, totalScore, gamePhase, weatherData } = context;
+  const { homeTeam, awayTeam, homeScore, awayScore, scoreDiff, totalScore, gamePhase, weatherData, runnersOnBase } = context;
   
   switch (alertType) {
     case 'RISP':
-      return `🎯 RUNNERS IN SCORING POSITION: ${homeTeam} has multiple scoring opportunities. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${gamePhase} situation with ${scoreDiff}-point gap. ${weatherData?.condition === 'windy' ? '🌪️ Wind favoring offense' : ''}`;
+      const runnerText = runnersOnBase?.length > 0 
+        ? `Runners on ${runnersOnBase.join(' and ')}`
+        : 'Runner in scoring position';
+      return `🎯 RUNNERS IN SCORING POSITION: ${homeTeam} has scoring opportunities with ${runnerText.toLowerCase()}. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${gamePhase} situation with ${scoreDiff}-point gap. ${weatherData?.condition === 'windy' ? '🌪️ Wind favoring offense' : ''}`;
       
     case 'HomeRun':
       return `💥 HOME RUN ALERT: Big momentum swing in ${homeTeam} game! Score now ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${scoreDiff < 3 ? '🔥 Game tied up!' : '📈 Lead extended'}. ${totalScore > 15 ? 'High-scoring affair' : 'Breaking open'}`;
@@ -379,7 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const settings = await storage.getSettingsBySport(alertData.sport);
       
       // Use the advanced alert engine to generate context-aware alerts
-      const gameContext = generateGameContext(event.game, alertData.sport);
+      const gameContext = generateGameContext(event.game);
       const potentialAlerts = checkAlerts(gameContext);
       const filteredAlerts = filterAlertsBySettings(potentialAlerts, settings || {});
       
@@ -388,15 +408,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ message: "Alert filtered out by user settings" });
       }
       
-      // Use the highest priority alert
-      const topAlert = filteredAlerts.reduce((prev, current) => 
-        (prev.priority === 'high' && current.priority !== 'high') ? prev : current
-      );
+      // Use the first available alert
+      const topAlert = filteredAlerts[0];
       
       // Update alert data with engine results
-      alertData.type = topAlert.type;
-      alertData.title = `${event.game.homeTeam} - ${topAlert.message}`;
-      alertData.description = topAlert.message;
+      alertData.title = `${event.game.homeTeam} - ${topAlert}`;
+      alertData.description = topAlert;
       
       if (settings?.aiEnabled) {
         const analysis = await analyzeAlert(
@@ -452,12 +469,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Only generate alerts for actually live games
       const randomLiveGame = liveGames[Math.floor(Math.random() * liveGames.length)];
       
-      // Generate enhanced realistic events with valuable betting context
+      // Generate realistic game situations (not random events)
+      const currentInning = Math.floor(Math.random() * 9) + 1;
+      const homeScore = Math.floor(Math.random() * 15) + 1;
+      const awayScore = Math.floor(Math.random() * 15) + 1;
+      
+      // Simulate actual game state to determine valid alerts
+      const runnersOnBase = Math.random() < 0.25 ? generateRunnerConfiguration() : [];
+      const hasRunnersInScoringPosition = runnersOnBase.some(base => base === '2B' || base === '3B');
+      
       const eventTypes = randomLiveGame.sport === 'MLB' 
         ? [
-            { type: "RISP", probability: 0.3, value: "High scoring potential" }, 
+            ...(hasRunnersInScoringPosition ? [{ type: "RISP", probability: 0.8, value: "High scoring potential" }] : []),
             { type: "HomeRun", probability: 0.1, value: "Momentum shift" }, 
-            { type: "LateInning", probability: 0.2, value: "Critical situation" },
+            { type: "LateInning", probability: currentInning >= 7 ? 0.4 : 0.1, value: "Critical situation" },
             { type: "WeatherImpact", probability: 0.15, value: "Wind advantage" }
           ]
         : randomLiveGame.sport === 'NFL'
@@ -481,9 +506,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weatherData = await getWeatherData(randomLiveGame.homeTeam.name);
       
       // Generate enhanced alert data with betting insights
-      const homeScore = Math.floor(Math.random() * 15) + 1;
-      const awayScore = Math.floor(Math.random() * 15) + 1;
-      const currentInning = Math.floor(Math.random() * 9) + 1;
       const currentQuarter = Math.floor(Math.random() * 4) + 1;
       
       // Calculate betting-relevant metrics
@@ -505,7 +527,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           scoreDiff,
           totalScore,
           gamePhase,
-          weatherData
+          weatherData,
+          runnersOnBase
         }),
         gameInfo: {
           score: { away: awayScore, home: homeScore },
