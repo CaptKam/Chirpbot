@@ -115,24 +115,26 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
     <div className="relative overflow-hidden rounded-xl">
       {/* Hidden Menu Behind Card */}
       <div className="absolute inset-0 bg-gray-100 flex items-center justify-end pr-2 rounded-xl">
-        <div className="flex items-center space-x-1">
-          {/* Sportsbook Quick Actions */}
-          {SPORTSBOOKS.map((sportsbook) => (
-            <Button
-              key={sportsbook.name}
-              onClick={() => handleSportsbookClick(sportsbook)}
-              className={`${sportsbook.color} hover:opacity-90 text-white p-1 h-10 w-10 rounded-lg flex items-center justify-center`}
-              data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
-              title={`Open ${sportsbook.name} for ${alert.gameInfo.awayTeam} @ ${alert.gameInfo.homeTeam}`}
-            >
-              <span className="text-xs font-bold whitespace-nowrap">{sportsbook.icon}</span>
-            </Button>
-          ))}
+        <div className="flex flex-col items-center space-y-1 justify-center h-full">
+          {/* Sportsbook Quick Actions - Stacked Vertically */}
+          <div className="flex flex-col space-y-1">
+            {SPORTSBOOKS.map((sportsbook) => (
+              <Button
+                key={sportsbook.name}
+                onClick={() => handleSportsbookClick(sportsbook)}
+                className={`${sportsbook.color} hover:opacity-90 text-white p-1 h-8 w-12 rounded-lg flex items-center justify-center`}
+                data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
+                title={`Open ${sportsbook.name} for ${alert.gameInfo.awayTeam} @ ${alert.gameInfo.homeTeam}`}
+              >
+                <span className="text-xs font-bold whitespace-nowrap">{sportsbook.icon}</span>
+              </Button>
+            ))}
+          </div>
           
           {/* Delete Button */}
           <Button
             onClick={() => onDelete(alert.id)}
-            className="bg-red-500 hover:bg-red-600 text-white p-1 h-10 w-10 rounded-lg flex items-center justify-center"
+            className="bg-red-500 hover:bg-red-600 text-white p-1 h-8 w-12 rounded-lg flex items-center justify-center mt-1"
             data-testid={`delete-alert-${alert.id}`}
           >
             <Trash2 className="w-4 h-4" />
