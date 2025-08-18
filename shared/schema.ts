@@ -27,7 +27,6 @@ export const alerts = pgTable("alerts", {
   description: text("description").notNull(),
   aiContext: text("ai_context"),
   aiConfidence: integer("ai_confidence").default(0), // 0-100
-  priority: integer("priority").default(50), // 0-100
   gameInfo: jsonb("game_info").$type<{
     homeTeam: string;
     awayTeam: string;
