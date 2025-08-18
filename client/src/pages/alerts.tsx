@@ -209,36 +209,10 @@ export default function Alerts() {
                   </p>
                 </div>
 
-                {/* Enhanced Game Info Display */}
-                {alert.gameInfo && (
-                  <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-sm font-bold text-chirp-blue">
-                          {alert.gameInfo.awayTeam} {(alert.gameInfo as any)?.score?.away || 0} - {(alert.gameInfo as any)?.score?.home || 0} {alert.gameInfo.homeTeam}
-                        </div>
-                        <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-                          {alert.gameInfo.status}
-                        </div>
-                      </div>
-                    </div>
-                    
-
-                    
-                    {/* Momentum Indicator */}
-                    {(alert.gameInfo as any)?.momentumShift && (
-                      <div className="mt-2 flex items-center space-x-2 text-xs">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        <span className="font-bold text-red-700">MOMENTUM SHIFT DETECTED</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* Weather Display */}
                 {alert.weatherData && (
-                  <div className="mb-3 text-xs text-chirp-dark bg-sky-50 p-2 rounded-lg">
-                    <span className="font-medium">Weather Impact:</span> {alert.weatherData.temperature}°F, {alert.weatherData.condition}
+                  <div className="mb-3 text-xs text-chirp-dark">
+                    <span className="font-medium">Weather:</span> {alert.weatherData.temperature}°F, {alert.weatherData.condition}
                     {alert.weatherData.windSpeed && (
                       <span> • Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}</span>
                     )}
