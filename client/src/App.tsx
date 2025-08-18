@@ -12,7 +12,7 @@ import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import { BottomNavigation } from "@/components/bottom-navigation";
-import { useWebSocket } from "@/hooks/use-websocket";
+
 import React, { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,28 +59,7 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
 }
 
 function AppContent() {
-  const { lastMessage } = useWebSocket();
-  const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    if (lastMessage && isAuthenticated) {
-      switch (lastMessage.type) {
-        case 'new_alert':
-          toast({
-            title: "New Alert",
-            description: (lastMessage.data as any).title,
-          });
-          break;
-        case 'team_monitoring_changed':
-          // Handle team monitoring changes if needed
-          break;
-        case 'settings_changed':
-          // Handle settings changes if needed
-          break;
-      }
-    }
-  }, [lastMessage, toast, isAuthenticated]);
+  // Removed WebSocket functionality - using polling instead for alerts
 
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-white min-h-screen relative" : "min-h-screen"}>
