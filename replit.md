@@ -17,6 +17,14 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (August 18, 2025)
 
+## Enhanced Swipe Interface & AI Analysis Fix (August 18, 2025)
+- **Vertical Button Layout**: Reorganized sportsbook buttons to stack vertically (up/down) for better mobile ergonomics
+- **Four Sportsbook Integration**: All betting platforms now visible - FanDuel (FD), Bet365 (365), DraftKings (DK), BetRivers (BR)
+- **Game-Specific URLs**: Each sportsbook button opens directly to the relevant sport section for that specific game
+- **AI Duplication Fix**: Updated AI analysis prompts to prevent repeating player stats and basic information already shown in alerts
+- **Strategic Focus**: AI now provides unique betting insights, historical success rates, and tactical context instead of duplicating batting averages
+- **Compact Design**: Smaller, more touch-friendly buttons optimized for mobile swipe gestures
+
 ## Modern Alert Design Overhaul (August 18, 2025)
 - **Complete UI Redesign**: Modern, clean alerts with instant visual clarity
 - **Eliminated Team Name Repetition**: Team names shown once in clean "Away @ Home" format

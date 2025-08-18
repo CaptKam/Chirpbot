@@ -16,7 +16,7 @@ export async function analyzeAlert(
   weatherData?: any
 ): Promise<AlertAnalysis> {
   try {
-    const prompt = `Provide strategic analysis for this sports alert:
+    const prompt = `Provide UNIQUE strategic analysis for this sports alert (avoid repeating basic stats):
     
 Alert Type: ${alertType}
 Sport: ${sport}  
@@ -24,19 +24,24 @@ Game: ${gameInfo.homeTeam} vs ${gameInfo.awayTeam}
 Status: ${gameInfo.status}
 Weather: ${weatherData ? `${weatherData.temperature}°F, ${weatherData.condition}` : 'Not available'}
 
-Focus on strategic implications, betting value, or unique insights - NOT basic stats or descriptions. Examples:
-- For RISP: "Historical data shows 68% scoring rate in this situation with 2+ outs"
-- For RedZone: "Team averages 4.2 points per red zone visit this season"
-- For Weather: "Wind direction favors left-handed hitters by 15% today"
+DO NOT mention player names, batting averages, or basic stats already in the alert.
+Focus ONLY on strategic implications, betting angles, or historical context:
 
-Provide analysis in JSON format with 'context' (tactical insight, not basic description) and 'confidence' (0-100) fields.`;
+Examples:
+- "Teams score in 72% of late-inning RISP situations this season"
+- "Home teams convert 68% of red zone attempts in night games" 
+- "Weather conditions favor over bets by 12% historically"
+- "Late-game momentum swings occur 3x more in tied games"
+- "Division rivals average 1.4 more runs in clutch situations"
+
+Provide brief tactical insight in JSON format with 'context' and 'confidence' (0-100) fields.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
-          content: "You are a sports betting analyst. Provide unique strategic insights, historical data, or betting implications - NOT basic descriptions. Focus on actionable intelligence that adds value beyond the main alert. Always respond with valid JSON."
+          content: "You are a sports betting analyst. Provide ONLY unique strategic insights that complement (never repeat) the main alert information. Focus on historical success rates, situational statistics, betting implications, or tactical context. NEVER mention player names, batting averages, or stats already shown. Always respond with valid JSON."
         },
         {
           role: "user",
