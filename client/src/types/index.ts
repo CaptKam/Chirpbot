@@ -16,6 +16,7 @@ export interface Alert {
   description: string;
   aiContext?: string | null;
   aiConfidence?: number | null;
+  priority?: number;
   gameInfo: {
     homeTeam: string;
     awayTeam: string;
