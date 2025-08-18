@@ -35,6 +35,9 @@ const teamNameToAbbr: Record<string, string> = {
   'Arizona Diamondbacks': 'AZ',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
+  // Additional abbreviation aliases for common variations
+  'CHW': 'CWS', // Chicago White Sox alias
+  'ARI': 'AZ',  // Arizona Diamondbacks alias
   
   // NFL Teams
   'Kansas City Chiefs': 'KC',
