@@ -15,6 +15,15 @@ Features persistent team monitoring that saves user game selections to the datab
 
 Preferred communication style: Simple, everyday language.
 
+# Recent Changes (August 18, 2025)
+
+## Authentication & Game Persistence Fix
+- **Issue**: Game selections were not persisting between login sessions
+- **Root Cause**: Frontend was using hardcoded test user ID "test-user-123" instead of actual authenticated user ID
+- **Solution**: Updated calendar.tsx to use real user ID from useAuth hook for all monitored game operations
+- **Impact**: User game selections now properly persist with their account across login sessions
+- **Database**: All monitored games now correctly reference the authenticated user's actual ID
+
 # System Architecture
 
 ## Frontend Architecture

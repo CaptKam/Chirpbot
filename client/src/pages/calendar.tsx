@@ -11,7 +11,6 @@ import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
-const TEST_USER_ID = "test-user-123"; // For demo purposes
 
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
@@ -64,7 +63,7 @@ export default function Calendar() {
 
   // Load persisted monitored games
   const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
-    queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`, { sport: activeSport }],
+    queryKey: [`/api/user/${user?.id}/monitored-games`, { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
       const searchParams = new URLSearchParams(params as Record<string, string>);
@@ -74,6 +73,7 @@ export default function Calendar() {
       if (!response.ok) throw new Error("Failed to fetch monitored games");
       return response.json();
     },
+    enabled: !!user?.id, // Only run query when user ID is available
   });
 
   // Sync selected games with persisted monitored games
@@ -92,22 +92,28 @@ export default function Calendar() {
       homeTeamName: string; 
       awayTeamName: string; 
     }) => {
-      return apiRequest("POST", `/api/user/${TEST_USER_ID}/monitored-games`, { 
+      if (!user?.id) throw new Error("User not authenticated");
+      return apiRequest("POST", `/api/user/${user.id}/monitored-games`, { 
         gameId, sport, homeTeamName, awayTeamName 
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/monitored-games`] });
+      }
     }
   });
 
   // Remove game monitoring
   const removeMonitoringMutation = useMutation({
     mutationFn: async (gameId: string) => {
-      return apiRequest("DELETE", `/api/user/${TEST_USER_ID}/monitored-games/${gameId}`);
+      if (!user?.id) throw new Error("User not authenticated");
+      return apiRequest("DELETE", `/api/user/${user.id}/monitored-games/${gameId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/monitored-games`] });
+      }
     }
   });
 
