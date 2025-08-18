@@ -1,10 +1,4 @@
-import { 
-  type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, 
-  type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam,
-  type SportLearning, type InsertSportLearning, type UserPermission, type InsertUserPermission,
-  type AdminLog, type InsertAdminLog,
-  users, userMonitoredTeams, teams, alerts, settings, sportLearning, userPermissions, adminLogs
-} from "@shared/schema";
+import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, users, userMonitoredTeams, teams, alerts, settings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -43,32 +37,6 @@ export interface IStorage {
   getAllSettings(): Promise<Settings[]>;
   createSettings(settings: InsertSettings): Promise<Settings>;
   updateSettings(sport: string, updates: Partial<Settings>): Promise<Settings | undefined>;
-
-  // Admin operations
-  getAllUsers(): Promise<User[]>;
-  updateUser(userId: string, updates: Partial<User>): Promise<User>;
-  getAdminStats(): Promise<{
-    totalUsers: number;
-    activeSessions: number;
-    totalArticles: number;
-    alertsToday: number;
-  }>;
-
-  // Learning content operations
-  getAllLearningContent(sport?: string): Promise<SportLearning[]>;
-  createLearningContent(data: InsertSportLearning): Promise<SportLearning>;
-  updateLearningContent(id: string, updates: Partial<InsertSportLearning>): Promise<SportLearning>;
-  deleteLearningContent(id: string): Promise<void>;
-
-  // Permissions operations
-  getUserPermissions(userId: string): Promise<UserPermission[]>;
-  getAllPermissions(): Promise<UserPermission[]>;
-  createPermission(data: InsertUserPermission): Promise<UserPermission>;
-  deletePermission(id: string): Promise<void>;
-
-  // Admin logs operations
-  getAdminLogs(): Promise<AdminLog[]>;
-  createAdminLog(data: InsertAdminLog): Promise<AdminLog>;
 }
 
 export class MemStorage implements IStorage {
@@ -416,91 +384,6 @@ export class DatabaseStorage implements IStorage {
   async updateSettings(sport: string, updates: Partial<Settings>): Promise<Settings | undefined> {
     const [updatedSettings] = await db.update(settings).set(updates).where(eq(settings.sport, sport)).returning();
     return updatedSettings || undefined;
-  }
-
-  // Admin operations
-  async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
-  }
-
-  async updateUser(userId: string, updates: Partial<User>): Promise<User> {
-    const [updatedUser] = await db.update(users).set(updates).where(eq(users.id, userId)).returning();
-    return updatedUser;
-  }
-
-  async getAdminStats(): Promise<{
-    totalUsers: number;
-    activeSessions: number;
-    totalArticles: number;
-    alertsToday: number;
-  }> {
-    // Get user count
-    const userCount = await db.select().from(users);
-    
-    // Get published articles count
-    const publishedArticles = await db.select().from(sportLearning).where(eq(sportLearning.isPublished, true));
-    
-    // Get today's alerts
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayAlerts = await db.select().from(alerts);
-    
-    return {
-      totalUsers: userCount.length,
-      activeSessions: 0, // Placeholder - would need session table query
-      totalArticles: publishedArticles.length,
-      alertsToday: todayAlerts.filter(alert => alert.timestamp >= today).length,
-    };
-  }
-
-  // Learning content operations
-  async getAllLearningContent(sport?: string): Promise<SportLearning[]> {
-    if (sport) {
-      return await db.select().from(sportLearning).where(eq(sportLearning.sport, sport));
-    }
-    return await db.select().from(sportLearning);
-  }
-
-  async createLearningContent(data: InsertSportLearning): Promise<SportLearning> {
-    const [article] = await db.insert(sportLearning).values(data).returning();
-    return article;
-  }
-
-  async updateLearningContent(id: string, updates: Partial<InsertSportLearning>): Promise<SportLearning> {
-    const [updatedArticle] = await db.update(sportLearning).set(updates).where(eq(sportLearning.id, id)).returning();
-    return updatedArticle;
-  }
-
-  async deleteLearningContent(id: string): Promise<void> {
-    await db.delete(sportLearning).where(eq(sportLearning.id, id));
-  }
-
-  // Permissions operations
-  async getUserPermissions(userId: string): Promise<UserPermission[]> {
-    return await db.select().from(userPermissions).where(eq(userPermissions.userId, userId));
-  }
-
-  async getAllPermissions(): Promise<UserPermission[]> {
-    return await db.select().from(userPermissions);
-  }
-
-  async createPermission(data: InsertUserPermission): Promise<UserPermission> {
-    const [permission] = await db.insert(userPermissions).values(data).returning();
-    return permission;
-  }
-
-  async deletePermission(id: string): Promise<void> {
-    await db.delete(userPermissions).where(eq(userPermissions.id, id));
-  }
-
-  // Admin logs operations
-  async getAdminLogs(): Promise<AdminLog[]> {
-    return await db.select().from(adminLogs);
-  }
-
-  async createAdminLog(data: InsertAdminLog): Promise<AdminLog> {
-    const [log] = await db.insert(adminLogs).values(data).returning();
-    return log;
   }
 }
 

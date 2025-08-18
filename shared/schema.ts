@@ -1,6 +1,5 @@
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, boolean, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,10 +7,6 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("user"), // user, admin, moderator
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const teams = pgTable("teams", {
@@ -101,49 +96,10 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Learning content for each sport with admin management
-export const sportLearning = pgTable("sport_learning", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL
-  category: text("category").notNull(), // alerts, strategies, rules, analysis
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  videoUrl: text("video_url"),
-  imageUrl: text("image_url"),
-  tags: jsonb("tags").$type<string[]>().default([]),
-  difficulty: text("difficulty").notNull().default("beginner"), // beginner, intermediate, advanced
-  estimatedReadTime: integer("estimated_read_time").default(5), // in minutes
-  isPublished: boolean("is_published").notNull().default(false),
-  authorId: varchar("author_id").notNull().references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-// User permissions for fine-grained access control
-export const userPermissions = pgTable("user_permissions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  permission: text("permission").notNull(), // manage_users, manage_content, view_analytics, etc.
-  resource: text("resource"), // specific resource like 'mlb', 'alerts', etc.
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-// Admin activity logs
-export const adminLogs = pgTable("admin_logs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  adminId: varchar("admin_id").notNull().references(() => users.id),
-  action: text("action").notNull(),
-  resource: text("resource").notNull(),
-  resourceId: varchar("resource_id"),
-  details: jsonb("details").$type<Record<string, any>>(),
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
-});
-
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
-  role: true,
 });
 
 export const insertTeamSchema = createInsertSchema(teams).omit({
@@ -164,41 +120,21 @@ export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTea
   createdAt: true,
 });
 
-export const insertSportLearningSchema = createInsertSchema(sportLearning).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertUserPermissionSchema = createInsertSchema(userPermissions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({
-  id: true,
-  timestamp: true,
-});
-
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type Team = typeof teams.$inferSelect;
+
 export type InsertAlert = z.infer<typeof insertAlertSchema>;
 export type Alert = typeof alerts.$inferSelect;
+
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
 export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
 export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
-export type InsertSportLearning = z.infer<typeof insertSportLearningSchema>;
-export type SportLearning = typeof sportLearning.$inferSelect;
-export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
-export type UserPermission = typeof userPermissions.$inferSelect;
-export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
-export type AdminLog = typeof adminLogs.$inferSelect;
-
-// Additional game types for live sports data
 
 // Game types for live sports data
 export interface Game {

@@ -60,7 +60,7 @@ function estimateNFLScoringChance(ctx: GameContext): number {
   return 0.25;
 }
 
-export function checkAlerts(ctx: GameContext) {
+function checkAlerts(ctx: GameContext) {
   const alerts: string[] = [];
 
   if (ctx.sport === 'MLB') {
@@ -123,63 +123,4 @@ export function checkAlerts(ctx: GameContext) {
 
   const priority = getAlertPriority(ctx);
   return alerts.map(a => `[Priority ${priority}] ` + a);
-}
-
-// Legacy compatibility functions for existing codebase
-export function generateGameContext(gameData: any): GameContext {
-  return {
-    sport: gameData.sport || 'MLB',
-    homeScore: gameData.homeScore || 0,
-    awayScore: gameData.awayScore || 0,
-    inning: gameData.inning,
-    quarter: gameData.quarter,
-    runnersOn: gameData.runnersOn,
-    outs: gameData.outs,
-    redZone: gameData.redZone,
-    clutchTime: gameData.clutchTime,
-    powerPlay: gameData.powerPlay,
-    windSpeed: gameData.windSpeed,
-    temperature: gameData.temperature,
-    batterHRsThisSeason: gameData.batterHRsThisSeason,
-    timeRemainingSec: gameData.timeRemainingSec,
-    down: gameData.down,
-    distance: gameData.distance,
-    fieldPosition: gameData.fieldPosition,
-    leadChanges: gameData.leadChanges,
-    emptyNet: gameData.emptyNet,
-    periodNHL: gameData.periodNHL,
-    timeRemainingMinNHL: gameData.timeRemainingMinNHL
-  };
-}
-
-export function filterAlertsBySettings(alerts: string[], settings: any): string[] {
-  if (!settings) return alerts;
-  
-  return alerts.filter(alert => {
-    const alertLower = alert.toLowerCase();
-    
-    // MLB filters
-    if (alertLower.includes('runner') && !settings.rispAlerts) return false;
-    if (alertLower.includes('home run') && !settings.homeRunAlerts) return false;
-    if (alertLower.includes('wind') && !settings.weatherAlerts) return false;
-    if (alertLower.includes('power hitter') && !settings.powerBatterAlerts) return false;
-    
-    // NFL filters  
-    if (alertLower.includes('red zone') && !settings.redZoneAlerts) return false;
-    if (alertLower.includes('2-min') && !settings.twoMinuteAlerts) return false;
-    if (alertLower.includes('4th down') && !settings.fourthDownAlerts) return false;
-    if (alertLower.includes('turnover') && !settings.turnoverAlerts) return false;
-    
-    // NBA filters
-    if (alertLower.includes('clutch') && !settings.clutchTimeAlerts) return false;
-    if (alertLower.includes('overtime') && !settings.overtimeAlerts) return false;
-    if (alertLower.includes('lead') && !settings.leadChangeAlerts) return false;
-    
-    // NHL filters
-    if (alertLower.includes('power play') && !settings.powerPlayAlerts) return false;
-    if (alertLower.includes('empty net') && !settings.emptyNetAlerts) return false;
-    if (alertLower.includes('3rd period') && !settings.thirdPeriodAlerts) return false;
-    
-    return true;
-  });
 }

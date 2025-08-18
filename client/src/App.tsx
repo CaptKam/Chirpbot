@@ -9,7 +9,6 @@ import Landing from "./pages/landing";
 import Calendar from "./pages/calendar";
 import Alerts from "./pages/alerts";
 import Settings from "./pages/settings";
-import AdminPortal from "./pages/admin-simple";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import { BottomNavigation } from "@/components/bottom-navigation";
@@ -96,7 +95,6 @@ function AppContent() {
           const AdvancedSettings = React.lazy(() => import("./pages/advanced-settings"));
           return <ProtectedRoute component={() => <React.Suspense fallback={<div>Loading...</div>}><AdvancedSettings /></React.Suspense>} />;
         }} />
-        <Route path="/admin" component={() => <ProtectedRoute component={AdminPortal} />} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}
