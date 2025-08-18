@@ -8,7 +8,7 @@ import {
   Timer, Trophy, Wind, Bot, AlertTriangle, 
   CircleDot, Users, Activity, Sparkles, Trash2, ExternalLink
 } from "lucide-react";
-import { TeamLogo } from "@/components/team-logo";
+import { TeamLogoV5 as TeamLogo } from "@/components/team-logo";
 import { formatDistanceToNow } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";

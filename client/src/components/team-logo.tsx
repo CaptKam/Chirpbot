@@ -176,7 +176,8 @@ const teamNameToAbbr: Record<string, string> = {
   'Washington Capitals': 'WSH'
 };
 
-export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }: TeamLogoProps) {
+// Version 5.0 - Force complete refresh with new component name
+export function TeamLogoV5({ teamName, abbreviation, size = 'md', className = '' }: TeamLogoProps) {
   // Early return if teamName is not provided
   if (!teamName) {
     return (
@@ -191,6 +192,9 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
     md: 'w-12 h-12',
     lg: 'w-16 h-16'
   };
+
+  // Get abbreviation from team name
+  const teamAbbr = abbreviation || teamNameToAbbr[teamName];
 
   const logoMap: Record<string, JSX.Element> = {
     // MLB Teams
@@ -541,9 +545,6 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
       </svg>
     )
   };
-
-  // Get abbreviation from prop or lookup from team name
-  const teamAbbr = abbreviation || teamNameToAbbr[teamName];
   
   // Generic fallback logo with better styling
   const defaultLogo = (
@@ -559,7 +560,14 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
     return defaultLogo;
   }
   
-  return selectedLogo;
+  // Return logo with unique timestamp to force refresh
+  const timestamp = new Date().getTime();
+  return (
+    <div key={`logo-wrapper-${teamAbbr}-${timestamp}`} className={`${sizeClasses[size]} ${className}`}>
+      {selectedLogo}
+    </div>
+  );
 }
 
-// Force refresh v3.0 - Cache bust
+// Export with both names for compatibility
+export const TeamLogo = TeamLogoV5;
