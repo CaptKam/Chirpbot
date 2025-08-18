@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   Zap, Bell, Filter, Share2, Target, TrendingUp, 
   Timer, Trophy, Wind, Bot, AlertTriangle, 
-  CircleDot, Users, Activity, Sparkles
+  CircleDot, Users, Activity, Sparkles, Trash2, ExternalLink
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Alert } from "@/types";
 
 const FILTER_OPTIONS = [
@@ -17,14 +19,253 @@ const FILTER_OPTIONS = [
   { id: "ai-verified", label: "AI Verified", active: false },
 ];
 
+// Sportsbook quick actions
+const SPORTSBOOKS = [
+  { name: "FanDuel", url: "https://fanduel.com", color: "bg-blue-600", icon: "FD" },
+  { name: "Bet365", url: "https://bet365.com", color: "bg-green-600", icon: "365" },
+  { name: "DraftKings", url: "https://draftkings.com", color: "bg-orange-600", icon: "DK" },
+  { name: "BetRivers", url: "https://betrivers.com", color: "bg-purple-600", icon: "BR" },
+];
+
+interface SwipeableAlertCardProps {
+  alert: Alert;
+  config: any;
+  onDelete: (alertId: string) => void;
+}
+
+function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps) {
+  const [swipeX, setSwipeX] = useState(0);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef(0);
+  const isDraggingRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startXRef.current = e.touches[0].clientX;
+    isDraggingRef.current = true;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingRef.current) return;
+    
+    const currentX = e.touches[0].clientX;
+    const deltaX = startXRef.current - currentX;
+    
+    // Only allow left swipe (positive deltaX)
+    if (deltaX > 0) {
+      setSwipeX(Math.min(deltaX, 120)); // Max swipe of 120px
+    }
+  };
+
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
+    
+    // If swiped more than 60px, reveal the menu
+    if (swipeX > 60) {
+      setSwipeX(120);
+      setIsRevealed(true);
+    } else {
+      setSwipeX(0);
+      setIsRevealed(false);
+    }
+  };
+
+  const closeMenu = () => {
+    setSwipeX(0);
+    setIsRevealed(false);
+  };
+
+  const handleSportsbookClick = (url: string) => {
+    window.open(url, '_blank');
+  };
+
+  const AlertIcon = config.icon;
+  
+  // Parse the score from gameInfo if available
+  const score = (alert.gameInfo as any)?.score || { away: 0, home: 0 };
+  
+  // Extract key details from description for cleaner display
+  const cleanDescription = alert.description
+    ?.replace(/Score:.*?\./, '') // Remove score from description
+    ?.replace(alert.gameInfo.homeTeam, '') // Remove redundant team names
+    ?.replace(alert.gameInfo.awayTeam, '')
+    ?.trim();
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      {/* Hidden Menu Behind Card */}
+      <div className="absolute inset-0 bg-gray-100 flex items-center justify-end pr-4 rounded-xl">
+        <div className="flex items-center space-x-2">
+          {/* Sportsbook Quick Actions */}
+          {SPORTSBOOKS.map((sportsbook) => (
+            <Button
+              key={sportsbook.name}
+              onClick={() => handleSportsbookClick(sportsbook.url)}
+              className={`${sportsbook.color} hover:opacity-90 text-white p-2 h-12 w-12 rounded-lg`}
+              data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
+            >
+              <span className="text-xs font-bold">{sportsbook.icon}</span>
+            </Button>
+          ))}
+          
+          {/* Delete Button */}
+          <Button
+            onClick={() => onDelete(alert.id)}
+            className="bg-red-500 hover:bg-red-600 text-white p-2 h-12 w-12 rounded-lg"
+            data-testid={`delete-alert-${alert.id}`}
+          >
+            <Trash2 className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Alert Card */}
+      <Card
+        ref={cardRef}
+        className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-all border-l-4 ${config.borderColor} overflow-hidden relative`}
+        style={{
+          transform: `translateX(-${swipeX}px)`,
+          transition: isDraggingRef.current ? 'none' : 'transform 0.3s ease-out'
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={isRevealed ? closeMenu : undefined}
+        data-testid={`alert-card-${alert.id}`}
+      >
+        {/* Alert Type Header - Large and Clear */}
+        <div className={`${config.color} px-4 py-3`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <AlertIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-white font-black text-lg uppercase tracking-wide">
+                  {config.shortLabel}
+                </h3>
+                <p className="text-white/90 text-xs">
+                  {config.description}
+                </p>
+              </div>
+            </div>
+            {alert.aiConfidence && alert.aiConfidence > 85 && (
+              <div className="flex items-center space-x-1 bg-white/20 px-3 py-1 rounded-full">
+                <Sparkles className="w-4 h-4 text-yellow-300" />
+                <span className="text-xs font-bold text-white">
+                  HIGH CONFIDENCE
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Game Matchup - Clean Single Display */}
+        <div className="px-4 pt-4 pb-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-3">
+              <Badge variant="outline" className="text-xs font-bold uppercase">
+                {alert.sport}
+              </Badge>
+              <span className="text-xs text-gray-500">
+                {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
+              </span>
+            </div>
+            <Badge className="bg-green-100 text-green-800 border-green-300">
+              {alert.gameInfo.status}
+            </Badge>
+          </div>
+
+          {/* Team Matchup */}
+          <div className="bg-gray-50 rounded-lg p-3 mb-3">
+            <div className="flex items-center justify-center">
+              <span className="text-lg font-bold text-gray-900">
+                {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
+              </span>
+            </div>
+          </div>
+
+          {/* Alert Details - What's Happening */}
+          <div className={`${config.bgColor} rounded-lg p-3 mb-3`}>
+            <p className={`text-sm font-medium ${config.textColor}`}>
+              {cleanDescription || alert.description}
+            </p>
+          </div>
+
+          {/* Weather Impact (if relevant) */}
+          {alert.weatherData && alert.type === 'WeatherImpact' && (
+            <div className="flex items-center space-x-2 bg-sky-50 rounded-lg p-2 mb-3">
+              <Wind className="w-4 h-4 text-sky-600" />
+              <span className="text-xs text-sky-900">
+                {alert.weatherData.temperature}°F • {alert.weatherData.condition}
+                {alert.weatherData.windSpeed && ` • Wind: ${alert.weatherData.windSpeed}mph`}
+              </span>
+            </div>
+          )}
+
+          {/* AI Insight - Concise */}
+          {alert.aiContext && (
+            <div className="border-t pt-3">
+              <div className="flex items-start space-x-2">
+                <Bot className="w-4 h-4 text-blue-600 mt-0.5" />
+                <p className="text-xs text-gray-700 leading-relaxed">
+                  <span className="font-bold">AI:</span> {alert.aiContext}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action Bar */}
+        <div className="px-4 pb-3 flex justify-between items-center">
+          <div className="text-xs text-gray-400">
+            {isRevealed ? "Tap to close" : "Swipe left for actions"}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-gray-500 hover:text-gray-700"
+            data-testid={`alert-share-${alert.id}`}
+          >
+            <Share2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function Alerts() {
   const [activeFilters, setActiveFilters] = useState(["all"]);
+  const { toast } = useToast();
 
   const { data: alerts = [], isLoading } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
     refetchInterval: 2000, // Refetch every 2 seconds for ultra-fast updates
     staleTime: 0, // Always consider data stale for maximum freshness
     gcTime: 1000, // Minimal cache time for fastest updates (updated from deprecated cacheTime)
+  });
+
+  // Delete alert mutation
+  const deleteAlertMutation = useMutation({
+    mutationFn: async (alertId: string) => {
+      const response = await apiRequest("DELETE", `/api/alerts/${alertId}`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+      toast({
+        title: "Alert deleted",
+        description: "The alert has been removed successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete alert. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const toggleFilter = (filterId: string) => {
@@ -240,119 +481,14 @@ export default function Alerts() {
         ) : (
           filteredAlerts.map((alert) => {
             const config = getAlertTypeConfig(alert.type);
-            const AlertIcon = config.icon;
-            
-            // Parse the score from gameInfo if available
-            const score = (alert.gameInfo as any)?.score || { away: 0, home: 0 };
-            
-            // Extract key details from description for cleaner display
-            const cleanDescription = alert.description
-              ?.replace(/Score:.*?\./, '') // Remove score from description
-              ?.replace(alert.gameInfo.homeTeam, '') // Remove redundant team names
-              ?.replace(alert.gameInfo.awayTeam, '')
-              ?.trim();
             
             return (
-              <Card
+              <SwipeableAlertCard
                 key={alert.id}
-                className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border-l-4 ${config.borderColor} overflow-hidden`}
-                data-testid={`alert-card-${alert.id}`}
-              >
-                {/* Alert Type Header - Large and Clear */}
-                <div className={`${config.color} px-4 py-3`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <AlertIcon className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-white font-black text-lg uppercase tracking-wide">
-                          {config.shortLabel}
-                        </h3>
-                        <p className="text-white/90 text-xs">
-                          {config.description}
-                        </p>
-                      </div>
-                    </div>
-                    {alert.aiConfidence && alert.aiConfidence > 85 && (
-                      <div className="flex items-center space-x-1 bg-white/20 px-3 py-1 rounded-full">
-                        <Sparkles className="w-4 h-4 text-yellow-300" />
-                        <span className="text-xs font-bold text-white">
-                          HIGH CONFIDENCE
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Game Matchup - Clean Single Display */}
-                <div className="px-4 pt-4 pb-2">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <Badge variant="outline" className="text-xs font-bold uppercase">
-                        {alert.sport}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
-                      </span>
-                    </div>
-                    <Badge className="bg-green-100 text-green-800 border-green-300">
-                      {alert.gameInfo.status}
-                    </Badge>
-                  </div>
-
-                  {/* Team Matchup */}
-                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                    <div className="flex items-center justify-center">
-                      <span className="text-lg font-bold text-gray-900">
-                        {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Alert Details - What's Happening */}
-                  <div className={`${config.bgColor} rounded-lg p-3 mb-3`}>
-                    <p className={`text-sm font-medium ${config.textColor}`}>
-                      {cleanDescription || alert.description}
-                    </p>
-                  </div>
-
-                  {/* Weather Impact (if relevant) */}
-                  {alert.weatherData && alert.type === 'WeatherImpact' && (
-                    <div className="flex items-center space-x-2 bg-sky-50 rounded-lg p-2 mb-3">
-                      <Wind className="w-4 h-4 text-sky-600" />
-                      <span className="text-xs text-sky-900">
-                        {alert.weatherData.temperature}°F • {alert.weatherData.condition}
-                        {alert.weatherData.windSpeed && ` • Wind: ${alert.weatherData.windSpeed}mph`}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* AI Insight - Concise */}
-                  {alert.aiContext && (
-                    <div className="border-t pt-3">
-                      <div className="flex items-start space-x-2">
-                        <Bot className="w-4 h-4 text-blue-600 mt-0.5" />
-                        <p className="text-xs text-gray-700 leading-relaxed">
-                          <span className="font-bold">AI:</span> {alert.aiContext}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Bar */}
-                <div className="px-4 pb-3 flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-500 hover:text-gray-700"
-                    data-testid={`alert-share-${alert.id}`}
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </Card>
+                alert={alert}
+                config={config}
+                onDelete={deleteAlertMutation.mutate}
+              />
             );
           })
         )}

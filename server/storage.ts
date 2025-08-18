@@ -31,6 +31,7 @@ export interface IStorage {
   getRecentAlerts(limit?: number): Promise<Alert[]>;
   createAlert(alert: InsertAlert): Promise<Alert>;
   markAlertSentToTelegram(id: string): Promise<void>;
+  deleteAlert(id: string): Promise<boolean>;
 
   // Settings
   getSettingsBySport(sport: string): Promise<Settings | undefined>;
@@ -235,6 +236,10 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async deleteAlert(id: string): Promise<boolean> {
+    return this.alerts.delete(id);
+  }
+
   // Settings methods
   async getSettingsBySport(sport: string): Promise<Settings | undefined> {
     return this.settings.get(sport);
@@ -364,6 +369,11 @@ export class DatabaseStorage implements IStorage {
 
   async markAlertSentToTelegram(id: string): Promise<void> {
     await db.update(alerts).set({ sentToTelegram: true }).where(eq(alerts.id, id));
+  }
+
+  async deleteAlert(id: string): Promise<boolean> {
+    const result = await db.delete(alerts).where(eq(alerts.id, id));
+    return result.rowCount > 0;
   }
 
   // Settings methods

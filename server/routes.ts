@@ -264,6 +264,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete alert
+  app.delete("/api/alerts/:alertId", async (req, res) => {
+    try {
+      const { alertId } = req.params;
+      
+      const deleted = await storage.deleteAlert(alertId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Alert not found" });
+      }
+
+      // Broadcast alert deletion to connected clients
+      broadcast({ type: 'alert_deleted', data: { alertId } });
+
+      res.json({ message: "Alert deleted successfully" });
+    } catch (error) {
+      console.error("Failed to delete alert:", error);
+      res.status(500).json({ message: "Failed to delete alert" });
+    }
+  });
+
   // Settings routes
   app.get("/api/settings", async (req, res) => {
     try {
