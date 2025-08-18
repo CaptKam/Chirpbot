@@ -17,6 +17,15 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (August 18, 2025)
 
+## Enhanced RISP Alert System (August 18, 2025)
+- **Issue**: RISP alerts were generating incorrectly when no runners were on base
+- **Solution**: Fixed alert logic to only trigger when runners actually in scoring position (2B or 3B)
+- **Enhancement**: Added batter quality factor - alerts now include detailed batter stats and profile
+- **Batter Profiles**: Power Hitter, Clutch Performer, Contact Hitter, Veteran Leader, Rising Star, Regular Player
+- **Smart Probability**: 90% alert chance with good batters + RISP, 40% with average batters + RISP
+- **Rich Context**: Alerts now show "Power Hitter at bat (.285, 25 HR, 70% clutch)" with runner positions
+- **Impact**: RISP alerts are now highly accurate and provide valuable context for betting/fantasy decisions
+
 ## Ultra-Fast Real-Time Performance Optimization
 - **Performance Goal**: Fastest possible alerts - every second counts for sports betting and live trading decisions
 - **Frontend Updates**: Reduced refresh intervals to 2-5 seconds across all critical data fetches

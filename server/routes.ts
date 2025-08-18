@@ -28,15 +28,43 @@ function generateRunnerConfiguration(): string[] {
   return bases;
 }
 
+function generateBatterProfile() {
+  const profiles = [
+    { type: 'power', name: 'Power Hitter', avg: '.285', hr: 25, rbi: 80, clutch: 0.7 },
+    { type: 'clutch', name: 'Clutch Performer', avg: '.295', hr: 15, rbi: 90, clutch: 0.85 },
+    { type: 'contact', name: 'Contact Hitter', avg: '.315', hr: 8, rbi: 65, clutch: 0.6 },
+    { type: 'rookie', name: 'Rising Star', avg: '.270', hr: 12, rbi: 55, clutch: 0.5 },
+    { type: 'veteran', name: 'Veteran Leader', avg: '.275', hr: 18, rbi: 75, clutch: 0.8 },
+    { type: 'average', name: 'Regular Player', avg: '.245', hr: 6, rbi: 35, clutch: 0.4 }
+  ];
+  
+  // Weight towards better batters in key situations (more exciting for alerts)
+  const weights = [0.25, 0.25, 0.15, 0.1, 0.15, 0.1]; // Favor power/clutch hitters
+  const random = Math.random();
+  let cumulative = 0;
+  
+  for (let i = 0; i < profiles.length; i++) {
+    cumulative += weights[i];
+    if (random <= cumulative) {
+      return profiles[i];
+    }
+  }
+  
+  return profiles[profiles.length - 1]; // fallback
+}
+
 function generateEnhancedDescription(alertType: string, sport: string, context: any): string {
-  const { homeTeam, awayTeam, homeScore, awayScore, scoreDiff, totalScore, gamePhase, weatherData, runnersOnBase } = context;
+  const { homeTeam, awayTeam, homeScore, awayScore, scoreDiff, totalScore, gamePhase, weatherData, runnersOnBase, batterQuality } = context;
   
   switch (alertType) {
     case 'RISP':
       const runnerText = runnersOnBase?.length > 0 
-        ? `Runners on ${runnersOnBase.join(' and ')}`
-        : 'Runner in scoring position';
-      return `🎯 RUNNERS IN SCORING POSITION: ${homeTeam} has scoring opportunities with ${runnerText.toLowerCase()}. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${gamePhase} situation with ${scoreDiff}-point gap. ${weatherData?.condition === 'windy' ? '🌪️ Wind favoring offense' : ''}`;
+        ? `runners on ${runnersOnBase.join(' and ')}`
+        : 'runner in scoring position';
+      const batterText = batterQuality 
+        ? `${batterQuality.name} at bat (${batterQuality.avg}, ${batterQuality.hr} HR, ${Math.round(batterQuality.clutch * 100)}% clutch)`
+        : 'good batter up';
+      return `🎯 RISP THREAT: ${homeTeam} has ${runnerText} with ${batterText}! Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${gamePhase} situation with ${scoreDiff}-point gap. ${weatherData?.condition === 'windy' ? '🌪️ Wind favoring offense' : ''}`;
       
     case 'HomeRun':
       return `💥 HOME RUN ALERT: Big momentum swing in ${homeTeam} game! Score now ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${scoreDiff < 3 ? '🔥 Game tied up!' : '📈 Lead extended'}. ${totalScore > 15 ? 'High-scoring affair' : 'Breaking open'}`;
@@ -478,9 +506,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const runnersOnBase = Math.random() < 0.25 ? generateRunnerConfiguration() : [];
       const hasRunnersInScoringPosition = runnersOnBase.some(base => base === '2B' || base === '3B');
       
+      // Simulate batter quality (power hitter, clutch performer, etc.)
+      const batterQuality = generateBatterProfile();
+      
+      // Enhanced RISP logic - higher probability for good batters
+      const isGoodBatter = batterQuality.clutch >= 0.6 || batterQuality.hr >= 15;
+      const rispProbability = hasRunnersInScoringPosition 
+        ? (isGoodBatter ? 0.9 : 0.4) // Much higher chance with good batter
+        : 0;
+      
       const eventTypes = randomLiveGame.sport === 'MLB' 
         ? [
-            ...(hasRunnersInScoringPosition ? [{ type: "RISP", probability: 0.8, value: "High scoring potential" }] : []),
+            ...(rispProbability > 0 ? [{ type: "RISP", probability: rispProbability, value: "High scoring potential" }] : []),
             { type: "HomeRun", probability: 0.1, value: "Momentum shift" }, 
             { type: "LateInning", probability: currentInning >= 7 ? 0.4 : 0.1, value: "Critical situation" },
             { type: "WeatherImpact", probability: 0.15, value: "Wind advantage" }
@@ -528,7 +565,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalScore,
           gamePhase,
           weatherData,
-          runnersOnBase
+          runnersOnBase,
+          batterQuality
         }),
         gameInfo: {
           score: { away: awayScore, home: homeScore },
