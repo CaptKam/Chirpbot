@@ -76,6 +76,10 @@ Preferred communication style: Simple, everyday language.
 - **Game State Tracking**: Real-time game status and scoring updates from authentic sources
 
 ## Infrastructure Services
-- **Neon Database**: PostgreSQL hosting with serverless architecture
+- **Neon Database**: PostgreSQL hosting with serverless architecture (Migration completed August 18, 2025)
+  - Connection: ep-twilight-sound-aeg8aaaf-pooler.c-2.us-east-2.aws.neon.tech
+  - Database: neondb
+  - Region: US East 2 (AWS)
+  - Pooler mode enabled for optimal performance
 - **Replit Platform**: Development and deployment environment with WebSocket support
 - **CDN Integration**: Google Fonts for typography and external asset delivery
