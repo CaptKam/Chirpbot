@@ -172,107 +172,119 @@ export default function Alerts() {
         ) : (
           filteredAlerts.map((alert) => {
             const AlertIcon = getAlertIcon(alert.type);
-            const alertColorClass = getAlertColor(alert.type);
+            
+            // Extract key info for highlighting
+            const isHighPriority = (alert.aiConfidence || 0) > 85;
+            const gameScore = alert.gameInfo ? `${(alert.gameInfo as any)?.score?.away || 0}-${(alert.gameInfo as any)?.score?.home || 0}` : null;
             
             return (
               <Card
                 key={alert.id}
-                className={`bg-white rounded-xl shadow-sm border-l-4 p-4 ${alertColorClass}`}
+                className={`bg-white rounded-2xl shadow-lg border-0 p-6 hover:shadow-xl transition-all duration-300 ${
+                  isHighPriority ? 'ring-2 ring-red-500 bg-gradient-to-br from-red-50 to-orange-50' : ''
+                }`}
                 data-testid={`alert-card-${alert.id}`}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Badge className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${alertColorClass.split(' ').slice(0, 2).join(' ')}`}>
-                      <AlertIcon className="w-3 h-3 mr-1" />
-                      {alert.type}
-                    </Badge>
-                    <span className="text-xs text-chirp-dark" data-testid={`alert-time-${alert.id}`}>
-                      {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
-                    </span>
-                  </div>
-                  {alert.aiConfidence && (
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                      <span className="text-xs font-medium text-chirp-dark">
-                        {alert.aiConfidence}% AI
-                      </span>
+                {/* Priority Indicator */}
+                {isHighPriority && (
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="bg-red-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest animate-pulse">
+                      🚨 HIGH PRIORITY ALERT 🚨
                     </div>
-                  )}
-                </div>
-                
-                <div className="mb-3">
-                  <h3 className="font-bold text-chirp-blue mb-1" data-testid={`alert-title-${alert.id}`}>
-                    {alert.title}
-                  </h3>
-                  <p className="text-sm text-chirp-dark" data-testid={`alert-description-${alert.id}`}>
-                    {alert.description}
-                  </p>
-                </div>
+                  </div>
+                )}
 
-                {/* Enhanced Game Info Display */}
-                {alert.gameInfo && (
-                  <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-sm font-bold text-chirp-blue">
+                {/* Main Alert Content */}
+                <div className="mb-4">
+                  {/* Alert Type & Time */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-xl ${isHighPriority ? 'bg-red-500' : 'bg-blue-500'}`}>
+                        <AlertIcon className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black uppercase tracking-wider text-gray-900">
+                          {alert.type === 'RISP' ? 'RISP THREAT' : alert.type}
+                        </div>
+                        <div className="text-xs text-gray-500 font-medium">
+                          {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* AI Confidence Badge */}
+                    {alert.aiConfidence && (
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        alert.aiConfidence > 90 
+                          ? 'bg-green-500 text-white' 
+                          : alert.aiConfidence > 75 
+                          ? 'bg-yellow-500 text-white' 
+                          : 'bg-gray-400 text-white'
+                      }`}>
+                        {alert.aiConfidence}% CONFIDENCE
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Game Score - Most Important Info */}
+                  {alert.gameInfo && gameScore && (
+                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl p-4 mb-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-black mb-2">
                           {alert.gameInfo.awayTeam} {(alert.gameInfo as any)?.score?.away || 0} - {(alert.gameInfo as any)?.score?.home || 0} {alert.gameInfo.homeTeam}
                         </div>
-                        <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-                          {alert.gameInfo.status}
+                        <div className="bg-white bg-opacity-20 rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide inline-block">
+                          {alert.gameInfo.status} • LIVE
                         </div>
                       </div>
                     </div>
-                    
+                  )}
 
-                    
-                    {/* Momentum Indicator */}
-                    {(alert.gameInfo as any)?.momentumShift && (
-                      <div className="mt-2 flex items-center space-x-2 text-xs">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        <span className="font-bold text-red-700">MOMENTUM SHIFT DETECTED</span>
-                      </div>
-                    )}
+                  {/* Alert Description */}
+                  <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                    <p className="text-lg font-semibold text-gray-900 leading-relaxed" data-testid={`alert-description-${alert.id}`}>
+                      {alert.description}
+                    </p>
                   </div>
-                )}
+                </div>
 
-                {/* Weather Display */}
-                {alert.weatherData && (
-                  <div className="mb-3 text-xs text-chirp-dark bg-sky-50 p-2 rounded-lg">
-                    <span className="font-medium">Weather Impact:</span> {alert.weatherData.temperature}°F, {alert.weatherData.condition}
-                    {alert.weatherData.windSpeed && (
-                      <span> • Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}</span>
-                    )}
-                  </div>
-                )}
-
-                {/* AI Context */}
+                {/* AI Analysis - Prominent Display */}
                 {alert.aiContext && (
-                  <div className="bg-blue-50 rounded-lg p-3 mb-3">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Bot className="w-4 h-4 text-blue-600" />
-                      <span className="text-xs font-bold uppercase text-blue-800 tracking-wide">
-                        AI Analysis
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-100 rounded-xl p-4 mb-4 border-l-4 border-blue-500">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Bot className="w-5 h-5 text-blue-600" />
+                      <span className="text-sm font-black uppercase text-blue-800 tracking-widest">
+                        AI INSIGHT
                       </span>
                     </div>
-                    <p className="text-sm text-blue-800" data-testid={`alert-ai-context-${alert.id}`}>
+                    <p className="text-base font-medium text-blue-900 leading-relaxed" data-testid={`alert-ai-context-${alert.id}`}>
                       {alert.aiContext}
                     </p>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm font-medium text-chirp-dark" data-testid={`alert-game-info-${alert.id}`}>
-                      {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
-                    </span>
-                    <span className="text-sm text-chirp-blue">
-                      {alert.gameInfo.status}
-                    </span>
+                {/* Weather Impact */}
+                {alert.weatherData && (
+                  <div className="bg-sky-50 rounded-xl p-3 mb-4 border-l-4 border-sky-400">
+                    <div className="text-sm font-bold text-sky-800 mb-1">WEATHER IMPACT</div>
+                    <div className="text-sm text-sky-700">
+                      {alert.weatherData.temperature}°F • {alert.weatherData.condition}
+                      {alert.weatherData.windSpeed && (
+                        <span> • Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bottom Actions */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                  <div className="text-sm font-medium text-gray-600">
+                    {alert.sport} • {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="p-0 text-chirp-red hover:text-red-700"
+                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                     data-testid={`alert-share-${alert.id}`}
                   >
                     <Share2 className="w-4 h-4" />
