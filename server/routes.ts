@@ -10,6 +10,37 @@ import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
 import { checkAlerts, generateGameContext, filterAlertsBySettings } from "./services/alertEngine";
 
+// Enhanced alert description generator for better user value
+function generateEnhancedDescription(alertType: string, sport: string, context: any): string {
+  const { homeTeam, awayTeam, homeScore, awayScore, scoreDiff, totalScore, gamePhase, weatherData } = context;
+  
+  switch (alertType) {
+    case 'RISP':
+      return `🎯 RUNNERS IN SCORING POSITION: ${homeTeam} has multiple scoring opportunities. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${gamePhase} situation with ${scoreDiff}-point gap. ${weatherData?.condition === 'windy' ? '🌪️ Wind favoring offense' : ''}`;
+      
+    case 'HomeRun':
+      return `💥 HOME RUN ALERT: Big momentum swing in ${homeTeam} game! Score now ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${scoreDiff < 3 ? '🔥 Game tied up!' : '📈 Lead extended'}. ${totalScore > 15 ? 'High-scoring affair' : 'Breaking open'}`;
+      
+    case 'RedZone':
+      return `🚨 RED ZONE OPPORTUNITY: ${homeTeam} inside the 20-yard line. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${scoreDiff < 7 ? '🎯 Could tie/take lead' : '📊 Building cushion'}. ${gamePhase} pressure`;
+      
+    case 'ClutchTime':
+      return `⏰ CRUNCH TIME: Final minutes with ${homeTeam} vs ${awayTeam}. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${scoreDiff < 5 ? '🔥 Anyone\'s game' : '🎯 Comeback needed'}. Total: ${totalScore}`;
+      
+    case 'TwoMinuteWarning':
+      return `⚡ TWO-MINUTE WARNING: Critical drive time! ${homeTeam} vs ${awayTeam} - ${awayScore} to ${homeScore}. ${scoreDiff < 7 ? '🎯 One score game' : '📈 Need quick points'}. ${totalScore > 35 ? 'Offensive shootout' : 'Defensive battle'}`;
+      
+    case 'WeatherImpact':
+      return `🌪️ WEATHER FACTOR: ${weatherData?.condition || 'Wind'} affecting ${homeTeam} game. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${weatherData?.windSpeed > 15 ? 'Strong winds favor running game' : 'Conditions changing'}`;
+      
+    case 'LeadChange':
+      return `🔄 LEAD CHANGE: ${homeTeam} vs ${awayTeam} momentum shift! New score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${totalScore > 180 ? '🏀 High-scoring battle' : '🎯 Defensive struggle'}. ${gamePhase}`;
+      
+    default:
+      return `📊 ${alertType}: ${homeTeam} vs ${awayTeam} action. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${gamePhase} development`;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
@@ -419,13 +450,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Only generate alerts for actually live games
       const randomLiveGame = liveGames[Math.floor(Math.random() * liveGames.length)];
       
-      // Generate realistic event based on sport
+      // Generate enhanced realistic events with valuable betting context
       const eventTypes = randomLiveGame.sport === 'MLB' 
-        ? [{ type: "RISP", probability: 0.3 }, { type: "HomeRun", probability: 0.1 }, { type: "LateInning", probability: 0.2 }]
+        ? [
+            { type: "RISP", probability: 0.3, value: "High scoring potential" }, 
+            { type: "HomeRun", probability: 0.1, value: "Momentum shift" }, 
+            { type: "LateInning", probability: 0.2, value: "Critical situation" },
+            { type: "WeatherImpact", probability: 0.15, value: "Wind advantage" }
+          ]
         : randomLiveGame.sport === 'NFL'
-        ? [{ type: "RedZone", probability: 0.4 }]
+        ? [
+            { type: "RedZone", probability: 0.4, value: "Scoring opportunity" },
+            { type: "TwoMinuteWarning", probability: 0.2, value: "Game-deciding drive" },
+            { type: "FourthDown", probability: 0.25, value: "High-pressure situation" }
+          ]
         : randomLiveGame.sport === 'NBA'
-        ? [{ type: "ClutchTime", probability: 0.3 }]
+        ? [
+            { type: "ClutchTime", probability: 0.3, value: "Final push" },
+            { type: "LeadChange", probability: 0.35, value: "Momentum swing" }
+          ]
         : [];
 
       if (eventTypes.length === 0) return;
@@ -435,18 +478,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const weatherData = await getWeatherData(randomLiveGame.homeTeam.name);
       
+      // Generate enhanced alert data with betting insights
+      const homeScore = Math.floor(Math.random() * 15) + 1;
+      const awayScore = Math.floor(Math.random() * 15) + 1;
+      const currentInning = Math.floor(Math.random() * 9) + 1;
+      const currentQuarter = Math.floor(Math.random() * 4) + 1;
+      
+      // Calculate betting-relevant metrics
+      const scoreDiff = Math.abs(homeScore - awayScore);
+      const totalScore = homeScore + awayScore;
+      const gamePhase = randomLiveGame.sport === 'MLB' 
+        ? currentInning > 6 ? 'Late Game' : currentInning > 3 ? 'Mid Game' : 'Early Game'
+        : currentQuarter > 2 ? 'Second Half' : 'First Half';
+
       const alertData = {
         type: randomEvent.type,
         sport: randomLiveGame.sport,
-        title: `${randomLiveGame.homeTeam.name} - ${randomEvent.type} Alert`,
-        description: `${randomLiveGame.homeTeam.name} ${randomEvent.type === 'RISP' ? 'has runners in scoring position' : randomEvent.type === 'RedZone' ? 'is in the red zone' : 'clutch time situation'}`,
+        title: `🔥 ${randomLiveGame.homeTeam.name} vs ${randomLiveGame.awayTeam.name} - ${randomEvent.type}`,
+        description: generateEnhancedDescription(randomEvent.type, randomLiveGame.sport, {
+          homeTeam: randomLiveGame.homeTeam.name,
+          awayTeam: randomLiveGame.awayTeam.name,
+          homeScore,
+          awayScore,
+          scoreDiff,
+          totalScore,
+          gamePhase,
+          weatherData
+        }),
         gameInfo: {
-          score: { away: Math.floor(Math.random() * 30), home: Math.floor(Math.random() * 30) },
-          inning: randomLiveGame.sport === 'MLB' ? `${Math.floor(Math.random() * 9) + 1}th` : undefined,
-          quarter: randomLiveGame.sport === 'NFL' ? `${Math.floor(Math.random() * 4) + 1}st Quarter` : undefined,
+          score: { away: awayScore, home: homeScore },
+          scoreDiff,
+          totalScore,
+          gamePhase,
+          inning: randomLiveGame.sport === 'MLB' ? `${currentInning}th` : undefined,
+          quarter: randomLiveGame.sport === 'NFL' ? `${currentQuarter}${currentQuarter === 1 ? 'st' : currentQuarter === 2 ? 'nd' : currentQuarter === 3 ? 'rd' : 'th'} Quarter` : undefined,
           status: 'Live',
           awayTeam: randomLiveGame.awayTeam.name,
-          homeTeam: randomLiveGame.homeTeam.name
+          homeTeam: randomLiveGame.homeTeam.name,
+          // Enhanced betting metrics
+          trendIndicator: scoreDiff > 7 ? 'Blowout Risk' : scoreDiff < 3 ? 'Close Game' : 'Competitive',
+          overUnderHint: totalScore > 20 ? 'Over Trending' : totalScore < 10 ? 'Under Trending' : 'On Pace',
+          momentumShift: randomEvent.type === 'HomeRun' || randomEvent.type === 'LeadChange',
+          bettingValue: randomEvent.value
         },
         weatherData,
         aiContext: undefined as string | undefined,
