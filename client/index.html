@@ -9,6 +9,46 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Suppress Vite HMR WebSocket errors in Replit environment
+      if (window.location.hostname.includes('replit')) {
+        const originalWebSocket = window.WebSocket;
+        window.WebSocket = function(...args) {
+          const url = args[0];
+          // Check if this is a Vite HMR WebSocket trying to connect to localhost
+          if (typeof url === 'string' && url.includes('localhost:undefined')) {
+            // Replace localhost:undefined with the current host
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const correctedUrl = url.replace(/wss?:\/\/localhost:undefined/, `${protocol}//${window.location.host}`);
+            args[0] = correctedUrl;
+          }
+          try {
+            return new originalWebSocket(...args);
+          } catch (error) {
+            // Silently fail for Vite HMR WebSocket errors
+            if (typeof url === 'string' && (url.includes('@vite') || url.includes('localhost'))) {
+              console.debug('Vite HMR WebSocket connection skipped in Replit environment');
+              // Return a mock WebSocket that does nothing
+              return {
+                close: () => {},
+                send: () => {},
+                addEventListener: () => {},
+                removeEventListener: () => {},
+                readyState: 3, // CLOSED state
+              };
+            }
+            throw error;
+          }
+        };
+        // Copy over static properties
+        Object.setPrototypeOf(window.WebSocket, originalWebSocket);
+        Object.setPrototypeOf(window.WebSocket.prototype, originalWebSocket.prototype);
+        window.WebSocket.CONNECTING = originalWebSocket.CONNECTING;
+        window.WebSocket.OPEN = originalWebSocket.OPEN;
+        window.WebSocket.CLOSING = originalWebSocket.CLOSING;
+        window.WebSocket.CLOSED = originalWebSocket.CLOSED;
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
