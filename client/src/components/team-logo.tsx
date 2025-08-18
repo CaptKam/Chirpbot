@@ -35,6 +35,45 @@ const teamNameToAbbr: Record<string, string> = {
   'Arizona Diamondbacks': 'ARI',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
+  'Tampa Bay Rays': 'TB',
+  'New York Mets': 'NYM',
+  'Washington Nationals': 'WSH',
+  'Minnesota Twins': 'MIN',
+  'Oakland Athletics': 'OAK',
+  
+  // Common shortened MLB team names from ESPN/API
+  'Yankees': 'NYY',
+  'Red Sox': 'BOS',
+  'Dodgers': 'LAD',
+  'Giants': 'SF',
+  'Angels': 'LAA',
+  'Padres': 'SD',
+  'Athletics': 'OAK',
+  'A\'s': 'OAK',
+  'Mariners': 'SEA',
+  'Rangers': 'TEX',
+  'Astros': 'HOU',
+  'Guardians': 'CLE',
+  'Tigers': 'DET',
+  'Twins': 'MIN',
+  'Royals': 'KC',
+  'White Sox': 'CHW',
+  'Rays': 'TB',
+  'Orioles': 'BAL',
+  'Blue Jays': 'TOR',
+  'Braves': 'ATL',
+  'Marlins': 'MIA',
+  'Mets': 'NYM',
+  'Phillies': 'PHI',
+  'Nationals': 'WSH',
+  'Cubs': 'CHC',
+  'Reds': 'CIN',
+  'Brewers': 'MIL',
+  'Pirates': 'PIT',
+  'Cardinals': 'STL',
+  'Diamondbacks': 'ARI',
+  'D-backs': 'ARI',
+  'Rockies': 'COL',
   
   // NFL Teams
   'Kansas City Chiefs': 'KC',
@@ -493,6 +532,9 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   // Get abbreviation from prop or lookup from team name
   const teamAbbr = abbreviation || teamNameToAbbr[teamName];
   
+  // Enhanced debugging
+  console.log(`🏀 TeamLogo - Input: "${teamName}", Mapped to: "${teamAbbr}"`);
+  
   // Generic fallback logo with better styling
   const defaultLogo = (
     <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
@@ -503,9 +545,14 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   const selectedLogo = logoMap[teamAbbr];
   
   if (!selectedLogo) {
-    console.log(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
+    console.log(`❌ No logo found for team: "${teamName}" -> "${teamAbbr}"`);
+    console.log(`Available logos:`, Object.keys(logoMap).slice(0, 15));
     return defaultLogo;
   }
   
+  console.log(`✅ Found logo for: "${teamName}" -> "${teamAbbr}"`);
+  
   return selectedLogo;
 }
+
+// Force refresh v2.1
