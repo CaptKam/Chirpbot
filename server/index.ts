@@ -11,21 +11,40 @@ app.use(express.urlencoded({ extended: false }));
 // Session middleware with database storage for production
 const pgStore = connectPg(session);
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
-  store: new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
-  }),
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  }
-}));
+// Configure session store
+let sessionConfig;
+if (process.env.DATABASE_URL) {
+  sessionConfig = {
+    secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
+    store: new pgStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+    }),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Set to false for Replit deployment
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: "lax", // Use lax for better compatibility
+    }
+  };
+} else {
+  // Fallback for development
+  sessionConfig = {
+    secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false,
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "lax",
+    }
+  };
+}
+
+app.use(session(sessionConfig));
 
 app.use((req, res, next) => {
   const start = Date.now();
