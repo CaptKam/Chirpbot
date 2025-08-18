@@ -133,18 +133,26 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
     const { homeTeam, awayTeam } = alert.gameInfo;
     const sport = alert.sport.toLowerCase();
     
-    // Generate sport-specific URLs for each sportsbook
+    // Encode team names for URL
+    const encodedHome = encodeURIComponent(homeTeam);
+    const encodedAway = encodeURIComponent(awayTeam);
+    
+    // Generate game-specific URLs for each sportsbook
     switch (sportsbook.name) {
       case "FanDuel":
-        return `${sportsbook.baseUrl}/${sport}`;
+        // FanDuel uses search queries to find specific games
+        return `${sportsbook.baseUrl}/${sport}?search=${encodedAway}+${encodedHome}`;
       case "DraftKings":
-        return `${sportsbook.baseUrl}/${sport}`;
+        // DraftKings also uses search to find games
+        return `${sportsbook.baseUrl}/${sport}?search=${encodedAway}+@+${encodedHome}`;
       case "Bet365":
-        return `${sportsbook.baseUrl}`;
+        // Bet365 uses a search parameter
+        return `${sportsbook.baseUrl}#/AC/B1/C1/D13/E${sport === 'mlb' ? '16' : sport === 'nfl' ? '12' : '18'}/F2/`;
       case "BetRivers":
-        return `${sportsbook.baseUrl}/sportsbook/${sport}`;
+        // BetRivers deep links to sports section with search
+        return `${sportsbook.baseUrl}/sportsbook/${sport}?search=${encodedHome}`;
       default:
-        return sportsbook.baseUrl;
+        return `${sportsbook.baseUrl}/${sport}`;
     }
   };
 
