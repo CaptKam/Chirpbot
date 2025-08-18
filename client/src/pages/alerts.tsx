@@ -189,7 +189,7 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
           <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 mb-3">
             {/* Away Team */}
             <div className="flex items-center space-x-2 flex-1">
-              <TeamLogo team={alert.gameInfo.awayTeam} size="sm" />
+              <TeamLogo teamName={alert.gameInfo.awayTeam} size="sm" />
               <span className="font-bold text-gray-900">{awayTeamName}</span>
             </div>
             
@@ -205,7 +205,7 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
             {/* Home Team */}
             <div className="flex items-center space-x-2 flex-1 justify-end">
               <span className="font-bold text-gray-900">{homeTeamName}</span>
-              <TeamLogo team={alert.gameInfo.homeTeam} size="sm" />
+              <TeamLogo teamName={alert.gameInfo.homeTeam} size="sm" />
             </div>
           </div>
         </div>

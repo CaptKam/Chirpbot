@@ -74,6 +74,15 @@ const teamNameToAbbr: Record<string, string> = {
 };
 
 export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }: TeamLogoProps) {
+  // Early return if teamName is not provided
+  if (!teamName) {
+    return (
+      <div className={`w-8 h-8 ${className} rounded-full bg-gray-400 border-2 border-white shadow-sm flex items-center justify-center`}>
+        <span className="text-white font-black text-xs">?</span>
+      </div>
+    );
+  }
+
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -284,7 +293,7 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   // Generic fallback logo with better styling
   const defaultLogo = (
     <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
-      <span className="text-white font-black text-xs">{teamAbbr || teamName.slice(0, 3).toUpperCase()}</span>
+      <span className="text-white font-black text-xs">{teamAbbr || (teamName ? teamName.slice(0, 3).toUpperCase() : '???')}</span>
     </div>
   );
 
