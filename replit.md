@@ -1,6 +1,6 @@
 # Overview
 
-ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, the application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) using authentic ESPN API data and generates intelligent alerts for high-impact game situations like runners in scoring position, red zone opportunities, and clutch time scenarios. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. Features persistent team monitoring that saves user game selections to the database and restores them on page reload. Current system is successfully generating real Los Angeles Dodgers RISP alerts with 85% AI confidence scores.
+ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, the application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) using authentic ESPN API data and generates intelligent alerts for high-impact game situations like runners in scoring position, red zone opportunities, and clutch time scenarios. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. Features persistent team monitoring that saves user game selections to the database and restores them on page reload. Alert generation system now correctly filters for live games only, preventing alerts for non-active games. Fixed August 18, 2025.
 
 # User Preferences
 
@@ -58,9 +58,10 @@ Preferred communication style: Simple, everyday language.
 - **Location-based Data**: City-specific weather conditions for game context
 
 ## Sports Data
-- **Simulated Sports Events**: Built-in sports event simulation system for development
+- **ESPN API Integration**: Real-time sports data from ESPN's public API endpoints
+- **Live Game Filtering**: Alert generation only occurs for games that are actually happening
 - **Multi-sport Support**: MLB, NFL, NBA, NHL event types and monitoring
-- **Game State Tracking**: Real-time game status and scoring updates
+- **Game State Tracking**: Real-time game status and scoring updates from authentic sources
 
 ## Infrastructure Services
 - **Neon Database**: PostgreSQL hosting with serverless architecture
