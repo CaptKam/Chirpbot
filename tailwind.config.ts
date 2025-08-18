@@ -5,17 +5,8 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
-      fontVariantNumeric: {
-        tabular: 'tabular-nums lining-nums',
-      },
-      container: { center: true, padding: '16px' },
-      boxShadow: {
-        card: '0 1px 1px rgba(0,0,0,.25), 0 12px 24px rgba(3,7,18,.35)',
-      },
       borderRadius: {
-        lg: "16px",
-        xl: "24px",
-        '2xl': "32px",
+        lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
@@ -109,20 +100,10 @@ export default {
             height: "0",
           },
         },
-        fadeIn: {
-          '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        pulseLive: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.9' },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        fadeIn: 'fadeIn 0.18s ease-out',
-        pulseLive: 'pulseLive 1.6s ease-in-out infinite',
       },
     },
   },
