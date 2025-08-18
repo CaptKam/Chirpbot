@@ -502,150 +502,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Real-time alert generation for live games only
-  setInterval(async () => {
-    try {
-      // Get today's games from ESPN API
-      const gamesData = await liveSportsService.getTodaysGames();
-      const liveGames = gamesData.games.filter(game => game.status === 'live');
-      
-      if (liveGames.length === 0) {
-        console.log('No live games found, skipping alert generation');
-        return;
-      }
+  // DISABLED: Mock alert generation - only use real game data
+  // setInterval(async () => {
+  //   try {
+  //     // Get today's games from ESPN API
+  //     const gamesData = await liveSportsService.getTodaysGames();
+  //     const liveGames = gamesData.games.filter(game => game.status === 'live');
+  //     
+  //     if (liveGames.length === 0) {
+  //       console.log('No live games found, skipping alert generation');
+  //       return;
+  //     }
+  //
+  //     // Only generate alerts for actually live games
+  //     const randomLiveGame = liveGames[Math.floor(Math.random() * liveGames.length)];
+  //     
+  //     // Generate realistic game situations (not random events)
+  //     const currentInning = Math.floor(Math.random() * 9) + 1;
+  //     // Use actual scores from the live game data
+  //     const homeScore = randomLiveGame.score?.home || 0;
+  //     const awayScore = randomLiveGame.score?.away || 0;
+  //     
+  //     // Simulate actual game state to determine valid alerts
+  //     const runnersOnBase = Math.random() < 0.25 ? generateRunnerConfiguration() : [];
+  //     const hasRunnersInScoringPosition = runnersOnBase.some(base => base === '2B' || base === '3B');
+  //     
+  //     // Simulate batter quality (power hitter, clutch performer, etc.)
+  //     const batterQuality = generateBatterProfile();
+  //     
+  //     // Enhanced RISP logic - higher probability for good batters
+  //     const isGoodBatter = batterQuality.clutch >= 0.6 || batterQuality.hr >= 15;
+  //     const rispProbability = hasRunnersInScoringPosition 
+  //       ? (isGoodBatter ? 0.9 : 0.4) // Much higher chance with good batter
+  //       : 0;
+  //     
+  //     const eventTypes = randomLiveGame.sport === 'MLB' 
+  //       ? [
+  //           ...(rispProbability > 0 ? [{ type: "RISP", probability: rispProbability, value: "High scoring potential" }] : []),
+  //           { type: "HomeRun", probability: 0.1, value: "Momentum shift" }, 
+  //           { type: "LateInning", probability: currentInning >= 7 ? 0.4 : 0.1, value: "Critical situation" },
+  //           { type: "WeatherImpact", probability: 0.15, value: "Wind advantage" }
+  //         ]
+  //       : randomLiveGame.sport === 'NFL'
+  //       ? [
+  //           { type: "RedZone", probability: 0.4, value: "Scoring opportunity" },
+  //           { type: "TwoMinuteWarning", probability: 0.2, value: "Game-deciding drive" },
+  //           { type: "FourthDown", probability: 0.25, value: "High-pressure situation" }
+  //         ]
+  //       : randomLiveGame.sport === 'NBA'
+  //       ? [
+  //           { type: "ClutchTime", probability: 0.3, value: "Final push" },
+  //           { type: "LeadChange", probability: 0.35, value: "Momentum swing" }
+  //         ]
+  //       : [];
+  //
+  //     if (eventTypes.length === 0) return;
+  //
+  //     const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+  //     if (Math.random() > randomEvent.probability) return;
+  //
+  //     const weatherData = await getWeatherData(randomLiveGame.homeTeam.name);
+  //     
+  //     // Generate enhanced alert data with betting insights
+  //     const currentQuarter = Math.floor(Math.random() * 4) + 1;
+  //     
+  //     // Calculate betting-relevant metrics
+  //     const scoreDiff = Math.abs(homeScore - awayScore);
+  //     const totalScore = homeScore + awayScore;
+  //     const gamePhase = randomLiveGame.sport === 'MLB' 
+  //       ? currentInning > 6 ? 'Late Game' : currentInning > 3 ? 'Mid Game' : 'Early Game'
+  //       : currentQuarter > 2 ? 'Second Half' : 'First Half';
+  //
+  //     const alertData = {
+  //       type: randomEvent.type,
+  //       sport: randomLiveGame.sport,
+  //       title: `${randomLiveGame.awayTeam.name} @ ${randomLiveGame.homeTeam.name}`,
+  //       description: generateEnhancedDescription(randomEvent.type, randomLiveGame.sport, {
+  //         homeTeam: randomLiveGame.homeTeam.name,
+  //         awayTeam: randomLiveGame.awayTeam.name,
+  //         homeScore,
+  //         awayScore,
+  //         scoreDiff,
+  //         totalScore,
+  //         gamePhase,
+  //         weatherData,
+  //         runnersOnBase,
+  //         batterQuality
+  //       }),
+  //       gameInfo: {
+  //         score: { away: awayScore, home: homeScore },
+  //         scoreDiff,
+  //         totalScore,
+  //         gamePhase,
+  //         inning: randomLiveGame.sport === 'MLB' ? `${currentInning}th` : undefined,
+  //         quarter: randomLiveGame.sport === 'NFL' ? `${currentQuarter}${currentQuarter === 1 ? 'st' : currentQuarter === 2 ? 'nd' : currentQuarter === 3 ? 'rd' : 'th'} Quarter` : undefined,
+  //         status: 'Live',
+  //         awayTeam: randomLiveGame.awayTeam.name,
+  //         homeTeam: randomLiveGame.homeTeam.name,
+  //         // Enhanced betting metrics
+  //         trendIndicator: scoreDiff > 7 ? 'Blowout Risk' : scoreDiff < 3 ? 'Close Game' : 'Competitive',
+  //         overUnderHint: totalScore > 20 ? 'Over Trending' : totalScore < 10 ? 'Under Trending' : 'On Pace',
+  //         momentumShift: randomEvent.type === 'HomeRun' || randomEvent.type === 'LeadChange',
+  //         bettingValue: randomEvent.value
+  //       },
+  //       weatherData,
+  //       aiContext: undefined as string | undefined,
+  //       aiConfidence: 0,
+  //       sentToTelegram: false,
+  //     };
+  //
+  //     const settings = await storage.getSettingsBySport(alertData.sport);
+  //     if (settings?.aiEnabled) {
+  //       const analysis = await analyzeAlert(
+  //         alertData.type,
+  //         alertData.sport,
+  //         alertData.gameInfo,
+  //         weatherData
+  //       );
+  //       alertData.aiContext = analysis.context;
+  //       alertData.aiConfidence = analysis.confidence;
+  //     }
+  //
+  //     const alert = await storage.createAlert(alertData);
+  //
+  //     if (settings?.telegramEnabled) {
+  //       const telegramConfig = {
+  //         botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
+  //         chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+  //       };
+  //
+  //       const sent = await sendTelegramAlert(telegramConfig, {
+  //         ...alert,
+  //         aiContext: alert.aiContext || undefined
+  //       });
+  //       if (sent) {
+  //         await storage.markAlertSentToTelegram(alert.id);
+  //       }
+  //     }
 
-      // Only generate alerts for actually live games
-      const randomLiveGame = liveGames[Math.floor(Math.random() * liveGames.length)];
-      
-      // Generate realistic game situations (not random events)
-      const currentInning = Math.floor(Math.random() * 9) + 1;
-      // Use actual scores from the live game data
-      const homeScore = randomLiveGame.score?.home || 0;
-      const awayScore = randomLiveGame.score?.away || 0;
-      
-      // Simulate actual game state to determine valid alerts
-      const runnersOnBase = Math.random() < 0.25 ? generateRunnerConfiguration() : [];
-      const hasRunnersInScoringPosition = runnersOnBase.some(base => base === '2B' || base === '3B');
-      
-      // Simulate batter quality (power hitter, clutch performer, etc.)
-      const batterQuality = generateBatterProfile();
-      
-      // Enhanced RISP logic - higher probability for good batters
-      const isGoodBatter = batterQuality.clutch >= 0.6 || batterQuality.hr >= 15;
-      const rispProbability = hasRunnersInScoringPosition 
-        ? (isGoodBatter ? 0.9 : 0.4) // Much higher chance with good batter
-        : 0;
-      
-      const eventTypes = randomLiveGame.sport === 'MLB' 
-        ? [
-            ...(rispProbability > 0 ? [{ type: "RISP", probability: rispProbability, value: "High scoring potential" }] : []),
-            { type: "HomeRun", probability: 0.1, value: "Momentum shift" }, 
-            { type: "LateInning", probability: currentInning >= 7 ? 0.4 : 0.1, value: "Critical situation" },
-            { type: "WeatherImpact", probability: 0.15, value: "Wind advantage" }
-          ]
-        : randomLiveGame.sport === 'NFL'
-        ? [
-            { type: "RedZone", probability: 0.4, value: "Scoring opportunity" },
-            { type: "TwoMinuteWarning", probability: 0.2, value: "Game-deciding drive" },
-            { type: "FourthDown", probability: 0.25, value: "High-pressure situation" }
-          ]
-        : randomLiveGame.sport === 'NBA'
-        ? [
-            { type: "ClutchTime", probability: 0.3, value: "Final push" },
-            { type: "LeadChange", probability: 0.35, value: "Momentum swing" }
-          ]
-        : [];
-
-      if (eventTypes.length === 0) return;
-
-      const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-      if (Math.random() > randomEvent.probability) return;
-
-      const weatherData = await getWeatherData(randomLiveGame.homeTeam.name);
-      
-      // Generate enhanced alert data with betting insights
-      const currentQuarter = Math.floor(Math.random() * 4) + 1;
-      
-      // Calculate betting-relevant metrics
-      const scoreDiff = Math.abs(homeScore - awayScore);
-      const totalScore = homeScore + awayScore;
-      const gamePhase = randomLiveGame.sport === 'MLB' 
-        ? currentInning > 6 ? 'Late Game' : currentInning > 3 ? 'Mid Game' : 'Early Game'
-        : currentQuarter > 2 ? 'Second Half' : 'First Half';
-
-      const alertData = {
-        type: randomEvent.type,
-        sport: randomLiveGame.sport,
-        title: `${randomLiveGame.awayTeam.name} @ ${randomLiveGame.homeTeam.name}`,
-        description: generateEnhancedDescription(randomEvent.type, randomLiveGame.sport, {
-          homeTeam: randomLiveGame.homeTeam.name,
-          awayTeam: randomLiveGame.awayTeam.name,
-          homeScore,
-          awayScore,
-          scoreDiff,
-          totalScore,
-          gamePhase,
-          weatherData,
-          runnersOnBase,
-          batterQuality
-        }),
-        gameInfo: {
-          score: { away: awayScore, home: homeScore },
-          scoreDiff,
-          totalScore,
-          gamePhase,
-          inning: randomLiveGame.sport === 'MLB' ? `${currentInning}th` : undefined,
-          quarter: randomLiveGame.sport === 'NFL' ? `${currentQuarter}${currentQuarter === 1 ? 'st' : currentQuarter === 2 ? 'nd' : currentQuarter === 3 ? 'rd' : 'th'} Quarter` : undefined,
-          status: 'Live',
-          awayTeam: randomLiveGame.awayTeam.name,
-          homeTeam: randomLiveGame.homeTeam.name,
-          // Enhanced betting metrics
-          trendIndicator: scoreDiff > 7 ? 'Blowout Risk' : scoreDiff < 3 ? 'Close Game' : 'Competitive',
-          overUnderHint: totalScore > 20 ? 'Over Trending' : totalScore < 10 ? 'Under Trending' : 'On Pace',
-          momentumShift: randomEvent.type === 'HomeRun' || randomEvent.type === 'LeadChange',
-          bettingValue: randomEvent.value
-        },
-        weatherData,
-        aiContext: undefined as string | undefined,
-        aiConfidence: 0,
-        sentToTelegram: false,
-      };
-
-      const settings = await storage.getSettingsBySport(alertData.sport);
-      if (settings?.aiEnabled) {
-        const analysis = await analyzeAlert(
-          alertData.type,
-          alertData.sport,
-          alertData.gameInfo,
-          weatherData
-        );
-        alertData.aiContext = analysis.context;
-        alertData.aiConfidence = analysis.confidence;
-      }
-
-      const alert = await storage.createAlert(alertData);
-
-      if (settings?.telegramEnabled) {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
-          chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
-        };
-
-        const sent = await sendTelegramAlert(telegramConfig, {
-          ...alert,
-          aiContext: alert.aiContext || undefined
-        });
-        if (sent) {
-          await storage.markAlertSentToTelegram(alert.id);
-        }
-      }
-
-      broadcast({ type: 'new_alert', data: alert });
-      console.log(`Generated alert for live game: ${randomLiveGame.homeTeam.name} vs ${randomLiveGame.awayTeam.name}`);
-    } catch (error) {
-      console.error("Live game alert generation error:", error);
-    }
-  }, 15000 + Math.random() * 15000); // 15-30 seconds for much faster alert generation
+  //     broadcast({ type: 'new_alert', data: alert });
+  //     console.log(`Generated alert for live game: ${randomLiveGame.homeTeam.name} vs ${randomLiveGame.awayTeam.name}`);
+  //   } catch (error) {
+  //     console.error("Live game alert generation error:", error);
+  //   }
+  // }, 15000 + Math.random() * 15000); // 15-30 seconds for much faster alert generation
 
   // Auth routes
   app.post("/api/auth/signup", async (req, res) => {
