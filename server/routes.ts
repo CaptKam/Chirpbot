@@ -237,7 +237,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const games = await sportsService.getLiveGames(sport);
       res.json(games);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch games" });
+      console.error("Failed to fetch live games:", error);
+      res.status(500).json({ message: "Failed to fetch games - check ESPN API connection" });
+    }
+  });
+
+  // New route to get live scores for a specific team
+  app.get("/api/sports/team/:teamName/games", async (req, res) => {
+    try {
+      const { teamName } = req.params;
+      const sport = req.query.sport as string;
+      const allGames = await sportsService.getLiveGames(sport);
+      const teamGames = allGames.filter(game => 
+        game.homeTeam.toLowerCase().includes(teamName.toLowerCase()) ||
+        game.awayTeam.toLowerCase().includes(teamName.toLowerCase())
+      );
+      res.json(teamGames);
+    } catch (error) {
+      console.error("Failed to fetch team games:", error);
+      res.status(500).json({ message: "Failed to fetch team games" });
     }
   });
 
@@ -302,57 +320,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auto-generate sports events every 1-2 minutes for demo
+  // Check for real sports events every 2 minutes, fallback to simulation if no real events
   setInterval(async () => {
     try {
-      const event = sportsService.generateSportsEvent();
-      if (!event) return;
+      // First try to get real live games and check for events
+      const allLiveGames = await sportsService.getLiveGames();
+      let realEventFound = false;
 
-      const weatherData = await getWeatherData(event.game.homeTeam);
-      
-      const alertData = {
-        type: event.type,
-        sport: event.type.includes("RedZone") ? "NFL" : event.type.includes("ClutchTime") ? "NBA" : "MLB",
-        title: `${event.game.homeTeam} - ${event.type} Alert`,
-        description: event.description,
-        gameInfo: event.game,
-        weatherData,
-        aiContext: null,
-        aiConfidence: 0,
-        sentToTelegram: false,
-      };
-
-      const settings = await storage.getSettingsBySport(alertData.sport);
-      if (settings?.aiEnabled) {
-        const analysis = await analyzeAlert(
-          alertData.type,
-          alertData.sport,
-          alertData.gameInfo,
-          weatherData
-        );
-        alertData.aiContext = analysis.context;
-        alertData.aiConfidence = analysis.confidence;
-      }
-
-      const alert = await storage.createAlert(alertData);
-
-      if (settings?.telegramEnabled) {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
-          chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+      for (const game of allLiveGames) {
+        // Simple real-time event detection based on game state
+        const sportMapping: Record<string, string> = {
+          "inning": "MLB",
+          "quarter": "NFL",
+          "period": "NHL"
         };
 
-        const sent = await sendTelegramAlert(telegramConfig, alert);
-        if (sent) {
-          await storage.markAlertSentToTelegram(alert.id);
+        let sport = "NBA"; // default
+        let eventType = "ClutchTime";
+
+        if (game.inning) {
+          sport = "MLB";
+          if (game.inning.includes("7th") || game.inning.includes("8th") || game.inning.includes("9th")) {
+            eventType = "LateInning";
+          } else {
+            continue; // Only alert on late innings for MLB
+          }
+        } else if (game.quarter && game.quarter.includes("4th")) {
+          if (game.quarter.includes("Quarter")) {
+            sport = game.homeTeam.includes("Lakers") || game.homeTeam.includes("Warriors") || 
+                  game.awayTeam.includes("Lakers") || game.awayTeam.includes("Warriors") ? "NBA" : "NFL";
+            eventType = sport === "NBA" ? "ClutchTime" : "RedZone";
+          }
+        } else if (game.period) {
+          sport = "NHL";
+          eventType = "PowerPlay";
+        } else {
+          continue; // Skip if no interesting game state
+        }
+
+        const scoreDiff = Math.abs((game.score?.home || 0) - (game.score?.away || 0));
+        
+        // Only create alerts for close games
+        if (scoreDiff <= (sport === "NFL" ? 7 : sport === "NBA" ? 5 : 2)) {
+          const weatherData = await getWeatherData(game.homeTeam);
+          
+          const alertData = {
+            type: eventType,
+            sport,
+            title: `${game.homeTeam} - ${eventType} Alert (LIVE)`,
+            description: `Real-time alert: ${game.homeTeam} vs ${game.awayTeam} - Close game in ${sport === "MLB" ? "late innings" : sport === "NBA" ? "4th quarter" : sport === "NFL" ? "4th quarter" : "final period"}`,
+            gameInfo: game,
+            weatherData,
+            aiContext: null,
+            aiConfidence: 0,
+            sentToTelegram: false,
+          };
+
+          const settings = await storage.getSettingsBySport(alertData.sport);
+          if (settings?.aiEnabled) {
+            const analysis = await analyzeAlert(
+              alertData.type,
+              alertData.sport,
+              alertData.gameInfo,
+              weatherData
+            );
+            alertData.aiContext = analysis.context;
+            alertData.aiConfidence = analysis.confidence;
+          }
+
+          const alert = await storage.createAlert(alertData);
+
+          if (settings?.telegramEnabled) {
+            const telegramConfig = {
+              botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
+              chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+            };
+
+            const sent = await sendTelegramAlert(telegramConfig, alert);
+            if (sent) {
+              await storage.markAlertSentToTelegram(alert.id);
+            }
+          }
+
+          broadcast({ type: 'new_alert', data: alert });
+          realEventFound = true;
+          console.log("Real-time sports alert created:", alert.title);
+          break; // Only create one alert per check to avoid spam
         }
       }
 
-      broadcast({ type: 'new_alert', data: alert });
+      // Fallback to simulation if no real events (for demo purposes)
+      if (!realEventFound && Math.random() < 0.3) { // 30% chance to simulate if no real events
+        const event = sportsService.generateSportsEvent();
+        if (event) {
+          const weatherData = await getWeatherData(event.game.homeTeam);
+          
+          const alertData = {
+            type: event.type,
+            sport: event.type.includes("RedZone") ? "NFL" : event.type.includes("ClutchTime") ? "NBA" : "MLB",
+            title: `${event.game.homeTeam} - ${event.type} Alert (Simulated)`,
+            description: event.description,
+            gameInfo: event.game,
+            weatherData,
+            aiContext: null,
+            aiConfidence: 0,
+            sentToTelegram: false,
+          };
+
+          const settings = await storage.getSettingsBySport(alertData.sport);
+          if (settings?.aiEnabled) {
+            const analysis = await analyzeAlert(
+              alertData.type,
+              alertData.sport,
+              alertData.gameInfo,
+              weatherData
+            );
+            alertData.aiContext = analysis.context;
+            alertData.aiConfidence = analysis.confidence;
+          }
+
+          const alert = await storage.createAlert(alertData);
+
+          if (settings?.telegramEnabled) {
+            const telegramConfig = {
+              botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
+              chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+            };
+
+            const sent = await sendTelegramAlert(telegramConfig, alert);
+            if (sent) {
+              await storage.markAlertSentToTelegram(alert.id);
+            }
+          }
+
+          broadcast({ type: 'new_alert', data: alert });
+        }
+      }
+
     } catch (error) {
-      console.error("Auto-generated event error:", error);
+      console.error("Real-time sports monitoring error:", error);
     }
-  }, 60000 + Math.random() * 60000); // 1-2 minutes
+  }, 120000); // Check every 2 minutes for real events
 
   return httpServer;
 }
