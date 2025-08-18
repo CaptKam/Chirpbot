@@ -32,6 +32,22 @@ export default function Calendar() {
 
   const games = gamesData?.games || [];
 
+  // Fetch alerts for badge count
+  const { data: alerts } = useQuery({
+    queryKey: ["/api/alerts", { limit: "10" }],
+    queryFn: async ({ queryKey }) => {
+      const [url, params] = queryKey;
+      const searchParams = new URLSearchParams(params as Record<string, string>);
+      const response = await fetch(`${url}?${searchParams}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch alerts");
+      return response.json();
+    },
+  });
+
+  const alertCount = alerts?.length || 0;
+
   // Load persisted monitored games
   const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
     queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`, { sport: activeSport }],
@@ -157,12 +173,16 @@ export default function Calendar() {
               <span className="text-xs font-medium">Sign Up</span>
             </Button>
           </Link>
-          <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              3
-            </span>
-          </Button>
+          <Link href="/alerts">
+            <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
+              <Bell className="w-5 h-5" />
+              {alertCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {alertCount > 99 ? "99+" : alertCount}
+                </span>
+              )}
+            </Button>
+          </Link>
         </div>
       </header>
 
