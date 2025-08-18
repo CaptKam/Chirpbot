@@ -549,7 +549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Auth successful for user: ${user.username}`);
-      res.json({ id: user.id, username: user.username });
+      res.json({ id: user.id, username: user.username, role: user.role });
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ message: "Failed to check authentication" });
@@ -645,5 +645,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin routes - require admin role
+  app.get('/api/admin/stats', isAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      res.status(500).json({ message: 'Failed to fetch admin stats' });
+    }
+  });
+
+  app.get('/api/admin/users', isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Don't send passwords
+      const safeUsers = users.map(({ password, ...user }) => user);
+      res.json(safeUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  });
+
+  app.patch('/api/admin/users/:userId', isAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const updates = req.body;
+      
+      // Log admin action
+      await storage.createAdminLog({
+        adminId: (req as any).user?.id,
+        action: 'UPDATE_USER',
+        resource: 'user',
+        resourceId: userId,
+        details: updates,
+      });
+
+      const updatedUser = await storage.updateUser(userId, updates);
+      const { password, ...safeUser } = updatedUser;
+      res.json(safeUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: 'Failed to update user' });
+    }
+  });
+
+  app.get('/api/admin/learning', isAdmin, async (req, res) => {
+    try {
+      const { sport } = req.query;
+      const articles = await storage.getAllLearningContent(sport as string);
+      res.json(articles);
+    } catch (error) {
+      console.error('Error fetching learning content:', error);
+      res.status(500).json({ message: 'Failed to fetch learning content' });
+    }
+  });
+
+  app.post('/api/admin/learning', isAdmin, async (req, res) => {
+    try {
+      const articleData = {
+        ...req.body,
+        authorId: (req as any).user?.id,
+      };
+      
+      const article = await storage.createLearningContent(articleData);
+      
+      // Log admin action
+      await storage.createAdminLog({
+        adminId: (req as any).user?.id,
+        action: 'CREATE_LEARNING_CONTENT',
+        resource: 'learning',
+        resourceId: article.id,
+        details: { sport: article.sport, title: article.title },
+      });
+
+      res.json(article);
+    } catch (error) {
+      console.error('Error creating learning content:', error);
+      res.status(500).json({ message: 'Failed to create learning content' });
+    }
+  });
+
+  app.get('/api/admin/permissions', isAdmin, async (req, res) => {
+    try {
+      const permissions = await storage.getAllPermissions();
+      res.json(permissions);
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+      res.status(500).json({ message: 'Failed to fetch permissions' });
+    }
+  });
+
+  app.get('/api/admin/logs', isAdmin, async (req, res) => {
+    try {
+      const logs = await storage.getAdminLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching admin logs:', error);
+      res.status(500).json({ message: 'Failed to fetch admin logs' });
+    }
+  });
+
   return httpServer;
+}
+
+// Middleware to check admin role
+async function isAdmin(req: any, res: any, next: any) {
+  try {
+    // Check if user is authenticated first
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    // Get user and check role
+    const user = await storage.getUser(req.session.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    (req as any).user = user;
+    next();
+  } catch (error) {
+    console.error('Admin auth check error:', error);
+    res.status(500).json({ message: 'Authentication error' });
+  }
 }
