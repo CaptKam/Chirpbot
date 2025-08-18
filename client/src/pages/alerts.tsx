@@ -20,12 +20,65 @@ const FILTER_OPTIONS = [
   { id: "ai-verified", label: "AI Verified", active: false },
 ];
 
-// Sportsbook quick actions
+// Sportsbook quick actions with accurate brand colors and logos
 const SPORTSBOOKS = [
-  { name: "FanDuel", baseUrl: "https://sportsbook.fanduel.com", color: "bg-blue-600", icon: "FD" },
-  { name: "Bet365", baseUrl: "https://www.bet365.com/#/HO/", color: "bg-green-600", icon: "365" },
-  { name: "DraftKings", baseUrl: "https://sportsbook.draftkings.com", color: "bg-orange-600", icon: "DK" },
-  { name: "BetRivers", baseUrl: "https://www.betrivers.com", color: "bg-purple-600", icon: "BR" },
+  { 
+    name: "FanDuel", 
+    baseUrl: "https://sportsbook.fanduel.com", 
+    color: "bg-blue-600", 
+    icon: "FD",
+    logo: (
+      <svg viewBox="0 0 60 60" className="w-16 h-16">
+        <rect width="60" height="60" fill="#1493FF" rx="8"/>
+        <path d="M30 12 L42 18 L42 36 L30 42 L18 36 L18 18 Z" fill="#FFFFFF" opacity="0.15"/>
+        <text x="30" y="38" textAnchor="middle" className="fill-white" style={{fontSize: '18px', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif'}}>FD</text>
+      </svg>
+    )
+  },
+  { 
+    name: "Bet365", 
+    baseUrl: "https://www.bet365.com/#/HO/", 
+    color: "bg-green-600", 
+    icon: "365",
+    logo: (
+      <svg viewBox="0 0 60 60" className="w-16 h-16">
+        <rect width="60" height="60" fill="#236C00" rx="8"/>
+        <text x="19" y="33" className="fill-white" style={{fontSize: '13px', fontWeight: 'normal', fontFamily: 'system-ui, sans-serif'}}>bet</text>
+        <text x="33" y="33" style={{fontSize: '13px', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif', fill: '#FFD700'}}>365</text>
+      </svg>
+    )
+  },
+  { 
+    name: "DraftKings", 
+    baseUrl: "https://sportsbook.draftkings.com", 
+    color: "bg-orange-600", 
+    icon: "DK",
+    logo: (
+      <svg viewBox="0 0 60 60" className="w-16 h-16">
+        <rect width="60" height="60" fill="#F3701D" rx="8"/>
+        <rect width="60" height="60" fill="#000000" opacity="0.08" rx="8"/>
+        <g transform="translate(30,22)">
+          <polygon points="-9,-7 9,-7 6,-3 3,3 -3,3 -6,-3" fill="#FFFFFF"/>
+          <polygon points="-2,4 2,4 0,10" fill="#FFFFFF"/>
+        </g>
+        <text x="30" y="48" textAnchor="middle" className="fill-white" style={{fontSize: '11px', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif'}}>DK</text>
+      </svg>
+    )
+  },
+  { 
+    name: "BetRivers", 
+    baseUrl: "https://www.betrivers.com", 
+    color: "bg-purple-600", 
+    icon: "BR",
+    logo: (
+      <svg viewBox="0 0 60 60" className="w-16 h-16">
+        <rect width="60" height="60" fill="#27388C" rx="8"/>
+        <path d="M12 22 Q22 18 32 22 Q42 26 52 22" stroke="#00B4D8" strokeWidth="3" fill="none"/>
+        <path d="M12 30 Q22 26 32 30 Q42 34 52 30" stroke="#00B4D8" strokeWidth="3" fill="none"/>
+        <text x="30" y="48" textAnchor="middle" className="fill-white" style={{fontSize: '10px', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif'}}>RIVERS</text>
+      </svg>
+    )
+  },
 ];
 
 interface SwipeableAlertCardProps {
@@ -103,7 +156,10 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
   const AlertIcon = config.icon;
   
   // Parse the score from gameInfo if available
-  const score = (alert.gameInfo as any)?.score || { away: 0, home: 0 };
+  const score = (alert.gameInfo as any)?.score || { 
+    away: (alert.gameInfo as any)?.awayScore || 0, 
+    home: (alert.gameInfo as any)?.homeScore || 0 
+  };
   
   // Extract team names without cities
   const getTeamNameWithoutCity = (fullTeamName: string) => {
@@ -134,11 +190,11 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
               <Button
                 key={sportsbook.name}
                 onClick={() => handleSportsbookClick(sportsbook)}
-                className={`${sportsbook.color} hover:opacity-90 text-white p-1 h-8 w-12 rounded-lg flex items-center justify-center`}
+                className="bg-white hover:bg-gray-50 border border-gray-200 p-2 h-16 w-20 rounded-lg flex items-center justify-center shadow-sm"
                 data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
                 title={`Open ${sportsbook.name} for ${alert.gameInfo.awayTeam} @ ${alert.gameInfo.homeTeam}`}
               >
-                <span className="text-xs font-bold whitespace-nowrap">{sportsbook.icon}</span>
+                {sportsbook.logo}
               </Button>
             ))}
           </div>
