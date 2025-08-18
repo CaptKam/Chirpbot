@@ -228,6 +228,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User monitored games endpoints
+  app.get('/api/user/:userId/monitored-games', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { sport } = req.query;
+      
+      const monitoredGames = sport 
+        ? await storage.getUserMonitoredGamesBySport(userId, sport as string)
+        : await storage.getUserMonitoredGames(userId);
+        
+      res.json(monitoredGames);
+    } catch (error) {
+      console.error("Error fetching monitored games:", error);
+      res.status(500).json({ message: "Failed to fetch monitored games" });
+    }
+  });
+
+  app.post('/api/user/:userId/monitored-games', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { gameId, sport, homeTeamName, awayTeamName } = req.body;
+      
+      const monitoring = await storage.addUserMonitoredGame({
+        userId,
+        gameId,
+        sport,
+        homeTeamName,
+        awayTeamName
+      });
+      
+      res.json(monitoring);
+    } catch (error) {
+      console.error("Error adding monitored game:", error);
+      res.status(500).json({ message: "Failed to add monitored game" });
+    }
+  });
+
+  app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
+    try {
+      const { userId, gameId } = req.params;
+      
+      await storage.removeUserMonitoredGame(userId, gameId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing monitored game:", error);
+      res.status(500).json({ message: "Failed to remove monitored game" });
+    }
+  });
+
+  app.get('/api/user/:userId/monitored-games/:gameId/status', async (req, res) => {
+    try {
+      const { userId, gameId } = req.params;
+      
+      const isMonitored = await storage.isGameMonitoredByUser(userId, gameId);
+      res.json({ isMonitored });
+    } catch (error) {
+      console.error("Error checking game monitoring status:", error);
+      res.status(500).json({ message: "Failed to check monitoring status" });
+    }
+  });
+
   // Telegram test route
   app.post("/api/telegram/test", async (req, res) => {
     try {

@@ -61,6 +61,17 @@ export const settings = pgTable("settings", {
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(true),
 });
 
+// User monitored teams for persistent game selection
+export const userMonitoredTeams = pgTable("user_monitored_teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  gameId: text("game_id").notNull(), // The game ID from live sports API
+  sport: text("sport").notNull(),
+  homeTeamName: text("home_team_name").notNull(),
+  awayTeamName: text("away_team_name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -80,6 +91,11 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
 });
 
+export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTeams).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -92,6 +108,9 @@ export type Alert = typeof alerts.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
+export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
+export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
 
 // Game types for live sports data
 export interface Game {

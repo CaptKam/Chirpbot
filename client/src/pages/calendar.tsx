@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
@@ -10,6 +10,7 @@ import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
+const TEST_USER_ID = "test-user-123"; // For demo purposes
 
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
@@ -30,17 +31,75 @@ export default function Calendar() {
 
   const games = gamesData?.games || [];
 
+  // Load persisted monitored games
+  const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
+    queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`, { sport: activeSport }],
+    queryFn: async ({ queryKey }) => {
+      const [url, params] = queryKey;
+      const searchParams = new URLSearchParams(params as Record<string, string>);
+      const response = await fetch(`${url}?${searchParams}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch monitored games");
+      return response.json();
+    },
+  });
+
+  // Sync selected games with persisted monitored games
+  useEffect(() => {
+    if (monitoredGames) {
+      const persistedGameIds = new Set<string>(monitoredGames.map((game: any) => game.gameId));
+      setSelectedGames(persistedGameIds);
+    }
+  }, [monitoredGames, activeSport]);
+
+  // Add game monitoring
+  const addMonitoringMutation = useMutation({
+    mutationFn: async ({ gameId, sport, homeTeamName, awayTeamName }: { 
+      gameId: string; 
+      sport: string; 
+      homeTeamName: string; 
+      awayTeamName: string; 
+    }) => {
+      return apiRequest(`/api/user/${TEST_USER_ID}/monitored-games`, "POST", { 
+        gameId, sport, homeTeamName, awayTeamName 
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
+    }
+  });
+
+  // Remove game monitoring
+  const removeMonitoringMutation = useMutation({
+    mutationFn: async (gameId: string) => {
+      return apiRequest(`/api/user/${TEST_USER_ID}/monitored-games/${gameId}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
+    }
+  });
+
   const toggleGameSelection = (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
     const newSelected = new Set(selectedGames);
     if (newSelected.has(gameId)) {
       newSelected.delete(gameId);
+      // Remove from database
+      removeMonitoringMutation.mutate(gameId);
     } else {
       newSelected.add(gameId);
+      // Add to database
+      addMonitoringMutation.mutate({
+        gameId,
+        sport: activeSport,
+        homeTeamName: game.homeTeam.name,
+        awayTeamName: game.awayTeam.name
+      });
     }
     setSelectedGames(newSelected);
-    
-    // Here we could sync with team monitoring if needed
-    // For now, we'll just track game selections
   };
 
   const selectedCount = selectedGames.size;
