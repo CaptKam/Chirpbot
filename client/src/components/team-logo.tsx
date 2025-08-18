@@ -305,21 +305,34 @@ export function TeamLogoV5({ teamName, abbreviation, size = 'md', className = ''
       </svg>
     ),
     'PHI': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#E81828" stroke="#002D72" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">PHI</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Phillies Liberty Bell Design */}
+        <path d="M35 25 Q50 15 65 25 L65 35 Q65 55 50 70 Q35 55 35 35 Z" fill="#E81828" stroke="#002D72" strokeWidth="3"/>
+        <path d="M35 35 L65 35" stroke="#002D72" strokeWidth="2"/>
+        <rect x="48" y="70" width="4" height="10" fill="#002D72"/>
+        <text x="50" y="90" textAnchor="middle" className="fill-red-600 font-black text-xs font-sans">PHILLIES</text>
       </svg>
     ),
     'SEA': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#0C2C56" stroke="#005C5C" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-teal-400 font-black text-base font-sans">SEA</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Mariners Compass Design */}
+        <circle cx="50" cy="50" r="45" fill="#0C2C56" stroke="#005C5C" strokeWidth="3"/>
+        <polygon points="50,15 55,40 50,45 45,40" fill="#005C5C"/>
+        <polygon points="85,50 60,55 55,50 60,45" fill="#005C5C"/>
+        <polygon points="50,85 45,60 50,55 55,60" fill="#005C5C"/>
+        <polygon points="15,50 40,45 45,50 40,55" fill="#005C5C"/>
+        <circle cx="50" cy="50" r="8" fill="#005C5C"/>
+        <text x="50" y="56" textAnchor="middle" className="fill-white font-black text-xs font-sans">M</text>
       </svg>
     ),
     'BAL': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#DF4601" stroke="#000000" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">BAL</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Orioles Bird Design */}
+        <path d="M50 15 Q65 20 70 35 Q75 45 65 60 Q70 70 60 75 Q45 80 35 70 Q30 60 35 50 Q25 40 35 30 Q40 20 50 15 Z" fill="#DF4601" stroke="#000000" strokeWidth="2"/>
+        <circle cx="55" cy="35" r="3" fill="#000000"/>
+        <path d="M65 30 Q75 25 80 35" fill="none" stroke="#DF4601" strokeWidth="3"/>
+        <path d="M45 50 Q55 55 60 50" fill="none" stroke="#000000" strokeWidth="2"/>
+        <text x="50" y="90" textAnchor="middle" className="fill-orange-600 font-black text-xs font-sans">ORIOLES</text>
       </svg>
     ),
     'ATL': (
