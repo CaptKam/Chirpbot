@@ -171,33 +171,13 @@ class LiveSportsService {
     return { hasRISP, positions };
   }
 
-  // Get today's MLB games with ESPN IDs mapped to MLB.com game IDs
-  async getMLBGamesWithRunnerData(): Promise<Array<Game & { mlbGameId?: string; runners?: any; gameState?: any }>> {
+  // NO LONGER USED - Removed problematic ESPN->MLB API mapping
+  // Focus on predictive alerts with ESPN data only
+  async getSimplifiedMLBGames(): Promise<Game[]> {
     try {
-      const espnGames = await this.fetchESPNGames('MLB');
-      const enhancedGames = [];
-
-      for (const game of espnGames) {
-        // Extract ESPN game ID and try to map to MLB.com
-        const espnId = game.id.replace('mlb-', '');
-        
-        // For live games, get detailed runner data
-        if (game.status === 'live') {
-          const gameDetails = await this.getMLBGameDetails(espnId);
-          enhancedGames.push({
-            ...game,
-            mlbGameId: espnId,
-            runners: gameDetails?.runners,
-            gameState: gameDetails
-          });
-        } else {
-          enhancedGames.push({ ...game, mlbGameId: espnId });
-        }
-      }
-
-      return enhancedGames;
+      return await this.fetchESPNGames('MLB');
     } catch (error) {
-      console.error('Error fetching MLB games with runner data:', error);
+      console.error('Error fetching simplified MLB games:', error);
       return [];
     }
   }

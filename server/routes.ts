@@ -556,20 +556,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const scoreDiff = Math.abs(homeScore - awayScore);
         const totalScore = homeScore + awayScore;
         
-        // Generate alerts for actual game events only
+        // Generate PREDICTIVE alerts for betting opportunities BEFORE they happen
         let alertType = null;
         let alertDescription = null;
         
-        if (homeScored || awayScored) {
-          alertType = "Scoring Play";
-          const scoringTeam = homeScored ? game.homeTeam.name : game.awayTeam.name;
-          alertDescription = `${scoringTeam} scores! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name}`;
-        } else if (scoreDiff <= 3 && totalScore > 10) {
-          // Close game alert (only once per game per 10 minutes)
-          const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
-          if (timeSinceLastAlert > 600000) { // 10 minutes
-            alertType = "Close Game";
-            alertDescription = `Tight game! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name}`;
+        // Only generate predictive alerts, not post-event alerts
+        if (game.sport === 'MLB') {
+          // Late inning pressure situations (7th+ inning with close score)
+          if (scoreDiff <= 2 && totalScore >= 4) {
+            const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
+            if (timeSinceLastAlert > 600000) { // 10 minutes between alerts
+              alertType = "Close Game Opportunity";
+              alertDescription = `Tight game developing! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Prime betting opportunity`;
+            }
+          }
+        } else if (game.sport === 'NFL') {
+          // NFL close game situations
+          if (scoreDiff <= 7 && totalScore >= 14) {
+            const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
+            if (timeSinceLastAlert > 600000) {
+              alertType = "NFL Close Game";
+              alertDescription = `One-score game! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Key betting moment`;
+            }
           }
         }
         
@@ -637,82 +645,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check MLB games for RISP situations using MLB.com API data
-      const mlbLiveGames = await liveSportsService.getMLBGamesWithRunnerData();
-      const mlbLiveGamesFiltered = mlbLiveGames.filter(game => game.status === 'live');
+      // Simple predictive alerts based on game situations (no complex API mapping needed)
+      // Focus on situations that create betting opportunities BEFORE they resolve
       
-      for (const mlbGame of mlbLiveGamesFiltered) {
-        const gameId = `${mlbGame.id}-risp`;
-        const previousRispState = gameStates.get(gameId);
+      // Check for late-game pressure in close MLB games
+      const mlbGames = liveGames.filter(game => game.sport === 'MLB');
+      for (const game of mlbGames) {
+        const gameId = `${game.id}-pressure`;
+        const previousPressureState = gameStates.get(gameId);
+        const scoreDiff = Math.abs((game.score?.home || 0) - (game.score?.away || 0));
+        const totalScore = (game.score?.home || 0) + (game.score?.away || 0);
+        const timeSinceLastPressureAlert = Date.now() - (previousPressureState?.lastAlertTime || 0);
         
-        if (mlbGame.runners && mlbGame.gameState) {
-          const runnersInfo = liveSportsService.checkRunnersInScoringPosition(mlbGame.runners);
-          const timeSinceLastRispAlert = Date.now() - (previousRispState?.lastAlertTime || 0);
-          
-          console.log(`RISP Check: ${mlbGame.awayTeam.name} @ ${mlbGame.homeTeam.name} - ${runnersInfo.hasRISP ? 'YES' : 'NO'} - Positions: ${runnersInfo.positions.join(', ')}`);
-          
-          // Generate RISP alert if runners in scoring position and enough time has passed
-          if (runnersInfo.hasRISP && timeSinceLastRispAlert > 300000) { // 5 minutes between RISP alerts
-            const inning = mlbGame.gameState.inning || 'Unknown';
-            const inningHalf = mlbGame.gameState.inningHalf || '';
-            const outs = mlbGame.gameState.outs || 0;
-            
-            const alertData = {
-              type: "RISP",
-              sport: mlbGame.sport,
-              title: `${mlbGame.awayTeam.name} @ ${mlbGame.homeTeam.name}`,
-              description: `Runners in scoring position! ${runnersInfo.positions.join(' and ')} - ${inningHalf} ${inning}, ${outs} outs`,
-              gameInfo: {
-                score: mlbGame.score,
-                status: 'Live',
-                awayTeam: mlbGame.awayTeam.name,
-                homeTeam: mlbGame.homeTeam.name,
-                venue: mlbGame.venue || 'TBD',
-                inning: `${inningHalf} ${inning}`,
-                outs,
-                runners: runnersInfo.positions
-              },
-              weatherData: await getWeatherData(mlbGame.homeTeam.name),
-              aiContext: undefined as string | undefined,
-              aiConfidence: 0,
-              sentToTelegram: false,
+        // Generate pressure situation alerts
+        if (scoreDiff <= 1 && totalScore >= 6 && timeSinceLastPressureAlert > 900000) { // 15 minutes between pressure alerts
+          const alertData = {
+            type: "High Pressure Situation",
+            sport: game.sport,
+            title: `${game.awayTeam.name} @ ${game.homeTeam.name}`,
+            description: `One-run game! ${game.awayTeam.name} ${game.score?.away || 0} - ${game.score?.home || 0} ${game.homeTeam.name} - High-value betting opportunity`,
+            gameInfo: {
+              score: game.score,
+              status: 'Live',
+              awayTeam: game.awayTeam.name,
+              homeTeam: game.homeTeam.name,
+              venue: game.venue || 'TBD',
+              situation: 'One-run game - maximum pressure'
+            },
+            weatherData: await getWeatherData(game.homeTeam.name),
+            aiContext: undefined as string | undefined,
+            aiConfidence: 0,
+            sentToTelegram: false,
+          };
+
+          const settings = await storage.getSettingsBySport(alertData.sport);
+          if (settings?.aiEnabled) {
+            const analysis = await analyzeAlert(
+              alertData.type,
+              alertData.sport,
+              alertData.gameInfo,
+              alertData.weatherData
+            );
+            alertData.aiContext = analysis.context;
+            alertData.aiConfidence = analysis.confidence;
+          }
+
+          const alert = await storage.createAlert(alertData);
+
+          if (settings?.telegramEnabled) {
+            const telegramConfig = {
+              botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
+              chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
             };
 
-            const settings = await storage.getSettingsBySport(alertData.sport);
-            if (settings?.aiEnabled) {
-              const analysis = await analyzeAlert(
-                alertData.type,
-                alertData.sport,
-                alertData.gameInfo,
-                alertData.weatherData
-              );
-              alertData.aiContext = analysis.context;
-              alertData.aiConfidence = analysis.confidence;
+            const sent = await sendTelegramAlert(telegramConfig, {
+              ...alert,
+              aiContext: alert.aiContext || undefined
+            });
+            if (sent) {
+              await storage.markAlertSentToTelegram(alert.id);
             }
-
-            const alert = await storage.createAlert(alertData);
-
-            if (settings?.telegramEnabled) {
-              const telegramConfig = {
-                botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
-                chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
-              };
-
-              const sent = await sendTelegramAlert(telegramConfig, {
-                ...alert,
-                aiContext: alert.aiContext || undefined
-              });
-              if (sent) {
-                await storage.markAlertSentToTelegram(alert.id);
-              }
-            }
-
-            broadcast({ type: 'new_alert', data: alert });
-            console.log(`🏃‍♂️ RISP alert generated: ${mlbGame.homeTeam.name} vs ${mlbGame.awayTeam.name} - ${runnersInfo.positions.join(' and ')}`);
-            
-            // Update last RISP alert time
-            gameStates.set(gameId, { lastAlertTime: Date.now() });
           }
+
+          broadcast({ type: 'new_alert', data: alert });
+          console.log(`🔥 PRESSURE ALERT: ${game.homeTeam.name} vs ${game.awayTeam.name} - One-run game!`);
+          
+          // Update last pressure alert time
+          gameStates.set(gameId, { lastAlertTime: Date.now() });
         }
       }
     } catch (error) {
