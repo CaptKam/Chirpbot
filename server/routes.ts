@@ -149,9 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         alerts = await storage.getRecentAlerts(limit);
       }
 
-      // Sort alerts by timestamp descending (newest first)
-      const sortedAlerts = alerts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      res.json(sortedAlerts);
+      res.json(alerts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch alerts" });
     }
