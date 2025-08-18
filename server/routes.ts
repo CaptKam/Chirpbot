@@ -8,6 +8,7 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
+import { generatePredictiveAlerts, type AlertResult } from "./services/alert-engine";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -382,22 +383,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Real-time alert generation for live games only
+  // NEW: Real-time predictive alert generation for live games
   setInterval(async () => {
     try {
-      // Get today's games from ESPN API
+      console.log('🔍 Analyzing live games for predictive alerts...');
+      
+      // Generate predictive alerts for all live games
+      const predictiveAlerts = await liveSportsService.analyzeAllLiveGames();
+      
+      if (predictiveAlerts.length === 0) {
+        console.log('No live games or alert conditions found');
+        return;
+      }
+
+      console.log(`📊 Generated ${predictiveAlerts.length} predictive alerts`);
+
+      // Process each alert
+      for (const predictiveAlert of predictiveAlerts) {
+        // Create alert record in database
+        const alertData = {
+          type: predictiveAlert.type,
+          sport: predictiveAlert.sport || 'MLB',
+          title: predictiveAlert.title,
+          description: predictiveAlert.description,
+          gameInfo: {
+            status: 'Live',
+            homeTeam: predictiveAlert.homeTeam || 'Home Team',
+            awayTeam: predictiveAlert.awayTeam || 'Away Team',
+            id: predictiveAlert.gameId
+          },
+          weatherData: null,
+          aiContext: `Predictive Alert - ${predictiveAlert.predictiveWindow} (${predictiveAlert.confidence}% confidence)`,
+          aiConfidence: predictiveAlert.confidence,
+          sentToTelegram: false,
+        };
+
+        const alert = await storage.createAlert(alertData);
+
+        // Send to Telegram if enabled for this sport
+        const settings = await storage.getSettingsBySport(predictiveAlert.sport || 'MLB');
+        if (settings?.telegramEnabled) {
+          const telegramConfig = {
+            botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
+            chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+          };
+
+          const sent = await sendTelegramAlert(telegramConfig, {
+            ...alert,
+            aiContext: alert.aiContext || undefined
+          });
+          if (sent) {
+            await storage.markAlertSentToTelegram(alert.id);
+          }
+        }
+
+        // Broadcast new alert via WebSocket
+        broadcast({ 
+          type: 'new_alert', 
+          data: {
+            ...alert,
+            priority: predictiveAlert.priority,
+            predictiveWindow: predictiveAlert.predictiveWindow
+          }
+        });
+
+        console.log(`🚨 Alert: ${predictiveAlert.title} (${predictiveAlert.confidence}% confidence)`);
+      }
+    } catch (error) {
+      console.error('Error in predictive alert generation:', error);
+    }
+  }, 30000); // Check every 30 seconds for live game situations
+
+  // Legacy alert generation (keeping for manual testing)
+  app.post("/api/alerts/generate-test", async (req: any, res: any) => {
+    try {
       const gamesData = await liveSportsService.getTodaysGames();
       const liveGames = gamesData.games.filter(game => game.status === 'live');
       
       if (liveGames.length === 0) {
-        console.log('No live games found, skipping alert generation');
-        return;
+        return res.json({ message: 'No live games for testing', alerts: [] });
       }
 
-      // Only generate alerts for actually live games
       const randomLiveGame = liveGames[Math.floor(Math.random() * liveGames.length)];
       
-      // Generate realistic event based on sport
+      // Generate legacy event based on sport
       const eventTypes = randomLiveGame.sport === 'MLB' 
         ? [{ type: "RISP", probability: 0.3 }, { type: "HomeRun", probability: 0.1 }, { type: "LateInning", probability: 0.2 }]
         : randomLiveGame.sport === 'NFL'
@@ -463,10 +532,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       broadcast({ type: 'new_alert', data: alert });
       console.log(`Generated alert for live game: ${randomLiveGame.homeTeam.name} vs ${randomLiveGame.awayTeam.name}`);
+      res.json(alert);
     } catch (error) {
       console.error("Live game alert generation error:", error);
+      res.status(500).json({ message: "Failed to generate test alert" });
     }
-  }, 60000 + Math.random() * 60000); // 1-2 minutes
+  });
+
+  // Remove old setInterval - it's now handled by the new predictive system above
 
   // Auth routes
   app.post("/api/auth/signup", async (req, res) => {
