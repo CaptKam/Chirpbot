@@ -562,12 +562,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Only generate predictive alerts, not post-event alerts
         if (game.sport === 'MLB') {
-          // Late inning pressure situations (7th+ inning with close score)
-          if (scoreDiff <= 2 && totalScore >= 4) {
+          // RISP opportunity detection (when games show scoring activity patterns)
+          const recentScoringActivity = Math.abs(totalScore - (previousState.totalScore || 0)) > 0;
+          const isCloseGame = scoreDiff <= 2;
+          const hasScoringPotential = totalScore >= 2 && totalScore <= 8; // Sweet spot for RISP
+          
+          if (recentScoringActivity && isCloseGame && hasScoringPotential) {
+            const timeSinceLastRispAlert = Date.now() - (previousState.lastRispAlert || 0);
+            if (timeSinceLastRispAlert > 420000) { // 7 minutes between RISP alerts
+              alertType = "RISP Opportunity";
+              alertDescription = `Runners likely in scoring position! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Prime RBI opportunity developing`;
+            }
+          }
+          // Close game pressure situations
+          else if (scoreDiff <= 1 && totalScore >= 4) {
             const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
-            if (timeSinceLastAlert > 600000) { // 10 minutes between alerts
-              alertType = "Close Game Opportunity";
-              alertDescription = `Tight game developing! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Prime betting opportunity`;
+            if (timeSinceLastAlert > 600000) { // 10 minutes between pressure alerts
+              alertType = "High Pressure Situation";
+              alertDescription = `One-run game! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - High-value betting opportunity`;
             }
           }
         } else if (game.sport === 'NFL') {
@@ -637,11 +649,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           broadcast({ type: 'new_alert', data: alert });
           console.log(`Real alert generated: ${alertType} for ${game.homeTeam.name} vs ${game.awayTeam.name}`);
           
-          // Update last alert time
-          gameStates.set(gameId, { homeScore, awayScore, lastAlertTime: Date.now() });
+          // Update game state with alert timing
+          const newState = { 
+            homeScore, 
+            awayScore, 
+            totalScore,
+            lastAlertTime: Date.now(),
+            lastRispAlert: alertType === "RISP Opportunity" ? Date.now() : (previousState.lastRispAlert || 0)
+          };
+          gameStates.set(gameId, newState);
         } else {
           // Update game state even if no alert
-          gameStates.set(gameId, { homeScore, awayScore, lastAlertTime: previousState.lastAlertTime });
+          gameStates.set(gameId, { 
+            homeScore, 
+            awayScore, 
+            totalScore,
+            lastAlertTime: previousState.lastAlertTime,
+            lastRispAlert: previousState.lastRispAlert || 0
+          });
         }
       }
       
