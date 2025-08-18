@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus } from "lucide-react";
+import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 const TEST_USER_ID = "test-user-123"; // For demo purposes
@@ -47,6 +47,20 @@ export default function Calendar() {
   });
 
   const alertCount = alerts?.length || 0;
+
+  // Authentication
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/logout", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      window.location.reload();
+    },
+  });
 
   // Load persisted monitored games
   const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
@@ -162,17 +176,35 @@ export default function Calendar() {
               LIVE
             </span>
           </div>
-          <Link href="/signup">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-white hover:text-gray-200 px-2"
-              data-testid="button-header-signup"
-            >
-              <UserPlus className="w-4 h-4 mr-1" />
-              <span className="text-xs font-medium">Sign Up</span>
-            </Button>
-          </Link>
+          {!isAuthLoading && (
+            isAuthenticated ? (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white hover:text-gray-200 px-2"
+                data-testid="button-header-logout"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                <LogOut className="w-4 h-4 mr-1" />
+                <span className="text-xs font-medium">
+                  {logoutMutation.isPending ? "Logging out..." : "Logout"}
+                </span>
+              </Button>
+            ) : (
+              <Link href="/signup">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-white hover:text-gray-200 px-2"
+                  data-testid="button-header-signup"
+                >
+                  <UserPlus className="w-4 h-4 mr-1" />
+                  <span className="text-xs font-medium">Sign Up</span>
+                </Button>
+              </Link>
+            )
+          )}
           <Link href="/alerts">
             <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
               <Bell className="w-5 h-5" />

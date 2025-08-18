@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Bell, CheckCircle, AlertCircle } from "lucide-react";
+import { Zap, Bell, CheckCircle, AlertCircle, LogOut, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
 import type { Settings } from "@/types";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
@@ -34,6 +35,20 @@ export default function Settings() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [telegramStatus, setTelegramStatus] = useState<boolean | null>(null);
   const { toast } = useToast();
+
+  // Authentication
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/logout", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      window.location.reload();
+    },
+  });
 
   const { data: settings, isLoading } = useQuery<Settings>({
     queryKey: ["/api/settings", { sport: activeSport }],
@@ -133,12 +148,40 @@ export default function Settings() {
               LIVE
             </span>
           </div>
-          <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              3
-            </span>
-          </Button>
+          {!isAuthLoading && (
+            isAuthenticated ? (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white hover:text-gray-200 px-2"
+                data-testid="button-header-logout"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                <LogOut className="w-4 h-4 mr-1" />
+                <span className="text-xs font-medium">
+                  {logoutMutation.isPending ? "Logging out..." : "Logout"}
+                </span>
+              </Button>
+            ) : (
+              <Link href="/signup">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-white hover:text-gray-200 px-2"
+                  data-testid="button-header-signup"
+                >
+                  <UserPlus className="w-4 h-4 mr-1" />
+                  <span className="text-xs font-medium">Sign Up</span>
+                </Button>
+              </Link>
+            )
+          )}
+          <Link href="/alerts">
+            <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
+              <Bell className="w-5 h-5" />
+            </Button>
+          </Link>
         </div>
       </header>
 
