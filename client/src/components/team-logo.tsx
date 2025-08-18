@@ -248,21 +248,33 @@ export function TeamLogoV5({ teamName, abbreviation, size = 'md', className = ''
       </svg>
     ),
     'MIL': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#FFC52F" stroke="#12284B" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-blue-900 font-black text-xl font-sans">M</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Brewers Beer Mug Shape */}
+        <path d="M30 25 L70 25 L75 30 L75 75 L70 85 L30 85 L25 75 L25 30 Z" fill="#FFC52F" stroke="#12284B" strokeWidth="3"/>
+        <rect x="75" y="40" width="8" height="25" fill="#12284B" rx="4"/>
+        <path d="M30 35 L70 35 L70 40 L30 40 Z" fill="#FFFFFF"/>
+        <circle cx="50" cy="60" r="12" fill="#12284B"/>
+        <text x="50" y="66" textAnchor="middle" className="fill-yellow-400 font-black text-xs font-sans">MB</text>
       </svg>
     ),
     'DET': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#0C2340" stroke="#FA4616" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">DET</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Tigers Tiger Head Silhouette */}
+        <path d="M50 15 Q70 20 75 40 Q80 50 75 65 Q70 80 50 85 Q30 80 25 65 Q20 50 25 40 Q30 20 50 15 Z" fill="#FA4616" stroke="#0C2340" strokeWidth="3"/>
+        <circle cx="40" cy="45" r="4" fill="#0C2340"/>
+        <circle cx="60" cy="45" r="4" fill="#0C2340"/>
+        <path d="M35 55 L50 65 L65 55" fill="none" stroke="#0C2340" strokeWidth="3"/>
+        <path d="M20 35 Q35 25 25 45" fill="#FA4616"/>
+        <path d="M80 35 Q65 25 75 45" fill="#FA4616"/>
+        <text x="50" y="95" textAnchor="middle" className="fill-orange-600 font-black text-xs font-sans">TIGERS</text>
       </svg>
     ),
     'HOU': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#002D62" stroke="#EB6E1F" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-orange-400 font-black text-base font-sans">HOU</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Astros Star/Space Theme */}
+        <polygon points="50,15 58,35 80,35 65,50 72,70 50,60 28,70 35,50 20,35 42,35" fill="#EB6E1F" stroke="#002D62" strokeWidth="2"/>
+        <circle cx="50" cy="50" r="15" fill="#002D62"/>
+        <text x="50" y="56" textAnchor="middle" className="fill-orange-400 font-black text-sm font-sans">H</text>
       </svg>
     ),
     'PIT': (
@@ -284,9 +296,12 @@ export function TeamLogoV5({ teamName, abbreviation, size = 'md', className = ''
       </svg>
     ),
     'STL': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#C41E3A" stroke="#FEDB00" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">STL</text>
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className}`}>
+        {/* Cardinals Bird Silhouette */}
+        <path d="M25 45 Q35 25 55 35 Q75 25 85 45 Q80 55 65 60 Q70 70 55 75 Q45 80 35 75 Q30 65 25 60 Z" fill="#C41E3A" stroke="#FEDB00" strokeWidth="2"/>
+        <circle cx="60" cy="40" r="3" fill="#FEDB00"/>
+        <path d="M75 35 Q85 30 90 40" fill="none" stroke="#C41E3A" strokeWidth="3"/>
+        <text x="50" y="90" textAnchor="middle" className="fill-red-600 font-black text-xs font-sans">CARDINALS</text>
       </svg>
     ),
     'PHI': (
