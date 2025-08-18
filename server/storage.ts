@@ -1,7 +1,7 @@
 import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, users, userMonitoredTeams, teams, alerts, settings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -351,15 +351,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAlertsBySport(sport: string): Promise<Alert[]> {
-    return await db.select().from(alerts).where(eq(alerts.sport, sport));
+    return await db.select().from(alerts)
+      .where(eq(alerts.sport, sport))
+      .orderBy(desc(alerts.timestamp));
   }
 
   async getAlertsByType(type: string): Promise<Alert[]> {
-    return await db.select().from(alerts).where(eq(alerts.type, type));
+    return await db.select().from(alerts)
+      .where(eq(alerts.type, type))
+      .orderBy(desc(alerts.timestamp));
   }
 
   async getRecentAlerts(limit = 50): Promise<Alert[]> {
-    return await db.select().from(alerts).limit(limit);
+    return await db.select().from(alerts)
+      .orderBy(desc(alerts.timestamp))
+      .limit(limit);
   }
 
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
