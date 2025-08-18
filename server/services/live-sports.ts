@@ -1,79 +1,110 @@
 import type { Game, GameDay } from "@shared/schema";
 
-interface MLBGameData {
-  gamePk: number;
-  gameDate: string;
+// ESPN API Interfaces
+interface ESPNGame {
+  id: string;
+  date: string;
+  name: string;
+  shortName: string;
   status: {
-    abstractGameCode: string;
-    codedGameState: string;
-    statusCode: string;
-  };
-  teams: {
-    home: {
-      team: {
-        id: number;
-        name: string;
-        abbreviation: string;
-      };
-    };
-    away: {
-      team: {
-        id: number;
-        name: string;
-        abbreviation: string;
-      };
+    type: {
+      name: string;
+      state: string;
+      completed: boolean;
     };
   };
-  venue: {
-    name: string;
-  };
+  competitions: Array<{
+    id: string;
+    venue?: {
+      fullName: string;
+    };
+    competitors: Array<{
+      id: string;
+      homeAway: 'home' | 'away';
+      team: {
+        id: string;
+        name: string;
+        displayName: string;
+        abbreviation: string;
+      };
+    }>;
+  }>;
 }
 
-interface MLBScheduleResponse {
-  dates: {
-    date: string;
-    games: MLBGameData[];
-  }[];
+interface ESPNResponse {
+  events: ESPNGame[];
 }
 
 class LiveSportsService {
-  private async fetchMLBGames(date: string): Promise<Game[]> {
+  private readonly ESPN_ENDPOINTS = {
+    MLB: 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard',
+    NFL: 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard',
+    NBA: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
+    NHL: 'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard'
+  };
+
+  private async fetchESPNGames(sport: 'MLB' | 'NFL' | 'NBA' | 'NHL'): Promise<Game[]> {
     try {
-      const url = `https://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&date=${date}`;
-      const response = await fetch(url);
+      const url = this.ESPN_ENDPOINTS[sport];
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0'
+        }
+      });
       
       if (!response.ok) {
-        throw new Error(`MLB API error: ${response.status}`);
+        throw new Error(`ESPN API error for ${sport}: ${response.status}`);
       }
 
-      const data: MLBScheduleResponse = await response.json();
+      const data: ESPNResponse = await response.json();
       
-      if (!data.dates || data.dates.length === 0) {
+      if (!data.events || data.events.length === 0) {
+        console.log(`No ${sport} games found for today`);
         return [];
       }
 
-      return data.dates[0].games.map((game: MLBGameData): Game => ({
-        id: `mlb-${game.gamePk}`,
-        sport: 'MLB',
-        homeTeam: {
-          id: game.teams.home.team.id.toString(),
-          name: game.teams.home.team.name,
-          abbreviation: game.teams.home.team.abbreviation,
-        },
-        awayTeam: {
-          id: game.teams.away.team.id.toString(),
-          name: game.teams.away.team.name,
-          abbreviation: game.teams.away.team.abbreviation,
-        },
-        startTime: game.gameDate,
-        status: this.mapMLBStatus(game.status.abstractGameCode),
-        venue: game.venue.name,
-        isSelected: false,
-      }));
+      return data.events.map((game: ESPNGame): Game => {
+        const competition = game.competitions[0];
+        const homeTeam = competition.competitors.find(c => c.homeAway === 'home');
+        const awayTeam = competition.competitors.find(c => c.homeAway === 'away');
+
+        if (!homeTeam || !awayTeam) {
+          console.warn(`Invalid team data for game ${game.id}`);
+          return null;
+        }
+
+        return {
+          id: `${sport.toLowerCase()}-${game.id}`,
+          sport,
+          homeTeam: {
+            id: homeTeam.team.id,
+            name: homeTeam.team.displayName,
+            abbreviation: homeTeam.team.abbreviation,
+          },
+          awayTeam: {
+            id: awayTeam.team.id,
+            name: awayTeam.team.displayName,
+            abbreviation: awayTeam.team.abbreviation,
+          },
+          startTime: game.date,
+          status: this.mapESPNStatus(game.status),
+          venue: competition.venue?.fullName || 'TBD',
+          isSelected: false,
+        };
+      }).filter((game): game is Game => game !== null);
     } catch (error) {
-      console.error('Error fetching MLB games:', error);
-      return this.getMockMLBGames();
+      console.error(`Error fetching ${sport} games from ESPN:`, error);
+      return [];
     }
+  }
+
+  private mapESPNStatus(status: ESPNGame['status']): 'scheduled' | 'live' | 'final' {
+    const state = status.type.state.toLowerCase();
+    const name = status.type.name.toLowerCase();
+    
+    if (status.type.completed) return 'final';
+    if (state === 'in' || name.includes('halftime') || name.includes('break')) return 'live';
+    return 'scheduled';
   }
 
   private mapMLBStatus(status: string): 'scheduled' | 'live' | 'final' {
@@ -203,27 +234,23 @@ class LiveSportsService {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     let games: Game[] = [];
 
-    if (!sport || sport === 'MLB') {
-      const mlbGames = await this.fetchMLBGames(today);
-      games.push(...mlbGames);
-    }
-
-    // For NFL, NBA, NHL - use mock data for now (APIs would be similar)
-    if (!sport || sport === 'NFL') {
-      games.push(...this.getMockNFLGames());
-    }
-
-    if (!sport || sport === 'NBA') {
-      games.push(...this.getMockNBAGames());
-    }
-
-    if (!sport || sport === 'NHL') {
-      games.push(...this.getMockNHLGames());
-    }
-
-    // Filter by sport if specified
-    if (sport) {
-      games = games.filter(game => game.sport === sport);
+    if (!sport) {
+      // Fetch all sports simultaneously
+      const [mlbGames, nflGames, nbaGames, nhlGames] = await Promise.all([
+        this.fetchESPNGames('MLB'),
+        this.fetchESPNGames('NFL'),
+        this.fetchESPNGames('NBA'),
+        this.fetchESPNGames('NHL'),
+      ]);
+      games = [...mlbGames, ...nflGames, ...nbaGames, ...nhlGames];
+    } else {
+      // Fetch specific sport
+      const sportCode = sport.toUpperCase() as 'MLB' | 'NFL' | 'NBA' | 'NHL';
+      if (['MLB', 'NFL', 'NBA', 'NHL'].includes(sportCode)) {
+        games = await this.fetchESPNGames(sportCode);
+      } else {
+        console.warn(`Unknown sport: ${sport}`);
+      }
     }
 
     return {
