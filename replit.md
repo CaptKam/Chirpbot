@@ -9,15 +9,7 @@ ChirpBot V2 is a fully functional modern sports alert application providing real
 - UI Components: Game cards with 12px rounded corners, shadow on hover, full-width responsive design
 - Active monitoring indicated with blue border and background
 
-Features persistent team monitoring that saves user game selections to the database and restores them on page reload. 
-
-**Advanced Predictive Alert System (August 18, 2025):**
-- Comprehensive alert engine with sophisticated logic for MLB, NFL, NBA, NHL
-- Real-time ESPN API integration for authentic game context analysis
-- Priority-based alerts (high/medium/low) with confidence scoring (70-95%)
-- Predictive time windows ("This at-bat", "Next 2 minutes", "Final minutes")
-- Context-aware analysis: inning situations, field position, score gaps, game clock
-- BEFORE-event prediction focus: alerts trigger before critical moments happen
+Features persistent team monitoring that saves user game selections to the database and restores them on page reload. Alert generation system correctly filters for live games only.
 
 # User Preferences
 
@@ -31,19 +23,6 @@ Preferred communication style: Simple, everyday language.
 - **Solution**: Updated calendar.tsx to use real user ID from useAuth hook for all monitored game operations
 - **Impact**: User game selections now properly persist with their account across login sessions
 - **Database**: All monitored games now correctly reference the authenticated user's actual ID
-
-## Advanced Predictive Alert Engine Implementation
-- **New Alert Engine**: Created `server/services/alert-engine.ts` with comprehensive predictive logic
-- **ESPN API Integration**: Enhanced `live-sports.ts` with detailed game data extraction and context analysis
-- **Smart Alert Types**: 
-  - MLB: RISP situations, late-inning pressure, power hitter scenarios, weather impacts
-  - NFL: Two-minute drills, red zone opportunities, 4th down decisions, game-winning drives
-  - NBA: Clutch time alerts, shot clock pressure situations
-  - NHL: Power play opportunities, empty net scenarios
-- **Confidence Scoring**: AI-powered confidence ratings (70-95%) based on historical game data
-- **Predictive Windows**: Time-specific predictions for when events will likely occur
-- **Real-time Analysis**: 30-second interval checking of live ESPN game data
-- **Priority System**: High/medium/low alert classification for user notification management
 
 # System Architecture
 
