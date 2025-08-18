@@ -3,9 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Filter, Share2, TriangleAlert, Star, Bot, Volleyball, Dumbbell, Clock, TrendingUp, Cloud } from "lucide-react";
+import { Zap, Bell, Filter, Share2, TriangleAlert, Star, Bot, Volleyball, Dumbbell } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { TeamLogo } from "@/components/team-logo";
 import type { Alert } from "@/types";
 
 const FILTER_OPTIONS = [
@@ -178,140 +177,106 @@ export default function Alerts() {
             return (
               <Card
                 key={alert.id}
-                className="bg-white rounded-2xl shadow-lg border-0 p-0 overflow-hidden hover:shadow-xl transition-all duration-300"
+                className={`bg-white rounded-xl shadow-sm border-l-4 p-4 ${alertColorClass}`}
                 data-testid={`alert-card-${alert.id}`}
               >
-                {/* Modern Header with Team Matchup */}
-                {alert.gameInfo && (
-                  <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      {/* Team Logos and Matchup */}
-                      <div className="flex items-center space-x-4 flex-1">
-                        <div className="flex items-center space-x-2">
-                          <TeamLogo teamName={alert.gameInfo.awayTeam} size="md" />
-                          <div className="text-center">
-                            <div className="text-sm font-medium text-gray-300">{alert.gameInfo.awayTeam}</div>
-                            <div className="text-xl font-black text-white">{(alert.gameInfo as any)?.score?.away || 0}</div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col items-center mx-2">
-                          <div className="text-xs text-gray-400 font-medium">VS</div>
-                          <div className="text-xs text-gray-400">{alert.gameInfo.status}</div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <div className="text-center">
-                            <div className="text-xl font-black text-white">{(alert.gameInfo as any)?.score?.home || 0}</div>
-                            <div className="text-sm font-medium text-gray-300">{alert.gameInfo.homeTeam}</div>
-                          </div>
-                          <TeamLogo teamName={alert.gameInfo.homeTeam} size="md" />
-                        </div>
-                      </div>
-                      
-                      {/* Alert Type Badge */}
-                      <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase shadow-lg">
-                        <AlertIcon className="w-3 h-3 mr-1" />
-                        {alert.type}
-                      </Badge>
-                    </div>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <Badge className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${alertColorClass.split(' ').slice(0, 2).join(' ')}`}>
+                      <AlertIcon className="w-3 h-3 mr-1" />
+                      {alert.type}
+                    </Badge>
+                    <span className="text-xs text-chirp-dark" data-testid={`alert-time-${alert.id}`}>
+                      {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
+                    </span>
                   </div>
-                )}
-                
-                {/* Alert Content */}
-                <div className="p-5">
-                  {/* Alert Title and Description */}
-                  <div className="mb-4">
-                    <h3 className="font-black text-lg text-gray-900 mb-2 leading-tight" data-testid={`alert-title-${alert.id}`}>
-                      {alert.title}
-                    </h3>
-                    <p className="text-gray-700 text-sm leading-relaxed" data-testid={`alert-description-${alert.id}`}>
-                      {alert.description}
-                    </p>
-                  </div>
-
-                  {/* AI Analysis Section */}
-                  {alert.aiContext && (
-                    <div className="mb-4 p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
-                      <div className="flex items-start space-x-3">
-                        <div className="bg-indigo-500 rounded-full p-2">
-                          <Bot className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-bold text-indigo-900 text-sm">AI Analysis</h4>
-                            {alert.aiConfidence && (
-                              <div className="flex items-center space-x-2">
-                                <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                <span className="text-xs font-bold text-indigo-700">{alert.aiConfidence}% Confidence</span>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-indigo-800 text-sm leading-relaxed" data-testid={`alert-ai-context-${alert.id}`}>
-                            {alert.aiContext}
-                          </p>
-                          {alert.aiConfidence && (
-                            <div className="mt-2 w-full bg-indigo-200 rounded-full h-2 overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
-                                style={{ width: `${alert.aiConfidence}%` }}
-                              ></div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Weather Information */}
-                  {alert.weatherData && (
-                    <div className="mb-4 p-3 bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-200">
-                      <div className="flex items-center space-x-2">
-                        <Cloud className="w-4 h-4 text-sky-600" />
-                        <span className="font-semibold text-sky-900 text-sm">Weather Impact:</span>
-                        <span className="text-sky-800 text-sm">
-                          {alert.weatherData.temperature}°F, {alert.weatherData.condition}
-                        </span>
-                        {alert.weatherData.windSpeed && (
-                          <span className="text-sky-700 text-sm">
-                            • Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Momentum Indicator */}
-                  {alert.gameInfo && (alert.gameInfo as any)?.momentumShift && (
-                    <div className="mb-4 p-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        <TrendingUp className="w-4 h-4 text-red-600" />
-                        <span className="font-bold text-red-800 text-sm">MOMENTUM SHIFT DETECTED</span>
-                      </div>
+                  {alert.aiConfidence && (
+                    <div className="flex items-center space-x-1">
+                      <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                      <span className="text-xs font-medium text-chirp-dark">
+                        {alert.aiConfidence}% AI
+                      </span>
                     </div>
                   )}
                 </div>
+                
+                <div className="mb-3">
+                  <h3 className="font-bold text-chirp-blue mb-1" data-testid={`alert-title-${alert.id}`}>
+                    {alert.title}
+                  </h3>
+                  <p className="text-sm text-chirp-dark" data-testid={`alert-description-${alert.id}`}>
+                    {alert.description}
+                  </p>
+                </div>
 
-                {/* Modern Footer */}
-                <div className="bg-gray-50 px-5 py-3 border-t border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-xs text-gray-600">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="font-medium uppercase tracking-wide">{alert.sport}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
-                        <span data-testid={`alert-time-${alert.id}`}>
-                          {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
-                        </span>
+                {/* Enhanced Game Info Display */}
+                {alert.gameInfo && (
+                  <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-sm font-bold text-chirp-blue">
+                          {alert.gameInfo.awayTeam} {(alert.gameInfo as any)?.score?.away || 0} - {(alert.gameInfo as any)?.score?.home || 0} {alert.gameInfo.homeTeam}
+                        </div>
+                        <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                          {alert.gameInfo.status}
+                        </div>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-gray-500 hover:text-indigo-600 p-2 rounded-full hover:bg-indigo-50" data-testid={`alert-share-${alert.id}`}>
-                      <Share2 className="w-4 h-4" />
-                    </Button>
+                    
+
+                    
+                    {/* Momentum Indicator */}
+                    {(alert.gameInfo as any)?.momentumShift && (
+                      <div className="mt-2 flex items-center space-x-2 text-xs">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="font-bold text-red-700">MOMENTUM SHIFT DETECTED</span>
+                      </div>
+                    )}
                   </div>
+                )}
+
+                {/* Weather Display */}
+                {alert.weatherData && (
+                  <div className="mb-3 text-xs text-chirp-dark bg-sky-50 p-2 rounded-lg">
+                    <span className="font-medium">Weather Impact:</span> {alert.weatherData.temperature}°F, {alert.weatherData.condition}
+                    {alert.weatherData.windSpeed && (
+                      <span> • Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* AI Context */}
+                {alert.aiContext && (
+                  <div className="bg-blue-50 rounded-lg p-3 mb-3">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Bot className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-bold uppercase text-blue-800 tracking-wide">
+                        AI Analysis
+                      </span>
+                    </div>
+                    <p className="text-sm text-blue-800" data-testid={`alert-ai-context-${alert.id}`}>
+                      {alert.aiContext}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm font-medium text-chirp-dark" data-testid={`alert-game-info-${alert.id}`}>
+                      {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
+                    </span>
+                    <span className="text-sm text-chirp-blue">
+                      {alert.gameInfo.status}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-0 text-chirp-red hover:text-red-700"
+                    data-testid={`alert-share-${alert.id}`}
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </Card>
             );

@@ -35,13 +35,6 @@ const teamNameToAbbr: Record<string, string> = {
   'Arizona Diamondbacks': 'AZ',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
-  // Additional abbreviation aliases for common variations
-  'CHW': 'CWS', // Chicago White Sox alias
-  'ARI': 'AZ',  // Arizona Diamondbacks alias
-  'Chicago White Sox (CHW)': 'CWS',
-  'Arizona Diamondbacks (ARI)': 'AZ',
-  'Athletics': 'OAK',
-  'Oakland Athletics': 'OAK',
   
   // NFL Teams
   'Kansas City Chiefs': 'KC',
@@ -233,12 +226,6 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#2F241D" stroke="#FFC425" strokeWidth="3"/>
         <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-xl font-sans">SD</text>
-      </svg>
-    ),
-    'OAK': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#003831" stroke="#EFB21E" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-base font-sans">OAK</text>
       </svg>
     ),
 
