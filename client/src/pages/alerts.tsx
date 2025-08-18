@@ -301,18 +301,12 @@ export default function Alerts() {
                     </Badge>
                   </div>
 
-                  {/* Score Display - Big and Clear */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="text-center flex-1">
-                        <p className="text-sm text-gray-600 mb-1">{alert.gameInfo.awayTeam}</p>
-                        <p className="text-3xl font-black text-gray-900">{score.away}</p>
-                      </div>
-                      <div className="text-2xl text-gray-400 mx-4">-</div>
-                      <div className="text-center flex-1">
-                        <p className="text-sm text-gray-600 mb-1">{alert.gameInfo.homeTeam}</p>
-                        <p className="text-3xl font-black text-gray-900">{score.home}</p>
-                      </div>
+                  {/* Team Matchup */}
+                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                    <div className="flex items-center justify-center">
+                      <span className="text-lg font-bold text-gray-900">
+                        {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
+                      </span>
                     </div>
                   </div>
 

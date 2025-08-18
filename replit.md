@@ -17,6 +17,15 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (August 18, 2025)
 
+## Modern Alert Design Overhaul (August 18, 2025)
+- **Complete UI Redesign**: Modern, clean alerts with instant visual clarity
+- **Eliminated Team Name Repetition**: Team names shown once in clean "Away @ Home" format
+- **Removed Score Clutter**: Eliminated distracting score displays per user feedback
+- **Visual Hierarchy**: Color-coded headers with icons for immediate alert type recognition
+- **Simplified Descriptions**: Focused on essential alert information without redundant details
+- **Professional Cards**: Clean layout with proper spacing and modern shadows
+- **Instant Understanding**: Users can now immediately understand what each alert means
+
 ## Enhanced RISP Alert System (August 18, 2025)
 - **Issue**: RISP alerts were generating incorrectly when no runners were on base
 - **Solution**: Fixed alert logic to only trigger when runners actually in scoring position (2B or 3B)
