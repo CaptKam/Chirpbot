@@ -546,14 +546,16 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
     return defaultLogo;
   }
   
-  // Add timestamp for cache busting - ensure fresh logos
-  const cacheBust = Date.now();
-  const freshLogo = React.cloneElement(selectedLogo, { 
-    key: `logo-${teamAbbr}-${cacheBust}`,
-    'data-version': 'v3-enhanced'
+  // Add visible indicator to confirm logo update is working
+  const logoWithIndicator = React.cloneElement(selectedLogo, {
+    key: `logo-${teamAbbr}-enhanced`,
+    style: { 
+      border: '2px solid #00ff00',
+      opacity: 0.9
+    }
   });
   
-  return freshLogo;
+  return logoWithIndicator;
 }
 
 // Force refresh v3.0 - Cache bust
