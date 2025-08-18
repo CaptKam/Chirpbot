@@ -182,7 +182,7 @@ export default function Calendar() {
                       </div>
                       <div>
                         <h3 className="font-bold text-chirp-blue" data-testid={`game-title-${game.id}`}>
-                          {game.awayTeam.abbreviation} @ {game.homeTeam.abbreviation}
+                          {game.awayTeam.name} @ {game.homeTeam.name}
                         </h3>
                         <div className="flex items-center space-x-2 mt-1">
                           <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${
