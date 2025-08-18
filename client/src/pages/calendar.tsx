@@ -128,16 +128,34 @@ export default function Calendar() {
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse">
-                <div className="flex items-center justify-between">
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 min-h-[140px] animate-pulse">
+                {/* Header skeleton */}
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
-                    <div>
-                      <div className="h-4 bg-gray-300 rounded w-32 mb-2"></div>
-                      <div className="h-3 bg-gray-300 rounded w-24"></div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+                      <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                      <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
                     </div>
                   </div>
-                  <div className="w-11 h-6 bg-gray-300 rounded-full"></div>
+                  <div className="w-16 h-6 bg-gray-300 rounded-full"></div>
+                </div>
+                
+                {/* Team names skeleton */}
+                <div className="mb-3">
+                  <div className="h-5 bg-gray-300 rounded w-48 mb-1"></div>
+                </div>
+                
+                {/* Bottom info skeleton */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-20 h-7 bg-gray-300 rounded-full"></div>
+                    <div className="w-16 h-7 bg-gray-300 rounded-full"></div>
+                  </div>
+                  <div className="text-right">
+                    <div className="h-5 bg-gray-300 rounded w-16 mb-1"></div>
+                    <div className="h-4 bg-gray-300 rounded w-24"></div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -161,7 +179,7 @@ export default function Calendar() {
               return (
                 <Card 
                   key={game.id} 
-                  className={`bg-white rounded-xl shadow-sm border cursor-pointer transition-all duration-200 p-4 ${
+                  className={`bg-white rounded-xl shadow-sm border cursor-pointer transition-all duration-200 p-6 min-h-[140px] ${
                     isSelected 
                       ? 'border-chirp-red bg-red-50 ring-2 ring-chirp-red ring-opacity-20' 
                       : 'border-gray-100 hover:border-chirp-blue hover:shadow-md'
@@ -169,57 +187,69 @@ export default function Calendar() {
                   onClick={() => toggleGameSelection(game.id)}
                   data-testid={`game-card-${game.id}`}
                 >
-                  <div className="flex items-center justify-between">
+                  {/* Header with teams and selection indicator */}
+                  <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-10 h-10 bg-chirp-blue rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-chirp-blue rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm">
                           {game.awayTeam.abbreviation}
                         </div>
-                        <span className="text-chirp-dark font-medium">@</span>
-                        <div className="w-10 h-10 bg-chirp-red rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        <span className="text-chirp-dark font-bold text-lg">@</span>
+                        <div className="w-12 h-12 bg-chirp-red rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm">
                           {game.homeTeam.abbreviation}
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-chirp-blue" data-testid={`game-title-${game.id}`}>
-                          {game.awayTeam.name} @ {game.homeTeam.name}
-                        </h3>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            game.status === 'live' 
-                              ? 'bg-green-100 text-green-800' 
-                              : game.status === 'final'
-                              ? 'bg-gray-100 text-gray-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {game.status === 'live' && <Play className="w-3 h-3 mr-1" />}
-                            {game.status === 'scheduled' && <Clock className="w-3 h-3 mr-1" />}
-                            {game.status === 'live' ? 'LIVE' : game.status.toUpperCase()}
-                          </Badge>
-                          <Badge className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                            {game.sport}
-                          </Badge>
-                          <Badge className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                            {getWeatherIcon(weather.condition)}
-                            <span className="ml-1">{weather.temperature}°F</span>
-                          </Badge>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3">
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-chirp-blue">
-                          {formattedTime}
-                        </div>
-                        {game.venue && (
-                          <div className="text-xs text-chirp-dark">
-                            {game.venue}
-                          </div>
-                        )}
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge className="bg-purple-100 text-purple-800 px-3 py-1.5 rounded-full text-sm font-bold">
+                        {game.sport}
+                      </Badge>
                       {isSelected && (
-                        <CheckCircle className="w-6 h-6 text-chirp-red" data-testid={`game-selected-${game.id}`} />
+                        <CheckCircle className="w-7 h-7 text-chirp-red" data-testid={`game-selected-${game.id}`} />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Team names */}
+                  <div className="mb-3">
+                    <h3 className="font-bold text-chirp-blue text-lg leading-tight" data-testid={`game-title-${game.id}`}>
+                      {game.awayTeam.name} @ {game.homeTeam.name}
+                    </h3>
+                  </div>
+
+                  {/* Game info row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {/* Status badge */}
+                      <Badge className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                        game.status === 'live' 
+                          ? 'bg-green-100 text-green-800' 
+                          : game.status === 'final'
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {game.status === 'live' && <Play className="w-4 h-4 mr-1.5" />}
+                        {game.status === 'scheduled' && <Clock className="w-4 h-4 mr-1.5" />}
+                        {game.status === 'live' ? 'LIVE' : game.status.toUpperCase()}
+                      </Badge>
+                      
+                      {/* Weather badge */}
+                      <Badge className="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-sm font-medium">
+                        {getWeatherIcon(weather.condition)}
+                        <span className="ml-1.5">{weather.temperature}°F</span>
+                      </Badge>
+                    </div>
+                    
+                    {/* Time and venue */}
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-chirp-blue">
+                        {formattedTime}
+                      </div>
+                      {game.venue && (
+                        <div className="text-sm text-chirp-dark font-medium mt-0.5">
+                          {game.venue.length > 20 ? `${game.venue.substring(0, 20)}...` : game.venue}
+                        </div>
                       )}
                     </div>
                   </div>
