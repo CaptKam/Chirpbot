@@ -20,12 +20,66 @@ const FILTER_OPTIONS = [
   { id: "ai-verified", label: "AI Verified", active: false },
 ];
 
-// Sportsbook quick actions
+// Sportsbook quick actions with logos
 const SPORTSBOOKS = [
-  { name: "FanDuel", baseUrl: "https://sportsbook.fanduel.com", color: "bg-blue-600", icon: "FD" },
-  { name: "Bet365", baseUrl: "https://www.bet365.com/#/HO/", color: "bg-green-600", icon: "365" },
-  { name: "DraftKings", baseUrl: "https://sportsbook.draftkings.com", color: "bg-orange-600", icon: "DK" },
-  { name: "BetRivers", baseUrl: "https://www.betrivers.com", color: "bg-purple-600", icon: "BR" },
+  { 
+    name: "FanDuel", 
+    baseUrl: "https://sportsbook.fanduel.com", 
+    color: "bg-blue-600", 
+    icon: "FD",
+    logo: (
+      <svg viewBox="0 0 100 100" className="w-8 h-8">
+        <rect x="0" y="0" width="100" height="100" fill="#1E40AF" rx="8"/>
+        <rect x="15" y="25" width="70" height="12" fill="#FFFFFF" rx="2"/>
+        <rect x="15" y="44" width="70" height="12" fill="#FFFFFF" rx="2"/>
+        <rect x="15" y="63" width="70" height="12" fill="#FFFFFF" rx="2"/>
+        <text x="50" y="88" textAnchor="middle" className="fill-white font-bold text-xs">FD</text>
+      </svg>
+    )
+  },
+  { 
+    name: "Bet365", 
+    baseUrl: "https://www.bet365.com/#/HO/", 
+    color: "bg-green-600", 
+    icon: "365",
+    logo: (
+      <svg viewBox="0 0 100 100" className="w-8 h-8">
+        <rect x="0" y="0" width="100" height="100" fill="#16A34A" rx="8"/>
+        <circle cx="30" cy="35" r="12" fill="#FFFFFF"/>
+        <circle cx="70" cy="35" r="12" fill="#FFFFFF"/>
+        <rect x="20" y="55" width="60" height="8" fill="#FFFFFF" rx="4"/>
+        <text x="50" y="88" textAnchor="middle" className="fill-white font-bold text-xs">365</text>
+      </svg>
+    )
+  },
+  { 
+    name: "DraftKings", 
+    baseUrl: "https://sportsbook.draftkings.com", 
+    color: "bg-orange-600", 
+    icon: "DK",
+    logo: (
+      <svg viewBox="0 0 100 100" className="w-8 h-8">
+        <rect x="0" y="0" width="100" height="100" fill="#EA580C" rx="8"/>
+        <polygon points="50,20 65,45 35,45" fill="#FFFFFF"/>
+        <rect x="40" y="45" width="20" height="25" fill="#FFFFFF"/>
+        <text x="50" y="88" textAnchor="middle" className="fill-white font-bold text-xs">DK</text>
+      </svg>
+    )
+  },
+  { 
+    name: "BetRivers", 
+    baseUrl: "https://www.betrivers.com", 
+    color: "bg-purple-600", 
+    icon: "BR",
+    logo: (
+      <svg viewBox="0 0 100 100" className="w-8 h-8">
+        <rect x="0" y="0" width="100" height="100" fill="#9333EA" rx="8"/>
+        <path d="M20 30 Q50 15 80 30 Q50 45 20 30" fill="#FFFFFF"/>
+        <path d="M20 50 Q50 35 80 50 Q50 65 20 50" fill="#FFFFFF"/>
+        <text x="50" y="88" textAnchor="middle" className="fill-white font-bold text-xs">BR</text>
+      </svg>
+    )
+  },
 ];
 
 interface SwipeableAlertCardProps {
@@ -134,11 +188,11 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
               <Button
                 key={sportsbook.name}
                 onClick={() => handleSportsbookClick(sportsbook)}
-                className={`${sportsbook.color} hover:opacity-90 text-white p-1 h-8 w-12 rounded-lg flex items-center justify-center`}
+                className="bg-white hover:bg-gray-50 border border-gray-200 p-1 h-10 w-12 rounded-lg flex items-center justify-center shadow-sm"
                 data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
                 title={`Open ${sportsbook.name} for ${alert.gameInfo.awayTeam} @ ${alert.gameInfo.homeTeam}`}
               >
-                <span className="text-xs font-bold whitespace-nowrap">{sportsbook.icon}</span>
+                {sportsbook.logo}
               </Button>
             ))}
           </div>
