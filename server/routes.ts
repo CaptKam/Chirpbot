@@ -8,6 +8,7 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
+import { checkAlerts, generateGameContext, filterAlertsBySettings } from "./services/alertEngine";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -341,8 +342,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sentToTelegram: false,
       };
 
-      // Get AI analysis
+      // Get AI analysis and check advanced alerts
       const settings = await storage.getSettingsBySport(alertData.sport);
+      
+      // Use the advanced alert engine to generate context-aware alerts
+      const gameContext = generateGameContext(event.game, alertData.sport);
+      const potentialAlerts = checkAlerts(gameContext);
+      const filteredAlerts = filterAlertsBySettings(potentialAlerts, settings || {});
+      
+      // If no alerts pass the filter, don't create an alert
+      if (filteredAlerts.length === 0) {
+        return res.json({ message: "Alert filtered out by user settings" });
+      }
+      
+      // Use the highest priority alert
+      const topAlert = filteredAlerts.reduce((prev, current) => 
+        (prev.priority === 'high' && current.priority !== 'high') ? prev : current
+      );
+      
+      // Update alert data with engine results
+      alertData.type = topAlert.type;
+      alertData.title = `${event.game.homeTeam} - ${topAlert.message}`;
+      alertData.description = topAlert.message;
+      
       if (settings?.aiEnabled) {
         const analysis = await analyzeAlert(
           alertData.type,

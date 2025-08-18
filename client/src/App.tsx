@@ -13,7 +13,7 @@ import Signup from "./pages/signup";
 import Login from "./pages/login";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -91,6 +91,10 @@ function AppContent() {
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+        <Route path="/advanced-settings" component={() => {
+          const AdvancedSettings = React.lazy(() => import("./pages/advanced-settings"));
+          return <ProtectedRoute component={() => <React.Suspense fallback={<div>Loading...</div>}><AdvancedSettings /></React.Suspense>} />;
+        }} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}

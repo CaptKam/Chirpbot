@@ -17,6 +17,19 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (August 18, 2025)
 
+## Advanced Alert System Implementation
+- **Feature**: Comprehensive multi-sport alert engine with 16 user-controllable toggles
+- **Implementation**: Core alert logic with context-aware filtering for MLB, NFL, NBA, NHL
+- **Database**: Added 16 new boolean columns for sport-specific alert preferences
+- **Frontend**: Advanced settings page with sport-specific toggle controls
+- **Alert Engine**: Real-time processing with priority-based alert generation and user preference filtering
+- **Sports Coverage**:
+  - MLB: Game state, RISP, weather impact, and power batter alerts
+  - NFL: Red zone, two-minute warnings, fourth down conversions, and turnover alerts
+  - NBA: Clutch time, overtime, lead changes, and close game finish alerts  
+  - NHL: Power play, empty net, third period ties, and final minute close game alerts
+- **Performance**: Fast alert processing with immediate user preference application
+
 ## Authentication & Game Persistence Fix
 - **Issue**: Game selections were not persisting between login sessions
 - **Root Cause**: Frontend was using hardcoded test user ID "test-user-123" instead of actual authenticated user ID

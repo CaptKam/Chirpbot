@@ -59,6 +59,30 @@ export const settings = pgTable("settings", {
   aiConfidenceThreshold: integer("ai_confidence_threshold").notNull().default(85),
   telegramEnabled: boolean("telegram_enabled").notNull().default(true),
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(true),
+  
+  // MLB Alert Toggles
+  gameStateAlerts: boolean("game_state_alerts").notNull().default(true),
+  rispAlerts: boolean("risp_alerts").notNull().default(true),
+  weatherAlerts: boolean("weather_alerts").notNull().default(true),
+  batterAlerts: boolean("batter_alerts").notNull().default(true),
+  
+  // NFL Alert Toggles
+  redZoneAlerts: boolean("red_zone_alerts").notNull().default(true),
+  twoMinuteAlerts: boolean("two_minute_alerts").notNull().default(true),
+  fourthDownAlerts: boolean("fourth_down_alerts").notNull().default(true),
+  turnoverAlerts: boolean("turnover_alerts").notNull().default(true),
+  
+  // NBA Alert Toggles
+  clutchTimeAlerts: boolean("clutch_time_alerts").notNull().default(true),
+  overtimeAlerts: boolean("overtime_alerts").notNull().default(true),
+  leadChangeAlerts: boolean("lead_change_alerts").notNull().default(true),
+  closeGameAlerts: boolean("close_game_alerts").notNull().default(true),
+  
+  // NHL Alert Toggles
+  powerPlayAlerts: boolean("power_play_alerts").notNull().default(true),
+  emptyNetAlerts: boolean("empty_net_alerts").notNull().default(true),
+  thirdPeriodAlerts: boolean("third_period_alerts").notNull().default(true),
+  finalMinutesAlerts: boolean("final_minutes_alerts").notNull().default(true),
 });
 
 // User monitored teams for persistent game selection
