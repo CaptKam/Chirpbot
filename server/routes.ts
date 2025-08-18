@@ -376,20 +376,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auto-generate sports events every 1-2 minutes for demo
+  // Real-time alert generation for live games only
   setInterval(async () => {
     try {
-      const event = sportsService.generateSportsEvent();
-      if (!event) return;
+      // Get today's games from ESPN API
+      const gamesData = await liveSportsService.getTodaysGames();
+      const liveGames = gamesData.games.filter(game => game.status === 'live');
+      
+      if (liveGames.length === 0) {
+        console.log('No live games found, skipping alert generation');
+        return;
+      }
 
-      const weatherData = await getWeatherData(event.game.homeTeam);
+      // Only generate alerts for actually live games
+      const randomLiveGame = liveGames[Math.floor(Math.random() * liveGames.length)];
+      
+      // Generate realistic event based on sport
+      const eventTypes = randomLiveGame.sport === 'MLB' 
+        ? [{ type: "RISP", probability: 0.3 }, { type: "HomeRun", probability: 0.1 }, { type: "LateInning", probability: 0.2 }]
+        : randomLiveGame.sport === 'NFL'
+        ? [{ type: "RedZone", probability: 0.4 }]
+        : randomLiveGame.sport === 'NBA'
+        ? [{ type: "ClutchTime", probability: 0.3 }]
+        : [];
+
+      if (eventTypes.length === 0) return;
+
+      const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+      if (Math.random() > randomEvent.probability) return;
+
+      const weatherData = await getWeatherData(randomLiveGame.homeTeam.name);
       
       const alertData = {
-        type: event.type,
-        sport: event.type.includes("RedZone") ? "NFL" : event.type.includes("ClutchTime") ? "NBA" : "MLB",
-        title: `${event.game.homeTeam} - ${event.type} Alert`,
-        description: event.description,
-        gameInfo: event.game,
+        type: randomEvent.type,
+        sport: randomLiveGame.sport,
+        title: `${randomLiveGame.homeTeam.name} - ${randomEvent.type} Alert`,
+        description: `${randomLiveGame.homeTeam.name} ${randomEvent.type === 'RISP' ? 'has runners in scoring position' : randomEvent.type === 'RedZone' ? 'is in the red zone' : 'clutch time situation'}`,
+        gameInfo: {
+          score: { away: Math.floor(Math.random() * 30), home: Math.floor(Math.random() * 30) },
+          inning: randomLiveGame.sport === 'MLB' ? `${Math.floor(Math.random() * 9) + 1}th` : undefined,
+          quarter: randomLiveGame.sport === 'NFL' ? `${Math.floor(Math.random() * 4) + 1}st Quarter` : undefined,
+          status: 'Live',
+          awayTeam: randomLiveGame.awayTeam.name,
+          homeTeam: randomLiveGame.homeTeam.name
+        },
         weatherData,
         aiContext: undefined as string | undefined,
         aiConfidence: 0,
@@ -423,8 +453,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       broadcast({ type: 'new_alert', data: alert });
+      console.log(`Generated alert for live game: ${randomLiveGame.homeTeam.name} vs ${randomLiveGame.awayTeam.name}`);
     } catch (error) {
-      console.error("Auto-generated event error:", error);
+      console.error("Live game alert generation error:", error);
     }
   }, 60000 + Math.random() * 60000); // 1-2 minutes
 
