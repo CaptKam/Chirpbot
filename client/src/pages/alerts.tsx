@@ -157,7 +157,10 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
   const AlertIcon = config.icon;
   
   // Parse the score from gameInfo if available
-  const score = (alert.gameInfo as any)?.score || { away: 0, home: 0 };
+  const score = (alert.gameInfo as any)?.score || { 
+    away: (alert.gameInfo as any)?.awayScore || 0, 
+    home: (alert.gameInfo as any)?.homeScore || 0 
+  };
   
   // Extract team names without cities
   const getTeamNameWithoutCity = (fullTeamName: string) => {

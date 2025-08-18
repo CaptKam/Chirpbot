@@ -519,9 +519,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate realistic game situations (not random events)
       const currentInning = Math.floor(Math.random() * 9) + 1;
-      // Generate realistic baseball scores (most games are 0-10 runs)
-      const homeScore = Math.floor(Math.random() * 8) + 0;  // 0-7 runs
-      const awayScore = Math.floor(Math.random() * 8) + 0;  // 0-7 runs
+      // Use actual scores from the live game data
+      const homeScore = randomLiveGame.score?.home || 0;
+      const awayScore = randomLiveGame.score?.away || 0;
       
       // Simulate actual game state to determine valid alerts
       const runnersOnBase = Math.random() < 0.25 ? generateRunnerConfiguration() : [];
