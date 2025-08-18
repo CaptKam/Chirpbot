@@ -21,7 +21,6 @@ interface ESPNGame {
     competitors: Array<{
       id: string;
       homeAway: 'home' | 'away';
-      score?: string;
       team: {
         id: string;
         name: string;
@@ -64,14 +63,14 @@ class LiveSportsService {
         return [];
       }
 
-      return data.events.map((game: ESPNGame): Game | undefined => {
+      return data.events.map((game: ESPNGame): Game => {
         const competition = game.competitions[0];
         const homeTeam = competition.competitors.find(c => c.homeAway === 'home');
         const awayTeam = competition.competitors.find(c => c.homeAway === 'away');
 
         if (!homeTeam || !awayTeam) {
           console.warn(`Invalid team data for game ${game.id}`);
-          return undefined;
+          return null;
         }
 
         return {
@@ -81,24 +80,18 @@ class LiveSportsService {
             id: homeTeam.team.id,
             name: homeTeam.team.displayName,
             abbreviation: homeTeam.team.abbreviation,
-            score: parseInt(homeTeam.score || '0', 10),
           },
           awayTeam: {
             id: awayTeam.team.id,
             name: awayTeam.team.displayName,
             abbreviation: awayTeam.team.abbreviation,
-            score: parseInt(awayTeam.score || '0', 10),
           },
           startTime: game.date,
           status: this.mapESPNStatus(game.status),
           venue: competition.venue?.fullName || 'TBD',
           isSelected: false,
-          score: {
-            away: parseInt(awayTeam.score || '0', 10),
-            home: parseInt(homeTeam.score || '0', 10),
-          },
         };
-      }).filter((game): game is Game => game !== undefined);
+      }).filter((game): game is Game => game !== null);
     } catch (error) {
       console.error(`Error fetching ${sport} games from ESPN:`, error);
       return [];

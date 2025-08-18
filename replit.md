@@ -17,15 +17,6 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (August 18, 2025)
 
-## Alert Header Redesign & Score Integration (August 18, 2025)
-- **New Header Layout**: Removed "CLUTCH" and "Game event" text, replaced with clean team matchup display
-- **Team Logo Integration**: Shows team logos on both sides with simplified team names (no cities)
-- **Live Score Display**: Fixed ESPN API integration to fetch and display actual game scores
-- **Score Data Flow**: Updated Game interface and live-sports service to properly extract scores from ESPN API
-- **Consistent Logo Sizing**: Made team logos same size (md) across alerts and calendar pages  
-- **Sportsbook Logos**: Added clean, recognizable logos for FanDuel, Bet365, DraftKings, and BetRivers
-- **Score Structure**: Properly mapped ESPN competitor scores to alert gameInfo for accurate display
-
 ## Enhanced Swipe Interface & AI Analysis Fix (August 18, 2025)
 - **Vertical Button Layout**: Reorganized sportsbook buttons to stack vertically (up/down) for better mobile ergonomics
 - **Four Sportsbook Integration**: All betting platforms now visible - FanDuel (FD), Bet365 (365), DraftKings (DK), BetRivers (BR)
