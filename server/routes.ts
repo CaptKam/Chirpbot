@@ -59,33 +59,33 @@ function generateEnhancedDescription(alertType: string, sport: string, context: 
   switch (alertType) {
     case 'RISP':
       const runnerText = runnersOnBase?.length > 0 
-        ? `runners on ${runnersOnBase.join(' and ')}`
-        : 'runner in scoring position';
+        ? `Runners on ${runnersOnBase.join(' and ')}`
+        : 'Runner in scoring position';
       const batterText = batterQuality 
-        ? `${batterQuality.name} at bat (${batterQuality.avg}, ${batterQuality.hr} HR, ${Math.round(batterQuality.clutch * 100)}% clutch)`
-        : 'good batter up';
-      return `🎯 RISP THREAT: ${homeTeam} has ${runnerText} with ${batterText}! Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${gamePhase} situation with ${scoreDiff}-point gap. ${weatherData?.condition === 'windy' ? '🌪️ Wind favoring offense' : ''}`;
+        ? `${batterQuality.name} at bat (${batterQuality.avg}, ${batterQuality.hr} HR)`
+        : 'Quality batter up';
+      return `${runnerText} with ${batterText}. ${gamePhase} situation, ${scoreDiff}-run game.`;
       
     case 'HomeRun':
-      return `💥 HOME RUN ALERT: Big momentum swing in ${homeTeam} game! Score now ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${scoreDiff < 3 ? '🔥 Game tied up!' : '📈 Lead extended'}. ${totalScore > 15 ? 'High-scoring affair' : 'Breaking open'}`;
+      return `Big momentum swing! ${scoreDiff < 3 ? 'Game-tying shot' : 'Lead extended'}. ${totalScore > 10 ? 'High-scoring battle' : 'Breaking the game open'}.`;
       
     case 'RedZone':
-      return `🚨 RED ZONE OPPORTUNITY: ${homeTeam} inside the 20-yard line. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${scoreDiff < 7 ? '🎯 Could tie/take lead' : '📊 Building cushion'}. ${gamePhase} pressure`;
+      return `Inside the 20-yard line. ${scoreDiff < 7 ? 'Could tie/take lead' : 'Building cushion'}. ${gamePhase} pressure situation.`;
       
     case 'ClutchTime':
-      return `⏰ CRUNCH TIME: Final minutes with ${homeTeam} vs ${awayTeam}. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${scoreDiff < 5 ? '🔥 Anyone\'s game' : '🎯 Comeback needed'}. Total: ${totalScore}`;
+      return `Final minutes of a ${scoreDiff < 5 ? 'nail-biter' : 'comeback opportunity'}. Every possession matters.`;
       
     case 'TwoMinuteWarning':
-      return `⚡ TWO-MINUTE WARNING: Critical drive time! ${homeTeam} vs ${awayTeam} - ${awayScore} to ${homeScore}. ${scoreDiff < 7 ? '🎯 One score game' : '📈 Need quick points'}. ${totalScore > 35 ? 'Offensive shootout' : 'Defensive battle'}`;
+      return `Critical drive time! ${scoreDiff < 7 ? 'One score game' : 'Need quick points'}. ${totalScore > 35 ? 'Offensive shootout' : 'Defensive battle'}.`;
       
     case 'WeatherImpact':
-      return `🌪️ WEATHER FACTOR: ${weatherData?.condition || 'Wind'} affecting ${homeTeam} game. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${weatherData?.windSpeed > 15 ? 'Strong winds favor running game' : 'Conditions changing'}`;
+      return `${weatherData?.condition || 'Weather'} conditions affecting play. ${weatherData?.windSpeed > 15 ? 'Strong winds favor running game' : 'Conditions changing strategy'}.`;
       
     case 'LeadChange':
-      return `🔄 LEAD CHANGE: ${homeTeam} vs ${awayTeam} momentum shift! New score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${totalScore > 180 ? '🏀 High-scoring battle' : '🎯 Defensive struggle'}. ${gamePhase}`;
+      return `Momentum shift! ${totalScore > 180 ? 'High-scoring affair' : 'Defensive struggle'}. ${gamePhase}.`;
       
     default:
-      return `📊 ${alertType}: ${homeTeam} vs ${awayTeam} action. Score: ${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}. ${gamePhase} development`;
+      return `${gamePhase} development. Key situation unfolding.`;
   }
 }
 
@@ -556,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const alertData = {
         type: randomEvent.type,
         sport: randomLiveGame.sport,
-        title: `🔥 ${randomLiveGame.homeTeam.name} vs ${randomLiveGame.awayTeam.name} - ${randomEvent.type}`,
+        title: `${randomLiveGame.awayTeam.name} @ ${randomLiveGame.homeTeam.name}`,
         description: generateEnhancedDescription(randomEvent.type, randomLiveGame.sport, {
           homeTeam: randomLiveGame.homeTeam.name,
           awayTeam: randomLiveGame.awayTeam.name,

@@ -3,7 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Filter, Share2, TriangleAlert, Star, Bot, Volleyball, Dumbbell } from "lucide-react";
+import { 
+  Zap, Bell, Filter, Share2, Target, TrendingUp, 
+  Timer, Trophy, Wind, Bot, AlertTriangle, 
+  CircleDot, Users, Activity, Sparkles
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@/types";
 
@@ -38,33 +42,97 @@ export default function Alerts() {
     }
   };
 
-  const getAlertIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "risp":
-      case "homerun":
-      case "lateinning":
-        return TriangleAlert;
-      case "redzone":
-        return Volleyball;
-      case "clutchtime":
-        return Dumbbell;
+  const getAlertTypeConfig = (type: string) => {
+    const typeUpper = type.toUpperCase();
+    switch (typeUpper) {
+      case "RISP":
+        return {
+          icon: Target,
+          label: "RUNNERS IN SCORING POSITION",
+          shortLabel: "RISP",
+          color: "bg-red-500",
+          bgColor: "bg-red-50",
+          borderColor: "border-red-500",
+          textColor: "text-red-900",
+          description: "High-probability scoring opportunity"
+        };
+      case "HOMERUN":
+        return {
+          icon: Trophy,
+          label: "HOME RUN",
+          shortLabel: "HR",
+          color: "bg-purple-500",
+          bgColor: "bg-purple-50",
+          borderColor: "border-purple-500",
+          textColor: "text-purple-900",
+          description: "Big momentum swing"
+        };
+      case "REDZONE":
+        return {
+          icon: AlertTriangle,
+          label: "RED ZONE",
+          shortLabel: "RZ",
+          color: "bg-orange-500",
+          bgColor: "bg-orange-50",
+          borderColor: "border-orange-500",
+          textColor: "text-orange-900",
+          description: "Inside the 20-yard line"
+        };
+      case "CLUTCHTIME":
+        return {
+          icon: Timer,
+          label: "CLUTCH TIME",
+          shortLabel: "CLUTCH",
+          color: "bg-blue-500",
+          bgColor: "bg-blue-50",
+          borderColor: "border-blue-500",
+          textColor: "text-blue-900",
+          description: "Final minutes, close game"
+        };
+      case "TWOMINUTEWARNING":
+        return {
+          icon: Timer,
+          label: "2-MINUTE WARNING",
+          shortLabel: "2MIN",
+          color: "bg-indigo-500",
+          bgColor: "bg-indigo-50",
+          borderColor: "border-indigo-500",
+          textColor: "text-indigo-900",
+          description: "Critical drive time"
+        };
+      case "WEATHERIMPACT":
+        return {
+          icon: Wind,
+          label: "WEATHER IMPACT",
+          shortLabel: "WX",
+          color: "bg-sky-500",
+          bgColor: "bg-sky-50",
+          borderColor: "border-sky-500",
+          textColor: "text-sky-900",
+          description: "Conditions affecting play"
+        };
+      case "LEADCHANGE":
+        return {
+          icon: TrendingUp,
+          label: "LEAD CHANGE",
+          shortLabel: "LEAD",
+          color: "bg-green-500",
+          bgColor: "bg-green-50",
+          borderColor: "border-green-500",
+          textColor: "text-green-900",
+          description: "Momentum shift"
+        };
       default:
-        return TriangleAlert;
-    }
-  };
-
-  const getAlertColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "risp":
-      case "homerun":
-      case "lateinning":
-        return "bg-red-100 text-red-800 border-red-500";
-      case "redzone":
-        return "bg-yellow-100 text-yellow-800 border-yellow-500";
-      case "clutchtime":
-        return "bg-green-100 text-green-800 border-green-500";
-      default:
-        return "bg-red-100 text-red-800 border-red-500";
+        return {
+          icon: Activity,
+          label: type.toUpperCase(),
+          shortLabel: type.slice(0, 4).toUpperCase(),
+          color: "bg-gray-500",
+          bgColor: "bg-gray-50",
+          borderColor: "border-gray-500",
+          textColor: "text-gray-900",
+          description: "Game event"
+        };
     }
   };
 
@@ -163,7 +231,7 @@ export default function Alerts() {
           </div>
         ) : filteredAlerts.length === 0 ? (
           <Card className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <TriangleAlert className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-bold text-chirp-blue mb-2">No Alerts Found</h3>
             <p className="text-sm text-chirp-dark">
               No alerts match your current filters. Try adjusting your filter settings.
@@ -171,108 +239,120 @@ export default function Alerts() {
           </Card>
         ) : (
           filteredAlerts.map((alert) => {
-            const AlertIcon = getAlertIcon(alert.type);
-            const alertColorClass = getAlertColor(alert.type);
+            const config = getAlertTypeConfig(alert.type);
+            const AlertIcon = config.icon;
+            
+            // Parse the score from gameInfo if available
+            const score = (alert.gameInfo as any)?.score || { away: 0, home: 0 };
+            
+            // Extract key details from description for cleaner display
+            const cleanDescription = alert.description
+              ?.replace(/Score:.*?\./, '') // Remove score from description
+              ?.replace(alert.gameInfo.homeTeam, '') // Remove redundant team names
+              ?.replace(alert.gameInfo.awayTeam, '')
+              ?.trim();
             
             return (
               <Card
                 key={alert.id}
-                className={`bg-white rounded-xl shadow-sm border-l-4 p-4 ${alertColorClass}`}
+                className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border-l-4 ${config.borderColor} overflow-hidden`}
                 data-testid={`alert-card-${alert.id}`}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Badge className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${alertColorClass.split(' ').slice(0, 2).join(' ')}`}>
-                      <AlertIcon className="w-3 h-3 mr-1" />
-                      {alert.type}
-                    </Badge>
-                    <span className="text-xs text-chirp-dark" data-testid={`alert-time-${alert.id}`}>
-                      {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
-                    </span>
+                {/* Alert Type Header - Large and Clear */}
+                <div className={`${config.color} px-4 py-3`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-white/20 p-2 rounded-lg">
+                        <AlertIcon className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-black text-lg uppercase tracking-wide">
+                          {config.shortLabel}
+                        </h3>
+                        <p className="text-white/90 text-xs">
+                          {config.description}
+                        </p>
+                      </div>
+                    </div>
+                    {alert.aiConfidence && alert.aiConfidence > 85 && (
+                      <div className="flex items-center space-x-1 bg-white/20 px-3 py-1 rounded-full">
+                        <Sparkles className="w-4 h-4 text-yellow-300" />
+                        <span className="text-xs font-bold text-white">
+                          HIGH CONFIDENCE
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {alert.aiConfidence && (
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                      <span className="text-xs font-medium text-chirp-dark">
-                        {alert.aiConfidence}% AI
+                </div>
+
+                {/* Game Matchup - Clean Single Display */}
+                <div className="px-4 pt-4 pb-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <Badge variant="outline" className="text-xs font-bold uppercase">
+                        {alert.sport}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800 border-green-300">
+                      {alert.gameInfo.status}
+                    </Badge>
+                  </div>
+
+                  {/* Score Display - Big and Clear */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-center flex-1">
+                        <p className="text-sm text-gray-600 mb-1">{alert.gameInfo.awayTeam}</p>
+                        <p className="text-3xl font-black text-gray-900">{score.away}</p>
+                      </div>
+                      <div className="text-2xl text-gray-400 mx-4">-</div>
+                      <div className="text-center flex-1">
+                        <p className="text-sm text-gray-600 mb-1">{alert.gameInfo.homeTeam}</p>
+                        <p className="text-3xl font-black text-gray-900">{score.home}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Alert Details - What's Happening */}
+                  <div className={`${config.bgColor} rounded-lg p-3 mb-3`}>
+                    <p className={`text-sm font-medium ${config.textColor}`}>
+                      {cleanDescription || alert.description}
+                    </p>
+                  </div>
+
+                  {/* Weather Impact (if relevant) */}
+                  {alert.weatherData && alert.type === 'WeatherImpact' && (
+                    <div className="flex items-center space-x-2 bg-sky-50 rounded-lg p-2 mb-3">
+                      <Wind className="w-4 h-4 text-sky-600" />
+                      <span className="text-xs text-sky-900">
+                        {alert.weatherData.temperature}°F • {alert.weatherData.condition}
+                        {alert.weatherData.windSpeed && ` • Wind: ${alert.weatherData.windSpeed}mph`}
                       </span>
                     </div>
                   )}
-                </div>
-                
-                <div className="mb-3">
-                  <h3 className="font-bold text-chirp-blue mb-1" data-testid={`alert-title-${alert.id}`}>
-                    {alert.title}
-                  </h3>
-                  <p className="text-sm text-chirp-dark" data-testid={`alert-description-${alert.id}`}>
-                    {alert.description}
-                  </p>
-                </div>
 
-                {/* Enhanced Game Info Display */}
-                {alert.gameInfo && (
-                  <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-sm font-bold text-chirp-blue">
-                          {alert.gameInfo.awayTeam} {(alert.gameInfo as any)?.score?.away || 0} - {(alert.gameInfo as any)?.score?.home || 0} {alert.gameInfo.homeTeam}
-                        </div>
-                        <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-                          {alert.gameInfo.status}
-                        </div>
+                  {/* AI Insight - Concise */}
+                  {alert.aiContext && (
+                    <div className="border-t pt-3">
+                      <div className="flex items-start space-x-2">
+                        <Bot className="w-4 h-4 text-blue-600 mt-0.5" />
+                        <p className="text-xs text-gray-700 leading-relaxed">
+                          <span className="font-bold">AI:</span> {alert.aiContext}
+                        </p>
                       </div>
                     </div>
-                    
+                  )}
+                </div>
 
-                    
-                    {/* Momentum Indicator */}
-                    {(alert.gameInfo as any)?.momentumShift && (
-                      <div className="mt-2 flex items-center space-x-2 text-xs">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        <span className="font-bold text-red-700">MOMENTUM SHIFT DETECTED</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Weather Display */}
-                {alert.weatherData && (
-                  <div className="mb-3 text-xs text-chirp-dark bg-sky-50 p-2 rounded-lg">
-                    <span className="font-medium">Weather Impact:</span> {alert.weatherData.temperature}°F, {alert.weatherData.condition}
-                    {alert.weatherData.windSpeed && (
-                      <span> • Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}</span>
-                    )}
-                  </div>
-                )}
-
-                {/* AI Context */}
-                {alert.aiContext && (
-                  <div className="bg-blue-50 rounded-lg p-3 mb-3">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Bot className="w-4 h-4 text-blue-600" />
-                      <span className="text-xs font-bold uppercase text-blue-800 tracking-wide">
-                        AI Analysis
-                      </span>
-                    </div>
-                    <p className="text-sm text-blue-800" data-testid={`alert-ai-context-${alert.id}`}>
-                      {alert.aiContext}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm font-medium text-chirp-dark" data-testid={`alert-game-info-${alert.id}`}>
-                      {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
-                    </span>
-                    <span className="text-sm text-chirp-blue">
-                      {alert.gameInfo.status}
-                    </span>
-                  </div>
+                {/* Action Bar */}
+                <div className="px-4 pb-3 flex justify-end">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="p-0 text-chirp-red hover:text-red-700"
+                    className="text-gray-500 hover:text-gray-700"
                     data-testid={`alert-share-${alert.id}`}
                   >
                     <Share2 className="w-4 h-4" />
