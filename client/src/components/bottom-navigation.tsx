@@ -5,7 +5,7 @@ export function BottomNavigation() {
   const [location] = useLocation();
 
   const navItems = [
-    { path: "/", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
+    { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
     { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts" },
     { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
   ];
@@ -14,7 +14,7 @@ export function BottomNavigation() {
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 z-50">
       <div className="flex">
         {navItems.map(({ path, icon: Icon, label, testId }) => {
-          const isActive = location === path;
+          const isActive = location === path || (path === "/dashboard" && location === "/");
           return (
             <Link
               key={path}

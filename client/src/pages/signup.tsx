@@ -25,8 +25,8 @@ export default function Signup() {
         title: "Account created!",
         description: "Your ChirpBot account has been created successfully. You can now sign in.",
       });
-      // Redirect to home or login page
-      window.location.href = "/";
+      // Redirect to dashboard after signup
+      window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
       toast({

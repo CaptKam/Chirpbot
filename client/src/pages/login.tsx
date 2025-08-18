@@ -25,7 +25,7 @@ export default function Login() {
         description: "You have successfully signed in to ChirpBot.",
       });
       // Redirect to dashboard
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
       toast({
