@@ -8,6 +8,7 @@ import {
   Timer, Trophy, Wind, Bot, AlertTriangle, 
   CircleDot, Users, Activity, Sparkles, Trash2, ExternalLink
 } from "lucide-react";
+import { TeamLogo } from "@/components/team-logo";
 import { formatDistanceToNow } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -104,6 +105,17 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
   // Parse the score from gameInfo if available
   const score = (alert.gameInfo as any)?.score || { away: 0, home: 0 };
   
+  // Extract team names without cities
+  const getTeamNameWithoutCity = (fullTeamName: string) => {
+    // Remove common city prefixes and return just the team name
+    return fullTeamName
+      .replace(/^(Los Angeles|New York|San Francisco|Chicago|Boston|Philadelphia|Detroit|Houston|Atlanta|Miami|Dallas|Denver|Seattle|Portland|Phoenix|San Antonio|San Diego|Tampa Bay|Kansas City|Las Vegas|Oklahoma City|New Orleans|Charlotte|Memphis|Milwaukee|Cleveland|Cincinnati|Pittsburgh|Buffalo|Indianapolis|Jacksonville|Nashville|Green Bay|Baltimore|Minnesota|Washington|Carolina|New England)\s+/i, '')
+      .trim();
+  };
+  
+  const awayTeamName = getTeamNameWithoutCity(alert.gameInfo.awayTeam);
+  const homeTeamName = getTeamNameWithoutCity(alert.gameInfo.homeTeam);
+  
   // Extract key details from description for cleaner display
   const cleanDescription = alert.description
     ?.replace(/Score:.*?\./, '') // Remove score from description
@@ -156,35 +168,9 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
         onClick={isRevealed ? closeMenu : undefined}
         data-testid={`alert-card-${alert.id}`}
       >
-        {/* Alert Type Header - Large and Clear */}
-        <div className={`${config.color} px-4 py-3`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white/20 p-2 rounded-lg">
-                <AlertIcon className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-black text-lg uppercase tracking-wide">
-                  {config.shortLabel}
-                </h3>
-                <p className="text-white/90 text-xs">
-                  {config.description}
-                </p>
-              </div>
-            </div>
-            {alert.aiConfidence && alert.aiConfidence > 85 && (
-              <div className="flex items-center space-x-1 bg-white/20 px-3 py-1 rounded-full">
-                <Sparkles className="w-4 h-4 text-yellow-300" />
-                <span className="text-xs font-bold text-white">
-                  HIGH CONFIDENCE
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Game Matchup - Clean Single Display */}
-        <div className="px-4 pt-4 pb-2">
+        {/* Redesigned Header with Team Logos and Score */}
+        <div className="px-4 py-3 bg-white border-b border-gray-200">
+          {/* Top row - Sport, Time, Status */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
               <Badge variant="outline" className="text-xs font-bold uppercase">
@@ -199,18 +185,49 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
             </Badge>
           </div>
 
-          {/* Team Matchup */}
-          <div className="bg-gray-50 rounded-lg p-3 mb-3">
-            <div className="flex items-center justify-center">
-              <span className="text-lg font-bold text-gray-900">
-                {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
-              </span>
+          {/* Team Matchup with Logos and Score */}
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 mb-3">
+            {/* Away Team */}
+            <div className="flex items-center space-x-2 flex-1">
+              <TeamLogo team={alert.gameInfo.awayTeam} size="sm" />
+              <span className="font-bold text-gray-900">{awayTeamName}</span>
+            </div>
+            
+            {/* Score */}
+            <div className="flex items-center space-x-3 px-4">
+              <div className="text-center">
+                <div className="text-lg font-bold text-gray-900">
+                  {score.away} - {score.home}
+                </div>
+              </div>
+            </div>
+            
+            {/* Home Team */}
+            <div className="flex items-center space-x-2 flex-1 justify-end">
+              <span className="font-bold text-gray-900">{homeTeamName}</span>
+              <TeamLogo team={alert.gameInfo.homeTeam} size="sm" />
             </div>
           </div>
+        </div>
 
-          {/* Alert Details - What's Happening */}
-          <div className={`${config.bgColor} rounded-lg p-3 mb-3`}>
-            <p className={`text-sm font-medium ${config.textColor}`}>
+        {/* Alert Content */}
+        <div className="px-4 pt-2 pb-2">
+
+          {/* Alert Type and Details */}
+          <div className={`${config.color} rounded-lg p-3 mb-3`}>
+            <div className="flex items-center space-x-2 mb-2">
+              <AlertIcon className="w-5 h-5 text-white" />
+              <h3 className="text-white font-bold text-sm uppercase tracking-wide">
+                {config.shortLabel}
+              </h3>
+              {alert.aiConfidence && alert.aiConfidence > 85 && (
+                <div className="flex items-center space-x-1 bg-white/20 px-2 py-1 rounded-full ml-auto">
+                  <Sparkles className="w-3 h-3 text-yellow-300" />
+                  <span className="text-xs font-bold text-white">HIGH</span>
+                </div>
+              )}
+            </div>
+            <p className="text-white/95 text-sm font-medium">
               {cleanDescription || alert.description}
             </p>
           </div>
