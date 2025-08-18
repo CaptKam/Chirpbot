@@ -33,6 +33,14 @@ Preferred communication style: Simple, everyday language.
 - **Weather Integration**: Impact assessments for outdoor games affecting play conditions
 - **Professional Display**: Streamlined alert cards with essential information and clear visual hierarchy
 
+## Advanced Mathematical Alert Engine
+- **Sophisticated Logic**: Integrated comprehensive multi-sport alert engine with real mathematical calculations
+- **Scoring Probabilities**: NFL red zone scoring chances (72% for 3rd & short, 48% for 4th down, 38% for late drives)
+- **Priority System**: Dynamic priority scoring based on game closeness, timing, and situation criticality
+- **Detailed Scenarios**: 20+ specific game situations per sport with precise statistical analysis
+- **Real Calculations**: Authentic sports mathematics replacing basic placeholder logic
+- **Enhanced Filtering**: Sport-specific alert filtering with granular user preference controls
+
 ## Advanced Alert System Implementation
 - **Feature**: Comprehensive multi-sport alert engine with 16 user-controllable toggles
 - **Implementation**: Core alert logic with context-aware filtering for MLB, NFL, NBA, NHL
