@@ -8,7 +8,7 @@ import {
   Timer, Trophy, Wind, Bot, AlertTriangle, 
   CircleDot, Users, Activity, Sparkles, Trash2, ExternalLink
 } from "lucide-react";
-import { TeamLogoV5 as TeamLogo } from "@/components/team-logo";
+import { TeamLogo } from "@/components/team-logo";
 import { formatDistanceToNow } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -189,7 +189,7 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
           <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 mb-3">
             {/* Away Team */}
             <div className="flex items-center space-x-2 flex-1">
-              <TeamLogo teamName={alert.gameInfo.awayTeam} size="sm" key={`away-${alert.id}-v3`} />
+              <TeamLogo teamName={alert.gameInfo.awayTeam} size="sm" />
               <span className="font-bold text-gray-900">{awayTeamName}</span>
             </div>
             
@@ -205,7 +205,7 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
             {/* Home Team */}
             <div className="flex items-center space-x-2 flex-1 justify-end">
               <span className="font-bold text-gray-900">{homeTeamName}</span>
-              <TeamLogo teamName={alert.gameInfo.homeTeam} size="sm" key={`home-${alert.id}-v3`} />
+              <TeamLogo teamName={alert.gameInfo.homeTeam} size="sm" />
             </div>
           </div>
         </div>

@@ -4,8 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Force cache refresh for team logos v3.0 */
-
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(220, 21%, 11%);
