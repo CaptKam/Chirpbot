@@ -21,10 +21,10 @@ const FILTER_OPTIONS = [
 
 // Sportsbook quick actions
 const SPORTSBOOKS = [
-  { name: "FanDuel", url: "https://fanduel.com", color: "bg-blue-600", icon: "FD" },
-  { name: "Bet365", url: "https://bet365.com", color: "bg-green-600", icon: "365" },
-  { name: "DraftKings", url: "https://draftkings.com", color: "bg-orange-600", icon: "DK" },
-  { name: "BetRivers", url: "https://betrivers.com", color: "bg-purple-600", icon: "BR" },
+  { name: "FanDuel", baseUrl: "https://sportsbook.fanduel.com", color: "bg-blue-600", icon: "FD" },
+  { name: "Bet365", baseUrl: "https://www.bet365.com/#/HO/", color: "bg-green-600", icon: "365" },
+  { name: "DraftKings", baseUrl: "https://sportsbook.draftkings.com", color: "bg-orange-600", icon: "DK" },
+  { name: "BetRivers", baseUrl: "https://www.betrivers.com", color: "bg-purple-600", icon: "BR" },
 ];
 
 interface SwipeableAlertCardProps {
@@ -75,8 +75,28 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
     setIsRevealed(false);
   };
 
-  const handleSportsbookClick = (url: string) => {
-    window.open(url, '_blank');
+  const generateGameUrl = (sportsbook: any, alert: Alert) => {
+    const { homeTeam, awayTeam } = alert.gameInfo;
+    const sport = alert.sport.toLowerCase();
+    
+    // Generate sport-specific URLs for each sportsbook
+    switch (sportsbook.name) {
+      case "FanDuel":
+        return `${sportsbook.baseUrl}/${sport}`;
+      case "DraftKings":
+        return `${sportsbook.baseUrl}/${sport}`;
+      case "Bet365":
+        return `${sportsbook.baseUrl}`;
+      case "BetRivers":
+        return `${sportsbook.baseUrl}/sportsbook/${sport}`;
+      default:
+        return sportsbook.baseUrl;
+    }
+  };
+
+  const handleSportsbookClick = (sportsbook: any) => {
+    const gameUrl = generateGameUrl(sportsbook, alert);
+    window.open(gameUrl, '_blank');
   };
 
   const AlertIcon = config.icon;
@@ -94,27 +114,28 @@ function SwipeableAlertCard({ alert, config, onDelete }: SwipeableAlertCardProps
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* Hidden Menu Behind Card */}
-      <div className="absolute inset-0 bg-gray-100 flex items-center justify-end pr-4 rounded-xl">
-        <div className="flex items-center space-x-2">
+      <div className="absolute inset-0 bg-gray-100 flex items-center justify-end pr-2 rounded-xl">
+        <div className="flex items-center space-x-1">
           {/* Sportsbook Quick Actions */}
           {SPORTSBOOKS.map((sportsbook) => (
             <Button
               key={sportsbook.name}
-              onClick={() => handleSportsbookClick(sportsbook.url)}
-              className={`${sportsbook.color} hover:opacity-90 text-white p-2 h-12 w-12 rounded-lg`}
+              onClick={() => handleSportsbookClick(sportsbook)}
+              className={`${sportsbook.color} hover:opacity-90 text-white p-1 h-10 w-10 rounded-lg flex items-center justify-center`}
               data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
+              title={`Open ${sportsbook.name} for ${alert.gameInfo.awayTeam} @ ${alert.gameInfo.homeTeam}`}
             >
-              <span className="text-xs font-bold">{sportsbook.icon}</span>
+              <span className="text-xs font-bold whitespace-nowrap">{sportsbook.icon}</span>
             </Button>
           ))}
           
           {/* Delete Button */}
           <Button
             onClick={() => onDelete(alert.id)}
-            className="bg-red-500 hover:bg-red-600 text-white p-2 h-12 w-12 rounded-lg"
+            className="bg-red-500 hover:bg-red-600 text-white p-1 h-10 w-10 rounded-lg flex items-center justify-center"
             data-testid={`delete-alert-${alert.id}`}
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       </div>
