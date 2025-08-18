@@ -20,7 +20,7 @@ const FILTER_OPTIONS = [
   { id: "ai-verified", label: "AI Verified", active: false },
 ];
 
-// Sportsbook quick actions with logos
+// Sportsbook quick actions with accurate logos
 const SPORTSBOOKS = [
   { 
     name: "FanDuel", 
@@ -29,11 +29,11 @@ const SPORTSBOOKS = [
     icon: "FD",
     logo: (
       <svg viewBox="0 0 100 100" className="w-8 h-8">
-        <rect x="0" y="0" width="100" height="100" fill="#1E40AF" rx="8"/>
-        <rect x="15" y="25" width="70" height="12" fill="#FFFFFF" rx="2"/>
-        <rect x="15" y="44" width="70" height="12" fill="#FFFFFF" rx="2"/>
-        <rect x="15" y="63" width="70" height="12" fill="#FFFFFF" rx="2"/>
-        <text x="50" y="88" textAnchor="middle" className="fill-white font-bold text-xs">FD</text>
+        <rect x="0" y="0" width="100" height="100" fill="#1E429F" rx="8"/>
+        <g transform="translate(50,50)">
+          <text x="0" y="-8" textAnchor="middle" className="fill-white font-bold text-lg" style={{fontFamily: 'Arial, sans-serif'}}>Fan</text>
+          <text x="0" y="8" textAnchor="middle" className="fill-white font-bold text-lg" style={{fontFamily: 'Arial, sans-serif'}}>Duel</text>
+        </g>
       </svg>
     )
   },
@@ -44,11 +44,13 @@ const SPORTSBOOKS = [
     icon: "365",
     logo: (
       <svg viewBox="0 0 100 100" className="w-8 h-8">
-        <rect x="0" y="0" width="100" height="100" fill="#16A34A" rx="8"/>
-        <circle cx="30" cy="35" r="12" fill="#FFFFFF"/>
-        <circle cx="70" cy="35" r="12" fill="#FFFFFF"/>
-        <rect x="20" y="55" width="60" height="8" fill="#FFFFFF" rx="4"/>
-        <text x="50" y="88" textAnchor="middle" className="fill-white font-bold text-xs">365</text>
+        <rect x="0" y="0" width="100" height="100" fill="#43B02A" rx="8"/>
+        <g transform="translate(50,35)">
+          <text x="0" y="0" textAnchor="middle" className="fill-white font-bold text-sm" style={{fontFamily: 'Arial, sans-serif'}}>bet</text>
+        </g>
+        <g transform="translate(50,65)">
+          <text x="0" y="0" textAnchor="middle" className="fill-black font-bold text-2xl" style={{fontFamily: 'Arial, sans-serif', fill: '#FFD700'}}>365</text>
+        </g>
       </svg>
     )
   },
@@ -59,10 +61,10 @@ const SPORTSBOOKS = [
     icon: "DK",
     logo: (
       <svg viewBox="0 0 100 100" className="w-8 h-8">
-        <rect x="0" y="0" width="100" height="100" fill="#EA580C" rx="8"/>
-        <polygon points="50,20 65,45 35,45" fill="#FFFFFF"/>
-        <rect x="40" y="45" width="20" height="25" fill="#FFFFFF"/>
-        <text x="50" y="88" textAnchor="middle" className="fill-white font-bold text-xs">DK</text>
+        <rect x="0" y="0" width="100" height="100" fill="#FF6600" rx="8"/>
+        <polygon points="30,25 70,25 65,35 60,45 40,45 35,35" fill="#FFFFFF"/>
+        <polygon points="45,45 55,45 50,60" fill="#FFFFFF"/>
+        <text x="50" y="85" textAnchor="middle" className="fill-white font-bold text-xs" style={{fontFamily: 'Arial, sans-serif'}}>DK</text>
       </svg>
     )
   },
@@ -73,10 +75,10 @@ const SPORTSBOOKS = [
     icon: "BR",
     logo: (
       <svg viewBox="0 0 100 100" className="w-8 h-8">
-        <rect x="0" y="0" width="100" height="100" fill="#9333EA" rx="8"/>
-        <path d="M20 30 Q50 15 80 30 Q50 45 20 30" fill="#FFFFFF"/>
-        <path d="M20 50 Q50 35 80 50 Q50 65 20 50" fill="#FFFFFF"/>
-        <text x="50" y="88" textAnchor="middle" className="fill-white font-bold text-xs">BR</text>
+        <rect x="0" y="0" width="100" height="100" fill="#1B365D" rx="8"/>
+        <path d="M15 30 Q25 20 35 30 Q45 40 55 30 Q65 20 75 30 Q85 40 95 30" stroke="#00A9CE" strokeWidth="3" fill="none"/>
+        <path d="M15 50 Q25 40 35 50 Q45 60 55 50 Q65 40 75 50 Q85 60 95 50" stroke="#00A9CE" strokeWidth="3" fill="none"/>
+        <text x="50" y="80" textAnchor="middle" className="fill-white font-bold text-xs" style={{fontFamily: 'Arial, sans-serif'}}>BR</text>
       </svg>
     )
   },
