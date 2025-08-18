@@ -215,7 +215,7 @@ export default function Alerts() {
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center space-x-3">
                         <div className="text-sm font-bold text-chirp-blue">
-                          {alert.gameInfo.awayTeam} {alert.gameInfo.score?.away} - {alert.gameInfo.score?.home} {alert.gameInfo.homeTeam}
+                          {alert.gameInfo.awayTeam} {(alert.gameInfo as any)?.score?.away || 0} - {(alert.gameInfo as any)?.score?.home || 0} {alert.gameInfo.homeTeam}
                         </div>
                         <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
                           {alert.gameInfo.status}
@@ -223,46 +223,10 @@ export default function Alerts() {
                       </div>
                     </div>
                     
-                    {/* Betting Context */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {alert.gameInfo.trendIndicator && (
-                        <div className="flex items-center space-x-1">
-                          <span className="font-medium text-gray-600">Trend:</span>
-                          <span className={`font-bold ${
-                            alert.gameInfo.trendIndicator === 'Close Game' ? 'text-red-600' : 
-                            alert.gameInfo.trendIndicator === 'Blowout Risk' ? 'text-orange-600' : 'text-blue-600'
-                          }`}>
-                            {alert.gameInfo.trendIndicator}
-                          </span>
-                        </div>
-                      )}
-                      {alert.gameInfo.overUnderHint && (
-                        <div className="flex items-center space-x-1">
-                          <span className="font-medium text-gray-600">O/U:</span>
-                          <span className={`font-bold ${
-                            alert.gameInfo.overUnderHint.includes('Over') ? 'text-red-600' : 
-                            alert.gameInfo.overUnderHint.includes('Under') ? 'text-blue-600' : 'text-gray-600'
-                          }`}>
-                            {alert.gameInfo.overUnderHint}
-                          </span>
-                        </div>
-                      )}
-                      {alert.gameInfo.bettingValue && (
-                        <div className="flex items-center space-x-1">
-                          <span className="font-medium text-gray-600">Value:</span>
-                          <span className="font-bold text-green-600">{alert.gameInfo.bettingValue}</span>
-                        </div>
-                      )}
-                      {alert.gameInfo.gamePhase && (
-                        <div className="flex items-center space-x-1">
-                          <span className="font-medium text-gray-600">Phase:</span>
-                          <span className="font-bold text-purple-600">{alert.gameInfo.gamePhase}</span>
-                        </div>
-                      )}
-                    </div>
+
                     
                     {/* Momentum Indicator */}
-                    {alert.gameInfo.momentumShift && (
+                    {(alert.gameInfo as any)?.momentumShift && (
                       <div className="mt-2 flex items-center space-x-2 text-xs">
                         <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                         <span className="font-bold text-red-700">MOMENTUM SHIFT DETECTED</span>
