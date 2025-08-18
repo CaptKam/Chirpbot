@@ -5,17 +5,17 @@ import { Zap, Bell, Shield, TrendingUp, Users, Activity, ChevronRight } from "lu
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-chirp-blue via-blue-600 to-blue-800">
+    <div className="min-h-screen bg-gradient-to-br from-chirp-accent-blue via-blue-700 to-blue-900">
       {/* Header */}
       <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-chirp-red rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-chirp-alert-red rounded-full flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-black uppercase tracking-wide text-white">ChirpBot</h1>
+                <h1 className="text-xl font-black uppercase tracking-wider text-white">ChirpBot</h1>
                 <p className="text-blue-200 text-xs font-medium">V2 Alert System</p>
               </div>
             </div>
@@ -31,7 +31,7 @@ export default function Landing() {
               </Link>
               <Link href="/signup">
                 <Button 
-                  className="bg-chirp-red hover:bg-red-700 text-white"
+                  className="bg-chirp-cta-blue hover:bg-blue-600 text-white font-bold rounded-lg"
                   data-testid="button-landing-signup"
                 >
                   Sign Up Free
@@ -51,7 +51,7 @@ export default function Landing() {
           </div>
           <h1 className="text-5xl sm:text-6xl font-black text-white mb-6">
             Never Miss a
-            <span className="text-chirp-red"> Game-Changing</span> Moment
+            <span className="text-chirp-alert-red"> Game-Changing</span> Moment
           </h1>
           <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
             Real-time AI-powered sports alerts for MLB, NFL, NBA, and NHL. 
@@ -62,7 +62,7 @@ export default function Landing() {
             <Link href="/signup">
               <Button 
                 size="lg" 
-                className="bg-chirp-red hover:bg-red-700 text-white px-8 py-6 text-lg font-bold"
+                className="bg-chirp-cta-blue hover:bg-blue-600 text-white px-8 py-6 text-lg font-bold rounded-lg"
                 data-testid="button-hero-get-started"
               >
                 Get Started Free
@@ -73,7 +73,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-white text-white hover:bg-white hover:text-chirp-blue px-8 py-6 text-lg font-bold"
+                className="border-white text-white hover:bg-white hover:text-chirp-accent-blue px-8 py-6 text-lg font-bold rounded-lg"
                 data-testid="button-hero-login"
               >
                 Log In to Dashboard

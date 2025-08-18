@@ -38,16 +38,27 @@
   --sidebar-border: hsl(217, 33%, 91%);
   --sidebar-ring: hsl(220, 64%, 53%);
   
-  /* ChirpBot Custom Colors */
-  --chirp-blue: hsl(220, 64%, 23%);
-  --chirp-red: hsl(355, 85%, 56%);
-  --chirp-gray: hsl(217, 33%, 95%);
-  --chirp-dark: hsl(220, 21%, 29%);
+  /* ChirpBot V2 Color Palette */
+  --chirp-bg: #F2F4F7;
+  --chirp-accent-blue: #1C2B5E;
+  --chirp-cta-blue: #2387F4;
+  --chirp-alert-red: #F02D3A;
+  --chirp-border-gray: #DCE1E7;
+  --chirp-text-dark: #111827;
+  --chirp-text-muted: #6B7280;
+  
+  /* Legacy colors for compatibility */
+  --chirp-blue: #1C2B5E;
+  --chirp-red: #F02D3A;
+  --chirp-gray: #F2F4F7;
+  --chirp-dark: #111827;
+  --chirp-light: #DCE1E7;
+  --chirp-navy: #0F172A;
   
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
-  --radius: 1.3rem;
+  --radius: 0.75rem;
 }
 
 .dark {
@@ -91,12 +102,15 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased;
     font-family: var(--font-sans);
+    background-color: var(--chirp-bg);
+    color: var(--chirp-text-dark);
   }
 }
 
 @layer utilities {
+  /* Color utilities */
   .chirp-blue {
     color: var(--chirp-blue);
   }
@@ -127,5 +141,54 @@
   
   .bg-chirp-dark {
     background-color: var(--chirp-dark);
+  }
+  
+  /* Typography styles - ChirpBot V2 */
+  .heading-primary {
+    @apply font-black uppercase tracking-wider text-chirp-text-dark;
+  }
+  
+  .heading-secondary {
+    @apply font-bold uppercase tracking-wide text-chirp-text-dark;
+  }
+  
+  .subheading {
+    @apply font-semibold text-chirp-text-dark;
+  }
+  
+  .body-text {
+    @apply font-normal text-chirp-text-dark;
+  }
+  
+  .text-muted {
+    @apply text-chirp-text-muted;
+  }
+  
+  /* Button styles */
+  .btn-primary {
+    @apply bg-chirp-cta-blue hover:bg-blue-600 text-white font-bold rounded-lg px-4 py-2 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-white border border-chirp-border-gray hover:bg-gray-50 text-chirp-text-dark font-semibold rounded-lg px-4 py-2 transition-colors;
+  }
+  
+  /* Card styles */
+  .card-game {
+    @apply bg-white border border-chirp-border-gray rounded-xl shadow-sm hover:shadow-lg transition-all duration-200;
+    border-radius: 12px;
+  }
+  
+  .card-game-active {
+    @apply border-2 border-chirp-cta-blue bg-blue-50 shadow-md;
+  }
+  
+  /* Badge styles */
+  .badge-live {
+    @apply bg-chirp-alert-red text-white font-bold uppercase tracking-wider px-3 py-1 rounded-full text-xs;
+  }
+  
+  .badge-sport {
+    @apply bg-purple-100 text-purple-800 font-bold uppercase tracking-wide px-3 py-1 rounded-full text-sm;
   }
 }

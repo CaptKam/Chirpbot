@@ -61,11 +61,22 @@ export default {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
-        // ChirpBot custom colors
-        "chirp-blue": "#1D2E5F",
-        "chirp-red": "#E23237",
-        "chirp-gray": "#F3F4F6",
-        "chirp-dark": "#4A4A4A",
+        // ChirpBot V2 Color Palette
+        "chirp-bg": "#F2F4F7",
+        "chirp-accent-blue": "#1C2B5E",
+        "chirp-cta-blue": "#2387F4",
+        "chirp-alert-red": "#F02D3A",
+        "chirp-border-gray": "#DCE1E7",
+        "chirp-text-dark": "#111827",
+        "chirp-text-muted": "#6B7280",
+        
+        // Legacy colors for compatibility
+        "chirp-blue": "#1C2B5E",
+        "chirp-red": "#F02D3A",
+        "chirp-gray": "#F2F4F7",
+        "chirp-dark": "#111827",
+        "chirp-light": "#DCE1E7",
+        "chirp-navy": "#0F172A",
       },
       fontFamily: {
         sans: ["var(--font-sans)"],

@@ -157,22 +157,22 @@ export default function Calendar() {
   };
 
   return (
-    <div className="pb-20">
+    <div className="pb-20 bg-chirp-bg">
       {/* Header */}
-      <header className="bg-chirp-blue text-white p-4 flex items-center justify-between">
+      <header className="bg-chirp-accent-blue text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-chirp-red rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-chirp-alert-red rounded-full flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black uppercase tracking-wide">ChirpBot</h1>
-            <p className="text-blue-200 text-xs font-medium">V2 Alert System</p>
+            <h1 className="text-xl font-black uppercase tracking-wider">ChirpBot</h1>
+            <p className="text-blue-200 text-xs font-semibold">V2 Alert System</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <div className="bg-chirp-red px-3 py-1 rounded-full">
-            <span className="text-white text-xs font-bold uppercase tracking-wide">
-              <div className="w-1.5 h-1.5 bg-red-300 rounded-full inline-block mr-1 animate-pulse"></div>
+          <div className="bg-chirp-alert-red px-3 py-1 rounded-full">
+            <span className="text-white text-xs font-bold uppercase tracking-wider">
+              <div className="w-1.5 h-1.5 bg-white opacity-75 rounded-full inline-block mr-1 animate-pulse"></div>
               LIVE
             </span>
           </div>
@@ -226,10 +226,10 @@ export default function Calendar() {
               key={sport}
               onClick={() => setActiveSport(sport)}
               data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors ${
+              className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
                 activeSport === sport
-                  ? "border-chirp-red text-chirp-red"
-                  : "border-transparent text-chirp-dark hover:text-chirp-blue"
+                  ? "border-chirp-cta-blue text-chirp-cta-blue bg-blue-50"
+                  : "border-transparent text-chirp-text-muted hover:text-chirp-text-dark"
               }`}
             >
               {sport}
@@ -241,10 +241,10 @@ export default function Calendar() {
       {/* Teams List */}
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
+          <h2 className="text-lg font-black uppercase tracking-wider text-chirp-text-dark">
             Today's Games
           </h2>
-          <span className="text-sm font-medium text-chirp-dark">
+          <span className="text-sm font-semibold text-chirp-text-muted">
             {selectedCount}/{games.length} Selected
           </span>
         </div>
@@ -303,11 +303,12 @@ export default function Calendar() {
               return (
                 <Card 
                   key={game.id} 
-                  className={`bg-white rounded-xl shadow-sm border cursor-pointer transition-all duration-200 p-6 min-h-[140px] ${
+                  className={`bg-white shadow-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] ${
                     isSelected 
-                      ? 'border-chirp-red bg-red-50 ring-2 ring-chirp-red ring-opacity-20' 
-                      : 'border-gray-100 hover:border-chirp-blue hover:shadow-md'
+                      ? 'border-2 border-chirp-cta-blue bg-blue-50 shadow-md' 
+                      : 'border border-chirp-border-gray hover:shadow-lg'
                   }`}
+                  style={{ borderRadius: '12px' }}
                   onClick={() => toggleGameSelection(game.id)}
                   data-testid={`game-card-${game.id}`}
                 >
@@ -336,7 +337,7 @@ export default function Calendar() {
                         {game.sport}
                       </Badge>
                       {isSelected && (
-                        <CheckCircle className="w-7 h-7 text-chirp-red" data-testid={`game-selected-${game.id}`} />
+                        <CheckCircle className="w-7 h-7 text-chirp-cta-blue" data-testid={`game-selected-${game.id}`} />
                       )}
                     </div>
                   </div>

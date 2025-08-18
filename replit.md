@@ -1,6 +1,15 @@
 # Overview
 
-ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, the application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) using authentic ESPN API data and generates intelligent alerts for high-impact game situations like runners in scoring position, red zone opportunities, and clutch time scenarios. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. Features persistent team monitoring that saves user game selections to the database and restores them on page reload. Alert generation system now correctly filters for live games only, preventing alerts for non-active games. Fixed August 18, 2025.
+ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, the application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) using authentic ESPN API data and generates intelligent alerts for high-impact game situations. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. 
+
+**Design System Updates (August 18, 2025):**
+- Implemented modern, bold, sports-centric design with professional color palette
+- Primary colors: #F2F4F7 (background), #1C2B5E (accent), #2387F4 (CTA blue), #F02D3A (alert red)
+- Typography: Bold uppercase headings with letter spacing, Inter font family
+- UI Components: Game cards with 12px rounded corners, shadow on hover, full-width responsive design
+- Active monitoring indicated with blue border and background
+
+Features persistent team monitoring that saves user game selections to the database and restores them on page reload. Alert generation system correctly filters for live games only.
 
 # User Preferences
 
@@ -11,10 +20,13 @@ Preferred communication style: Simple, everyday language.
 ## Frontend Architecture
 - **Framework**: React with TypeScript using Vite for build tooling
 - **UI Library**: Shadcn/ui components built on Radix UI primitives for accessible, modern interfaces
-- **Styling**: Tailwind CSS with custom ChirpBot theme variables and Inter font family
+- **Styling**: Tailwind CSS with ChirpBot V2 design system
+  - Color Palette: #F2F4F7 (bg), #1C2B5E (accent), #2387F4 (CTA), #F02D3A (alert), #DCE1E7 (borders)
+  - Typography: Inter font family, bold uppercase headings with letter spacing
+  - Components: 12px rounded corners on cards, shadow-lg on hover effects
 - **State Management**: TanStack Query for server state with WebSocket integration for real-time updates
 - **Routing**: Wouter for lightweight client-side routing
-- **Mobile-First Design**: Responsive design optimized for mobile devices with bottom navigation
+- **Mobile-First Design**: Responsive design optimized for mobile devices with sticky bottom navigation
 
 ## Backend Architecture
 - **Runtime**: Node.js with Express.js RESTful API
