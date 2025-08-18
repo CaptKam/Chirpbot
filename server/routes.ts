@@ -505,7 +505,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Real-time alert generation using ESPN API data - no mock data
   const gameStates = new Map(); // Track previous game states for change detection
   
+  console.log('🚀 Starting real-time alert generation system...');
+  
   setInterval(async () => {
+    console.log('⚡ Alert generation cycle starting...');
     try {
       // Get today's live games from ESPN API
       const gamesData = await liveSportsService.getTodaysGames();
@@ -634,7 +637,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
     } catch (error) {
-      console.error("Real-time alert generation error:", error);
+      console.error("🚨 Real-time alert generation error:", error);
+      if (error instanceof Error) {
+        console.error("Stack trace:", error.stack);
+      }
     }
   }, 30000); // Check for real game changes every 30 seconds
 
