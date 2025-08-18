@@ -44,6 +44,9 @@ class LiveSportsService {
     NHL: 'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard'
   };
 
+  // MLB Official Stats API for detailed game data including runners
+  private readonly MLB_STATS_API = 'https://statsapi.mlb.com/api/v1';
+
   private async fetchESPNGames(sport: 'MLB' | 'NFL' | 'NBA' | 'NHL'): Promise<Game[]> {
     try {
       const url = this.ESPN_ENDPOINTS[sport];
@@ -124,6 +127,78 @@ class LiveSportsService {
         return 'final';
       default:
         return 'scheduled';
+    }
+  }
+
+  // Get detailed MLB game data with runners and game state from MLB.com
+  async getMLBGameDetails(gameId: string) {
+    try {
+      const response = await fetch(`${this.MLB_STATS_API}/game/${gameId}/liveData`);
+      if (!response.ok) {
+        throw new Error(`MLB API error: ${response.status}`);
+      }
+      const data = await response.json();
+      return {
+        runners: data.linescore?.runners || {},
+        inning: data.linescore?.currentInning || 1,
+        inningHalf: data.linescore?.inningHalf || 'Top',
+        atBat: data.plays?.currentPlay,
+        outs: data.linescore?.outs || 0
+      };
+    } catch (error) {
+      console.error(`Error fetching MLB game details for ${gameId}:`, error);
+      return null;
+    }
+  }
+
+  // Check if runners are in scoring position (2nd or 3rd base)
+  checkRunnersInScoringPosition(runners: any): { hasRISP: boolean; positions: string[] } {
+    const positions: string[] = [];
+    let hasRISP = false;
+
+    if (runners?.second) {
+      positions.push('2nd base');
+      hasRISP = true;
+    }
+    if (runners?.third) {
+      positions.push('3rd base');
+      hasRISP = true;
+    }
+    if (runners?.first) {
+      positions.push('1st base');
+    }
+
+    return { hasRISP, positions };
+  }
+
+  // Get today's MLB games with ESPN IDs mapped to MLB.com game IDs
+  async getMLBGamesWithRunnerData(): Promise<Array<Game & { mlbGameId?: string; runners?: any; gameState?: any }>> {
+    try {
+      const espnGames = await this.fetchESPNGames('MLB');
+      const enhancedGames = [];
+
+      for (const game of espnGames) {
+        // Extract ESPN game ID and try to map to MLB.com
+        const espnId = game.id.replace('mlb-', '');
+        
+        // For live games, get detailed runner data
+        if (game.status === 'live') {
+          const gameDetails = await this.getMLBGameDetails(espnId);
+          enhancedGames.push({
+            ...game,
+            mlbGameId: espnId,
+            runners: gameDetails?.runners,
+            gameState: gameDetails
+          });
+        } else {
+          enhancedGames.push({ ...game, mlbGameId: espnId });
+        }
+      }
+
+      return enhancedGames;
+    } catch (error) {
+      console.error('Error fetching MLB games with runner data:', error);
+      return [];
     }
   }
 

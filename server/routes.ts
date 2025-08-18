@@ -636,6 +636,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameStates.set(gameId, { homeScore, awayScore, lastAlertTime: previousState.lastAlertTime });
         }
       }
+      
+      // Check MLB games for RISP situations using MLB.com API data
+      const mlbLiveGames = await liveSportsService.getMLBGamesWithRunnerData();
+      const mlbLiveGamesFiltered = mlbLiveGames.filter(game => game.status === 'live');
+      
+      for (const mlbGame of mlbLiveGamesFiltered) {
+        const gameId = `${mlbGame.id}-risp`;
+        const previousRispState = gameStates.get(gameId);
+        
+        if (mlbGame.runners && mlbGame.gameState) {
+          const runnersInfo = liveSportsService.checkRunnersInScoringPosition(mlbGame.runners);
+          const timeSinceLastRispAlert = Date.now() - (previousRispState?.lastAlertTime || 0);
+          
+          console.log(`RISP Check: ${mlbGame.awayTeam.name} @ ${mlbGame.homeTeam.name} - ${runnersInfo.hasRISP ? 'YES' : 'NO'} - Positions: ${runnersInfo.positions.join(', ')}`);
+          
+          // Generate RISP alert if runners in scoring position and enough time has passed
+          if (runnersInfo.hasRISP && timeSinceLastRispAlert > 300000) { // 5 minutes between RISP alerts
+            const inning = mlbGame.gameState.inning || 'Unknown';
+            const inningHalf = mlbGame.gameState.inningHalf || '';
+            const outs = mlbGame.gameState.outs || 0;
+            
+            const alertData = {
+              type: "RISP",
+              sport: mlbGame.sport,
+              title: `${mlbGame.awayTeam.name} @ ${mlbGame.homeTeam.name}`,
+              description: `Runners in scoring position! ${runnersInfo.positions.join(' and ')} - ${inningHalf} ${inning}, ${outs} outs`,
+              gameInfo: {
+                score: mlbGame.score,
+                status: 'Live',
+                awayTeam: mlbGame.awayTeam.name,
+                homeTeam: mlbGame.homeTeam.name,
+                venue: mlbGame.venue || 'TBD',
+                inning: `${inningHalf} ${inning}`,
+                outs,
+                runners: runnersInfo.positions
+              },
+              weatherData: await getWeatherData(mlbGame.homeTeam.name),
+              aiContext: undefined as string | undefined,
+              aiConfidence: 0,
+              sentToTelegram: false,
+            };
+
+            const settings = await storage.getSettingsBySport(alertData.sport);
+            if (settings?.aiEnabled) {
+              const analysis = await analyzeAlert(
+                alertData.type,
+                alertData.sport,
+                alertData.gameInfo,
+                alertData.weatherData
+              );
+              alertData.aiContext = analysis.context;
+              alertData.aiConfidence = analysis.confidence;
+            }
+
+            const alert = await storage.createAlert(alertData);
+
+            if (settings?.telegramEnabled) {
+              const telegramConfig = {
+                botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
+                chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+              };
+
+              const sent = await sendTelegramAlert(telegramConfig, {
+                ...alert,
+                aiContext: alert.aiContext || undefined
+              });
+              if (sent) {
+                await storage.markAlertSentToTelegram(alert.id);
+              }
+            }
+
+            broadcast({ type: 'new_alert', data: alert });
+            console.log(`🏃‍♂️ RISP alert generated: ${mlbGame.homeTeam.name} vs ${mlbGame.awayTeam.name} - ${runnersInfo.positions.join(' and ')}`);
+            
+            // Update last RISP alert time
+            gameStates.set(gameId, { lastAlertTime: Date.now() });
+          }
+        }
+      }
     } catch (error) {
       console.error("🚨 Real-time alert generation error:", error);
       if (error instanceof Error) {
