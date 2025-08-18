@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Zap, Bell, Filter, Share2, Target, TrendingUp, 
   Timer, Trophy, Wind, Bot, AlertTriangle, 
-  CircleDot, Users, Activity, Sparkles, Trash2, ExternalLink, Plus
+  CircleDot, Users, Activity, Sparkles, Trash2, ExternalLink
 } from "lucide-react";
 import { TeamLogo } from "@/components/team-logo";
 import { formatDistanceToNow } from "date-fns";
@@ -364,40 +364,6 @@ export default function Alerts() {
     },
   });
 
-  // Simulate alert mutation for testing
-  const simulateAlertMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/sports/simulate", {});
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.message && data.message !== "No event generated") {
-        toast({
-          title: "Test Alert",
-          description: data.message,
-        });
-      } else if (data.id) {
-        queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-        toast({
-          title: "Test Alert Created",
-          description: data.title || "New test alert generated",
-        });
-      } else {
-        toast({
-          title: "No Alert Generated",
-          description: "Try again - alerts are based on game probabilities",
-        });
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to generate test alert",
-        variant: "destructive",
-      });
-    },
-  });
-
   const toggleFilter = (filterId: string) => {
     if (filterId === "all") {
       setActiveFilters(["all"]);
@@ -554,22 +520,10 @@ export default function Alerts() {
           <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
             Live Alerts
           </h2>
-          <div className="flex space-x-2">
-            <Button 
-              size="sm" 
-              onClick={() => simulateAlertMutation.mutate()}
-              disabled={simulateAlertMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-full text-xs font-bold uppercase"
-              data-testid="button-test-alert"
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              {simulateAlertMutation.isPending ? "Generating..." : "Test Alert"}
-            </Button>
-            <Button size="sm" className="bg-chirp-red text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
-              <Filter className="w-3 h-3 mr-1" />
-              Filter
-            </Button>
-          </div>
+          <Button size="sm" className="bg-chirp-red text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
+            <Filter className="w-3 h-3 mr-1" />
+            Filter
+          </Button>
         </div>
         <div className="flex space-x-2 overflow-x-auto">
           {FILTER_OPTIONS.map((option) => (
