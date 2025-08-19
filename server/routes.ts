@@ -10,84 +10,7 @@ import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
 import { checkAlerts, generateGameContext, filterAlertsBySettings } from "./services/alertEngine";
 
-// Enhanced alert description generator for better user value
-function generateRunnerConfiguration(): string[] {
-  const bases: string[] = [];
-  const possibleBases = ['1B', '2B', '3B'];
-  
-  // Generate realistic runner configurations (1-3 runners)
-  const numRunners = Math.floor(Math.random() * 3) + 1;
-  
-  // Ensure we don't have impossible configurations (can't have runner on 2B without 1B first, etc.)
-  for (let i = 0; i < numRunners; i++) {
-    if (i === 0) bases.push('1B');
-    else if (i === 1) bases.push('2B');  
-    else if (i === 2) bases.push('3B');
-  }
-  
-  return bases;
-}
-
-function generateBatterProfile() {
-  const profiles = [
-    { type: 'power', name: 'Power Hitter', avg: '.285', hr: 25, rbi: 80, clutch: 0.7 },
-    { type: 'clutch', name: 'Clutch Performer', avg: '.295', hr: 15, rbi: 90, clutch: 0.85 },
-    { type: 'contact', name: 'Contact Hitter', avg: '.315', hr: 8, rbi: 65, clutch: 0.6 },
-    { type: 'rookie', name: 'Rising Star', avg: '.270', hr: 12, rbi: 55, clutch: 0.5 },
-    { type: 'veteran', name: 'Veteran Leader', avg: '.275', hr: 18, rbi: 75, clutch: 0.8 },
-    { type: 'average', name: 'Regular Player', avg: '.245', hr: 6, rbi: 35, clutch: 0.4 }
-  ];
-  
-  // Weight towards better batters in key situations (more exciting for alerts)
-  const weights = [0.25, 0.25, 0.15, 0.1, 0.15, 0.1]; // Favor power/clutch hitters
-  const random = Math.random();
-  let cumulative = 0;
-  
-  for (let i = 0; i < profiles.length; i++) {
-    cumulative += weights[i];
-    if (random <= cumulative) {
-      return profiles[i];
-    }
-  }
-  
-  return profiles[profiles.length - 1]; // fallback
-}
-
-function generateEnhancedDescription(alertType: string, sport: string, context: any): string {
-  const { homeTeam, awayTeam, homeScore, awayScore, scoreDiff, totalScore, gamePhase, weatherData, runnersOnBase, batterQuality } = context;
-  
-  switch (alertType) {
-    case 'RISP':
-      const runnerText = runnersOnBase?.length > 0 
-        ? `Runners on ${runnersOnBase.join(' and ')}`
-        : 'Runner in scoring position';
-      const batterText = batterQuality 
-        ? `${batterQuality.name} at bat (${batterQuality.avg}, ${batterQuality.hr} HR)`
-        : 'Quality batter up';
-      return `${runnerText} with ${batterText}. ${gamePhase} situation, ${scoreDiff}-run game.`;
-      
-    case 'HomeRun':
-      return `Big momentum swing! ${scoreDiff < 3 ? 'Game-tying shot' : 'Lead extended'}. ${totalScore > 10 ? 'High-scoring battle' : 'Breaking the game open'}.`;
-      
-    case 'RedZone':
-      return `Inside the 20-yard line. ${scoreDiff < 7 ? 'Could tie/take lead' : 'Building cushion'}. ${gamePhase} pressure situation.`;
-      
-    case 'ClutchTime':
-      return `Final minutes of a ${scoreDiff < 5 ? 'nail-biter' : 'comeback opportunity'}. Every possession matters.`;
-      
-    case 'TwoMinuteWarning':
-      return `Critical drive time! ${scoreDiff < 7 ? 'One score game' : 'Need quick points'}. ${totalScore > 35 ? 'Offensive shootout' : 'Defensive battle'}.`;
-      
-    case 'WeatherImpact':
-      return `${weatherData?.condition || 'Weather'} conditions affecting play. ${weatherData?.windSpeed > 15 ? 'Strong winds favor running game' : 'Conditions changing strategy'}.`;
-      
-    case 'LeadChange':
-      return `Momentum shift! ${totalScore > 180 ? 'High-scoring affair' : 'Defensive struggle'}. ${gamePhase}.`;
-      
-    default:
-      return `${gamePhase} development. Key situation unfolding.`;
-  }
-}
+// Removed mock data generators - only using real ESPN API data
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -556,40 +479,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const scoreDiff = Math.abs(homeScore - awayScore);
         const totalScore = homeScore + awayScore;
         
-        // Generate PREDICTIVE alerts for betting opportunities BEFORE they happen
+        // Generate ACCURATE PREDICTIVE alerts based only on verifiable game states
         let alertType = null;
         let alertDescription = null;
         
-        // Only generate predictive alerts, not post-event alerts
+        // Only generate alerts based on actual game data we can verify
         if (game.sport === 'MLB') {
-          // CONSERVATIVE RISP detection - only when we can be confident
-          const recentScoringActivity = Math.abs(totalScore - (previousState.totalScore || 0)) > 0;
-          const isCloseGame = scoreDiff <= 2;
-          const hasScoringPotential = totalScore >= 2 && totalScore <= 8;
-          
-          // Only generate RISP alerts for recent scoring in close games
-          if (recentScoringActivity && isCloseGame && hasScoringPotential) {
-            const timeSinceLastRispAlert = Date.now() - (previousState.lastRispAlert || 0);
-            if (timeSinceLastRispAlert > 420000) { // 7 minutes between RISP alerts
-              alertType = "High Scoring Potential";
-              alertDescription = `Active scoring situation! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Betting opportunity developing`;
+          // Close game alerts (100% accurate based on score)
+          if (scoreDiff <= 1 && totalScore >= 5) {
+            const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
+            if (timeSinceLastAlert > 600000) { // 10 minutes between alerts
+              alertType = "High Leverage Situation";
+              alertDescription = `${scoreDiff === 0 ? 'Tie game' : 'One-run game'}! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Critical betting moment`;
             }
           }
-          // Close game pressure situations
-          else if (scoreDiff <= 1 && totalScore >= 4) {
+          // Comeback opportunity (verifiable from scores)
+          else if (scoreDiff >= 2 && scoreDiff <= 3 && totalScore >= 6) {
             const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
-            if (timeSinceLastAlert > 600000) { // 10 minutes between pressure alerts
-              alertType = "High Pressure Situation";
-              alertDescription = `One-run game! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - High-value betting opportunity`;
+            if (timeSinceLastAlert > 900000) { // 15 minutes between alerts
+              alertType = "Comeback Opportunity";
+              alertDescription = `${scoreDiff}-run game. ${awayScore > homeScore ? game.homeTeam.name : game.awayTeam.name} within striking distance!`;
             }
           }
         } else if (game.sport === 'NFL') {
-          // NFL close game situations
-          if (scoreDiff <= 7 && totalScore >= 14) {
+          // NFL one-score game alerts
+          if (scoreDiff <= 8 && totalScore >= 14) {
             const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
             if (timeSinceLastAlert > 600000) {
-              alertType = "NFL Close Game";
-              alertDescription = `One-score game! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Key betting moment`;
+              alertType = "NFL One-Score Game";
+              alertDescription = `${scoreDiff <= 3 ? 'Field goal' : 'Touchdown'} difference! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name}`;
+            }
+          }
+        } else if (game.sport === 'NBA') {
+          // NBA clutch time (verifiable from scores)
+          if (scoreDiff <= 5 && totalScore >= 160) {
+            const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
+            if (timeSinceLastAlert > 600000) {
+              alertType = "NBA Clutch Time";
+              alertDescription = `${scoreDiff}-point game! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Every possession critical`;
+            }
+          }
+        } else if (game.sport === 'NHL') {
+          // NHL close game (verifiable from scores)
+          if (scoreDiff <= 1 && totalScore >= 2) {
+            const timeSinceLastAlert = Date.now() - (previousState.lastAlertTime || 0);
+            if (timeSinceLastAlert > 600000) {
+              alertType = "NHL Tight Game";
+              alertDescription = `${scoreDiff === 0 ? 'Tie game' : 'One-goal game'}! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name}`;
             }
           }
         }
@@ -656,7 +592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             awayScore, 
             totalScore,
             lastAlertTime: Date.now(),
-            lastRispAlert: alertType === "High Scoring Potential" ? Date.now() : (previousState.lastRispAlert || 0)
+            lastAlertTime: Date.now()
           };
           gameStates.set(gameId, newState);
         } else {
@@ -665,8 +601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             homeScore, 
             awayScore, 
             totalScore,
-            lastAlertTime: previousState.lastAlertTime,
-            lastRispAlert: previousState.lastRispAlert || 0
+            lastAlertTime: previousState.lastAlertTime
           });
         }
       }
