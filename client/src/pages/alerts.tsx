@@ -16,10 +16,16 @@ const FILTER_OPTIONS = [
 export default function Alerts() {
   const [activeFilters, setActiveFilters] = useState(["all"]);
 
-  const { data: alerts = [], isLoading } = useQuery<Alert[]>({
+  const { data: alerts = [], isLoading, error } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
     refetchInterval: 30000, // Refetch every 30 seconds for live updates
   });
+
+  // Debug logging
+  console.log("Alerts loading:", isLoading);
+  console.log("Alerts error:", error);
+  console.log("Alerts data:", alerts);
+  console.log("Alerts length:", alerts?.length);
 
   const toggleFilter = (filterId: string) => {
     if (filterId === "all") {
@@ -66,7 +72,7 @@ export default function Alerts() {
     }
   };
 
-  const filteredAlerts = alerts.filter(alert => {
+  const filteredAlerts = Array.isArray(alerts) ? alerts.filter(alert => {
     if (activeFilters.includes("all")) return true;
     if (activeFilters.includes("high-impact")) {
       // Consider alerts with AI confidence > 90% as high impact
@@ -76,7 +82,9 @@ export default function Alerts() {
       return alert.aiContext && (alert.aiConfidence || 0) > 75;
     }
     return true;
-  });
+  }) : [];
+  
+  console.log("Filtered alerts:", filteredAlerts);
 
   return (
     <div className="pb-20">
@@ -165,6 +173,9 @@ export default function Alerts() {
             <h3 className="text-lg font-bold text-chirp-blue mb-2">No Alerts Found</h3>
             <p className="text-sm text-chirp-dark">
               No alerts match your current filters. Try adjusting your filter settings.
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              Debug: {alerts.length} total alerts loaded, {filteredAlerts.length} after filtering
             </p>
             <p className="text-xs text-gray-500 mt-2">
               Debug: {alerts.length} total alerts loaded, {filteredAlerts.length} after filtering

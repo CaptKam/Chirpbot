@@ -89,7 +89,7 @@ function AppContent() {
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
         <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
-        <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
+        <Route path="/alerts" component={Alerts} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route component={NotFound} />
       </Switch>
