@@ -12,30 +12,51 @@ import { liveSportsService } from "./services/live-sports";
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
-  // Setup WebSocket server
+  // Setup WebSocket server with heartbeat
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const clients = new Set<WebSocket>();
 
-  wss.on('connection', (ws) => {
+  function heartbeat(this: any) { 
+    this.isAlive = true; 
+  }
+
+  wss.on('connection', (ws: any) => {
+    ws.isAlive = true;
     clients.add(ws);
     console.log('WebSocket client connected');
+
+    ws.on('pong', heartbeat);
 
     ws.on('close', () => {
       clients.delete(ws);
       console.log('WebSocket client disconnected');
     });
 
-    ws.on('error', (error) => {
+    ws.on('error', (error: Error) => {
       console.error('WebSocket error:', error);
       clients.delete(ws);
     });
   });
 
-  // Broadcast function for real-time updates
+  // Heartbeat interval to detect zombie connections
+  const heartbeatInterval = setInterval(() => {
+    wss.clients.forEach((ws: any) => {
+      if (ws.isAlive === false) {
+        return ws.terminate();
+      }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  // Broadcast function with backpressure handling
   function broadcast(data: any) {
-    clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(data));
+    const payload = JSON.stringify(data);
+    clients.forEach((client: any) => {
+      if (client.readyState === WebSocket.OPEN && client.bufferedAmount < 1_000_000) {
+        client.send(payload);
+      } else if (client.bufferedAmount >= 1_000_000) {
+        console.warn('WebSocket client buffer full, skipping broadcast');
       }
     });
   }

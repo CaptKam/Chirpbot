@@ -1,6 +1,13 @@
+import { fetchJson } from './http';
+
 export interface TelegramConfig {
   botToken: string;
   chatId: string;
+}
+
+// Escape Telegram MarkdownV2 special characters
+function escapeMd(s: string): string {
+  return s.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
 
 export async function sendTelegramAlert(
@@ -22,8 +29,8 @@ export async function sendTelegramAlert(
       return false;
     }
 
-    // Build rich notification message with game context
-    let message = `🚨 *${alert.type.toUpperCase()} ALERT*\n\n*${alert.title}*\n\n${alert.description}\n\n`;
+    // Build rich notification message with escaped markdown
+    let message = `🚨 *${escapeMd(alert.type.toUpperCase())} ALERT*\n\n*${escapeMd(alert.title)}*\n\n${escapeMd(alert.description)}\n\n`;
     
     // Game situation section
     message += `🎮 *GAME SITUATION*\n`;
@@ -86,26 +93,34 @@ export async function sendTelegramAlert(
     
     message += `\n\n#ChirpBot #${alert.type.replace(/\s+/g, '')}`;
 
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      }),
-    });
+    try {
+      const result = await fetchJson<any>(
+        `https://api.telegram.org/bot${botToken}/sendMessage`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: 'MarkdownV2',
+            disable_web_page_preview: false,
+          }),
+          timeoutMs: 8000
+        }
+      );
 
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error("Telegram API error:", result);
+      return result.ok === true;
+    } catch (fetchError: any) {
+      // Handle rate limiting
+      if (fetchError.message?.includes('429')) {
+        console.warn('Telegram rate limit hit, dropping alert');
+      } else {
+        console.error('Telegram send error:', fetchError.message);
+      }
       return false;
     }
-
-    return result.ok;
   } catch (error) {
     console.error("Failed to send Telegram alert:", error);
     return false;

@@ -1,5 +1,6 @@
 import type { Game, GameDay } from "@shared/schema";
 import { mlbApi } from "./mlb-api";
+import { fetchJson } from './http';
 
 // ESPN API Interfaces
 interface ESPNGame {
@@ -43,35 +44,40 @@ class LiveSportsService {
     NBA: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
     NHL: 'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard'
   };
+  
+  // Cache ESPN data for 5 seconds to reduce API calls
+  private espnCache = new Map<string, { data: Game[], timestamp: number }>();
+  private CACHE_TTL = 5000; // 5 seconds
 
   private async fetchESPNGames(sport: 'MLB' | 'NFL' | 'NBA' | 'NHL'): Promise<Game[]> {
+    // Check cache first
+    const cached = this.espnCache.get(sport);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data;
+    }
+    
     try {
       const url = this.ESPN_ENDPOINTS[sport];
-      const response = await fetch(url, {
+      const data = await fetchJson<ESPNResponse>(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0'
-        }
+        },
+        timeoutMs: 8000
       });
-      
-      if (!response.ok) {
-        throw new Error(`ESPN API error for ${sport}: ${response.status}`);
-      }
-
-      const data: ESPNResponse = await response.json();
       
       if (!data.events || data.events.length === 0) {
         console.log(`No ${sport} games found for today`);
         return [];
       }
 
-      return data.events.map((game: ESPNGame): Game => {
+      const games = data.events.map((game: ESPNGame): Game => {
         const competition = game.competitions[0];
         const homeTeam = competition.competitors.find(c => c.homeAway === 'home');
         const awayTeam = competition.competitors.find(c => c.homeAway === 'away');
 
         if (!homeTeam || !awayTeam) {
           console.warn(`Invalid team data for game ${game.id}`);
-          return null;
+          return null as any;
         }
 
         return {
@@ -93,6 +99,10 @@ class LiveSportsService {
           isSelected: false,
         };
       }).filter((game): game is Game => game !== null);
+      
+      // Cache the results
+      this.espnCache.set(sport, { data: games, timestamp: Date.now() });
+      return games;
     } catch (error) {
       console.error(`Error fetching ${sport} games from ESPN:`, error);
       return [];

@@ -2,14 +2,28 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
+import helmet from "helmet";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const { Pool } = pg;
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Security and CORS
+app.set('trust proxy', 1);
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled for Vite dev mode
+}));
+app.use(cors({
+  origin: process.env.CLIENT_ORIGIN || true,
+  credentials: true
+}));
+
+// Body parsing with size limits
+app.use(express.json({ limit: '200kb' }));
+app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 
 // PostgreSQL session store for persistent sessions
 const pgPool = new Pool({
@@ -25,12 +39,13 @@ app.use(session({
     tableName: 'session',
     createTableIfMissing: true
   }),
-  secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
+  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'chirpbot-dev-secret-key-12345'),
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Set to true in production with HTTPS
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));

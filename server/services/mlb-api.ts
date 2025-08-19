@@ -1,4 +1,5 @@
 import type { Game } from "@shared/schema";
+import { fetchJson } from './http';
 
 // MLB Stats API Interfaces (official MLB.com API)
 interface MLBGame {
@@ -117,22 +118,21 @@ export class MLBApiService {
       console.log(`Fetching MLB games for today (${today}) and yesterday (${yesterday})`);
       
       // Fetch both today's and yesterday's games to catch any ongoing games
-      const [todayResponse, yesterdayResponse] = await Promise.all([
-        fetch(`${this.BASE_URL}/schedule?sportId=1&date=${today}&hydrate=linescore,team`, {
-          headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' }
-        }),
-        fetch(`${this.BASE_URL}/schedule?sportId=1&date=${yesterday}&hydrate=linescore,team`, {
-          headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' }
-        })
-      ]);
-
-      if (!todayResponse.ok) {
-        throw new Error(`MLB API error: ${todayResponse.status} ${todayResponse.statusText}`);
-      }
-
-      const [todayData, yesterdayData]: [MLBScheduleResponse, MLBScheduleResponse] = await Promise.all([
-        todayResponse.json(),
-        yesterdayResponse.ok ? yesterdayResponse.json() : { dates: [] }
+      const [todayData, yesterdayData] = await Promise.all([
+        fetchJson<MLBScheduleResponse>(
+          `${this.BASE_URL}/schedule?sportId=1&date=${today}&hydrate=linescore,team`,
+          {
+            headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
+            timeoutMs: 8000
+          }
+        ),
+        fetchJson<MLBScheduleResponse>(
+          `${this.BASE_URL}/schedule?sportId=1&date=${yesterday}&hydrate=linescore,team`,
+          {
+            headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
+            timeoutMs: 8000
+          }
+        )
       ]);
       
       // Combine all games and filter for live ones or those scheduled for today
@@ -175,22 +175,19 @@ export class MLBApiService {
     try {
       const url = `${this.BASE_URL}/game/${gamePk}/feed/live`;
       
-      const response = await fetch(url, {
+      const data = await fetchJson<MLBLiveFeedResponse>(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
           'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
+        },
+        timeoutMs: 8000
+      }).catch(async (error) => {
+        if (error.message?.includes('404')) {
           // Live feed not available - try alternative linescore endpoint
           return await this.getLinescoreData(gamePk);
         }
-        throw new Error(`MLB Live Feed API error: ${response.status}`);
-      }
-
-      const data = await response.json();
+        throw error;
+      });
       
       // Enhanced live feed with play-by-play data
       return {

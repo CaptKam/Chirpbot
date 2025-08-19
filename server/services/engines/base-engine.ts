@@ -32,7 +32,11 @@ export abstract class BaseSportEngine implements SportEngine {
   abstract monitoringInterval: number;
   
   // Track last game state that triggered each alert to prevent duplicates
-  protected lastAlertStates = new Map<string, string>(); // key: gameId-alertType, value: game state hash
+  protected lastAlertStates = new Map<string, {hash: string, ts: number}>();
+  private MAX_KEYS = 5000;
+  private MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+  private lastFireAt = new Map<string, number>(); // track last fire time
+  private MIN_REFIRE_MS = 20000; // 20 seconds minimum between same alerts
   
   abstract extractGameState(apiData: any): any;
   abstract monitor(): Promise<void>;
@@ -73,22 +77,38 @@ export abstract class BaseSportEngine implements SportEngine {
   }
   
   protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
-    // Create a unique key for this game and alert type
     const key = `${gameId}-${alertType}`;
-    
-    // Create a hash of relevant game state properties
     const stateHash = this.createGameStateHash(gameState, alertType);
-    
-    // Check if we've already triggered this alert for this exact game state
-    const lastStateHash = this.lastAlertStates.get(key);
-    
-    if (lastStateHash === stateHash) {
-      // Same game state, don't trigger duplicate alert
+    const now = Date.now();
+
+    // Check minimum refire interval
+    const lastFire = this.lastFireAt.get(key) ?? 0;
+    if (now - lastFire < this.MIN_REFIRE_MS) {
+      return false;
+    }
+
+    // Check if same state
+    const prev = this.lastAlertStates.get(key);
+    if (prev && prev.hash === stateHash) {
       return false;
     }
     
-    // New game state, allow alert and track it
-    this.lastAlertStates.set(key, stateHash);
+    // Update tracking
+    this.lastAlertStates.set(key, { hash: stateHash, ts: now });
+    this.lastFireAt.set(key, now);
+
+    // Prune old entries if map gets too large
+    if (this.lastAlertStates.size > this.MAX_KEYS) {
+      const cutoff = now - this.MAX_AGE_MS;
+      const entries = Array.from(this.lastAlertStates.entries());
+      for (const [k, v] of entries) {
+        if (v.ts < cutoff) {
+          this.lastAlertStates.delete(k);
+          this.lastFireAt.delete(k);
+        }
+      }
+    }
+    
     return true;
   }
   
@@ -96,16 +116,20 @@ export abstract class BaseSportEngine implements SportEngine {
     // Only track properties relevant to each alert type to avoid duplicates
     let relevantState: any = {};
     
-    // For runner-based alerts, track runners and outs
-    if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('bases')) {
+    // For runner-based alerts, track runners and outs (ignore balls/strikes)
+    if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('risp') || alertType.toLowerCase().includes('bases')) {
       relevantState = {
-        runners: gameState.runners,
-        outs: gameState.outs,
         inning: gameState.inning,
-        inningState: gameState.inningState
+        half: gameState.inningState,
+        outs: gameState.outs,
+        r1: !!gameState.runners?.first,
+        r2: !!gameState.runners?.second,
+        r3: !!gameState.runners?.third,
+        away: gameState.awayScore,
+        home: gameState.homeScore
       };
     }
-    // For inning-based alerts, track inning changes
+    // For inning-based alerts, track inning changes only
     else if (alertType.toLowerCase().includes('inning')) {
       relevantState = {
         inning: gameState.inning,

@@ -1,0 +1,248 @@
+1) Stabilize data fetching (timeouts, retries, backoff)
+
+Why: ESPN/MLB endpoints and Telegram/OpenAI can hiccup; a single slow call can stall loops and spam logs.
+
+Add a tiny fetch helper (server‑wide):
+
+// server/services/http.ts
+import pRetry from "p-retry";
+
+export async function fetchJson<T>(
+  url: string,
+  init: RequestInit & { timeoutMs?: number } = {}
+): Promise<T> {
+  const { timeoutMs = 5000, ...rest } = init;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await pRetry(async () => {
+      const res = await fetch(url, { ...rest, signal: controller.signal });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText}: ${body.slice(0,200)}`);
+      }
+      return res.json() as Promise<T>;
+    }, { retries: 3, factor: 2, minTimeout: 300, maxTimeout: 2000, randomize: true });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+
+Then swap your fetch(...) in mlb-api.ts, live-sports.ts, etc. to fetchJson.
+
+2) Prevent alert spam + memory growth
+
+You already hash game state to dedupe, but the map can grow forever and can still jitter on tiny irrelevancies.
+
+Cap and age‑out dedupe keys:
+
+// server/services/engines/base-engine.ts
+private lastAlertStates = new Map<string, {hash: string, ts: number}>();
+private MAX_KEYS = 5000;
+private MAX_AGE_MS = 30 * 60 * 1000; // 30m
+
+protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
+  const key = `${gameId}-${alertType}`;
+  const stateHash = this.createGameStateHash(gameState, alertType);
+  const now = Date.now();
+
+  const prev = this.lastAlertStates.get(key);
+  if (prev && prev.hash === stateHash) {
+    return false;
+  }
+  this.lastAlertStates.set(key, { hash: stateHash, ts: now });
+
+  // prune occasionally
+  if (this.lastAlertStates.size > this.MAX_KEYS) {
+    const cutoff = now - this.MAX_AGE_MS;
+    for (const [k, v] of this.lastAlertStates) {
+      if (v.ts < cutoff) this.lastAlertStates.delete(k);
+    }
+  }
+  return true;
+}
+
+
+Make the hash ignore noise (e.g., pitch count when the alert is about RISP). In createGameStateHash, pick fields per alert type.
+
+3) Reduce unnecessary polling/work
+
+Right now you poll very frequently. Save bandwidth and CPU:
+
+Only poll games for teams that are monitored (or recently were).
+
+Batch MLB live feeds by tracking live game IDs and only hitting live ones.
+
+Use a simple scheduler: fast loop for live games (2s), slower loop for “scheduled” (30–60s).
+
+4) WebSocket hardening (keepalive + backpressure)
+
+Add heartbeat to avoid zombie connections, and don’t broadcast to slow clients.
+
+// server/routes.ts (after wss created)
+function heartbeat(this: any){ this.isAlive = true; }
+
+wss.on('connection', (ws: any) => {
+  ws.isAlive = true;
+  ws.on('pong', heartbeat);
+});
+
+const interval = setInterval(() => {
+  wss.clients.forEach((ws: any) => {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+// make sure to clear on server close if needed
+
+
+And in broadcast, skip clients with large bufferedAmount:
+
+function broadcast(data: any) {
+  const payload = JSON.stringify(data);
+  clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN && client.bufferedAmount < 1_000_000) {
+      client.send(payload);
+    }
+  });
+}
+
+5) Telegram & Markdown safety + rate limits
+
+Telegram MarkdownV2 needs escaping; also 429s are common.
+
+// server/services/telegram.ts
+function escapeMd(s: string) {
+  return s.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
+
+// before sending:
+const message = [
+  `🚨 *${escapeMd(alert.type.toUpperCase())} ALERT*`,
+  `*${escapeMd(alert.title)}*`,
+  escapeMd(alert.description),
+  `Score: ${alert.gameInfo?.score?.away}-${alert.gameInfo?.score?.home}`,
+].join('\n\n');
+
+// wrap fetch with fetchJson + retry; if 429, backoff and drop if repeated
+
+6) OpenAI call correctness & resilience
+
+Keep your 5s timeout (good), but also fall back to a local, fast rule‑based blurb when the model times out.
+
+Batch: if multiple alerts fire in one tick, combine into one responses request or at least limit parallelism (e.g., p‑limit 2–3).
+
+Guard JSON parsing tightly (you do; keep it).
+
+7) Security & prod toggles
+
+Sessions: in prod set cookie.secure=true, sameSite:'lax', trust proxy on Express, and never default to a dev secret.
+
+Helmet & CORS: add helmet() and explicit CORS for the client origin.
+
+Zod route validation: you already have zod schemas; apply them on every write route and sanitize/limit strings.
+
+// server/index.ts
+import helmet from "helmet";
+import cors from "cors";
+app.set('trust proxy', 1);
+app.use(helmet());
+app.use(cors({ origin: process.env.CLIENT_ORIGIN, credentials: true }));
+
+// use zod refine in routes before storage calls
+
+Targeted improvements by module
+server/services/mlb-api.ts
+
+Swap to fetchJson with timeouts/retries.
+
+Cache static bits per game (teams, venue) in memory for the game day to reduce payload.
+
+When live feed 404s, you already fall back to linescore—great. Also memoize linescore for ~2s to avoid bursts (simple Map with TTL).
+
+server/services/live-sports.ts
+
+ESPN scoreboard can be slow. Fetch once per sport on an interval and serve from memory to the routes; don’t call ESPN on every request.
+
+Normalize to your Game shape in one place and re‑use.
+
+server/services/engines/base-engine.ts
+
+You split regular vs. prediction alerts: good. Add per‑alert min re‑fire intervals to avoid thrash:
+
+// inside shouldTriggerAlert or separate map
+private lastFireAt = new Map<string, number>();
+private MIN_REFIRE_MS = 20_000; // per alert type
+
+const last = this.lastFireAt.get(key) ?? 0;
+if (Date.now() - last < this.MIN_REFIRE_MS) return false;
+this.lastFireAt.set(key, Date.now());
+
+server/routes.ts
+
+The JSON response logging is handy but risks PII; keep it under NODE_ENV==='development' and truncate earlier (e.g., 400 chars).
+
+Add a /health route that checks DB and returns engine status (useful for uptime monitors).
+
+server/db.ts & sessions
+
+You’re mixing Neon serverless and connect-pg-simple Pool. That’s OK, but in serverless hosts ensure a single shared client (module‑level singleton). Looks good as written. Just ensure DATABASE_URL is different for session store vs Neon WS if you ever split infra.
+
+server/services/openai.ts
+
+Consider moving model name to process.env.OPENAI_MODEL with a sane default.
+
+If the SDK changes, wrap behind an adapter (createOpenAIClient()) so only one file changes.
+
+server/services/ai-predictions.ts
+
+Where possible, compute cheap priors (e.g., league‑average run‑expectancy matrix by base/out state). Use those when OpenAI is down/timeouts, so the user never sees a blank AI context.
+
+Client (React)
+
+Ensure WS reconnect with exponential backoff and jitter (10s cap), and display a small “Live” indicator that blinks red when disconnected.
+
+Debounce/merge inbound new_alert messages into a single state update per animation frame to avoid render storms.
+
+Persist “seen” status locally in addition to server for snappy UX.
+
+Example: MLB Engine signal‑to‑noise
+
+For alerts like “Runner on 3rd, 1 Out”, avoid firing on every pitch. Add a state gate that only allows refire on state transitions (e.g., bases/outs/inning change), not count changes:
+
+// in createGameStateHash for RISP-style alerts
+const keyFields = {
+  inning: s.inning,
+  half: s.inningState,
+  outs: s.outs,
+  r1: !!s.runners.first,
+  r2: !!s.runners.second,
+  r3: !!s.runners.third,
+  away: s.awayScore,
+  home: s.homeScore,
+};
+return stableHash(keyFields); // ignore balls/strikes for this alert
+
+Ops & DX
+
+Add pino logger with pretty transport in dev; JSON in prod.
+
+Add /metrics (Prometheus): request latency, alert counts, dropped broadcasts, external API latency.
+
+Create a “simulation mode” endpoint that feeds canned play‑by‑play to validate alert logic without live games (great for demos/tests).
+
+Add Vitest for alert condition functions (pure, easy to test).
+
+Quick security checklist
+
+SESSION_SECRET must be set (no default) in prod.
+
+cookie: { secure:true, httpOnly:true, sameSite:'lax' } in prod.
+
+Validate/escape all user input (team names, alert types) before interpolating into Markdown or logs.
+
+Limit payload sizes (app.use(express.json({ limit: '200kb' }))).

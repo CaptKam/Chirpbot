@@ -1,6 +1,11 @@
 import OpenAI from "openai";
+import { fetchJson } from './http';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 5000,
+  maxRetries: 2
+});
 
 export interface PredictionAnalysis {
   eventType: string;
@@ -87,6 +92,57 @@ export interface PredictionRequest {
   minimumProbability?: number; // Only return predictions above this threshold
 }
 
+// Fallback predictions based on statistical averages
+function generateFallbackPredictions(request: PredictionRequest): PredictionAnalysis[] {
+  const predictions: PredictionAnalysis[] = [];
+  const { context, eventTypes } = request;
+  
+  for (const eventType of eventTypes) {
+    let probability = 0;
+    let reasoning = "Statistical average (AI unavailable)";
+    
+    // Baseball RISP scoring probabilities based on historical data
+    if (eventType === "Scoring Play" && context.sport === "MLB") {
+      const runners = context.runnersOn || [];
+      const outs = context.outs || 0;
+      
+      if (runners.includes("3rd") && outs < 2) {
+        probability = 65;
+        reasoning = "Runner on 3rd with less than 2 outs historically scores 65% of the time";
+      } else if (runners.includes("2nd") && outs < 2) {
+        probability = 45;
+        reasoning = "Runner on 2nd with less than 2 outs historically scores 45% of the time";
+      } else if (runners.length > 0) {
+        probability = 25;
+        reasoning = "Runners on base score approximately 25% of the time";
+      }
+    }
+    
+    // Home run probability based on batter stats
+    if (eventType === "Home Run" && context.currentBatter) {
+      const avgHrRate = 3; // ~3% average HR rate
+      const batterHrRate = context.currentBatter.stats.hr && context.currentBatter.stats.atBats
+        ? (context.currentBatter.stats.hr / context.currentBatter.stats.atBats) * 100
+        : avgHrRate;
+      probability = Math.min(batterHrRate * 1.5, 15); // Cap at 15%
+      reasoning = `Based on batter's HR rate of ${batterHrRate.toFixed(1)}%`;
+    }
+    
+    if (probability > 0) {
+      predictions.push({
+        eventType,
+        probability,
+        confidence: 50, // Lower confidence for fallback
+        reasoning,
+        impact: "Significant scoring opportunity",
+        shouldAlert: probability >= (request.minimumProbability || 30)
+      });
+    }
+  }
+  
+  return predictions;
+}
+
 export async function generatePredictions(request: PredictionRequest): Promise<PredictionAnalysis[]> {
   try {
     const prompt = buildPredictionPrompt(request);
@@ -140,8 +196,15 @@ Be realistic with probabilities - don't inflate them. Base them on actual statis
       confidence: Math.max(0, Math.min(100, p.confidence))
     }));
     
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI prediction failed:", error);
+    
+    // Use fallback predictions when AI fails
+    if (error.status === 429 || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      console.log('Using fallback predictions due to AI service unavailability');
+      return generateFallbackPredictions(request);
+    }
+    
     return [];
   }
 }
