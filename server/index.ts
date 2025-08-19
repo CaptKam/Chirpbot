@@ -1,14 +1,30 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+
+const { Pool } = pg;
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session middleware
+// PostgreSQL session store for persistent sessions
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+const PgSession = connectPgSimple(session);
+
+// Session middleware with PostgreSQL store
 app.use(session({
+  store: new PgSession({
+    pool: pgPool,
+    tableName: 'session',
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
   resave: false,
   saveUninitialized: false,
