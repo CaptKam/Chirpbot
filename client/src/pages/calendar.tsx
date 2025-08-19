@@ -160,24 +160,24 @@ export default function Calendar() {
   };
 
   return (
-    <div className="pb-20 bg-chirp-bg">
+    <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
-      <header className="bg-chirp-accent-blue text-white p-4 flex items-center justify-between">
+      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-chirp-alert-red rounded-full flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
+            <Zap className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-xl font-black uppercase tracking-wider">ChirpBot</h1>
-            <p className="text-blue-200 text-xs font-semibold">V2 Alert System</p>
+            <h1 className="text-xl font-black uppercase tracking-wider text-slate-100">ChirpBot</h1>
+            <p className="text-emerald-300/80 text-xs font-semibold">V2 Alert System</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
           <Link href="/alerts">
-            <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
+            <Button variant="ghost" size="sm" className="relative p-0 text-slate-100 hover:text-emerald-300">
               <Bell className="w-7 h-7" />
               {unseenCount && unseenCount.count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-emerald-500 text-slate-900 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                   {unseenCount.count}
                 </span>
               )}
@@ -187,7 +187,7 @@ export default function Calendar() {
       </header>
 
       {/* Sport Tabs */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
         <div className="flex overflow-x-auto">
           {SPORTS.map((sport) => (
             <button
@@ -196,8 +196,8 @@ export default function Calendar() {
               data-testid={`sport-tab-${sport.toLowerCase()}`}
               className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
                 activeSport === sport
-                  ? "border-chirp-cta-blue text-chirp-cta-blue bg-blue-50"
-                  : "border-transparent text-chirp-text-muted hover:text-chirp-text-dark"
+                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
+                  : "border-transparent text-slate-400 hover:text-slate-200"
               }`}
             >
               {sport}
@@ -210,22 +210,22 @@ export default function Calendar() {
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-black uppercase tracking-wider text-chirp-text-dark">
+            <h2 className="text-lg font-black uppercase tracking-wider text-slate-100">
               Today's Games
             </h2>
             <div className="flex items-center space-x-4 mt-1">
-              <span className="text-sm font-semibold text-green-600">
+              <span className="text-sm font-semibold text-emerald-400">
                 {games.filter(g => g.status === 'live').length} Live
               </span>
-              <span className="text-sm font-semibold text-blue-600">
+              <span className="text-sm font-semibold text-emerald-300">
                 {games.filter(g => g.status === 'scheduled').length} Scheduled
               </span>
-              <span className="text-sm font-semibold text-gray-600">
+              <span className="text-sm font-semibold text-slate-400">
                 {games.filter(g => g.status === 'final').length} Final
               </span>
             </div>
           </div>
-          <span className="text-sm font-semibold text-chirp-text-muted">
+          <span className="text-sm font-semibold text-slate-300">
             {selectedCount}/{games.length} Selected
           </span>
         </div>
@@ -233,42 +233,42 @@ export default function Calendar() {
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 min-h-[140px] animate-pulse">
+              <div key={i} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6 min-h-[140px] animate-pulse">
                 {/* Header skeleton */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
-                      <div className="w-4 h-4 bg-gray-300 rounded"></div>
-                      <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+                      <div className="w-12 h-12 bg-slate-700 rounded-full"></div>
+                      <div className="w-4 h-4 bg-slate-700 rounded"></div>
+                      <div className="w-12 h-12 bg-slate-700 rounded-full"></div>
                     </div>
                   </div>
-                  <div className="w-16 h-6 bg-gray-300 rounded-full"></div>
+                  <div className="w-16 h-6 bg-slate-700 rounded-full"></div>
                 </div>
                 
                 {/* Team names skeleton */}
                 <div className="mb-3">
-                  <div className="h-5 bg-gray-300 rounded w-48 mb-1"></div>
+                  <div className="h-5 bg-slate-700 rounded w-48 mb-1"></div>
                 </div>
                 
                 {/* Bottom info skeleton */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-20 h-7 bg-gray-300 rounded-full"></div>
-                    <div className="w-16 h-7 bg-gray-300 rounded-full"></div>
+                    <div className="w-20 h-7 bg-slate-700 rounded-full"></div>
+                    <div className="w-16 h-7 bg-slate-700 rounded-full"></div>
                   </div>
                   <div className="text-right">
-                    <div className="h-5 bg-gray-300 rounded w-16 mb-1"></div>
-                    <div className="h-4 bg-gray-300 rounded w-24"></div>
+                    <div className="h-5 bg-slate-700 rounded w-16 mb-1"></div>
+                    <div className="h-4 bg-slate-700 rounded w-24"></div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : games.length === 0 ? (
-          <div className="text-center py-8 text-chirp-dark">
+          <div className="text-center py-8 text-slate-300">
             <p className="text-lg font-medium">No games scheduled for today</p>
-            <p className="text-sm mt-2">Check back later or try a different sport</p>
+            <p className="text-sm mt-2 text-slate-400">Check back later or try a different sport</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -296,10 +296,10 @@ export default function Calendar() {
               return (
                 <Card 
                   key={game.id} 
-                  className={`bg-white shadow-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] ${
+                  className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] hover:bg-white/10 ${
                     isSelected 
-                      ? 'border-2 border-chirp-cta-blue bg-blue-50 shadow-md' 
-                      : 'border border-chirp-border-gray hover:shadow-lg'
+                      ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
+                      : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
                   }`}
                   style={{ borderRadius: '12px' }}
                   onClick={() => toggleGameSelection(game.id)}
@@ -315,7 +315,7 @@ export default function Calendar() {
                           size="md"
                           className="shadow-sm"
                         />
-                        <span className="text-chirp-dark font-bold text-lg">@</span>
+                        <span className="text-slate-300 font-bold text-lg">@</span>
                         <TeamLogo
                           teamName={game.homeTeam.name}
                           abbreviation={game.homeTeam.abbreviation}
@@ -326,18 +326,18 @@ export default function Calendar() {
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Badge className="bg-purple-100 text-purple-800 px-3 py-1.5 rounded-full text-sm font-bold">
+                      <Badge className="bg-emerald-500/20 text-emerald-300 px-3 py-1.5 rounded-full text-sm font-bold ring-1 ring-emerald-500/30">
                         {game.sport}
                       </Badge>
                       {isSelected && (
-                        <CheckCircle className="w-7 h-7 text-chirp-cta-blue" data-testid={`game-selected-${game.id}`} />
+                        <CheckCircle className="w-7 h-7 text-emerald-400" data-testid={`game-selected-${game.id}`} />
                       )}
                     </div>
                   </div>
 
                   {/* Team names */}
                   <div className="mb-3">
-                    <h3 className="font-bold text-chirp-blue text-lg leading-tight" data-testid={`game-title-${game.id}`}>
+                    <h3 className="font-bold text-slate-100 text-lg leading-tight" data-testid={`game-title-${game.id}`}>
                       {game.awayTeam.name} @ {game.homeTeam.name}
                     </h3>
                   </div>
@@ -348,10 +348,10 @@ export default function Calendar() {
                       {/* Status badge */}
                       <Badge className={`px-3 py-1.5 rounded-full text-sm font-medium ${
                         game.status === 'live' 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
                           : game.status === 'final'
-                          ? 'bg-gray-100 text-gray-800'
-                          : 'bg-blue-100 text-blue-800'
+                          ? 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
+                          : 'bg-slate-600/50 text-slate-300 ring-1 ring-slate-500'
                       }`}>
                         {game.status === 'live' && <Play className="w-4 h-4 mr-1.5" />}
                         {game.status === 'scheduled' && <Clock className="w-4 h-4 mr-1.5" />}
@@ -359,7 +359,7 @@ export default function Calendar() {
                       </Badge>
                       
                       {/* Weather badge */}
-                      <Badge className="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-sm font-medium">
+                      <Badge className="bg-slate-600/50 text-slate-300 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ring-slate-500">
                         {getWeatherIcon(weather.condition)}
                         <span className="ml-1.5">{weather.temperature}°F</span>
                       </Badge>
@@ -367,11 +367,11 @@ export default function Calendar() {
                     
                     {/* Time and venue */}
                     <div className="text-right">
-                      <div className="text-lg font-bold text-chirp-blue">
+                      <div className="text-lg font-bold text-emerald-400">
                         {formattedTime}
                       </div>
                       {game.venue && (
-                        <div className="text-sm text-chirp-dark font-medium mt-0.5">
+                        <div className="text-sm text-slate-300 font-medium mt-0.5">
                           {game.venue.length > 20 ? `${game.venue.substring(0, 20)}...` : game.venue}
                         </div>
                       )}

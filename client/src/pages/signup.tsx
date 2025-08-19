@@ -93,33 +93,33 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-chirp-blue to-chirp-navy flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-chirp-red rounded-full flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Zap className="w-8 h-8 text-emerald-400" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Join ChirpBot</h1>
-          <p className="text-chirp-light">Get real-time sports alerts powered by AI</p>
+          <h1 className="text-3xl font-bold text-slate-100 mb-2">Join ChirpBot</h1>
+          <p className="text-slate-300">Get real-time sports alerts powered by AI</p>
         </div>
 
         {/* Signup Form */}
-        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+        <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 shadow-xl">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center text-chirp-dark">Create Account</CardTitle>
-            <CardDescription className="text-center text-gray-600">
+            <CardTitle className="text-2xl text-center text-slate-100">Create Account</CardTitle>
+            <CardDescription className="text-center text-slate-300">
               Enter your details to get started with ChirpBot
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium text-chirp-dark">
+                <Label htmlFor="username" className="text-sm font-medium text-slate-200">
                   Username
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     id="username"
                     data-testid="input-username"
@@ -127,7 +127,7 @@ export default function Signup() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username"
-                    className="pl-10 h-12 border-gray-200 focus:border-chirp-blue focus:ring-chirp-blue"
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                     disabled={isLoading}
                     autoComplete="username"
                   />
@@ -135,11 +135,11 @@ export default function Signup() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-chirp-dark">
+                <Label htmlFor="password" className="text-sm font-medium text-slate-200">
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     id="password"
                     data-testid="input-password"
@@ -147,7 +147,7 @@ export default function Signup() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="pl-10 h-12 border-gray-200 focus:border-chirp-blue focus:ring-chirp-blue"
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                     disabled={isLoading}
                     autoComplete="new-password"
                   />
@@ -155,11 +155,11 @@ export default function Signup() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-chirp-dark">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-200">
                   Confirm Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     id="confirmPassword"
                     data-testid="input-confirm-password"
@@ -167,7 +167,7 @@ export default function Signup() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm your password"
-                    className="pl-10 h-12 border-gray-200 focus:border-chirp-blue focus:ring-chirp-blue"
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                     disabled={isLoading}
                     autoComplete="new-password"
                   />
@@ -177,7 +177,7 @@ export default function Signup() {
               <Button
                 type="submit"
                 data-testid="button-signup"
-                className="w-full h-12 bg-chirp-red hover:bg-chirp-red/90 text-white font-semibold"
+                className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold shadow-lg shadow-emerald-500/25"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating Account..." : "Create Account"}
@@ -185,10 +185,10 @@ export default function Signup() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-slate-300">
                 Already have an account?{" "}
                 <Link href="/login">
-                  <span className="text-chirp-blue hover:underline font-medium cursor-pointer">
+                  <span className="text-emerald-400 hover:text-emerald-300 hover:underline font-medium cursor-pointer">
                     Sign in here
                   </span>
                 </Link>
@@ -197,7 +197,7 @@ export default function Signup() {
 
             <div className="mt-4 text-center">
               <Link href="/">
-                <Button variant="ghost" data-testid="link-home" className="text-gray-600 hover:text-chirp-blue">
+                <Button variant="ghost" data-testid="link-home" className="text-slate-400 hover:text-slate-200">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Home
                 </Button>
@@ -207,7 +207,7 @@ export default function Signup() {
         </Card>
 
         {/* Features */}
-        <div className="mt-8 text-center text-chirp-light text-sm">
+        <div className="mt-8 text-center text-slate-400 text-sm">
           <p className="mb-2">✨ AI-powered sports analysis</p>
           <p className="mb-2">⚡ Real-time game alerts</p>
           <p>🏆 MLB • NFL • NBA • NHL coverage</p>

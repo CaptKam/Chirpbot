@@ -11,7 +11,7 @@ export function BottomNavigation() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-chirp-border-gray shadow-lg z-50">
+    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50">
       <div className="flex">
         {navItems.map(({ path, icon: Icon, label, testId }) => {
           const isActive = location === path || (path === "/dashboard" && location === "/");
@@ -22,8 +22,8 @@ export function BottomNavigation() {
               data-testid={testId}
               className={`flex-1 py-3 px-4 text-center transition-colors ${
                 isActive 
-                  ? "text-chirp-cta-blue font-bold" 
-                  : "text-chirp-text-muted hover:text-chirp-text-dark"
+                  ? "text-emerald-400 font-bold" 
+                  : "text-slate-400 hover:text-slate-200"
               }`}
             >
               <Icon className="w-6 h-6 mb-1 mx-auto" />

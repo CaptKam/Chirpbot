@@ -22,10 +22,10 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-chirp-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-300">Loading...</p>
         </div>
       </div>
     );
@@ -43,10 +43,10 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-chirp-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-300">Loading...</p>
         </div>
       </div>
     );
@@ -101,7 +101,7 @@ function AppContent() {
   }, [lastMessage, toast, isAuthenticated]);
 
   return (
-    <div className={isAuthenticated ? "max-w-md mx-auto bg-white min-h-screen relative" : "min-h-screen"}>
+    <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
       <Switch>
         <Route path="/" component={() => <PublicRoute component={Landing} />} />
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
@@ -120,7 +120,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="bg-chirp-gray min-h-screen">
+        <div className="bg-gradient-to-b from-[#0B1220] to-[#0F1A32] min-h-screen text-slate-100 antialiased">
           <Toaster />
           <AppContent />
         </div>

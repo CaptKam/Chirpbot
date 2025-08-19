@@ -137,13 +137,13 @@ export default function Alerts() {
       case "risp":
       case "homerun":
       case "lateinning":
-        return "bg-red-100 text-red-800 border-red-500";
+        return "bg-red-500/20 text-red-300 ring-red-500/50";
       case "redzone":
-        return "bg-yellow-100 text-yellow-800 border-yellow-500";
+        return "bg-yellow-500/20 text-yellow-300 ring-yellow-500/50";
       case "clutchtime":
-        return "bg-green-100 text-green-800 border-green-500";
+        return "bg-emerald-500/20 text-emerald-300 ring-emerald-500/50";
       default:
-        return "bg-red-100 text-red-800 border-red-500";
+        return "bg-red-500/20 text-red-300 ring-red-500/50";
     }
   };
 
@@ -157,23 +157,23 @@ export default function Alerts() {
   console.log("Filtered alerts:", filteredAlerts);
 
   return (
-    <div className="pb-20 bg-chirp-bg min-h-screen">
+    <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
-      <header className="bg-chirp-blue text-white p-4 flex items-center justify-between">
+      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-chirp-red rounded-full flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
+            <Zap className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-xl font-black uppercase tracking-wide">ChirpBot</h1>
-            <p className="text-blue-200 text-xs font-medium">V2 Alert System</p>
+            <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
+            <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
+          <Button variant="ghost" size="sm" className="relative p-0 text-slate-100 hover:text-emerald-300">
             <Bell className="w-7 h-7" />
             {unseenCount.count > 0 && (
-              <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-emerald-500 text-slate-900 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                 {unseenCount.count}
               </span>
             )}
@@ -182,14 +182,14 @@ export default function Alerts() {
       </header>
 
       {/* Filters */}
-      <div className="bg-white border-b border-gray-200 p-4">
+      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 p-4">
         <div className="mb-3">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
+            <h2 className="text-lg font-black uppercase tracking-wide text-slate-100">
               Live Alerts
             </h2>
             {unseenCount.count > 0 && (
-              <Badge className="bg-red-500 text-white px-2 py-1 text-xs font-bold">
+              <Badge className="bg-emerald-500 text-slate-900 px-2 py-1 text-xs font-bold">
                 {unseenCount.count} NEW
               </Badge>
             )}
@@ -203,8 +203,8 @@ export default function Alerts() {
               data-testid={`filter-${option.id}`}
               className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap transition-colors ${
                 activeFilters.includes(option.id)
-                  ? "bg-chirp-blue text-white"
-                  : "bg-gray-100 text-chirp-dark hover:bg-gray-200"
+                  ? "bg-emerald-500 text-slate-900"
+                  : "bg-white/10 text-slate-300 hover:bg-white/20"
               }`}
             >
               {option.label}
@@ -218,32 +218,32 @@ export default function Alerts() {
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm border-l-4 border-gray-300 p-4 animate-pulse">
+              <div key={i} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 animate-pulse">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    <div className="h-5 bg-gray-300 rounded w-20"></div>
-                    <div className="h-4 bg-gray-300 rounded w-16"></div>
+                    <div className="h-5 bg-slate-700 rounded w-20"></div>
+                    <div className="h-4 bg-slate-700 rounded w-16"></div>
                   </div>
-                  <div className="h-4 bg-gray-300 rounded w-12"></div>
+                  <div className="h-4 bg-slate-700 rounded w-12"></div>
                 </div>
-                <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-300 rounded w-full mb-3"></div>
-                <div className="h-16 bg-gray-300 rounded mb-3"></div>
+                <div className="h-4 bg-slate-700 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-slate-700 rounded w-full mb-3"></div>
+                <div className="h-16 bg-slate-700 rounded mb-3"></div>
                 <div className="flex justify-between">
-                  <div className="h-3 bg-gray-300 rounded w-20"></div>
-                  <div className="h-4 bg-gray-300 rounded w-4"></div>
+                  <div className="h-3 bg-slate-700 rounded w-20"></div>
+                  <div className="h-4 bg-slate-700 rounded w-4"></div>
                 </div>
               </div>
             ))}
           </div>
         ) : filteredAlerts.length === 0 ? (
-          <Card className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <TriangleAlert className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-chirp-blue mb-2">No Alerts Found</h3>
-            <p className="text-sm text-chirp-dark">
+          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-8 text-center">
+            <TriangleAlert className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-slate-100 mb-2">No Alerts Found</h3>
+            <p className="text-sm text-slate-300">
               No alerts match your current filters. Try adjusting your filter settings.
             </p>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               Debug: {alerts.length} total alerts loaded, {filteredAlerts.length} after filtering
             </p>
           </Card>
@@ -253,45 +253,47 @@ export default function Alerts() {
             return (
               <Card
                 key={alert.id}
-                className={`bg-white rounded-xl shadow-sm border-l-4 p-4 hover:shadow-lg transition-shadow ${
-                  alert.seen ? 'border-gray-300 opacity-75' : 'border-red-500'
+                className={`bg-white/5 backdrop-blur-sm ring-1 rounded-xl p-4 hover:bg-white/10 transition-all duration-200 ${
+                  alert.seen 
+                    ? 'ring-slate-600/50 opacity-75' 
+                    : 'ring-emerald-500/50 shadow-lg shadow-emerald-500/20'
                 }`}
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
               >
                 {/* Quick Impact Header */}
                 <div className="text-center mb-2">
-                  <h2 className="text-base font-black uppercase tracking-wide text-red-600">
+                  <h2 className="text-base font-black uppercase tracking-wide text-emerald-400">
                     ⚡ {alert.type.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}!
                   </h2>
                 </div>
                 
                 {/* Key Situation */}
                 <div className="text-center mb-2">
-                  <h3 className="font-bold text-chirp-blue" style={{fontSize: '15px'}} data-testid={`alert-title-${alert.id}`}>
+                  <h3 className="font-bold text-slate-100" style={{fontSize: '15px'}} data-testid={`alert-title-${alert.id}`}>
                     {alert.title.toUpperCase()}
                   </h3>
                 </div>
 
                 {/* Quick Action Insight */}
                 <div className="text-center">
-                  <p className="text-sm font-medium text-chirp-dark" data-testid={`alert-description-${alert.id}`}>
+                  <p className="text-sm font-medium text-slate-300" data-testid={`alert-description-${alert.id}`}>
                     {alert.description}
                   </p>
                 </div>
 
                 {/* AI Analysis */}
                 {alert.aiContext && (
-                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-2 border-blue-400">
+                  <div className="mt-3 p-3 bg-emerald-500/10 backdrop-blur-sm rounded-lg ring-1 ring-emerald-500/30">
                     <div className="flex items-start">
-                      <span className="text-blue-600 mr-2">🤖</span>
+                      <span className="text-emerald-400 mr-2">🤖</span>
                       <div className="flex-1">
-                        <p className="text-xs font-medium text-blue-800 mb-1">AI ANALYSIS</p>
-                        <p className="text-sm text-blue-700" data-testid={`alert-ai-context-${alert.id}`}>
+                        <p className="text-xs font-medium text-emerald-300 mb-1">AI ANALYSIS</p>
+                        <p className="text-sm text-slate-200" data-testid={`alert-ai-context-${alert.id}`}>
                           {alert.aiContext}
                         </p>
                         {alert.aiConfidence && (
-                          <p className="text-xs text-blue-600 mt-2 font-medium">
+                          <p className="text-xs text-emerald-400 mt-2 font-medium">
                             {alert.aiConfidence}% Confidence
                           </p>
                         )}

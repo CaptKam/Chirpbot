@@ -65,33 +65,33 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-chirp-blue to-chirp-navy flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-chirp-red rounded-full flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Zap className="w-8 h-8 text-emerald-400" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-          <p className="text-chirp-light">Sign in to your ChirpBot account</p>
+          <h1 className="text-3xl font-bold text-slate-100 mb-2">Welcome Back</h1>
+          <p className="text-slate-300">Sign in to your ChirpBot account</p>
         </div>
 
         {/* Login Form */}
-        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+        <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 shadow-xl">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center text-chirp-dark">Sign In</CardTitle>
-            <CardDescription className="text-center text-gray-600">
+            <CardTitle className="text-2xl text-center text-slate-100">Sign In</CardTitle>
+            <CardDescription className="text-center text-slate-300">
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium text-chirp-dark">
+                <Label htmlFor="username" className="text-sm font-medium text-slate-200">
                   Username
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     id="username"
                     data-testid="input-username"
@@ -99,7 +99,7 @@ export default function Login() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username"
-                    className="pl-10 h-12 border-gray-200 focus:border-chirp-blue focus:ring-chirp-blue"
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                     disabled={isLoading}
                     autoComplete="username"
                   />
@@ -107,11 +107,11 @@ export default function Login() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-chirp-dark">
+                <Label htmlFor="password" className="text-sm font-medium text-slate-200">
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     id="password"
                     data-testid="input-password"
@@ -119,7 +119,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="pl-10 h-12 border-gray-200 focus:border-chirp-blue focus:ring-chirp-blue"
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                     disabled={isLoading}
                     autoComplete="current-password"
                   />
@@ -129,7 +129,7 @@ export default function Login() {
               <Button
                 type="submit"
                 data-testid="button-login"
-                className="w-full h-12 bg-chirp-red hover:bg-chirp-red/90 text-white font-semibold"
+                className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold shadow-lg shadow-emerald-500/25"
                 disabled={isLoading}
               >
                 {isLoading ? "Signing In..." : "Sign In"}
@@ -137,10 +137,10 @@ export default function Login() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-slate-300">
                 Don't have an account?{" "}
                 <Link href="/signup">
-                  <span className="text-chirp-blue hover:underline font-medium cursor-pointer">
+                  <span className="text-emerald-400 hover:text-emerald-300 hover:underline font-medium cursor-pointer">
                     Sign up here
                   </span>
                 </Link>
@@ -149,7 +149,7 @@ export default function Login() {
 
             <div className="mt-4 text-center">
               <Link href="/">
-                <Button variant="ghost" data-testid="link-home" className="text-gray-600 hover:text-chirp-blue">
+                <Button variant="ghost" data-testid="link-home" className="text-slate-400 hover:text-slate-200">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Home
                 </Button>
@@ -159,7 +159,7 @@ export default function Login() {
         </Card>
 
         {/* Features */}
-        <div className="mt-8 text-center text-chirp-light text-sm">
+        <div className="mt-8 text-center text-slate-400 text-sm">
           <p className="mb-2">⚡ Get back to real-time alerts</p>
           <p className="mb-2">🎯 Your personalized sports feed</p>
           <p>📱 Seamless cross-device experience</p>
