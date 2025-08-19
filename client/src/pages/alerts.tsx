@@ -176,7 +176,7 @@ export default function Alerts() {
               >
                 {/* Quick Impact Header */}
                 <div className="text-center mb-2">
-                  <h2 className="text-xl font-black uppercase tracking-wide text-red-600">
+                  <h2 className="text-lg font-black uppercase tracking-wide text-red-600">
                     ⚡ {alert.type.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}!
                   </h2>
                 </div>
