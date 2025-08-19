@@ -193,12 +193,27 @@ export default function Alerts() {
                   <p className="text-sm font-medium text-chirp-dark" data-testid={`alert-description-${alert.id}`}>
                     {alert.description}
                   </p>
-                  {alert.aiConfidence && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {alert.aiConfidence}% AI confidence
-                    </p>
-                  )}
                 </div>
+
+                {/* AI Analysis */}
+                {alert.aiContext && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-2 border-blue-400">
+                    <div className="flex items-start">
+                      <span className="text-blue-600 mr-2">🤖</span>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-blue-800 mb-1">AI ANALYSIS</p>
+                        <p className="text-sm text-blue-700" data-testid={`alert-ai-context-${alert.id}`}>
+                          {alert.aiContext}
+                        </p>
+                        {alert.aiConfidence && (
+                          <p className="text-xs text-blue-600 mt-2 font-medium">
+                            {alert.aiConfidence}% Confidence
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </Card>
             );
           })}
