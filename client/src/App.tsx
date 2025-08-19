@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,6 +15,7 @@ import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -62,14 +63,31 @@ function AppContent() {
   const { lastMessage } = useWebSocket();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (lastMessage && isAuthenticated) {
       switch (lastMessage.type) {
         case 'new_alert':
+          const alertData = lastMessage.data as any;
+          const gameInfo = alertData.gameInfo || {};
+          const score = gameInfo.score ? `${gameInfo.awayTeam} ${gameInfo.score.away} - ${gameInfo.score.home} ${gameInfo.homeTeam}` : alertData.title;
+          const inningInfo = gameInfo.inning ? `Inning ${gameInfo.inning} ${gameInfo.inningState === 'top' ? '▲' : '▼'}` : '';
+          
           toast({
-            title: "New Alert",
-            description: (lastMessage.data as any).title,
+            title: `⚡ ${alertData.type}`,
+            description: (
+              <div className="space-y-1">
+                <div className="font-semibold">{alertData.description}</div>
+                <div className="text-xs opacity-80">{score}</div>
+                {inningInfo && <div className="text-xs opacity-80">{inningInfo}</div>}
+              </div>
+            ),
+            action: (
+              <ToastAction altText="View Alerts" onClick={() => setLocation('/alerts')}>
+                View
+              </ToastAction>
+            ),
           });
           break;
         case 'team_monitoring_changed':
