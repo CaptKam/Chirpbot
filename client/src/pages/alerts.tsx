@@ -7,6 +7,7 @@ import { Zap, Bell, TriangleAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useWebSocket } from "@/hooks/use-websocket";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
@@ -20,13 +21,14 @@ export default function Alerts() {
   const [activeFilters, setActiveFilters] = useState(["all"]);
   const queryClient = useQueryClient();
   const seenAlertsRef = useRef(new Set<string>());
+  const { lastMessage } = useWebSocket();
 
   const { data: alerts = [], isLoading, error } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
     refetchInterval: 30000, // Refetch every 30 seconds for live updates
   });
 
-  const { data: unseenCount = { count: 0 } } = useQuery({
+  const { data: unseenCount = { count: 0 } } = useQuery<{ count: number }>({
     queryKey: ["/api/alerts/unseen/count"],
     refetchInterval: 30000,
   });
@@ -69,6 +71,32 @@ export default function Alerts() {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
     });
   }, []); // Only run once when component mounts
+
+  // Handle real-time alert updates via WebSocket
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'new_alert') {
+      // Check if the data is actually an Alert (has required properties)
+      const data = lastMessage.data;
+      if (data && 'type' in data && 'sport' in data && 'title' in data) {
+        const newAlert = data as Alert;
+      
+        // Update the alerts list in the query cache to add the new alert at the beginning
+        queryClient.setQueryData<Alert[]>(["/api/alerts"], (oldAlerts) => {
+          if (!oldAlerts) return [newAlert];
+          
+          // Check if alert already exists to prevent duplicates
+          const exists = oldAlerts.some(alert => alert.id === newAlert.id);
+          if (exists) return oldAlerts;
+          
+          // Add new alert at the beginning of the list
+          return [newAlert, ...oldAlerts];
+        });
+      
+        // Also invalidate the unseen count query to update the badge
+        queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
+      }
+    }
+  }, [lastMessage, queryClient]);
 
   // Debug logging
   console.log("Alerts loading:", isLoading);
@@ -146,7 +174,7 @@ export default function Alerts() {
         <div className="flex items-center space-x-3">
           <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
             <Bell className="w-7 h-7" />
-            {unseenCount && unseenCount.count > 0 && (
+            {unseenCount.count > 0 && (
               <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {unseenCount.count}
               </span>
@@ -162,7 +190,7 @@ export default function Alerts() {
             <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
               Live Alerts
             </h2>
-            {unseenCount && unseenCount.count > 0 && (
+            {unseenCount.count > 0 && (
               <Badge className="bg-red-500 text-white px-2 py-1 text-xs font-bold">
                 {unseenCount.count} NEW
               </Badge>
