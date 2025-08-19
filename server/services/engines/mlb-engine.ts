@@ -508,7 +508,7 @@ export class MLBEngine extends BaseSportEngine {
   // Override processAlerts to use dynamic descriptions
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
     for (const alert of triggeredAlerts) {
-      if (!this.shouldTriggerAlert(alert.type, gameState.gameId)) {
+      if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
         continue;
       }
       

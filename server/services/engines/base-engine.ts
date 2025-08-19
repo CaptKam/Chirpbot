@@ -31,9 +31,8 @@ export abstract class BaseSportEngine implements SportEngine {
   abstract alertConfigs: AlertConfig[];
   abstract monitoringInterval: number;
   
-  // Alert cooldown removed - alerts will trigger whenever conditions are met
-  protected alertHistory = new Map<string, number>();
-  protected readonly ALERT_COOLDOWN = 0; // No cooldown - alerts fire immediately when conditions match
+  // Track last game state that triggered each alert to prevent duplicates
+  protected lastAlertStates = new Map<string, string>(); // key: gameId-alertType, value: game state hash
   
   abstract extractGameState(apiData: any): any;
   abstract monitor(): Promise<void>;
@@ -73,14 +72,71 @@ export abstract class BaseSportEngine implements SportEngine {
     return [...triggeredRegular, ...triggeredPredictions];
   }
   
-  protected shouldTriggerAlert(alertType: string, gameId: string): boolean {
-    // No cooldown - always allow alerts to trigger when conditions are met
+  protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
+    // Create a unique key for this game and alert type
+    const key = `${gameId}-${alertType}`;
+    
+    // Create a hash of relevant game state properties
+    const stateHash = this.createGameStateHash(gameState, alertType);
+    
+    // Check if we've already triggered this alert for this exact game state
+    const lastStateHash = this.lastAlertStates.get(key);
+    
+    if (lastStateHash === stateHash) {
+      // Same game state, don't trigger duplicate alert
+      return false;
+    }
+    
+    // New game state, allow alert and track it
+    this.lastAlertStates.set(key, stateHash);
     return true;
+  }
+  
+  protected createGameStateHash(gameState: any, alertType: string): string {
+    // Only track properties relevant to each alert type to avoid duplicates
+    let relevantState: any = {};
+    
+    // For runner-based alerts, track runners and outs
+    if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('bases')) {
+      relevantState = {
+        runners: gameState.runners,
+        outs: gameState.outs,
+        inning: gameState.inning,
+        inningState: gameState.inningState
+      };
+    }
+    // For inning-based alerts, track inning changes
+    else if (alertType.toLowerCase().includes('inning')) {
+      relevantState = {
+        inning: gameState.inning,
+        inningState: gameState.inningState,
+        outs: gameState.outs
+      };
+    }
+    // For score-based alerts, track score
+    else if (alertType.toLowerCase().includes('score') || alertType.toLowerCase().includes('tie')) {
+      relevantState = {
+        score: `${gameState.awayScore}-${gameState.homeScore}`,
+        inning: gameState.inning
+      };
+    }
+    // Default: track major game state changes
+    else {
+      relevantState = {
+        inning: gameState.inning,
+        inningState: gameState.inningState,
+        outs: gameState.outs,
+        runners: gameState.runners,
+        score: `${gameState.awayScore}-${gameState.homeScore}`
+      };
+    }
+    
+    return JSON.stringify(relevantState);
   }
   
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: any): Promise<void> {
     for (const alert of triggeredAlerts) {
-      if (!this.shouldTriggerAlert(alert.type, gameState.gameId)) {
+      if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
         continue;
       }
       
