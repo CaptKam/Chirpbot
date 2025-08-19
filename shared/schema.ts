@@ -55,6 +55,12 @@ export const settings = pgTable("settings", {
     homeRun: boolean;
     lateInning: boolean;
     closeGame: boolean;
+    runnersOnBase: boolean;
+    hits: boolean;
+    scoring: boolean;
+    inningChange: boolean;
+    homeRunAlert: boolean;
+    strikeouts: boolean;
     
     // NFL Alert Types  
     redZone: boolean;

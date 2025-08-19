@@ -184,6 +184,65 @@ export class MLBEngine extends BaseSportEngine {
       isPrediction: true,
       predictionEvents: ["Walk-off Hit", "Grand Slam", "Game Winner"],
       minimumPredictionProbability: 65
+    },
+    // Live Events Alerts
+    {
+      type: "Runners on Base",
+      settingKey: "runnersOnBase",
+      priority: 60,
+      probability: 1.0,
+      description: "🏃 Runners on Base - Scoring opportunity developing!",
+      conditions: (state: MLBGameState) => 
+        state.runners.first || state.runners.second || state.runners.third
+    },
+    {
+      type: "Hit Alert",
+      settingKey: "hits",
+      priority: 70,
+      probability: 1.0,
+      description: "🏏 HIT! Base hit extends the inning!",
+      isPrediction: true,
+      predictionEvents: ["Hit", "Single", "Double", "Triple"],
+      minimumPredictionProbability: 60
+    },
+    {
+      type: "Scoring Play",
+      settingKey: "scoring",
+      priority: 85,
+      probability: 1.0,
+      description: "🏃 TEAM SCORES! Run crosses the plate!",
+      isPrediction: true,
+      predictionEvents: ["Scoring Play", "RBI Hit"],
+      minimumPredictionProbability: 70
+    },
+    {
+      type: "Inning Change",
+      settingKey: "inningChange",
+      priority: 50,
+      probability: 1.0,
+      description: "🚀 New inning! Momentum shift opportunity",
+      conditions: (state: MLBGameState) => 
+        state.outs === 0 && (state.inningState === 'top' || state.inningState === 'bottom')
+    },
+    {
+      type: "Home Run Alert",
+      settingKey: "homeRunAlert",
+      priority: 95,
+      probability: 1.0,
+      description: "🚀 HOME RUN! Ball is gone!",
+      isPrediction: true,
+      predictionEvents: ["Home Run"],
+      minimumPredictionProbability: 75
+    },
+    {
+      type: "Strikeout Alert",
+      settingKey: "strikeouts",
+      priority: 65,
+      probability: 1.0,
+      description: "⚾ STRIKEOUT! Batter goes down swinging!",
+      isPrediction: true,
+      predictionEvents: ["Strikeout"],
+      minimumPredictionProbability: 70
     }
   ];
   

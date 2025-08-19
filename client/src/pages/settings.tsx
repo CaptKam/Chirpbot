@@ -20,6 +20,12 @@ const ALERT_TYPE_CONFIG = {
     { key: "homeRun", label: "Home Run Situations", description: "High-leverage at-bats with power hitters" },
     { key: "lateInning", label: "Late Inning Pressure", description: "Critical situations in 7th inning or later" },
     { key: "closeGame", label: "Close Game", description: "One-run games in final innings" },
+    { key: "runnersOnBase", label: "Runners on Base", description: "🏃 Scoring opportunity developing with runners on base" },
+    { key: "hits", label: "Hit Alerts", description: "🏏 Singles, Doubles, and Triples in real-time" },
+    { key: "scoring", label: "Scoring Plays", description: "🏃 Team scores! Live run notifications" },
+    { key: "inningChange", label: "Inning Changes", description: "🚀 New inning transitions and momentum shifts" },
+    { key: "homeRunAlert", label: "Home Run Alert", description: "🚀 HOME RUN! Live power hitting moments" },
+    { key: "strikeouts", label: "Strikeout Alert", description: "⚾ STRIKEOUT! Live pitching dominance" },
   ],
   NFL: [
     { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line" },

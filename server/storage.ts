@@ -53,7 +53,7 @@ export class MemStorage implements IStorage {
     this.teams = new Map();
     this.alerts = new Map();
     this.settings = new Map();
-    
+
     // Initialize with default teams and settings
     this.initializeDefaultData();
   }
@@ -102,22 +102,46 @@ export class MemStorage implements IStorage {
           homeRun: sport === "MLB",
           lateInning: sport === "MLB",
           closeGame: sport === "MLB",
-          
+          runnersOnBase: sport === "MLB",
+          hits: sport === "MLB",
+          scoring: sport === "MLB",
+          inningChange: false,
+          homeRunAlert: true,
+          strikeouts: false,
+
           // NFL Alert Types  
           redZone: sport === "NFL",
           nflCloseGame: sport === "NFL",
           fourthDown: sport === "NFL",
           twoMinuteWarning: sport === "NFL",
-          
+          runnersOnBase: false,
+          hits: false,
+          scoring: false,
+          inningChange: false,
+          homeRunAlert: false,
+          strikeouts: false,
+
           // NBA Alert Types
           clutchTime: sport === "NBA",
           nbaCloseGame: sport === "NBA",
           overtime: sport === "NBA",
-          
+          runnersOnBase: false,
+          hits: false,
+          scoring: false,
+          inningChange: false,
+          homeRunAlert: false,
+          strikeouts: false,
+
           // NHL Alert Types
           powerPlay: sport === "NHL",
           nhlCloseGame: sport === "NHL",
           emptyNet: sport === "NHL",
+          runnersOnBase: false,
+          hits: false,
+          scoring: false,
+          inningChange: false,
+          homeRunAlert: false,
+          strikeouts: false,
         },
         aiEnabled: true,
         aiConfidenceThreshold: 85,
@@ -166,7 +190,7 @@ export class MemStorage implements IStorage {
   async updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined> {
     const team = this.teams.get(id);
     if (!team) return undefined;
-    
+
     const updatedTeam = { ...team, ...updates };
     this.teams.set(id, updatedTeam);
     return updatedTeam;
@@ -249,19 +273,19 @@ export class MemStorage implements IStorage {
       } : null
     };
     this.alerts.set(id, alert);
-    
+
     // Auto-clear old alerts if we have more than 30
     if (this.alerts.size > 30) {
       const sortedAlerts = Array.from(this.alerts.entries())
         .sort((a, b) => b[1].timestamp.getTime() - a[1].timestamp.getTime());
-      
+
       // Keep only the 30 most recent alerts
       const alertsToDelete = sortedAlerts.slice(30);
       alertsToDelete.forEach(([alertId]) => {
         this.alerts.delete(alertId);
       });
     }
-    
+
     return alert;
   }
 
@@ -319,7 +343,7 @@ export class MemStorage implements IStorage {
   async updateSettings(sport: string, updates: Partial<Settings>): Promise<Settings | undefined> {
     const settings = this.settings.get(sport);
     if (!settings) return undefined;
-    
+
     const updatedSettings = { ...settings, ...updates };
     this.settings.set(sport, updatedSettings);
     return updatedSettings;
