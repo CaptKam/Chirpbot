@@ -87,6 +87,7 @@ export abstract class BaseSportEngine implements SportEngine {
       try {
         const weatherData = await getWeatherData(gameState.homeTeam);
         
+        
         const alertData = {
           type: alert.type,
           sport: this.sport,

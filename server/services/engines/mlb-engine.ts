@@ -183,6 +183,7 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`   Runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third}`);
       console.log(`   Outs: ${gameState.outs}, Balls: ${gameState.balls}, Strikes: ${gameState.strikes}`);
       
+      
       return gameState;
     } catch (error) {
       console.error('Error extracting MLB game state:', error);
