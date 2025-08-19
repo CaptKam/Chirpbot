@@ -62,56 +62,16 @@ ${alert.aiContext ? `🤖 *AI Analysis:*\n${alert.aiContext}` : ''}
 
 export async function testTelegramConnection(config: TelegramConfig): Promise<boolean> {
   try {
-    const { botToken, chatId } = config;
+    const { botToken } = config;
     
-    if (!botToken || !chatId || botToken === "default_key" || chatId === "default_key") {
-      console.log("Missing Telegram credentials for test");
+    if (!botToken || botToken === "default_key") {
       return false;
     }
 
-    // First check if bot token is valid
-    const botResponse = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
-    const botResult = await botResponse.json();
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+    const result = await response.json();
     
-    if (!botResponse.ok || !botResult.ok) {
-      console.error("Invalid bot token:", botResult);
-      return false;
-    }
-
-    // Then send actual test message
-    console.log(`Sending test message to Chat ID: ${chatId}`);
-    const testMessage = `✅ ChirpBot Test Message
-
-Your Telegram notifications are working perfectly! 🎉
-
-You'll now receive live sports alerts here.
-
-#ChirpBot #TestConnection`;
-
-    const requestBody = {
-      chat_id: chatId,
-      text: testMessage,
-    };
-    
-    console.log('Sending Telegram request:', JSON.stringify(requestBody, null, 2));
-
-    const messageResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    const messageResult = await messageResponse.json();
-    
-    if (!messageResponse.ok) {
-      console.error("Failed to send test message:", messageResult);
-      return false;
-    }
-
-    console.log("Test message sent successfully to Telegram");
-    return messageResult.ok;
+    return response.ok && result.ok;
   } catch (error) {
     console.error("Telegram connection test failed:", error);
     return false;
