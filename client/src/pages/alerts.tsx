@@ -145,7 +145,7 @@ export default function Alerts() {
         </div>
         <div className="flex items-center space-x-3">
           <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
-            <Bell className="w-5 h-5" />
+            <Bell className="w-7 h-7" />
             {unseenCount && unseenCount.count > 0 && (
               <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {unseenCount.count}
