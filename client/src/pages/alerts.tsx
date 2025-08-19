@@ -45,33 +45,11 @@ export default function Alerts() {
   };
 
   const getAlertIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "risp":
-      case "homerun":
-      case "lateinning":
-        return TriangleAlert;
-      case "redzone":
-        return Volleyball;
-      case "clutchtime":
-        return Dumbbell;
-      default:
-        return TriangleAlert;
-    }
+    return TriangleAlert;
   };
 
   const getAlertColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "risp":
-      case "homerun":
-      case "lateinning":
-        return "bg-red-100 text-red-800 border-red-500";
-      case "redzone":
-        return "bg-yellow-100 text-yellow-800 border-yellow-500";
-      case "clutchtime":
-        return "bg-green-100 text-green-800 border-green-500";
-      default:
-        return "bg-red-100 text-red-800 border-red-500";
-    }
+    return "bg-red-100 text-red-800 border-red-500";
   };
 
   const filteredAlerts = Array.isArray(alerts) ? alerts.filter(alert => {
