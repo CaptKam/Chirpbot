@@ -6,6 +6,7 @@ import { generatePredictions, PredictionRequest, GameContext, PREDICTION_EVENTS 
 
 export interface AlertConfig {
   type: string;
+  settingKey?: string; // Maps to alertTypes setting key
   priority: number;
   probability: number;
   description: string;
@@ -36,11 +37,22 @@ export abstract class BaseSportEngine implements SportEngine {
   abstract extractGameState(apiData: any): any;
   
   async checkAlertConditions(gameState: any): Promise<AlertConfig[]> {
+    // Get settings to check which alert types are enabled
+    const settings = await storage.getSettingsBySport(this.sport);
+    if (!settings) {
+      return [];
+    }
+    
     const regularAlerts = this.alertConfigs.filter(config => !config.isPrediction);
     const predictionAlerts = this.alertConfigs.filter(config => config.isPrediction);
     
     // Process regular condition-based alerts
     const triggeredRegular = regularAlerts.filter(config => {
+      // Check if this alert type is enabled in settings
+      if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
+        return false;
+      }
+      
       if (config.conditions) {
         return config.conditions(gameState) && Math.random() < config.probability;
       }
@@ -149,9 +161,25 @@ export abstract class BaseSportEngine implements SportEngine {
   private async checkPredictionAlerts(predictionConfigs: AlertConfig[], gameState: any): Promise<AlertConfig[]> {
     if (predictionConfigs.length === 0) return [];
     
+    // Get settings to check which prediction alerts are enabled
+    const settings = await storage.getSettingsBySport(this.sport);
+    if (!settings?.aiEnabled) {
+      return [];
+    }
+    
+    // Filter prediction configs by enabled settings
+    const enabledPredictionConfigs = predictionConfigs.filter(config => {
+      if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
+        return false;
+      }
+      return true;
+    });
+    
+    if (enabledPredictionConfigs.length === 0) return [];
+    
     try {
       const gameContext = this.buildGameContext(gameState);
-      const allPredictionEvents = predictionConfigs.flatMap(config => config.predictionEvents || []);
+      const allPredictionEvents = enabledPredictionConfigs.flatMap(config => config.predictionEvents || []);
       
       if (allPredictionEvents.length === 0) return [];
       
@@ -167,7 +195,7 @@ export abstract class BaseSportEngine implements SportEngine {
       // Match predictions to alert configs
       const triggeredPredictions: AlertConfig[] = [];
       
-      for (const config of predictionConfigs) {
+      for (const config of enabledPredictionConfigs) {
         const relevantPredictions = predictions.filter(p => 
           config.predictionEvents?.includes(p.eventType) &&
           p.probability >= (config.minimumPredictionProbability || 60) &&

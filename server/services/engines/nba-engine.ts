@@ -21,7 +21,7 @@ export class NBAEngine extends BaseSportEngine {
   async monitor() {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
-      if (!settings?.aiEnabled) {
+      if (!settings) {
         return;
       }
       
@@ -34,42 +34,29 @@ export class NBAEngine extends BaseSportEngine {
   
   alertConfigs: AlertConfig[] = [
     {
-      type: "ClutchTime",
+      type: "Clutch Time",
+      settingKey: "clutchTime",
       priority: 90,
       probability: 0.9,
-      description: "Clutch time - Under 5 minutes in close game!",
+      description: "🏀 CLUTCH TIME! Under 5 minutes in close game",
       conditions: (state: NBAGameState) => 
         state.clutchTime && Math.abs(state.homeScore - state.awayScore) <= 5
     },
     {
-      type: "Overtime Alert",
+      type: "Overtime",
+      settingKey: "overtime",
       priority: 95,
       probability: 1.0,
-      description: "OVERTIME - Extra basketball!",
+      description: "⚡ OVERTIME! Extra basketball action",
       conditions: (state: NBAGameState) => 
         state.overtime
     },
     {
-      type: "Fourth Quarter",
-      priority: 75,
-      probability: 0.8,
-      description: "Fourth quarter action - Game heating up",
-      conditions: (state: NBAGameState) => 
-        state.period === 4 && Math.abs(state.homeScore - state.awayScore) <= 10
-    },
-    {
-      type: "Blowout Alert",
-      priority: 60,
-      probability: 0.5,
-      description: "One team pulling away - Potential comeback?",
-      conditions: (state: NBAGameState) => 
-        Math.abs(state.homeScore - state.awayScore) >= 20 && state.period >= 3
-    },
-    {
-      type: "Close Game",
+      type: "NBA Close Game",
+      settingKey: "nbaCloseGame",
       priority: 80,
       probability: 0.8,
-      description: "Tight contest - Anyone's game!",
+      description: "🔥 TIGHT CONTEST! Anyone's game",
       conditions: (state: NBAGameState) => 
         Math.abs(state.homeScore - state.awayScore) <= 3 && state.period >= 2
     },

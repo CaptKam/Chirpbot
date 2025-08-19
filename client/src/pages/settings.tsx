@@ -16,18 +16,26 @@ const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
-    { key: "risp", label: "Runners in Scoring Position", description: "Alerts when team has runners on 2nd or 3rd base" },
+    { key: "risp", label: "Runners In Scoring Position", description: "Alerts when team has runners on 2nd or 3rd base" },
     { key: "homeRun", label: "Home Run Situations", description: "High-leverage at-bats with power hitters" },
     { key: "lateInning", label: "Late Inning Pressure", description: "Critical situations in 7th inning or later" },
+    { key: "closeGame", label: "Close Game", description: "One-run games in final innings" },
   ],
   NFL: [
     { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line" },
+    { key: "nflCloseGame", label: "NFL Close Game", description: "One-score games in final quarter" },
+    { key: "fourthDown", label: "Fourth Down", description: "Critical fourth down decisions" },
+    { key: "twoMinuteWarning", label: "Two Minute Warning", description: "Game-deciding final drives" },
   ],
   NBA: [
     { key: "clutchTime", label: "Clutch Time", description: "Final 2 minutes of close games" },
+    { key: "nbaCloseGame", label: "NBA Close Game", description: "Single-digit games in 4th quarter" },
+    { key: "overtime", label: "Overtime", description: "Extra period situations" },
   ],
   NHL: [
     { key: "powerPlay", label: "Power Play", description: "Man advantage situations" },
+    { key: "nhlCloseGame", label: "NHL Close Game", description: "One-goal games in final period" },
+    { key: "emptyNet", label: "Empty Net", description: "Goalie pulled for extra attacker" },
   ],
 };
 

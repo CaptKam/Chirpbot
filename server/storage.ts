@@ -94,11 +94,27 @@ export class MemStorage implements IStorage {
         id,
         sport,
         alertTypes: {
+          // MLB Alert Types
           risp: sport === "MLB",
           homeRun: sport === "MLB",
           lateInning: sport === "MLB",
+          closeGame: sport === "MLB",
+          
+          // NFL Alert Types  
           redZone: sport === "NFL",
+          nflCloseGame: sport === "NFL",
+          fourthDown: sport === "NFL",
+          twoMinuteWarning: sport === "NFL",
+          
+          // NBA Alert Types
           clutchTime: sport === "NBA",
+          nbaCloseGame: sport === "NBA",
+          overtime: sport === "NBA",
+          
+          // NHL Alert Types
+          powerPlay: sport === "NHL",
+          nhlCloseGame: sport === "NHL",
+          emptyNet: sport === "NHL",
         },
         aiEnabled: true,
         aiConfidenceThreshold: 85,

@@ -78,35 +78,39 @@ export class MLBEngine extends BaseSportEngine {
         state.runners.first && state.runners.second && state.runners.third && state.outs === 1
     },
     {
-      type: "RISP",
+      type: "Runners In Scoring Position",
+      settingKey: "risp",
       priority: 70,
       probability: 0.8,
-      description: "Runners in scoring position - Key moment!",
+      description: "⚡ PRESSURE COOKER! Runners in scoring position",
       conditions: (state: MLBGameState) => 
         (state.runners.second || state.runners.third) && state.outs < 2
     },
     {
-      type: "High Pressure Situation", 
+      type: "Close Game", 
+      settingKey: "closeGame",
       priority: 80,
       probability: 0.7,
-      description: "One-run game - High-value betting opportunity",
+      description: "🔥 NAIL-BITER! One-run game!",
       conditions: (state: MLBGameState) => 
         Math.abs(state.homeScore - state.awayScore) <= 1 && state.inning >= 7
     },
     {
-      type: "LateInning",
+      type: "Late Inning Pressure",
+      settingKey: "lateInning",
       priority: 65,
       probability: 0.6,
-      description: "Late inning situation - Critical phase",
+      description: "⏰ CRUNCH TIME! Final innings",
       conditions: (state: MLBGameState) => 
         state.inning >= 8 && Math.abs(state.homeScore - state.awayScore) <= 3
     },
     // AI Prediction-based alerts
     {
-      type: "Home Run Prediction",
+      type: "Home Run Situations",
+      settingKey: "homeRun",
       priority: 85,
       probability: 1.0,
-      description: "🚀 HIGH HOME RUN PROBABILITY - Favorable conditions detected!",
+      description: "🚀 POWER ALERT! High home run potential!",
       isPrediction: true,
       predictionEvents: ["Home Run"],
       minimumPredictionProbability: 75

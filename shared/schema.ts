@@ -49,11 +49,27 @@ export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   sport: text("sport").notNull(),
   alertTypes: jsonb("alert_types").$type<{
+    // MLB Alert Types
     risp: boolean;
     homeRun: boolean;
     lateInning: boolean;
+    closeGame: boolean;
+    
+    // NFL Alert Types  
     redZone: boolean;
+    nflCloseGame: boolean;
+    fourthDown: boolean;
+    twoMinuteWarning: boolean;
+    
+    // NBA Alert Types
     clutchTime: boolean;
+    nbaCloseGame: boolean;
+    overtime: boolean;
+    
+    // NHL Alert Types
+    powerPlay: boolean;
+    nhlCloseGame: boolean;
+    emptyNet: boolean;
   }>().notNull(),
   aiEnabled: boolean("ai_enabled").notNull().default(true),
   aiConfidenceThreshold: integer("ai_confidence_threshold").notNull().default(85),

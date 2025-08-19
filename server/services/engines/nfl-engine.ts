@@ -25,7 +25,7 @@ export class NFLEngine extends BaseSportEngine {
   async monitor() {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
-      if (!settings?.aiEnabled) {
+      if (!settings) {
         return;
       }
       
@@ -41,51 +41,39 @@ export class NFLEngine extends BaseSportEngine {
   alertConfigs: AlertConfig[] = [
     {
       type: "NFL Close Game",
+      settingKey: "nflCloseGame",
       priority: 80,
       probability: 0.8,
-      description: "One-score game - Key betting moment",
+      description: "🏈 ONE SCORE GAME! High-pressure moment",
       conditions: (state: NFLGameState) => 
         Math.abs(state.homeScore - state.awayScore) <= 7 && state.quarter >= 3
     },
     {
-      type: "Red Zone Alert",
+      type: "Red Zone Situations",
+      settingKey: "redZone",
       priority: 85,
       probability: 0.9,
-      description: "Team in the red zone - Scoring opportunity!",
+      description: "🚨 RED ZONE ALERT! Touchdown territory",
       conditions: (state: NFLGameState) => 
         state.redZone && state.quarter >= 2
     },
     {
       type: "Two Minute Warning",
+      settingKey: "twoMinuteWarning",
       priority: 90,
       probability: 1.0,
-      description: "Two minute warning - Crunch time!",
+      description: "⏰ TWO MINUTE WARNING! Crunch time",
       conditions: (state: NFLGameState) => 
         state.twoMinuteWarning && Math.abs(state.homeScore - state.awayScore) <= 10
     },
     {
       type: "Fourth Down",
+      settingKey: "fourthDown",
       priority: 95,
       probability: 0.9,
-      description: "4th down decision - Go for it or punt?",
+      description: "🎯 4TH DOWN! Go for it or punt?",
       conditions: (state: NFLGameState) => 
         state.down === 4 && state.quarter >= 3 && state.yardsToGo <= 3
-    },
-    {
-      type: "Overtime Alert",
-      priority: 100,
-      probability: 1.0,
-      description: "OVERTIME - Sudden death!",
-      conditions: (state: NFLGameState) => 
-        state.quarter === 5
-    },
-    {
-      type: "Final Quarter",
-      priority: 70,
-      probability: 0.7,
-      description: "Fourth quarter action - Game on the line",
-      conditions: (state: NFLGameState) => 
-        state.quarter === 4 && Math.abs(state.homeScore - state.awayScore) <= 14
     }
   ];
   

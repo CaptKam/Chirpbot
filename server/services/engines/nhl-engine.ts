@@ -23,7 +23,7 @@ export class NHLEngine extends BaseSportEngine {
   async monitor() {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
-      if (!settings?.aiEnabled) {
+      if (!settings) {
         return;
       }
       
@@ -36,50 +36,29 @@ export class NHLEngine extends BaseSportEngine {
   
   alertConfigs: AlertConfig[] = [
     {
-      type: "Power Play Alert",
+      type: "Power Play",
+      settingKey: "powerPlay",
       priority: 85,
       probability: 0.9,
-      description: "Power play opportunity - Man advantage!",
+      description: "⚡ POWER PLAY! Man advantage opportunity",
       conditions: (state: NHLGameState) => 
         state.powerPlay
     },
     {
-      type: "Empty Net Alert",
+      type: "Empty Net",
+      settingKey: "emptyNet",
       priority: 95,
       probability: 1.0,
-      description: "Empty net - Goalie pulled!",
+      description: "😨 EMPTY NET! Goalie pulled for extra attacker",
       conditions: (state: NHLGameState) => 
         state.emptyNet
     },
     {
-      type: "Third Period Alert",
-      priority: 80,
-      probability: 0.8,
-      description: "Third period action - Final frame!",
-      conditions: (state: NHLGameState) => 
-        state.period === 3 && Math.abs(state.homeScore - state.awayScore) <= 2
-    },
-    {
-      type: "Final Minutes",
-      priority: 90,
-      probability: 0.9,
-      description: "Final minutes - Crunch time!",
-      conditions: (state: NHLGameState) => 
-        state.finalMinutes && state.period === 3
-    },
-    {
-      type: "Overtime Alert",
-      priority: 100,
-      probability: 1.0,
-      description: "OVERTIME - Sudden death!",
-      conditions: (state: NHLGameState) => 
-        state.overtime
-    },
-    {
-      type: "Close Game",
+      type: "NHL Close Game",
+      settingKey: "nhlCloseGame",
       priority: 75,
       probability: 0.7,
-      description: "One-goal game - Tight contest!",
+      description: "🏆 ONE-GOAL GAME! Tight contest",
       conditions: (state: NHLGameState) => 
         Math.abs(state.homeScore - state.awayScore) <= 1 && state.period >= 2
     },
