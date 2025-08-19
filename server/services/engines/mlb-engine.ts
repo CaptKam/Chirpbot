@@ -434,6 +434,143 @@ export class MLBEngine extends BaseSportEngine {
     return Math.min(95, Math.max(5, probability));
   }
   
+  // Generate dynamic description based on actual game state
+  private generateDynamicDescription(alert: AlertConfig, gameState: MLBGameState): string {
+    const runners = gameState.runners;
+    const outs = gameState.outs;
+    const scoringProb = this.calculateScoringProbability(gameState);
+    
+    // Build runner description
+    const runnerPositions = [];
+    if (runners.first) runnerPositions.push('1ST');
+    if (runners.second) runnerPositions.push('2ND');
+    if (runners.third) runnerPositions.push('3RD');
+    
+    switch (alert.type) {
+      case 'Runner on 3rd, 1 Out':
+        return `🎯 RUNNER ON 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
+      
+      case 'Runners on 2nd & 3rd, 1 Out':
+        return `🔥 RUNNERS ON 2ND & 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
+      
+      case 'Bases Loaded 0 Outs':
+        return `🚨 BASES LOADED, 0 OUTS! (${scoringProb}% scoring probability) - MAXIMUM opportunity!`;
+      
+      case 'Bases Loaded 1 Out':
+        return `🔥 BASES LOADED, 1 OUT! (${scoringProb}% scoring probability) - High-value scoring chance!`;
+      
+      case 'Bases Loaded 2 Outs':
+        return `🚨 BASES LOADED, 2 OUTS! (${scoringProb}% scoring probability) - MAXIMUM PRESSURE! Make or break moment!`;
+      
+      case 'Runners In Scoring Position':
+        if (runnerPositions.length > 0) {
+          const runnerText = runnerPositions.join(' & ');
+          return `⚡ RUNNER${runnerPositions.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
+        }
+        return `⚡ PRESSURE COOKER! Runners in scoring position, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
+      
+      case 'Close Game':
+        const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+        return `🔥 NAIL-BITER! ${scoreDiff}-run game in inning ${gameState.inning}! (${scoringProb}% scoring probability)`;
+      
+      case 'Late Inning Pressure':
+        return `⏰ CRUNCH TIME! Final innings - Inning ${gameState.inning}, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
+      
+      case 'Tie Game 9th Inning':
+        return `🔥 TIE GAME ${gameState.inning}TH INNING! (${scoringProb}% scoring probability) - FINAL INNING DRAMA!`;
+      
+      case '7th Inning Warning':
+        return `🚨 7TH INNING STRETCH! (${scoringProb}% scoring probability) - Critical innings ahead!`;
+      
+      case 'Game Start':
+        return `⚾ GAME START - First pitch! (${scoringProb}% scoring probability)`;
+      
+      default:
+        // For other alerts, use the original description but add scoring probability
+        return `${alert.description} (${scoringProb}% scoring probability)`;
+    }
+  }
+  
+  // Override processAlerts to use dynamic descriptions
+  async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
+    for (const alert of triggeredAlerts) {
+      if (!this.shouldTriggerAlert(alert.type, gameState.gameId)) {
+        continue;
+      }
+      
+      try {
+        const weatherData = await getWeatherData(gameState.homeTeam);
+        
+        // Generate dynamic description based on actual game state
+        const dynamicDescription = this.generateDynamicDescription(alert, gameState);
+        
+        const alertData = {
+          type: alert.type,
+          sport: this.sport,
+          title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
+          description: dynamicDescription,
+          gameInfo: {
+            score: { 
+              away: gameState.awayScore, 
+              home: gameState.homeScore 
+            },
+            status: 'Live',
+            awayTeam: gameState.awayTeam,
+            homeTeam: gameState.homeTeam,
+            ...this.getGameSpecificInfo(gameState)
+          },
+          weatherData,
+          aiContext: undefined as string | undefined,
+          aiConfidence: alert.priority,
+          sentToTelegram: false,
+        };
+
+        // Get settings for this sport
+        const settings = await storage.getSettingsBySport(this.sport);
+        
+        // Get AI analysis for high-priority alerts
+        if (alert.priority >= 70 && settings?.aiEnabled) {
+          const analysis = await analyzeAlert(
+            alertData.type,
+            alertData.sport,
+            alertData.gameInfo,
+            weatherData
+          );
+          alertData.aiContext = analysis.context || undefined;
+          alertData.aiConfidence = analysis.confidence;
+        }
+
+        const createdAlert = await storage.createAlert(alertData);
+
+        // Send to Telegram for high-priority alerts
+        if (alert.priority >= 75 && settings?.telegramEnabled) {
+          const telegramConfig = {
+            botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
+            chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+          };
+
+          const sent = await sendTelegramAlert(telegramConfig, {
+            ...createdAlert,
+            aiContext: createdAlert.aiContext || undefined
+          });
+          if (sent) {
+            await storage.markAlertSentToTelegram(createdAlert.id);
+          }
+        }
+
+        console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${alert.priority})`);
+        
+        // Broadcast to clients if callback exists
+        if (this.onAlert) {
+          this.onAlert(createdAlert);
+        }
+        
+      } catch (error) {
+        console.error(`Error processing ${this.sport} alert:`, error);
+      }
+    }
+  }
+
   async monitor() {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
