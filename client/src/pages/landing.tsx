@@ -122,7 +122,7 @@ function Hero() {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-slate-600 hover:bg-slate-800 px-8 py-6 text-lg font-bold rounded-xl text-white hover:text-white"
+                className="border-emerald-500 hover:bg-emerald-500 hover:text-slate-900 px-8 py-6 text-lg font-bold rounded-xl text-emerald-400"
                 data-testid="button-hero-login"
               >
                 Login to Dashboard
