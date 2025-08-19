@@ -78,18 +78,21 @@ export default function Alerts() {
       // Check if the data is actually an Alert (has required properties)
       const data = lastMessage.data;
       if (data && 'type' in data && 'sport' in data && 'title' in data) {
-        const newAlert = data as Alert;
+        const newAlert = data as unknown as Alert;
       
         // Update the alerts list in the query cache to add the new alert at the beginning
         queryClient.setQueryData<Alert[]>(["/api/alerts"], (oldAlerts) => {
-          if (!oldAlerts) return [newAlert];
+          // Add default properties for WebSocket alert data
+          const alertWithDefaults = { ...newAlert, seen: false, sentToTelegram: false };
+          
+          if (!oldAlerts) return [alertWithDefaults];
           
           // Check if alert already exists to prevent duplicates
-          const exists = oldAlerts.some(alert => alert.id === newAlert.id);
+          const exists = oldAlerts.some(alert => alert.id === alertWithDefaults.id);
           if (exists) return oldAlerts;
           
           // Add new alert at the beginning of the list
-          return [newAlert, ...oldAlerts];
+          return [alertWithDefaults, ...oldAlerts];
         });
       
         // Also invalidate the unseen count query to update the badge
@@ -98,11 +101,6 @@ export default function Alerts() {
     }
   }, [lastMessage, queryClient]);
 
-  // Debug logging
-  console.log("Alerts loading:", isLoading);
-  console.log("Alerts error:", error);
-  console.log("Alerts data:", alerts);
-  console.log("Alerts length:", alerts?.length);
 
   const toggleFilter = (filterId: string) => {
     if (filterId === "all") {
