@@ -9,6 +9,7 @@ import type { Alert } from "@shared/schema";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
+  { id: "mlb", label: "MLB", active: false },
   { id: "nfl", label: "NFL", active: false },
   { id: "nba", label: "NBA", active: false },
   { id: "nhl", label: "NHL", active: false },
