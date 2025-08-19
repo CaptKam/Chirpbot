@@ -160,14 +160,14 @@ export default function Alerts() {
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
-      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
+      <header className="bg-[#1C2B5E] border-b border-slate-700 text-slate-100 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
             <Zap className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
             <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
-            <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
+            <p className="text-emerald-300 text-xs font-medium">V2 Alert System</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -183,7 +183,7 @@ export default function Alerts() {
       </header>
 
       {/* Filters */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 p-4">
+      <div className="bg-[#1C2B5E] border-b border-slate-700 p-4">
         <div className="mb-3">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-black uppercase tracking-wide text-slate-100">
@@ -205,7 +205,7 @@ export default function Alerts() {
               className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap transition-colors ${
                 activeFilters.includes(option.id)
                   ? "bg-emerald-500 text-slate-900"
-                  : "bg-white/10 text-slate-300 hover:bg-white/20"
+                  : "bg-slate-600 text-slate-300 hover:bg-slate-500"
               }`}
             >
               {option.label}
@@ -219,7 +219,7 @@ export default function Alerts() {
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 animate-pulse">
+              <div key={i} className="bg-[#0F1A32] ring-1 ring-slate-700 rounded-xl p-4 animate-pulse">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     <div className="h-5 bg-slate-700 rounded w-20"></div>
@@ -238,7 +238,7 @@ export default function Alerts() {
             ))}
           </div>
         ) : filteredAlerts.length === 0 ? (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-8 text-center">
+          <Card className="bg-[#0F1A32] ring-1 ring-slate-700 rounded-xl p-8 text-center">
             <TriangleAlert className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-lg font-bold text-slate-100 mb-2">No Alerts Found</h3>
             <p className="text-sm text-slate-300">
@@ -255,10 +255,10 @@ export default function Alerts() {
               <SwipeableCard
                 key={alert.id}
                 alertId={alert.id}
-                className={`bg-white/5 backdrop-blur-sm ring-1 rounded-xl p-4 hover:bg-white/10 transition-all duration-200 ${
+                className={`bg-[#0F1A32] ring-1 rounded-xl p-4 hover:bg-slate-800 transition-all duration-200 ${
                   alert.seen 
-                    ? 'ring-slate-600/50 opacity-75' 
-                    : 'ring-emerald-500/50 shadow-lg shadow-emerald-500/20'
+                    ? 'ring-slate-600 opacity-75' 
+                    : 'ring-emerald-500 shadow-lg'
                 }`}
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
@@ -286,7 +286,7 @@ export default function Alerts() {
 
                 {/* AI Analysis */}
                 {alert.aiContext && (
-                  <div className="mt-3 p-3 bg-emerald-500/10 backdrop-blur-sm rounded-lg ring-1 ring-emerald-500/30">
+                  <div className="mt-3 p-3 bg-emerald-500 rounded-lg">
                     <div className="flex items-start">
                       <span className="text-emerald-400 mr-2">🤖</span>
                       <div className="flex-1">

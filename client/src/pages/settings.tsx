@@ -150,14 +150,14 @@ export default function Settings() {
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
-      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
+      <header className="bg-[#1C2B5E] border-b border-slate-700 text-slate-100 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
             <Zap className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
             <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
-            <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
+            <p className="text-emerald-300 text-xs font-medium">V2 Alert System</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -175,7 +175,7 @@ export default function Settings() {
       </header>
 
       {/* Sport Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
+      <div className="bg-[#1C2B5E] border-b border-slate-700">
         <div className="flex overflow-x-auto">
           {SPORTS.map((sport) => (
             <button
@@ -184,7 +184,7 @@ export default function Settings() {
               data-testid={`sport-tab-${sport.toLowerCase()}`}
               className={`px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors ${
                 activeSport === sport
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
+                  ? "border-emerald-500 text-emerald-400 bg-[#0F1A32]"
                   : "border-transparent text-slate-400 hover:text-slate-200"
               }`}
             >
@@ -201,7 +201,7 @@ export default function Settings() {
             {[...Array(3)].map((_, i) => (
               <div key={i} className="animate-pulse">
                 <div className="h-6 bg-slate-700 rounded w-32 mb-4"></div>
-                <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 space-y-4">
+                <div className="bg-[#0F1A32] ring-1 ring-slate-700 rounded-xl p-4 space-y-4">
                   <div className="flex justify-between items-center">
                     <div className="h-4 bg-slate-700 rounded w-48"></div>
                     <div className="w-11 h-6 bg-slate-700 rounded-full"></div>
@@ -219,7 +219,7 @@ export default function Settings() {
               </h2>
               <div className="space-y-4">
                 {ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]?.map((alertConfig) => (
-                  <Card key={alertConfig.key} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-200">
+                  <Card key={alertConfig.key} className="bg-[#0F1A32] ring-1 ring-slate-700 rounded-xl p-4 hover:bg-slate-800 transition-all duration-200">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-bold text-slate-100" data-testid={`alert-type-${alertConfig.key}`}>
@@ -247,7 +247,7 @@ export default function Settings() {
                 AI Analysis
               </h2>
               
-              <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 space-y-4 hover:bg-white/10 transition-all duration-200">
+              <Card className="bg-[#0F1A32] ring-1 ring-slate-700 rounded-xl p-4 space-y-4 hover:bg-slate-800 transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-slate-100">AI Context Enhancement</h3>
@@ -262,7 +262,7 @@ export default function Settings() {
                 </div>
 
                 {settings.aiEnabled && (
-                  <div className="border-t border-white/10 pt-4">
+                  <div className="border-t border-slate-700 pt-4">
                     <label className="block text-sm font-medium text-slate-100 mb-2">
                       AI Confidence Threshold
                     </label>
@@ -297,7 +297,7 @@ export default function Settings() {
                 Notifications
               </h2>
               
-              <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 space-y-4 hover:bg-white/10 transition-all duration-200">
+              <Card className="bg-[#0F1A32] ring-1 ring-slate-700 rounded-xl p-4 space-y-4 hover:bg-slate-800 transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-slate-100">Telegram Alerts</h3>
@@ -324,21 +324,21 @@ export default function Settings() {
                   />
                 </div>
 
-                <div className="border-t border-white/10 pt-4">
+                <div className="border-t border-slate-700 pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium text-slate-300">Telegram Bot Status</span>
                     {telegramStatus === null ? (
-                      <Badge className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-slate-600">
+                      <Badge className="bg-slate-700 text-slate-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-slate-600">
                         <AlertCircle className="w-3 h-3 mr-1" />
                         Unknown
                       </Badge>
                     ) : telegramStatus ? (
-                      <Badge className="bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-emerald-500/30">
+                      <Badge className="bg-emerald-500 text-slate-900 px-2 py-1 rounded-full text-xs font-medium">
                         <CheckCircle className="w-3 h-3 mr-1" />
                         Connected
                       </Badge>
                     ) : (
-                      <Badge className="bg-red-500/20 text-red-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-red-500/30">
+                      <Badge className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                         <AlertCircle className="w-3 h-3 mr-1" />
                         Disconnected
                       </Badge>
@@ -374,7 +374,7 @@ export default function Settings() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="text-red-300 ring-1 ring-red-500/30 hover:bg-red-500/10 hover:ring-red-500/50 border-none"
+                        className="text-red-300 ring-1 ring-red-500 hover:bg-red-500 hover:ring-red-500 border-none"
                         data-testid="button-settings-logout"
                         onClick={() => logoutMutation.mutate()}
                         disabled={logoutMutation.isPending}
@@ -393,7 +393,7 @@ export default function Settings() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="text-emerald-300 ring-1 ring-emerald-500/30 hover:bg-emerald-500/10 hover:ring-emerald-500/50 border-none"
+                          className="text-emerald-300 ring-1 ring-emerald-500 hover:bg-emerald-500 hover:ring-emerald-500 border-none"
                           data-testid="button-settings-signup"
                         >
                           <UserPlus className="w-4 h-4 mr-2" />
@@ -407,7 +407,7 @@ export default function Settings() {
             </div>
           </>
         ) : (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-8 text-center">
+          <Card className="bg-[#0F1A32] ring-1 ring-slate-700 rounded-xl p-8 text-center">
             <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-lg font-bold text-slate-100 mb-2">Settings Not Found</h3>
             <p className="text-sm text-slate-300">
