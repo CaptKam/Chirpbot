@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Zap, Bell, Shield, TrendingUp, Users, Activity, ChevronRight } from "lucide-react";
+import chirpbotLogo from "@assets/chirpbot-logo.png";
 
 export default function Landing() {
   return (
@@ -11,9 +12,11 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-chirp-alert-red rounded-full flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
+              <img 
+                src={chirpbotLogo} 
+                alt="ChirpBot Logo" 
+                className="w-10 h-10"
+              />
               <div>
                 <h1 className="text-xl font-black uppercase tracking-wider text-white">ChirpBot</h1>
                 <p className="text-blue-200 text-xs font-medium">V2 Alert System</p>
