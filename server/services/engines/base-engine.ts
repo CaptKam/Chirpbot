@@ -2,7 +2,6 @@ import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
-import { sendSMS, formatAlertForSMS } from '../sms';
 import { generatePredictions, PredictionRequest, GameContext, PREDICTION_EVENTS } from '../ai-predictions';
 
 export interface AlertConfig {
@@ -139,25 +138,6 @@ export abstract class BaseSportEngine implements SportEngine {
           });
           if (sent) {
             await storage.markAlertSentToTelegram(createdAlert.id);
-          }
-        }
-        
-        // Send SMS for high-priority alerts
-        if (alert.priority >= 75 && settings?.smsEnabled && settings?.phoneNumber) {
-          try {
-            const smsMessage = formatAlertForSMS({
-              type: alert.type,
-              sport: this.sport,
-              title: alertData.title,
-              description: alert.description,
-              gameInfo: alertData.gameInfo
-            });
-            const smsSent = await sendSMS(settings.phoneNumber, smsMessage);
-            if (smsSent) {
-              console.log(`📱 SMS alert sent for ${alert.type}`);
-            }
-          } catch (error) {
-            console.error('SMS notification failed:', error);
           }
         }
 

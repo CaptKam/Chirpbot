@@ -120,8 +120,6 @@ export class MemStorage implements IStorage {
         aiConfidenceThreshold: 85,
         telegramEnabled: true,
         pushNotificationsEnabled: true,
-        smsEnabled: false,
-        phoneNumber: null,
       });
     });
   }
@@ -394,16 +392,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
-    const alertData = {
-      ...insertAlert,
-      gameInfo: {
-        ...insertAlert.gameInfo,
-        quarter: insertAlert.gameInfo.quarter as string | undefined,
-        inning: insertAlert.gameInfo.inning as string | undefined,
-        period: insertAlert.gameInfo.period as string | undefined
-      }
-    };
-    const [alert] = await db.insert(alerts).values([alertData]).returning();
+    const [alert] = await db.insert(alerts).values([insertAlert]).returning();
     return alert;
   }
 
