@@ -16,7 +16,7 @@ interface NBAGameState {
 
 export class NBAEngine extends BaseSportEngine {
   sport = 'NBA';
-  monitoringInterval = 20000; // 20 seconds for NBA
+  monitoringInterval = 3000; // 3 seconds for fast NBA monitoring
   
   async monitor() {
     try {

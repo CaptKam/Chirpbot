@@ -16,7 +16,7 @@ interface AIGameAnalysis {
 
 export class AIEngine extends BaseSportEngine {
   sport = 'AI_ANALYSIS';
-  monitoringInterval = 15000; // 15 seconds - frequent scanning
+  monitoringInterval = 5000; // 5 seconds - ultra-fast AI scanning
   
   async monitor() {
     try {

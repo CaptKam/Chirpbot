@@ -20,7 +20,7 @@ interface NFLGameState {
 
 export class NFLEngine extends BaseSportEngine {
   sport = 'NFL';
-  monitoringInterval = 30000; // 30 seconds for NFL
+  monitoringInterval = 5000; // 5 seconds for fast NFL monitoring
   
   async monitor() {
     try {

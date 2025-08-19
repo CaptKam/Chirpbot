@@ -28,7 +28,7 @@ interface WeatherState {
 
 export class WeatherEngine extends BaseSportEngine {
   sport = 'WEATHER';
-  monitoringInterval = 300000; // 5 minutes for weather monitoring
+  monitoringInterval = 60000; // 1 minute for faster weather monitoring
   
   private weatherHistory = new Map<string, WeatherState['currentWeather']>();
   

@@ -62,7 +62,7 @@ interface MLBGameState {
 
 export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
-  monitoringInterval = 10000; // 10 seconds for high-frequency monitoring
+  monitoringInterval = 2000; // 2 seconds for ultra-fast real-time monitoring
   
   alertConfigs: AlertConfig[] = [
     {

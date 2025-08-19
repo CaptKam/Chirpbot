@@ -18,7 +18,7 @@ interface NHLGameState {
 
 export class NHLEngine extends BaseSportEngine {
   sport = 'NHL';
-  monitoringInterval = 15000; // 15 seconds for NHL
+  monitoringInterval = 3000; // 3 seconds for fast NHL monitoring
   
   async monitor() {
     try {
