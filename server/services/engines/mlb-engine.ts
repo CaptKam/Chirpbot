@@ -59,15 +59,20 @@ interface MLBGameState {
       homeRuns: number;
     };
   };
+  compositeScore?: { // Added to hold composite score for fallback
+    composite: number;
+    RE_norm: number;
+    context: string;
+  };
 }
 
 export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
   monitoringInterval = 2000; // 2 seconds for ultra-fast real-time monitoring
-  
+
   // Track last game state to prevent duplicate alerts
   private lastGameStates = new Map<string, string>(); // key: gameId-alertType, value: state hash
-  
+
   alertConfigs: AlertConfig[] = [
     {
       type: "Game Start",
@@ -252,25 +257,25 @@ export class MLBEngine extends BaseSportEngine {
       minimumPredictionProbability: 70
     }
   ];
-  
+
   extractGameState(liveFeed: any): MLBGameState | null {
     try {
       const linescore = liveFeed.liveData.linescore;
       const gameData = liveFeed.gameData;
-      
+
       // Extract current batter and pitcher data
       let currentBatter = undefined;
       let currentPitcher = undefined;
-      
+
       try {
         const plays = liveFeed.liveData?.plays;
         const currentPlay = plays?.currentPlay;
-        
+
         // Get current batter
         if (currentPlay?.matchup?.batter) {
           const batter = currentPlay.matchup.batter;
           const batterStats = batter.stats?.find((stat: any) => stat.type?.displayName === 'statsSingleSeason')?.stats;
-          
+
           currentBatter = {
             id: batter.id,
             name: batter.fullName || 'Unknown Batter',
@@ -289,12 +294,12 @@ export class MLBEngine extends BaseSportEngine {
             }
           };
         }
-        
+
         // Get current pitcher
         if (currentPlay?.matchup?.pitcher) {
           const pitcher = currentPlay.matchup.pitcher;
           const pitcherStats = pitcher.stats?.find((stat: any) => stat.type?.displayName === 'statsSingleSeason')?.stats;
-          
+
           currentPitcher = {
             id: pitcher.id,
             name: pitcher.fullName || 'Unknown Pitcher',
@@ -317,7 +322,7 @@ export class MLBEngine extends BaseSportEngine {
       } catch (playerError) {
         console.log('Player data not available in current play');
       }
-      
+
       const gameState = {
         gameId: `mlb-${gameData.game.pk}`,
         gamePk: gameData.game.pk,
@@ -345,23 +350,23 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`   Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}`);
       console.log(`   Runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third}`);
       console.log(`   Outs: ${gameState.outs}, Balls: ${gameState.balls}, Strikes: ${gameState.strikes}`);
-      
+
       if (gameState.currentBatter) {
         console.log(`   🏏 Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
       }
-      
+
       if (gameState.currentPitcher) {
         console.log(`   ⚾ Current Pitcher: ${gameState.currentPitcher.name} (${gameState.currentPitcher.throwHand}) - ERA: ${gameState.currentPitcher.stats.era}, WHIP: ${gameState.currentPitcher.stats.whip}, K: ${gameState.currentPitcher.stats.strikeOuts}, W-L: ${gameState.currentPitcher.stats.wins}-${gameState.currentPitcher.stats.losses}`);
       }
-      
-      
+
+
       return gameState;
     } catch (error) {
       console.error('Error extracting MLB game state:', error);
       return null;
     }
   }
-  
+
   protected getGameSpecificInfo(gameState: MLBGameState) {
     return {
       inning: gameState.inning.toString(),
@@ -421,99 +426,99 @@ export class MLBEngine extends BaseSportEngine {
       gameState: 'Live'
     };
   }
-  
+
   private calculateScoringProbability(gameState: MLBGameState): number {
     let probability = 30; // Base probability
-    
+
     // Adjust based on runners
     if (gameState.runners.first) probability += 10;
     if (gameState.runners.second) probability += 20;  
     if (gameState.runners.third) probability += 25;
-    
+
     // Adjust based on outs
     if (gameState.outs === 0) probability += 20;
     else if (gameState.outs === 1) probability += 10;
     else probability -= 10;
-    
+
     // Late inning pressure
     if (gameState.inning >= 8) probability += 15;
-    
+
     return Math.min(95, Math.max(5, probability));
   }
-  
+
   // Generate dynamic description based on actual game state
   private generateDynamicDescription(alert: AlertConfig, gameState: MLBGameState): string {
     const runners = gameState.runners;
     const outs = gameState.outs;
     const scoringProb = this.calculateScoringProbability(gameState);
-    
+
     // Build runner description
     const runnerPositions = [];
     if (runners.first) runnerPositions.push('1ST');
     if (runners.second) runnerPositions.push('2ND');
     if (runners.third) runnerPositions.push('3RD');
-    
+
     switch (alert.type) {
       case 'Runner on 3rd, 1 Out':
         return `🎯 RUNNER ON 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
-      
+
       case 'Runners on 2nd & 3rd, 1 Out':
         return `🔥 RUNNERS ON 2ND & 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
-      
+
       case 'Bases Loaded 0 Outs':
         return `🚨 BASES LOADED, 0 OUTS! (${scoringProb}% scoring probability) - MAXIMUM opportunity!`;
-      
+
       case 'Bases Loaded 1 Out':
         return `🔥 BASES LOADED, 1 OUT! (${scoringProb}% scoring probability) - High-value scoring chance!`;
-      
+
       case 'Bases Loaded 2 Outs':
         return `🚨 BASES LOADED, 2 OUTS! (${scoringProb}% scoring probability) - MAXIMUM PRESSURE! Make or break moment!`;
-      
+
       case 'Runners In Scoring Position':
         const scoringRunners = [];
         if (runners.second) scoringRunners.push('2ND');
         if (runners.third) scoringRunners.push('3RD');
-        
+
         if (scoringRunners.length > 0) {
           const runnerText = scoringRunners.join(' & ');
           return `⚡ RUNNER${scoringRunners.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
         }
         return `⚡ PRESSURE COOKER! Runners in scoring position, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
-      
+
       case 'Runners on Base':
         if (runnerPositions.length > 0) {
           const runnerText = runnerPositions.join(' & ');
           return `🏃 RUNNER${runnerPositions.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
         }
         return `🏃 Runners on base, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
-      
+
       case 'Close Game':
         const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
         return `🔥 NAIL-BITER! ${scoreDiff}-run game in inning ${gameState.inning}! (${scoringProb}% scoring probability)`;
-      
+
       case 'Late Inning Pressure':
         return `⏰ CRUNCH TIME! Final innings - Inning ${gameState.inning}, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
-      
+
       case 'Tie Game 9th Inning':
         return `🔥 TIE GAME ${gameState.inning}TH INNING! (${scoringProb}% scoring probability) - FINAL INNING DRAMA!`;
-      
+
       case '7th Inning Warning':
         return `🚨 7TH INNING STRETCH! (${scoringProb}% scoring probability) - Critical innings ahead!`;
-      
+
       case 'Game Start':
         return `⚾ GAME START - First pitch! (${scoringProb}% scoring probability)`;
-      
+
       default:
         // For other alerts, use the original description but add scoring probability
         return `${alert.description} (${scoringProb}% scoring probability)`;
     }
   }
-  
+
   // Create a hash specific to MLB game state
   private createMLBStateHash(gameState: MLBGameState, alertType: string): string {
     // Only track properties relevant to each alert type
     let relevantState: any = {};
-    
+
     // For runner-based alerts, track runners and outs
     if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('bases')) {
       relevantState = {
@@ -547,26 +552,26 @@ export class MLBEngine extends BaseSportEngine {
         score: `${gameState.awayScore}-${gameState.homeScore}`
       };
     }
-    
+
     return JSON.stringify(relevantState);
   }
-  
+
   // Check if we should trigger this alert (no duplicates)
   private shouldTriggerMLBAlert(alertType: string, gameState: MLBGameState): boolean {
     const key = `${gameState.gameId}-${alertType}`;
     const currentStateHash = this.createMLBStateHash(gameState, alertType);
     const lastStateHash = this.lastGameStates.get(key);
-    
+
     if (lastStateHash === currentStateHash) {
       // Same game state, don't trigger duplicate alert
       return false;
     }
-    
+
     // New game state, allow alert and track it
     this.lastGameStates.set(key, currentStateHash);
     return true;
   }
-  
+
   // Override processAlerts to use dynamic descriptions and composite scoring
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
     for (const alert of triggeredAlerts) {
@@ -574,10 +579,10 @@ export class MLBEngine extends BaseSportEngine {
       if (!this.shouldTriggerMLBAlert(alert.type, gameState)) {
         continue;
       }
-      
+
       try {
         const weatherData = await getWeatherData(gameState.homeTeam);
-        
+
         // Calculate composite score for enhanced priority
         const situationScore = scoreSituation({
           outs: gameState.outs as 0|1|2,
@@ -597,13 +602,16 @@ export class MLBEngine extends BaseSportEngine {
             awayScore: gameState.awayScore
           }
         });
-        
+
+        // Add composite score to gameState for potential fallback use
+        gameState.compositeScore = situationScore.scores;
+
         // Use enhanced priority from composite score
         const enhancedPriority = Math.max(alert.priority, situationScore.priority);
-        
+
         // Generate dynamic description based on actual game state
         const dynamicDescription = this.generateDynamicDescription(alert, gameState);
-        
+
         const alertData = {
           type: alert.type,
           sport: this.sport,
@@ -630,17 +638,37 @@ export class MLBEngine extends BaseSportEngine {
 
         // Get settings for this sport
         const settings = await storage.getSettingsBySport(this.sport);
-        
-        // Get AI analysis for high-priority alerts (using enhanced priority)
-        if (enhancedPriority >= 70 && settings?.aiEnabled) {
-          const analysis = await analyzeAlert(
-            alertData.type,
-            alertData.sport,
-            alertData.gameInfo,
-            weatherData
-          );
-          alertData.aiContext = analysis.context || undefined;
-          alertData.aiConfidence = analysis.confidence;
+
+        // Get AI analysis for high-priority alerts (with better fallback)
+        if (alert.priority >= 70 && settings?.aiEnabled) {
+          try {
+            const analysis = await analyzeAlert(
+              alertData.type,
+              alertData.sport,
+              alertData.gameInfo,
+              weatherData
+            );
+
+            // Only use AI analysis if it's actually available
+            if (analysis.confidence > 0) {
+              alertData.aiContext = analysis.context || undefined;
+              alertData.aiConfidence = analysis.confidence;
+            } else {
+              // Use composite score-based context when AI fails
+              const compositeScore = gameState.compositeScore;
+              if (compositeScore) {
+                alertData.aiContext = `Statistical analysis: ${Math.round(compositeScore.composite)}% opportunity score (RE: ${compositeScore.RE_norm}, Context: ${compositeScore.context})`;
+                alertData.aiConfidence = Math.min(90, compositeScore.composite + 20);
+              }
+            }
+          } catch (error) {
+            // Fallback to composite scoring when AI completely fails
+            const compositeScore = gameState.compositeScore;
+            if (compositeScore) {
+              alertData.aiContext = `Advanced analytics: ${Math.round(compositeScore.composite)}% situation score based on run expectancy and context`;
+              alertData.aiConfidence = Math.min(85, compositeScore.composite + 15);
+            }
+          }
         }
 
         const createdAlert = await storage.createAlert(alertData);
@@ -662,12 +690,12 @@ export class MLBEngine extends BaseSportEngine {
         }
 
         console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${alert.priority} → Enhanced: ${enhancedPriority}) - Composite: ${situationScore.scores.composite}`);
-        
+
         // Broadcast to clients if callback exists
         if (this.onAlert) {
           this.onAlert(createdAlert);
         }
-        
+
       } catch (error) {
         console.error(`Error processing ${this.sport} alert:`, error);
       }
@@ -692,34 +720,34 @@ export class MLBEngine extends BaseSportEngine {
       for (const game of liveGames) {
         try {
           console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (State: ${game.gameState}, PK: ${game.gamePk})`);
-          
+
           if (game.gameState !== 'Live') {
             console.log(`⏭️ Skipping non-live game (${game.gameState})`);
             continue;
           }
-          
+
           if (!game.gamePk) {
             console.log(`⏭️ Skipping game with no gamePk`);
             continue;
           }
-          
+
           console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
           const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
-          
+
           // Skip if live feed data isn't available yet (returns null for 404)
           if (!liveFeed) {
             console.log(`⚠️ No live feed data available for game ${game.gamePk} yet`);
             continue;
           }
-          
+
           console.log(`✅ Got live feed data for game ${game.gamePk}, processing...`);
-          
+
           const gameState = this.extractGameState(liveFeed);
-          
+
           if (!gameState) continue;
-          
+
           const triggeredAlerts = await this.checkAlertConditions(gameState);
-          
+
           if (triggeredAlerts.length > 0) {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
             console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
@@ -727,12 +755,12 @@ export class MLBEngine extends BaseSportEngine {
           } else {
             console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
           }
-          
+
         } catch (gameError) {
           console.error(`Error processing ${this.sport} game:`, gameError);
         }
       }
-      
+
     } catch (error) {
       console.error(`${this.sport} monitoring error:`, error);
     }
