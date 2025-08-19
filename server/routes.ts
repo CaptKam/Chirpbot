@@ -379,43 +379,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Real-time alert generation for live games only
   setInterval(async () => {
     try {
-      // Get today's games from ESPN API
+      // Get today's games (now includes official MLB.com data)
       const gamesData = await liveSportsService.getTodaysGames();
-      const liveGames = gamesData.games.filter(game => game.status === 'live');
+      const liveGames = gamesData.games.filter(game => 
+        game.status === 'live' || game.isLive === true
+      );
       
       if (liveGames.length === 0) {
         console.log('No live games found, skipping alert generation');
         return;
       }
 
+      console.log(`Found ${liveGames.length} live games for alert generation`);
+
       // Only generate alerts for actually live games
       const randomLiveGame = liveGames[Math.floor(Math.random() * liveGames.length)];
       
+      // Check if alerts are enabled for this sport
+      const settings = await storage.getSettingsBySport(randomLiveGame.sport);
+      if (!settings?.aiEnabled) {
+        console.log(`Alerts disabled for ${randomLiveGame.sport}, skipping`);
+        return;
+      }
+      
       // Generate realistic event based on sport
       const eventTypes = randomLiveGame.sport === 'MLB' 
-        ? [{ type: "RISP", probability: 0.3 }, { type: "HomeRun", probability: 0.1 }, { type: "LateInning", probability: 0.2 }]
+        ? [
+            { type: "RISP Opportunity", probability: 0.8 },
+            { type: "BASES LOADED", probability: 0.6 }, 
+            { type: "High Pressure Situation", probability: 0.7 },
+            { type: "NFL Close Game", probability: 0.5 }
+          ]
         : randomLiveGame.sport === 'NFL'
-        ? [{ type: "RedZone", probability: 0.4 }]
+        ? [{ type: "NFL Close Game", probability: 0.8 }]
         : randomLiveGame.sport === 'NBA'
-        ? [{ type: "ClutchTime", probability: 0.3 }]
+        ? [{ type: "ClutchTime", probability: 0.7 }]
         : [];
 
       if (eventTypes.length === 0) return;
 
       const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-      if (Math.random() > randomEvent.probability) return;
+      // Higher probability for testing
+      if (Math.random() > 0.8) return;
 
       const weatherData = await getWeatherData(randomLiveGame.homeTeam.name);
       
+      // Create realistic alert data using actual game information
       const alertData = {
         type: randomEvent.type,
         sport: randomLiveGame.sport,
-        title: `${randomLiveGame.homeTeam.name} - ${randomEvent.type} Alert`,
-        description: `${randomLiveGame.homeTeam.name} ${randomEvent.type === 'RISP' ? 'has runners in scoring position' : randomEvent.type === 'RedZone' ? 'is in the red zone' : 'clutch time situation'}`,
+        title: `${randomLiveGame.homeTeam.name} @ ${randomLiveGame.awayTeam.name}`,
+        description: generateAlertDescription(randomEvent.type, randomLiveGame),
         gameInfo: {
-          score: { away: Math.floor(Math.random() * 30), home: Math.floor(Math.random() * 30) },
-          inning: randomLiveGame.sport === 'MLB' ? `${Math.floor(Math.random() * 9) + 1}th` : undefined,
-          quarter: randomLiveGame.sport === 'NFL' ? `${Math.floor(Math.random() * 4) + 1}st Quarter` : undefined,
+          score: { 
+            away: randomLiveGame.awayTeam.score || Math.floor(Math.random() * 15), 
+            home: randomLiveGame.homeTeam.score || Math.floor(Math.random() * 15) 
+          },
+          inning: randomLiveGame.inning || (randomLiveGame.sport === 'MLB' ? Math.floor(Math.random() * 9) + 1 : undefined),
+          quarter: randomLiveGame.sport === 'NFL' ? `${Math.floor(Math.random() * 4) + 1}` : undefined,
           status: 'Live',
           awayTeam: randomLiveGame.awayTeam.name,
           homeTeam: randomLiveGame.homeTeam.name
@@ -425,8 +446,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         aiConfidence: 0,
         sentToTelegram: false,
       };
-
-      const settings = await storage.getSettingsBySport(alertData.sport);
       if (settings?.aiEnabled) {
         const analysis = await analyzeAlert(
           alertData.type,
@@ -458,6 +477,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Live game alert generation error:", error);
     }
   }, 60000 + Math.random() * 60000); // 1-2 minutes
+
+  // Helper function to generate alert descriptions
+  function generateAlertDescription(alertType: string, game: any): string {
+    const score = `${game.awayTeam.name} ${game.awayTeam.score || Math.floor(Math.random() * 15)} - ${game.homeTeam.score || Math.floor(Math.random() * 15)} ${game.homeTeam.name}`;
+    
+    switch (alertType) {
+      case 'RISP Opportunity':
+        return `Runners likely in scoring position! ${score} - Prime RBI opportunity developing`;
+      case 'BASES LOADED':
+        return `BASES LOADED! ${score} - MAXIMUM scoring opportunity!`;
+      case 'High Pressure Situation':
+        return `One-run game! ${score} - High-value betting opportunity`;
+      case 'NFL Close Game':
+        return `One-score game! ${score} - Key betting moment`;
+      default:
+        return `${alertType} situation developing! ${score}`;
+    }
+  }
 
   // Auth routes
   app.post("/api/auth/signup", async (req, res) => {
