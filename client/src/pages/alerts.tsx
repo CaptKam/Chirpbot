@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { SwipeableCard } from "@/components/SwipeableCard";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
@@ -251,8 +252,9 @@ export default function Alerts() {
           <>
             {filteredAlerts.map((alert) => {
             return (
-              <Card
+              <SwipeableCard
                 key={alert.id}
+                alertId={alert.id}
                 className={`bg-white/5 backdrop-blur-sm ring-1 rounded-xl p-4 hover:bg-white/10 transition-all duration-200 ${
                   alert.seen 
                     ? 'ring-slate-600/50 opacity-75' 
@@ -301,7 +303,7 @@ export default function Alerts() {
                     </div>
                   </div>
                 )}
-              </Card>
+              </SwipeableCard>
             );
           })}
           </>

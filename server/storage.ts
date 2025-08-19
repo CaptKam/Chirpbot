@@ -34,6 +34,7 @@ export interface IStorage {
   markAlertAsSeen(id: string): Promise<void>;
   markAllAlertsAsSeen(): Promise<void>;
   getUnseenAlertsCount(): Promise<number>;
+  deleteAlert(id: string): Promise<void>;
 
   // Settings
   getSettingsBySport(sport: string): Promise<Settings | undefined>;
@@ -316,6 +317,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.alerts.values()).filter(alert => !alert.seen).length;
   }
 
+  async deleteAlert(id: string): Promise<void> {
+    this.alerts.delete(id);
+  }
+
   // Settings methods
   async getSettingsBySport(sport: string): Promise<Settings | undefined> {
     return this.settings.get(sport);
@@ -473,6 +478,10 @@ export class DatabaseStorage implements IStorage {
   async getUnseenAlertsCount(): Promise<number> {
     const result = await db.select({ count: sql`count(*)` }).from(alerts).where(eq(alerts.seen, false));
     return Number(result[0]?.count || 0);
+  }
+
+  async deleteAlert(id: string): Promise<void> {
+    await db.delete(alerts).where(eq(alerts.id, id));
   }
 
   // Settings methods
