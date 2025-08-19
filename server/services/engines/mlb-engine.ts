@@ -235,6 +235,12 @@ export class MLBEngine extends BaseSportEngine {
           
           if (!game.gamePk) continue;
           const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
+          
+          // Skip if live feed data isn't available yet (returns null for 404)
+          if (!liveFeed) {
+            continue;
+          }
+          
           const gameState = this.extractGameState(liveFeed);
           
           if (!gameState) continue;
