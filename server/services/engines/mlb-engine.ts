@@ -78,6 +78,14 @@ export class MLBEngine extends BaseSportEngine {
         state.runners.first && state.runners.second && state.runners.third && state.outs === 1
     },
     {
+      type: "Bases Loaded 2 Outs", 
+      priority: 95,
+      probability: 1.0,
+      description: "🚨 BASES LOADED, 2 OUTS! - MAXIMUM PRESSURE! Make or break moment!",
+      conditions: (state: MLBGameState) => 
+        state.runners.first && state.runners.second && state.runners.third && state.outs === 2
+    },
+    {
       type: "Runner on 3rd, 1 Out",
       settingKey: "risp",
       priority: 80,
