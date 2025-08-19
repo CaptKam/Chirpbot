@@ -284,15 +284,22 @@ export class MLBApiService {
       return {
         gameData: {
           game: { pk: gamePk },
-          teams: boxscore.teams
+          teams: {
+            away: {
+              name: boxscore.teams?.away?.team?.name || linescore.defense?.team?.name || 'Away Team'
+            },
+            home: {
+              name: boxscore.teams?.home?.team?.name || linescore.offense?.team?.name || 'Home Team'
+            }
+          }
         },
         liveData: {
           linescore: {
             currentInning: linescore.currentInning || 1,
             inningState: linescore.inningState || 'Top',
-            outs: 0, // Not available in linescore
-            balls: 0, // Not available in linescore  
-            strikes: 0, // Not available in linescore
+            outs: linescore.outs || 0,
+            balls: linescore.balls || 0,
+            strikes: linescore.strikes || 0,
             offense: {
               first: linescore.offense?.first || null,
               second: linescore.offense?.second || null,
