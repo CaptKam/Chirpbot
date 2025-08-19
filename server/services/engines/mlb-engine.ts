@@ -1,5 +1,5 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
-import { mlbApi } from '../mlb-api';
+import { mlbApi } from './mlb-api';
 
 interface MLBGameState {
   gameId: string;

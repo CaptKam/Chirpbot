@@ -377,16 +377,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import modular sport engines
-  const { alertEngineManager } = await import('./services/engines');
+  // Start existing MLB alert engine for now (keeping current functionality)
+  const { mlbAlertEngine } = await import('./services/mlb-alerts');
   
-  // Setup alert broadcasting for all sports
-  alertEngineManager.setAlertCallback((alert: any) => {
+  mlbAlertEngine.onAlert = (alert: any) => {
     broadcast({ type: 'new_alert', data: alert });
-  });
+  };
   
-  // Start all sport engines (MLB: 10s, NFL: 30s, NBA: 20s, NHL: 15s)
-  await alertEngineManager.startAllEngines();
+  mlbAlertEngine.startRealTimeMonitoring();
 
   // Keep existing general sports alert generation (reduced frequency for non-MLB)
   setInterval(async () => {

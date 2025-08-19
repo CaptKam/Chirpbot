@@ -1,7 +1,7 @@
 import { storage } from '../storage';
-import { getWeatherData } from '../weather';
-import { analyzeAlert } from '../ai';
-import { sendTelegramAlert } from '../telegram';
+import { getWeatherData } from './weather';
+import { analyzeAlert } from './ai';
+import { sendTelegramAlert } from './telegram';
 
 export interface AlertConfig {
   type: string;
