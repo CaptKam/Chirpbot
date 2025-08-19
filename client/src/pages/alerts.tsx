@@ -57,15 +57,18 @@ export default function Alerts() {
 
   // Mark all alerts as seen when the page loads
   useEffect(() => {
-    if (alerts && alerts.length > 0) {
-      // Mark all unseen alerts as seen
-      alerts.forEach(alert => {
-        if (!alert.seen && !seenAlertsRef.current.has(alert.id)) {
-          markAlertAsSeen(alert.id);
-        }
-      });
-    }
-  }, [alerts, markAlertAsSeen]);
+    // Mark all alerts as seen with one API call when page loads
+    fetch('/api/alerts/mark-all-seen', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }).then(() => {
+      // Refresh the unseen count
+      queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+    });
+  }, []); // Only run once when component mounts
 
   // Debug logging
   console.log("Alerts loading:", isLoading);
@@ -95,9 +98,9 @@ export default function Alerts() {
       case "lateinning":
         return TriangleAlert;
       case "redzone":
-        return Volleyball;
+        return Zap;
       case "clutchtime":
-        return Dumbbell;
+        return Zap;
       default:
         return TriangleAlert;
     }
@@ -157,7 +160,7 @@ export default function Alerts() {
             <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
               Live Alerts ({alerts.length})
             </h2>
-            {unseenCount.count > 0 && (
+            {unseenCount && unseenCount.count > 0 && (
               <Badge className="bg-red-500 text-white px-2 py-1 text-xs font-bold">
                 {unseenCount.count} NEW
               </Badge>
