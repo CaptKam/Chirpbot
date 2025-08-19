@@ -58,7 +58,7 @@ Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key 
   } catch (error: any) {
     if (error.message === 'OpenAI API timeout') {
       console.error("OpenAI analysis timed out after 5 seconds");
-    } else if (error.status === 429) {
+    } else if (error.status === 429 || error.code === 'insufficient_quota' || error.message?.includes('quota')) {
       console.error("OpenAI quota exceeded - falling back to statistical analysis");
     } else {
       console.error("OpenAI analysis failed:", error.message || error);

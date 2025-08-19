@@ -211,12 +211,14 @@ Be realistic with probabilities - don't inflate them. Base them on actual statis
     console.error("AI prediction failed:", error);
     
     // Use fallback predictions when AI fails
-    if (error.status === 429 || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+    if (error.status === 429 || error.code === 'insufficient_quota' || error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.message?.includes('quota')) {
       console.log('Using fallback predictions due to AI service unavailability');
       return generateFallbackPredictions(request);
     }
     
-    return [];
+    // For any other error, still return fallback to keep the app working
+    console.log('Using fallback predictions due to AI error');
+    return generateFallbackPredictions(request);
   }
 }
 
