@@ -1,6 +1,6 @@
-import { storage } from '../storage';
+import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
-import { analyzeAlert } from '../ai';
+import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
 
 export interface AlertConfig {
@@ -94,7 +94,7 @@ export abstract class BaseSportEngine implements SportEngine {
             alertData.gameInfo,
             weatherData
           );
-          alertData.aiContext = analysis.context;
+          alertData.aiContext = analysis.context || undefined;
           alertData.aiConfidence = analysis.confidence;
         }
 

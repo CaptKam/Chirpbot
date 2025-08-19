@@ -73,7 +73,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-white text-white hover:bg-white hover:text-chirp-accent-blue px-8 py-6 text-lg font-bold rounded-lg"
+                className="border-white hover:bg-white hover:text-chirp-accent-blue px-8 py-6 text-lg font-bold rounded-lg text-white bg-[#f02d3a]"
                 data-testid="button-hero-login"
               >
                 Log In to Dashboard

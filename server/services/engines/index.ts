@@ -35,7 +35,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   async startAllEngines(): Promise<void> {
     console.log('🚀 Starting all sport alert engines...');
     
-    for (const [sport, engine] of this.engines) {
+    for (const [sport, engine] of Array.from(this.engines.entries())) {
       try {
         console.log(`Starting ${sport} engine with ${engine.monitoringInterval/1000}s interval`);
         
@@ -57,10 +57,6 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     try {
       // This would be implemented based on each sport's specific monitoring logic
       // For now, we'll call a generic monitoring method
-      if (engine.startMonitoring && typeof engine.startMonitoring === 'function') {
-        // If engine has its own monitoring, let it handle it
-        return;
-      }
       
       console.log(`🔍 Monitoring ${sport} games...`);
       // Generic monitoring logic would go here
@@ -73,7 +69,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   stopAllEngines(): void {
     console.log('🛑 Stopping all sport alert engines...');
     
-    for (const [sport, intervalId] of this.intervalIds) {
+    for (const [sport, intervalId] of Array.from(this.intervalIds.entries())) {
       clearInterval(intervalId);
       console.log(`✅ ${sport} engine stopped`);
     }
@@ -83,7 +79,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   
   // Set alert callback for all engines
   setAlertCallback(callback: (alert: any) => void): void {
-    for (const engine of this.engines.values()) {
+    for (const engine of Array.from(this.engines.values())) {
       engine.onAlert = callback;
     }
   }
