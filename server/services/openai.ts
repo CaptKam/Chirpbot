@@ -1,7 +1,9 @@
 import OpenAI from "openai";
 
 const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key" 
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 5000,
+  maxRetries: 1
 });
 
 export interface AlertAnalysis {
@@ -56,10 +58,15 @@ Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key 
       confidence: Math.max(0, Math.min(100, result.confidence || 0))
     };
   } catch (error: any) {
-    if (error.message === 'OpenAI API timeout') {
-      console.error("OpenAI analysis timed out after 5 seconds");
+    // Silently handle all OpenAI errors to prevent workflow failures
+    if (error.status === 429) {
+      console.log("OpenAI analysis skipped: API quota exceeded, using fallback");
+    } else if (error.message === 'OpenAI API timeout') {
+      console.log("OpenAI analysis skipped: timeout after 5 seconds");
+    } else if (error.message?.includes('API key')) {
+      console.log("OpenAI analysis skipped: API key not configured");
     } else {
-      console.error("OpenAI analysis failed:", error.message || error);
+      console.log("OpenAI analysis skipped:", error.message || "API temporarily unavailable");
     }
     return {
       context: "AI analysis temporarily unavailable",

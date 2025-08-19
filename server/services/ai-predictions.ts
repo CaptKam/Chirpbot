@@ -3,8 +3,8 @@ import { fetchJson } from './http';
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY,
-  timeout: 5000,
-  maxRetries: 2
+  timeout: 8000,
+  maxRetries: 1
 });
 
 export interface PredictionAnalysis {
@@ -197,15 +197,19 @@ Be realistic with probabilities - don't inflate them. Base them on actual statis
     }));
     
   } catch (error: any) {
-    console.error("AI prediction failed:", error);
-    
-    // Use fallback predictions when AI fails
-    if (error.status === 429 || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      console.log('Using fallback predictions due to AI service unavailability');
-      return generateFallbackPredictions(request);
+    // Silently handle all OpenAI errors and use fallbacks
+    if (error.status === 429) {
+      console.log('AI predictions: Using statistical fallbacks due to API quota limit');
+    } else if (error.message?.includes('timeout')) {
+      console.log('AI predictions: Using statistical fallbacks due to timeout');
+    } else if (error.message?.includes('API key')) {
+      console.log('AI predictions: Using statistical fallbacks (API key not configured)');
+    } else {
+      console.log('AI predictions: Using statistical fallbacks (API temporarily unavailable)');
     }
     
-    return [];
+    // Always return fallback predictions instead of empty array
+    return generateFallbackPredictions(request);
   }
 }
 
