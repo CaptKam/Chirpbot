@@ -173,35 +173,6 @@ export default function Calendar() {
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          {!isAuthLoading && (
-            isAuthenticated ? (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white hover:text-gray-200 px-2"
-                data-testid="button-header-logout"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-              >
-                <LogOut className="w-4 h-4 mr-1" />
-                <span className="text-xs font-medium">
-                  {logoutMutation.isPending ? "Logging out..." : "Logout"}
-                </span>
-              </Button>
-            ) : (
-              <Link href="/signup">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-white hover:text-gray-200 px-2"
-                  data-testid="button-header-signup"
-                >
-                  <UserPlus className="w-4 h-4 mr-1" />
-                  <span className="text-xs font-medium">Sign Up</span>
-                </Button>
-              </Link>
-            )
-          )}
           <Link href="/alerts">
             <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
               <Bell className="w-7 h-7" />
