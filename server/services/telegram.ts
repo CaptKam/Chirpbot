@@ -62,16 +62,52 @@ ${alert.aiContext ? `🤖 *AI Analysis:*\n${alert.aiContext}` : ''}
 
 export async function testTelegramConnection(config: TelegramConfig): Promise<boolean> {
   try {
-    const { botToken } = config;
+    const { botToken, chatId } = config;
     
-    if (!botToken || botToken === "default_key") {
+    if (!botToken || !chatId || botToken === "default_key" || chatId === "default_key") {
+      console.log("Missing Telegram credentials for test");
       return false;
     }
 
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
-    const result = await response.json();
+    // First check if bot token is valid
+    const botResponse = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+    const botResult = await botResponse.json();
     
-    return response.ok && result.ok;
+    if (!botResponse.ok || !botResult.ok) {
+      console.error("Invalid bot token:", botResult);
+      return false;
+    }
+
+    // Then send actual test message
+    const testMessage = `✅ **ChirpBot Test Message**
+
+Your Telegram notifications are working perfectly! 🎉
+
+You'll now receive live sports alerts here.
+
+#ChirpBot #TestConnection`;
+
+    const messageResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: testMessage,
+        parse_mode: 'Markdown',
+      }),
+    });
+
+    const messageResult = await messageResponse.json();
+    
+    if (!messageResponse.ok) {
+      console.error("Failed to send test message:", messageResult);
+      return false;
+    }
+
+    console.log("Test message sent successfully to Telegram");
+    return messageResult.ok;
   } catch (error) {
     console.error("Telegram connection test failed:", error);
     return false;
