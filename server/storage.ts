@@ -200,7 +200,7 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 
-  async getRecentAlerts(limit = 50): Promise<Alert[]> {
+  async getRecentAlerts(limit = 30): Promise<Alert[]> {
     return Array.from(this.alerts.values())
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, limit);
@@ -224,6 +224,19 @@ export class MemStorage implements IStorage {
       weatherData: insertAlert.weatherData || null
     };
     this.alerts.set(id, alert);
+    
+    // Auto-clear old alerts if we have more than 30
+    if (this.alerts.size > 30) {
+      const sortedAlerts = Array.from(this.alerts.entries())
+        .sort((a, b) => b[1].timestamp.getTime() - a[1].timestamp.getTime());
+      
+      // Keep only the 30 most recent alerts
+      const alertsToDelete = sortedAlerts.slice(30);
+      alertsToDelete.forEach(([alertId]) => {
+        this.alerts.delete(alertId);
+      });
+    }
+    
     return alert;
   }
 

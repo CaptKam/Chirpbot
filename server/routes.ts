@@ -106,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sport = req.query.sport as string;
       const type = req.query.type as string;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
 
       let alerts;
       if (sport) {
@@ -115,6 +115,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         alerts = await storage.getAlertsByType(type);
       } else {
         alerts = await storage.getRecentAlerts(limit);
+      }
+      
+      // Always limit to max 30 alerts for performance
+      if (alerts.length > 30) {
+        alerts = alerts.slice(0, 30);
       }
 
       res.json(alerts);
