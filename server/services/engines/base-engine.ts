@@ -32,7 +32,7 @@ export abstract class BaseSportEngine implements SportEngine {
   abstract monitoringInterval: number;
   
   protected alertHistory = new Map<string, number>();
-  protected readonly ALERT_COOLDOWN = 300000; // 5 minutes
+  protected readonly ALERT_COOLDOWN = 60000; // 1 minute - reduced from 5 minutes for more frequent alerts
   
   abstract extractGameState(apiData: any): any;
   abstract monitor(): Promise<void>;
@@ -51,11 +51,17 @@ export abstract class BaseSportEngine implements SportEngine {
     const triggeredRegular = regularAlerts.filter(config => {
       // Check if this alert type is enabled in settings
       if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
+        console.log(`⏭️ Alert type '${config.type}' skipped - setting '${config.settingKey}' is disabled`);
         return false;
       }
       
       if (config.conditions) {
-        return config.conditions(gameState) && Math.random() < config.probability;
+        const conditionMet = config.conditions(gameState);
+        const probabilityMet = Math.random() < config.probability;
+        if (conditionMet && !probabilityMet) {
+          console.log(`🎲 Alert type '${config.type}' condition met but probability check failed (${config.probability * 100}% chance)`);
+        }
+        return conditionMet && probabilityMet;
       }
       return Math.random() < config.probability;
     });

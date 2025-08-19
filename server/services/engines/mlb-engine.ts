@@ -633,7 +633,10 @@ export class MLBEngine extends BaseSportEngine {
           
           if (triggeredAlerts.length > 0) {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
+            console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
             await this.processAlerts(triggeredAlerts, gameState);
+          } else {
+            console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
           }
           
         } catch (gameError) {
