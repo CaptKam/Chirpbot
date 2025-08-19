@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Zap, Bell, Filter, Share2, TriangleAlert, Star, Bot, Volleyball, Dumbbell } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import type { Alert } from "@/types";
+import type { Alert } from "@shared/schema";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All Sports", active: true },
@@ -111,7 +111,7 @@ export default function Alerts() {
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
-            Live Alerts
+            Live Alerts ({alerts.length})
           </h2>
           <Button size="sm" className="bg-chirp-red text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
             <Filter className="w-3 h-3 mr-1" />
@@ -165,6 +165,9 @@ export default function Alerts() {
             <h3 className="text-lg font-bold text-chirp-blue mb-2">No Alerts Found</h3>
             <p className="text-sm text-chirp-dark">
               No alerts match your current filters. Try adjusting your filter settings.
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              Debug: {alerts.length} total alerts loaded, {filteredAlerts.length} after filtering
             </p>
           </Card>
         ) : (
