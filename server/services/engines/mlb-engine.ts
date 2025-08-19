@@ -2,6 +2,9 @@ import { BaseSportEngine, AlertConfig } from './base-engine';
 import { mlbApi } from '../mlb-api';
 import { GameContext, PREDICTION_EVENTS } from '../ai-predictions';
 import { storage } from '../../storage';
+import { getWeatherData } from '../weather';
+import { analyzeAlert } from '../openai';
+import { sendTelegramAlert } from '../telegram';
 
 interface MLBGameState {
   gameId: string;
@@ -463,11 +466,22 @@ export class MLBEngine extends BaseSportEngine {
         return `🚨 BASES LOADED, 2 OUTS! (${scoringProb}% scoring probability) - MAXIMUM PRESSURE! Make or break moment!`;
       
       case 'Runners In Scoring Position':
-        if (runnerPositions.length > 0) {
-          const runnerText = runnerPositions.join(' & ');
-          return `⚡ RUNNER${runnerPositions.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
+        const scoringRunners = [];
+        if (runners.second) scoringRunners.push('2ND');
+        if (runners.third) scoringRunners.push('3RD');
+        
+        if (scoringRunners.length > 0) {
+          const runnerText = scoringRunners.join(' & ');
+          return `⚡ RUNNER${scoringRunners.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
         }
         return `⚡ PRESSURE COOKER! Runners in scoring position, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
+      
+      case 'Runners on Base':
+        if (runnerPositions.length > 0) {
+          const runnerText = runnerPositions.join(' & ');
+          return `🏃 RUNNER${runnerPositions.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
+        }
+        return `🏃 Runners on base, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
       
       case 'Close Game':
         const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
