@@ -166,7 +166,7 @@ export class MLBEngine extends BaseSportEngine {
   
   protected getGameSpecificInfo(gameState: MLBGameState) {
     return {
-      inning: gameState.inning,
+      inning: gameState.inning.toString(),
       inningState: gameState.inningState,
       outs: gameState.outs,
       balls: gameState.balls,

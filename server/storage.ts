@@ -392,7 +392,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
-    const [alert] = await db.insert(alerts).values([insertAlert]).returning();
+    const alertToInsert = {
+      ...insertAlert,
+      gameInfo: {
+        ...insertAlert.gameInfo,
+        quarter: insertAlert.gameInfo.quarter as string | undefined,
+        inning: insertAlert.gameInfo.inning as string | undefined,
+        period: insertAlert.gameInfo.period as string | undefined,
+      },
+      weatherData: insertAlert.weatherData ? {
+        temperature: insertAlert.weatherData.temperature,
+        condition: insertAlert.weatherData.condition,
+        windSpeed: insertAlert.weatherData.windSpeed as number | undefined,
+        windDirection: insertAlert.weatherData.windDirection as string | undefined,
+      } : null,
+    };
+    const [alert] = await db.insert(alerts).values([alertToInsert]).returning();
     return alert;
   }
 
