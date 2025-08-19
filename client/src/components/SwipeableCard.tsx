@@ -64,6 +64,7 @@ export function SwipeableCard({ children, alertId, className, ...props }: Swipea
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
     // Try to open the app first
@@ -106,6 +107,18 @@ export function SwipeableCard({ children, alertId, className, ...props }: Swipea
     }
   };
 
+  const startAutoReturnTimer = () => {
+    // Clear any existing timer
+    if (autoReturnTimeoutRef.current) {
+      clearTimeout(autoReturnTimeoutRef.current);
+    }
+    
+    // Set new timer to return to center after 3 seconds
+    autoReturnTimeoutRef.current = setTimeout(() => {
+      setDragX(0);
+    }, 3000);
+  };
+
   const handleDragEnd = (event: any, info: PanInfo) => {
     const threshold = 100;
     if (Math.abs(info.offset.x) < threshold) {
@@ -113,20 +126,36 @@ export function SwipeableCard({ children, alertId, className, ...props }: Swipea
     } else if (info.offset.x > threshold) {
       // Swiped right - show delete
       setDragX(120);
+      startAutoReturnTimer();
     } else if (info.offset.x < -threshold) {
       // Swiped left - show sportsbooks
       setDragX(-280);
+      startAutoReturnTimer();
     }
   };
 
+  // Clear timer on component unmount
+  React.useEffect(() => {
+    return () => {
+      if (autoReturnTimeoutRef.current) {
+        clearTimeout(autoReturnTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="relative overflow-hidden rounded-xl">
-      {/* Sportsbook Menu (Left Swipe) */}
-      <div className="absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-emerald-500/20 to-transparent backdrop-blur-sm flex items-center justify-end pr-4 space-x-2">
+      {/* Sportsbook Menu (Left Swipe) - Only show when swiped left */}
+      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-emerald-500/20 to-transparent backdrop-blur-sm flex items-center justify-end pr-4 space-x-2 transition-opacity duration-300 ${
+        dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}>
         {sportsbooks.map((sportsbook) => (
           <Button
             key={sportsbook.name}
-            onClick={() => handleSportsbookClick(sportsbook)}
+            onClick={() => {
+              handleSportsbookClick(sportsbook);
+              setDragX(0); // Return to center after click
+            }}
             className="h-12 w-12 p-0 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm ring-1 ring-white/20 transition-all"
             data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
           >
@@ -139,10 +168,15 @@ export function SwipeableCard({ children, alertId, className, ...props }: Swipea
         ))}
       </div>
 
-      {/* Delete Menu (Right Swipe) */}
-      <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent backdrop-blur-sm flex items-center justify-start pl-4">
+      {/* Delete Menu (Right Swipe) - Only show when swiped right */}
+      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent backdrop-blur-sm flex items-center justify-start pl-4 transition-opacity duration-300 ${
+        dragX > 50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}>
         <Button
-          onClick={handleDeleteAlert}
+          onClick={() => {
+            handleDeleteAlert();
+            setDragX(0); // Return to center after click
+          }}
           disabled={isDeleting}
           className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm ring-1 ring-red-500/30 transition-all"
           data-testid={`delete-alert-${alertId}`}
