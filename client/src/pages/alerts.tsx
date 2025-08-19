@@ -32,11 +32,19 @@ export default function Alerts() {
   });
 
   const markAsSeenMutation = useMutation({
-    mutationFn: (alertId: string) => apiRequest(`/api/alerts/${alertId}/seen`, {
-      method: 'PATCH'
-    }),
+    mutationFn: (alertId: string) => 
+      fetch(`/api/alerts/${alertId}/seen`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }).then(res => {
+        if (!res.ok) throw new Error('Failed to mark as seen');
+        return res.json();
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
     }
   });
 
@@ -47,27 +55,16 @@ export default function Alerts() {
     }
   }, [markAsSeenMutation]);
 
-  // Intersection Observer to mark alerts as seen when they come into view
+  // Mark all alerts as seen when the page loads
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const alertId = entry.target.getAttribute('data-alert-id');
-            if (alertId) {
-              markAlertAsSeen(alertId);
-            }
-          }
-        });
-      },
-      { threshold: 0.5, rootMargin: '0px 0px -100px 0px' }
-    );
-
-    // Observe all alert cards
-    const alertCards = document.querySelectorAll('[data-alert-id]');
-    alertCards.forEach(card => observer.observe(card));
-
-    return () => observer.disconnect();
+    if (alerts && alerts.length > 0) {
+      // Mark all unseen alerts as seen
+      alerts.forEach(alert => {
+        if (!alert.seen && !seenAlertsRef.current.has(alert.id)) {
+          markAlertAsSeen(alert.id);
+        }
+      });
+    }
   }, [alerts, markAlertAsSeen]);
 
   // Debug logging

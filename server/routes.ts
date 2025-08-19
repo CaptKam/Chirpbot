@@ -211,6 +211,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark all alerts as seen
+  app.patch("/api/alerts/mark-all-seen", async (req, res) => {
+    try {
+      await storage.markAllAlertsAsSeen();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking all alerts as seen:", error);
+      res.status(500).json({ message: "Failed to mark all alerts as seen" });
+    }
+  });
+
   // Settings routes
   app.get("/api/settings", async (req, res) => {
     try {

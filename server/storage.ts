@@ -32,6 +32,7 @@ export interface IStorage {
   createAlert(alert: InsertAlert): Promise<Alert>;
   markAlertSentToTelegram(id: string): Promise<void>;
   markAlertAsSeen(id: string): Promise<void>;
+  markAllAlertsAsSeen(): Promise<void>;
   getUnseenAlertsCount(): Promise<number>;
 
   // Settings
@@ -280,6 +281,13 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async markAllAlertsAsSeen(): Promise<void> {
+    Array.from(this.alerts.values()).forEach(alert => {
+      alert.seen = true;
+      this.alerts.set(alert.id, alert);
+    });
+  }
+
   async getUnseenAlertsCount(): Promise<number> {
     return Array.from(this.alerts.values()).filter(alert => !alert.seen).length;
   }
@@ -432,6 +440,10 @@ export class DatabaseStorage implements IStorage {
 
   async markAlertAsSeen(id: string): Promise<void> {
     await db.update(alerts).set({ seen: true }).where(eq(alerts.id, id));
+  }
+
+  async markAllAlertsAsSeen(): Promise<void> {
+    await db.update(alerts).set({ seen: true });
   }
 
   async getUnseenAlertsCount(): Promise<number> {
