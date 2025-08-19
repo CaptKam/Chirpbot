@@ -64,6 +64,9 @@ export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
   monitoringInterval = 2000; // 2 seconds for ultra-fast real-time monitoring
   
+  // Track last game state to prevent duplicate alerts
+  private lastGameStates = new Map<string, string>(); // key: gameId-alertType, value: state hash
+  
   alertConfigs: AlertConfig[] = [
     {
       type: "Game Start",
@@ -505,10 +508,69 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
   
+  // Create a hash specific to MLB game state
+  private createMLBStateHash(gameState: MLBGameState, alertType: string): string {
+    // Only track properties relevant to each alert type
+    let relevantState: any = {};
+    
+    // For runner-based alerts, track runners and outs
+    if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('bases')) {
+      relevantState = {
+        runners: gameState.runners,
+        outs: gameState.outs,
+        inning: gameState.inning,
+        inningState: gameState.inningState
+      };
+    }
+    // For inning-based alerts, track inning changes
+    else if (alertType.toLowerCase().includes('inning')) {
+      relevantState = {
+        inning: gameState.inning,
+        inningState: gameState.inningState
+      };
+    }
+    // For score-based alerts
+    else if (alertType.toLowerCase().includes('score') || alertType.toLowerCase().includes('tie') || alertType.toLowerCase().includes('close')) {
+      relevantState = {
+        score: `${gameState.awayScore}-${gameState.homeScore}`,
+        inning: gameState.inning
+      };
+    }
+    // Default: track major game state changes
+    else {
+      relevantState = {
+        inning: gameState.inning,
+        inningState: gameState.inningState,
+        outs: gameState.outs,
+        runners: gameState.runners,
+        score: `${gameState.awayScore}-${gameState.homeScore}`
+      };
+    }
+    
+    return JSON.stringify(relevantState);
+  }
+  
+  // Check if we should trigger this alert (no duplicates)
+  private shouldTriggerMLBAlert(alertType: string, gameState: MLBGameState): boolean {
+    const key = `${gameState.gameId}-${alertType}`;
+    const currentStateHash = this.createMLBStateHash(gameState, alertType);
+    const lastStateHash = this.lastGameStates.get(key);
+    
+    if (lastStateHash === currentStateHash) {
+      // Same game state, don't trigger duplicate alert
+      return false;
+    }
+    
+    // New game state, allow alert and track it
+    this.lastGameStates.set(key, currentStateHash);
+    return true;
+  }
+  
   // Override processAlerts to use dynamic descriptions
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
     for (const alert of triggeredAlerts) {
-      if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
+      // Use MLB-specific duplicate detection
+      if (!this.shouldTriggerMLBAlert(alert.type, gameState)) {
         continue;
       }
       
