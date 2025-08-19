@@ -97,7 +97,7 @@ export default function Signup() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <Zap className="w-8 h-8 text-emerald-400" />
           </div>
           <h1 className="text-3xl font-bold text-slate-100 mb-2">Join ChirpBot</h1>
@@ -105,7 +105,7 @@ export default function Signup() {
         </div>
 
         {/* Signup Form */}
-        <Card className="bg-[#1C2B5E] ring-1 ring-slate-700 border-0 shadow-xl">
+        <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 shadow-xl">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center text-slate-100">Create Account</CardTitle>
             <CardDescription className="text-center text-slate-300">
@@ -127,7 +127,7 @@ export default function Signup() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username"
-                    className="pl-10 h-12 bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500"
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                     disabled={isLoading}
                     autoComplete="username"
                   />
@@ -147,7 +147,7 @@ export default function Signup() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="pl-10 h-12 bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500"
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                     disabled={isLoading}
                     autoComplete="new-password"
                   />
@@ -167,7 +167,7 @@ export default function Signup() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm your password"
-                    className="pl-10 h-12 bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500"
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                     disabled={isLoading}
                     autoComplete="new-password"
                   />

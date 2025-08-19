@@ -162,14 +162,14 @@ export default function Calendar() {
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
-      <header className="bg-[#1C2B5E] border-b border-slate-700 text-slate-100 p-4 flex items-center justify-between">
+      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
             <Zap className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
             <h1 className="text-xl font-black uppercase tracking-wider text-slate-100">ChirpBot</h1>
-            <p className="text-emerald-300 text-xs font-semibold">V2 Alert System</p>
+            <p className="text-emerald-300/80 text-xs font-semibold">V2 Alert System</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -187,7 +187,7 @@ export default function Calendar() {
       </header>
 
       {/* Sport Tabs */}
-      <div className="bg-[#1C2B5E] border-b border-slate-700">
+      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
         <div className="flex overflow-x-auto">
           {SPORTS.map((sport) => (
             <button
@@ -196,7 +196,7 @@ export default function Calendar() {
               data-testid={`sport-tab-${sport.toLowerCase()}`}
               className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
                 activeSport === sport
-                  ? "border-emerald-500 text-emerald-400 bg-[#0F1A32]"
+                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
                   : "border-transparent text-slate-400 hover:text-slate-200"
               }`}
             >
@@ -233,7 +233,7 @@ export default function Calendar() {
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-[#0F1A32] ring-1 ring-slate-700 rounded-xl p-6 min-h-[140px] animate-pulse">
+              <div key={i} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6 min-h-[140px] animate-pulse">
                 {/* Header skeleton */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-4">
@@ -296,10 +296,10 @@ export default function Calendar() {
               return (
                 <Card 
                   key={game.id} 
-                  className={`bg-[#0F1A32] cursor-pointer transition-all duration-200 p-6 min-h-[140px] hover:bg-slate-800 ${
+                  className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] hover:bg-white/10 ${
                     isSelected 
-                      ? 'ring-2 ring-emerald-500 bg-[#1C2B5E] shadow-xl' 
-                      : 'ring-1 ring-slate-700 hover:ring-emerald-500'
+                      ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
+                      : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
                   }`}
                   style={{ borderRadius: '12px' }}
                   onClick={() => toggleGameSelection(game.id)}
@@ -326,7 +326,7 @@ export default function Calendar() {
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Badge className="bg-emerald-500 text-slate-900 px-3 py-1.5 rounded-full text-sm font-bold">
+                      <Badge className="bg-emerald-500/20 text-emerald-300 px-3 py-1.5 rounded-full text-sm font-bold ring-1 ring-emerald-500/30">
                         {game.sport}
                       </Badge>
                       {isSelected && (
@@ -348,10 +348,10 @@ export default function Calendar() {
                       {/* Status badge */}
                       <Badge className={`px-3 py-1.5 rounded-full text-sm font-medium ${
                         game.status === 'live' 
-                          ? 'bg-emerald-500 text-slate-900' 
+                          ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
                           : game.status === 'final'
-                          ? 'bg-slate-700 text-slate-300 ring-1 ring-slate-600'
-                          : 'bg-slate-600 text-slate-300 ring-1 ring-slate-500'
+                          ? 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
+                          : 'bg-slate-600/50 text-slate-300 ring-1 ring-slate-500'
                       }`}>
                         {game.status === 'live' && <Play className="w-4 h-4 mr-1.5" />}
                         {game.status === 'scheduled' && <Clock className="w-4 h-4 mr-1.5" />}
@@ -359,7 +359,7 @@ export default function Calendar() {
                       </Badge>
                       
                       {/* Weather badge */}
-                      <Badge className="bg-slate-600 text-slate-300 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ring-slate-500">
+                      <Badge className="bg-slate-600/50 text-slate-300 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ring-slate-500">
                         {getWeatherIcon(weather.condition)}
                         <span className="ml-1.5">{weather.temperature}°F</span>
                       </Badge>

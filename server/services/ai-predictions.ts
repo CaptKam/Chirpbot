@@ -99,33 +99,22 @@ function generateFallbackPredictions(request: PredictionRequest): PredictionAnal
   
   for (const eventType of eventTypes) {
     let probability = 0;
-    let reasoning = "Statistical analysis based on historical patterns";
+    let reasoning = "Statistical average (AI unavailable)";
     
-    // Enhanced Baseball RISP scoring probabilities
+    // Baseball RISP scoring probabilities based on historical data
     if (eventType === "Scoring Play" && context.sport === "MLB") {
       const runners = context.runnersOn || [];
       const outs = context.outs || 0;
-      const inning = context.inning || 1;
       
-      // Base probability from runners and outs
-      if (runners.includes("3rd") && runners.includes("2nd") && outs === 0) {
-        probability = 85;
-        reasoning = "Runners on 2nd & 3rd with no outs - historically scores 85% of the time";
-      } else if (runners.includes("3rd") && outs < 2) {
-        probability = runners.includes("2nd") ? 75 : 65;
-        reasoning = `Runner on 3rd with ${outs} outs - ${probability}% historical scoring rate`;
+      if (runners.includes("3rd") && outs < 2) {
+        probability = 65;
+        reasoning = "Runner on 3rd with less than 2 outs historically scores 65% of the time";
       } else if (runners.includes("2nd") && outs < 2) {
-        probability = 45 + (outs === 0 ? 10 : 0);
-        reasoning = `Runner on 2nd with ${outs} outs - ${probability}% historical scoring rate`;
+        probability = 45;
+        reasoning = "Runner on 2nd with less than 2 outs historically scores 45% of the time";
       } else if (runners.length > 0) {
-        probability = 25 + (runners.length > 1 ? 10 : 0);
-        reasoning = `${runners.length} runner(s) on base - ${probability}% average scoring rate`;
-      }
-      
-      // Late inning boost
-      if (inning >= 7) {
-        probability = Math.min(95, probability + 8);
-        reasoning += " (late inning boost)";
+        probability = 25;
+        reasoning = "Runners on base score approximately 25% of the time";
       }
     }
     
@@ -211,14 +200,12 @@ Be realistic with probabilities - don't inflate them. Base them on actual statis
     console.error("AI prediction failed:", error);
     
     // Use fallback predictions when AI fails
-    if (error.status === 429 || error.code === 'insufficient_quota' || error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.message?.includes('quota')) {
+    if (error.status === 429 || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       console.log('Using fallback predictions due to AI service unavailability');
       return generateFallbackPredictions(request);
     }
     
-    // For any other error, still return fallback to keep the app working
-    console.log('Using fallback predictions due to AI error');
-    return generateFallbackPredictions(request);
+    return [];
   }
 }
 

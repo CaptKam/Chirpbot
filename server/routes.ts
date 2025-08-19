@@ -464,12 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Start all sport engines (MLB: 10s, NFL: 30s, NBA: 20s, NHL: 15s, Weather: 5min, AI: 15s)
-  try {
-    await alertEngineManager.startAllEngines();
-  } catch (error) {
-    console.error('Error starting alert engines:', error);
-    console.log('Application will continue running with limited alert functionality');
-  }
+  await alertEngineManager.startAllEngines();
 
   // Helper function to generate alert descriptions
   function generateAlertDescription(alertType: string, game: any): string {

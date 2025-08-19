@@ -11,7 +11,7 @@ export function BottomNavigation() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-[#1C2B5E] border-t border-slate-700 shadow-xl z-50">
+    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50">
       <div className="flex">
         {navItems.map(({ path, icon: Icon, label, testId }) => {
           const isActive = location === path || (path === "/dashboard" && location === "/");
