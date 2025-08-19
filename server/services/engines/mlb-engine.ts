@@ -1,0 +1,199 @@
+import { BaseSportEngine, AlertConfig } from './base-engine';
+import { mlbApi } from '../mlb-api';
+
+interface MLBGameState {
+  gameId: string;
+  gamePk: number;
+  inning: number;
+  inningState: 'top' | 'bottom';
+  outs: number;
+  balls: number;
+  strikes: number;
+  runners: {
+    first: boolean;
+    second: boolean;
+    third: boolean;
+  };
+  homeScore: number;
+  awayScore: number;
+  homeTeam: string;
+  awayTeam: string;
+}
+
+export class MLBEngine extends BaseSportEngine {
+  sport = 'MLB';
+  monitoringInterval = 10000; // 10 seconds for high-frequency monitoring
+  
+  alertConfigs: AlertConfig[] = [
+    {
+      type: "Game Start",
+      priority: 40,
+      probability: 1.0,
+      description: "⚾ GAME START - First pitch!",
+      conditions: (state: MLBGameState) => 
+        state.inning === 1 && state.inningState === 'top' && state.outs === 0
+    },
+    {
+      type: "7th Inning Warning", 
+      priority: 50,
+      probability: 1.0,
+      description: "🚨 7TH INNING STRETCH - Critical innings ahead!",
+      conditions: (state: MLBGameState) => 
+        state.inning === 7 && state.inningState === 'top' && state.outs === 0
+    },
+    {
+      type: "Tie Game 9th Inning",
+      priority: 85,
+      probability: 1.0, 
+      description: "🔥 TIE GAME 9TH INNING - FINAL INNING DRAMA!",
+      conditions: (state: MLBGameState) => 
+        state.inning === 9 && state.inningState === 'top' && state.outs === 0 && 
+        state.homeScore === state.awayScore
+    },
+    {
+      type: "Bases Loaded 0 Outs",
+      priority: 95,
+      probability: 1.0,
+      description: "🚨 BASES LOADED, 0 OUTS! - MAXIMUM scoring opportunity!",
+      conditions: (state: MLBGameState) => 
+        state.runners.first && state.runners.second && state.runners.third && state.outs === 0
+    },
+    {
+      type: "Bases Loaded 1 Out", 
+      priority: 85,
+      probability: 1.0,
+      description: "🔥 BASES LOADED, 1 OUT! - High-value scoring chance!",
+      conditions: (state: MLBGameState) => 
+        state.runners.first && state.runners.second && state.runners.third && state.outs === 1
+    },
+    {
+      type: "RISP",
+      priority: 70,
+      probability: 0.8,
+      description: "Runners in scoring position - Key moment!",
+      conditions: (state: MLBGameState) => 
+        (state.runners.second || state.runners.third) && state.outs < 2
+    },
+    {
+      type: "High Pressure Situation", 
+      priority: 80,
+      probability: 0.7,
+      description: "One-run game - High-value betting opportunity",
+      conditions: (state: MLBGameState) => 
+        Math.abs(state.homeScore - state.awayScore) <= 1 && state.inning >= 7
+    },
+    {
+      type: "LateInning",
+      priority: 65,
+      probability: 0.6,
+      description: "Late inning situation - Critical phase",
+      conditions: (state: MLBGameState) => 
+        state.inning >= 8 && Math.abs(state.homeScore - state.awayScore) <= 3
+    }
+  ];
+  
+  extractGameState(liveFeed: any): MLBGameState | null {
+    try {
+      const linescore = liveFeed.liveData.linescore;
+      const gameData = liveFeed.gameData;
+      
+      return {
+        gameId: `mlb-${gameData.game.pk}`,
+        gamePk: gameData.game.pk,
+        inning: linescore.currentInning || 1,
+        inningState: linescore.inningState === 'Top' ? 'top' : 'bottom',
+        outs: linescore.outs || 0,
+        balls: linescore.balls || 0,
+        strikes: linescore.strikes || 0,
+        runners: {
+          first: !!linescore.offense?.first,
+          second: !!linescore.offense?.second, 
+          third: !!linescore.offense?.third,
+        },
+        homeScore: linescore.teams.home.runs || 0,
+        awayScore: linescore.teams.away.runs || 0,
+        homeTeam: gameData.teams.home.name,
+        awayTeam: gameData.teams.away.name,
+      };
+    } catch (error) {
+      console.error('Error extracting MLB game state:', error);
+      return null;
+    }
+  }
+  
+  protected getGameSpecificInfo(gameState: MLBGameState) {
+    return {
+      inning: gameState.inning,
+      inningState: gameState.inningState,
+      outs: gameState.outs,
+      balls: gameState.balls,
+      strikes: gameState.strikes,
+      runners: gameState.runners,
+      priority: 85,
+      scoringProbability: this.calculateScoringProbability(gameState)
+    };
+  }
+  
+  private calculateScoringProbability(gameState: MLBGameState): number {
+    let probability = 30; // Base probability
+    
+    // Adjust based on runners
+    if (gameState.runners.first) probability += 10;
+    if (gameState.runners.second) probability += 20;  
+    if (gameState.runners.third) probability += 25;
+    
+    // Adjust based on outs
+    if (gameState.outs === 0) probability += 20;
+    else if (gameState.outs === 1) probability += 10;
+    else probability -= 10;
+    
+    // Late inning pressure
+    if (gameState.inning >= 8) probability += 15;
+    
+    return Math.min(95, Math.max(5, probability));
+  }
+  
+  async startMonitoring() {
+    console.log(`🔴 ${this.sport} Engine STARTED - ${this.monitoringInterval/1000}s monitoring`);
+    
+    setInterval(async () => {
+      try {
+        const settings = await storage.getSettingsBySport(this.sport);
+        if (!settings?.aiEnabled) {
+          return; // Skip if disabled
+        }
+
+        const liveGames = await mlbApi.getLiveGames();
+        if (liveGames.length === 0) return;
+
+        console.log(`🔍 Checking ${liveGames.length} live ${this.sport} games...`);
+
+        for (const game of liveGames) {
+          try {
+            if (game.gameState !== 'Live') continue;
+            
+            const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
+            const gameState = this.extractGameState(liveFeed);
+            
+            if (!gameState) continue;
+            
+            const triggeredAlerts = this.checkAlertConditions(gameState);
+            
+            if (triggeredAlerts.length > 0) {
+              console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
+              await this.processAlerts(triggeredAlerts, gameState);
+            }
+            
+          } catch (gameError) {
+            console.error(`Error processing ${this.sport} game:`, gameError);
+          }
+        }
+        
+      } catch (error) {
+        console.error(`${this.sport} monitoring error:`, error);
+      }
+    }, this.monitoringInterval);
+  }
+}
+
+export const mlbEngine = new MLBEngine();
