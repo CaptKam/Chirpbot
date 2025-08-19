@@ -45,11 +45,33 @@ export default function Alerts() {
   };
 
   const getAlertIcon = (type: string) => {
-    return TriangleAlert;
+    switch (type.toLowerCase()) {
+      case "risp":
+      case "homerun":
+      case "lateinning":
+        return TriangleAlert;
+      case "redzone":
+        return Volleyball;
+      case "clutchtime":
+        return Dumbbell;
+      default:
+        return TriangleAlert;
+    }
   };
 
   const getAlertColor = (type: string) => {
-    return "bg-red-100 text-red-800 border-red-500";
+    switch (type.toLowerCase()) {
+      case "risp":
+      case "homerun":
+      case "lateinning":
+        return "bg-red-100 text-red-800 border-red-500";
+      case "redzone":
+        return "bg-yellow-100 text-yellow-800 border-yellow-500";
+      case "clutchtime":
+        return "bg-green-100 text-green-800 border-green-500";
+      default:
+        return "bg-red-100 text-red-800 border-red-500";
+    }
   };
 
   const filteredAlerts = Array.isArray(alerts) ? alerts.filter(alert => {
@@ -88,7 +110,7 @@ export default function Alerts() {
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="mb-3">
           <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
-            Live Alerts
+            Live Alerts ({alerts.length})
           </h2>
         </div>
         <div className="flex space-x-2 overflow-x-auto">
