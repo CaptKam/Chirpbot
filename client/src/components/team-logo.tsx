@@ -26,15 +26,15 @@ const teamNameToAbbr: Record<string, string> = {
   'Seattle Mariners': 'SEA',
   'Baltimore Orioles': 'BAL',
   'Atlanta Braves': 'ATL',
-  'Chicago White Sox': 'CWS',
   'Kansas City Royals': 'KC',
   'Texas Rangers': 'TEX',
   'Colorado Rockies': 'COL',
   'Los Angeles Angels': 'LAA',
   'Cincinnati Reds': 'CIN',
-  'Arizona Diamondbacks': 'AZ',
+  'Arizona Diamondbacks': 'ARI',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
+  'Chicago White Sox': 'CHW',
   
   // NFL Teams
   'Kansas City Chiefs': 'KC',
@@ -53,6 +53,8 @@ const teamNameToAbbr: Record<string, string> = {
   'Denver Broncos': 'DEN',
   'Las Vegas Raiders': 'LV',
   'Los Angeles Chargers': 'LAC',
+  'Washington Commanders': 'WAS',
+  'Dallas Cowboys': 'DAL',
   
   // NBA Teams  
   'Los Angeles Lakers': 'LAL',
@@ -300,7 +302,13 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   const selectedLogo = logoMap[teamAbbr];
   
   if (!selectedLogo) {
-    console.log(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
+    // Only log once per team to avoid spam
+    const globalAny = globalThis as any;
+    if (!globalAny.loggedMissingLogos) globalAny.loggedMissingLogos = new Set();
+    if (!globalAny.loggedMissingLogos.has(teamAbbr)) {
+      console.log(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
+      globalAny.loggedMissingLogos.add(teamAbbr);
+    }
     return defaultLogo;
   }
   

@@ -105,6 +105,26 @@ export class MemStorage implements IStorage {
         aiConfidenceThreshold: 85,
         telegramEnabled: true,
         pushNotificationsEnabled: true,
+        // MLB Alert Toggles
+        gameStateAlerts: sport === "MLB",
+        rispAlerts: sport === "MLB",
+        weatherAlerts: sport === "MLB",
+        batterAlerts: sport === "MLB",
+        // NFL Alert Toggles
+        redZoneAlerts: sport === "NFL",
+        twoMinuteAlerts: sport === "NFL",
+        fourthDownAlerts: sport === "NFL",
+        turnoverAlerts: sport === "NFL",
+        // NBA Alert Toggles
+        clutchTimeAlerts: sport === "NBA",
+        overtimeAlerts: sport === "NBA",
+        leadChangeAlerts: sport === "NBA",
+        closeGameAlerts: sport === "NBA",
+        // NHL Alert Toggles
+        powerPlayAlerts: sport === "NHL",
+        emptyNetAlerts: sport === "NHL",
+        thirdPeriodAlerts: sport === "NHL",
+        finalMinutesAlerts: sport === "NHL",
       });
     });
   }
@@ -222,7 +242,12 @@ export class MemStorage implements IStorage {
         inning: insertAlert.gameInfo.inning as string | undefined,
         period: insertAlert.gameInfo.period as string | undefined,
       },
-      weatherData: insertAlert.weatherData || null
+      weatherData: insertAlert.weatherData ? {
+        temperature: insertAlert.weatherData.temperature,
+        condition: insertAlert.weatherData.condition,
+        windSpeed: insertAlert.weatherData.windSpeed as number | undefined,
+        windDirection: insertAlert.weatherData.windDirection as string | undefined,
+      } : null
     };
     this.alerts.set(id, alert);
     return alert;
@@ -258,7 +283,24 @@ export class MemStorage implements IStorage {
       aiEnabled: insertSettings.aiEnabled ?? true,
       aiConfidenceThreshold: insertSettings.aiConfidenceThreshold ?? 85,
       telegramEnabled: insertSettings.telegramEnabled ?? true,
-      pushNotificationsEnabled: insertSettings.pushNotificationsEnabled ?? true
+      pushNotificationsEnabled: insertSettings.pushNotificationsEnabled ?? true,
+      // Ensure all required boolean fields have defaults
+      gameStateAlerts: insertSettings.gameStateAlerts ?? true,
+      rispAlerts: insertSettings.rispAlerts ?? true,
+      weatherAlerts: insertSettings.weatherAlerts ?? true,
+      batterAlerts: insertSettings.batterAlerts ?? true,
+      redZoneAlerts: insertSettings.redZoneAlerts ?? true,
+      twoMinuteAlerts: insertSettings.twoMinuteAlerts ?? true,
+      fourthDownAlerts: insertSettings.fourthDownAlerts ?? true,
+      turnoverAlerts: insertSettings.turnoverAlerts ?? true,
+      clutchTimeAlerts: insertSettings.clutchTimeAlerts ?? true,
+      overtimeAlerts: insertSettings.overtimeAlerts ?? true,
+      leadChangeAlerts: insertSettings.leadChangeAlerts ?? true,
+      closeGameAlerts: insertSettings.closeGameAlerts ?? true,
+      powerPlayAlerts: insertSettings.powerPlayAlerts ?? true,
+      emptyNetAlerts: insertSettings.emptyNetAlerts ?? true,
+      thirdPeriodAlerts: insertSettings.thirdPeriodAlerts ?? true,
+      finalMinutesAlerts: insertSettings.finalMinutesAlerts ?? true,
     };
     this.settings.set(settings.sport, settings);
     return settings;
@@ -369,7 +411,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
-    const [alert] = await db.insert(alerts).values(insertAlert).returning();
+    // Properly cast gameInfo properties to ensure type compatibility
+    const alertData = {
+      ...insertAlert,
+      gameInfo: {
+        ...insertAlert.gameInfo,
+        quarter: insertAlert.gameInfo.quarter as string | undefined,
+        inning: insertAlert.gameInfo.inning as string | undefined,
+        period: insertAlert.gameInfo.period as string | undefined,
+      },
+      weatherData: insertAlert.weatherData ? {
+        temperature: insertAlert.weatherData.temperature,
+        condition: insertAlert.weatherData.condition,
+        windSpeed: insertAlert.weatherData.windSpeed as number | undefined,
+        windDirection: insertAlert.weatherData.windDirection as string | undefined,
+      } : null
+    };
+    const [alert] = await db.insert(alerts).values([alertData]).returning();
     return alert;
   }
 
@@ -379,7 +437,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAlert(id: string): Promise<boolean> {
     const result = await db.delete(alerts).where(eq(alerts.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Settings methods
