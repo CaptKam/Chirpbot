@@ -5,6 +5,7 @@ import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
+import { scoreSituation } from './mlb-scorer';
 
 interface MLBGameState {
   gameId: string;
@@ -566,7 +567,7 @@ export class MLBEngine extends BaseSportEngine {
     return true;
   }
   
-  // Override processAlerts to use dynamic descriptions
+  // Override processAlerts to use dynamic descriptions and composite scoring
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
     for (const alert of triggeredAlerts) {
       // Use MLB-specific duplicate detection
@@ -576,6 +577,29 @@ export class MLBEngine extends BaseSportEngine {
       
       try {
         const weatherData = await getWeatherData(gameState.homeTeam);
+        
+        // Calculate composite score for enhanced priority
+        const situationScore = scoreSituation({
+          outs: gameState.outs as 0|1|2,
+          runners: gameState.runners,
+          batter: gameState.currentBatter,
+          onDeck: undefined, // TODO: Add on-deck batter data
+          pitcher: gameState.currentPitcher,
+          weather: weatherData ? {
+            windSpeed: weatherData.windSpeed,
+            windDirection: weatherData.windDirection
+          } : undefined,
+          park: { hrFactor: 1.00, runFactor: 1.00 }, // TODO: Add park factors
+          game: {
+            inning: gameState.inning,
+            inningState: gameState.inningState,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore
+          }
+        });
+        
+        // Use enhanced priority from composite score
+        const enhancedPriority = Math.max(alert.priority, situationScore.priority);
         
         // Generate dynamic description based on actual game state
         const dynamicDescription = this.generateDynamicDescription(alert, gameState);
@@ -593,19 +617,22 @@ export class MLBEngine extends BaseSportEngine {
             status: 'Live',
             awayTeam: gameState.awayTeam,
             homeTeam: gameState.homeTeam,
-            ...this.getGameSpecificInfo(gameState)
+            ...this.getGameSpecificInfo(gameState),
+            // Add composite scoring data
+            compositeScore: situationScore.scores,
+            enhancedPriority: enhancedPriority
           },
           weatherData,
           aiContext: undefined as string | undefined,
-          aiConfidence: alert.priority,
+          aiConfidence: enhancedPriority,
           sentToTelegram: false,
         };
 
         // Get settings for this sport
         const settings = await storage.getSettingsBySport(this.sport);
         
-        // Get AI analysis for high-priority alerts
-        if (alert.priority >= 70 && settings?.aiEnabled) {
+        // Get AI analysis for high-priority alerts (using enhanced priority)
+        if (enhancedPriority >= 70 && settings?.aiEnabled) {
           const analysis = await analyzeAlert(
             alertData.type,
             alertData.sport,
@@ -618,8 +645,8 @@ export class MLBEngine extends BaseSportEngine {
 
         const createdAlert = await storage.createAlert(alertData);
 
-        // Send to Telegram for high-priority alerts
-        if (alert.priority >= 75 && settings?.telegramEnabled) {
+        // Send to Telegram for high-priority alerts (using enhanced priority)
+        if (enhancedPriority >= 75 && settings?.telegramEnabled) {
           const telegramConfig = {
             botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
             chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
@@ -634,7 +661,7 @@ export class MLBEngine extends BaseSportEngine {
           }
         }
 
-        console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${alert.priority})`);
+        console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${alert.priority} → Enhanced: ${enhancedPriority}) - Composite: ${situationScore.scores.composite}`);
         
         // Broadcast to clients if callback exists
         if (this.onAlert) {
