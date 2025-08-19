@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Zap, Bell, TriangleAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
@@ -17,11 +18,57 @@ const FILTER_OPTIONS = [
 
 export default function Alerts() {
   const [activeFilters, setActiveFilters] = useState(["all"]);
+  const queryClient = useQueryClient();
+  const seenAlertsRef = useRef(new Set<string>());
 
   const { data: alerts = [], isLoading, error } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
     refetchInterval: 30000, // Refetch every 30 seconds for live updates
   });
+
+  const { data: unseenCount = { count: 0 } } = useQuery({
+    queryKey: ["/api/alerts/unseen/count"],
+    refetchInterval: 30000,
+  });
+
+  const markAsSeenMutation = useMutation({
+    mutationFn: (alertId: string) => apiRequest(`/api/alerts/${alertId}/seen`, {
+      method: 'PATCH'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
+    }
+  });
+
+  const markAlertAsSeen = useCallback((alertId: string) => {
+    if (!seenAlertsRef.current.has(alertId)) {
+      seenAlertsRef.current.add(alertId);
+      markAsSeenMutation.mutate(alertId);
+    }
+  }, [markAsSeenMutation]);
+
+  // Intersection Observer to mark alerts as seen when they come into view
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const alertId = entry.target.getAttribute('data-alert-id');
+            if (alertId) {
+              markAlertAsSeen(alertId);
+            }
+          }
+        });
+      },
+      { threshold: 0.5, rootMargin: '0px 0px -100px 0px' }
+    );
+
+    // Observe all alert cards
+    const alertCards = document.querySelectorAll('[data-alert-id]');
+    alertCards.forEach(card => observer.observe(card));
+
+    return () => observer.disconnect();
+  }, [alerts, markAlertAsSeen]);
 
   // Debug logging
   console.log("Alerts loading:", isLoading);
@@ -109,9 +156,16 @@ export default function Alerts() {
       {/* Filters */}
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="mb-3">
-          <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
-            Live Alerts ({alerts.length})
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
+              Live Alerts ({alerts.length})
+            </h2>
+            {unseenCount.count > 0 && (
+              <Badge className="bg-red-500 text-white px-2 py-1 text-xs font-bold">
+                {unseenCount.count} NEW
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex space-x-2 overflow-x-auto">
           {FILTER_OPTIONS.map((option) => (
@@ -171,8 +225,11 @@ export default function Alerts() {
             return (
               <Card
                 key={alert.id}
-                className="bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-4 hover:shadow-lg transition-shadow"
+                className={`bg-white rounded-xl shadow-sm border-l-4 p-4 hover:shadow-lg transition-shadow ${
+                  alert.seen ? 'border-gray-300 opacity-75' : 'border-red-500'
+                }`}
                 data-testid={`alert-card-${alert.id}`}
+                data-alert-id={alert.id}
               >
                 {/* Quick Impact Header */}
                 <div className="text-center mb-2">

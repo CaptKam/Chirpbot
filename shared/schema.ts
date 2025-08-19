@@ -43,6 +43,7 @@ export const alerts = pgTable("alerts", {
   }>(),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   sentToTelegram: boolean("sent_to_telegram").notNull().default(false),
+  seen: boolean("seen").notNull().default(false),
 });
 
 export const settings = pgTable("settings", {
@@ -101,6 +102,7 @@ export const insertTeamSchema = createInsertSchema(teams).omit({
 export const insertAlertSchema = createInsertSchema(alerts).omit({
   id: true,
   timestamp: true,
+  seen: true,
 });
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({

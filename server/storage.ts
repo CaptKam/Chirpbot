@@ -31,6 +31,8 @@ export interface IStorage {
   getRecentAlerts(limit?: number): Promise<Alert[]>;
   createAlert(alert: InsertAlert): Promise<Alert>;
   markAlertSentToTelegram(id: string): Promise<void>;
+  markAlertAsSeen(id: string): Promise<void>;
+  getUnseenAlertsCount(): Promise<number>;
 
   // Settings
   getSettingsBySport(sport: string): Promise<Settings | undefined>;
@@ -229,6 +231,7 @@ export class MemStorage implements IStorage {
       id, 
       timestamp: new Date(),
       sentToTelegram: false,
+      seen: false,
       aiContext: insertAlert.aiContext || null,
       aiConfidence: insertAlert.aiConfidence || null,
       gameInfo: {
@@ -267,6 +270,18 @@ export class MemStorage implements IStorage {
       alert.sentToTelegram = true;
       this.alerts.set(id, alert);
     }
+  }
+
+  async markAlertAsSeen(id: string): Promise<void> {
+    const alert = this.alerts.get(id);
+    if (alert) {
+      alert.seen = true;
+      this.alerts.set(id, alert);
+    }
+  }
+
+  async getUnseenAlertsCount(): Promise<number> {
+    return Array.from(this.alerts.values()).filter(alert => !alert.seen).length;
   }
 
   // Settings methods
@@ -413,6 +428,15 @@ export class DatabaseStorage implements IStorage {
 
   async markAlertSentToTelegram(id: string): Promise<void> {
     await db.update(alerts).set({ sentToTelegram: true }).where(eq(alerts.id, id));
+  }
+
+  async markAlertAsSeen(id: string): Promise<void> {
+    await db.update(alerts).set({ seen: true }).where(eq(alerts.id, id));
+  }
+
+  async getUnseenAlertsCount(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` }).from(alerts).where(eq(alerts.seen, false));
+    return Number(result[0]?.count || 0);
   }
 
   // Settings methods

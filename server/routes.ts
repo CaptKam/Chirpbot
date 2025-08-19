@@ -188,6 +188,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark alert as seen
+  app.patch("/api/alerts/:id/seen", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.markAlertAsSeen(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking alert as seen:", error);
+      res.status(500).json({ message: "Failed to mark alert as seen" });
+    }
+  });
+
+  // Get unseen alerts count
+  app.get("/api/alerts/unseen/count", async (req, res) => {
+    try {
+      const count = await storage.getUnseenAlertsCount();
+      res.json({ count });
+    } catch (error) {
+      console.error("Error getting unseen alerts count:", error);
+      res.status(500).json({ message: "Failed to get unseen alerts count" });
+    }
+  });
+
   // Settings routes
   app.get("/api/settings", async (req, res) => {
     try {
