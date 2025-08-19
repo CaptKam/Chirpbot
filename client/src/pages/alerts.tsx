@@ -35,19 +35,13 @@ export default function Alerts() {
     mutationFn: (alertId: string) => apiRequest(`/api/alerts/${alertId}/seen`, {
       method: 'PATCH'
     }),
-    onSuccess: (data, alertId) => {
-      console.log('✅ Marked alert as seen:', alertId);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-    },
-    onError: (error, alertId) => {
-      console.error('❌ Failed to mark alert as seen:', alertId, error);
     }
   });
 
   const markAlertAsSeen = useCallback((alertId: string) => {
     if (!seenAlertsRef.current.has(alertId)) {
-      console.log('👀 Marking alert as seen:', alertId);
       seenAlertsRef.current.add(alertId);
       markAsSeenMutation.mutate(alertId);
     }
@@ -55,34 +49,25 @@ export default function Alerts() {
 
   // Intersection Observer to mark alerts as seen when they come into view
   useEffect(() => {
-    if (!alerts || alerts.length === 0) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const alertId = entry.target.getAttribute('data-alert-id');
             if (alertId) {
-              console.log('📱 Alert came into view:', alertId);
               markAlertAsSeen(alertId);
             }
           }
         });
       },
-      { threshold: 0.3, rootMargin: '0px 0px -50px 0px' }
+      { threshold: 0.5, rootMargin: '0px 0px -100px 0px' }
     );
 
-    // Use a timeout to ensure DOM is ready
-    const timeoutId = setTimeout(() => {
-      const alertCards = document.querySelectorAll('[data-alert-id]');
-      console.log('🔍 Found alert cards to observe:', alertCards.length);
-      alertCards.forEach(card => observer.observe(card));
-    }, 100);
+    // Observe all alert cards
+    const alertCards = document.querySelectorAll('[data-alert-id]');
+    alertCards.forEach(card => observer.observe(card));
 
-    return () => {
-      clearTimeout(timeoutId);
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [alerts, markAlertAsSeen]);
 
   // Debug logging
@@ -90,7 +75,6 @@ export default function Alerts() {
   console.log("Alerts error:", error);
   console.log("Alerts data:", alerts);
   console.log("Alerts length:", alerts?.length);
-  console.log("Unseen count:", unseenCount);
 
   const toggleFilter = (filterId: string) => {
     if (filterId === "all") {
@@ -180,23 +164,6 @@ export default function Alerts() {
               <Badge className="bg-red-500 text-white px-2 py-1 text-xs font-bold">
                 {unseenCount.count} NEW
               </Badge>
-            )}
-            {unseenCount.count > 0 && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => {
-                  // Mark all visible alerts as seen for testing
-                  alerts.slice(0, 10).forEach(alert => {
-                    if (!alert.seen) {
-                      markAlertAsSeen(alert.id);
-                    }
-                  });
-                }}
-                className="ml-2 text-xs"
-              >
-                Mark Top 10 as Seen
-              </Button>
             )}
           </div>
         </div>
