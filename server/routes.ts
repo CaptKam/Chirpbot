@@ -562,26 +562,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Only generate predictive alerts, not post-event alerts
         if (game.sport === 'MLB') {
-          // BASES LOADED detection (ultimate betting opportunity)
+          // CONSERVATIVE RISP detection - only when we can be confident
           const recentScoringActivity = Math.abs(totalScore - (previousState.totalScore || 0)) > 0;
-          const suddenScoringBurst = Math.abs(totalScore - (previousState.totalScore || 0)) >= 2;
           const isCloseGame = scoreDiff <= 2;
           const hasScoringPotential = totalScore >= 2 && totalScore <= 8;
           
-          // Bases loaded detection (highest priority)
-          if (suddenScoringBurst && isCloseGame && hasScoringPotential) {
-            const timeSinceLastBasesLoadedAlert = Date.now() - (previousState.lastBasesLoadedAlert || 0);
-            if (timeSinceLastBasesLoadedAlert > 300000) { // 5 minutes between bases loaded alerts
-              alertType = "BASES LOADED";
-              alertDescription = `BASES LOADED! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - MAXIMUM scoring opportunity!`;
-            }
-          }
-          // Standard RISP detection
-          else if (recentScoringActivity && isCloseGame && hasScoringPotential) {
+          // Only generate RISP alerts for recent scoring in close games
+          if (recentScoringActivity && isCloseGame && hasScoringPotential) {
             const timeSinceLastRispAlert = Date.now() - (previousState.lastRispAlert || 0);
             if (timeSinceLastRispAlert > 420000) { // 7 minutes between RISP alerts
-              alertType = "RISP Opportunity";
-              alertDescription = `Runners likely in scoring position! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Prime RBI opportunity developing`;
+              alertType = "High Scoring Potential";
+              alertDescription = `Active scoring situation! ${game.awayTeam.name} ${awayScore} - ${homeScore} ${game.homeTeam.name} - Betting opportunity developing`;
             }
           }
           // Close game pressure situations
@@ -665,8 +656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             awayScore, 
             totalScore,
             lastAlertTime: Date.now(),
-            lastRispAlert: alertType === "RISP Opportunity" ? Date.now() : (previousState.lastRispAlert || 0),
-            lastBasesLoadedAlert: alertType === "BASES LOADED" ? Date.now() : (previousState.lastBasesLoadedAlert || 0)
+            lastRispAlert: alertType === "High Scoring Potential" ? Date.now() : (previousState.lastRispAlert || 0)
           };
           gameStates.set(gameId, newState);
         } else {
@@ -676,8 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             awayScore, 
             totalScore,
             lastAlertTime: previousState.lastAlertTime,
-            lastRispAlert: previousState.lastRispAlert || 0,
-            lastBasesLoadedAlert: previousState.lastBasesLoadedAlert || 0
+            lastRispAlert: previousState.lastRispAlert || 0
           });
         }
       }
