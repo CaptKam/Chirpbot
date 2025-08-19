@@ -160,7 +160,7 @@ export default function Alerts() {
         <div className="mb-3">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
-              Live Alerts ({alerts.length})
+              Live Alerts
             </h2>
             {unseenCount && unseenCount.count > 0 && (
               <Badge className="bg-red-500 text-white px-2 py-1 text-xs font-bold">
