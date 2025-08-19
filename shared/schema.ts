@@ -34,6 +34,46 @@ export const alerts = pgTable("alerts", {
     inning?: string;
     period?: string;
     status: string;
+    // Enhanced MLB-specific data for rich notifications
+    inningState?: 'top' | 'bottom';
+    outs?: number;
+    balls?: number;
+    strikes?: number;
+    runners?: {
+      first: boolean;
+      second: boolean;
+      third: boolean;
+    };
+    score?: {
+      home: number;
+      away: number;
+    };
+    priority?: number;
+    scoringProbability?: number;
+    currentBatter?: {
+      id: number;
+      name: string;
+      batSide: string;
+      stats: {
+        avg: number;
+        hr: number;
+        rbi: number;
+        obp: number;
+        ops: number;
+      };
+    };
+    currentPitcher?: {
+      id: number;
+      name: string;
+      throwHand: string;
+      stats: {
+        era: number;
+        whip: number;
+        strikeOuts: number;
+        wins: number;
+        losses: number;
+      };
+    };
   }>().notNull(),
   weatherData: jsonb("weather_data").$type<{
     temperature: number;

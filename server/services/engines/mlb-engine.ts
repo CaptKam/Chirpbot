@@ -364,7 +364,32 @@ export class MLBEngine extends BaseSportEngine {
       strikes: gameState.strikes,
       runners: gameState.runners,
       priority: 85,
-      scoringProbability: this.calculateScoringProbability(gameState)
+      scoringProbability: this.calculateScoringProbability(gameState),
+      // Include current matchup for team planning context
+      currentBatter: gameState.currentBatter ? {
+        id: gameState.currentBatter.id,
+        name: gameState.currentBatter.name,
+        batSide: gameState.currentBatter.batSide,
+        stats: {
+          avg: gameState.currentBatter.stats.avg,
+          hr: gameState.currentBatter.stats.hr,
+          rbi: gameState.currentBatter.stats.rbi,
+          obp: gameState.currentBatter.stats.obp,
+          ops: gameState.currentBatter.stats.ops
+        }
+      } : undefined,
+      currentPitcher: gameState.currentPitcher ? {
+        id: gameState.currentPitcher.id,
+        name: gameState.currentPitcher.name,
+        throwHand: gameState.currentPitcher.throwHand,
+        stats: {
+          era: gameState.currentPitcher.stats.era,
+          whip: gameState.currentPitcher.stats.whip,
+          strikeOuts: gameState.currentPitcher.stats.strikeOuts,
+          wins: gameState.currentPitcher.stats.wins,
+          losses: gameState.currentPitcher.stats.losses
+        }
+      } : undefined
     };
   }
 

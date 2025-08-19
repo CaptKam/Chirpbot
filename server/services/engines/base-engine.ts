@@ -35,6 +35,7 @@ export abstract class BaseSportEngine implements SportEngine {
   protected readonly ALERT_COOLDOWN = 300000; // 5 minutes
   
   abstract extractGameState(apiData: any): any;
+  abstract monitor(): Promise<void>;
   
   async checkAlertConditions(gameState: any): Promise<AlertConfig[]> {
     // Get settings to check which alert types are enabled
