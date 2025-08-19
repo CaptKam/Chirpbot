@@ -173,12 +173,6 @@ export default function Calendar() {
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <div className="bg-chirp-alert-red px-3 py-1 rounded-full">
-            <span className="text-white text-xs font-bold uppercase tracking-wider">
-              <div className="w-1.5 h-1.5 bg-white opacity-75 rounded-full inline-block mr-1 animate-pulse"></div>
-              LIVE
-            </span>
-          </div>
           {!isAuthLoading && (
             isAuthenticated ? (
               <Button 

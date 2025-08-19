@@ -155,12 +155,6 @@ export default function Settings() {
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <div className="bg-chirp-red px-3 py-1 rounded-full">
-            <span className="text-white text-xs font-bold uppercase tracking-wide">
-              <div className="w-1.5 h-1.5 bg-red-300 rounded-full inline-block mr-1 animate-pulse"></div>
-              LIVE
-            </span>
-          </div>
           <Link href="/alerts">
             <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
               <Bell className="w-7 h-7" />
