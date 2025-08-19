@@ -70,10 +70,11 @@ Preferred communication style: Simple, everyday language.
 - **Location-based Data**: City-specific weather conditions for game context
 
 ## Sports Data
-- **ESPN API Integration**: Real-time sports data from ESPN's public API endpoints
+- **MLB.com Official API**: Primary data source for MLB games from statsapi.mlb.com (no API key required)
+- **ESPN API Integration**: Real-time sports data for NFL, NBA, NHL from ESPN's public API endpoints
 - **Live Game Filtering**: Alert generation only occurs for games that are actually happening
-- **Multi-sport Support**: MLB, NFL, NBA, NHL event types and monitoring
-- **Game State Tracking**: Real-time game status and scoring updates from authentic sources
+- **Multi-sport Support**: MLB (official API), NFL, NBA, NHL event types and monitoring
+- **Game State Tracking**: Real-time game status, scores, innings, and detailed game information from authentic sources
 
 ## Infrastructure Services
 - **Neon Database**: PostgreSQL hosting with serverless architecture (Migration completed August 18, 2025)

@@ -120,16 +120,25 @@ export interface Game {
     id: string;
     name: string;
     abbreviation: string;
+    score?: number;
   };
   awayTeam: {
     id: string;
     name: string;
     abbreviation: string;
+    score?: number;
   };
   startTime: string;
   status: 'scheduled' | 'live' | 'final';
   venue?: string;
   isSelected?: boolean;
+  isLive?: boolean;
+  isCompleted?: boolean;
+  // MLB-specific fields
+  inning?: number;
+  inningState?: string;
+  gameState?: string;
+  gamePk?: number;
 }
 
 export interface GameDay {

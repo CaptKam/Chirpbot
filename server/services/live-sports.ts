@@ -1,4 +1,5 @@
 import type { Game, GameDay } from "@shared/schema";
+import { mlbApi } from "./mlb-api";
 
 // ESPN API Interfaces
 interface ESPNGame {
@@ -230,23 +231,48 @@ class LiveSportsService {
     ];
   }
 
+  /**
+   * Get only MLB games from official MLB.com API
+   */
+  async getMLBGames(date?: string): Promise<GameDay> {
+    try {
+      const mlbGames = await mlbApi.getTodaysGames();
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      
+      console.log(`Fetched ${mlbGames.length} MLB games from official MLB.com API`);
+      
+      return {
+        date: targetDate,
+        games: mlbGames,
+      };
+    } catch (error) {
+      console.error('Error fetching MLB games:', error);
+      throw error;
+    }
+  }
+
   async getTodaysGames(sport?: string): Promise<GameDay> {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     let games: Game[] = [];
 
     if (!sport) {
-      // Fetch all sports simultaneously
+      // Use official MLB API for MLB games, ESPN for others
       const [mlbGames, nflGames, nbaGames, nhlGames] = await Promise.all([
-        this.fetchESPNGames('MLB'),
+        mlbApi.getTodaysGames(),  // Official MLB.com API
         this.fetchESPNGames('NFL'),
         this.fetchESPNGames('NBA'),
         this.fetchESPNGames('NHL'),
       ]);
       games = [...mlbGames, ...nflGames, ...nbaGames, ...nhlGames];
+      console.log(`Fetched ${games.length} total games (${mlbGames.length} MLB from official API)`);
+    } else if (sport.toUpperCase() === 'MLB') {
+      // Use official MLB API for MLB-only requests
+      games = await mlbApi.getTodaysGames();
+      console.log(`Fetched ${games.length} MLB games from official MLB.com API`);
     } else {
-      // Fetch specific sport
-      const sportCode = sport.toUpperCase() as 'MLB' | 'NFL' | 'NBA' | 'NHL';
-      if (['MLB', 'NFL', 'NBA', 'NHL'].includes(sportCode)) {
+      // Use ESPN for other sports
+      const sportCode = sport.toUpperCase() as 'NFL' | 'NBA' | 'NHL';
+      if (['NFL', 'NBA', 'NHL'].includes(sportCode)) {
         games = await this.fetchESPNGames(sportCode);
       } else {
         console.warn(`Unknown sport: ${sport}`);
