@@ -79,7 +79,8 @@ export async function testTelegramConnection(config: TelegramConfig): Promise<bo
     }
 
     // Then send actual test message
-    const testMessage = `✅ **ChirpBot Test Message**
+    console.log(`Sending test message to Chat ID: ${chatId}`);
+    const testMessage = `✅ ChirpBot Test Message
 
 Your Telegram notifications are working perfectly! 🎉
 
@@ -87,16 +88,19 @@ You'll now receive live sports alerts here.
 
 #ChirpBot #TestConnection`;
 
+    const requestBody = {
+      chat_id: chatId,
+      text: testMessage,
+    };
+    
+    console.log('Sending Telegram request:', JSON.stringify(requestBody, null, 2));
+
     const messageResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: testMessage,
-        parse_mode: 'Markdown',
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     const messageResult = await messageResponse.json();
