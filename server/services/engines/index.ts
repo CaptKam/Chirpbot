@@ -39,13 +39,30 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   async startAllEngines(): Promise<void> {
     console.log('🚀 Starting all sport engines...');
 
-    // Start all engines
-    await mlbEngine.startMonitoring();
-    await nflEngine.startMonitoring();
-    await nbaEngine.startMonitoring();
-    await nhlEngine.startMonitoring();
-    await weatherEngine.startMonitoring();
-    await aiEngine.startMonitoring();
+    // Start monitoring for all engines with their specific intervals
+    for (const [sport, engine] of Array.from(this.engines.entries())) {
+      if (!this.intervalIds.has(sport)) {
+        console.log(`🔧 Starting ${sport} engine with ${engine.monitoringInterval}ms interval`);
+        
+        // Start immediately
+        try {
+          await engine.monitor();
+        } catch (error) {
+          console.error(`Error in initial ${sport} monitoring:`, error);
+        }
+
+        // Set up periodic monitoring
+        const intervalId = setInterval(async () => {
+          try {
+            await engine.monitor();
+          } catch (error) {
+            console.error(`Error in ${sport} monitoring:`, error);
+          }
+        }, engine.monitoringInterval);
+
+        this.intervalIds.set(sport, intervalId);
+      }
+    }
 
     console.log('✅ All sport engines started successfully');
   }
