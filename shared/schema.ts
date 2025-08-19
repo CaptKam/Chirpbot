@@ -75,6 +75,8 @@ export const settings = pgTable("settings", {
   aiConfidenceThreshold: integer("ai_confidence_threshold").notNull().default(85),
   telegramEnabled: boolean("telegram_enabled").notNull().default(true),
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(true),
+  smsEnabled: boolean("sms_enabled").notNull().default(false),
+  phoneNumber: text("phone_number"),
 });
 
 // User monitored teams for persistent game selection
