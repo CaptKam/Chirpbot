@@ -180,9 +180,6 @@ export default function Alerts() {
           </Card>
         ) : (
           <>
-            <div className="bg-green-100 p-4 rounded mb-4">
-              <p className="text-green-800 font-bold">✓ {filteredAlerts.length} alerts are loaded and ready to display!</p>
-            </div>
             {filteredAlerts.map((alert) => {
             const AlertIcon = getAlertIcon(alert.type);
             const alertColorClass = getAlertColor(alert.type);
