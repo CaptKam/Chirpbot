@@ -114,14 +114,10 @@ export default function Alerts() {
 
       {/* Filters */}
       <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3">
           <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
             Live Alerts ({alerts.length})
           </h2>
-          <Button size="sm" className="bg-chirp-red text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
-            <Filter className="w-3 h-3 mr-1" />
-            Filter
-          </Button>
         </div>
         <div className="flex space-x-2 overflow-x-auto">
           {FILTER_OPTIONS.map((option) => (
