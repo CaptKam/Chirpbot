@@ -184,8 +184,8 @@ export class MLBApiService {
 
       if (!response.ok) {
         if (response.status === 404) {
-          // Live feed not available yet - this is normal for games that just started
-          return null;
+          // Live feed not available - try alternative linescore endpoint
+          return await this.getLinescoreData(gamePk);
         }
         throw new Error(`MLB Live Feed API error: ${response.status}`);
       }
@@ -247,6 +247,66 @@ export class MLBApiService {
       gamePk: mlbGame.gamePk
     };
   };
+
+  /**
+   * Get linescore data as fallback when live feed is not available
+   */
+  async getLinescoreData(gamePk: number): Promise<any> {
+    try {
+      const linescoreUrl = `${this.BASE_URL}/game/${gamePk}/linescore`;
+      const boxscoreUrl = `${this.BASE_URL}/game/${gamePk}/boxscore`;
+      
+      const [linescoreRes, boxscoreRes] = await Promise.all([
+        fetch(linescoreUrl, {
+          headers: {
+            'User-Agent': 'ChirpBot/2.0',
+            'Accept': 'application/json'
+          }
+        }),
+        fetch(boxscoreUrl, {
+          headers: {
+            'User-Agent': 'ChirpBot/2.0', 
+            'Accept': 'application/json'
+          }
+        })
+      ]);
+
+      if (!linescoreRes.ok || !boxscoreRes.ok) {
+        return null;
+      }
+
+      const [linescore, boxscore] = await Promise.all([
+        linescoreRes.json(),
+        boxscoreRes.json()
+      ]);
+
+      // Construct a simplified live feed format from linescore and boxscore data
+      return {
+        gameData: {
+          game: { pk: gamePk },
+          teams: boxscore.teams
+        },
+        liveData: {
+          linescore: {
+            currentInning: linescore.currentInning || 1,
+            inningState: linescore.inningState || 'Top',
+            outs: 0, // Not available in linescore
+            balls: 0, // Not available in linescore  
+            strikes: 0, // Not available in linescore
+            offense: {
+              first: linescore.offense?.first || null,
+              second: linescore.offense?.second || null,
+              third: linescore.offense?.third || null
+            },
+            teams: linescore.teams
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching linescore data:', error);
+      return null;
+    }
+  }
 
   /**
    * Get team logos (MLB teams have standardized logo URLs)

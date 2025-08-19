@@ -149,11 +149,11 @@ export class MLBEngine extends BaseSportEngine {
       const linescore = liveFeed.liveData.linescore;
       const gameData = liveFeed.gameData;
       
-      return {
+      const gameState = {
         gameId: `mlb-${gameData.game.pk}`,
         gamePk: gameData.game.pk,
         inning: linescore.currentInning || 1,
-        inningState: linescore.inningState === 'Top' ? 'top' : 'bottom',
+        inningState: (linescore.inningState === 'Top' ? 'top' : 'bottom') as 'top' | 'bottom',
         outs: linescore.outs || 0,
         balls: linescore.balls || 0,
         strikes: linescore.strikes || 0,
@@ -167,6 +167,15 @@ export class MLBEngine extends BaseSportEngine {
         homeTeam: gameData.teams.home.name,
         awayTeam: gameData.teams.away.name,
       };
+
+      // Debug logging for live game state
+      console.log(`🔍 MLB Game State Debug - ${gameState.awayTeam} @ ${gameState.homeTeam}:`);
+      console.log(`   Inning: ${gameState.inning} ${gameState.inningState}`);
+      console.log(`   Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}`);
+      console.log(`   Runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third}`);
+      console.log(`   Outs: ${gameState.outs}, Balls: ${gameState.balls}, Strikes: ${gameState.strikes}`);
+      
+      return gameState;
     } catch (error) {
       console.error('Error extracting MLB game state:', error);
       return null;
@@ -229,26 +238,42 @@ export class MLBEngine extends BaseSportEngine {
   async monitor() {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
+      console.log(`📊 MLB Settings - AI Enabled: ${settings?.aiEnabled}`);
       if (!settings?.aiEnabled) {
+        console.log(`⏸️ MLB monitoring disabled, skipping`);
         return; // Skip if disabled
       }
 
       const liveGames = await mlbApi.getLiveGames();
+      console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 
       console.log(`🔍 Checking ${liveGames.length} live ${this.sport} games...`);
 
       for (const game of liveGames) {
         try {
-          if (game.gameState !== 'Live') continue;
+          console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (State: ${game.gameState}, PK: ${game.gamePk})`);
           
-          if (!game.gamePk) continue;
+          if (game.gameState !== 'Live') {
+            console.log(`⏭️ Skipping non-live game (${game.gameState})`);
+            continue;
+          }
+          
+          if (!game.gamePk) {
+            console.log(`⏭️ Skipping game with no gamePk`);
+            continue;
+          }
+          
+          console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
           const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
           
           // Skip if live feed data isn't available yet (returns null for 404)
           if (!liveFeed) {
+            console.log(`⚠️ No live feed data available for game ${game.gamePk} yet`);
             continue;
           }
+          
+          console.log(`✅ Got live feed data for game ${game.gamePk}, processing...`);
           
           const gameState = this.extractGameState(liveFeed);
           
