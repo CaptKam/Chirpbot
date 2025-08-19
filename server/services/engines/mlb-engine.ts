@@ -99,7 +99,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "risp",
       priority: 85,
       probability: 0.90,
-      description: "🔥 RUNNERS ON 2ND & 3RD, 1 OUT! (High scoring probability)",
+      description: "🔥 RUNNERS ON 2ND & 3RD, 1 OUT! Prime scoring opportunity",
       conditions: (state: MLBGameState) => 
         state.runners.second && state.runners.third && !state.runners.first && state.outs === 1
     },
