@@ -88,7 +88,7 @@ export default function Alerts() {
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="mb-3">
           <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue">
-            Live Alerts ({alerts.length})
+            Live Alerts
           </h2>
         </div>
         <div className="flex space-x-2 overflow-x-auto">
