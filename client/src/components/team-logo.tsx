@@ -35,6 +35,12 @@ const teamNameToAbbr: Record<string, string> = {
   'Arizona Diamondbacks': 'AZ',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
+  'New York Mets': 'NYM',
+  'Washington Nationals': 'WSH',
+  'Athletics': 'OAK',
+  'Oakland Athletics': 'OAK',
+  'Minnesota Twins': 'MIN',
+  'Tampa Bay Rays': 'TB',
   
   // NFL Teams
   'Kansas City Chiefs': 'KC',
@@ -274,6 +280,36 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
         <circle cx="50" cy="50" r="48" fill="#F47A38" stroke="#B9975B" strokeWidth="3"/>
         <polygon points="25,45 75,45 50,25" fill="#B9975B"/>
         <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">DUCKS</text>
+      </svg>
+    ),
+    'NYM': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#002D72" stroke="#FF5910" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-xl font-sans">M</text>
+      </svg>
+    ),
+    'WSH': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#AB0003" stroke="#14225A" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-xl font-sans">W</text>
+      </svg>
+    ),
+    'OAK': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#003831" stroke="#EFB21E" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-xl font-sans">A</text>
+      </svg>
+    ),
+    'MIN': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#002B5C" stroke="#D31145" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">MIN</text>
+      </svg>
+    ),
+    'TB': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#092C5C" stroke="#8FBCE6" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-xl font-sans">TB</text>
       </svg>
     )
   };

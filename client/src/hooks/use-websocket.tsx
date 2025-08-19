@@ -42,10 +42,20 @@ export function useWebSocket() {
       wsRef.current.onerror = (error) => {
         console.error('WebSocket error:', error);
         setIsConnected(false);
+        // Clear any pending reconnect attempts to prevent race conditions
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
       };
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
       setIsConnected(false);
+      // Attempt to reconnect on creation failure
+      reconnectTimeoutRef.current = setTimeout(() => {
+        console.log('Retrying WebSocket connection...');
+        connect();
+      }, 5000);
     }
   };
 

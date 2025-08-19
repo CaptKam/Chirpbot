@@ -31,7 +31,11 @@ export class SportsDataService {
   private startGameSimulations() {
     // Simulate live game events every 30-60 seconds
     const interval = setInterval(() => {
-      this.generateRandomSportsEvent();
+      try {
+        this.generateRandomSportsEvent();
+      } catch (error) {
+        console.error('Error generating random sports event:', error);
+      }
     }, 30000 + Math.random() * 30000); // 30-60 seconds
 
     this.gameSimulations.set("main", interval);

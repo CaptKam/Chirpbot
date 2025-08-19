@@ -26,6 +26,12 @@ export async function fetchJson<T>(
         console.log(`Attempt ${error.attemptNumber} failed. ${error.retriesLeft} retries left.`);
       }
     });
+  } catch (error) {
+    // Handle timeout or other fetch errors
+    if (controller.signal.aborted) {
+      throw new Error(`Request timed out after ${timeoutMs}ms`);
+    }
+    throw error;
   } finally {
     clearTimeout(id);
   }
@@ -54,6 +60,12 @@ export async function fetchText(
       maxTimeout: 2000, 
       randomize: true 
     });
+  } catch (error) {
+    // Handle timeout or other fetch errors
+    if (controller.signal.aborted) {
+      throw new Error(`Request timed out after ${timeoutMs}ms`);
+    }
+    throw error;
   } finally {
     clearTimeout(id);
   }
