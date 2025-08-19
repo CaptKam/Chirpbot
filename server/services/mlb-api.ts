@@ -110,33 +110,50 @@ export class MLBApiService {
    */
   async getTodaysGames(): Promise<Game[]> {
     try {
+      // Get both today and yesterday in case games are still ongoing from previous day
       const today = new Date().toISOString().split('T')[0];
-      const url = `${this.BASE_URL}/schedule?sportId=1&date=${today}&hydrate=linescore,team`;
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      console.log(`Fetching MLB games from: ${url}`);
+      console.log(`Fetching MLB games for today (${today}) and yesterday (${yesterday})`);
       
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'ChirpBot/2.0',
-          'Accept': 'application/json'
-        }
-      });
+      // Fetch both today's and yesterday's games to catch any ongoing games
+      const [todayResponse, yesterdayResponse] = await Promise.all([
+        fetch(`${this.BASE_URL}/schedule?sportId=1&date=${today}&hydrate=linescore,team`, {
+          headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' }
+        }),
+        fetch(`${this.BASE_URL}/schedule?sportId=1&date=${yesterday}&hydrate=linescore,team`, {
+          headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' }
+        })
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`MLB API error: ${response.status} ${response.statusText}`);
+      if (!todayResponse.ok) {
+        throw new Error(`MLB API error: ${todayResponse.status} ${todayResponse.statusText}`);
       }
 
-      const data: MLBScheduleResponse = await response.json();
+      const [todayData, yesterdayData]: [MLBScheduleResponse, MLBScheduleResponse] = await Promise.all([
+        todayResponse.json(),
+        yesterdayResponse.ok ? yesterdayResponse.json() : { dates: [] }
+      ]);
       
-      if (!data.dates || data.dates.length === 0) {
-        console.log('No MLB games scheduled for today');
-        return [];
+      // Combine all games and filter for live ones or those scheduled for today
+      const allGames: MLBGame[] = [];
+      
+      // Add today's games
+      if (todayData.dates && todayData.dates.length > 0) {
+        allGames.push(...(todayData.dates[0]?.games || []));
+      }
+      
+      // Add yesterday's games that are still live
+      if (yesterdayData.dates && yesterdayData.dates.length > 0) {
+        const yesterdayLiveGames = (yesterdayData.dates[0]?.games || []).filter(game => 
+          game.status.abstractGameState === 'Live'
+        );
+        allGames.push(...yesterdayLiveGames);
       }
 
-      const games = data.dates[0]?.games || [];
-      console.log(`Found ${games.length} MLB games for today`);
+      console.log(`Found ${allGames.length} total MLB games (today: ${todayData.dates?.[0]?.games?.length || 0}, yesterday live: ${yesterdayData.dates?.[0]?.games?.filter(g => g.status.abstractGameState === 'Live').length || 0})`);
 
-      return games.map(this.transformMLBGame);
+      return allGames.map(this.transformMLBGame);
     } catch (error) {
       console.error('Error fetching MLB games:', error);
       throw error;
