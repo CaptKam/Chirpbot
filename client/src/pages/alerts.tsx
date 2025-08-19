@@ -87,7 +87,7 @@ export default function Alerts() {
   console.log("Filtered alerts:", filteredAlerts);
 
   return (
-    <div className="pb-20">
+    <div className="pb-20 bg-chirp-bg min-h-screen">
       {/* Header */}
       <header className="bg-chirp-blue text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -145,7 +145,7 @@ export default function Alerts() {
       </div>
 
       {/* Alerts Feed */}
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -177,12 +177,13 @@ export default function Alerts() {
             <p className="text-xs text-gray-500 mt-2">
               Debug: {alerts.length} total alerts loaded, {filteredAlerts.length} after filtering
             </p>
-            <p className="text-xs text-gray-500 mt-2">
-              Debug: {alerts.length} total alerts loaded, {filteredAlerts.length} after filtering
-            </p>
           </Card>
         ) : (
-          filteredAlerts.map((alert) => {
+          <>
+            <div className="bg-green-100 p-4 rounded mb-4">
+              <p className="text-green-800 font-bold">✓ {filteredAlerts.length} alerts are loaded and ready to display!</p>
+            </div>
+            {filteredAlerts.map((alert) => {
             const AlertIcon = getAlertIcon(alert.type);
             const alertColorClass = getAlertColor(alert.type);
             
@@ -266,7 +267,8 @@ export default function Alerts() {
                 </div>
               </Card>
             );
-          })
+          })}
+          </>
         )}
       </div>
     </div>

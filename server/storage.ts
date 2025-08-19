@@ -354,7 +354,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentAlerts(limit = 50): Promise<Alert[]> {
-    return await db.select().from(alerts).limit(limit);
+    return await db.select().from(alerts).orderBy(sql`${alerts.timestamp} DESC`).limit(limit);
   }
 
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
