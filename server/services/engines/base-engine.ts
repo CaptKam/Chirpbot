@@ -31,8 +31,9 @@ export abstract class BaseSportEngine implements SportEngine {
   abstract alertConfigs: AlertConfig[];
   abstract monitoringInterval: number;
   
+  // Alert cooldown removed - alerts will trigger whenever conditions are met
   protected alertHistory = new Map<string, number>();
-  protected readonly ALERT_COOLDOWN = 60000; // 1 minute - reduced from 5 minutes for more frequent alerts
+  protected readonly ALERT_COOLDOWN = 0; // No cooldown - alerts fire immediately when conditions match
   
   abstract extractGameState(apiData: any): any;
   abstract monitor(): Promise<void>;
@@ -73,15 +74,7 @@ export abstract class BaseSportEngine implements SportEngine {
   }
   
   protected shouldTriggerAlert(alertType: string, gameId: string): boolean {
-    const alertKey = `${gameId}-${alertType}`;
-    const lastAlert = this.alertHistory.get(alertKey);
-    const now = Date.now();
-    
-    if (lastAlert && (now - lastAlert) < this.ALERT_COOLDOWN) {
-      return false;
-    }
-    
-    this.alertHistory.set(alertKey, now);
+    // No cooldown - always allow alerts to trigger when conditions are met
     return true;
   }
   
