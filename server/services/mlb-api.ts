@@ -280,6 +280,9 @@ export class MLBApiService {
         boxscoreRes.json()
       ]);
 
+      // Debug logging to check what we're getting
+      console.log(`📊 Linescore data - outs: ${linescore.outs}, balls: ${linescore.balls}, strikes: ${linescore.strikes}`);
+      
       // Construct a simplified live feed format from linescore and boxscore data
       return {
         gameData: {
@@ -297,9 +300,9 @@ export class MLBApiService {
           linescore: {
             currentInning: linescore.currentInning || 1,
             inningState: linescore.inningState || 'Top',
-            outs: linescore.outs || 0,
-            balls: linescore.balls || 0,
-            strikes: linescore.strikes || 0,
+            outs: linescore.outs || 0,  // These are at root level
+            balls: linescore.balls || 0,  // These are at root level
+            strikes: linescore.strikes || 0,  // These are at root level
             offense: {
               first: linescore.offense?.first || null,
               second: linescore.offense?.second || null,
