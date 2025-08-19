@@ -1,0 +1,78 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, Football, Baseball, TimerReset, Activity, Wifi } from "lucide-react";
+
+
+// If you use shadcn/ui in your project, you can swap these lightweight buttons/cards
+// with the actual components. Keeping it dependency-light for drop-in use.
+
+
+export default function LandingPage() {
+return (
+<div className="min-h-screen bg-[#0B1220] text-slate-100 antialiased selection:bg-emerald-500/30">
+<Nav />
+<Hero />
+<LogosStrip />
+<ValueProps />
+<LivePreview />
+<HowItWorks />
+<Proof />
+<Pricing />
+<FAQ />
+<Footer />
+</div>
+);
+}
+
+
+function Nav() {
+const [open, setOpen] = useState(false);
+return (
+<header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0B1220]/70">
+<div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+<a href="#" className="flex items-center gap-2">
+<div className="h-8 w-8 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30" />
+<span className="font-semibold tracking-wide">chirpbot</span>
+</a>
+<nav className="hidden items-center gap-8 md:flex">
+<a className="text-sm text-slate-300 hover:text-white" href="#features">Features</a>
+<a className="text-sm text-slate-300 hover:text-white" href="#preview">Preview</a>
+<a className="text-sm text-slate-300 hover:text-white" href="#pricing">Pricing</a>
+<a className="text-sm text-slate-300 hover:text-white" href="#faq">FAQ</a>
+<a className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] transition" href="#signup">Start Free</a>
+</nav>
+<button className="md:hidden" onClick={() => setOpen(!open)} aria-label="Toggle Menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+</button>
+</div>
+{open && (
+<div className="md:hidden border-t border-white/10 px-6 pb-6">
+<div className="flex flex-col gap-4">
+<a className="text-sm text-slate-300" href="#features">Features</a>
+<a className="text-sm text-slate-300" href="#preview">Preview</a>
+<a className="text-sm text-slate-300" href="#pricing">Pricing</a>
+<a className="text-sm text-slate-300" href="#faq">FAQ</a>
+<a className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/25" href="#signup">Start Free</a>
+</div>
+</div>
+)}
+</header>
+);
+}
+
+
+function Hero() {
+return (
+<section className="relative overflow-hidden">
+{/* Background image: replace src with /images/hero-sports.webp (1920x1080, ~350KB) */}
+<img src="/images/hero-sports.webp" alt="Stadium at dusk" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30" loading="eager" />
+<div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0B1220]/60 to-[#0B1220]" />
+
+
+<div className="relative mx-auto max-w-7xl px-6 pt-16 pb-24 lg:pb-32">
+<Badge>Live Sports Signals</Badge>
+<motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }} className="mt-6 font-black tracking-tight text-5xl sm:text-6xl">
+Catch the <span className="text-emerald-400">moment</span>. Bet the <span className="text-emerald-400">edge</span>.
+</motion.h1>
+<motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.6, ease: "easeOut" }} className="mt-5 max-w-2xl text-lg text-slate-300">
+Real‑time MLB/NFL alerts with ruthless noise‑reduction. Built for sharps, teams, and high‑tempo traders.
