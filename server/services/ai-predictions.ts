@@ -29,12 +29,38 @@ export interface GameContext {
   // Situational context
   runnersOn?: string[]; // ["1st", "2nd", "3rd"]
   currentBatter?: {
+    id?: number;
     name: string;
+    batSide?: string;
     stats: {
       avg?: number;
       hr?: number;
       rbi?: number;
       obp?: number;
+      ops?: number;
+      slg?: number;
+      atBats?: number;
+      hits?: number;
+      strikeOuts?: number;
+      walks?: number;
+    };
+  };
+  currentPitcher?: {
+    id?: number;
+    name: string;
+    throwHand?: string;
+    stats: {
+      era?: number;
+      whip?: number;
+      strikeOuts?: number;
+      walks?: number;
+      wins?: number;
+      losses?: number;
+      saves?: number;
+      inningsPitched?: string;
+      hits?: number;
+      earnedRuns?: number;
+      homeRuns?: number;
     };
   };
   
@@ -146,10 +172,26 @@ function buildPredictionPrompt(request: PredictionRequest): string {
   
   // Player context
   if (context.currentBatter) {
-    prompt += `\nCURRENT BATTER: ${context.currentBatter.name}\n`;
+    prompt += `\nCURRENT BATTER: ${context.currentBatter.name}`;
+    if (context.currentBatter.batSide) prompt += ` (${context.currentBatter.batSide === 'L' ? 'Left' : context.currentBatter.batSide === 'R' ? 'Right' : 'Switch'} handed)`;
+    prompt += `\n`;
     if (context.currentBatter.stats.avg) prompt += `Batting Average: ${context.currentBatter.stats.avg}\n`;
     if (context.currentBatter.stats.hr) prompt += `Home Runs: ${context.currentBatter.stats.hr}\n`;
     if (context.currentBatter.stats.rbi) prompt += `RBIs: ${context.currentBatter.stats.rbi}\n`;
+    if (context.currentBatter.stats.ops) prompt += `OPS: ${context.currentBatter.stats.ops}\n`;
+    if (context.currentBatter.stats.strikeOuts) prompt += `Strikeouts: ${context.currentBatter.stats.strikeOuts}\n`;
+  }
+  
+  if (context.currentPitcher) {
+    prompt += `\nCURRENT PITCHER: ${context.currentPitcher.name}`;
+    if (context.currentPitcher.throwHand) prompt += ` (${context.currentPitcher.throwHand === 'L' ? 'Left' : 'Right'} handed)`;
+    prompt += `\n`;
+    if (context.currentPitcher.stats.era) prompt += `ERA: ${context.currentPitcher.stats.era}\n`;
+    if (context.currentPitcher.stats.whip) prompt += `WHIP: ${context.currentPitcher.stats.whip}\n`;
+    if (context.currentPitcher.stats.strikeOuts) prompt += `Strikeouts: ${context.currentPitcher.stats.strikeOuts}\n`;
+    if (context.currentPitcher.stats.wins !== undefined && context.currentPitcher.stats.losses !== undefined) {
+      prompt += `Record: ${context.currentPitcher.stats.wins}-${context.currentPitcher.stats.losses}\n`;
+    }
   }
   
   // Environmental factors

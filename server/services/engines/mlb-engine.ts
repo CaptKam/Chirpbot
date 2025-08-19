@@ -21,12 +21,38 @@ interface MLBGameState {
   homeTeam: string;
   awayTeam: string;
   currentBatter?: {
+    id: number;
     name: string;
+    batSide: string;
     stats: {
-      avg?: number;
-      hr?: number;
-      rbi?: number;
-      obp?: number;
+      avg: number;
+      hr: number;
+      rbi: number;
+      obp: number;
+      ops: number;
+      slg: number;
+      atBats: number;
+      hits: number;
+      strikeOuts: number;
+      walks: number;
+    };
+  };
+  currentPitcher?: {
+    id: number;
+    name: string;
+    throwHand: string;
+    stats: {
+      era: number;
+      whip: number;
+      strikeOuts: number;
+      walks: number;
+      wins: number;
+      losses: number;
+      saves: number;
+      inningsPitched: string;
+      hits: number;
+      earnedRuns: number;
+      homeRuns: number;
     };
   };
 }
@@ -166,6 +192,66 @@ export class MLBEngine extends BaseSportEngine {
       const linescore = liveFeed.liveData.linescore;
       const gameData = liveFeed.gameData;
       
+      // Extract current batter and pitcher data
+      let currentBatter = undefined;
+      let currentPitcher = undefined;
+      
+      try {
+        const plays = liveFeed.liveData?.plays;
+        const currentPlay = plays?.currentPlay;
+        
+        // Get current batter
+        if (currentPlay?.matchup?.batter) {
+          const batter = currentPlay.matchup.batter;
+          const batterStats = batter.stats?.find((stat: any) => stat.type?.displayName === 'statsSingleSeason')?.stats;
+          
+          currentBatter = {
+            id: batter.id,
+            name: batter.fullName || 'Unknown Batter',
+            batSide: batter.batSide?.code || 'U',
+            stats: {
+              avg: batterStats?.avg ? parseFloat(batterStats.avg) : 0,
+              hr: batterStats?.homeRuns || 0,
+              rbi: batterStats?.rbi || 0,
+              obp: batterStats?.obp ? parseFloat(batterStats.obp) : 0,
+              ops: batterStats?.ops ? parseFloat(batterStats.ops) : 0,
+              slg: batterStats?.slg ? parseFloat(batterStats.slg) : 0,
+              atBats: batterStats?.atBats || 0,
+              hits: batterStats?.hits || 0,
+              strikeOuts: batterStats?.strikeOuts || 0,
+              walks: batterStats?.baseOnBalls || 0
+            }
+          };
+        }
+        
+        // Get current pitcher
+        if (currentPlay?.matchup?.pitcher) {
+          const pitcher = currentPlay.matchup.pitcher;
+          const pitcherStats = pitcher.stats?.find((stat: any) => stat.type?.displayName === 'statsSingleSeason')?.stats;
+          
+          currentPitcher = {
+            id: pitcher.id,
+            name: pitcher.fullName || 'Unknown Pitcher',
+            throwHand: pitcher.pitchHand?.code || 'U',
+            stats: {
+              era: pitcherStats?.era ? parseFloat(pitcherStats.era) : 0,
+              whip: pitcherStats?.whip ? parseFloat(pitcherStats.whip) : 0,
+              strikeOuts: pitcherStats?.strikeOuts || 0,
+              walks: pitcherStats?.baseOnBalls || 0,
+              wins: pitcherStats?.wins || 0,
+              losses: pitcherStats?.losses || 0,
+              saves: pitcherStats?.saves || 0,
+              inningsPitched: pitcherStats?.inningsPitched || '0.0',
+              hits: pitcherStats?.hits || 0,
+              earnedRuns: pitcherStats?.earnedRuns || 0,
+              homeRuns: pitcherStats?.homeRuns || 0
+            }
+          };
+        }
+      } catch (playerError) {
+        console.log('Player data not available in current play');
+      }
+      
       const gameState = {
         gameId: `mlb-${gameData.game.pk}`,
         gamePk: gameData.game.pk,
@@ -183,6 +269,8 @@ export class MLBEngine extends BaseSportEngine {
         awayScore: linescore.teams.away.runs || 0,
         homeTeam: gameData.teams.home.name,
         awayTeam: gameData.teams.away.name,
+        currentBatter,
+        currentPitcher,
       };
 
       // Debug logging for live game state
@@ -191,6 +279,14 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`   Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}`);
       console.log(`   Runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third}`);
       console.log(`   Outs: ${gameState.outs}, Balls: ${gameState.balls}, Strikes: ${gameState.strikes}`);
+      
+      if (gameState.currentBatter) {
+        console.log(`   🏏 Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
+      }
+      
+      if (gameState.currentPitcher) {
+        console.log(`   ⚾ Current Pitcher: ${gameState.currentPitcher.name} (${gameState.currentPitcher.throwHand}) - ERA: ${gameState.currentPitcher.stats.era}, WHIP: ${gameState.currentPitcher.stats.whip}, K: ${gameState.currentPitcher.stats.strikeOuts}, W-L: ${gameState.currentPitcher.stats.wins}-${gameState.currentPitcher.stats.losses}`);
+      }
       
       
       return gameState;
@@ -228,6 +324,7 @@ export class MLBEngine extends BaseSportEngine {
       scoreDifference: gameState.homeScore - gameState.awayScore,
       runnersOn,
       currentBatter: gameState.currentBatter,
+      currentPitcher: gameState.currentPitcher,
       homeTeam: gameState.homeTeam,
       awayTeam: gameState.awayTeam,
       gameState: 'Live'
