@@ -95,6 +95,15 @@ export class MLBEngine extends BaseSportEngine {
         state.runners.third && !state.runners.first && !state.runners.second && state.outs === 1
     },
     {
+      type: "Runners on 2nd & 3rd, 1 Out",
+      settingKey: "risp",
+      priority: 85,
+      probability: 0.90,
+      description: "🔥 RUNNERS ON 2ND & 3RD, 1 OUT! (High scoring probability)",
+      conditions: (state: MLBGameState) => 
+        state.runners.second && state.runners.third && !state.runners.first && state.outs === 1
+    },
+    {
       type: "Runners In Scoring Position",
       settingKey: "risp",
       priority: 70,
