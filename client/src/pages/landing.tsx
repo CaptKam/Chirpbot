@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, Football, Baseball, TimerReset, Activity, Wifi, ChevronDown, Play, Star, Users, TrendingUp, Award, Target, Clock, Globe } from "lucide-react";
+import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, TimerReset, Activity, Wifi, ChevronDown, Play, Star, Users, TrendingUp, Award, Target, Clock, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
@@ -125,8 +125,7 @@ function Hero() {
                 className="border-slate-600 hover:bg-slate-800 px-8 py-6 text-lg font-bold rounded-xl text-slate-100"
                 data-testid="button-hero-login"
               >
-                <Play className="mr-2 w-5 h-5" />
-                Watch Demo
+                Login to Dashboard
               </Button>
             </Link>
           </motion.div>
