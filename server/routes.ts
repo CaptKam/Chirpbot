@@ -376,41 +376,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Real-time alert generation for live games only
+  // Import and start MLB alert engine
+  const { mlbAlertEngine } = await import('./services/mlb-alerts');
+  
+  // Setup MLB alert broadcasting
+  mlbAlertEngine.onAlert = (alert: any) => {
+    broadcast({ type: 'new_alert', data: alert });
+  };
+  
+  // Start high-frequency MLB monitoring (10 seconds)
+  mlbAlertEngine.startRealTimeMonitoring();
+
+  // Keep existing general sports alert generation (reduced frequency for non-MLB)
   setInterval(async () => {
     try {
-      // Get today's games (now includes official MLB.com data)
       const gamesData = await liveSportsService.getTodaysGames();
       const liveGames = gamesData.games.filter(game => 
         game.status === 'live' || game.isLive === true
       );
       
-      if (liveGames.length === 0) {
-        console.log('No live games found, skipping alert generation');
+      // Only process non-MLB games here (MLB handled by dedicated engine)
+      const nonMLBGames = liveGames.filter(game => game.sport !== 'MLB');
+      
+      if (nonMLBGames.length === 0) {
         return;
       }
 
-      console.log(`Found ${liveGames.length} live games for alert generation`);
-
-      // Only generate alerts for actually live games
-      const randomLiveGame = liveGames[Math.floor(Math.random() * liveGames.length)];
+      const randomLiveGame = nonMLBGames[Math.floor(Math.random() * nonMLBGames.length)];
       
-      // Check if alerts are enabled for this sport
       const settings = await storage.getSettingsBySport(randomLiveGame.sport);
       if (!settings?.aiEnabled) {
-        console.log(`Alerts disabled for ${randomLiveGame.sport}, skipping`);
         return;
       }
       
-      // Generate realistic event based on sport
-      const eventTypes = randomLiveGame.sport === 'MLB' 
-        ? [
-            { type: "RISP Opportunity", probability: 0.8 },
-            { type: "BASES LOADED", probability: 0.6 }, 
-            { type: "High Pressure Situation", probability: 0.7 },
-            { type: "NFL Close Game", probability: 0.5 }
-          ]
-        : randomLiveGame.sport === 'NFL'
+      const eventTypes = randomLiveGame.sport === 'NFL'
         ? [{ type: "NFL Close Game", probability: 0.8 }]
         : randomLiveGame.sport === 'NBA'
         ? [{ type: "ClutchTime", probability: 0.7 }]
@@ -419,12 +418,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (eventTypes.length === 0) return;
 
       const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-      // Higher probability for testing
-      if (Math.random() > 0.8) return;
+      if (Math.random() > 0.6) return; // Reduced frequency for non-MLB
 
       const weatherData = await getWeatherData(randomLiveGame.homeTeam.name);
       
-      // Create realistic alert data using actual game information
       const alertData = {
         type: randomEvent.type,
         sport: randomLiveGame.sport,
@@ -435,7 +432,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             away: randomLiveGame.awayTeam.score || Math.floor(Math.random() * 15), 
             home: randomLiveGame.homeTeam.score || Math.floor(Math.random() * 15) 
           },
-          inning: randomLiveGame.inning || (randomLiveGame.sport === 'MLB' ? Math.floor(Math.random() * 9) + 1 : undefined),
           quarter: randomLiveGame.sport === 'NFL' ? `${Math.floor(Math.random() * 4) + 1}` : undefined,
           status: 'Live',
           awayTeam: randomLiveGame.awayTeam.name,
@@ -446,6 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         aiConfidence: 0,
         sentToTelegram: false,
       };
+      
       if (settings?.aiEnabled) {
         const analysis = await analyzeAlert(
           alertData.type,
@@ -476,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Live game alert generation error:", error);
     }
-  }, 60000 + Math.random() * 60000); // 1-2 minutes
+  }, 120000 + Math.random() * 60000); // 2-3 minutes for non-MLB sports
 
   // Helper function to generate alert descriptions
   function generateAlertDescription(alertType: string, game: any): string {

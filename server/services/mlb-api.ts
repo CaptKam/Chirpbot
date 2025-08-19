@@ -171,7 +171,7 @@ export class MLBApiService {
   /**
    * Get detailed live feed for a specific game
    */
-  async getLiveFeed(gamePk: number): Promise<MLBLiveFeedResponse> {
+  async getLiveFeed(gamePk: number): Promise<any> {
     try {
       const url = `${this.BASE_URL}/game/${gamePk}/feed/live`;
       
@@ -186,7 +186,23 @@ export class MLBApiService {
         throw new Error(`MLB Live Feed API error: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      
+      // Enhanced live feed with play-by-play data
+      return {
+        gameData: data.gameData,
+        liveData: {
+          linescore: {
+            ...data.liveData.linescore,
+            outs: data.liveData.linescore?.outs || 0,
+            balls: data.liveData.linescore?.balls || 0,
+            strikes: data.liveData.linescore?.strikes || 0,
+            offense: data.liveData.linescore?.offense || {},
+            defense: data.liveData.linescore?.defense || {}
+          },
+          plays: data.liveData.plays
+        }
+      };
     } catch (error) {
       console.error(`Error fetching live feed for game ${gamePk}:`, error);
       throw error;
