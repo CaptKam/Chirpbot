@@ -161,35 +161,6 @@ export default function Settings() {
               LIVE
             </span>
           </div>
-          {!isAuthLoading && (
-            isAuthenticated ? (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white hover:text-gray-200 px-2"
-                data-testid="button-header-logout"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-              >
-                <LogOut className="w-4 h-4 mr-1" />
-                <span className="text-xs font-medium">
-                  {logoutMutation.isPending ? "Logging out..." : "Logout"}
-                </span>
-              </Button>
-            ) : (
-              <Link href="/signup">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-white hover:text-gray-200 px-2"
-                  data-testid="button-header-signup"
-                >
-                  <UserPlus className="w-4 h-4 mr-1" />
-                  <span className="text-xs font-medium">Sign Up</span>
-                </Button>
-              </Link>
-            )
-          )}
           <Link href="/alerts">
             <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
               <Bell className="w-7 h-7" />
@@ -384,6 +355,54 @@ export default function Settings() {
                     {testTelegramMutation.isPending ? "Testing..." : "Test Connection"}
                   </Button>
                 </div>
+              </Card>
+            </div>
+
+            {/* Account Section */}
+            <div>
+              <h2 className="text-lg font-black uppercase tracking-wide text-chirp-blue mb-4">
+                Account
+              </h2>
+              <Card className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                {!isAuthLoading && (
+                  isAuthenticated ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-chirp-blue">Sign Out</h3>
+                        <p className="text-sm text-chirp-dark mt-1">Sign out of your ChirpBot account</p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                        data-testid="button-settings-logout"
+                        onClick={() => logoutMutation.mutate()}
+                        disabled={logoutMutation.isPending}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        {logoutMutation.isPending ? "Signing out..." : "Sign Out"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-chirp-blue">Account Access</h3>
+                        <p className="text-sm text-chirp-dark mt-1">Sign up to save your settings</p>
+                      </div>
+                      <Link href="/signup">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-chirp-blue border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                          data-testid="button-settings-signup"
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </div>
+                  )
+                )}
               </Card>
             </div>
           </>
