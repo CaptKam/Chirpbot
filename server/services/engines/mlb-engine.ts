@@ -1,5 +1,7 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { mlbApi } from '../mlb-api';
+import { GameContext, PREDICTION_EVENTS } from '../ai-predictions';
+import { storage } from '../../storage';
 
 interface MLBGameState {
   gameId: string;
@@ -18,6 +20,15 @@ interface MLBGameState {
   awayScore: number;
   homeTeam: string;
   awayTeam: string;
+  currentBatter?: {
+    name: string;
+    stats: {
+      avg?: number;
+      hr?: number;
+      rbi?: number;
+      obp?: number;
+    };
+  };
 }
 
 export class MLBEngine extends BaseSportEngine {
@@ -89,6 +100,34 @@ export class MLBEngine extends BaseSportEngine {
       description: "Late inning situation - Critical phase",
       conditions: (state: MLBGameState) => 
         state.inning >= 8 && Math.abs(state.homeScore - state.awayScore) <= 3
+    },
+    // AI Prediction-based alerts
+    {
+      type: "Home Run Prediction",
+      priority: 85,
+      probability: 1.0,
+      description: "🚀 HIGH HOME RUN PROBABILITY - Favorable conditions detected!",
+      isPrediction: true,
+      predictionEvents: ["Home Run"],
+      minimumPredictionProbability: 75
+    },
+    {
+      type: "RBI Opportunity",
+      priority: 75,
+      probability: 1.0,
+      description: "🎯 RBI OPPORTUNITY - High scoring probability!",
+      isPrediction: true,
+      predictionEvents: ["RBI Hit", "Scoring Play"],
+      minimumPredictionProbability: 70
+    },
+    {
+      type: "Clutch Moment Prediction",
+      priority: 90,
+      probability: 1.0,
+      description: "⚡ CLUTCH MOMENT - AI detects game-changing potential!",
+      isPrediction: true,
+      predictionEvents: ["Walk-off Hit", "Grand Slam", "Game Winner"],
+      minimumPredictionProbability: 65
     }
   ];
   
@@ -133,6 +172,27 @@ export class MLBEngine extends BaseSportEngine {
       scoringProbability: this.calculateScoringProbability(gameState)
     };
   }
+
+  protected buildGameContext(gameState: MLBGameState): GameContext {
+    const runnersOn: string[] = [];
+    if (gameState.runners.first) runnersOn.push("1st");
+    if (gameState.runners.second) runnersOn.push("2nd");
+    if (gameState.runners.third) runnersOn.push("3rd");
+
+    return {
+      sport: this.sport,
+      inning: gameState.inning,
+      outs: gameState.outs,
+      homeScore: gameState.homeScore,
+      awayScore: gameState.awayScore,
+      scoreDifference: gameState.homeScore - gameState.awayScore,
+      runnersOn,
+      currentBatter: gameState.currentBatter,
+      homeTeam: gameState.homeTeam,
+      awayTeam: gameState.awayTeam,
+      gameState: 'Live'
+    };
+  }
   
   private calculateScoringProbability(gameState: MLBGameState): number {
     let probability = 30; // Base probability
@@ -172,12 +232,13 @@ export class MLBEngine extends BaseSportEngine {
           try {
             if (game.gameState !== 'Live') continue;
             
+            if (!game.gamePk) continue;
             const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
             const gameState = this.extractGameState(liveFeed);
             
             if (!gameState) continue;
             
-            const triggeredAlerts = this.checkAlertConditions(gameState);
+            const triggeredAlerts = await this.checkAlertConditions(gameState);
             
             if (triggeredAlerts.length > 0) {
               console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);

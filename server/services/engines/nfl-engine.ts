@@ -1,4 +1,5 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
+import { GameContext } from '../ai-predictions';
 
 interface NFLGameState {
   gameId: string;
@@ -108,6 +109,22 @@ export class NFLEngine extends BaseSportEngine {
       yardsToGo: gameState.yardsToGo,
       possession: gameState.possession,
       redZone: gameState.redZone
+    };
+  }
+
+  protected buildGameContext(gameState: NFLGameState): GameContext {
+    return {
+      sport: this.sport,
+      quarter: gameState.quarter,
+      down: gameState.down,
+      yardsToGo: gameState.yardsToGo,
+      homeScore: gameState.homeScore,
+      awayScore: gameState.awayScore,
+      scoreDifference: gameState.homeScore - gameState.awayScore,
+      timeRemaining: gameState.timeRemaining,
+      homeTeam: gameState.homeTeam,
+      awayTeam: gameState.awayTeam,
+      gameState: 'Live'
     };
   }
 }

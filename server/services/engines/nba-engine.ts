@@ -1,4 +1,5 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
+import { GameContext } from '../ai-predictions';
 
 interface NBAGameState {
   gameId: string;
@@ -56,6 +57,25 @@ export class NBAEngine extends BaseSportEngine {
       description: "Tight contest - Anyone's game!",
       conditions: (state: NBAGameState) => 
         Math.abs(state.homeScore - state.awayScore) <= 3 && state.period >= 2
+    },
+    // AI Prediction-based alerts
+    {
+      type: "Buzzer Beater Prediction",
+      priority: 95,
+      probability: 1.0,
+      description: "🚨 BUZZER BEATER POTENTIAL - Final seconds magic!",
+      isPrediction: true,
+      predictionEvents: ["Buzzer Beater", "Game Winner"],
+      minimumPredictionProbability: 70
+    },
+    {
+      type: "Three Point Opportunity",
+      priority: 80,
+      probability: 1.0,
+      description: "🎯 HIGH THREE-POINT PROBABILITY - Shooter ready!",
+      isPrediction: true,
+      predictionEvents: ["Three Pointer"],
+      minimumPredictionProbability: 75
     }
   ];
   
@@ -97,6 +117,20 @@ export class NBAEngine extends BaseSportEngine {
       timeRemaining: gameState.timeRemaining,
       clutchTime: gameState.clutchTime,
       overtime: gameState.overtime
+    };
+  }
+
+  protected buildGameContext(gameState: NBAGameState): GameContext {
+    return {
+      sport: this.sport,
+      period: gameState.period,
+      homeScore: gameState.homeScore,
+      awayScore: gameState.awayScore,
+      scoreDifference: gameState.homeScore - gameState.awayScore,
+      timeRemaining: gameState.timeRemaining,
+      homeTeam: gameState.homeTeam,
+      awayTeam: gameState.awayTeam,
+      gameState: 'Live'
     };
   }
 }

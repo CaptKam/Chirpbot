@@ -1,4 +1,5 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
+import { GameContext } from '../ai-predictions';
 
 interface NHLGameState {
   gameId: string;
@@ -66,6 +67,25 @@ export class NHLEngine extends BaseSportEngine {
       description: "One-goal game - Tight contest!",
       conditions: (state: NHLGameState) => 
         Math.abs(state.homeScore - state.awayScore) <= 1 && state.period >= 2
+    },
+    // AI Prediction-based alerts  
+    {
+      type: "Power Play Goal Prediction",
+      priority: 90,
+      probability: 1.0,
+      description: "⚡ POWER PLAY GOAL POTENTIAL - Man advantage opportunity!",
+      isPrediction: true,
+      predictionEvents: ["Power Play Goal", "Goal"],
+      minimumPredictionProbability: 70
+    },
+    {
+      type: "Game Winner Prediction",
+      priority: 95,
+      probability: 1.0,
+      description: "🏆 GAME WINNER POTENTIAL - Clutch goal opportunity!",
+      isPrediction: true,
+      predictionEvents: ["Game Winner", "Goal"],
+      minimumPredictionProbability: 65
     }
   ];
   
@@ -110,6 +130,20 @@ export class NHLEngine extends BaseSportEngine {
       powerPlay: gameState.powerPlay,
       emptyNet: gameState.emptyNet,
       overtime: gameState.overtime
+    };
+  }
+
+  protected buildGameContext(gameState: NHLGameState): GameContext {
+    return {
+      sport: this.sport,
+      period: gameState.period,
+      homeScore: gameState.homeScore,
+      awayScore: gameState.awayScore,
+      scoreDifference: gameState.homeScore - gameState.awayScore,
+      timeRemaining: gameState.timeRemaining,
+      homeTeam: gameState.homeTeam,
+      awayTeam: gameState.awayTeam,
+      gameState: 'Live'
     };
   }
 }
