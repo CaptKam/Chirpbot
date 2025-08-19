@@ -183,6 +183,10 @@ export class MLBApiService {
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          // Live feed not available yet - this is normal for games that just started
+          return null;
+        }
         throw new Error(`MLB Live Feed API error: ${response.status}`);
       }
 
