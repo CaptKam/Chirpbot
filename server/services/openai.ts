@@ -26,7 +26,12 @@ Weather: ${weatherData ? `${weatherData.temperature}°F, ${weatherData.condition
 
 Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key impact) and 'confidence' (0-100) fields.`;
 
-    const response = await openai.chat.completions.create({
+    // Add timeout using Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('OpenAI API timeout')), 5000)
+    );
+
+    const apiPromise = openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
@@ -42,14 +47,20 @@ Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key 
       max_tokens: 150,
     });
 
+    const response = await Promise.race([apiPromise, timeoutPromise]);
+
     const result = JSON.parse(response.choices[0].message.content || '{"context": "Analysis unavailable", "confidence": 0}');
     
     return {
       context: result.context || "Analysis unavailable",
       confidence: Math.max(0, Math.min(100, result.confidence || 0))
     };
-  } catch (error) {
-    console.error("OpenAI analysis failed:", error);
+  } catch (error: any) {
+    if (error.message === 'OpenAI API timeout') {
+      console.error("OpenAI analysis timed out after 5 seconds");
+    } else {
+      console.error("OpenAI analysis failed:", error.message || error);
+    }
     return {
       context: "AI analysis temporarily unavailable",
       confidence: 0

@@ -550,5 +550,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick test endpoint without AI
+  app.post("/api/test/quick-alert", async (req, res) => {
+    try {
+      const testAlert = {
+        type: "Quick Test",
+        sport: "MLB",
+        title: "Test Alert - Immediate Response",
+        description: "Testing alert system without AI delay",
+        gameInfo: {
+          homeTeam: "Test Home Team",
+          awayTeam: "Test Away Team",
+          status: "Live"
+        },
+        aiContext: "Quick test - AI bypassed",
+        aiConfidence: 100,
+        weatherData: {
+          temperature: 72,
+          condition: "Clear",
+          windSpeed: 5,
+          windDirection: "N"
+        },
+        sentToTelegram: false
+      };
+
+      const alert = await storage.createAlert(testAlert);
+      broadcast({ type: 'new_alert', data: alert });
+      
+      res.json({
+        success: true,
+        message: "Quick alert created successfully",
+        alert
+      });
+    } catch (error: any) {
+      console.error("Quick test failed:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Quick test failed",
+        error: error.message 
+      });
+    }
+  });
+
+  // Test endpoint to trigger alerts for all sports
+  app.post("/api/test/generate-alerts", async (req, res) => {
+    try {
+      const testAlerts = [];
+      const timestamp = new Date().toISOString();
+      
+      // Test MLB Alert - RISP scenario
+      const mlbAlert = {
+        type: "RISP",
+        sport: "MLB",
+        title: "Test MLB Game: Yankees @ Red Sox",
+        description: "Bases loaded, 2 outs in the 9th inning! High scoring opportunity",
+        gameInfo: {
+          homeTeam: "Boston Red Sox",
+          awayTeam: "New York Yankees",
+          status: "Live",
+          inning: "9",
+          inningState: "bottom",
+          outs: 2,
+          balls: 3,
+          strikes: 2,
+          runners: { first: true, second: true, third: true },
+          scoringProbability: 0.78
+        }
+      };
+
+      // Test NFL Alert - Red Zone
+      const nflAlert = {
+        type: "Red Zone",
+        sport: "NFL",
+        title: "Test NFL Game: Cowboys @ Eagles",
+        description: "Red zone opportunity! Cowboys at the 15-yard line",
+        gameInfo: {
+          homeTeam: "Philadelphia Eagles",
+          awayTeam: "Dallas Cowboys",
+          status: "Live",
+          quarter: "4",
+          timeRemaining: "2:35",
+          down: 3,
+          yardsToGo: 7,
+          possession: "Cowboys",
+          redZone: true
+        }
+      };
+
+      // Test NBA Alert - Clutch Time
+      const nbaAlert = {
+        type: "Clutch Time",
+        sport: "NBA",
+        title: "Test NBA Game: Lakers @ Celtics",
+        description: "Clutch time! 3-point game with 45 seconds left",
+        gameInfo: {
+          homeTeam: "Boston Celtics",
+          awayTeam: "Los Angeles Lakers",
+          status: "Live",
+          period: "4",
+          timeRemaining: "0:45",
+          clutchTime: true,
+          overtime: false
+        }
+      };
+
+      // Test NHL Alert - Power Play
+      const nhlAlert = {
+        type: "Power Play",
+        sport: "NHL",
+        title: "Test NHL Game: Rangers @ Bruins",
+        description: "Power play opportunity for the Rangers!",
+        gameInfo: {
+          homeTeam: "Boston Bruins",
+          awayTeam: "New York Rangers",
+          status: "Live",
+          period: "3",
+          timeRemaining: "5:23",
+          powerPlay: true,
+          emptyNet: false
+        }
+      };
+
+      // Create alerts with AI analysis
+      for (const alertData of [mlbAlert, nflAlert, nbaAlert, nhlAlert]) {
+        try {
+          const weatherData = await getWeatherData(alertData.gameInfo.homeTeam);
+          
+          // Get AI analysis
+          const settings = await storage.getSettingsBySport(alertData.sport);
+          let aiContext = undefined;
+          let aiConfidence = 85;
+          
+          if (settings?.aiEnabled) {
+            const analysis = await analyzeAlert(
+              alertData.type,
+              alertData.sport,
+              alertData.gameInfo,
+              weatherData
+            );
+            aiContext = analysis.context;
+            aiConfidence = analysis.confidence;
+          }
+
+          const alert = await storage.createAlert({
+            ...alertData,
+            aiContext,
+            aiConfidence,
+            weatherData,
+            sentToTelegram: false
+          });
+
+          testAlerts.push(alert);
+          
+          // Broadcast to WebSocket clients
+          broadcast({ type: 'new_alert', data: alert });
+        } catch (error) {
+          console.error(`Failed to create ${alertData.sport} test alert:`, error);
+        }
+      }
+
+      res.json({
+        message: "Test alerts generated successfully",
+        count: testAlerts.length,
+        alerts: testAlerts,
+        timestamp
+      });
+    } catch (error) {
+      console.error("Test alert generation failed:", error);
+      res.status(500).json({ message: "Failed to generate test alerts" });
+    }
+  });
+
   return httpServer;
 }
