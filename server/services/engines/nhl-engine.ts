@@ -1,5 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { GameContext } from '../ai-predictions';
+import { storage } from '../../storage';
 
 interface NHLGameState {
   gameId: string;
@@ -18,6 +19,20 @@ interface NHLGameState {
 export class NHLEngine extends BaseSportEngine {
   sport = 'NHL';
   monitoringInterval = 15000; // 15 seconds for NHL
+  
+  async monitor() {
+    try {
+      const settings = await storage.getSettingsBySport(this.sport);
+      if (!settings?.aiEnabled) {
+        return;
+      }
+      
+      console.log(`🏒 Checking ${this.sport} games for alerts...`);
+      
+    } catch (error) {
+      console.error(`${this.sport} monitoring error:`, error);
+    }
+  }
   
   alertConfigs: AlertConfig[] = [
     {

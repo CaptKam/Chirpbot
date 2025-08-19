@@ -213,47 +213,43 @@ export class MLBEngine extends BaseSportEngine {
     return Math.min(95, Math.max(5, probability));
   }
   
-  async startMonitoring() {
-    console.log(`🔴 ${this.sport} Engine STARTED - ${this.monitoringInterval/1000}s monitoring`);
-    
-    setInterval(async () => {
-      try {
-        const settings = await storage.getSettingsBySport(this.sport);
-        if (!settings?.aiEnabled) {
-          return; // Skip if disabled
-        }
-
-        const liveGames = await mlbApi.getLiveGames();
-        if (liveGames.length === 0) return;
-
-        console.log(`🔍 Checking ${liveGames.length} live ${this.sport} games...`);
-
-        for (const game of liveGames) {
-          try {
-            if (game.gameState !== 'Live') continue;
-            
-            if (!game.gamePk) continue;
-            const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
-            const gameState = this.extractGameState(liveFeed);
-            
-            if (!gameState) continue;
-            
-            const triggeredAlerts = await this.checkAlertConditions(gameState);
-            
-            if (triggeredAlerts.length > 0) {
-              console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
-              await this.processAlerts(triggeredAlerts, gameState);
-            }
-            
-          } catch (gameError) {
-            console.error(`Error processing ${this.sport} game:`, gameError);
-          }
-        }
-        
-      } catch (error) {
-        console.error(`${this.sport} monitoring error:`, error);
+  async monitor() {
+    try {
+      const settings = await storage.getSettingsBySport(this.sport);
+      if (!settings?.aiEnabled) {
+        return; // Skip if disabled
       }
-    }, this.monitoringInterval);
+
+      const liveGames = await mlbApi.getLiveGames();
+      if (liveGames.length === 0) return;
+
+      console.log(`🔍 Checking ${liveGames.length} live ${this.sport} games...`);
+
+      for (const game of liveGames) {
+        try {
+          if (game.gameState !== 'Live') continue;
+          
+          if (!game.gamePk) continue;
+          const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
+          const gameState = this.extractGameState(liveFeed);
+          
+          if (!gameState) continue;
+          
+          const triggeredAlerts = await this.checkAlertConditions(gameState);
+          
+          if (triggeredAlerts.length > 0) {
+            console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
+            await this.processAlerts(triggeredAlerts, gameState);
+          }
+          
+        } catch (gameError) {
+          console.error(`Error processing ${this.sport} game:`, gameError);
+        }
+      }
+      
+    } catch (error) {
+      console.error(`${this.sport} monitoring error:`, error);
+    }
   }
 }
 

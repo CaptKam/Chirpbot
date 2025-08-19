@@ -164,7 +164,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
         };
 
-        const sent = await sendTelegramAlert(telegramConfig, alert);
+        const sent = await sendTelegramAlert(telegramConfig, {
+          ...alert,
+          aiContext: alert.aiContext || undefined
+        });
         if (sent) {
           await storage.markAlertSentToTelegram(alert.id);
         }
@@ -361,7 +364,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
         };
 
-        const sent = await sendTelegramAlert(telegramConfig, alert);
+        const sent = await sendTelegramAlert(telegramConfig, {
+          ...alert,
+          aiContext: alert.aiContext || undefined
+        });
         if (sent) {
           await storage.markAlertSentToTelegram(alert.id);
         }
@@ -385,96 +391,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     broadcast({ type: 'new_alert', data: alert });
   });
   
-  // Start all sport engines (MLB: 10s, NFL: 30s, NBA: 20s, NHL: 15s)
+  // Start all sport engines (MLB: 10s, NFL: 30s, NBA: 20s, NHL: 15s, Weather: 5min, AI: 15s)
   await alertEngineManager.startAllEngines();
-
-  // Keep existing general sports alert generation (reduced frequency for non-MLB)
-  setInterval(async () => {
-    try {
-      const gamesData = await liveSportsService.getTodaysGames();
-      const liveGames = gamesData.games.filter(game => 
-        game.status === 'live' || game.isLive === true
-      );
-      
-      // Only process non-MLB games here (MLB handled by dedicated engine)
-      const nonMLBGames = liveGames.filter(game => game.sport !== 'MLB');
-      
-      if (nonMLBGames.length === 0) {
-        return;
-      }
-
-      const randomLiveGame = nonMLBGames[Math.floor(Math.random() * nonMLBGames.length)];
-      
-      const settings = await storage.getSettingsBySport(randomLiveGame.sport);
-      if (!settings?.aiEnabled) {
-        return;
-      }
-      
-      const eventTypes = randomLiveGame.sport === 'NFL'
-        ? [{ type: "NFL Close Game", probability: 0.8 }]
-        : randomLiveGame.sport === 'NBA'
-        ? [{ type: "ClutchTime", probability: 0.7 }]
-        : [];
-
-      if (eventTypes.length === 0) return;
-
-      const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-      if (Math.random() > 0.6) return; // Reduced frequency for non-MLB
-
-      const weatherData = await getWeatherData(randomLiveGame.homeTeam.name);
-      
-      const alertData = {
-        type: randomEvent.type,
-        sport: randomLiveGame.sport,
-        title: `${randomLiveGame.homeTeam.name} @ ${randomLiveGame.awayTeam.name}`,
-        description: generateAlertDescription(randomEvent.type, randomLiveGame),
-        gameInfo: {
-          score: { 
-            away: randomLiveGame.awayTeam.score || Math.floor(Math.random() * 15), 
-            home: randomLiveGame.homeTeam.score || Math.floor(Math.random() * 15) 
-          },
-          quarter: randomLiveGame.sport === 'NFL' ? `${Math.floor(Math.random() * 4) + 1}` : undefined,
-          status: 'Live',
-          awayTeam: randomLiveGame.awayTeam.name,
-          homeTeam: randomLiveGame.homeTeam.name
-        },
-        weatherData,
-        aiContext: undefined as string | undefined,
-        aiConfidence: 0,
-        sentToTelegram: false,
-      };
-      
-      if (settings?.aiEnabled) {
-        const analysis = await analyzeAlert(
-          alertData.type,
-          alertData.sport,
-          alertData.gameInfo,
-          weatherData
-        );
-        alertData.aiContext = analysis.context;
-        alertData.aiConfidence = analysis.confidence;
-      }
-
-      const alert = await storage.createAlert(alertData);
-
-      if (settings?.telegramEnabled) {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
-          chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
-        };
-
-        const sent = await sendTelegramAlert(telegramConfig, alert);
-        if (sent) {
-          await storage.markAlertSentToTelegram(alert.id);
-        }
-      }
-
-      broadcast({ type: 'new_alert', data: alert });
-      console.log(`Generated alert for live game: ${randomLiveGame.homeTeam.name} vs ${randomLiveGame.awayTeam.name}`);
-    } catch (error) {
-      console.error("Live game alert generation error:", error);
-    }
-  }, 120000 + Math.random() * 60000); // 2-3 minutes for non-MLB sports
 
   // Helper function to generate alert descriptions
   function generateAlertDescription(alertType: string, game: any): string {

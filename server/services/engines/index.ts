@@ -57,13 +57,17 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     }
   }
   
-  private async monitorSport(sport: string, engine: BaseSportEngine): Promise<void> {
+  private async monitorSport(sport: string, engine: any): Promise<void> {
     try {
-      // This would be implemented based on each sport's specific monitoring logic
-      // For now, we'll call a generic monitoring method
-      
       console.log(`🔍 Monitoring ${sport} games...`);
-      // Generic monitoring logic would go here
+      
+      // Call the engine's specific monitoring method if it exists
+      if (engine.monitor && typeof engine.monitor === 'function') {
+        await engine.monitor();
+      } else if (engine.startMonitoring && typeof engine.startMonitoring === 'function' && !engine.monitoringStarted) {
+        // For engines with their own monitoring (MLB), just mark as started
+        engine.monitoringStarted = true;
+      }
       
     } catch (error) {
       console.error(`Error monitoring ${sport}:`, error);

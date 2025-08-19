@@ -18,6 +18,24 @@ export class AIEngine extends BaseSportEngine {
   sport = 'AI_ANALYSIS';
   monitoringInterval = 15000; // 15 seconds - frequent scanning
   
+  async monitor() {
+    try {
+      const settings = await storage.getSettingsBySport('MLB');
+      if (!settings?.aiEnabled) {
+        return;
+      }
+      
+      console.log(`🤖 AI scanning all live games for complex scenarios...`);
+      
+      // This would analyze all live games across all sports
+      // Looking for high-complexity situations worth predicting
+      // For now, placeholder implementation
+      
+    } catch (error) {
+      console.error(`AI analysis error:`, error);
+    }
+  }
+  
   alertConfigs: AlertConfig[] = [
     {
       type: "High-Probability Scenario",

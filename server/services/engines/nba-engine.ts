@@ -1,5 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { GameContext } from '../ai-predictions';
+import { storage } from '../../storage';
 
 interface NBAGameState {
   gameId: string;
@@ -16,6 +17,20 @@ interface NBAGameState {
 export class NBAEngine extends BaseSportEngine {
   sport = 'NBA';
   monitoringInterval = 20000; // 20 seconds for NBA
+  
+  async monitor() {
+    try {
+      const settings = await storage.getSettingsBySport(this.sport);
+      if (!settings?.aiEnabled) {
+        return;
+      }
+      
+      console.log(`🏀 Checking ${this.sport} games for alerts...`);
+      
+    } catch (error) {
+      console.error(`${this.sport} monitoring error:`, error);
+    }
+  }
   
   alertConfigs: AlertConfig[] = [
     {

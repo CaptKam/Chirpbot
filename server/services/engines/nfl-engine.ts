@@ -1,5 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { GameContext } from '../ai-predictions';
+import { storage } from '../../storage';
 
 interface NFLGameState {
   gameId: string;
@@ -20,6 +21,22 @@ interface NFLGameState {
 export class NFLEngine extends BaseSportEngine {
   sport = 'NFL';
   monitoringInterval = 30000; // 30 seconds for NFL
+  
+  async monitor() {
+    try {
+      const settings = await storage.getSettingsBySport(this.sport);
+      if (!settings?.aiEnabled) {
+        return;
+      }
+      
+      // For now, NFL monitoring would check ESPN API for live games
+      // This is a placeholder that will be expanded with real game data
+      console.log(`⚡ Checking ${this.sport} games for alerts...`);
+      
+    } catch (error) {
+      console.error(`${this.sport} monitoring error:`, error);
+    }
+  }
   
   alertConfigs: AlertConfig[] = [
     {

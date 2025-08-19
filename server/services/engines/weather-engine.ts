@@ -32,6 +32,62 @@ export class WeatherEngine extends BaseSportEngine {
   
   private weatherHistory = new Map<string, WeatherState['currentWeather']>();
   
+  async monitor() {
+    try {
+      const settings = await storage.getSettingsBySport('MLB');
+      if (!settings?.aiEnabled) {
+        return;
+      }
+      
+      console.log(`🌤️ Checking weather conditions for all active games...`);
+      
+      // Get all monitored teams and check weather for their venues
+      const monitoredTeams = await storage.getMonitoredTeams();
+      
+      for (const team of monitoredTeams) {
+        try {
+          const weatherData = await getWeatherData(team.name);
+          if (!weatherData) continue;
+          
+          const previousWeather = this.weatherHistory.get(team.name);
+          
+          const weatherState: WeatherState = {
+            gameId: `weather-${team.name}`,
+            homeTeam: team.name,
+            awayTeam: 'N/A',
+            venue: team.name,
+            city: team.name,
+            currentWeather: {
+              temperature: weatherData.temperature || 0,
+              windSpeed: weatherData.windSpeed || 0,
+              windDirection: weatherData.windDirection || 'N',
+              condition: weatherData.condition
+            },
+            previousWeather,
+            sport: 'WEATHER'
+          };
+          
+          // Check for weather alerts
+          const triggeredAlerts = await this.checkAlertConditions(weatherState);
+          
+          if (triggeredAlerts.length > 0) {
+            console.log(`🌪️ Weather alerts for ${team.name}:`, triggeredAlerts.length);
+            await this.processAlerts(triggeredAlerts, weatherState);
+          }
+          
+          // Update weather history
+          this.weatherHistory.set(team.name, weatherState.currentWeather);
+          
+        } catch (error) {
+          console.error(`Weather check failed for ${team.name}:`, error);
+        }
+      }
+      
+    } catch (error) {
+      console.error(`Weather monitoring error:`, error);
+    }
+  }
+  
   alertConfigs: AlertConfig[] = [
     {
       type: "Wind Shift Alert",
