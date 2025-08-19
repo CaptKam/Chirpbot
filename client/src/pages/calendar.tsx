@@ -46,7 +46,10 @@ export default function Calendar() {
     },
   });
 
-  const alertCount = alerts?.length || 0;
+  const { data: unseenCount = { count: 0 } } = useQuery<{ count: number }>({
+    queryKey: ["/api/alerts/unseen/count"],
+    refetchInterval: 30000,
+  });
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -207,10 +210,10 @@ export default function Calendar() {
           )}
           <Link href="/alerts">
             <Button variant="ghost" size="sm" className="relative p-0 text-white hover:text-gray-200">
-              <Bell className="w-5 h-5" />
-              {alertCount > 0 && (
+              <Bell className="w-7 h-7" />
+              {unseenCount && unseenCount.count > 0 && (
                 <span className="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {alertCount > 99 ? "99+" : alertCount}
+                  {unseenCount.count}
                 </span>
               )}
             </Button>
