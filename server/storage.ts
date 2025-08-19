@@ -1,7 +1,7 @@
 import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, users, userMonitoredTeams, teams, alerts, settings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -31,7 +31,6 @@ export interface IStorage {
   getRecentAlerts(limit?: number): Promise<Alert[]>;
   createAlert(alert: InsertAlert): Promise<Alert>;
   markAlertSentToTelegram(id: string): Promise<void>;
-  deleteAlert(id: string): Promise<boolean>;
 
   // Settings
   getSettingsBySport(sport: string): Promise<Settings | undefined>;
@@ -105,26 +104,6 @@ export class MemStorage implements IStorage {
         aiConfidenceThreshold: 85,
         telegramEnabled: true,
         pushNotificationsEnabled: true,
-        // MLB Alert Toggles
-        gameStateAlerts: sport === "MLB",
-        rispAlerts: sport === "MLB",
-        weatherAlerts: sport === "MLB",
-        batterAlerts: sport === "MLB",
-        // NFL Alert Toggles
-        redZoneAlerts: sport === "NFL",
-        twoMinuteAlerts: sport === "NFL",
-        fourthDownAlerts: sport === "NFL",
-        turnoverAlerts: sport === "NFL",
-        // NBA Alert Toggles
-        clutchTimeAlerts: sport === "NBA",
-        overtimeAlerts: sport === "NBA",
-        leadChangeAlerts: sport === "NBA",
-        closeGameAlerts: sport === "NBA",
-        // NHL Alert Toggles
-        powerPlayAlerts: sport === "NHL",
-        emptyNetAlerts: sport === "NHL",
-        thirdPeriodAlerts: sport === "NHL",
-        finalMinutesAlerts: sport === "NHL",
       });
     });
   }
@@ -242,12 +221,7 @@ export class MemStorage implements IStorage {
         inning: insertAlert.gameInfo.inning as string | undefined,
         period: insertAlert.gameInfo.period as string | undefined,
       },
-      weatherData: insertAlert.weatherData ? {
-        temperature: insertAlert.weatherData.temperature,
-        condition: insertAlert.weatherData.condition,
-        windSpeed: insertAlert.weatherData.windSpeed as number | undefined,
-        windDirection: insertAlert.weatherData.windDirection as string | undefined,
-      } : null
+      weatherData: insertAlert.weatherData || null
     };
     this.alerts.set(id, alert);
     return alert;
@@ -259,10 +233,6 @@ export class MemStorage implements IStorage {
       alert.sentToTelegram = true;
       this.alerts.set(id, alert);
     }
-  }
-
-  async deleteAlert(id: string): Promise<boolean> {
-    return this.alerts.delete(id);
   }
 
   // Settings methods
@@ -283,24 +253,7 @@ export class MemStorage implements IStorage {
       aiEnabled: insertSettings.aiEnabled ?? true,
       aiConfidenceThreshold: insertSettings.aiConfidenceThreshold ?? 85,
       telegramEnabled: insertSettings.telegramEnabled ?? true,
-      pushNotificationsEnabled: insertSettings.pushNotificationsEnabled ?? true,
-      // Ensure all required boolean fields have defaults
-      gameStateAlerts: insertSettings.gameStateAlerts ?? true,
-      rispAlerts: insertSettings.rispAlerts ?? true,
-      weatherAlerts: insertSettings.weatherAlerts ?? true,
-      batterAlerts: insertSettings.batterAlerts ?? true,
-      redZoneAlerts: insertSettings.redZoneAlerts ?? true,
-      twoMinuteAlerts: insertSettings.twoMinuteAlerts ?? true,
-      fourthDownAlerts: insertSettings.fourthDownAlerts ?? true,
-      turnoverAlerts: insertSettings.turnoverAlerts ?? true,
-      clutchTimeAlerts: insertSettings.clutchTimeAlerts ?? true,
-      overtimeAlerts: insertSettings.overtimeAlerts ?? true,
-      leadChangeAlerts: insertSettings.leadChangeAlerts ?? true,
-      closeGameAlerts: insertSettings.closeGameAlerts ?? true,
-      powerPlayAlerts: insertSettings.powerPlayAlerts ?? true,
-      emptyNetAlerts: insertSettings.emptyNetAlerts ?? true,
-      thirdPeriodAlerts: insertSettings.thirdPeriodAlerts ?? true,
-      finalMinutesAlerts: insertSettings.finalMinutesAlerts ?? true,
+      pushNotificationsEnabled: insertSettings.pushNotificationsEnabled ?? true
     };
     this.settings.set(settings.sport, settings);
     return settings;
@@ -393,51 +346,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAlertsBySport(sport: string): Promise<Alert[]> {
-    return await db.select().from(alerts)
-      .where(eq(alerts.sport, sport))
-      .orderBy(desc(alerts.timestamp));
+    return await db.select().from(alerts).where(eq(alerts.sport, sport));
   }
 
   async getAlertsByType(type: string): Promise<Alert[]> {
-    return await db.select().from(alerts)
-      .where(eq(alerts.type, type))
-      .orderBy(desc(alerts.timestamp));
+    return await db.select().from(alerts).where(eq(alerts.type, type));
   }
 
   async getRecentAlerts(limit = 50): Promise<Alert[]> {
-    return await db.select().from(alerts)
-      .orderBy(desc(alerts.timestamp))
-      .limit(limit);
+    return await db.select().from(alerts).limit(limit);
   }
 
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
-    // Properly cast gameInfo properties to ensure type compatibility
-    const alertData = {
-      ...insertAlert,
-      gameInfo: {
-        ...insertAlert.gameInfo,
-        quarter: insertAlert.gameInfo.quarter as string | undefined,
-        inning: insertAlert.gameInfo.inning as string | undefined,
-        period: insertAlert.gameInfo.period as string | undefined,
-      },
-      weatherData: insertAlert.weatherData ? {
-        temperature: insertAlert.weatherData.temperature,
-        condition: insertAlert.weatherData.condition,
-        windSpeed: insertAlert.weatherData.windSpeed as number | undefined,
-        windDirection: insertAlert.weatherData.windDirection as string | undefined,
-      } : null
-    };
-    const [alert] = await db.insert(alerts).values([alertData]).returning();
+    const [alert] = await db.insert(alerts).values(insertAlert).returning();
     return alert;
   }
 
   async markAlertSentToTelegram(id: string): Promise<void> {
     await db.update(alerts).set({ sentToTelegram: true }).where(eq(alerts.id, id));
-  }
-
-  async deleteAlert(id: string): Promise<boolean> {
-    const result = await db.delete(alerts).where(eq(alerts.id, id));
-    return (result.rowCount ?? 0) > 0;
   }
 
   // Settings methods

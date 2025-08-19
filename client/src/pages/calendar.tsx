@@ -11,6 +11,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
+const TEST_USER_ID = "test-user-123"; // For demo purposes
 
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
@@ -27,13 +28,11 @@ export default function Calendar() {
       if (!response.ok) throw new Error("Failed to fetch games");
       return response.json();
     },
-    refetchInterval: 5000, // Refresh every 5 seconds for live game updates
-    staleTime: 0, // Always fresh data
   });
 
   const games = gamesData?.games || [];
 
-  // Fetch alerts for badge count with fast refresh
+  // Fetch alerts for badge count
   const { data: alerts } = useQuery({
     queryKey: ["/api/alerts", { limit: "10" }],
     queryFn: async ({ queryKey }) => {
@@ -45,8 +44,6 @@ export default function Calendar() {
       if (!response.ok) throw new Error("Failed to fetch alerts");
       return response.json();
     },
-    refetchInterval: 3000, // Fast refresh for alert badge
-    staleTime: 0,
   });
 
   const alertCount = alerts?.length || 0;
@@ -65,9 +62,9 @@ export default function Calendar() {
     },
   });
 
-  // Load persisted monitored games with fast refresh
+  // Load persisted monitored games
   const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
-    queryKey: [`/api/user/${user?.id}/monitored-games`, { sport: activeSport }],
+    queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`, { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
       const searchParams = new URLSearchParams(params as Record<string, string>);
@@ -77,9 +74,6 @@ export default function Calendar() {
       if (!response.ok) throw new Error("Failed to fetch monitored games");
       return response.json();
     },
-    enabled: !!user?.id, // Only run query when user ID is available
-    refetchInterval: 4000, // Fast refresh for game monitoring status
-    staleTime: 0,
   });
 
   // Sync selected games with persisted monitored games
@@ -98,28 +92,22 @@ export default function Calendar() {
       homeTeamName: string; 
       awayTeamName: string; 
     }) => {
-      if (!user?.id) throw new Error("User not authenticated");
-      return apiRequest("POST", `/api/user/${user.id}/monitored-games`, { 
+      return apiRequest("POST", `/api/user/${TEST_USER_ID}/monitored-games`, { 
         gameId, sport, homeTeamName, awayTeamName 
       });
     },
     onSuccess: () => {
-      if (user?.id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/monitored-games`] });
-      }
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
     }
   });
 
   // Remove game monitoring
   const removeMonitoringMutation = useMutation({
     mutationFn: async (gameId: string) => {
-      if (!user?.id) throw new Error("User not authenticated");
-      return apiRequest("DELETE", `/api/user/${user.id}/monitored-games/${gameId}`);
+      return apiRequest("DELETE", `/api/user/${TEST_USER_ID}/monitored-games/${gameId}`);
     },
     onSuccess: () => {
-      if (user?.id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/monitored-games`] });
-      }
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
     }
   });
 

@@ -26,15 +26,15 @@ const teamNameToAbbr: Record<string, string> = {
   'Seattle Mariners': 'SEA',
   'Baltimore Orioles': 'BAL',
   'Atlanta Braves': 'ATL',
+  'Chicago White Sox': 'CWS',
   'Kansas City Royals': 'KC',
   'Texas Rangers': 'TEX',
   'Colorado Rockies': 'COL',
   'Los Angeles Angels': 'LAA',
   'Cincinnati Reds': 'CIN',
-  'Arizona Diamondbacks': 'ARI',
+  'Arizona Diamondbacks': 'AZ',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
-  'Chicago White Sox': 'CHW',
   
   // NFL Teams
   'Kansas City Chiefs': 'KC',
@@ -53,8 +53,6 @@ const teamNameToAbbr: Record<string, string> = {
   'Denver Broncos': 'DEN',
   'Las Vegas Raiders': 'LV',
   'Los Angeles Chargers': 'LAC',
-  'Washington Commanders': 'WAS',
-  'Dallas Cowboys': 'DAL',
   
   // NBA Teams  
   'Los Angeles Lakers': 'LAL',
@@ -76,15 +74,6 @@ const teamNameToAbbr: Record<string, string> = {
 };
 
 export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }: TeamLogoProps) {
-  // Early return if teamName is not provided
-  if (!teamName) {
-    return (
-      <div className={`w-8 h-8 ${className} rounded-full bg-gray-400 border-2 border-white shadow-sm flex items-center justify-center`}>
-        <span className="text-white font-black text-xs">?</span>
-      </div>
-    );
-  }
-
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -295,20 +284,14 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   // Generic fallback logo with better styling
   const defaultLogo = (
     <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
-      <span className="text-white font-black text-xs">{teamAbbr || (teamName ? teamName.slice(0, 3).toUpperCase() : '???')}</span>
+      <span className="text-white font-black text-xs">{teamAbbr || teamName.slice(0, 3).toUpperCase()}</span>
     </div>
   );
 
   const selectedLogo = logoMap[teamAbbr];
   
   if (!selectedLogo) {
-    // Only log once per team to avoid spam
-    const globalAny = globalThis as any;
-    if (!globalAny.loggedMissingLogos) globalAny.loggedMissingLogos = new Set();
-    if (!globalAny.loggedMissingLogos.has(teamAbbr)) {
-      console.log(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
-      globalAny.loggedMissingLogos.add(teamAbbr);
-    }
+    console.log(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
     return defaultLogo;
   }
   

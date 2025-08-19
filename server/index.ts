@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -8,44 +7,17 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session middleware with database storage for production
-const pgStore = connectPg(session);
-
-// Configure session store for maximum deployment compatibility
-let sessionStore;
-try {
-  if (process.env.DATABASE_URL) {
-    sessionStore = new pgStore({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
-      ttl: 7 * 24 * 60 * 60, // 7 days in seconds
-    });
-    console.log('Using PostgreSQL session store');
-  } else {
-    console.log('Using memory session store (development)');
-  }
-} catch (error) {
-  console.error('Session store setup error:', error);
-}
-
-const sessionConfig = {
+// Session middleware
+app.use(session({
   secret: process.env.SESSION_SECRET || 'chirpbot-dev-secret-key-12345',
-  store: sessionStore,
-  resave: true, // Changed to true for better persistence
-  saveUninitialized: true, // Changed to true for deployment compatibility
-  name: 'chirpbot.sid', // Unique session name
+  resave: false,
+  saveUninitialized: false,
   cookie: {
-    secure: false, // Always false for Replit
-    httpOnly: false, // False for debugging
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: false, // Most permissive for deployment
-    domain: undefined, // Let browser handle domain
-    path: "/",
-  },
-  rolling: true, // Extend session on activity
-};
-
-app.use(session(sessionConfig));
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();
