@@ -8,9 +8,10 @@ import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 
 const FILTER_OPTIONS = [
-  { id: "all", label: "All Sports", active: true },
-  { id: "high-impact", label: "High Impact", active: false },
-  { id: "ai-verified", label: "AI Verified", active: false },
+  { id: "all", label: "All", active: true },
+  { id: "nfl", label: "NFL", active: false },
+  { id: "nba", label: "NBA", active: false },
+  { id: "nhl", label: "NHL", active: false },
 ];
 
 export default function Alerts() {
@@ -74,14 +75,9 @@ export default function Alerts() {
 
   const filteredAlerts = Array.isArray(alerts) ? alerts.filter(alert => {
     if (activeFilters.includes("all")) return true;
-    if (activeFilters.includes("high-impact")) {
-      // Consider alerts with AI confidence > 90% as high impact
-      return (alert.aiConfidence || 0) > 90;
-    }
-    if (activeFilters.includes("ai-verified")) {
-      return alert.aiContext && (alert.aiConfidence || 0) > 75;
-    }
-    return true;
+    return activeFilters.some(filter => 
+      alert.sport.toLowerCase() === filter.toLowerCase()
+    );
   }) : [];
   
   console.log("Filtered alerts:", filteredAlerts);
