@@ -258,6 +258,7 @@ export class MLBAlertEngine {
     try {
       const settings = await storage.getSettingsBySport('MLB');
       if (!settings?.aiEnabled) {
+        console.log('Alerts disabled for MLB, skipping');
         return; // Skip if MLB alerts are disabled
       }
 
@@ -271,6 +272,11 @@ export class MLBAlertEngine {
 
       for (const game of liveGames) {
         try {
+          // Skip games that are not actually live
+          if (game.status.statusCode !== 'I') {
+            continue;
+          }
+          
           // Get detailed live feed for accurate game state
           const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
           const gameState = this.extractGameState(liveFeed, game);
