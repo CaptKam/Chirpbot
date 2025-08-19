@@ -237,7 +237,12 @@ export class MemStorage implements IStorage {
         inning: insertAlert.gameInfo.inning as string | undefined,
         period: insertAlert.gameInfo.period as string | undefined,
       },
-      weatherData: insertAlert.weatherData || null
+      weatherData: insertAlert.weatherData ? {
+        temperature: insertAlert.weatherData.temperature,
+        condition: insertAlert.weatherData.condition,
+        windSpeed: insertAlert.weatherData.windSpeed as number | undefined,
+        windDirection: insertAlert.weatherData.windDirection as string | undefined
+      } : null
     };
     this.alerts.set(id, alert);
     
@@ -387,7 +392,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
-    const [alert] = await db.insert(alerts).values(insertAlert).returning();
+    const [alert] = await db.insert(alerts).values([insertAlert]).returning();
     return alert;
   }
 
