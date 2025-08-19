@@ -241,9 +241,22 @@ export default function Calendar() {
       {/* Teams List */}
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black uppercase tracking-wider text-chirp-text-dark">
-            Today's Games
-          </h2>
+          <div>
+            <h2 className="text-lg font-black uppercase tracking-wider text-chirp-text-dark">
+              Today's Games
+            </h2>
+            <div className="flex items-center space-x-4 mt-1">
+              <span className="text-sm font-semibold text-green-600">
+                {games.filter(g => g.status === 'live').length} Live
+              </span>
+              <span className="text-sm font-semibold text-blue-600">
+                {games.filter(g => g.status === 'scheduled').length} Scheduled
+              </span>
+              <span className="text-sm font-semibold text-gray-600">
+                {games.filter(g => g.status === 'final').length} Final
+              </span>
+            </div>
+          </div>
           <span className="text-sm font-semibold text-chirp-text-muted">
             {selectedCount}/{games.length} Selected
           </span>
@@ -291,7 +304,19 @@ export default function Calendar() {
           </div>
         ) : (
           <div className="space-y-3">
-            {games.map((game) => {
+            {/* Sort games to show live games first, then scheduled, then final */}
+            {games
+              .sort((a, b) => {
+                // Live games first
+                if (a.status === 'live' && b.status !== 'live') return -1;
+                if (b.status === 'live' && a.status !== 'live') return 1;
+                // Then scheduled games
+                if (a.status === 'scheduled' && b.status === 'final') return -1;
+                if (b.status === 'scheduled' && a.status === 'final') return 1;
+                // Then by start time
+                return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+              })
+              .map((game) => {
               const isSelected = selectedGames.has(game.id);
               const weather = getWeatherData();
               const startTime = new Date(game.startTime);
