@@ -183,7 +183,7 @@ export default function Alerts() {
                 
                 {/* Key Situation */}
                 <div className="text-center mb-2">
-                  <h3 className="text-lg font-bold text-chirp-blue" data-testid={`alert-title-${alert.id}`}>
+                  <h3 className="font-bold text-chirp-blue" style={{fontSize: '15px'}} data-testid={`alert-title-${alert.id}`}>
                     {alert.title.toUpperCase()}
                   </h3>
                 </div>
