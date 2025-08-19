@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Filter, Share2, TriangleAlert, Star, Bot, Volleyball, Dumbbell } from "lucide-react";
+import { Zap, Bell, TriangleAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 
@@ -168,86 +168,36 @@ export default function Alerts() {
         ) : (
           <>
             {filteredAlerts.map((alert) => {
-            const AlertIcon = getAlertIcon(alert.type);
-            const alertColorClass = getAlertColor(alert.type);
-            
             return (
               <Card
                 key={alert.id}
-                className={`bg-white rounded-xl shadow-sm border-l-4 p-4 ${alertColorClass}`}
+                className="bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-4 hover:shadow-lg transition-shadow"
                 data-testid={`alert-card-${alert.id}`}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Badge className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${alertColorClass.split(' ').slice(0, 2).join(' ')}`}>
-                      <AlertIcon className="w-3 h-3 mr-1" />
-                      {alert.type}
-                    </Badge>
-                    <span className="text-xs text-chirp-dark" data-testid={`alert-time-${alert.id}`}>
-                      {formatDistanceToNow(new Date(alert.timestamp), { addSuffix: true })}
-                    </span>
-                  </div>
-                  {alert.aiConfidence && (
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                      <span className="text-xs font-medium text-chirp-dark">
-                        {alert.aiConfidence}% AI
-                      </span>
-                    </div>
-                  )}
+                {/* Quick Impact Header */}
+                <div className="text-center mb-2">
+                  <h2 className="text-xl font-black uppercase tracking-wide text-red-600">
+                    ⚡ {alert.type.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}!
+                  </h2>
                 </div>
                 
-                <div className="mb-3">
-                  <h3 className="font-bold text-chirp-blue mb-1" data-testid={`alert-title-${alert.id}`}>
-                    {alert.title}
+                {/* Key Situation */}
+                <div className="text-center mb-2">
+                  <h3 className="text-lg font-bold text-chirp-blue" data-testid={`alert-title-${alert.id}`}>
+                    {alert.title.toUpperCase()}
                   </h3>
-                  <p className="text-sm text-chirp-dark" data-testid={`alert-description-${alert.id}`}>
-                    {alert.description}
-                  </p>
                 </div>
 
-                {/* Weather Display */}
-                {alert.weatherData && (
-                  <div className="mb-3 text-xs text-chirp-dark">
-                    <span className="font-medium">Weather:</span> {alert.weatherData.temperature}°F, {alert.weatherData.condition}
-                    {alert.weatherData.windSpeed && (
-                      <span> • Wind: {alert.weatherData.windSpeed}mph {alert.weatherData.windDirection}</span>
-                    )}
-                  </div>
-                )}
-
-                {/* AI Context */}
-                {alert.aiContext && (
-                  <div className="bg-blue-50 rounded-lg p-3 mb-3">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Bot className="w-4 h-4 text-blue-600" />
-                      <span className="text-xs font-bold uppercase text-blue-800 tracking-wide">
-                        AI Analysis
-                      </span>
-                    </div>
-                    <p className="text-sm text-blue-800" data-testid={`alert-ai-context-${alert.id}`}>
-                      {alert.aiContext}
+                {/* Quick Action Insight */}
+                <div className="text-center">
+                  <p className="text-sm font-medium text-chirp-dark" data-testid={`alert-description-${alert.id}`}>
+                    {alert.description}
+                  </p>
+                  {alert.aiConfidence && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {alert.aiConfidence}% AI confidence
                     </p>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm font-medium text-chirp-dark" data-testid={`alert-game-info-${alert.id}`}>
-                      {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
-                    </span>
-                    <span className="text-sm text-chirp-blue">
-                      {alert.gameInfo.status}
-                    </span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-0 text-chirp-red hover:text-red-700"
-                    data-testid={`alert-share-${alert.id}`}
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </Button>
+                  )}
                 </div>
               </Card>
             );
