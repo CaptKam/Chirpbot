@@ -12,6 +12,8 @@ interface DemoOnboardingProps {
 
 export default function DemoOnboarding({ isOpen, onClose }: DemoOnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  
+  console.log("DemoOnboarding component - isOpen:", isOpen, "currentStep:", currentStep);
 
   const steps = [
     {
@@ -141,7 +143,7 @@ export default function DemoOnboarding({ isOpen, onClose }: DemoOnboardingProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-[#0B1220] border-slate-700 text-slate-100">
+      <DialogContent className="max-w-2xl bg-[#0B1220] border-slate-700 text-slate-100 z-[9999]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
             {steps[currentStep].title}

@@ -36,7 +36,9 @@ export default function Login() {
           title: "Welcome to ChirpBot Demo!",
           description: "Let's show you what we can do.",
         });
+        console.log("Setting showDemoOnboarding to true");
         setShowDemoOnboarding(true);
+        console.log("showDemoOnboarding state should now be:", true);
       } else {
         console.log("Regular user login - redirecting to dashboard");
         toast({
