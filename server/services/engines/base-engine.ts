@@ -217,8 +217,6 @@ export abstract class BaseSportEngine implements SportEngine {
             ...this.getGameSpecificInfo(gameState)
           },
           weatherData,
-          aiContext: aiContext,
-          aiConfidence: aiConfidence,
           sentToTelegram: false,
         };
 
@@ -234,10 +232,7 @@ export abstract class BaseSportEngine implements SportEngine {
             chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
           };
 
-          const sent = await sendTelegramAlert(telegramConfig, {
-            ...createdAlert,
-            aiContext: createdAlert.aiContext || undefined
-          });
+          const sent = await sendTelegramAlert(telegramConfig, createdAlert);
           if (sent) {
             await storage.markAlertSentToTelegram(createdAlert.id);
           }
@@ -265,7 +260,7 @@ export abstract class BaseSportEngine implements SportEngine {
 
     // Get settings to check which prediction alerts are enabled
     const settings = await storage.getSettingsBySport(this.sport);
-    if (!settings?.aiEnabled) {
+    if (!settings) {
       return [];
     }
 
@@ -286,7 +281,7 @@ export abstract class BaseSportEngine implements SportEngine {
       if (allPredictionEvents.length === 0) return [];
 
       const uniqueEvents = Array.from(new Set(allPredictionEvents));
-      const predictionRequest: PredictionRequest = {
+      const predictionRequest: any = {
         eventTypes: uniqueEvents, // Remove duplicates
         context: gameContext,
         minimumProbability: 60 // Default threshold
