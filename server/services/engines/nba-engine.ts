@@ -1,5 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { storage } from '../../storage';
+import { sportsDataService } from '../sportsdata-api';
 
 interface NBAGameState {
   gameId: string;
@@ -32,6 +33,36 @@ export class NBAEngine extends BaseSportEngine {
       }
       
       console.log(`🏀 Checking ${this.sport} games for alerts...`);
+      
+      // Fetch live NBA games from SportsData.io
+      const games = await sportsDataService.getNBAGames();
+      const liveGames = games.filter(game => game.status === 'live');
+      
+      if (liveGames.length === 0) {
+        return;
+      }
+      
+      console.log(`🏀 Found ${liveGames.length} live NBA games to monitor`);
+      
+      // Process each live game for alerts
+      for (const game of liveGames) {
+        const gameState: NBAGameState = {
+          gameId: game.id,
+          period: 1, // Default to 1 since SportsData doesn't provide detailed period info
+          timeRemaining: "12:00", // SportsData doesn't provide detailed time
+          homeScore: game.homeTeam.score || 0,
+          awayScore: game.awayTeam.score || 0,
+          homeTeam: game.homeTeam.name,
+          awayTeam: game.awayTeam.name,
+          clutchTime: false, // Would need more detailed data to determine
+          overtime: false // Would need more detailed data to determine
+        };
+        
+        const triggeredAlerts = await this.checkAlertConditions(gameState);
+        if (triggeredAlerts.length > 0) {
+          await this.processAlerts(triggeredAlerts, gameState);
+        }
+      }
       
     } catch (error) {
       console.error(`${this.sport} monitoring error:`, error);

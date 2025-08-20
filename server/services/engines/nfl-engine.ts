@@ -1,5 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { storage } from '../../storage';
+import { sportsDataService } from '../sportsdata-api';
 
 interface NFLGameState {
   gameId: string;
@@ -35,9 +36,41 @@ export class NFLEngine extends BaseSportEngine {
         return;
       }
       
-      // For now, NFL monitoring would check ESPN API for live games
-      // This is a placeholder that will be expanded with real game data
       console.log(`⚡ Checking ${this.sport} games for alerts...`);
+      
+      // Fetch live NFL games from SportsData.io
+      const games = await sportsDataService.getNFLGames();
+      const liveGames = games.filter(game => game.status === 'live');
+      
+      if (liveGames.length === 0) {
+        return;
+      }
+      
+      console.log(`🏈 Found ${liveGames.length} live NFL games to monitor`);
+      
+      // Process each live game for alerts
+      for (const game of liveGames) {
+        const gameState: NFLGameState = {
+          gameId: game.id,
+          quarter: 1, // Default to 1 since SportsData doesn't provide detailed quarter info
+          timeRemaining: "15:00", // SportsData doesn't provide detailed time
+          possession: "",
+          down: 1,
+          yardsToGo: 10,
+          yardLine: "50",
+          homeScore: game.homeTeam.score || 0,
+          awayScore: game.awayTeam.score || 0,
+          homeTeam: game.homeTeam.name,
+          awayTeam: game.awayTeam.name,
+          redZone: false,
+          twoMinuteWarning: false
+        };
+        
+        const triggeredAlerts = await this.checkAlertConditions(gameState);
+        if (triggeredAlerts.length > 0) {
+          await this.processAlerts(triggeredAlerts, gameState);
+        }
+      }
       
     } catch (error) {
       console.error(`${this.sport} monitoring error:`, error);
@@ -123,7 +156,7 @@ export class NFLEngine extends BaseSportEngine {
     };
   }
 
-  protected buildGameContext(gameState: NFLGameState): GameContext {
+  protected buildGameContext(gameState: NFLGameState): any {
     return {
       sport: this.sport,
       quarter: gameState.quarter,

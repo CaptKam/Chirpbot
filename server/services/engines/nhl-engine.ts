@@ -1,5 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { storage } from '../../storage';
+import { sportsDataService } from '../sportsdata-api';
 
 interface NHLGameState {
   gameId: string;
@@ -34,6 +35,38 @@ export class NHLEngine extends BaseSportEngine {
       }
       
       console.log(`🏒 Checking ${this.sport} games for alerts...`);
+      
+      // Fetch live NHL games from SportsData.io
+      const games = await sportsDataService.getNHLGames();
+      const liveGames = games.filter(game => game.status === 'live');
+      
+      if (liveGames.length === 0) {
+        return;
+      }
+      
+      console.log(`🏒 Found ${liveGames.length} live NHL games to monitor`);
+      
+      // Process each live game for alerts
+      for (const game of liveGames) {
+        const gameState: NHLGameState = {
+          gameId: game.id,
+          period: 1, // Default to 1 since SportsData doesn't provide detailed period info
+          timeRemaining: "20:00", // SportsData doesn't provide detailed time
+          homeScore: game.homeTeam.score || 0,
+          awayScore: game.awayTeam.score || 0,
+          homeTeam: game.homeTeam.name,
+          awayTeam: game.awayTeam.name,
+          powerPlay: false, // Would need more detailed data
+          emptyNet: false, // Would need more detailed data
+          overtime: false, // Would need more detailed data
+          finalMinutes: false
+        };
+        
+        const triggeredAlerts = await this.checkAlertConditions(gameState);
+        if (triggeredAlerts.length > 0) {
+          await this.processAlerts(triggeredAlerts, gameState);
+        }
+      }
       
     } catch (error) {
       console.error(`${this.sport} monitoring error:`, error);
@@ -133,7 +166,7 @@ export class NHLEngine extends BaseSportEngine {
     };
   }
 
-  protected buildGameContext(gameState: NHLGameState): GameContext {
+  protected buildGameContext(gameState: NHLGameState): any {
     return {
       sport: this.sport,
       period: gameState.period,
