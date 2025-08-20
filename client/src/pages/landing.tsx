@@ -235,21 +235,27 @@ function LivePreview() {
     {
       type: "RISP Alert",
       title: "Yankees @ Red Sox",
-      description: "RUNNERS ON 2ND & 3RD, 2 OUTS! (65% scoring probability)",
+      description: "RUNNERS ON 2ND & 3RD, 2 OUTS! Aaron Judge (.301 BA, 47 HRs) up to bat",
+      aiContext: "15 MPH wind blowing out to right field. Judge has .340 BA with RISP this season.",
+      weather: "Wind: 15 MPH → RF",
       time: "2s ago",
       confidence: 87
     },
     {
       type: "Red Zone Alert", 
       title: "Chiefs @ Bills",
-      description: "1ST & GOAL at 8-yard line! (78% TD probability)",
+      description: "1ST & GOAL at 8-yard line! Mahomes targeting Kelce in critical formation",
+      aiContext: "Chiefs are 89% successful from this position. Kelce has 12 red zone TDs this season.",
+      weather: "Clear, 72°F",
       time: "5s ago",
       confidence: 92
     },
     {
       type: "Clutch Time",
       title: "Lakers @ Warriors", 
-      description: "Under 2 minutes, 3-point game! (45% comeback probability)",
+      description: "Under 2 minutes, 3-point game! LeBron has the ball, Curry defending",
+      aiContext: "LeBron shoots 45% in clutch time. Warriors allowing 1.02 PPP in final 2 minutes.",
+      weather: "Indoor venue",
       time: "8s ago",
       confidence: 79
     }
@@ -304,9 +310,16 @@ function LivePreview() {
                   </div>
                   <h4 className="font-bold mb-1 text-slate-100">{alerts[alertIndex].title}</h4>
                   <p className="text-sm text-slate-300 mb-2">{alerts[alertIndex].description}</p>
-                  <div className="flex items-center gap-2">
-                    <div className="text-xs text-slate-400">Confidence:</div>
-                    <div className="text-xs font-semibold text-emerald-400">{alerts[alertIndex].confidence}%</div>
+                  <div className="bg-slate-800/50 rounded-lg p-2 mb-2">
+                    <div className="text-xs text-blue-300 mb-1">🤖 AI Analysis:</div>
+                    <div className="text-xs text-slate-300">{alerts[alertIndex].aiContext}</div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-slate-400">Confidence:</div>
+                      <div className="text-xs font-semibold text-emerald-400">{alerts[alertIndex].confidence}%</div>
+                    </div>
+                    <div className="text-xs text-slate-400">{alerts[alertIndex].weather}</div>
                   </div>
                 </motion.div>
               ))}
