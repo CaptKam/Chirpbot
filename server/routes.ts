@@ -1022,5 +1022,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset OpenAI quota status endpoint
+  app.post("/api/openai/reset-quota", async (req, res) => {
+    try {
+      const { getOpenAIManager } = await import('./services/openai-manager');
+      const openaiManager = getOpenAIManager();
+      
+      openaiManager.resetQuota();
+      
+      res.json({ 
+        message: 'OpenAI quota reset successfully - API calls re-enabled',
+        success: true 
+      });
+    } catch (error) {
+      console.error('Error resetting OpenAI quota:', error);
+      res.status(500).json({ message: 'Failed to reset OpenAI quota' });
+    }
+  });
+
   return httpServer;
 }

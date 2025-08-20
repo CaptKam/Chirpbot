@@ -353,7 +353,52 @@ Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key 
         )
       ]);
 
-      const result = JSON.parse(response.choices[0].message.content || '{"predictions": []}');
+      // Safely parse JSON response with validation
+      let result;
+      try {
+        const content = response.choices[0].message.content || '{"predictions": []}';
+        
+        // Clean up any potential JSON formatting issues
+        const cleanContent = content.trim();
+        
+        // Validate that we have proper JSON structure
+        if (!cleanContent.startsWith('{') || !cleanContent.endsWith('}')) {
+          throw new Error('Invalid JSON structure: response does not appear to be valid JSON');
+        }
+        
+        result = JSON.parse(cleanContent);
+        
+        // Validate the expected structure
+        if (!result || typeof result !== 'object') {
+          throw new Error('Invalid response structure: parsed result is not an object');
+        }
+        
+        if (!Array.isArray(result.predictions)) {
+          console.warn('OpenAI response missing predictions array, using empty array');
+          result.predictions = [];
+        }
+        
+      } catch (parseError: any) {
+        console.error('OpenAI JSON parsing failed:', parseError.message);
+        console.error('Raw response content:', response.choices[0].message.content);
+        
+        // Log this as a parsing error for debugging
+        this.logCall({
+          timestamp: new Date(),
+          type: 'prediction',
+          endpoint: 'chat.completions',
+          model: 'gpt-4o',
+          error: `JSON parsing failed: ${parseError.message}`,
+          latency: Date.now() - startTime,
+          cacheHit: false,
+          sport: context.sport || 'unknown',
+          context: { eventTypes }
+        });
+        
+        // Return fallback predictions instead of throwing
+        result = { predictions: this.generateStatisticalPredictions(eventTypes, context, minimumProbability) };
+      }
+      
       const predictions = result.predictions || [];
       const usage = response.usage;
       const cost = usage ? this.calculateCost('gpt-4o', usage.prompt_tokens, usage.completion_tokens) : 0;
@@ -514,6 +559,15 @@ Consider all factors but avoid overconfidence.`;
   clearOldLogs(keepLast: number = 100) {
     this.callLogs = this.callLogs.slice(-keepLast);
     console.log(`🧹 Cleared old OpenAI logs, keeping last ${keepLast}`);
+  }
+
+  // Reset quota status (for when user increases budget)
+  resetQuota(): void {
+    this.quotaAvailable = true;
+    this.lastQuotaCheck = Date.now();
+    this.stats.lastQuotaCheck = new Date();
+    this.stats.quotaExceeded = false;
+    console.log('🔄 OpenAI quota reset - API calls re-enabled');
   }
 
   // Check API health
