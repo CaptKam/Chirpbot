@@ -242,7 +242,9 @@ export class DemoSimulator {
   private alertCount: Map<string, number> = new Map();
   private realTimeEnginesPaused: boolean = false;
   private lastAlertTime: number = 0;
-  private MIN_ALERT_INTERVAL = 30000; // Minimum 30 seconds between ANY demo alerts
+  private MIN_ALERT_INTERVAL = 30000; // Minimum 30 seconds between ANY demo alerts (after initial burst)
+  private INITIAL_BURST_INTERVAL = 10000; // 10 seconds between first 3 alerts
+  private totalAlertsGenerated: number = 0;
 
   // Start demo mode for a user
   async startDemo(userId: string, storage: any) {
@@ -253,6 +255,9 @@ export class DemoSimulator {
     await storage.clearAllUserMonitoredGames(userId);
     // Clear all alerts for fresh demo experience  
     await storage.clearAllUserAlerts(userId);
+    // Reset alert counters for fresh burst behavior
+    this.totalAlertsGenerated = 0;
+    this.lastAlertTime = 0;
     // Pause real-time alert generation to prevent overwhelming demo
     this.realTimeEnginesPaused = true;
     console.log(`🎮 Demo mode started for user: ${userId} - all game selections and alerts cleared, real-time engines paused`);
@@ -304,23 +309,23 @@ export class DemoSimulator {
       this.alertCount.set(gameId, 0);
     }
 
-    // Generate first alert after a longer delay to let user see the popup tip
+    // Generate first alert quickly to start the demo impressively
     setTimeout(async () => {
       await this.generateDemoAlert(sport, teamNames, broadcast, gameId);
-    }, 30000 + Math.random() * 15000); // 30-45 second delay before first alert
+    }, 5000 + Math.random() * 5000); // 5-10 second delay before first alert
 
-    // Then generate alerts every 45-60 seconds (much slower pace for impressive demo)
+    // Then generate alerts with adaptive timing (quick start, then slower)
     const timer = setInterval(async () => {
       await this.generateDemoAlert(sport, teamNames, broadcast, gameId);
       
-      // Stop after 3 alerts per game (reduced from 5)
+      // Stop after 3 alerts per game
       const count = this.alertCount.get(gameId) || 0;
       if (count >= 3) {
         clearInterval(timer);
         this.activeGames.delete(gameId);
         console.log(`✅ Demo completed for game: ${gameId} (${count} alerts generated)`);
       }
-    }, 45000 + Math.random() * 15000); // 45-60 second intervals
+    }, 12000 + Math.random() * 8000); // 12-20 second intervals (faster for initial burst)
 
     this.activeGames.set(gameId, timer);
   }
@@ -339,14 +344,21 @@ export class DemoSimulator {
 
   // Generate a realistic demo alert with rate limiting
   private async generateDemoAlert(sport: string, teamNames: any, broadcast: (data: any) => void, gameId: string) {
-    // Global rate limiting - prevent alerts from different games from flooding
+    // Smart rate limiting - allow initial burst, then enforce longer intervals
     const now = Date.now();
     const timeSinceLastAlert = now - this.lastAlertTime;
-    if (timeSinceLastAlert < this.MIN_ALERT_INTERVAL) {
-      console.log(`⏳ Skipping demo alert - too soon (${Math.round(timeSinceLastAlert/1000)}s since last alert, need ${Math.round(this.MIN_ALERT_INTERVAL/1000)}s)`);
+    
+    // Use different intervals based on total alerts generated
+    const requiredInterval = this.totalAlertsGenerated < 3 ? this.INITIAL_BURST_INTERVAL : this.MIN_ALERT_INTERVAL;
+    
+    if (timeSinceLastAlert < requiredInterval) {
+      const mode = this.totalAlertsGenerated < 3 ? "burst" : "sustained";
+      console.log(`⏳ Skipping demo alert (${mode} mode) - too soon (${Math.round(timeSinceLastAlert/1000)}s since last alert, need ${Math.round(requiredInterval/1000)}s)`);
       return;
     }
+    
     this.lastAlertTime = now;
+    this.totalAlertsGenerated++;
     const alerts = DEMO_ALERTS[sport] || DEMO_ALERTS.MLB;
     const alertTemplate = alerts[Math.floor(Math.random() * alerts.length)];
     
