@@ -247,35 +247,6 @@ export class MLBEngine extends BaseSportEngine {
         return state.currentBatter.stats.rbi >= 80 && scoringPosition;
       }
     },
-    // AI Prediction-based alerts
-    {
-      type: "Home Run Situations",
-      settingKey: "homeRun",
-      priority: 85,
-      probability: 1.0,
-      description: "🚀 POWER ALERT! High home run potential!",
-      isPrediction: true,
-      predictionEvents: ["Home Run"],
-      minimumPredictionProbability: 75
-    },
-    {
-      type: "RBI Opportunity",
-      priority: 75,
-      probability: 1.0,
-      description: "🎯 RBI OPPORTUNITY - High scoring probability!",
-      isPrediction: true,
-      predictionEvents: ["RBI Hit", "Scoring Play"],
-      minimumPredictionProbability: 70
-    },
-    {
-      type: "Clutch Moment Prediction",
-      priority: 90,
-      probability: 1.0,
-      description: "⚡ CLUTCH MOMENT - AI detects game-changing potential!",
-      isPrediction: true,
-      predictionEvents: ["Walk-off Hit", "Grand Slam", "Game Winner"],
-      minimumPredictionProbability: 65
-    },
     // Live Events Alerts
     {
       type: "Runners on Base",
@@ -287,26 +258,6 @@ export class MLBEngine extends BaseSportEngine {
         state.runners.first || state.runners.second || state.runners.third
     },
     {
-      type: "Hit Alert",
-      settingKey: "hits",
-      priority: 70,
-      probability: 1.0,
-      description: "🏏 HIT! Base hit extends the inning!",
-      isPrediction: true,
-      predictionEvents: ["Hit", "Single", "Double", "Triple"],
-      minimumPredictionProbability: 60
-    },
-    {
-      type: "Scoring Play",
-      settingKey: "scoring",
-      priority: 85,
-      probability: 1.0,
-      description: "🏃 TEAM SCORES! Run crosses the plate!",
-      isPrediction: true,
-      predictionEvents: ["Scoring Play", "RBI Hit"],
-      minimumPredictionProbability: 70
-    },
-    {
       type: "Inning Change",
       settingKey: "inningChange",
       priority: 50,
@@ -315,26 +266,6 @@ export class MLBEngine extends BaseSportEngine {
       conditions: (state: MLBGameState) => 
         state.outs === 0 && (state.inningState === 'top' || state.inningState === 'bottom')
     },
-    {
-      type: "Home Run Alert",
-      settingKey: "homeRunAlert",
-      priority: 95,
-      probability: 1.0,
-      description: "🚀 HOME RUN! Ball is gone!",
-      isPrediction: true,
-      predictionEvents: ["Home Run"],
-      minimumPredictionProbability: 75
-    },
-    {
-      type: "Strikeout Alert",
-      settingKey: "strikeouts",
-      priority: 65,
-      probability: 1.0,
-      description: "⚾ STRIKEOUT! Batter goes down swinging!",
-      isPrediction: true,
-      predictionEvents: ["Strikeout"],
-      minimumPredictionProbability: 70
-    }
   ];
 
   extractGameState(liveFeed: any): MLBGameState | null {
