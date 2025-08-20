@@ -843,7 +843,6 @@ export class MLBEngine extends BaseSportEngine {
     const triggeredAlerts: AlertConfig[] = [];
     
     // Get settings to check if alert types are enabled
-    const { storage } = await import('../index.js');
     const settings = await storage.getSettingsBySport(this.sport);
     
     for (const alertConfig of this.alertConfigs) {
@@ -878,7 +877,6 @@ export class MLBEngine extends BaseSportEngine {
 
   // Check if a specific alert type is enabled in settings
   private async isAlertTypeEnabled(settingKey: string): Promise<boolean> {
-    const { storage } = await import('../index.js');
     const settings = await storage.getSettingsBySport(this.sport);
     return !!(settings.alertTypes as any)[settingKey];
   }
