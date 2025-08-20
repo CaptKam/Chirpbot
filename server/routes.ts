@@ -487,36 +487,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post("/api/auth/signup", async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { usernameOrEmail, password, firstName, lastName } = req.body;
       
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
+      if (!usernameOrEmail || !password) {
+        return res.status(400).json({ message: "Username/email and password are required" });
       }
 
-      if (username.length < 3) {
-        return res.status(400).json({ message: "Username must be at least 3 characters long" });
+      if (usernameOrEmail.length < 3) {
+        return res.status(400).json({ message: "Username/email must be at least 3 characters long" });
       }
 
       if (password.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters long" });
       }
 
+      // Check if this is an email or username
+      const isEmail = usernameOrEmail.includes('@');
+      
       // Check if user already exists
-      const existingUser = await storage.getUserByUsername(username);
+      const existingUser = await storage.getUserByUsername(usernameOrEmail);
       if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
+        return res.status(400).json({ 
+          message: isEmail ? "Email already registered" : "Username already exists" 
+        });
       }
 
-      // Create new user (in production, hash the password)
-      const user = await storage.createUser({ username, password });
+      // Hash password
+      const bcrypt = await import('bcryptjs');
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      // Create new user
+      const userData = {
+        [isEmail ? 'email' : 'username']: usernameOrEmail,
+        password: hashedPassword,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        authMethod: 'local' as const
+      };
+      
+      const user = await storage.createUser(userData);
       
       // Start session
       (req.session as any).userId = user.id;
-      (req.session as any).username = user.username;
+      (req.session as any).userInfo = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName
+      };
 
       res.json({ 
         id: user.id, 
         username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         message: "Account created successfully" 
       });
     } catch (error) {
@@ -538,7 +564,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
 
-      res.json({ id: user.id, username: user.username });
+      res.json({ 
+        id: user.id, 
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        authMethod: user.authMethod
+      });
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ message: "Failed to check authentication" });
@@ -563,30 +596,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { usernameOrEmail, password } = req.body;
       
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
+      if (!usernameOrEmail || !password) {
+        return res.status(400).json({ message: "Username/email and password are required" });
       }
 
-      // Find user
-      const user = await storage.getUserByUsername(username);
-      if (!user) {
-        return res.status(401).json({ message: "Invalid username or password" });
+      // Find user (case-insensitive search for username or email)
+      const user = await storage.getUserByUsername(usernameOrEmail);
+      if (!user || !user.password) {
+        return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Check password (in production, use proper password hashing)
-      if (user.password !== password) {
-        return res.status(401).json({ message: "Invalid username or password" });
+      // Check password with bcrypt
+      const bcrypt = await import('bcryptjs');
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid credentials" });
       }
 
       // Start session
       (req.session as any).userId = user.id;
-      (req.session as any).username = user.username;
+      (req.session as any).userInfo = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName
+      };
 
       res.json({ 
         id: user.id, 
         username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         message: "Login successful" 
       });
     } catch (error) {
@@ -595,26 +639,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Logout failed" });
-      }
-      res.json({ message: "Logout successful" });
-    });
-  });
-
   app.get("/api/auth/user", (req, res) => {
     const session = req.session as any;
     if (session?.userId) {
       res.json({ 
         id: session.userId, 
-        username: session.username,
+        ...session.userInfo,
         isAuthenticated: true 
       });
     } else {
       res.status(401).json({ message: "Not authenticated" });
     }
+  });
+
+  // OAuth routes (placeholder endpoints for future OAuth implementation)
+  app.get("/api/auth/google", (req, res) => {
+    // TODO: Implement Google OAuth
+    res.status(501).json({ 
+      message: "Google OAuth not yet implemented. Please use email/username signup.",
+      success: false 
+    });
+  });
+
+  app.get("/api/auth/apple", (req, res) => {
+    // TODO: Implement Apple OAuth  
+    res.status(501).json({ 
+      message: "Apple OAuth not yet implemented. Please use email/username signup.",
+      success: false 
+    });
+  });
+
+  // OAuth callback routes
+  app.get("/api/auth/google/callback", (req, res) => {
+    // TODO: Handle Google OAuth callback
+    res.redirect("/?oauth=error&provider=google");
+  });
+
+  app.get("/api/auth/apple/callback", (req, res) => {
+    // TODO: Handle Apple OAuth callback
+    res.redirect("/?oauth=error&provider=apple");
   });
 
   // Quick test endpoint without AI

@@ -7,6 +7,8 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByOAuthId(provider: 'google' | 'apple', oauthId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
   // Teams
@@ -140,12 +142,50 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    // Case-insensitive search for username or email
+    const lowerInput = username.toLowerCase();
+    return Array.from(this.users.values()).find(user => 
+      (user.username && user.username.toLowerCase() === lowerInput) ||
+      (user.email && user.email.toLowerCase() === lowerInput)
+    );
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const lowerEmail = email.toLowerCase();
+    return Array.from(this.users.values()).find(user => 
+      user.email && user.email.toLowerCase() === lowerEmail
+    );
+  }
+
+  async getUserByOAuthId(provider: 'google' | 'apple', oauthId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => {
+      if (provider === 'google') {
+        return user.googleId === oauthId;
+      } else if (provider === 'apple') {
+        return user.appleId === oauthId;
+      }
+      return false;
+    });
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const now = new Date();
+    const user: User = {
+      id,
+      username: insertUser.username || null,
+      email: insertUser.email || null,
+      password: insertUser.password || null,
+      googleId: insertUser.googleId || null,
+      appleId: insertUser.appleId || null,
+      firstName: insertUser.firstName || null,
+      lastName: insertUser.lastName || null,
+      profileImage: insertUser.profileImage || null,
+      authMethod: insertUser.authMethod || 'local',
+      emailVerified: insertUser.email ? false : false, // Will be true after email verification
+      createdAt: now,
+      updatedAt: now,
+    };
     this.users.set(id, user);
     return user;
   }
@@ -356,7 +396,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    // Case-insensitive search for username or email
+    const lowerInput = username.toLowerCase();
+    const [user] = await db.select().from(users)
+      .where(sql`(LOWER(${users.username}) = ${lowerInput} OR LOWER(${users.email}) = ${lowerInput})`);
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const lowerEmail = email.toLowerCase();
+    const [user] = await db.select().from(users)
+      .where(sql`LOWER(${users.email}) = ${lowerEmail}`);
+    return user || undefined;
+  }
+
+  async getUserByOAuthId(provider: 'google' | 'apple', oauthId: string): Promise<User | undefined> {
+    const column = provider === 'google' ? users.googleId : users.appleId;
+    const [user] = await db.select().from(users).where(eq(column, oauthId));
     return user || undefined;
   }
 

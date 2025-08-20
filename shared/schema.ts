@@ -5,8 +5,20 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  username: text("username").unique(),
+  email: text("email").unique(),
+  password: text("password"),
+  // OAuth fields
+  googleId: text("google_id").unique(),
+  appleId: text("apple_id").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  profileImage: text("profile_image"),
+  // Authentication method tracking
+  authMethod: text("auth_method").notNull().default("local"), // 'local', 'google', 'apple'
+  emailVerified: boolean("email_verified").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const teams = pgTable("teams", {
@@ -138,8 +150,26 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
   password: true,
-});
+  googleId: true,
+  appleId: true,
+  firstName: true,
+  lastName: true,
+  profileImage: true,
+  authMethod: true,
+}).extend({
+  // Make fields flexible for different auth methods
+  usernameOrEmail: z.string().optional(),
+}).partial().refine(
+  (data) => {
+    // At least username, email, googleId, or appleId must be provided
+    return data.username || data.email || data.googleId || data.appleId || data.usernameOrEmail;
+  },
+  {
+    message: "At least one identifier (username, email, Google ID, or Apple ID) is required",
+  }
+);
 
 export const insertTeamSchema = createInsertSchema(teams).omit({
   id: true,
