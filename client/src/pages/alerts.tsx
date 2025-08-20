@@ -296,6 +296,12 @@ export default function Alerts() {
                     </span>
                   </div>
                 )}
+                {/* Quick Impact Header */}
+                <div className="text-center mb-2">
+                  <h2 className="text-base font-black uppercase tracking-wide text-emerald-400">
+                    ⚡ {alert.type.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}!
+                  </h2>
+                </div>
                 {/* Teams & Situation */}
                 <div className="text-center mb-3">
                   <div className="text-xs font-medium text-slate-400 mb-1" data-testid={`alert-teams-${alert.id}`}>
