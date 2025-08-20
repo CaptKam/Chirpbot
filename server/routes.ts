@@ -545,22 +545,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/logout", async (req, res) => {
-    try {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error("Session destroy error:", err);
-          return res.status(500).json({ message: "Failed to logout" });
-        }
-        res.clearCookie('connect.sid');
-        res.json({ message: "Logged out successfully" });
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-      res.status(500).json({ message: "Failed to logout" });
-    }
-  });
-
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -595,13 +579,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Logout failed" });
-      }
-      res.json({ message: "Logout successful" });
-    });
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destroy error:", err);
+          return res.status(500).json({ message: "Failed to logout" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logged out successfully" });
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Failed to logout" });
+    }
   });
 
   app.get("/api/auth/user", (req, res) => {

@@ -1,7 +1,7 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { mlbApi } from '../mlb-api';
-import { GameContext, PREDICTION_EVENTS } from '../ai-predictions';
-import { storage } from '../../storage';
+import { PREDICTION_EVENTS } from '../ai-predictions';
+import { storage, type IStorage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
@@ -270,9 +270,9 @@ export class MLBEngine extends BaseSportEngine {
     }
   ];
 
-  constructor(storage: StorageInterface, onAlert?: (alert: any) => void) {
-    super('MLB', 2000, storage, onAlert); // 2 second intervals for ultra-fast MLB monitoring
-
+  constructor() {
+    super();
+    
     // Show HSS example calculation on startup
     console.log('🎯 HSS Engine Example Calculation:');
     hssEngine.exampleCalculation();
@@ -888,19 +888,21 @@ export class MLBEngine extends BaseSportEngine {
     return alertDef;
   }
 
-  // Placeholder for shouldTriggerAlert if it's defined in BaseSportEngine
-  private shouldTriggerAlert(alertDef: AlertConfig, gameState: MLBGameState): boolean {
-    // This logic is now integrated into processAlerts and shouldTriggerMLBAlert
-    // Re-evaluate if this method is still needed or if its logic should be part of processAlerts
-    if (alertDef.isPrediction) {
-      // Placeholder logic for prediction-based alerts
-      if (alertDef.type === "Home Run Alert" && gameState.currentBatter?.stats.hr > 20) return true;
-      if (alertDef.type === "RBI Opportunity" && gameState.currentBatter?.stats.rbi > 50) return true;
-      return false;
-    } else {
-      // Static conditions are checked in checkAlertConditions
-      return alertDef.conditions ? alertDef.conditions(gameState) : false;
+  // Override parent shouldTriggerAlert method
+  protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
+    // Call parent method
+    const shouldTrigger = super.shouldTriggerAlert(alertType, gameId, gameState);
+    
+    if (!shouldTrigger) return false;
+    
+    // Additional MLB-specific checks
+    if (alertType === 'RBI Opportunity' && gameState.currentBatter?.stats.hr && gameState.currentBatter.stats.hr < 10) {
+      if (gameState.currentBatter.stats.rbi && gameState.currentBatter.stats.rbi < 30) {
+        return Math.random() < 0.3;
+      }
     }
+    
+    return true;
   }
 
   private async runEnhancedAnalysis(gameState: MLBGameState, game: any): Promise<void> {
