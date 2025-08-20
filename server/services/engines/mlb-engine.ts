@@ -754,6 +754,32 @@ export class MLBEngine extends BaseSportEngine {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
       console.log(`📊 MLB Settings - AI Enabled: ${settings?.aiEnabled}`);
+      
+      // Enable core MLB settings if not set
+      if (settings) {
+        const coreSettings = {
+          risp: true,
+          closeGame: true,
+          lateInning: true,
+          starBatter: true,
+          powerHitter: true,
+          runnersOnBase: true,
+          inningChange: true
+        };
+        
+        let needsUpdate = false;
+        for (const [key, value] of Object.entries(coreSettings)) {
+          if (settings[key] === undefined) {
+            settings[key] = value;
+            needsUpdate = true;
+          }
+        }
+        
+        if (needsUpdate) {
+          await storage.updateSettingsBySport(this.sport, settings);
+          console.log(`✅ Updated MLB settings with core alert types`);
+        }
+      }
 
       const liveGames = await mlbApi.getLiveGames();
       console.log(`🎯 Found ${liveGames.length} live games`);

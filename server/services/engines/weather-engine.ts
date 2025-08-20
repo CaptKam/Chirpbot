@@ -258,27 +258,23 @@ export class WeatherEngine extends BaseSportEngine {
   }
 
   private async getAllLiveGames(): Promise<any[]> {
-    // This would collect live games from all sport engines
-    // For now, return sample structure - this should be implemented to collect from actual APIs
     try {
-      const games: any[] = [];
+      const { engineCoordinator } = await import('../engine-coordinator');
+      const allGames = await engineCoordinator.getAllLiveGames();
       
-      // You would integrate this with your existing sport APIs
-      // Example structure:
-      const sampleGames = [
-        {
-          gameId: 'mlb-sample-1',
-          homeTeam: 'Los Angeles Dodgers',
-          awayTeam: 'San Francisco Giants',
-          venue: 'Dodger Stadium',
-          city: 'Los Angeles',
-          sport: 'MLB'
-        }
-      ];
+      const games = allGames.map(game => ({
+        gameId: game.gameId,
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        venue: `${game.homeTeam} Stadium`, // Fallback venue name
+        city: game.homeTeam, // Use team name as city fallback
+        sport: game.sport
+      }));
       
-      return sampleGames;
+      console.log(`🌤️ Weather engine found ${games.length} live games to monitor`);
+      return games;
     } catch (error) {
-      console.error('Error getting live games:', error);
+      console.error('Error getting live games for weather monitoring:', error);
       return [];
     }
   }
