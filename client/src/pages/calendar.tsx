@@ -78,6 +78,10 @@ export default function Calendar() {
       return response.json();
     },
     onSuccess: () => {
+      // Clear demo onboarding flag for demo users so it shows again on next login
+      if (user?.username?.toLowerCase() === 'demo') {
+        sessionStorage.removeItem('demo-onboarding-shown');
+      }
       queryClient.clear();
       window.location.reload();
     },
