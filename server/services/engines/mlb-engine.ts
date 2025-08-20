@@ -942,7 +942,6 @@ export class MLBEngine extends BaseSportEngine {
             }
 
             // AI analysis has been completely removed
-          } else {
             console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
           }
 
