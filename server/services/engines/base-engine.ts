@@ -1,6 +1,8 @@
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
+import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
+import { generatePredictions, PredictionRequest, GameContext, PREDICTION_EVENTS } from '../ai-predictions';
 import { randomUUID } from 'crypto'; // Assuming crypto is available for randomUUID
 
 export interface AlertConfig {
@@ -69,8 +71,10 @@ export abstract class BaseSportEngine implements SportEngine {
       return Math.random() < config.probability;
     });
 
-    // AI prediction functionality removed
-    return triggeredRegular;
+    // Process AI prediction-based alerts
+    const triggeredPredictions = await this.checkPredictionAlerts(predictionAlerts, gameState);
+
+    return [...triggeredRegular, ...triggeredPredictions];
   }
 
   protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
@@ -164,9 +168,40 @@ export abstract class BaseSportEngine implements SportEngine {
       try {
         const weatherData = await getWeatherData(gameState.homeTeam);
 
-        // Simple alert context without AI
+        // Only get AI analysis for high-priority alerts (85+) to reduce API calls
         let aiContext = `${alert.type} situation detected`;
         let aiConfidence = 75;
+
+        // TEMPORARILY DISABLED: All OpenAI calls to reduce API usage
+        // Commenting out to ensure zero API calls
+        /*
+        if (alert.priority >= 85 && (await storage.getSettingsBySport(this.sport))?.aiEnabled) {
+          try {
+            const { analyzeAlert } = await import('../openai');
+            const aiAnalysis = await analyzeAlert(
+              alert.type,
+              this.sport,
+              {
+                gameInfo: {
+                  score: {
+                    away: gameState.awayScore,
+                    home: gameState.homeScore
+                  },
+                  status: 'Live', // Assuming 'Live' status for alerts
+                  awayTeam: gameState.awayTeam,
+                  homeTeam: gameState.homeTeam,
+                  ...this.getGameSpecificInfo(gameState)
+                },
+                weatherData
+              }
+            );
+            aiContext = aiAnalysis.context;
+            aiConfidence = aiAnalysis.confidence;
+          } catch (error) {
+            console.log(`AI analysis skipped for ${alert.type}: ${error}`);
+          }
+        }
+        */
 
         const alertData = {
           type: alert.type,
@@ -181,7 +216,7 @@ export abstract class BaseSportEngine implements SportEngine {
             status: 'Live',
             awayTeam: gameState.awayTeam,
             homeTeam: gameState.homeTeam,
-            // Game-specific info removed with AI
+            ...this.getGameSpecificInfo(gameState)
           },
           weatherData,
           aiContext: aiContext,
@@ -223,9 +258,76 @@ export abstract class BaseSportEngine implements SportEngine {
     }
   }
 
-  // AI methods removed
+  protected abstract getGameSpecificInfo(gameState: any): any;
 
-  // AI prediction processing removed
+  protected abstract buildGameContext(gameState: any): GameContext;
+
+  private async checkPredictionAlerts(predictionConfigs: AlertConfig[], gameState: any): Promise<AlertConfig[]> {
+    if (predictionConfigs.length === 0) return [];
+
+    // Get settings to check which prediction alerts are enabled
+    const settings = await storage.getSettingsBySport(this.sport);
+    if (!settings?.aiEnabled) {
+      return [];
+    }
+
+    // Filter prediction configs by enabled settings
+    const enabledPredictionConfigs = predictionConfigs.filter(config => {
+      if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
+        return false;
+      }
+      return true;
+    });
+
+    if (enabledPredictionConfigs.length === 0) return [];
+
+    try {
+      const gameContext = this.buildGameContext(gameState);
+      const allPredictionEvents = enabledPredictionConfigs.flatMap(config => config.predictionEvents || []);
+
+      if (allPredictionEvents.length === 0) return [];
+
+      const uniqueEvents = Array.from(new Set(allPredictionEvents));
+      const predictionRequest: PredictionRequest = {
+        eventTypes: uniqueEvents, // Remove duplicates
+        context: gameContext,
+        minimumProbability: 60 // Default threshold
+      };
+
+      // TEMPORARILY DISABLED: Too many API calls, using fallback predictions only
+      // const predictions = await generatePredictions(predictionRequest);
+      const predictions: any[] = [];
+
+      // Match predictions to alert configs
+      const triggeredPredictions: AlertConfig[] = [];
+
+      for (const config of enabledPredictionConfigs) {
+        const relevantPredictions = predictions.filter(p =>
+          config.predictionEvents?.includes(p.eventType) &&
+          p.probability >= (config.minimumPredictionProbability || 60) &&
+          p.shouldAlert
+        );
+
+        if (relevantPredictions.length > 0) {
+          // Create a new alert config with prediction data
+          const predictionAlert: AlertConfig = {
+            ...config,
+            description: `${config.description} - AI Prediction: ${relevantPredictions[0].reasoning}`,
+            probability: relevantPredictions[0].probability / 100,
+            priority: Math.max(config.priority, relevantPredictions[0].confidence)
+          };
+
+          triggeredPredictions.push(predictionAlert);
+        }
+      }
+
+      return triggeredPredictions;
+
+    } catch (error) {
+      console.error(`Error checking prediction alerts for ${this.sport}:`, error);
+      return [];
+    }
+  }
 
   // Optional callback for broadcasting alerts
   public onAlert?: (alert: any) => void;

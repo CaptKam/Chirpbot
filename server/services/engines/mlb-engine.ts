@@ -1,7 +1,9 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { mlbApi } from '../mlb-api';
+import { GameContext, PREDICTION_EVENTS } from '../ai-predictions';
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
+import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 
@@ -697,41 +699,39 @@ export class MLBEngine extends BaseSportEngine {
         // Get weather data for context
         const weatherData = await getWeatherData(gameState.homeTeam);
 
-        // Get AI analysis for ALL alerts when enabled
-        let aiAnalysis = { context: "Standard game situation", confidence: 75 };
-        
-        const sportSettings = await storage.getSettingsBySport(this.sport);
-        if (sportSettings?.aiEnabled) {
-          try {
-            const { analyzeAlert } = await import('../openai');
-            aiAnalysis = await analyzeAlert(alert.type, this.sport, gameState, weatherData);
-          } catch (error) {
-            console.log(`AI analysis skipped for ${alert.type}: ${error}`);
-          }
+        // TEMPORARILY DISABLED: All OpenAI calls to reduce API usage
+        let aiAnalysis = { context: "Standard game situation", confidence: 0 };
+        // Commenting out to ensure zero API calls
+        /*
+        if (alert.priority >= 85) {
+          const { analyzeAlert } = await import('../openai');
+          aiAnalysis = await analyzeAlert(alert.type, this.sport, gameState, weatherData);
         }
+        */
 
-        const alertData = {
+        const alertData: InsertAlert = {
+          id: randomUUID(),
           type: alert.type,
           sport: this.sport,
-          title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
-          description: alert.description,
+          team: gameState.homeTeam,
+          opponent: gameState.awayTeam,
+          message: alert.description,
+          probability: alert.probability,
+          priority: alert.priority,
           gameInfo: {
-            status: 'Live',
             ...gameState,
             weather: weatherData
           },
           aiContext: aiAnalysis.context,
           aiConfidence: aiAnalysis.confidence,
-          sentToTelegram: false
+          createdAt: new Date(),
+          isRead: false
         };
 
         const createdAlert = await storage.createAlert(alertData);
 
-        // Get settings for this sport
-        const settings = await storage.getSettingsBySport(this.sport);
-        
         // Send to Telegram for high-priority alerts
-        if (alert.priority >= 75 && settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
+        if (alert.priority >= 75 && settings?.telegramEnabled) {
           const telegramConfig = {
             botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
             chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",

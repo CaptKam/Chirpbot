@@ -166,7 +166,7 @@ function ValueProps() {
     {
       icon: <SignalHigh className="w-6 h-6" />,
       title: "Real-Time Alerts",
-      description: "Instant notifications for RISP, red zone drives, and clutch situations with intelligent context."
+      description: "Instant notifications for RISP, red zone drives, and clutch situations with AI-powered context."
     },
     {
       icon: <ShieldCheck className="w-6 h-6" />,
@@ -311,7 +311,7 @@ function LivePreview() {
                   <h4 className="font-bold mb-1 text-slate-100">{alerts[alertIndex].title}</h4>
                   <p className="text-sm text-slate-300 mb-2">{alerts[alertIndex].description}</p>
                   <div className="bg-slate-800/50 rounded-lg p-2 mb-2">
-                    <div className="text-xs text-blue-300 mb-1">📊 Context:</div>
+                    <div className="text-xs text-blue-300 mb-1">🤖 AI Analysis:</div>
                     <div className="text-xs text-slate-300">{alerts[alertIndex].aiContext}</div>
                   </div>
                   <div className="flex items-center justify-between">
@@ -346,7 +346,7 @@ function HowItWorks() {
     {
       number: "03",
       title: "Receive Instant Alerts",
-      description: "Get real-time notifications via WebSocket and Telegram with intelligent context."
+      description: "Get real-time notifications via WebSocket and Telegram with AI-powered context."
     }
   ];
 
@@ -445,7 +445,7 @@ function Pricing() {
             <ul className="space-y-4 mb-8">
               {[
                 "Real-time alerts for all sports",
-                "Smart context analysis", 
+                "AI-powered context analysis", 
                 "WebSocket live updates",
                 "Team monitoring dashboard",
                 "Telegram integration"
@@ -481,8 +481,8 @@ function FAQ() {
       answer: "We currently support MLB, NFL, NBA, and NHL with sport-specific alert types like RISP for baseball, red zone for football, and clutch time for basketball."
     },
     {
-      question: "How accurate are the alerts?",
-      answer: "Our system provides confidence scores above 85% for all alerts, with comprehensive analysis of game situations."
+      question: "How accurate is the AI analysis?",
+      answer: "Our OpenAI integration provides confidence scores above 85% for all alerts, with statistical fallbacks when AI services are unavailable."
     },
     {
       question: "Can I customize which alerts I receive?",
@@ -539,7 +539,7 @@ function Footer() {
           <div className="flex items-center gap-6 text-sm text-slate-400">
             <span>© 2025 ChirpBot V2. All rights reserved.</span>
             <span>•</span>
-            <span>Powered by ESPN API & MLB Data</span>
+            <span>Powered by ESPN API & OpenAI</span>
           </div>
         </div>
       </div>

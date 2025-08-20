@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shared/schema";
+import { analyzeAlert } from "./services/openai";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
@@ -160,9 +161,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weatherData = await getWeatherData(validatedData.gameInfo.homeTeam);
       }
 
-      // Simple alert context without AI
-      let aiContext = `${validatedData.type} situation detected`;
-      let aiConfidence = 75;
+      // Get AI analysis if enabled
+      let aiContext: string | undefined = undefined;
+      let aiConfidence = 0;
+
+      const settings = await storage.getSettingsBySport(validatedData.sport);
+      if (settings?.aiEnabled) {
+        const analysis = await analyzeAlert(
+          validatedData.type,
+          validatedData.sport,
+          validatedData.gameInfo,
+          weatherData
+        );
+        aiContext = analysis.context;
+        aiConfidence = analysis.confidence;
+      }
 
       const alert = await storage.createAlert({
         ...validatedData,
@@ -415,14 +428,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: event.description,
         gameInfo: event.game,
         weatherData,
-        aiContext: "Standard game situation",
-        aiConfidence: 75,
+        aiContext: undefined as string | undefined,
+        aiConfidence: 0,
         sentToTelegram: false,
       };
 
-      // Simple context without AI
-      alertData.aiContext = "Standard game situation";
-      alertData.aiConfidence = 75;
+      // Get AI analysis
+      const settings = await storage.getSettingsBySport(alertData.sport);
+      if (settings?.aiEnabled) {
+        const analysis = await analyzeAlert(
+          alertData.type,
+          alertData.sport,
+          alertData.gameInfo,
+          weatherData
+        );
+        alertData.aiContext = analysis.context;
+        alertData.aiConfidence = analysis.confidence;
+      }
 
       const alert = await storage.createAlert(alertData);
 
@@ -735,13 +757,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: "Quick Test",
         sport: "MLB",
         title: "Test Alert - Immediate Response",
-        description: "Testing alert system without AI",
+        description: "Testing alert system without AI delay",
         gameInfo: {
           homeTeam: "Test Home Team",
           awayTeam: "Test Away Team",
           status: "Live"
         },
-        aiContext: "Quick test - no AI",
+        aiContext: "Quick test - AI bypassed",
         aiConfidence: 100,
         weatherData: {
           temperature: 72,
@@ -849,14 +871,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
 
-      // Create alerts with standard context
+      // Create alerts with AI analysis
       for (const alertData of [mlbAlert, nflAlert, nbaAlert, nhlAlert]) {
         try {
           const weatherData = await getWeatherData(alertData.gameInfo.homeTeam);
           
-          // Standard context without AI
-          let aiContext = "Standard game situation";
+          // Get AI analysis
+          const settings = await storage.getSettingsBySport(alertData.sport);
+          let aiContext = undefined;
           let aiConfidence = 85;
+          
+          if (settings?.aiEnabled) {
+            const analysis = await analyzeAlert(
+              alertData.type,
+              alertData.sport,
+              alertData.gameInfo,
+              weatherData
+            );
+            aiContext = analysis.context;
+            aiConfidence = analysis.confidence;
+          }
 
           const alert = await storage.createAlert({
             ...alertData,
@@ -885,48 +919,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Test alert generation failed:", error);
       res.status(500).json({ message: "Failed to generate test alerts" });
     }
-  });
-
-  // AI endpoints removed
-  
-  // AI endpoints removed - returns placeholder data
-  app.get("/api/openai/logs", async (req, res) => {
-    res.json({
-      type: 'disabled',
-      message: 'AI functionality has been disabled',
-      stats: { totalCalls: 0, errorRate: 0, totalCost: 0 },
-      logs: [],
-      errorLogs: []
-    });
-  });
-
-  app.get("/api/openai/health", async (req, res) => {
-    res.json({
-      healthy: false,
-      quotaAvailable: false,
-      message: 'AI functionality disabled'
-    });
-  });
-
-  app.post("/api/openai/clear-logs", async (req, res) => {
-    res.json({ 
-      message: 'AI functionality disabled - no logs to clear',
-      success: false 
-    });
-  });
-
-  app.post("/api/openai/reset-quota", async (req, res) => {
-    res.json({ 
-      message: 'AI functionality disabled - no quota to reset',
-      success: false 
-    });
-  });
-
-  app.post("/api/openai/clear-cache", async (req, res) => {
-    res.json({ 
-      message: 'AI functionality disabled - no cache to clear',
-      success: false 
-    });
   });
 
   return httpServer;
