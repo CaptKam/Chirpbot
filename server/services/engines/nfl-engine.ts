@@ -24,6 +24,13 @@ export class NFLEngine extends BaseSportEngine {
   
   async monitor() {
     try {
+      // Check if demo mode is active and real-time alerts should be paused
+      const { demoSimulator } = await import('../../demo-simulator');
+      if (demoSimulator.shouldPauseRealTimeAlerts()) {
+        console.log('⏸️ NFL monitoring paused - demo mode active');
+        return;
+      }
+
       const settings = await storage.getSettingsBySport(this.sport);
       if (!settings) {
         return;

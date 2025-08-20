@@ -240,6 +240,7 @@ export class DemoSimulator {
   private activeGames: Map<string, NodeJS.Timeout> = new Map();
   private demoUserId: string | null = null;
   private alertCount: Map<string, number> = new Map();
+  private realTimeEnginesPaused: boolean = false;
 
   // Start demo mode for a user
   async startDemo(userId: string, storage: any) {
@@ -250,7 +251,9 @@ export class DemoSimulator {
     await storage.clearAllUserMonitoredGames(userId);
     // Clear all alerts for fresh demo experience  
     await storage.clearAllUserAlerts(userId);
-    console.log(`🎮 Demo mode started for user: ${userId} - all game selections and alerts cleared`);
+    // Pause real-time alert generation to prevent overwhelming demo
+    this.realTimeEnginesPaused = true;
+    console.log(`🎮 Demo mode started for user: ${userId} - all game selections and alerts cleared, real-time engines paused`);
   }
 
   // Reset demo data
@@ -473,7 +476,19 @@ export class DemoSimulator {
   stopDemo() {
     this.resetDemo();
     this.demoUserId = null;
-    console.log("🛑 Demo mode stopped");
+    // Resume real-time alert generation
+    this.realTimeEnginesPaused = false;
+    console.log("🛑 Demo mode stopped - real-time engines resumed");
+  }
+
+  // Check if we should pause real-time alerts for demo
+  shouldPauseRealTimeAlerts(): boolean {
+    return this.realTimeEnginesPaused;
+  }
+
+  // Check if demo is active
+  isDemoActive(): boolean {
+    return this.demoUserId !== null;
   }
 }
 
