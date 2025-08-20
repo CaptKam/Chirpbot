@@ -275,6 +275,15 @@ export default function Alerts() {
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
               >
+                {/* NEW badge for unseen alerts */}
+                {!alert.seen && (
+                  <div className="absolute -top-2 -right-2 z-10">
+                    <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                      NEW
+                    </div>
+                  </div>
+                )}
+                
                 {/* Quick Impact Header */}
                 <div className="text-center mb-2">
                   <h2 className="text-base font-black uppercase tracking-wide text-emerald-400">
