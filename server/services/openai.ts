@@ -28,16 +28,44 @@ function generateDetailedFallback(alertType: string, gameInfo: any, weatherData?
   
   let context = `Critical moment${inning}${outs}. Score: ${score}${scoringProb}.`;
   
-  // Weather impact
-  if (weatherData?.windSpeed && weatherData.windSpeed >= 10) {
-    context += ` Wind: ${weatherData.windSpeed}mph ${weatherData.windDirection || ''} affecting ball flight.`;
-  }
-  
-  // Batter context
+  // Enhanced batter analysis
   if (gameInfo.currentBatter?.name) {
     const batter = gameInfo.currentBatter;
     const hrRate = batter.stats?.hr && batter.stats?.atBats ? `${((batter.stats.hr / batter.stats.atBats) * 100).toFixed(1)}%` : 'Unknown';
-    context += ` ${batter.name} batting (${batter.stats?.avg || '?'} AVG, ${hrRate} HR rate).`;
+    const handedness = batter.batSide === 'L' ? 'LH' : batter.batSide === 'R' ? 'RH' : 'Switch';
+    context += ` ${batter.name} (${handedness}) batting: ${batter.stats?.avg?.toFixed(3) || '?'} AVG, ${batter.stats?.hr || 0} HR (${hrRate} rate), ${batter.stats?.ops?.toFixed(3) || '?'} OPS.`;
+    
+    // Power assessment
+    if (batter.stats?.hr && batter.stats.hr > 20) {
+      context += ` Power threat with ${batter.stats.hr} home runs.`;
+    }
+  }
+  
+  // Pitcher analysis
+  if (gameInfo.currentPitcher?.name) {
+    const pitcher = gameInfo.currentPitcher;
+    const handedness = pitcher.throwHand === 'L' ? 'LHP' : 'RHP';
+    context += ` Facing ${pitcher.name} (${handedness}): ${pitcher.stats?.era?.toFixed(2) || '?'} ERA, ${pitcher.stats?.whip?.toFixed(2) || '?'} WHIP.`;
+    
+    if (pitcher.stats?.era && pitcher.stats.era < 3.00) {
+      context += ` Elite pitcher.`;
+    } else if (pitcher.stats?.era && pitcher.stats.era > 5.00) {
+      context += ` Struggling pitcher.`;
+    }
+  }
+  
+  // On-deck threat
+  if (gameInfo.onDeckBatter?.name) {
+    const onDeck = gameInfo.onDeckBatter;
+    if (onDeck.stats?.hr && onDeck.stats.hr > 15) {
+      context += ` ${onDeck.name} on deck (${onDeck.stats.hr} HR threat).`;
+    }
+  }
+  
+  // Weather impact
+  if (weatherData?.windSpeed && weatherData.windSpeed >= 10) {
+    const direction = weatherData.windDirection?.includes('Out') ? 'helping' : weatherData.windDirection?.includes('In') ? 'hindering' : 'affecting';
+    context += ` ${weatherData.windSpeed}mph wind ${direction} ball flight.`;
   }
   
   return context;

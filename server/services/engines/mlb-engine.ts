@@ -683,7 +683,11 @@ export class MLBEngine extends BaseSportEngine {
             status: 'Live',
             awayTeam: gameState.awayTeam,
             homeTeam: gameState.homeTeam,
-            ...this.getGameSpecificInfo(gameState)
+            ...this.getGameSpecificInfo(gameState),
+            // Include live player data in alert
+            currentBatter: gameState.currentBatter,
+            onDeckBatter: gameState.onDeckBatter,
+            currentPitcher: gameState.currentPitcher
           },
           weatherData,
           aiContext: undefined as string | undefined,
