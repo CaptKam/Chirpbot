@@ -31,6 +31,7 @@ const ALERT_TYPE_CONFIG = {
     { key: "eliteClutch", label: "Elite Clutch Hitter", description: "High OPS batters in pressure situations" },
     { key: "avgHitter", label: ".300+ Hitter Alert", description: "Premium contact hitters at bat" },
     { key: "rbiMachine", label: "RBI Machine Alert", description: "80+ RBI producers with scoring chances" },
+    { key: "re24Advanced", label: "RE24 Advanced Analytics", description: "MLB Run Expectancy 24 (RE24) mathematical analysis system" },
   ],
   NFL: [
     { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line" },

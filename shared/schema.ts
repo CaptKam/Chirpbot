@@ -112,6 +112,12 @@ export const settings = pgTable("settings", {
     homeRunAlert: boolean;
     strikeouts: boolean;
     
+    // RE24 System
+    useRE24System: boolean;
+    re24Level1: boolean;
+    re24Level2: boolean;
+    re24Level3: boolean;
+    
     // NFL Alert Types  
     redZone: boolean;
     nflCloseGame: boolean;

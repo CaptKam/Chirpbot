@@ -5,6 +5,34 @@ import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 
+// RE24 (Run Expectancy) Table
+const RE24: Record<string, number> = {
+  "000-0": 0.50, "000-1": 0.27, "000-2": 0.11,
+  "100-0": 0.90, "100-1": 0.54, "100-2": 0.25,
+  "010-0": 1.14, "010-1": 0.70, "010-2": 0.33,
+  "001-0": 1.32, "001-1": 0.94, "001-2": 0.36,
+  "110-0": 1.50, "110-1": 0.95, "110-2": 0.45,
+  "101-0": 1.68, "101-1": 1.08, "101-2": 0.47,
+  "011-0": 1.95, "011-1": 1.24, "011-2": 0.54,
+  "111-0": 2.25, "111-1": 1.54, "111-2": 0.76,
+};
+
+type Runners = { first: boolean; second: boolean; third: boolean };
+
+function reKey(r: Runners, outs: number) {
+  return `${r.first ? 1 : 0}${r.second ? 1 : 0}${r.third ? 1 : 0}-${outs}`;
+}
+
+// Convert expected runs to score probability (bounded)
+function probFromRE(re: number) {
+  // Linear, simple, fast: good enough baseline
+  return clamp((re) / 2.2, 0.05, 0.98);
+}
+
+function clamp(x: number, lo: number, hi: number) { 
+  return Math.max(lo, Math.min(hi, x)); 
+}
+
 interface MLBGameState {
   gameId: string;
   gamePk: number;
@@ -266,6 +294,18 @@ export class MLBEngine extends BaseSportEngine {
       conditions: (state: MLBGameState) => 
         state.outs === 0 && (state.inningState === 'top' || state.inningState === 'bottom')
     },
+    // RE24 Advanced Alert
+    {
+      type: "High RE24 Situation",
+      settingKey: "re24Advanced",
+      priority: 85,
+      probability: 1.0,
+      description: "📊 HIGH RE24! Advanced scoring probability detected",
+      conditions: (state: MLBGameState) => {
+        const re24Prob = this.calculateRE24Probability(state);
+        return re24Prob >= 75; // Trigger on 75%+ RE24 probability
+      }
+    },
   ];
 
   extractGameState(liveFeed: any): MLBGameState | null {
@@ -387,6 +427,9 @@ export class MLBEngine extends BaseSportEngine {
       runners: gameState.runners,
       priority: 85,
       scoringProbability: this.calculateScoringProbability(gameState),
+      re24Probability: this.calculateRE24Probability(gameState),
+      re24Key: reKey(gameState.runners, gameState.outs),
+      expectedRuns: RE24[reKey(gameState.runners, gameState.outs)] || 0.50,
       // Include current matchup for team planning context
       currentBatter: gameState.currentBatter ? {
         id: gameState.currentBatter.id,
@@ -454,6 +497,23 @@ export class MLBEngine extends BaseSportEngine {
     if (gameState.inning >= 8) probability += 15;
 
     return Math.min(95, Math.max(5, probability));
+  }
+
+  // RE24-based scoring probability calculation
+  private calculateRE24Probability(gameState: MLBGameState): number {
+    const key = reKey(gameState.runners, gameState.outs);
+    const expectedRuns = RE24[key] || 0.50; // Default to empty bases, 0 outs
+    
+    // Convert expected runs to probability percentage
+    const probability = probFromRE(expectedRuns) * 100;
+    
+    // Apply late-inning pressure modifier
+    let modifier = 1.0;
+    if (gameState.inning >= 8) {
+      modifier = 1.15; // 15% boost for high-leverage situations
+    }
+    
+    return Math.round(clamp(probability * modifier, 5, 98));
   }
 
   // Generate dynamic description based on actual game state
@@ -553,6 +613,19 @@ export class MLBEngine extends BaseSportEngine {
 
       case 'Game Start':
         return `⚾ GAME START - First pitch! (${scoringProb}% scoring probability)`;
+
+      case 'High RE24 Situation':
+        const re24Prob = this.calculateRE24Probability(gameState);
+        const key = reKey(gameState.runners, gameState.outs);
+        const expectedRuns = RE24[key] || 0.50;
+        
+        const runnerDesc = [];
+        if (runners.first) runnerDesc.push('1ST');
+        if (runners.second) runnerDesc.push('2ND');
+        if (runners.third) runnerDesc.push('3RD');
+        
+        const situation = runnerDesc.length > 0 ? runnerDesc.join(' & ') : 'Empty bases';
+        return `📊 HIGH RE24! ${situation}, ${outs} out${outs !== 1 ? 's' : ''} = ${expectedRuns.toFixed(2)} expected runs (${re24Prob}% probability)`;
 
       default:
         // For other alerts, use the original description but add scoring probability
@@ -661,6 +734,9 @@ export class MLBEngine extends BaseSportEngine {
             },
             priority: alert.priority,
             scoringProbability: this.calculateScoringProbability(gameState),
+            re24Probability: this.calculateRE24Probability(gameState),
+            re24Key: reKey(gameState.runners, gameState.outs),
+            expectedRuns: RE24[reKey(gameState.runners, gameState.outs)] || 0.50,
             currentBatter: gameState.currentBatter ? {
               id: gameState.currentBatter.id,
               name: gameState.currentBatter.name,
@@ -738,7 +814,8 @@ export class MLBEngine extends BaseSportEngine {
           starBatter: true,
           powerHitter: true,
           runnersOnBase: true,
-          inningChange: true
+          inningChange: true,
+          re24Advanced: false // New RE24 system, disabled by default for testing
         };
 
         let needsUpdate = false;
