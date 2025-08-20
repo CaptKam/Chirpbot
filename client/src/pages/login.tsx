@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, User, Lock, ArrowLeft } from "lucide-react";
+import { Zap, User, Lock, ArrowLeft, Play } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Login() {
@@ -62,6 +62,15 @@ export default function Login() {
 
     setIsLoading(true);
     loginMutation.mutate({ usernameOrEmail, password });
+  };
+
+  const loadDemoCredentials = () => {
+    setUsernameOrEmail("demo");
+    setPassword("demo123");
+    toast({
+      title: "Demo credentials loaded",
+      description: "Ready to experience ChirpBot! Click Sign In to continue.",
+    });
   };
 
   return (
@@ -135,6 +144,21 @@ export default function Login() {
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
+
+            {/* Demo Button */}
+            <div className="mt-4">
+              <Button
+                type="button"
+                data-testid="button-demo"
+                onClick={loadDemoCredentials}
+                className="w-full h-10 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 text-blue-300 font-medium"
+                disabled={isLoading}
+                variant="outline"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Try Demo Account
+              </Button>
+            </div>
 
             {/* Social Auth Divider */}
             <div className="my-6 flex items-center">
