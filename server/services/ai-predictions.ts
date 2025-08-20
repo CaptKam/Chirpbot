@@ -367,18 +367,18 @@ function buildPredictionPrompt(request: PredictionRequest): string {
       const powerHitter = context.currentBatter.stats.hr && context.currentBatter.stats.hr > 15;
       const contactHitter = context.currentBatter.stats.avg && context.currentBatter.stats.avg > 0.280;
       
-      if (powerHitter && (context.weather.windSpeed || 0) >= 10 && context.weather.windDirection?.includes('Out')) {
-        prompt += `⚾ POWER HITTER + TAILWIND: ${context.currentBatter.name}'s power (${context.currentBatter.stats.hr} HR) gets boost from ${context.weather.windSpeed || 0}mph tailwind\n`;
-      } else if (powerHitter && (context.weather.windSpeed || 0) >= 10 && context.weather.windDirection?.includes('In')) {
-        prompt += `⚾ POWER NEGATED: ${context.currentBatter.name}'s power reduced by ${context.weather.windSpeed || 0}mph headwind\n`;
-      } else if (contactHitter && (context.weather.windSpeed || 0) >= 15) {
-        prompt += `⚾ CONTACT HITTER CHALLENGE: ${context.currentBatter.name} (.${Math.round((context.currentBatter.stats.avg || 0) * 1000)} AVG) faces difficult conditions with ${context.weather.windSpeed || 0}mph winds\n`;
+      if (powerHitter && context.weather.windSpeed >= 10 && context.weather.windDirection?.includes('Out')) {
+        prompt += `⚾ POWER HITTER + TAILWIND: ${context.currentBatter.name}'s power (${context.currentBatter.stats.hr} HR) gets boost from ${context.weather.windSpeed}mph tailwind\n`;
+      } else if (powerHitter && context.weather.windSpeed >= 10 && context.weather.windDirection?.includes('In')) {
+        prompt += `⚾ POWER NEGATED: ${context.currentBatter.name}'s power reduced by ${context.weather.windSpeed}mph headwind\n`;
+      } else if (contactHitter && context.weather.windSpeed >= 15) {
+        prompt += `⚾ CONTACT HITTER CHALLENGE: ${context.currentBatter.name} (.${Math.round((context.currentBatter.stats.avg || 0) * 1000)} AVG) faces difficult conditions with ${context.weather.windSpeed}mph winds\n`;
       }
       
-      if ((context.weather.temperature || 70) <= 50 && powerHitter) {
-        prompt += `🧊 COLD IMPACT: ${context.currentBatter.name}'s power reduced by cold ${context.weather.temperature || 50}°F temperature\n`;
-      } else if ((context.weather.temperature || 70) >= 85 && powerHitter) {
-        prompt += `🔥 HEAT BOOST: ${context.currentBatter.name}'s power enhanced by hot ${context.weather.temperature || 85}°F conditions\n`;
+      if (context.weather.temperature <= 50 && powerHitter) {
+        prompt += `🧊 COLD IMPACT: ${context.currentBatter.name}'s power reduced by cold ${context.weather.temperature}°F temperature\n`;
+      } else if (context.weather.temperature >= 85 && powerHitter) {
+        prompt += `🔥 HEAT BOOST: ${context.currentBatter.name}'s power enhanced by hot ${context.weather.temperature}°F conditions\n`;
       }
     }
   }
