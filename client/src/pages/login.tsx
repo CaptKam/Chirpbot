@@ -64,13 +64,13 @@ export default function Login() {
     loginMutation.mutate({ usernameOrEmail, password });
   };
 
-  const loadDemoCredentials = () => {
-    setUsernameOrEmail("demo");
-    setPassword("demo123");
+  const loginWithDemo = () => {
+    setIsLoading(true);
     toast({
-      title: "Demo credentials loaded",
-      description: "Ready to experience ChirpBot! Click Sign In to continue.",
+      title: "Starting demo...",
+      description: "Logging you into the ChirpBot demo experience.",
     });
+    loginMutation.mutate({ usernameOrEmail: "demo", password: "demo123" });
   };
 
   return (
@@ -150,13 +150,13 @@ export default function Login() {
               <Button
                 type="button"
                 data-testid="button-demo"
-                onClick={loadDemoCredentials}
+                onClick={loginWithDemo}
                 className="w-full h-10 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 text-blue-300 font-medium"
                 disabled={isLoading}
                 variant="outline"
               >
                 <Play className="w-4 h-4 mr-2" />
-                Try Demo Account
+                {isLoading ? "Starting Demo..." : "Try Demo Account"}
               </Button>
             </div>
 
