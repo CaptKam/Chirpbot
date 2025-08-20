@@ -8,24 +8,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap, User, Lock, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import DemoOnboarding from "@/components/DemoOnboarding";
 
 export default function Login() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showDemoOnboarding, setShowDemoOnboarding] = useState(false);
   const { toast } = useToast();
 
   const loginMutation = useMutation({
     mutationFn: async ({ usernameOrEmail, password }: { usernameOrEmail: string; password: string }) => {
       return apiRequest("POST", "/api/auth/login", { usernameOrEmail, password });
     },
-    onSuccess: () => {
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in to ChirpBot.",
-      });
-      // Redirect to dashboard
-      window.location.href = "/dashboard";
+    onSuccess: (data: any) => {
+      // Check if this is the demo account
+      if (data?.username === "Demo") {
+        toast({
+          title: "Welcome to ChirpBot Demo!",
+          description: "Let's show you what we can do.",
+        });
+        setShowDemoOnboarding(true);
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in to ChirpBot.",
+        });
+        // Redirect to dashboard for regular users
+        window.location.href = "/dashboard";
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -62,6 +73,17 @@ export default function Login() {
 
     setIsLoading(true);
     loginMutation.mutate({ usernameOrEmail, password });
+  };
+
+  const handleDemoOnboardingClose = () => {
+    setShowDemoOnboarding(false);
+    // Redirect to dashboard after onboarding
+    window.location.href = "/dashboard";
+  };
+
+  const fillDemoCredentials = () => {
+    setUsernameOrEmail("Demo");
+    setPassword("demo123");
   };
 
   return (
@@ -134,6 +156,19 @@ export default function Login() {
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
+
+              {/* Demo Credentials Button */}
+              <div className="mt-4 text-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={fillDemoCredentials}
+                  className="text-sm bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400"
+                  disabled={isLoading}
+                >
+                  🎯 Try Demo Account
+                </Button>
+              </div>
             </form>
 
             {/* Social Auth Divider */}
@@ -202,6 +237,12 @@ export default function Login() {
           <p>📱 Seamless cross-device experience</p>
         </div>
       </div>
+
+      {/* Demo Onboarding Modal */}
+      <DemoOnboarding 
+        isOpen={showDemoOnboarding} 
+        onClose={handleDemoOnboardingClose} 
+      />
     </div>
   );
 }
