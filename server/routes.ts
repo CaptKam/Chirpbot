@@ -1040,5 +1040,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear OpenAI cache endpoint
+  app.post("/api/openai/clear-cache", async (req, res) => {
+    try {
+      const { getOpenAIManager } = await import('./services/openai-manager');
+      const openaiManager = getOpenAIManager();
+      
+      openaiManager.clearCache();
+      
+      res.json({ 
+        message: 'OpenAI cache cleared - fresh analysis will be generated',
+        success: true 
+      });
+    } catch (error) {
+      console.error('Error clearing OpenAI cache:', error);
+      res.status(500).json({ message: 'Failed to clear OpenAI cache' });
+    }
+  });
+
   return httpServer;
 }

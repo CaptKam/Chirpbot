@@ -39,7 +39,7 @@ export class OpenAIManager {
   private callLogs: OpenAICallLog[] = [];
   private stats: OpenAIStats;
   private cache = new Map<string, { data: any; timestamp: number }>();
-  private readonly CACHE_TTL = 300000; // 5 minutes
+  private readonly CACHE_TTL = 30000; // 30 seconds - shorter for fresh analysis
   private readonly MAX_LOGS = 1000; // Keep last 1000 logs
   private quotaAvailable = true;
   private lastQuotaCheck = 0;
@@ -559,6 +559,12 @@ Consider all factors but avoid overconfidence.`;
   clearOldLogs(keepLast: number = 100) {
     this.callLogs = this.callLogs.slice(-keepLast);
     console.log(`🧹 Cleared old OpenAI logs, keeping last ${keepLast}`);
+  }
+
+  // Clear cache (force fresh analysis)
+  clearCache(): void {
+    this.cache.clear();
+    console.log('🧹 Cleared OpenAI cache - forcing fresh analysis');
   }
 
   // Reset quota status (for when user increases budget)
