@@ -60,7 +60,7 @@ export default function Alerts() {
 
   // Mark all alerts as seen after a delay to let user see them
   useEffect(() => {
-    // Give user 2 seconds to see the new alerts before marking as seen
+    // Give user 8 seconds to see the new alerts before marking as seen
     const timer = setTimeout(() => {
       fetch('/api/alerts/mark-all-seen', {
         method: 'PATCH',
@@ -72,7 +72,7 @@ export default function Alerts() {
         queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
         queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
       });
-    }, 2000);
+    }, 8000);
     
     return () => clearTimeout(timer);
   }, []); // Only run once when component mounts
@@ -267,10 +267,10 @@ export default function Alerts() {
               <SwipeableCard
                 key={alert.id}
                 alertId={alert.id}
-                className={`bg-white/5 backdrop-blur-sm ring-1 rounded-xl p-4 hover:bg-white/10 transition-all duration-200 ${
+                className={`bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all duration-200 ${
                   alert.seen 
-                    ? 'ring-slate-600/50' 
-                    : 'ring-emerald-500/50 shadow-lg shadow-emerald-500/20 animate-pulse-subtle'
+                    ? 'ring-1 ring-slate-600/50' 
+                    : 'ring-2 ring-emerald-500 shadow-xl shadow-emerald-500/30 animate-pulse-subtle border-2 border-emerald-400/50'
                 }`}
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
