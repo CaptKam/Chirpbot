@@ -70,7 +70,6 @@ interface InsertAlert {
   probability: number;
   priority: number;
   gameInfo: any; // Using 'any' for broader compatibility, but ideally a specific type
-  aiConfidence: number;
   createdAt: Date;
   isRead: boolean;
 }
@@ -481,7 +480,7 @@ export class MLBEngine extends BaseSportEngine {
     };
   }
 
-  protected buildGameContext(gameState: MLBGameState): GameContext {
+  protected buildGameContext(gameState: MLBGameState): any {
     const runnersOn: string[] = [];
     if (gameState.runners.first) runnersOn.push("1st");
     if (gameState.runners.second) runnersOn.push("2nd");
@@ -696,7 +695,6 @@ export class MLBEngine extends BaseSportEngine {
         // Get weather data for context
         const weatherData = await getWeatherData(gameState.homeTeam);
 
-        let aiAnalysis = { context: "Standard game situation", confidence: 0 };
         // AI analysis has been completely removed
 
         const alertData: InsertAlert = {
@@ -712,8 +710,6 @@ export class MLBEngine extends BaseSportEngine {
             ...gameState,
             weather: weatherData
           },
-          aiContext: aiAnalysis.context,
-          aiConfidence: aiAnalysis.confidence,
           createdAt: new Date(),
           isRead: false
         };
@@ -727,10 +723,7 @@ export class MLBEngine extends BaseSportEngine {
             chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
           };
 
-          const sent = await sendTelegramAlert(telegramConfig, {
-            ...createdAlert,
-            aiContext: createdAlert.aiContext || undefined
-          });
+          const sent = await sendTelegramAlert(telegramConfig, createdAlert);
           if (sent) {
             await storage.markAlertSentToTelegram(createdAlert.id);
           }

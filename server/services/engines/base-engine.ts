@@ -258,7 +258,7 @@ export abstract class BaseSportEngine implements SportEngine {
 
   protected abstract getGameSpecificInfo(gameState: any): any;
 
-  protected abstract buildGameContext(gameState: any): GameContext;
+  protected abstract buildGameContext(gameState: any): any;
 
   private async checkPredictionAlerts(predictionConfigs: AlertConfig[], gameState: any): Promise<AlertConfig[]> {
     if (predictionConfigs.length === 0) return [];

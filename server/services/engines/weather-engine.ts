@@ -1,5 +1,4 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
-import { GameContext } from '../ai-predictions';
 import { getWeatherData } from '../weather';
 import { storage } from '../../storage';
 

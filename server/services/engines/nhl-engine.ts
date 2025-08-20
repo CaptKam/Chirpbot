@@ -1,5 +1,4 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
-import { GameContext } from '../ai-predictions';
 import { storage } from '../../storage';
 
 interface NHLGameState {

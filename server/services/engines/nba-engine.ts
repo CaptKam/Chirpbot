@@ -1,5 +1,4 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
-import { GameContext } from '../ai-predictions';
 import { storage } from '../../storage';
 
 interface NBAGameState {
@@ -129,7 +128,7 @@ export class NBAEngine extends BaseSportEngine {
     };
   }
 
-  protected buildGameContext(gameState: NBAGameState): GameContext {
+  protected buildGameContext(gameState: NBAGameState): any {
     return {
       sport: this.sport,
       period: gameState.period,
