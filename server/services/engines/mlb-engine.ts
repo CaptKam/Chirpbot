@@ -40,23 +40,6 @@ interface MLBGameState {
       walks: number;
     };
   };
-  onDeckBatter?: {
-    id: number;
-    name: string;
-    batSide: string;
-    stats: {
-      avg: number;
-      hr: number;
-      rbi: number;
-      obp: number;
-      ops: number;
-      slg: number;
-      atBats: number;
-      hits: number;
-      strikeOuts: number;
-      walks: number;
-    };
-  };
   currentPitcher?: {
     id: number;
     name: string;
@@ -274,9 +257,8 @@ export class MLBEngine extends BaseSportEngine {
       const linescore = liveFeed.liveData.linescore;
       const gameData = liveFeed.gameData;
       
-      // Extract current batter, on-deck batter, and pitcher data
+      // Extract current batter and pitcher data
       let currentBatter = undefined;
-      let onDeckBatter = undefined;
       let currentPitcher = undefined;
       
       try {
@@ -305,42 +287,6 @@ export class MLBEngine extends BaseSportEngine {
               walks: batterStats?.baseOnBalls || 0
             }
           };
-        }
-        
-        // Get on-deck batter from lineup
-        try {
-          const lineup = liveFeed.liveData?.boxscore?.teams;
-          const isTopInning = linescore.inningState === 'Top';
-          const battingTeam = isTopInning ? lineup?.away : lineup?.home;
-          
-          if (battingTeam?.battingOrder) {
-            // Find current batter position in lineup
-            const currentBatterIndex = battingTeam.battingOrder.findIndex((player: any) => player.id === currentBatter?.id);
-            if (currentBatterIndex !== -1 && currentBatterIndex < battingTeam.battingOrder.length - 1) {
-              const onDeckPlayer = battingTeam.battingOrder[currentBatterIndex + 1];
-              const onDeckStats = onDeckPlayer.stats?.find((stat: any) => stat.type?.displayName === 'statsSingleSeason')?.stats;
-              
-              onDeckBatter = {
-                id: onDeckPlayer.id,
-                name: onDeckPlayer.fullName || 'Unknown On-Deck',
-                batSide: onDeckPlayer.batSide?.code || 'U',
-                stats: {
-                  avg: onDeckStats?.avg ? parseFloat(onDeckStats.avg) : 0,
-                  hr: onDeckStats?.homeRuns || 0,
-                  rbi: onDeckStats?.rbi || 0,
-                  obp: onDeckStats?.obp ? parseFloat(onDeckStats.obp) : 0,
-                  ops: onDeckStats?.ops ? parseFloat(onDeckStats.ops) : 0,
-                  slg: onDeckStats?.slg ? parseFloat(onDeckStats.slg) : 0,
-                  atBats: onDeckStats?.atBats || 0,
-                  hits: onDeckStats?.hits || 0,
-                  strikeOuts: onDeckStats?.strikeOuts || 0,
-                  walks: onDeckStats?.baseOnBalls || 0
-                }
-              };
-            }
-          }
-        } catch (onDeckError) {
-          console.log('On-deck batter data not available');
         }
         
         // Get current pitcher
@@ -389,7 +335,6 @@ export class MLBEngine extends BaseSportEngine {
         homeTeam: gameData.teams.home.name,
         awayTeam: gameData.teams.away.name,
         currentBatter,
-        onDeckBatter,
         currentPitcher,
       };
 
@@ -402,10 +347,6 @@ export class MLBEngine extends BaseSportEngine {
       
       if (gameState.currentBatter) {
         console.log(`   🏏 Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
-      }
-      
-      if (gameState.onDeckBatter) {
-        console.log(`   🔄 On-Deck: ${gameState.onDeckBatter.name} (${gameState.onDeckBatter.batSide}) - AVG: ${gameState.onDeckBatter.stats.avg}, HR: ${gameState.onDeckBatter.stats.hr}, RBI: ${gameState.onDeckBatter.stats.rbi}, OPS: ${gameState.onDeckBatter.stats.ops}`);
       }
       
       if (gameState.currentPitcher) {
@@ -440,29 +381,7 @@ export class MLBEngine extends BaseSportEngine {
           hr: gameState.currentBatter.stats.hr,
           rbi: gameState.currentBatter.stats.rbi,
           obp: gameState.currentBatter.stats.obp,
-          ops: gameState.currentBatter.stats.ops,
-          slg: gameState.currentBatter.stats.slg,
-          atBats: gameState.currentBatter.stats.atBats,
-          hits: gameState.currentBatter.stats.hits,
-          strikeOuts: gameState.currentBatter.stats.strikeOuts,
-          walks: gameState.currentBatter.stats.walks
-        }
-      } : undefined,
-      onDeckBatter: gameState.onDeckBatter ? {
-        id: gameState.onDeckBatter.id,
-        name: gameState.onDeckBatter.name,
-        batSide: gameState.onDeckBatter.batSide,
-        stats: {
-          avg: gameState.onDeckBatter.stats.avg,
-          hr: gameState.onDeckBatter.stats.hr,
-          rbi: gameState.onDeckBatter.stats.rbi,
-          obp: gameState.onDeckBatter.stats.obp,
-          ops: gameState.onDeckBatter.stats.ops,
-          slg: gameState.onDeckBatter.stats.slg,
-          atBats: gameState.onDeckBatter.stats.atBats,
-          hits: gameState.onDeckBatter.stats.hits,
-          strikeOuts: gameState.onDeckBatter.stats.strikeOuts,
-          walks: gameState.onDeckBatter.stats.walks
+          ops: gameState.currentBatter.stats.ops
         }
       } : undefined,
       currentPitcher: gameState.currentPitcher ? {
@@ -473,14 +392,8 @@ export class MLBEngine extends BaseSportEngine {
           era: gameState.currentPitcher.stats.era,
           whip: gameState.currentPitcher.stats.whip,
           strikeOuts: gameState.currentPitcher.stats.strikeOuts,
-          walks: gameState.currentPitcher.stats.walks,
           wins: gameState.currentPitcher.stats.wins,
-          losses: gameState.currentPitcher.stats.losses,
-          saves: gameState.currentPitcher.stats.saves,
-          inningsPitched: gameState.currentPitcher.stats.inningsPitched,
-          hits: gameState.currentPitcher.stats.hits,
-          earnedRuns: gameState.currentPitcher.stats.earnedRuns,
-          homeRuns: gameState.currentPitcher.stats.homeRuns
+          losses: gameState.currentPitcher.stats.losses
         }
       } : undefined
     };
@@ -501,13 +414,10 @@ export class MLBEngine extends BaseSportEngine {
       scoreDifference: gameState.homeScore - gameState.awayScore,
       runnersOn,
       currentBatter: gameState.currentBatter,
-      onDeckBatter: gameState.onDeckBatter,
       currentPitcher: gameState.currentPitcher,
       homeTeam: gameState.homeTeam,
       awayTeam: gameState.awayTeam,
-      gameState: 'Live',
-      weather: undefined, // Will be populated by weather data
-      previousWeather: undefined // Will be populated by weather engine
+      gameState: 'Live'
     };
   }
   
@@ -683,11 +593,7 @@ export class MLBEngine extends BaseSportEngine {
             status: 'Live',
             awayTeam: gameState.awayTeam,
             homeTeam: gameState.homeTeam,
-            ...this.getGameSpecificInfo(gameState),
-            // Include live player data in alert
-            currentBatter: gameState.currentBatter,
-            onDeckBatter: gameState.onDeckBatter,
-            currentPitcher: gameState.currentPitcher
+            ...this.getGameSpecificInfo(gameState)
           },
           weatherData,
           aiContext: undefined as string | undefined,
@@ -745,7 +651,11 @@ export class MLBEngine extends BaseSportEngine {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
       console.log(`📊 MLB Settings - AI Enabled: ${settings?.aiEnabled}`);
-      
+      if (!settings?.aiEnabled) {
+        console.log(`⏸️ MLB monitoring disabled, skipping`);
+        return; // Skip if disabled
+      }
+
       const liveGames = await mlbApi.getLiveGames();
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;

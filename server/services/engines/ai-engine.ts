@@ -20,22 +20,16 @@ export class AIEngine extends BaseSportEngine {
   
   async monitor() {
     try {
-      // Check if AI is enabled for any sport
-      const mlbSettings = await storage.getSettingsBySport('MLB');
-      const nflSettings = await storage.getSettingsBySport('NFL');
-      const nbaSettings = await storage.getSettingsBySport('NBA');
-      const nhlSettings = await storage.getSettingsBySport('NHL');
-      
-      const aiEnabled = mlbSettings?.aiEnabled || nflSettings?.aiEnabled || 
-                       nbaSettings?.aiEnabled || nhlSettings?.aiEnabled;
-      
-      if (!aiEnabled) {
+      const settings = await storage.getSettingsBySport('MLB');
+      if (!settings?.aiEnabled) {
         return;
       }
       
-      console.log(`🤖 AI scanning all live games across all sports for complex scenarios...`);
+      console.log(`🤖 AI scanning all live games for complex scenarios...`);
       
-      await this.scanAllGameData();
+      // This would analyze all live games across all sports
+      // Looking for high-complexity situations worth predicting
+      // For now, placeholder implementation
       
     } catch (error) {
       console.error(`AI analysis error:`, error);
@@ -199,139 +193,65 @@ export class AIEngine extends BaseSportEngine {
     const analyses: AIGameAnalysis[] = [];
     
     try {
-      console.log('🤖 Collecting live game data from all sport engines...');
+      // This should integrate with your existing sport engines to get live game data
+      // For now, return sample structure
       
-      // Get live games from all sports through the sports API
-      const { liveSportsService } = await import('../live-sports');
-      const { mlbApi } = await import('../mlb-api');
-      const { getWeatherData } = await import('../weather');
-      
-      // Get MLB games from official API
-      const mlbGames = await mlbApi.getLiveGames();
-      console.log(`🤖 Found ${mlbGames.length} live MLB games`);
+      // Example of what this should collect:
+      /*
+      const mlbGames = await mlbEngine.getCurrentGameStates();
+      const nflGames = await nflEngine.getCurrentGameStates();
+      const nbaGames = await nbaEngine.getCurrentGameStates();
+      const nhlGames = await nhlEngine.getCurrentGameStates();
       
       for (const game of mlbGames) {
-        try {
-          if (game.gameState !== 'Live') continue;
-          
-          const weatherData = await getWeatherData(game.homeTeam);
-          
-          // Get detailed game state for complexity analysis
-          const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
-          if (!liveFeed) continue;
-          
-          const gameState = this.extractMLBGameState(liveFeed);
-          if (!gameState) continue;
-          
-          analyses.push({
-            gameId: `mlb-${game.gamePk}`,
-            sport: 'MLB',
-            homeTeam: game.homeTeam,
-            awayTeam: game.awayTeam,
-            gameState,
-            weatherData: weatherData || {
-              windSpeed: 5,
-              windDirection: 'Variable',
-              temperature: 70,
-              condition: 'Clear'
-            },
-            complexityScore: 0,
-            predictionOpportunities: [...PREDICTION_EVENTS.MLB]
-          });
-        } catch (gameError) {
-          console.error(`Error processing MLB game ${game.gamePk}:`, gameError);
-        }
+        const weatherData = await getWeatherData(game.homeTeam);
+        analyses.push({
+          gameId: game.gameId,
+          sport: 'MLB',
+          homeTeam: game.homeTeam,
+          awayTeam: game.awayTeam,
+          gameState: game,
+          weatherData,
+          complexityScore: 0,
+          predictionOpportunities: PREDICTION_EVENTS.MLB
+        });
       }
+      */
       
-      // Get other sports from ESPN
-      try {
-        const todayGames = await liveSportsService.getTodaysGames();
-        const otherSportsGames = todayGames.games.filter(game => 
-          game.sport !== 'MLB' && game.status === 'live'
-        );
-        
-        console.log(`🤖 Found ${otherSportsGames.length} live games from other sports`);
-        
-        for (const game of otherSportsGames) {
-          try {
-            const weatherData = await getWeatherData(game.homeTeam.name);
-            
-            analyses.push({
-              gameId: game.id,
-              sport: game.sport,
-              homeTeam: game.homeTeam.name,
-              awayTeam: game.awayTeam.name,
-              gameState: {
-                homeScore: game.homeTeam.score || 0,
-                awayScore: game.awayTeam.score || 0,
-                status: game.status,
-                venue: game.venue
-              },
-              weatherData: weatherData || {
-                windSpeed: 5,
-                windDirection: 'Variable', 
-                temperature: 70,
-                condition: 'Clear'
-              },
-              complexityScore: 0,
-              predictionOpportunities: this.getPredictionEventsForSport(game.sport)
-            });
-          } catch (gameError) {
-            console.error(`Error processing ${game.sport} game ${game.id}:`, gameError);
+      // Sample data structure for now
+      const sampleAnalysis: AIGameAnalysis = {
+        gameId: 'ai-sample-1',
+        sport: 'MLB',
+        homeTeam: 'Los Angeles Angels',
+        awayTeam: 'Seattle Mariners',
+        gameState: {
+          inning: 8,
+          outs: 1,
+          runners: { first: false, second: true, third: true },
+          homeScore: 4,
+          awayScore: 5,
+          currentBatter: {
+            name: 'Shohei Ohtani',
+            stats: { hr: 25, rbi: 65, avg: 0.285 }
           }
-        }
-      } catch (sportsError) {
-        console.error('Error fetching other sports data:', sportsError);
-      }
+        },
+        weatherData: {
+          windSpeed: 12,
+          windDirection: 'Out to RF',
+          temperature: 75,
+          condition: 'Clear'
+        },
+        complexityScore: 0,
+        predictionOpportunities: [...PREDICTION_EVENTS.MLB]
+      };
       
-      console.log(`🤖 Collected ${analyses.length} total live games for AI analysis`);
+      analyses.push(sampleAnalysis);
       
     } catch (error) {
       console.error('Error collecting game data for AI analysis:', error);
     }
     
     return analyses;
-  }
-  
-  private extractMLBGameState(liveFeed: any): any {
-    try {
-      const linescore = liveFeed.liveData?.linescore;
-      if (!linescore) return null;
-      
-      return {
-        inning: linescore.currentInning || 1,
-        inningState: linescore.inningState || 'top',
-        outs: linescore.outs || 0,
-        balls: linescore.balls || 0,
-        strikes: linescore.strikes || 0,
-        homeScore: linescore.teams?.home?.runs || 0,
-        awayScore: linescore.teams?.away?.runs || 0,
-        runners: {
-          first: linescore.offense?.first || false,
-          second: linescore.offense?.second || false,
-          third: linescore.offense?.third || false
-        },
-        currentBatter: liveFeed.liveData?.plays?.currentPlay?.matchup?.batter || null
-      };
-    } catch (error) {
-      console.error('Error extracting MLB game state:', error);
-      return null;
-    }
-  }
-  
-  private getPredictionEventsForSport(sport: string): string[] {
-    switch (sport) {
-      case 'MLB':
-        return [...PREDICTION_EVENTS.MLB];
-      case 'NFL':
-        return [...PREDICTION_EVENTS.NFL];
-      case 'NBA':
-        return [...PREDICTION_EVENTS.NBA];
-      case 'NHL':
-        return [...PREDICTION_EVENTS.NHL];
-      default:
-        return ['Score', 'Win'];
-    }
   }
 
   async startMonitoring(): Promise<void> {

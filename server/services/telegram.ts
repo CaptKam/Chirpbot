@@ -67,43 +67,19 @@ export async function sendTelegramAlert(
     }
     
     // Team planning section - current matchup
-    if (alert.gameInfo.currentBatter || alert.gameInfo.currentPitcher || alert.gameInfo.onDeckBatter) {
-      message += `\n🎯 *MATCHUP DETAILS*\n`;
+    if (alert.gameInfo.currentBatter || alert.gameInfo.currentPitcher) {
+      message += `\n🎯 *TEAM PLANNING*\n`;
       
       if (alert.gameInfo.currentBatter) {
         const batter = alert.gameInfo.currentBatter;
-        const handedness = batter.batSide === 'L' ? 'LH' : batter.batSide === 'R' ? 'RH' : 'SH';
-        message += `🏏 *Current Batter:* ${escapeMd(batter.name)} (${handedness})\n`;
-        message += `   📊 ${batter.stats.avg?.toFixed(3) || 'N/A'} AVG • ${batter.stats.hr || 0} HR • ${batter.stats.rbi || 0} RBI • ${batter.stats.ops?.toFixed(3) || 'N/A'} OPS\n`;
-        
-        // Power indicator
-        if (batter.stats.hr && batter.stats.atBats && batter.stats.hr > 15) {
-          const hrRate = ((batter.stats.hr / batter.stats.atBats) * 100).toFixed(1);
-          message += `   ⚡ Power Threat: ${hrRate}% HR rate\n`;
-        }
-      }
-      
-      if (alert.gameInfo.onDeckBatter) {
-        const onDeck = alert.gameInfo.onDeckBatter;
-        const handedness = onDeck.batSide === 'L' ? 'LH' : onDeck.batSide === 'R' ? 'RH' : 'SH';
-        message += `🔄 *On Deck:* ${escapeMd(onDeck.name)} (${handedness})\n`;
-        message += `   📊 ${onDeck.stats.avg?.toFixed(3) || 'N/A'} AVG • ${onDeck.stats.hr || 0} HR • ${onDeck.stats.rbi || 0} RBI\n`;
+        message += `🏏 Batter: ${batter.name} (${batter.batSide})\n`;
+        message += `   Stats: ${batter.stats.avg.toFixed(3)} AVG, ${batter.stats.hr} HR, ${batter.stats.rbi} RBI, ${batter.stats.ops.toFixed(3)} OPS\n`;
       }
       
       if (alert.gameInfo.currentPitcher) {
         const pitcher = alert.gameInfo.currentPitcher;
-        const handedness = pitcher.throwHand === 'L' ? 'LHP' : 'RHP';
-        message += `⚾ *Current Pitcher:* ${escapeMd(pitcher.name)} (${handedness})\n`;
-        message += `   📊 ${pitcher.stats.era?.toFixed(2) || 'N/A'} ERA • ${pitcher.stats.whip?.toFixed(2) || 'N/A'} WHIP • ${pitcher.stats.strikeOuts || 0} K • ${pitcher.stats.wins || 0}\\-${pitcher.stats.losses || 0} W\\-L\n`;
-        
-        // Effectiveness indicator
-        if (pitcher.stats.era !== undefined) {
-          if (pitcher.stats.era < 3.00) {
-            message += `   🔥 Elite Pitcher: Sub-3.00 ERA\n`;
-          } else if (pitcher.stats.era > 5.00) {
-            message += `   🎯 Hittable: High ERA\n`;
-          }
-        }
+        message += `⚾ Pitcher: ${pitcher.name} (${pitcher.throwHand})\n`;
+        message += `   Stats: ${pitcher.stats.era.toFixed(2)} ERA, ${pitcher.stats.whip.toFixed(2)} WHIP, ${pitcher.stats.strikeOuts} K, ${pitcher.stats.wins}-${pitcher.stats.losses} W-L\n`;
       }
     }
     

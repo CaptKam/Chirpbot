@@ -50,23 +50,6 @@ export interface GameContext {
       walks?: number;
     };
   };
-  onDeckBatter?: {
-    id?: number;
-    name: string;
-    batSide?: string;
-    stats: {
-      avg?: number;
-      hr?: number;
-      rbi?: number;
-      obp?: number;
-      ops?: number;
-      slg?: number;
-      atBats?: number;
-      hits?: number;
-      strikeOuts?: number;
-      walks?: number;
-    };
-  };
   currentPitcher?: {
     id?: number;
     name: string;
@@ -88,12 +71,6 @@ export interface GameContext {
   
   // Environmental factors
   weather?: {
-    windSpeed?: number;
-    windDirection?: string;
-    temperature?: number;
-    condition?: string;
-  };
-  previousWeather?: {
     windSpeed?: number;
     windDirection?: string;
     temperature?: number;
@@ -244,7 +221,7 @@ function buildPredictionPrompt(request: PredictionRequest): string {
   // Game state
   prompt += `GAME SITUATION:\n`;
   prompt += `${context.awayTeam} @ ${context.homeTeam}\n`;
-  prompt += `Score: ${context.awayTeam} ${context.awayScore} - ${context.homeScore} ${context.homeTeam}\n`;
+  prompt += `Score: ${context.awayTeam} ${context.homeScore} - ${context.homeScore} ${context.homeTeam}\n`;
   prompt += `Score Difference: ${Math.abs(context.scoreDifference)} ${context.scoreDifference > 0 ? 'Home leading' : context.scoreDifference < 0 ? 'Away leading' : 'Tied'}\n`;
   
   // Sport-specific context
@@ -254,15 +231,6 @@ function buildPredictionPrompt(request: PredictionRequest): string {
     if (context.runnersOn?.length) {
       prompt += `Runners on base: ${context.runnersOn.join(', ')}\n`;
     }
-    
-    // Game momentum and situation
-    if (context.inning && context.inning >= 7) {
-      prompt += `LATE GAME SITUATION: Critical innings - every at-bat matters\n`;
-    }
-    if (context.outs === 2) {
-      prompt += `HIGH PRESSURE: Two outs - do-or-die situation\n`;
-    }
-    
   } else if (context.sport === 'NFL') {
     prompt += `Quarter: ${context.quarter || 'Unknown'}\n`;
     prompt += `Down: ${context.down || 'Unknown'}\n`;
@@ -279,26 +247,6 @@ function buildPredictionPrompt(request: PredictionRequest): string {
     if (context.currentBatter.stats.rbi) prompt += `RBIs: ${context.currentBatter.stats.rbi}\n`;
     if (context.currentBatter.stats.ops) prompt += `OPS: ${context.currentBatter.stats.ops}\n`;
     if (context.currentBatter.stats.strikeOuts) prompt += `Strikeouts: ${context.currentBatter.stats.strikeOuts}\n`;
-    
-    // Power analysis
-    if (context.currentBatter.stats.hr && context.currentBatter.stats.atBats) {
-      const hrRate = (context.currentBatter.stats.hr / context.currentBatter.stats.atBats * 100).toFixed(1);
-      prompt += `Home Run Rate: ${hrRate}% (${context.currentBatter.stats.hr}/${context.currentBatter.stats.atBats} AB)\n`;
-    }
-    
-    // Clutch performance indicator
-    if (context.currentBatter.stats.rbi && context.currentBatter.stats.rbi > 50) {
-      prompt += `CLUTCH PRODUCER: ${context.currentBatter.stats.rbi} RBIs this season\n`;
-    }
-  }
-  
-  // On-deck batter context (if available)
-  if (context.onDeckBatter) {
-    prompt += `\nON-DECK BATTER: ${context.onDeckBatter.name}`;
-    if (context.onDeckBatter.batSide) prompt += ` (${context.onDeckBatter.batSide === 'L' ? 'Left' : context.onDeckBatter.batSide === 'R' ? 'Right' : 'Switch'} handed)`;
-    prompt += `\n`;
-    if (context.onDeckBatter.stats.avg) prompt += `On-Deck BA: ${context.onDeckBatter.stats.avg} | HR: ${context.onDeckBatter.stats.hr || 0} | RBI: ${context.onDeckBatter.stats.rbi || 0}\n`;
-    if (context.onDeckBatter.stats.ops) prompt += `On-Deck OPS: ${context.onDeckBatter.stats.ops}\n`;
   }
   
   if (context.currentPitcher) {
@@ -316,71 +264,9 @@ function buildPredictionPrompt(request: PredictionRequest): string {
   // Environmental factors
   if (context.weather) {
     prompt += `\nWEATHER CONDITIONS:\n`;
-    if (context.weather.windSpeed) {
-      prompt += `Wind: ${context.weather.windSpeed}mph ${context.weather.windDirection || ''}\n`;
-      
-      // Wind impact analysis
-      if (context.weather.windSpeed >= 15) {
-        prompt += `⚠️ HIGH WINDS: ${context.weather.windSpeed}mph winds will significantly affect ball flight\n`;
-        if (context.weather.windDirection && context.weather.windDirection.includes('Out')) {
-          prompt += `🚀 WIND ADVANTAGE: Strong tailwind favors home runs and deep fly balls\n`;
-        } else if (context.weather.windDirection && context.weather.windDirection.includes('In')) {
-          prompt += `🛡️ PITCHER FRIENDLY: Headwind will knock down potential home runs\n`;
-        }
-      } else if (context.weather.windSpeed >= 8) {
-        prompt += `🌬️ MODERATE WINDS: Will affect ball trajectory, especially on pop-ups\n`;
-      }
-    }
-    
-    if (context.weather.temperature) {
-      prompt += `Temperature: ${context.weather.temperature}°F`;
-      if (context.weather.temperature >= 80) {
-        prompt += ` (Hot weather favors offense - ball travels further)\n`;
-      } else if (context.weather.temperature <= 50) {
-        prompt += ` (Cold weather favors pitching - ball doesn't travel as far)\n`;
-      } else {
-        prompt += ` (Neutral temperature conditions)\n`;
-      }
-    }
-    
+    if (context.weather.windSpeed) prompt += `Wind: ${context.weather.windSpeed}mph ${context.weather.windDirection || ''}\n`;
+    if (context.weather.temperature) prompt += `Temperature: ${context.weather.temperature}°F\n`;
     if (context.weather.condition) prompt += `Conditions: ${context.weather.condition}\n`;
-    
-    // Previous weather comparison for dynamic analysis
-    if (context.previousWeather) {
-      const windChange = Math.abs((context.weather.windSpeed || 0) - (context.previousWeather.windSpeed || 0));
-      const tempChange = Math.abs((context.weather.temperature || 0) - (context.previousWeather.temperature || 0));
-      
-      if (windChange >= 5) {
-        prompt += `🌪️ MAJOR WIND SHIFT: Wind speed changed by ${windChange}mph from earlier - affects pitcher/batter strategy\n`;
-      }
-      if (context.weather.windDirection !== context.previousWeather.windDirection) {
-        prompt += `🔄 WIND DIRECTION CHANGE: From ${context.previousWeather.windDirection || 'unknown'} to ${context.weather.windDirection || 'unknown'} - changes hitting approach\n`;
-      }
-      if (tempChange >= 10) {
-        prompt += `🌡️ SIGNIFICANT TEMPERATURE SHIFT: ${tempChange}°F change from earlier affects ball carry distance\n`;
-      }
-    }
-    
-    // Batter-specific weather impact
-    if (context.currentBatter) {
-      prompt += `\nWEATHER IMPACT ON CURRENT BATTER:\n`;
-      const powerHitter = context.currentBatter.stats.hr && context.currentBatter.stats.hr > 15;
-      const contactHitter = context.currentBatter.stats.avg && context.currentBatter.stats.avg > 0.280;
-      
-      if (powerHitter && context.weather.windSpeed >= 10 && context.weather.windDirection?.includes('Out')) {
-        prompt += `⚾ POWER HITTER + TAILWIND: ${context.currentBatter.name}'s power (${context.currentBatter.stats.hr} HR) gets boost from ${context.weather.windSpeed}mph tailwind\n`;
-      } else if (powerHitter && context.weather.windSpeed >= 10 && context.weather.windDirection?.includes('In')) {
-        prompt += `⚾ POWER NEGATED: ${context.currentBatter.name}'s power reduced by ${context.weather.windSpeed}mph headwind\n`;
-      } else if (contactHitter && context.weather.windSpeed >= 15) {
-        prompt += `⚾ CONTACT HITTER CHALLENGE: ${context.currentBatter.name} (.${Math.round((context.currentBatter.stats.avg || 0) * 1000)} AVG) faces difficult conditions with ${context.weather.windSpeed}mph winds\n`;
-      }
-      
-      if (context.weather.temperature <= 50 && powerHitter) {
-        prompt += `🧊 COLD IMPACT: ${context.currentBatter.name}'s power reduced by cold ${context.weather.temperature}°F temperature\n`;
-      } else if (context.weather.temperature >= 85 && powerHitter) {
-        prompt += `🔥 HEAT BOOST: ${context.currentBatter.name}'s power enhanced by hot ${context.weather.temperature}°F conditions\n`;
-      }
-    }
   }
   
   prompt += `\nProvide predictions for: ${eventTypes.join(', ')}\n`;
