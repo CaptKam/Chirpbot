@@ -76,7 +76,9 @@ class SportsDataService {
       return [];
     }
 
-    const targetDate = date || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    // Try different date formats - SportsData.io might expect different formats
+    const now = new Date();
+    const targetDate = date || now.toISOString().split('T')[0]; // YYYY-MM-DD
     const cacheKey = `${sport}-${targetDate}`;
     
     // Check cache
@@ -91,6 +93,7 @@ class SportsDataService {
       const url = `${this.BASE_URL}${endpoint}/${targetDate}?key=${this.apiKey}`;
       
       console.log(`🏈 Fetching ${sport} games from SportsData.io for ${targetDate}...`);
+      console.log(`🔍 SportsData.io Debug - URL: ${url.replace(this.apiKey || '', 'API_KEY_HIDDEN')}`);
       
       const data = await fetchJson<SportsDataScore[]>(url, {
         headers: {
@@ -104,45 +107,85 @@ class SportsDataService {
         return [];
       }
 
-      const games = data.map((game: SportsDataScore): Game => {
-        const gameStatus = this.mapSportsDataStatus(game.Status, game.IsClosed);
-        
-        return {
-          id: `${sport.toLowerCase()}-sd-${game.GameID}`,
-          sport,
-          homeTeam: {
-            id: game.HomeTeamID.toString(),
-            name: game.HomeTeam,
-            abbreviation: game.HomeTeam, // SportsData uses team names as keys
-            score: game.HomeTeamScore || 0,
-          },
-          awayTeam: {
-            id: game.AwayTeamID.toString(),
-            name: game.AwayTeam,
-            abbreviation: game.AwayTeam,
-            score: game.AwayTeamScore || 0,
-          },
-          startTime: game.DateTime,
-          status: gameStatus,
-          venue: `Stadium ID: ${game.StadiumID || 'TBD'}`,
-          isSelected: false,
-          // Add sport-specific data
-          ...(sport === 'NFL' && { quarter: game.Quarter }),
-          ...(sport === 'NBA' && { quarter: game.Quarter }),
-          ...(sport === 'NHL' && { period: game.Quarter }),
-        };
-      }).filter(game => game !== null);
+      return this.processSportsDataGames(data, sport);
+  }
+
+  private processSportsDataGames(data: SportsDataScore[], sport: 'NFL' | 'NBA' | 'NHL' | 'MLB'): Game[] {
+    const games = data.map((game: SportsDataScore): Game => {
+      const gameStatus = this.mapSportsDataStatus(game.Status, game.IsClosed);
       
-      // Cache the results
-      this.cache.set(cacheKey, { data: games, timestamp: Date.now() });
-      
-      console.log(`✅ Fetched ${games.length} ${sport} games from SportsData.io`);
-      return games;
+      return {
+        id: `${sport.toLowerCase()}-sd-${game.GameID}`,
+        sport,
+        homeTeam: {
+          id: game.HomeTeamID.toString(),
+          name: game.HomeTeam,
+          abbreviation: game.HomeTeam, // SportsData uses team names as keys
+          score: game.HomeTeamScore || 0,
+        },
+        awayTeam: {
+          id: game.AwayTeamID.toString(),
+          name: game.AwayTeam,
+          abbreviation: game.AwayTeam,
+          score: game.AwayTeamScore || 0,
+        },
+        startTime: game.DateTime,
+        status: gameStatus,
+        venue: `Stadium ID: ${game.StadiumID || 'TBD'}`,
+        isSelected: false,
+        // Add sport-specific data
+        ...(sport === 'NFL' && { quarter: game.Quarter }),
+        ...(sport === 'NBA' && { quarter: game.Quarter }),
+        ...(sport === 'NHL' && { period: game.Quarter }),
+      };
+    }).filter(game => game !== null);
+    
+    console.log(`✅ Processed ${games.length} ${sport} games from SportsData.io`);
+    return games;
     } catch (error) {
       console.error(`❌ Error fetching ${sport} games from SportsData.io:`, error);
+      
+      // Try alternative date formats if 404
+      if (error instanceof Error && error.message.includes('404')) {
+        console.log(`🔄 Trying alternative date formats for ${sport}...`);
+        
+        // Try with current season year for NBA/NHL/NFL
+        const currentYear = now.getFullYear();
+        const seasonYear = sport === 'NBA' || sport === 'NHL' ? 
+          (now.getMonth() < 6 ? currentYear : currentYear + 1) : currentYear;
+        
+        // Try different endpoints or date formats
+        const alternativeFormats = [
+          `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+          `${currentYear}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`,
+          `${seasonYear}`,
+        ];
+        
+        for (const altDate of alternativeFormats) {
+          try {
+            const altUrl = `${this.BASE_URL}${endpoint}/${altDate}?key=${this.apiKey}`;
+            console.log(`🔄 Trying alternative format: ${altDate}`);
+            
+            const altData = await fetchJson<SportsDataScore[]>(altUrl, {
+              headers: { 'User-Agent': 'ChirpBot/2.0' },
+              timeoutMs: 8000
+            });
+            
+            if (altData && altData.length > 0) {
+              console.log(`✅ Success with alternative format ${altDate} - found ${altData.length} games`);
+              return this.processSportsDataGames(altData, sport);
+            }
+          } catch (altError) {
+            console.log(`❌ Alternative format ${altDate} also failed`);
+          }
+        }
+      }
+      
       return [];
     }
   }
+
+  private processSportsDataGames(data: SportsDataScore[], sport: 'NFL' | 'NBA' | 'NHL' | 'MLB'): Game[] {
 
   private mapSportsDataStatus(status: string, isClosed: boolean): 'scheduled' | 'live' | 'final' {
     if (isClosed || status.toLowerCase().includes('final')) {

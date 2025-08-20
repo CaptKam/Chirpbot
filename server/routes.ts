@@ -755,6 +755,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test all data feeds
+  app.get("/api/test/data-feeds", async (req, res) => {
+    try {
+      const feedStatus = {
+        timestamp: new Date().toISOString(),
+        feeds: {
+          mlb: { status: 'unknown', games: 0, error: null },
+          nfl: { status: 'unknown', games: 0, error: null },
+          nba: { status: 'unknown', games: 0, error: null },
+          nhl: { status: 'unknown', games: 0, error: null },
+          weather: { status: 'unknown', data: null, error: null },
+          sportsDataApi: { status: 'unknown', configured: false }
+        }
+      };
+
+      // Test MLB API
+      try {
+        const mlbGames = await import("./services/mlb-api").then(m => m.mlbApi.getTodaysGames());
+        feedStatus.feeds.mlb = { 
+          status: 'success', 
+          games: mlbGames.length, 
+          error: null 
+        };
+      } catch (error) {
+        feedStatus.feeds.mlb = { 
+          status: 'failed', 
+          games: 0, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        };
+      }
+
+      // Test SportsData.io API key
+      const sportsDataKey = process.env.SPORTSDATA_API_KEY;
+      feedStatus.feeds.sportsDataApi = {
+        status: sportsDataKey && sportsDataKey !== 'your_sportsdata_api_key_here' ? 'configured' : 'missing',
+        configured: !!(sportsDataKey && sportsDataKey !== 'your_sportsdata_api_key_here')
+      };
+
+      // Test SportsData.io feeds
+      const { sportsDataService } = await import("./services/sportsdata-api");
+      
+      for (const sport of ['NFL', 'NBA', 'NHL'] as const) {
+        try {
+          const games = await sportsDataService[`get${sport}Games`]();
+          feedStatus.feeds[sport.toLowerCase() as 'nfl' | 'nba' | 'nhl'] = { 
+            status: 'success', 
+            games: games.length, 
+            error: null 
+          };
+        } catch (error) {
+          feedStatus.feeds[sport.toLowerCase() as 'nfl' | 'nba' | 'nhl'] = { 
+            status: 'failed', 
+            games: 0, 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          };
+        }
+      }
+
+      // Test Weather API
+      try {
+        const weatherData = await import("./services/weather").then(m => m.getWeatherData("New York"));
+        feedStatus.feeds.weather = { 
+          status: weatherData.isError ? 'failed' : 'success', 
+          data: weatherData, 
+          error: weatherData.isError ? 'API key or location issue' : null 
+        };
+      } catch (error) {
+        feedStatus.feeds.weather = { 
+          status: 'failed', 
+          data: null, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        };
+      }
+
+      res.json(feedStatus);
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Failed to test data feeds', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
   // Test endpoint to trigger alerts for all sports
   app.post("/api/test/generate-alerts", async (req, res) => {
     try {
