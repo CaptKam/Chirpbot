@@ -823,6 +823,14 @@ export class MLBEngine extends BaseSportEngine {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
             console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
             await this.processAlerts(triggeredAlerts, gameState);
+
+            // Trigger AI analysis only for high-priority complex scenarios
+            const highPriorityAlerts = triggeredAlerts.filter(alert => alert.priority >= 85);
+            if (highPriorityAlerts.length > 0) {
+              const { aiEngine } = await import('./ai-engine');
+              const weatherData = await getWeatherData(gameState.homeTeam);
+              await aiEngine.analyzeComplexScenario(gameState.gameId, this.sport, gameState, weatherData);
+            }
           } else {
             console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
           }

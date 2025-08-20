@@ -19,21 +19,9 @@ export class AIEngine extends BaseSportEngine {
   monitoringInterval = 5000; // 5 seconds - ultra-fast AI scanning
   
   async monitor() {
-    try {
-      const settings = await storage.getSettingsBySport('MLB');
-      if (!settings?.aiEnabled) {
-        return;
-      }
-      
-      console.log(`🤖 AI scanning all live games for complex scenarios...`);
-      
-      // This would analyze all live games across all sports
-      // Looking for high-complexity situations worth predicting
-      // For now, placeholder implementation
-      
-    } catch (error) {
-      console.error(`AI analysis error:`, error);
-    }
+    // AI Engine doesn't run independently anymore
+    // It only processes when called by other engines for complex scenarios
+    return;
   }
   
   alertConfigs: AlertConfig[] = [
@@ -265,11 +253,44 @@ export class AIEngine extends BaseSportEngine {
   }
 
   async startMonitoring(): Promise<void> {
-    console.log(`🤖 AI Engine STARTED - ${this.monitoringInterval/1000}s intelligent scanning`);
-    
-    setInterval(async () => {
-      await this.scanAllGameData();
-    }, this.monitoringInterval);
+    console.log(`🤖 AI Engine STARTED - Waiting for complex scenarios from other engines`);
+    // No independent scanning - only triggered by other engines
+  }
+
+  // New method for other engines to trigger AI analysis on specific games
+  async analyzeComplexScenario(gameId: string, sport: string, gameState: any, weatherData?: any): Promise<void> {
+    try {
+      const settings = await storage.getSettingsBySport(sport);
+      if (!settings?.aiEnabled) {
+        return;
+      }
+
+      console.log(`🤖 AI analyzing complex scenario for ${sport} game ${gameId}`);
+      
+      const gameAnalysis: AIGameAnalysis = {
+        gameId,
+        sport,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        gameState,
+        weatherData,
+        complexityScore: this.calculateComplexityScore({ gameState, weatherData, sport }),
+        predictionOpportunities: sport === 'MLB' ? [...PREDICTION_EVENTS.MLB] : 
+                               sport === 'NFL' ? [...PREDICTION_EVENTS.NFL] :
+                               sport === 'NBA' ? [...PREDICTION_EVENTS.NBA] :
+                               [...PREDICTION_EVENTS.NHL]
+      };
+
+      const triggeredAlerts = await this.checkAlertConditions(gameAnalysis);
+      
+      if (triggeredAlerts.length > 0) {
+        console.log(`🤖 AI found ${triggeredAlerts.length} complex scenarios for ${gameAnalysis.homeTeam} vs ${gameAnalysis.awayTeam}`);
+        await this.processAlerts(triggeredAlerts, gameAnalysis);
+      }
+      
+    } catch (error) {
+      console.error(`Error in AI complex scenario analysis:`, error);
+    }
   }
 }
 
