@@ -4,11 +4,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut } from "lucide-react";
+import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut, Sparkles } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { DemoOnboarding } from "@/components/demo-onboarding";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 const TEST_USER_ID = "test-user-123"; // For demo purposes
@@ -16,6 +17,7 @@ const TEST_USER_ID = "test-user-123"; // For demo purposes
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
+  const [showDemoOnboarding, setShowDemoOnboarding] = useState(false);
 
   const { data: gamesData, isLoading } = useQuery<GameDay>({
     queryKey: ["/api/games/today", { sport: activeSport }],
@@ -53,6 +55,24 @@ export default function Calendar() {
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  
+  // Check if this is a demo user and show onboarding
+  useEffect(() => {
+    if (user?.username?.toLowerCase() === 'demo') {
+      console.log("Demo user detected - showing onboarding");
+      // Set a small delay to ensure smooth transition after login
+      const timer = setTimeout(() => {
+        console.log("Setting showDemoOnboarding to true");
+        setShowDemoOnboarding(true);
+        console.log("showDemoOnboarding state should now be:", true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+  
+  useEffect(() => {
+    console.log("Delayed setting of showDemoOnboarding");
+  }, [showDemoOnboarding]);
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -64,10 +84,15 @@ export default function Calendar() {
       window.location.reload();
     },
   });
+  
+  const handleOnboardingComplete = () => {
+    setShowDemoOnboarding(false);
+  };
 
-  // Load persisted monitored games
+  // Load persisted monitored games - use actual user ID for demo users
+  const userId = user?.id || TEST_USER_ID;
   const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
-    queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`, { sport: activeSport }],
+    queryKey: [`/api/user/${userId}/monitored-games`, { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
       const searchParams = new URLSearchParams(params as Record<string, string>);
@@ -95,22 +120,22 @@ export default function Calendar() {
       homeTeamName: string; 
       awayTeamName: string; 
     }) => {
-      return apiRequest("POST", `/api/user/${TEST_USER_ID}/monitored-games`, { 
+      return apiRequest("POST", `/api/user/${userId}/monitored-games`, { 
         gameId, sport, homeTeamName, awayTeamName 
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/monitored-games`] });
     }
   });
 
   // Remove game monitoring
   const removeMonitoringMutation = useMutation({
     mutationFn: async (gameId: string) => {
-      return apiRequest("DELETE", `/api/user/${TEST_USER_ID}/monitored-games/${gameId}`);
+      return apiRequest("DELETE", `/api/user/${userId}/monitored-games/${gameId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${TEST_USER_ID}/monitored-games`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/monitored-games`] });
     }
   });
 
@@ -160,6 +185,28 @@ export default function Calendar() {
   };
 
   return (
+    <>
+      {/* Demo Onboarding Modal */}
+      <DemoOnboarding 
+        isOpen={showDemoOnboarding} 
+        onComplete={handleOnboardingComplete} 
+        username={user?.username || "Demo User"} 
+      />
+      
+      {/* Add a test button for development */}
+      {user?.username?.toLowerCase() === 'demo' && (
+        <Button
+          onClick={() => {
+            console.log("Test button clicked - opening modal");
+            setShowDemoOnboarding(true);
+          }}
+          className="fixed top-4 right-4 z-50 bg-purple-500 hover:bg-purple-600"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          Show Tour
+        </Button>
+      )}
+    
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
       <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
@@ -384,5 +431,6 @@ export default function Calendar() {
         )}
       </div>
     </div>
+    </>
   );
 }

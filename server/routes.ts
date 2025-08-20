@@ -8,6 +8,7 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
+import { demoSimulator } from "./demo-simulator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -326,6 +327,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { gameId, sport, homeTeamName, awayTeamName } = req.body;
       
+      // Check if this is a demo user
+      const session = req.session as any;
+      if (session?.isDemo && session?.userId === userId) {
+        // Start demo monitoring for this game
+        await demoSimulator.startGameMonitoring(gameId, userId, broadcast);
+      }
+      
       const monitoring = await storage.addUserMonitoredGame({
         userId,
         gameId,
@@ -344,6 +352,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
     try {
       const { userId, gameId } = req.params;
+      
+      // Check if this is a demo user
+      const session = req.session as any;
+      if (session?.isDemo && session?.userId === userId) {
+        // Stop demo monitoring for this game
+        demoSimulator.stopGameMonitoring(gameId, userId);
+      }
       
       await storage.removeUserMonitoredGame(userId, gameId);
       res.json({ success: true });
@@ -580,6 +595,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/logout", async (req, res) => {
     try {
+      const session = req.session as any;
+      
+      // Stop demo if it's a demo user
+      if (session?.isDemo) {
+        demoSimulator.stopDemo();
+      }
+      
       req.session.destroy((err) => {
         if (err) {
           console.error("Session destroy error:", err);
@@ -602,7 +624,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username/email and password are required" });
       }
 
-      // Find user (case-insensitive search for username or email)
+      // Handle demo account specially
+      if (usernameOrEmail.toLowerCase() === 'demo' && password === 'demo123') {
+        // Create or get demo user
+        let demoUser = await storage.getUserByUsername('demo');
+        
+        if (!demoUser) {
+          const bcrypt = await import('bcryptjs');
+          const hashedPassword = await bcrypt.hash('demo123', 10);
+          demoUser = await storage.createUser({
+            username: 'demo',
+            password: hashedPassword,
+            firstName: 'Demo',
+            lastName: 'User',
+            authMethod: 'local' as const
+          });
+        }
+        
+        // Start demo simulator
+        await demoSimulator.startDemo(demoUser.id);
+        
+        // Start session
+        (req.session as any).userId = demoUser.id;
+        (req.session as any).userInfo = {
+          id: demoUser.id,
+          username: demoUser.username,
+          email: demoUser.email,
+          firstName: demoUser.firstName,
+          lastName: demoUser.lastName
+        };
+        (req.session as any).isDemo = true;
+
+        return res.json({ 
+          id: demoUser.id, 
+          username: demoUser.username,
+          email: demoUser.email,
+          firstName: demoUser.firstName,
+          lastName: demoUser.lastName,
+          message: "Login successful" 
+        });
+      }
+
+      // Regular user login
       const user = await storage.getUserByUsername(usernameOrEmail);
       if (!user || !user.password) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -624,6 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: user.firstName,
         lastName: user.lastName
       };
+      (req.session as any).isDemo = false;
 
       res.json({ 
         id: user.id, 
