@@ -768,15 +768,16 @@ export class MLBEngine extends BaseSportEngine {
         };
         
         let needsUpdate = false;
+        const alertTypes = settings.alertTypes as any;
         for (const [key, value] of Object.entries(coreSettings)) {
-          if (settings[key] === undefined) {
-            settings[key] = value;
+          if (alertTypes[key] === undefined) {
+            alertTypes[key] = value;
             needsUpdate = true;
           }
         }
         
         if (needsUpdate) {
-          await storage.updateSettingsBySport(this.sport, settings);
+          await storage.updateSettings(this.sport, { alertTypes });
           console.log(`✅ Updated MLB settings with core alert types`);
         }
       }
