@@ -841,7 +841,18 @@ export class MLBEngine extends BaseSportEngine {
   // Placeholder for the checkAlertConditions method if it's defined in BaseSportEngine
   private async checkAlertConditions(gameState: MLBGameState): Promise<AlertConfig[]> {
     const triggeredAlerts: AlertConfig[] = [];
+    
+    // Get settings to check if alert types are enabled
+    const { storage } = await import('../index.js');
+    const settings = await storage.getSettingsBySport(this.sport);
+    
     for (const alertConfig of this.alertConfigs) {
+      // Check if this alert type is enabled in settings
+      if (alertConfig.settingKey && !(settings.alertTypes as any)[alertConfig.settingKey]) {
+        console.log(`⏭️ Alert type '${alertConfig.type}' skipped - setting '${alertConfig.settingKey}' is disabled`);
+        continue;
+      }
+      
       // Check if the alert is AI-prediction based or condition-based
       if (alertConfig.isPrediction) {
         // Logic to check against AI predictions would go here
@@ -865,11 +876,11 @@ export class MLBEngine extends BaseSportEngine {
     return triggeredAlerts;
   }
 
-  // Placeholder for isAlertTypeEnabled if it's defined in BaseSportEngine
+  // Check if a specific alert type is enabled in settings
   private async isAlertTypeEnabled(settingKey: string): Promise<boolean> {
-    // In a real implementation, this would check the user's settings
-    // For now, assume all alerts are enabled
-    return true;
+    const { storage } = await import('../index.js');
+    const settings = await storage.getSettingsBySport(this.sport);
+    return !!(settings.alertTypes as any)[settingKey];
   }
 
   // Placeholder for createAlert if it's defined in BaseSportEngine
