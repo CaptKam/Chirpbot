@@ -70,6 +70,7 @@ export class MLBEngine extends BaseSportEngine {
   alertConfigs: AlertConfig[] = [
     {
       type: "Game Start",
+      settingKey: "inningChange",
       priority: 40,
       probability: 1.0,
       description: "⚾ GAME START - First pitch!",
@@ -77,7 +78,8 @@ export class MLBEngine extends BaseSportEngine {
         state.inning === 1 && state.inningState === 'top' && state.outs === 0
     },
     {
-      type: "7th Inning Warning", 
+      type: "7th Inning Warning",
+      settingKey: "lateInning",
       priority: 50,
       probability: 1.0,
       description: "🚨 7TH INNING STRETCH - Critical innings ahead!",
@@ -86,6 +88,7 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "Tie Game 9th Inning",
+      settingKey: "closeGame",
       priority: 85,
       probability: 1.0, 
       description: "🔥 TIE GAME 9TH INNING - FINAL INNING DRAMA!",
@@ -95,6 +98,7 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "Bases Loaded 0 Outs",
+      settingKey: "risp",
       priority: 95,
       probability: 1.0,
       description: "🚨 BASES LOADED, 0 OUTS! - MAXIMUM scoring opportunity!",
@@ -103,6 +107,7 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "Bases Loaded 1 Out", 
+      settingKey: "risp",
       priority: 85,
       probability: 1.0,
       description: "🔥 BASES LOADED, 1 OUT! - High-value scoring chance!",
@@ -111,6 +116,7 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "Bases Loaded 2 Outs", 
+      settingKey: "risp",
       priority: 95,
       probability: 1.0,
       description: "🚨 BASES LOADED, 2 OUTS! - MAXIMUM PRESSURE! Make or break moment!",
