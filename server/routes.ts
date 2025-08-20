@@ -645,8 +645,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Start demo simulator
+        // Start demo simulator and clear all existing alerts
+        console.log(`🎮 Starting demo for user ${demoUser.id} - clearing all alerts`);
         await demoSimulator.startDemo(demoUser.id, storage);
+        console.log(`✅ Demo started and alerts cleared for user ${demoUser.id}`);
         
         // Start session
         (req.session as any).userId = demoUser.id;
@@ -665,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: demoUser.email,
           firstName: demoUser.firstName,
           lastName: demoUser.lastName,
-          message: "Login successful" 
+          message: "Demo login successful - fresh session started" 
         });
       }
 
