@@ -79,9 +79,10 @@ export default function Calendar() {
       return response.json();
     },
     onSuccess: () => {
-      // Clear demo onboarding flag for demo users so it shows again on next login
+      // Clear demo flags for demo users so they show again on next login
       if (user?.username?.toLowerCase() === 'demo') {
         sessionStorage.removeItem('demo-onboarding-shown');
+        sessionStorage.removeItem('demo-game-tip-shown');
       }
       queryClient.clear();
       window.location.reload();
@@ -104,15 +105,19 @@ export default function Calendar() {
   useEffect(() => {
     if (user?.username?.toLowerCase() === 'demo' && !showDemoOnboarding && games.length > 0) {
       const hasShownOnboarding = sessionStorage.getItem('demo-onboarding-shown');
-      if (hasShownOnboarding && !showGameTip) {
+      const hasShownGameTip = sessionStorage.getItem('demo-game-tip-shown');
+      
+      // Only show if onboarding was shown but game tip hasn't been shown yet this session
+      if (hasShownOnboarding && !hasShownGameTip) {
         setTimeout(() => {
           setShowGameTip(true);
+          sessionStorage.setItem('demo-game-tip-shown', 'true');
           // Auto-hide tip after 8 seconds
           setTimeout(() => setShowGameTip(false), 8000);
         }, 1500);
       }
     }
-  }, [user, showDemoOnboarding, games.length, showGameTip]);
+  }, [user, showDemoOnboarding, games.length]);
 
   // Load persisted monitored games - use actual user ID for demo users
   const userId = user?.id || TEST_USER_ID;
