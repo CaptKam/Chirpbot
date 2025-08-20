@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0B1220] text-slate-100 antialiased selection:bg-emerald-500/30">
+    <div className="min-h-screen bg-[#0B1220] text-slate-100 antialiased selection:bg-emerald-500/30 overflow-x-hidden">
       <Nav />
       <Hero />
       <LogosStrip />
@@ -25,7 +25,7 @@ function Nav() {
   const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0B1220]/70">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-4">
         <a href="#" className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
             <Zap className="w-4 h-4 text-emerald-400" />
@@ -83,14 +83,14 @@ function Hero() {
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0B1220]/60 to-[#0B1220]" />
 
-      <div className="relative mx-auto max-w-7xl px-6 pt-16 pb-24 lg:pb-32">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-24 lg:pb-32">
         <div className="text-center">
           <Badge>Live Sports Signals</Badge>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.6, ease: "easeOut" }} 
-            className="mt-6 font-black tracking-tight text-5xl sm:text-6xl lg:text-7xl"
+            className="mt-6 font-black tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl break-words"
           >
             Catch the <span className="text-emerald-400">moment</span>. Bet the <span className="text-emerald-400">edge</span>.
           </motion.h1>
@@ -98,7 +98,7 @@ function Hero() {
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ delay: 0.1, duration: 0.6, ease: "easeOut" }} 
-            className="mt-5 max-w-2xl mx-auto text-lg text-slate-300"
+            className="mt-5 max-w-2xl mx-auto text-base sm:text-lg text-slate-300 px-4 sm:px-0"
           >
             Real‑time MLB/NFL alerts with ruthless noise‑reduction. Built for sharps, teams, and high‑tempo traders.
           </motion.p>
@@ -140,11 +140,11 @@ function LogosStrip() {
   
   return (
     <section className="py-12 border-y border-slate-800/50">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <p className="text-center text-sm text-slate-400 mb-8">Powered by industry-leading data sources</p>
-        <div className="flex items-center justify-center gap-8 md:gap-12">
+        <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-8 lg:gap-12 flex-wrap">
           {logos.map((logo) => (
-            <div key={logo} className="text-slate-500 font-bold text-lg opacity-60 hover:opacity-100 transition-opacity">
+            <div key={logo} className="text-slate-500 font-bold text-base sm:text-lg opacity-60 hover:opacity-100 transition-opacity whitespace-nowrap">
               {logo}
             </div>
           ))}
@@ -189,17 +189,17 @@ function ValueProps() {
   ];
 
   return (
-    <section id="features" className="py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-black tracking-tight mb-4">
+    <section id="features" className="py-16 sm:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="text-center mb-12 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-4 px-4 sm:px-0">
             Built for <span className="text-emerald-400">serious</span> sports monitoring
           </h2>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto px-4 sm:px-0">
             Every feature designed to give you the edge in fast-moving sports betting and trading markets.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {features.map((feature, index) => (
             <motion.div
               key={index}
