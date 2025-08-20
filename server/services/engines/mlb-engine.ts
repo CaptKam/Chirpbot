@@ -699,15 +699,8 @@ export class MLBEngine extends BaseSportEngine {
         // Get weather data for context
         const weatherData = await getWeatherData(gameState.homeTeam);
 
-        // TEMPORARILY DISABLED: All OpenAI calls to reduce API usage
         let aiAnalysis = { context: "Standard game situation", confidence: 0 };
-        // Commenting out to ensure zero API calls
-        /*
-        if (alert.priority >= 85) {
-          const { analyzeAlert } = await import('../openai');
-          aiAnalysis = await analyzeAlert(alert.type, this.sport, gameState, weatherData);
-        }
-        */
+        // AI analysis has been completely removed
 
         const alertData: InsertAlert = {
           id: randomUUID(),
@@ -840,13 +833,7 @@ export class MLBEngine extends BaseSportEngine {
             console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
             await this.processAlerts(triggeredAlerts, gameState);
 
-            // Trigger AI analysis only for high-priority complex scenarios
-            const highPriorityAlerts = triggeredAlerts.filter(alert => alert.priority >= 85);
-            if (highPriorityAlerts.length > 0) {
-              const { aiEngine } = await import('./ai-engine');
-              const weatherData = await getWeatherData(gameState.homeTeam);
-              await aiEngine.analyzeComplexScenario(gameState.gameId, this.sport, gameState, weatherData);
-            }
+            // AI analysis has been completely removed
           } else {
             console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
           }
