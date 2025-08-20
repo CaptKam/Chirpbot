@@ -53,9 +53,9 @@ export default function Alerts() {
     }
   }, [markAsSeenMutation]);
 
-  // Mark all alerts as seen after a delay to let user see them
+  // Mark all alerts as seen after a longer delay to let user see them
   useEffect(() => {
-    // Give user 8 seconds to see the new alerts before marking as seen
+    // Give user 30 seconds to see the new alerts before auto-marking as seen
     const timer = setTimeout(() => {
       fetch('/api/alerts/mark-all-seen', {
         method: 'PATCH',
@@ -67,7 +67,7 @@ export default function Alerts() {
         queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
         queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
       });
-    }, 8000);
+    }, 30000); // Increased from 8 to 30 seconds
     
     return () => clearTimeout(timer);
   }, []); // Only run once when component mounts
@@ -177,6 +177,24 @@ export default function Alerts() {
             <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
           </div>
         </div>
+        {/* Mark all as read button */}
+        {filteredAlerts.some(a => !a.seen) && (
+          <Button
+            onClick={() => {
+              fetch('/api/alerts/mark-all-seen', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+              }).then(() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+              });
+            }}
+            className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-500/30"
+            data-testid="mark-all-read"
+          >
+            Mark All Read
+          </Button>
+        )}
       </header>
       {/* Filters */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 p-4">
@@ -187,21 +205,32 @@ export default function Alerts() {
             </h2>
           </div>
         </div>
-        <div className="flex space-x-2 overflow-x-auto">
-          {FILTER_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => toggleFilter(option.id)}
-              data-testid={`filter-${option.id}`}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap transition-colors ${
-                activeFilters.includes(option.id)
-                  ? "bg-emerald-500 text-slate-900"
-                  : "bg-white/10 text-slate-300 hover:bg-white/20"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex space-x-2 overflow-x-auto flex-1">
+            {FILTER_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => toggleFilter(option.id)}
+                data-testid={`filter-${option.id}`}
+                className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap transition-colors ${
+                  activeFilters.includes(option.id)
+                    ? "bg-emerald-500 text-slate-900"
+                    : "bg-white/10 text-slate-300 hover:bg-white/20"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {/* Unseen count indicator */}
+          {filteredAlerts.filter(a => !a.seen).length > 0 && (
+            <div className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 rounded-full">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-xs font-bold text-emerald-400">
+                {filteredAlerts.filter(a => !a.seen).length} NEW
+              </span>
+            </div>
+          )}
         </div>
       </div>
       {/* Alerts Feed */}
@@ -245,14 +274,28 @@ export default function Alerts() {
               <SwipeableCard
                 key={alert.id}
                 alertId={alert.id}
-                className={`bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all duration-200 ${
+                onClick={() => {
+                  // Mark as seen when clicked
+                  if (!alert.seen) {
+                    markAlertAsSeen(alert.id);
+                  }
+                }}
+                className={`bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all duration-500 relative overflow-hidden cursor-pointer ${
                   alert.seen 
-                    ? 'ring-1 ring-slate-600/50' 
-                    : 'ring-2 ring-emerald-500 shadow-xl shadow-emerald-500/30 animate-pulse-subtle border-2 border-emerald-400/50'
+                    ? 'ring-1 ring-slate-600/50 opacity-75' 
+                    : 'ring-2 ring-emerald-500 shadow-xl shadow-emerald-500/30 border-2 border-emerald-400/50'
                 }`}
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
               >
+                {/* NEW Badge for unseen alerts */}
+                {!alert.seen && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <span className="bg-emerald-500 text-slate-900 text-xs font-black px-2 py-1 rounded-full animate-pulse shadow-lg shadow-emerald-500/50">
+                      NEW
+                    </span>
+                  </div>
+                )}
                 {/* Quick Impact Header */}
                 <div className="text-center mb-2">
                   <h2 className="text-base font-black uppercase tracking-wide text-emerald-400">
