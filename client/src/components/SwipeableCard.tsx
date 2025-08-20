@@ -120,7 +120,7 @@ export function SwipeableCard({ children, alertId, className, ...props }: Swipea
   };
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const threshold = 100;
+    const threshold = 160; // Increased from 100 to make swipes more deliberate
     if (Math.abs(info.offset.x) < threshold) {
       setDragX(0);
     } else if (info.offset.x > threshold) {
@@ -189,10 +189,10 @@ export function SwipeableCard({ children, alertId, className, ...props }: Swipea
       <motion.div
         drag="x"
         dragConstraints={{ left: -300, right: 140 }}
-        dragElastic={0.1}
+        dragElastic={0.05}
         onDragEnd={handleDragEnd}
         animate={{ x: dragX }}
-        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+        transition={{ type: "spring", damping: 30, stiffness: 350 }}
         className="relative z-10"
         whileDrag={{ scale: 1.02 }}
       >
