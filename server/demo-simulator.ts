@@ -248,7 +248,9 @@ export class DemoSimulator {
     await this.resetDemo();
     // Clear all monitored games for fresh demo experience
     await storage.clearAllUserMonitoredGames(userId);
-    console.log(`🎮 Demo mode started for user: ${userId} - all game selections cleared`);
+    // Clear all alerts for fresh demo experience  
+    await storage.clearAllUserAlerts(userId);
+    console.log(`🎮 Demo mode started for user: ${userId} - all game selections and alerts cleared`);
   }
 
   // Reset demo data

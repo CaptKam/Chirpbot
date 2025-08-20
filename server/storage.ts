@@ -38,6 +38,7 @@ export interface IStorage {
   markAllAlertsAsSeen(): Promise<void>;
   getUnseenAlertsCount(): Promise<number>;
   deleteAlert(id: string): Promise<void>;
+  clearAllUserAlerts(userId: string): Promise<void>;
 
   // Settings
   getSettingsBySport(sport: string): Promise<Settings | undefined>;
@@ -358,6 +359,11 @@ export class MemStorage implements IStorage {
     this.alerts.delete(id);
   }
 
+  async clearAllUserAlerts(userId: string): Promise<void> {
+    // For MemStorage, we'll clear all alerts since we don't track user ownership
+    this.alerts.clear();
+  }
+
   // Settings methods
   async getSettingsBySport(sport: string): Promise<Settings | undefined> {
     return this.settings.get(sport);
@@ -550,6 +556,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAlert(id: string): Promise<void> {
     await db.delete(alerts).where(eq(alerts.id, id));
+  }
+
+  async clearAllUserAlerts(userId: string): Promise<void> {
+    // Clear all alerts since they're global in the current system
+    await db.delete(alerts);
   }
 
   // Settings methods
