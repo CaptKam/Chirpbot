@@ -17,6 +17,7 @@ interface SwipeableCardProps {
   children: React.ReactNode;
   alertId: string;
   className?: string;
+  onTap?: () => void;
   [key: string]: any;
 }
 
@@ -59,9 +60,10 @@ const sportsbooks: Sportsbook[] = [
   }
 ];
 
-export function SwipeableCard({ children, alertId, className, ...props }: SwipeableCardProps) {
+export function SwipeableCard({ children, alertId, className, onTap, ...props }: SwipeableCardProps) {
   const [dragX, setDragX] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
@@ -120,17 +122,37 @@ export function SwipeableCard({ children, alertId, className, ...props }: Swipea
   };
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const threshold = 160; // Increased from 100 to make swipes more deliberate
-    if (Math.abs(info.offset.x) < threshold) {
+    setIsDragging(false);
+    const threshold = 100; // Lowered back for better responsiveness
+    const velocity = info.velocity.x;
+    
+    // Use velocity for more natural swipe detection
+    if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 500) {
       setDragX(0);
-    } else if (info.offset.x > threshold) {
+    } else if (info.offset.x > threshold || velocity > 500) {
       // Swiped right - show delete
       setDragX(120);
       startAutoReturnTimer();
-    } else if (info.offset.x < -threshold) {
+    } else if (info.offset.x < -threshold || velocity < -500) {
       // Swiped left - show sportsbooks
       setDragX(-280);
       startAutoReturnTimer();
+    } else {
+      setDragX(0);
+    }
+  };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+    // Clear any existing timer when starting a new drag
+    if (autoReturnTimeoutRef.current) {
+      clearTimeout(autoReturnTimeoutRef.current);
+    }
+  };
+
+  const handleTap = () => {
+    if (!isDragging && onTap) {
+      onTap();
     }
   };
 
@@ -189,12 +211,21 @@ export function SwipeableCard({ children, alertId, className, ...props }: Swipea
       <motion.div
         drag="x"
         dragConstraints={{ left: -300, right: 140 }}
-        dragElastic={0.05}
+        dragElastic={0.1}
+        dragMomentum={false}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onTap={handleTap}
         animate={{ x: dragX }}
-        transition={{ type: "spring", damping: 30, stiffness: 350 }}
+        transition={{ 
+          type: "spring", 
+          damping: 25, 
+          stiffness: 300,
+          mass: 0.8
+        }}
         className="relative z-10"
-        whileDrag={{ scale: 1.02 }}
+        whileDrag={{ scale: 1.01, cursor: "grabbing" }}
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
         <Card className={className} {...props}>
           {children}

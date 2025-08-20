@@ -274,13 +274,13 @@ export default function Alerts() {
               <SwipeableCard
                 key={alert.id}
                 alertId={alert.id}
-                onClick={() => {
-                  // Mark as seen when clicked
+                onTap={() => {
+                  // Mark as seen when tapped (not dragged)
                   if (!alert.seen) {
                     markAlertAsSeen(alert.id);
                   }
                 }}
-                className={`bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all duration-500 relative overflow-hidden cursor-pointer ${
+                className={`bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all duration-500 relative overflow-hidden ${
                   alert.seen 
                     ? 'ring-1 ring-slate-600/50 opacity-75' 
                     : 'ring-2 ring-emerald-500 shadow-xl shadow-emerald-500/30 border-2 border-emerald-400/50'
