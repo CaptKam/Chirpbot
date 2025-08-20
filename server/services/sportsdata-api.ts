@@ -1,4 +1,3 @@
-
 import { fetchJson } from './http';
 import type { Game } from '@shared/schema';
 
@@ -88,6 +87,12 @@ class SportsDataService {
       return cached.data;
     }
 
+    // For NBA/NHL in off-season (July-September), skip API calls to avoid constant 404s
+    if ((sport === 'NBA' || sport === 'NHL') && (now.getMonth() >= 6 && now.getMonth() <= 8)) {
+      console.log(`🏀/🏒 ${sport} is in off-season (July-September), skipping API call`);
+      return [];
+    }
+
     try {
       const endpoint = this.ENDPOINTS[sport];
       const url = `${this.BASE_URL}${endpoint}/${targetDate}?key=${this.apiKey}`;
@@ -107,7 +112,56 @@ class SportsDataService {
         return [];
       }
 
-      return this.processSportsDataGames(data, sport);
+      const games = this.processSportsDataGames(data, sport);
+      
+      // Cache the results
+      this.cache.set(cacheKey, { data: games, timestamp: Date.now() });
+      return games;
+
+    } catch (error) {
+      console.error(`❌ Error fetching ${sport} games from SportsData.io:`, error);
+      
+      // Try alternative date formats if 404
+      if (error instanceof Error && error.message.includes('404')) {
+        console.log(`🔄 Trying alternative date formats for ${sport}...`);
+        
+        // For NBA/NHL, try previous season dates since they might be off-season
+        const currentYear = now.getFullYear();
+        const seasonYear = sport === 'NBA' || sport === 'NHL' ? 
+          (now.getMonth() < 6 ? currentYear : currentYear - 1) : currentYear;
+        
+        // Try different date formats
+        const alternativeFormats = [
+          `${currentYear}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`, // YYYYMMDD
+          `${seasonYear}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`, // Previous season YYYY-MM-DD
+        ];
+        
+        const endpoint = this.ENDPOINTS[sport];
+        
+        for (const altDate of alternativeFormats) {
+          try {
+            const altUrl = `${this.BASE_URL}${endpoint}/${altDate}?key=${this.apiKey}`;
+            console.log(`🔄 Trying alternative format: ${altDate}`);
+            
+            const altData = await fetchJson<SportsDataScore[]>(altUrl, {
+              headers: { 'User-Agent': 'ChirpBot/2.0' },
+              timeoutMs: 8000
+            });
+            
+            if (altData && altData.length > 0) {
+              console.log(`✅ Success with alternative format ${altDate} - found ${altData.length} games`);
+              const games = this.processSportsDataGames(altData, sport);
+              this.cache.set(cacheKey, { data: games, timestamp: Date.now() });
+              return games;
+            }
+          } catch (altError) {
+            console.log(`❌ Alternative format ${altDate} also failed`);
+          }
+        }
+      }
+      
+      return [];
+    }
   }
 
   private processSportsDataGames(data: SportsDataScore[], sport: 'NFL' | 'NBA' | 'NHL' | 'MLB'): Game[] {
@@ -142,50 +196,7 @@ class SportsDataService {
     
     console.log(`✅ Processed ${games.length} ${sport} games from SportsData.io`);
     return games;
-    } catch (error) {
-      console.error(`❌ Error fetching ${sport} games from SportsData.io:`, error);
-      
-      // Try alternative date formats if 404
-      if (error instanceof Error && error.message.includes('404')) {
-        console.log(`🔄 Trying alternative date formats for ${sport}...`);
-        
-        // Try with current season year for NBA/NHL/NFL
-        const currentYear = now.getFullYear();
-        const seasonYear = sport === 'NBA' || sport === 'NHL' ? 
-          (now.getMonth() < 6 ? currentYear : currentYear + 1) : currentYear;
-        
-        // Try different endpoints or date formats
-        const alternativeFormats = [
-          `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
-          `${currentYear}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`,
-          `${seasonYear}`,
-        ];
-        
-        for (const altDate of alternativeFormats) {
-          try {
-            const altUrl = `${this.BASE_URL}${endpoint}/${altDate}?key=${this.apiKey}`;
-            console.log(`🔄 Trying alternative format: ${altDate}`);
-            
-            const altData = await fetchJson<SportsDataScore[]>(altUrl, {
-              headers: { 'User-Agent': 'ChirpBot/2.0' },
-              timeoutMs: 8000
-            });
-            
-            if (altData && altData.length > 0) {
-              console.log(`✅ Success with alternative format ${altDate} - found ${altData.length} games`);
-              return this.processSportsDataGames(altData, sport);
-            }
-          } catch (altError) {
-            console.log(`❌ Alternative format ${altDate} also failed`);
-          }
-        }
-      }
-      
-      return [];
-    }
   }
-
-  private processSportsDataGames(data: SportsDataScore[], sport: 'NFL' | 'NBA' | 'NHL' | 'MLB'): Game[] {
 
   private mapSportsDataStatus(status: string, isClosed: boolean): 'scheduled' | 'live' | 'final' {
     if (isClosed || status.toLowerCase().includes('final')) {
