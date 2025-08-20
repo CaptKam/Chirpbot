@@ -43,7 +43,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     for (const [sport, engine] of Array.from(this.engines.entries())) {
       if (!this.intervalIds.has(sport)) {
         console.log(`🔧 Starting ${sport} engine with ${engine.monitoringInterval}ms interval`);
-
+        
         // Start immediately
         try {
           await engine.monitor();
