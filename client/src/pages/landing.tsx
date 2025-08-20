@@ -290,10 +290,10 @@ function LivePreview() {
               <span className="text-slate-400 text-sm ml-auto">ChirpBot Live</span>
             </div>
             <div className="space-y-4 min-h-[120px]">
-              {visibleAlerts.map((alertIndex, displayIndex) => (
+              {visibleAlerts.slice().reverse().map((alertIndex, displayIndex) => (
                 <motion.div
                   key={`${alertIndex}-${displayIndex}`}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.1 }}
                   className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/50"
