@@ -172,6 +172,9 @@ export abstract class BaseSportEngine implements SportEngine {
         let aiContext = `${alert.type} situation detected`;
         let aiConfidence = 75;
 
+        // TEMPORARILY DISABLED: All OpenAI calls to reduce API usage
+        // Commenting out to ensure zero API calls
+        /*
         if (alert.priority >= 85 && (await storage.getSettingsBySport(this.sport))?.aiEnabled) {
           try {
             const { analyzeAlert } = await import('../openai');
@@ -198,6 +201,7 @@ export abstract class BaseSportEngine implements SportEngine {
             console.log(`AI analysis skipped for ${alert.type}: ${error}`);
           }
         }
+        */
 
         const alertData = {
           type: alert.type,

@@ -699,12 +699,15 @@ export class MLBEngine extends BaseSportEngine {
         // Get weather data for context
         const weatherData = await getWeatherData(gameState.homeTeam);
 
-        // Only get AI analysis for high-priority alerts (85+) to reduce API calls
+        // TEMPORARILY DISABLED: All OpenAI calls to reduce API usage
         let aiAnalysis = { context: "Standard game situation", confidence: 0 };
+        // Commenting out to ensure zero API calls
+        /*
         if (alert.priority >= 85) {
           const { analyzeAlert } = await import('../openai');
           aiAnalysis = await analyzeAlert(alert.type, this.sport, gameState, weatherData);
         }
+        */
 
         const alertData: InsertAlert = {
           id: randomUUID(),
