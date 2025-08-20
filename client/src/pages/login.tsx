@@ -22,14 +22,17 @@ export default function Login() {
       return apiRequest("POST", "/api/auth/login", { usernameOrEmail, password });
     },
     onSuccess: (data: any) => {
+      console.log("Login successful, user data:", data);
       // Check if this is the demo account
       if (data?.username === "Demo") {
+        console.log("Demo user detected - showing onboarding");
         toast({
           title: "Welcome to ChirpBot Demo!",
           description: "Let's show you what we can do.",
         });
         setShowDemoOnboarding(true);
       } else {
+        console.log("Regular user login - redirecting to dashboard");
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in to ChirpBot.",
