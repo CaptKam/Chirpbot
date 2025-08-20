@@ -168,6 +168,67 @@ export class MLBEngine extends BaseSportEngine {
       conditions: (state: MLBGameState) => 
         state.inning >= 8 && Math.abs(state.homeScore - state.awayScore) <= 3
     },
+    // Big-Time Hitter Alerts
+    {
+      type: "Star Batter Alert",
+      settingKey: "starBatter",
+      priority: 80,
+      probability: 1.0,
+      description: "⭐ STAR BATTER UP! Elite hitter at the plate!",
+      conditions: (state: MLBGameState) => {
+        if (!state.currentBatter) return false;
+        const stats = state.currentBatter.stats;
+        return stats.avg >= 0.300 || stats.hr >= 20 || stats.ops >= 0.900;
+      }
+    },
+    {
+      type: "Power Hitter Alert",
+      settingKey: "powerHitter", 
+      priority: 85,
+      probability: 1.0,
+      description: "💪 POWER HITTER! 25+ HR slugger with runners on base!",
+      conditions: (state: MLBGameState) => {
+        if (!state.currentBatter) return false;
+        const hasRunnersOn = state.runners.first || state.runners.second || state.runners.third;
+        return state.currentBatter.stats.hr >= 25 && hasRunnersOn;
+      }
+    },
+    {
+      type: "Elite Hitter in Clutch",
+      settingKey: "eliteClutch",
+      priority: 90,
+      probability: 1.0,
+      description: "🔥 ELITE HITTER IN CLUTCH! High OPS batter in pressure situation!",
+      conditions: (state: MLBGameState) => {
+        if (!state.currentBatter) return false;
+        const isClutch = (state.runners.second || state.runners.third) && state.outs >= 1;
+        const isLateInning = state.inning >= 7;
+        return state.currentBatter.stats.ops >= 0.850 && (isClutch || isLateInning);
+      }
+    },
+    {
+      type: "300+ Hitter Alert",
+      settingKey: "avgHitter",
+      priority: 75,
+      probability: 1.0,
+      description: "🎯 .300+ HITTER! Premium contact hitter at bat!",
+      conditions: (state: MLBGameState) => {
+        if (!state.currentBatter) return false;
+        return state.currentBatter.stats.avg >= 0.300;
+      }
+    },
+    {
+      type: "RBI Machine Alert",
+      settingKey: "rbiMachine",
+      priority: 80,
+      probability: 1.0,
+      description: "🏃‍♂️ RBI MACHINE! 80+ RBI producer with scoring opportunity!",
+      conditions: (state: MLBGameState) => {
+        if (!state.currentBatter) return false;
+        const scoringPosition = state.runners.second || state.runners.third;
+        return state.currentBatter.stats.rbi >= 80 && scoringPosition;
+      }
+    },
     // AI Prediction-based alerts
     {
       type: "Home Run Situations",
@@ -451,6 +512,7 @@ export class MLBEngine extends BaseSportEngine {
     const runners = gameState.runners;
     const outs = gameState.outs;
     const scoringProb = this.calculateScoringProbability(gameState);
+    const batter = gameState.currentBatter;
     
     // Build runner description
     const runnerPositions = [];
@@ -459,6 +521,41 @@ export class MLBEngine extends BaseSportEngine {
     if (runners.third) runnerPositions.push('3RD');
     
     switch (alert.type) {
+      case 'Star Batter Alert':
+        if (batter) {
+          const highlights = [];
+          if (batter.stats.avg >= 0.300) highlights.push(`${batter.stats.avg.toFixed(3)} AVG`);
+          if (batter.stats.hr >= 20) highlights.push(`${batter.stats.hr} HR`);
+          if (batter.stats.ops >= 0.900) highlights.push(`${batter.stats.ops.toFixed(3)} OPS`);
+          return `⭐ STAR BATTER: ${batter.name} (${highlights.join(', ')}) - ${outs} out${outs !== 1 ? 's' : ''}!`;
+        }
+        return alert.description;
+      
+      case 'Power Hitter Alert':
+        if (batter) {
+          return `💪 POWER HITTER: ${batter.name} (${batter.stats.hr} HR) with runners on base! ${outs} out${outs !== 1 ? 's' : ''}!`;
+        }
+        return alert.description;
+      
+      case 'Elite Hitter in Clutch':
+        if (batter) {
+          return `🔥 ELITE CLUTCH: ${batter.name} (${batter.stats.ops.toFixed(3)} OPS) in pressure situation! ${outs} out${outs !== 1 ? 's' : ''}!`;
+        }
+        return alert.description;
+      
+      case '300+ Hitter Alert':
+        if (batter) {
+          return `🎯 .300+ HITTER: ${batter.name} (${batter.stats.avg.toFixed(3)} AVG, ${batter.stats.hr} HR) at the plate!`;
+        }
+        return alert.description;
+      
+      case 'RBI Machine Alert':
+        if (batter) {
+          return `🏃‍♂️ RBI MACHINE: ${batter.name} (${batter.stats.rbi} RBIs) with scoring opportunity! ${outs} out${outs !== 1 ? 's' : ''}!`;
+        }
+        return alert.description;
+      
+      case 'Runner on 3rd, 1 Out':
       case 'Runner on 3rd, 1 Out':
         return `🎯 RUNNER ON 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
       

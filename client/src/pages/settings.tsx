@@ -16,16 +16,21 @@ const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
-    { key: "risp", label: "Runners In Scoring Position", description: "Alerts when team has runners on 2nd or 3rd base" },
-    { key: "homeRun", label: "Home Run Situations", description: "High-leverage at-bats with power hitters" },
-    { key: "lateInning", label: "Late Inning Pressure", description: "Critical situations in 7th inning or later" },
-    { key: "closeGame", label: "Close Game", description: "One-run games in final innings" },
-    { key: "runnersOnBase", label: "Runners on Base", description: "🏃 Scoring opportunity developing with runners on base" },
-    { key: "hits", label: "Hit Alerts", description: "🏏 Singles, Doubles, and Triples in real-time" },
-    { key: "scoring", label: "Scoring Plays", description: "🏃 Team scores! Live run notifications" },
-    { key: "inningChange", label: "Inning Changes", description: "🚀 New inning transitions and momentum shifts" },
-    { key: "homeRunAlert", label: "Home Run Alert", description: "🚀 HOME RUN! Live power hitting moments" },
-    { key: "strikeouts", label: "Strikeout Alert", description: "⚾ STRIKEOUT! Live pitching dominance" },
+    { key: "risp", label: "RISP (Runners in Scoring Position)", description: "2nd/3rd base situations" },
+    { key: "closeGame", label: "Close Game", description: "1-run games in late innings" },
+    { key: "lateInning", label: "Late Inning Pressure", description: "8th+ inning crucial moments" },
+    { key: "homeRun", label: "Home Run Situations", description: "High home run probability moments" },
+    { key: "runnersOnBase", label: "Runners on Base", description: "Any base runner situations" },
+    { key: "hits", label: "Hit Alerts", description: "Base hit notifications" },
+    { key: "scoring", label: "Scoring Plays", description: "RBI and run-scoring events" },
+    { key: "inningChange", label: "Inning Changes", description: "New inning momentum shifts" },
+    { key: "homeRunAlert", label: "Home Run Alerts", description: "Actual home run notifications" },
+    { key: "strikeouts", label: "Strikeout Alerts", description: "Pitcher strikeout notifications" },
+    { key: "starBatter", label: "Star Batter Alert", description: ".300+ AVG, 20+ HR, or .900+ OPS hitters" },
+    { key: "powerHitter", label: "Power Hitter Alert", description: "25+ HR sluggers with runners on base" },
+    { key: "eliteClutch", label: "Elite Clutch Hitter", description: "High OPS batters in pressure situations" },
+    { key: "avgHitter", label: ".300+ Hitter Alert", description: "Premium contact hitters at bat" },
+    { key: "rbiMachine", label: "RBI Machine Alert", description: "80+ RBI producers with scoring chances" },
   ],
   NFL: [
     { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line" },
@@ -122,12 +127,12 @@ export default function Settings() {
 
   const handleAlertTypeToggle = (alertType: string, enabled: boolean) => {
     if (!settings) return;
-    
+
     const updatedAlertTypes = {
       ...settings.alertTypes,
       [alertType]: enabled,
     };
-    
+
     updateSettingsMutation.mutate({ alertTypes: updatedAlertTypes });
   };
 
@@ -246,7 +251,7 @@ export default function Settings() {
               <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-4">
                 AI Analysis
               </h2>
-              
+
               <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 space-y-4 hover:bg-white/10 transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div>
@@ -296,7 +301,7 @@ export default function Settings() {
               <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-4">
                 Notifications
               </h2>
-              
+
               <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 space-y-4 hover:bg-white/10 transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div>
@@ -344,7 +349,7 @@ export default function Settings() {
                       </Badge>
                     )}
                   </div>
-                  
+
                   <Button
                     onClick={() => testTelegramMutation.mutate()}
                     disabled={testTelegramMutation.isPending}
