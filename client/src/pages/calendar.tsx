@@ -56,23 +56,21 @@ export default function Calendar() {
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   
-  // Check if this is a demo user and show onboarding
+  // Check if this is a demo user and show onboarding (only once per session)
   useEffect(() => {
     if (user?.username?.toLowerCase() === 'demo') {
-      console.log("Demo user detected - showing onboarding");
-      // Set a small delay to ensure smooth transition after login
-      const timer = setTimeout(() => {
-        console.log("Setting showDemoOnboarding to true");
-        setShowDemoOnboarding(true);
-        console.log("showDemoOnboarding state should now be:", true);
-      }, 500);
-      return () => clearTimeout(timer);
+      const hasShownOnboarding = sessionStorage.getItem('demo-onboarding-shown');
+      if (!hasShownOnboarding) {
+        console.log("Demo user detected - showing onboarding for first time this session");
+        // Set a small delay to ensure smooth transition after login
+        const timer = setTimeout(() => {
+          setShowDemoOnboarding(true);
+          sessionStorage.setItem('demo-onboarding-shown', 'true');
+        }, 500);
+        return () => clearTimeout(timer);
+      }
     }
   }, [user]);
-  
-  useEffect(() => {
-    console.log("Delayed setting of showDemoOnboarding");
-  }, [showDemoOnboarding]);
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
