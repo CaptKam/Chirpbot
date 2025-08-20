@@ -298,7 +298,7 @@ export class DemoSimulator {
     // Generate first alert immediately
     await this.generateDemoAlert(sport, teamNames, broadcast);
 
-    // Then generate alerts every 8-12 seconds
+    // Then generate alerts every 15-25 seconds (slower pace for better UX)
     const timer = setInterval(async () => {
       await this.generateDemoAlert(sport, teamNames, broadcast);
       
@@ -309,7 +309,7 @@ export class DemoSimulator {
         this.activeGames.delete(gameId);
         console.log(`✅ Demo completed for game: ${gameId}`);
       }
-    }, 8000 + Math.random() * 4000); // 8-12 second intervals
+    }, 15000 + Math.random() * 10000); // 15-25 second intervals
 
     this.activeGames.set(gameId, timer);
   }
