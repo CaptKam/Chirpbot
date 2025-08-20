@@ -6,7 +6,7 @@ export function BottomNavigation() {
   const [location] = useLocation();
   
   // Get unseen alerts count
-  const { data: unseenCount } = useQuery({
+  const { data: unseenCount } = useQuery<{ count: number }>({
     queryKey: ['/api/alerts/unseen/count'],
     refetchInterval: 5000, // Check every 5 seconds
   });

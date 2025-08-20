@@ -1,6 +1,6 @@
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
@@ -64,12 +64,27 @@ function AppContent() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
+  
+  // Get settings to check if push notifications are enabled
+  const { data: settings } = useQuery({
+    queryKey: ['/api/settings'],
+    enabled: isAuthenticated,
+  });
 
   useEffect(() => {
     if (lastMessage && isAuthenticated) {
       switch (lastMessage.type) {
         case 'new_alert':
           const alertData = lastMessage.data as any;
+          
+          // Find the sport-specific settings
+          const sportSettings = settings?.find((s: any) => s.sport === alertData.sport);
+          
+          // Only show toast if push notifications are enabled
+          if (!sportSettings?.pushNotificationsEnabled) {
+            return;
+          }
+          
           const gameInfo = alertData.gameInfo || {};
           const score = gameInfo.score ? `${gameInfo.awayTeam} ${gameInfo.score.away} - ${gameInfo.score.home} ${gameInfo.homeTeam}` : alertData.title;
           const inningInfo = gameInfo.inning ? `Inning ${gameInfo.inning} ${gameInfo.inningState === 'top' ? '▲' : '▼'}` : '';
@@ -98,7 +113,7 @@ function AppContent() {
           break;
       }
     }
-  }, [lastMessage, toast, isAuthenticated]);
+  }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
 
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
