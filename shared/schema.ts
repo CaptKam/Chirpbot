@@ -132,8 +132,8 @@ export const settings = pgTable("settings", {
   }>().notNull(),
   aiEnabled: boolean("ai_enabled").notNull().default(true),
   aiConfidenceThreshold: integer("ai_confidence_threshold").notNull().default(85),
-  telegramEnabled: boolean("telegram_enabled").notNull().default(true),
-  pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(true),
+  telegramEnabled: boolean("telegram_enabled").notNull().default(false),
+  pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),
 });
 
 // User monitored teams for persistent game selection
