@@ -1,9 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, TriangleAlert } from "lucide-react";
+import { Zap, TriangleAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
