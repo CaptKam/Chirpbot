@@ -130,8 +130,6 @@ export class MemStorage implements IStorage {
           nhlCloseGame: sport === "NHL",
           emptyNet: sport === "NHL",
         },
-        aiEnabled: true,
-        aiConfidenceThreshold: 85,
         telegramEnabled: true,
         pushNotificationsEnabled: true,
       });
@@ -286,8 +284,6 @@ export class MemStorage implements IStorage {
       timestamp: new Date(),
       sentToTelegram: false,
       seen: false,
-      aiContext: insertAlert.aiContext || null,
-      aiConfidence: insertAlert.aiConfidence || null,
       gameInfo: {
         ...insertAlert.gameInfo,
         quarter: insertAlert.gameInfo.quarter as string | undefined,
@@ -379,8 +375,6 @@ export class MemStorage implements IStorage {
       ...insertSettings, 
       id,
       alertTypes: insertSettings.alertTypes || { risp: false, homeRun: false, lateInning: false, redZone: false, clutchTime: false },
-      aiEnabled: insertSettings.aiEnabled ?? true,
-      aiConfidenceThreshold: insertSettings.aiConfidenceThreshold ?? 85,
       telegramEnabled: insertSettings.telegramEnabled ?? true,
       pushNotificationsEnabled: insertSettings.pushNotificationsEnabled ?? true
     };

@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shared/schema";
-import { analyzeAlert } from "./services/openai";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
@@ -161,26 +160,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weatherData = await getWeatherData(validatedData.gameInfo.homeTeam);
       }
 
-      // Get AI analysis if enabled
-      let aiContext: string | undefined = undefined;
-      let aiConfidence = 0;
-
       const settings = await storage.getSettingsBySport(validatedData.sport);
-      if (settings?.aiEnabled) {
-        const analysis = await analyzeAlert(
-          validatedData.type,
-          validatedData.sport,
-          validatedData.gameInfo,
-          weatherData
-        );
-        aiContext = analysis.context;
-        aiConfidence = analysis.confidence;
-      }
 
       const alert = await storage.createAlert({
         ...validatedData,
-        aiContext,
-        aiConfidence,
         weatherData,
       });
 
@@ -191,10 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
         };
 
-        const sent = await sendTelegramAlert(telegramConfig, {
-          ...alert,
-          aiContext: alert.aiContext || undefined
-        });
+        const sent = await sendTelegramAlert(telegramConfig, alert);
         if (sent) {
           await storage.markAlertSentToTelegram(alert.id);
         }
@@ -428,24 +408,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: event.description,
         gameInfo: event.game,
         weatherData,
-        aiContext: undefined as string | undefined,
-        aiConfidence: 0,
         sentToTelegram: false,
       };
 
-      // Get AI analysis
       const settings = await storage.getSettingsBySport(alertData.sport);
-      if (settings?.aiEnabled) {
-        const analysis = await analyzeAlert(
-          alertData.type,
-          alertData.sport,
-          alertData.gameInfo,
-          weatherData
-        );
-        alertData.aiContext = analysis.context;
-        alertData.aiConfidence = analysis.confidence;
-      }
-
       const alert = await storage.createAlert(alertData);
 
       // Send to Telegram if both push notifications and telegram are enabled
@@ -455,10 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
         };
 
-        const sent = await sendTelegramAlert(telegramConfig, {
-          ...alert,
-          aiContext: alert.aiContext || undefined
-        });
+        const sent = await sendTelegramAlert(telegramConfig, alert);
         if (sent) {
           await storage.markAlertSentToTelegram(alert.id);
         }
@@ -871,31 +834,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
 
-      // Create alerts with AI analysis
+      // Create test alerts
       for (const alertData of [mlbAlert, nflAlert, nbaAlert, nhlAlert]) {
         try {
           const weatherData = await getWeatherData(alertData.gameInfo.homeTeam);
           
-          // Get AI analysis
-          const settings = await storage.getSettingsBySport(alertData.sport);
-          let aiContext = undefined;
-          let aiConfidence = 85;
-          
-          if (settings?.aiEnabled) {
-            const analysis = await analyzeAlert(
-              alertData.type,
-              alertData.sport,
-              alertData.gameInfo,
-              weatherData
-            );
-            aiContext = analysis.context;
-            aiConfidence = analysis.confidence;
-          }
-
           const alert = await storage.createAlert({
             ...alertData,
-            aiContext,
-            aiConfidence,
             weatherData,
             sentToTelegram: false
           });

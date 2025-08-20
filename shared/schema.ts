@@ -37,8 +37,6 @@ export const alerts = pgTable("alerts", {
   sport: text("sport").notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  aiContext: text("ai_context"),
-  aiConfidence: integer("ai_confidence").default(0), // 0-100
   gameInfo: jsonb("game_info").$type<{
     homeTeam: string;
     awayTeam: string;
@@ -130,8 +128,6 @@ export const settings = pgTable("settings", {
     nhlCloseGame: boolean;
     emptyNet: boolean;
   }>().notNull(),
-  aiEnabled: boolean("ai_enabled").notNull().default(true),
-  aiConfidenceThreshold: integer("ai_confidence_threshold").notNull().default(85),
   telegramEnabled: boolean("telegram_enabled").notNull().default(false),
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),
 });

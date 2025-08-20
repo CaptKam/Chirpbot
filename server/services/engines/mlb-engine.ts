@@ -1,9 +1,7 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { mlbApi } from '../mlb-api';
-import { GameContext, PREDICTION_EVENTS } from '../ai-predictions';
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
-import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 
@@ -72,7 +70,6 @@ interface InsertAlert {
   probability: number;
   priority: number;
   gameInfo: any; // Using 'any' for broader compatibility, but ideally a specific type
-  aiContext?: string;
   aiConfidence: number;
   createdAt: Date;
   isRead: boolean;

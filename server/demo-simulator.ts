@@ -23,8 +23,6 @@ interface DemoAlert {
   title: string;
   description: string;
   gameInfo: any;
-  aiContext?: string;
-  aiConfidence?: number;
   weatherData?: any;
 }
 

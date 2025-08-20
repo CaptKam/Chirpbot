@@ -1,8 +1,6 @@
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
-import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
-import { generatePredictions, PredictionRequest, GameContext, PREDICTION_EVENTS } from '../ai-predictions';
 import { randomUUID } from 'crypto'; // Assuming crypto is available for randomUUID
 
 export interface AlertConfig {
@@ -71,8 +69,8 @@ export abstract class BaseSportEngine implements SportEngine {
       return Math.random() < config.probability;
     });
 
-    // Process AI prediction-based alerts
-    const triggeredPredictions = await this.checkPredictionAlerts(predictionAlerts, gameState);
+    // Prediction-based alerts removed for cost efficiency
+    const triggeredPredictions: AlertConfig[] = [];
 
     return [...triggeredRegular, ...triggeredPredictions];
   }
