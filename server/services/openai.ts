@@ -11,12 +11,36 @@ export interface AlertAnalysis {
   confidence: number;
 }
 
+// Simple cache to reduce API calls
+const analysisCache = new Map<string, { analysis: AlertAnalysis; timestamp: number }>();
+const CACHE_TTL = 300000; // 5 minutes
+
 export async function analyzeAlert(
   alertType: string,
   sport: string,
   gameInfo: any,
   weatherData?: any
 ): Promise<AlertAnalysis> {
+  // Create cache key
+  const cacheKey = `${alertType}-${sport}-${gameInfo.homeTeam}-${gameInfo.awayTeam}`;
+  
+  // Check cache first
+  const cached = analysisCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.analysis;
+  }
+  
+  // Only use AI for high priority alerts to conserve quota
+  const highPriorityTypes = ['Runners on 2nd & 3rd, 1 Out', 'Runner on 3rd, 1 Out', 'Runners In Scoring Position'];
+  if (!highPriorityTypes.includes(alertType)) {
+    const fallbackAnalysis = {
+      context: `${alertType} situation - monitoring for scoring opportunities`,
+      confidence: 75
+    };
+    analysisCache.set(cacheKey, { analysis: fallbackAnalysis, timestamp: Date.now() });
+    return fallbackAnalysis;
+  }
+  
   try {
     const prompt = `Analyze this sports alert briefly:
     
@@ -53,10 +77,14 @@ Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key 
 
     const result = JSON.parse(response.choices[0].message.content || '{"context": "Analysis unavailable", "confidence": 0}');
     
-    return {
+    const analysis = {
       context: result.context || "Analysis unavailable",
       confidence: Math.max(0, Math.min(100, result.confidence || 0))
     };
+    
+    // Cache the result
+    analysisCache.set(cacheKey, { analysis, timestamp: Date.now() });
+    return analysis;
   } catch (error: any) {
     // Silently handle all OpenAI errors to prevent workflow failures
     if (error.status === 429) {
