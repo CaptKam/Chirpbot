@@ -15,6 +15,11 @@ export interface AlertAnalysis {
 const analysisCache = new Map<string, { analysis: AlertAnalysis; timestamp: number }>();
 const CACHE_TTL = 300000; // 5 minutes
 
+// Track quota status
+let lastQuotaCheck = 0;
+let quotaAvailable = true;
+const QUOTA_CHECK_INTERVAL = 60000; // Check quota every minute
+
 export async function analyzeAlert(
   alertType: string,
   sport: string,
@@ -30,9 +35,15 @@ export async function analyzeAlert(
     return cached.analysis;
   }
   
+  // Check if quota might be available again
+  if (!quotaAvailable && Date.now() - lastQuotaCheck > QUOTA_CHECK_INTERVAL) {
+    quotaAvailable = true;
+    console.log("Retrying OpenAI API - quota may be restored");
+  }
+  
   // Only use AI for high priority alerts to conserve quota
   const highPriorityTypes = ['Runners on 2nd & 3rd, 1 Out', 'Runner on 3rd, 1 Out', 'Runners In Scoring Position'];
-  if (!highPriorityTypes.includes(alertType)) {
+  if (!highPriorityTypes.includes(alertType) || !quotaAvailable) {
     const fallbackAnalysis = {
       context: `${alertType} situation - monitoring for scoring opportunities`,
       confidence: 75
@@ -86,14 +97,20 @@ Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key 
     analysisCache.set(cacheKey, { analysis, timestamp: Date.now() });
     return analysis;
   } catch (error: any) {
-    // Silently handle all OpenAI errors to prevent workflow failures
+    // Handle different OpenAI errors
     if (error.status === 429) {
+      quotaAvailable = false;
+      lastQuotaCheck = Date.now();
       console.log("OpenAI analysis skipped: API quota exceeded, using fallback");
     } else if (error.message === 'OpenAI API timeout') {
       console.log("OpenAI analysis skipped: timeout after 5 seconds");
     } else if (error.message?.includes('API key')) {
       console.log("OpenAI analysis skipped: API key not configured");
     } else {
+      // For other errors, try again in a minute
+      if (error.status !== 429) {
+        quotaAvailable = true;
+      }
       console.log("OpenAI analysis skipped:", error.message || "API temporarily unavailable");
     }
     return {
