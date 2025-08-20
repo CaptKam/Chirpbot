@@ -22,6 +22,7 @@ export interface IStorage {
   // User Monitored Games (Persistent Team Selection)
   getUserMonitoredGames(userId: string): Promise<UserMonitoredTeam[]>;
   getUserMonitoredGamesBySport(userId: string, sport: string): Promise<UserMonitoredTeam[]>;
+  getAllMonitoredGames(): Promise<UserMonitoredTeam[]>;
   addUserMonitoredGame(monitoring: InsertUserMonitoredTeam): Promise<UserMonitoredTeam>;
   removeUserMonitoredGame(userId: string, gameId: string): Promise<void>;
   clearAllUserMonitoredGames(userId: string): Promise<void>;
@@ -230,6 +231,10 @@ export class MemStorage implements IStorage {
 
   async getUserMonitoredGamesBySport(userId: string, sport: string): Promise<UserMonitoredTeam[]> {
     return []; // Mock implementation  
+  }
+  
+  async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
+    return []; // Mock implementation - no monitored games in memory storage
   }
 
   async addUserMonitoredGame(monitoring: InsertUserMonitoredTeam): Promise<UserMonitoredTeam> {
@@ -482,6 +487,10 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.select().from(userMonitoredTeams)
       .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.gameId, gameId)));
     return !!result;
+  }
+  
+  async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
+    return await db.select().from(userMonitoredTeams);
   }
 
   // Alert methods

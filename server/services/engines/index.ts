@@ -5,6 +5,7 @@ import { nhlEngine } from './nhl-engine';
 import { weatherEngine } from './weather-engine';
 // AI engine has been removed
 import { BaseSportEngine } from './base-engine';
+import { storage } from '../../storage';
 
 export interface AlertEngineManager {
   engines: Map<string, BaseSportEngine>;
@@ -37,34 +38,98 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   async startAllEngines(): Promise<void> {
-    console.log('🚀 Starting all sport engines...');
+    console.log('🚀 Starting sport engines based on monitored games...');
 
-    // Start monitoring for all engines with their specific intervals
+    // Check each sport for monitored games before starting
     for (const [sport, engine] of Array.from(this.engines.entries())) {
       if (!this.intervalIds.has(sport)) {
-        console.log(`🔧 Starting ${sport} engine with ${engine.monitoringInterval}ms interval`);
-
-        // Start immediately
-        try {
-          await engine.monitor();
-        } catch (error) {
-          console.error(`Error in initial ${sport} monitoring:`, error);
+        // Skip weather engine - it should always run
+        if (sport === 'WEATHER') {
+          this.startEngine(sport, engine);
+          continue;
         }
-
-        // Set up periodic monitoring
-        const intervalId = setInterval(async () => {
-          try {
-            await engine.monitor();
-          } catch (error) {
-            console.error(`Error in ${sport} monitoring:`, error);
-          }
-        }, engine.monitoringInterval);
-
-        this.intervalIds.set(sport, intervalId);
+        
+        // Check if there are any monitored games for this sport
+        const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
+        
+        if (hasMonitoredGames) {
+          console.log(`🔧 Starting ${sport} engine - found monitored games`);
+          this.startEngine(sport, engine);
+        } else {
+          console.log(`⏸️ Skipping ${sport} engine - no monitored games`);
+        }
       }
     }
 
-    console.log('✅ All sport engines started successfully');
+    // Set up a periodic check to start/stop engines based on monitored games
+    // Check every 30 seconds
+    setInterval(async () => {
+      await this.checkAndUpdateEngines();
+    }, 30000);
+
+    console.log('✅ Sport engines setup complete');
+  }
+  
+  private startEngine(sport: string, engine: BaseSportEngine): void {
+    console.log(`🔧 Starting ${sport} engine with ${engine.monitoringInterval}ms interval`);
+    
+    // Set up periodic monitoring
+    const intervalId = setInterval(async () => {
+      try {
+        await engine.monitor();
+      } catch (error) {
+        console.error(`Error in ${sport} monitoring:`, error);
+      }
+    }, engine.monitoringInterval);
+
+    this.intervalIds.set(sport, intervalId);
+  }
+  
+  private async hasMonitoredGamesForSport(sport: string): Promise<boolean> {
+    try {
+      const allMonitoredGames = await this.getAllMonitoredGames();
+      return allMonitoredGames.some(game => game.sport === sport);
+    } catch (error) {
+      console.error(`Error checking monitored games for ${sport}:`, error);
+      return false;
+    }
+  }
+  
+  private async getAllMonitoredGames(): Promise<any[]> {
+    try {
+      // Get all monitored games across all users
+      // This is a simplified approach - in a real system you might want to cache this
+      return await storage.getAllMonitoredGames();
+    } catch (error) {
+      console.error('Error fetching all monitored games:', error);
+      return [];
+    }
+  }
+  
+  private async checkAndUpdateEngines(): Promise<void> {
+    for (const [sport, engine] of Array.from(this.engines.entries())) {
+      if (sport === 'WEATHER') continue; // Weather always runs
+      
+      const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
+      const isRunning = this.intervalIds.has(sport);
+      
+      if (hasMonitoredGames && !isRunning) {
+        console.log(`🔄 Starting ${sport} engine - new monitored games detected`);
+        this.startEngine(sport, engine);
+      } else if (!hasMonitoredGames && isRunning) {
+        console.log(`🔄 Stopping ${sport} engine - no monitored games`);
+        this.stopEngine(sport);
+      }
+    }
+  }
+  
+  private stopEngine(sport: string): void {
+    const intervalId = this.intervalIds.get(sport);
+    if (intervalId) {
+      clearInterval(intervalId);
+      this.intervalIds.delete(sport);
+      console.log(`⏹️ ${sport} engine stopped`);
+    }
   }
 
   private async monitorSport(sport: string, engine: any): Promise<void> {
