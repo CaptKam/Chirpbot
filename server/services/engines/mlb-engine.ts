@@ -715,6 +715,7 @@ export class MLBEngine extends BaseSportEngine {
           title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
           description: alert.description,
           gameInfo: {
+            status: 'Live',
             ...gameState,
             weather: weatherData
           },

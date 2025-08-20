@@ -71,8 +71,11 @@ export abstract class BaseSportEngine implements SportEngine {
       return Math.random() < config.probability;
     });
 
-    // Process AI prediction-based alerts
-    const triggeredPredictions = await this.checkPredictionAlerts(predictionAlerts, gameState);
+    // Process AI prediction-based alerts - only if AI is enabled and there are prediction alerts
+    let triggeredPredictions: AlertConfig[] = [];
+    if (settings.aiEnabled && predictionAlerts.length > 0) {
+      triggeredPredictions = await this.checkPredictionAlerts(predictionAlerts, gameState);
+    }
 
     return [...triggeredRegular, ...triggeredPredictions];
   }
