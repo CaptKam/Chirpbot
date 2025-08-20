@@ -40,11 +40,20 @@ export default function Login() {
   });
 
   const handleDemoLogin = () => {
+    // If fields are already filled with demo credentials, auto-login
+    if (usernameOrEmail === "demo" && password === "demo123") {
+      setIsLoading(true);
+      loginMutation.mutate({ usernameOrEmail: "demo", password: "demo123" });
+      return;
+    }
+    
+    // Otherwise, fill the fields
     setUsernameOrEmail("demo");
     setPassword("demo123");
+    
     toast({
       title: "Demo credentials loaded",
-      description: "You can now sign in with the demo account or click the demo button again to auto-login.",
+      description: "Click 'Try Demo Account' again to auto-login, or use the Sign In button.",
     });
   };
 
