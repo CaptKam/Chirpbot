@@ -26,12 +26,12 @@ export default function Alerts() {
 
   const { data: alerts = [], isLoading, error } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
-    refetchInterval: 30000, // Refetch every 30 seconds for live updates
+    refetchInterval: 10000, // Refetch every 10 seconds for more responsive updates
   });
 
   const { data: unseenCount = { count: 0 } } = useQuery<{ count: number }>({
     queryKey: ["/api/alerts/unseen/count"],
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
   const markAsSeenMutation = useMutation({
@@ -58,19 +58,23 @@ export default function Alerts() {
     }
   }, [markAsSeenMutation]);
 
-  // Mark all alerts as seen when the page loads
+  // Mark all alerts as seen after a delay to let user see them
   useEffect(() => {
-    // Mark all alerts as seen with one API call when page loads
-    fetch('/api/alerts/mark-all-seen', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }).then(() => {
-      // Refresh the unseen count
-      queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-    });
+    // Give user 2 seconds to see the new alerts before marking as seen
+    const timer = setTimeout(() => {
+      fetch('/api/alerts/mark-all-seen', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }).then(() => {
+        // Refresh the unseen count
+        queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+      });
+    }, 2000);
+    
+    return () => clearTimeout(timer);
   }, []); // Only run once when component mounts
 
   // Handle real-time alert updates via WebSocket
@@ -78,7 +82,7 @@ export default function Alerts() {
     if (lastMessage && lastMessage.type === 'new_alert') {
       // Check if the data is actually an Alert (has required properties)
       const data = lastMessage.data;
-      if (data && 'type' in data && 'sport' in data && 'title' in data) {
+      if (data && 'type' in data && 'sport' in data && 'title' in data && 'id' in data) {
         const newAlert = data as unknown as Alert;
       
         // Update the alerts list in the query cache to add the new alert at the beginning
@@ -88,15 +92,20 @@ export default function Alerts() {
           
           if (!oldAlerts) return [alertWithDefaults];
           
-          // Check if alert already exists to prevent duplicates
-          const exists = oldAlerts.some(alert => alert.id === alertWithDefaults.id);
+          // Check if alert already exists to prevent duplicates (check by ID and timestamp)
+          const exists = oldAlerts.some(alert => 
+            alert.id === alertWithDefaults.id || 
+            (alert.title === alertWithDefaults.title && 
+             alert.timestamp === alertWithDefaults.timestamp)
+          );
           if (exists) return oldAlerts;
           
           // Add new alert at the beginning of the list
           return [alertWithDefaults, ...oldAlerts];
         });
       
-        // Also invalidate the unseen count query to update the badge
+        // Refresh both queries to ensure consistency
+        queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
         queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
       }
     }
@@ -148,14 +157,17 @@ export default function Alerts() {
     }
   };
 
-  const filteredAlerts = Array.isArray(alerts) ? alerts.filter(alert => {
-    if (activeFilters.includes("all")) return true;
-    return activeFilters.some(filter => 
-      alert.sport.toLowerCase() === filter.toLowerCase()
-    );
-  }) : [];
-  
-  console.log("Filtered alerts:", filteredAlerts);
+  const filteredAlerts = Array.isArray(alerts) ? alerts
+    .filter(alert => {
+      if (activeFilters.includes("all")) return true;
+      return activeFilters.some(filter => 
+        alert.sport.toLowerCase() === filter.toLowerCase()
+      );
+    })
+    .sort((a, b) => {
+      // Sort by timestamp, newest first
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    }) : [];
 
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
@@ -215,7 +227,7 @@ export default function Alerts() {
       </div>
 
       {/* Alerts Feed */}
-      <div className="p-4 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+      <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -257,8 +269,8 @@ export default function Alerts() {
                 alertId={alert.id}
                 className={`bg-white/5 backdrop-blur-sm ring-1 rounded-xl p-4 hover:bg-white/10 transition-all duration-200 ${
                   alert.seen 
-                    ? 'ring-slate-600/50 opacity-75' 
-                    : 'ring-emerald-500/50 shadow-lg shadow-emerald-500/20'
+                    ? 'ring-slate-600/50' 
+                    : 'ring-emerald-500/50 shadow-lg shadow-emerald-500/20 animate-pulse-subtle'
                 }`}
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
