@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shared/schema";
-import { analyzeAlert } from "./services/openai";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
@@ -161,21 +160,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weatherData = await getWeatherData(validatedData.gameInfo.homeTeam);
       }
 
-      // Get AI analysis if enabled
-      let aiContext: string | undefined = undefined;
-      let aiConfidence = 0;
-
-      const settings = await storage.getSettingsBySport(validatedData.sport);
-      if (settings?.aiEnabled) {
-        const analysis = await analyzeAlert(
-          validatedData.type,
-          validatedData.sport,
-          validatedData.gameInfo,
-          weatherData
-        );
-        aiContext = analysis.context;
-        aiConfidence = analysis.confidence;
-      }
+      // Simple alert context without AI
+      let aiContext = `${validatedData.type} situation detected`;
+      let aiConfidence = 75;
 
       const alert = await storage.createAlert({
         ...validatedData,
@@ -428,23 +415,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: event.description,
         gameInfo: event.game,
         weatherData,
-        aiContext: undefined as string | undefined,
-        aiConfidence: 0,
+        aiContext: "Standard game situation",
+        aiConfidence: 75,
         sentToTelegram: false,
       };
 
-      // Get AI analysis
-      const settings = await storage.getSettingsBySport(alertData.sport);
-      if (settings?.aiEnabled) {
-        const analysis = await analyzeAlert(
-          alertData.type,
-          alertData.sport,
-          alertData.gameInfo,
-          weatherData
-        );
-        alertData.aiContext = analysis.context;
-        alertData.aiConfidence = analysis.confidence;
-      }
+      // Simple context without AI
+      alertData.aiContext = "Standard game situation";
+      alertData.aiConfidence = 75;
 
       const alert = await storage.createAlert(alertData);
 
@@ -757,13 +735,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: "Quick Test",
         sport: "MLB",
         title: "Test Alert - Immediate Response",
-        description: "Testing alert system without AI delay",
+        description: "Testing alert system without AI",
         gameInfo: {
           homeTeam: "Test Home Team",
           awayTeam: "Test Away Team",
           status: "Live"
         },
-        aiContext: "Quick test - AI bypassed",
+        aiContext: "Quick test - no AI",
         aiConfidence: 100,
         weatherData: {
           temperature: 72,
@@ -871,26 +849,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
 
-      // Create alerts with AI analysis
+      // Create alerts with standard context
       for (const alertData of [mlbAlert, nflAlert, nbaAlert, nhlAlert]) {
         try {
           const weatherData = await getWeatherData(alertData.gameInfo.homeTeam);
           
-          // Get AI analysis
-          const settings = await storage.getSettingsBySport(alertData.sport);
-          let aiContext = undefined;
+          // Standard context without AI
+          let aiContext = "Standard game situation";
           let aiConfidence = 85;
-          
-          if (settings?.aiEnabled) {
-            const analysis = await analyzeAlert(
-              alertData.type,
-              alertData.sport,
-              alertData.gameInfo,
-              weatherData
-            );
-            aiContext = analysis.context;
-            aiConfidence = analysis.confidence;
-          }
 
           const alert = await storage.createAlert({
             ...alertData,
@@ -921,141 +887,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // OpenAI logs and stats endpoint
+  // AI endpoints removed
+  
+  // AI endpoints removed - returns placeholder data
   app.get("/api/openai/logs", async (req, res) => {
-    try {
-      const { getOpenAIManager } = await import('./services/openai-manager');
-      const openaiManager = getOpenAIManager();
-      
-      const limit = parseInt(req.query.limit as string) || 100;
-      const logsOnly = req.query.logsOnly === 'true';
-      const errorsOnly = req.query.errorsOnly === 'true';
-      
-      if (errorsOnly) {
-        const errorLogs = openaiManager.getErrorLogs();
-        res.json({
-          type: 'error_logs',
-          count: errorLogs.length,
-          logs: errorLogs
-        });
-      } else if (logsOnly) {
-        const logs = openaiManager.getLogs(limit);
-        res.json({
-          type: 'recent_logs',
-          count: logs.length,
-          logs
-        });
-      } else {
-        // Return comprehensive stats and recent logs
-        const stats = openaiManager.getStats();
-        const recentLogs = openaiManager.getLogs(50);
-        const errorLogs = openaiManager.getErrorLogs();
-        
-        res.json({
-          stats,
-          recentLogs: {
-            count: recentLogs.length,
-            logs: recentLogs
-          },
-          errorLogs: {
-            count: errorLogs.length,
-            logs: errorLogs.slice(-20) // Last 20 errors
-          },
-          summary: {
-            totalApiCalls: stats.totalCalls,
-            successRate: `${((stats.successfulCalls / stats.totalCalls) * 100).toFixed(2)}%`,
-            errorRate: `${stats.errorRate.toFixed(2)}%`,
-            cacheHitRate: `${((stats.cachedResponses / stats.totalCalls) * 100).toFixed(2)}%`,
-            totalCost: `$${stats.totalCost.toFixed(4)}`,
-            averageLatency: `${stats.averageLatency.toFixed(0)}ms`,
-            quotaStatus: stats.quotaExceeded ? 'EXCEEDED' : 'AVAILABLE'
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching OpenAI logs:', error);
-      res.status(500).json({ message: 'Failed to fetch OpenAI logs' });
-    }
+    res.json({
+      type: 'disabled',
+      message: 'AI functionality has been disabled',
+      stats: { totalCalls: 0, errorRate: 0, totalCost: 0 },
+      logs: [],
+      errorLogs: []
+    });
   });
 
-  // OpenAI health check endpoint
   app.get("/api/openai/health", async (req, res) => {
-    try {
-      const { getOpenAIManager } = await import('./services/openai-manager');
-      const openaiManager = getOpenAIManager();
-      
-      const isHealthy = await openaiManager.checkHealth();
-      const stats = openaiManager.getStats();
-      
-      res.json({
-        healthy: isHealthy,
-        quotaAvailable: !stats.quotaExceeded,
-        lastQuotaCheck: stats.lastQuotaCheck,
-        totalCalls: stats.totalCalls,
-        errorRate: stats.errorRate
-      });
-    } catch (error) {
-      console.error('Error checking OpenAI health:', error);
-      res.status(500).json({ 
-        healthy: false,
-        error: 'Failed to check OpenAI health' 
-      });
-    }
+    res.json({
+      healthy: false,
+      quotaAvailable: false,
+      message: 'AI functionality disabled'
+    });
   });
 
-  // Clear old OpenAI logs endpoint
   app.post("/api/openai/clear-logs", async (req, res) => {
-    try {
-      const { getOpenAIManager } = await import('./services/openai-manager');
-      const openaiManager = getOpenAIManager();
-      
-      const keepLast = parseInt(req.body.keepLast as string) || 100;
-      openaiManager.clearOldLogs(keepLast);
-      
-      res.json({ 
-        message: `Cleared old logs, keeping last ${keepLast}`,
-        success: true 
-      });
-    } catch (error) {
-      console.error('Error clearing OpenAI logs:', error);
-      res.status(500).json({ message: 'Failed to clear OpenAI logs' });
-    }
+    res.json({ 
+      message: 'AI functionality disabled - no logs to clear',
+      success: false 
+    });
   });
 
-  // Reset OpenAI quota status endpoint
   app.post("/api/openai/reset-quota", async (req, res) => {
-    try {
-      const { getOpenAIManager } = await import('./services/openai-manager');
-      const openaiManager = getOpenAIManager();
-      
-      openaiManager.resetQuota();
-      
-      res.json({ 
-        message: 'OpenAI quota reset successfully - API calls re-enabled',
-        success: true 
-      });
-    } catch (error) {
-      console.error('Error resetting OpenAI quota:', error);
-      res.status(500).json({ message: 'Failed to reset OpenAI quota' });
-    }
+    res.json({ 
+      message: 'AI functionality disabled - no quota to reset',
+      success: false 
+    });
   });
 
-  // Clear OpenAI cache endpoint
   app.post("/api/openai/clear-cache", async (req, res) => {
-    try {
-      const { getOpenAIManager } = await import('./services/openai-manager');
-      const openaiManager = getOpenAIManager();
-      
-      openaiManager.clearCache();
-      
-      res.json({ 
-        message: 'OpenAI cache cleared - fresh analysis will be generated',
-        success: true 
-      });
-    } catch (error) {
-      console.error('Error clearing OpenAI cache:', error);
-      res.status(500).json({ message: 'Failed to clear OpenAI cache' });
-    }
+    res.json({ 
+      message: 'AI functionality disabled - no cache to clear',
+      success: false 
+    });
   });
 
   return httpServer;

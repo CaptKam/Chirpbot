@@ -1,8 +1,6 @@
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
-import { PredictionRequest, GameContext, PREDICTION_EVENTS } from '../ai-predictions';
-import { getOpenAIManager } from '../openai-manager';
 import { randomUUID } from 'crypto'; // Assuming crypto is available for randomUUID
 
 export interface AlertConfig {
@@ -71,13 +69,8 @@ export abstract class BaseSportEngine implements SportEngine {
       return Math.random() < config.probability;
     });
 
-    // Process AI prediction-based alerts - only if AI is enabled and there are prediction alerts
-    let triggeredPredictions: AlertConfig[] = [];
-    if (settings.aiEnabled && predictionAlerts.length > 0) {
-      triggeredPredictions = await this.checkPredictionAlerts(predictionAlerts, gameState);
-    }
-
-    return [...triggeredRegular, ...triggeredPredictions];
+    // AI prediction functionality removed
+    return triggeredRegular;
   }
 
   protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
@@ -171,46 +164,9 @@ export abstract class BaseSportEngine implements SportEngine {
       try {
         const weatherData = await getWeatherData(gameState.homeTeam);
 
-        // Get AI analysis for ALL alerts when AI is enabled
+        // Simple alert context without AI
         let aiContext = `${alert.type} situation detected`;
         let aiConfidence = 75;
-
-        // Use centralized OpenAI manager for AI analysis with timeout protection
-        if ((await storage.getSettingsBySport(this.sport))?.aiEnabled) {
-          try {
-            const openaiManager = getOpenAIManager();
-            // Add timeout protection to prevent blocking alert creation
-            const aiAnalysisPromise = openaiManager.analyzeAlert(
-              alert.type,
-              this.sport,
-              {
-                score: {
-                  away: gameState.awayScore,
-                  home: gameState.homeScore
-                },
-                status: 'Live',
-                awayTeam: gameState.awayTeam,
-                homeTeam: gameState.homeTeam,
-                ...this.getGameSpecificInfo(gameState)
-              },
-              weatherData
-            );
-            
-            // Timeout after 3 seconds to avoid blocking alert creation
-            const aiAnalysis = await Promise.race([
-              aiAnalysisPromise,
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('AI analysis timeout - proceeding with alert')), 3000)
-              )
-            ]);
-            
-            aiContext = aiAnalysis.context;
-            aiConfidence = aiAnalysis.confidence;
-          } catch (error) {
-            console.log(`AI analysis skipped for ${alert.type}: ${error} - creating alert anyway`);
-            // Continue with default context if AI fails
-          }
-        }
 
         const alertData = {
           type: alert.type,
@@ -225,7 +181,7 @@ export abstract class BaseSportEngine implements SportEngine {
             status: 'Live',
             awayTeam: gameState.awayTeam,
             homeTeam: gameState.homeTeam,
-            ...this.getGameSpecificInfo(gameState)
+            // Game-specific info removed with AI
           },
           weatherData,
           aiContext: aiContext,
@@ -267,80 +223,9 @@ export abstract class BaseSportEngine implements SportEngine {
     }
   }
 
-  protected abstract getGameSpecificInfo(gameState: any): any;
+  // AI methods removed
 
-  protected abstract buildGameContext(gameState: any): GameContext;
-
-  private async checkPredictionAlerts(predictionConfigs: AlertConfig[], gameState: any): Promise<AlertConfig[]> {
-    if (predictionConfigs.length === 0) return [];
-
-    // Get settings to check which prediction alerts are enabled
-    const settings = await storage.getSettingsBySport(this.sport);
-    if (!settings?.aiEnabled) {
-      return [];
-    }
-
-    // Filter prediction configs by enabled settings
-    const enabledPredictionConfigs = predictionConfigs.filter(config => {
-      if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
-        return false;
-      }
-      return true;
-    });
-
-    if (enabledPredictionConfigs.length === 0) return [];
-
-    try {
-      const gameContext = this.buildGameContext(gameState);
-      const allPredictionEvents = enabledPredictionConfigs.flatMap(config => config.predictionEvents || []);
-
-      if (allPredictionEvents.length === 0) return [];
-
-      const uniqueEvents = Array.from(new Set(allPredictionEvents));
-      const predictionRequest: PredictionRequest = {
-        eventTypes: uniqueEvents, // Remove duplicates
-        context: gameContext,
-        minimumProbability: 60 // Default threshold
-      };
-
-      // Use centralized OpenAI manager for predictions
-      const openaiManager = getOpenAIManager();
-      const predictions = await openaiManager.generatePredictions(
-        predictionRequest.eventTypes,
-        predictionRequest.context,
-        predictionRequest.minimumProbability
-      );
-
-      // Match predictions to alert configs
-      const triggeredPredictions: AlertConfig[] = [];
-
-      for (const config of enabledPredictionConfigs) {
-        const relevantPredictions = predictions.filter(p =>
-          config.predictionEvents?.includes(p.eventType) &&
-          p.probability >= (config.minimumPredictionProbability || 60) &&
-          p.shouldAlert
-        );
-
-        if (relevantPredictions.length > 0) {
-          // Create a new alert config with prediction data
-          const predictionAlert: AlertConfig = {
-            ...config,
-            description: `${config.description} - AI Prediction: ${relevantPredictions[0].reasoning}`,
-            probability: relevantPredictions[0].probability / 100,
-            priority: Math.max(config.priority, relevantPredictions[0].confidence)
-          };
-
-          triggeredPredictions.push(predictionAlert);
-        }
-      }
-
-      return triggeredPredictions;
-
-    } catch (error) {
-      console.error(`Error checking prediction alerts for ${this.sport}:`, error);
-      return [];
-    }
-  }
+  // AI prediction processing removed
 
   // Optional callback for broadcasting alerts
   public onAlert?: (alert: any) => void;

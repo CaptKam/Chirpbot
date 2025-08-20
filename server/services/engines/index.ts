@@ -3,7 +3,6 @@ import { nflEngine } from './nfl-engine';
 import { nbaEngine } from './nba-engine';
 import { nhlEngine } from './nhl-engine';
 import { weatherEngine } from './weather-engine';
-import { aiEngine } from './ai-engine';
 import { BaseSportEngine } from './base-engine';
 
 export interface AlertEngineManager {
@@ -25,7 +24,6 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     this.addEngine('NBA', nbaEngine);
     this.addEngine('NHL', nhlEngine);
     this.addEngine('WEATHER', weatherEngine);
-    this.addEngine('AI_ANALYSIS', aiEngine);
   }
 
   addEngine(sport: string, engine: BaseSportEngine): void {
@@ -106,5 +104,5 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 export const alertEngineManager = new AlertEngineManagerImpl();
 
 // Export individual engines for direct access if needed
-export { mlbEngine, nflEngine, nbaEngine, nhlEngine, weatherEngine, aiEngine };
+export { mlbEngine, nflEngine, nbaEngine, nhlEngine, weatherEngine };
 export { BaseSportEngine } from './base-engine';
