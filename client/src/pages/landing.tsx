@@ -230,7 +230,7 @@ function ValueProps() {
 }
 
 function LivePreview() {
-  const [activeAlert, setActiveAlert] = useState(0);
+  const [visibleAlerts, setVisibleAlerts] = useState<number[]>([]);
   const alerts = [
     {
       type: "RISP Alert",
@@ -257,8 +257,18 @@ function LivePreview() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveAlert((prev) => (prev + 1) % alerts.length);
-    }, 3000);
+      setVisibleAlerts((prev) => {
+        if (prev.length === 0) {
+          return [0]; // Show first alert
+        } else if (prev.length === 1) {
+          return [0, 1]; // Show first and second
+        } else if (prev.length === 2) {
+          return [0, 1, 2]; // Show all three
+        } else {
+          return []; // Reset to empty
+        }
+      });
+    }, 4000); // Slower timing - 4 seconds between each step
     return () => clearInterval(interval);
   }, []);
 
@@ -279,26 +289,28 @@ function LivePreview() {
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span className="text-slate-400 text-sm ml-auto">ChirpBot Live</span>
             </div>
-            <motion.div
-              key={activeAlert}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="min-h-[120px]"
-            >
-              <div className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/50">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-emerald-400 text-sm font-semibold">{alerts[activeAlert].type}</span>
-                  <span className="text-slate-400 text-xs">{alerts[activeAlert].time}</span>
-                </div>
-                <h4 className="font-bold mb-1 text-slate-100">{alerts[activeAlert].title}</h4>
-                <p className="text-sm text-slate-300 mb-2">{alerts[activeAlert].description}</p>
-                <div className="flex items-center gap-2">
-                  <div className="text-xs text-slate-400">Confidence:</div>
-                  <div className="text-xs font-semibold text-emerald-400">{alerts[activeAlert].confidence}%</div>
-                </div>
-              </div>
-            </motion.div>
+            <div className="space-y-4 min-h-[120px]">
+              {visibleAlerts.map((alertIndex, displayIndex) => (
+                <motion.div
+                  key={`${alertIndex}-${displayIndex}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/50"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-emerald-400 text-sm font-semibold">{alerts[alertIndex].type}</span>
+                    <span className="text-slate-400 text-xs">{alerts[alertIndex].time}</span>
+                  </div>
+                  <h4 className="font-bold mb-1 text-slate-100">{alerts[alertIndex].title}</h4>
+                  <p className="text-sm text-slate-300 mb-2">{alerts[alertIndex].description}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-slate-400">Confidence:</div>
+                    <div className="text-xs font-semibold text-emerald-400">{alerts[alertIndex].confidence}%</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
