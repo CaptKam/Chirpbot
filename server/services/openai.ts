@@ -87,15 +87,40 @@ ${sport === 'MLB' ? `Inning: ${gameInfo.inning || '?'} ${gameInfo.inningState ||
 ${sport === 'MLB' ? `Outs: ${gameInfo.outs || '?'}` : ''}
 ${gameInfo.runners ? `Runners: ${Object.entries(gameInfo.runners).filter(([_, value]) => value).map(([base]) => base).join(', ') || 'None'}` : ''}
 
-Current Batter: ${gameInfo.currentBatter?.name || 'Unknown'} ${gameInfo.currentBatter?.stats ? `(${gameInfo.currentBatter.stats.avg || '?'} AVG, ${gameInfo.currentBatter.stats.hr || 0} HR, ${gameInfo.currentBatter.stats.rbi || 0} RBI, ${gameInfo.currentBatter.stats.ops || '?'} OPS)` : ''}
+CURRENT BATTER ANALYSIS:
+${gameInfo.currentBatter ? `🏏 ${gameInfo.currentBatter.name} (${gameInfo.currentBatter.batSide === 'L' ? 'Left' : gameInfo.currentBatter.batSide === 'R' ? 'Right' : 'Switch'} handed)
+Stats: ${gameInfo.currentBatter.stats.avg || 'N/A'} AVG, ${gameInfo.currentBatter.stats.hr || 0} HR, ${gameInfo.currentBatter.stats.rbi || 0} RBI, ${gameInfo.currentBatter.stats.ops || 'N/A'} OPS
+Power Rating: ${gameInfo.currentBatter.stats.hr && gameInfo.currentBatter.stats.atBats ? `${((gameInfo.currentBatter.stats.hr / gameInfo.currentBatter.stats.atBats) * 100).toFixed(1)}% HR rate` : 'Unknown'}
+Clutch Factor: ${gameInfo.currentBatter.stats.rbi && gameInfo.currentBatter.stats.rbi > 50 ? 'High RBI producer' : gameInfo.currentBatter.stats.rbi && gameInfo.currentBatter.stats.rbi > 25 ? 'Moderate RBI threat' : 'Limited RBI history'}` : 'Batter data not available'}
 
-Weather Impact: ${weatherData ? `${weatherData.temperature}°F, ${weatherData.windSpeed || 0}mph ${weatherData.windDirection || ''} wind, ${weatherData.condition}` : 'Not available'}
+ON-DECK BATTER:
+${gameInfo.onDeckBatter ? `🔄 ${gameInfo.onDeckBatter.name} (${gameInfo.onDeckBatter.batSide === 'L' ? 'Left' : gameInfo.onDeckBatter.batSide === 'R' ? 'Right' : 'Switch'} handed)
+On-Deck Stats: ${gameInfo.onDeckBatter.stats.avg || 'N/A'} AVG, ${gameInfo.onDeckBatter.stats.hr || 0} HR, ${gameInfo.onDeckBatter.stats.rbi || 0} RBI, ${gameInfo.onDeckBatter.stats.ops || 'N/A'} OPS
+Threat Level: ${gameInfo.onDeckBatter.stats.ops && gameInfo.onDeckBatter.stats.ops > 0.8 ? 'High threat' : gameInfo.onDeckBatter.stats.ops && gameInfo.onDeckBatter.stats.ops > 0.7 ? 'Moderate threat' : 'Lower threat'}` : 'On-deck batter data not available'}
+
+CURRENT PITCHER:
+${gameInfo.currentPitcher ? `⚾ ${gameInfo.currentPitcher.name} (${gameInfo.currentPitcher.throwHand === 'L' ? 'Left' : 'Right'} handed)
+Pitching Stats: ${gameInfo.currentPitcher.stats.era || 'N/A'} ERA, ${gameInfo.currentPitcher.stats.whip || 'N/A'} WHIP, ${gameInfo.currentPitcher.stats.strikeOuts || 0} K, ${gameInfo.currentPitcher.stats.wins || 0}-${gameInfo.currentPitcher.stats.losses || 0} W-L
+Control: ${gameInfo.currentPitcher.stats.whip && gameInfo.currentPitcher.stats.whip < 1.2 ? 'Excellent control' : gameInfo.currentPitcher.stats.whip && gameInfo.currentPitcher.stats.whip < 1.4 ? 'Good control' : 'Struggles with control'}` : 'Pitcher data not available'}
+
+WEATHER IMPACT ANALYSIS:
+${weatherData ? `🌤️ Current Conditions: ${weatherData.temperature}°F, ${weatherData.windSpeed || 0}mph ${weatherData.windDirection || ''} wind, ${weatherData.condition}
+Wind Analysis: ${weatherData.windSpeed >= 15 ? `⚠️ HIGH WINDS (${weatherData.windSpeed}mph) - Significantly affects ball flight` : weatherData.windSpeed >= 8 ? `🌬️ MODERATE WINDS (${weatherData.windSpeed}mph) - May affect pop-ups and fly balls` : `🍃 LIGHT WINDS (${weatherData.windSpeed}mph) - Minimal impact on play`}
+${weatherData.windDirection ? `Wind Direction Impact: ${weatherData.windDirection.includes('Out') ? '🚀 HITTING ADVANTAGE - Tailwind helps carry balls' : weatherData.windDirection.includes('In') ? '🛡️ PITCHER ADVANTAGE - Headwind knocks down fly balls' : '↔️ NEUTRAL - Crosswind affects ball movement'}` : ''}
+Temperature Effect: ${weatherData.temperature >= 80 ? '🔥 HOT WEATHER - Ball travels further, favors hitters' : weatherData.temperature <= 50 ? '🧊 COLD WEATHER - Ball doesn\'t carry, favors pitchers' : '🌡️ IDEAL TEMPERATURE - Neutral conditions'}` : 'Weather data not available'}
 
 Scoring Probability: ${gameInfo.scoringProbability || '?'}%
+Count: ${gameInfo.balls || 0}-${gameInfo.strikes || 0}
 
-Analyze the tactical significance, momentum impact, and why this moment matters. Consider weather effects on play outcomes.
+ANALYSIS REQUIREMENTS:
+Provide detailed tactical analysis considering:
+1. Current batter's strengths vs current pitcher
+2. On-deck threat for strategic decisions  
+3. Weather impact on this specific at-bat
+4. Game situation and momentum implications
+5. Why this moment is critical for both teams
 
-Provide analysis in JSON format with 'context' (2-3 detailed sentences about situation significance and tactical implications) and 'confidence' (0-100) fields.`;
+Provide analysis in JSON format with 'context' (2-3 detailed sentences about situation significance, player matchups, weather impact, and tactical implications) and 'confidence' (0-100) fields.`;
 
     // Add timeout using Promise.race
     const timeoutPromise = new Promise<never>((_, reject) => 

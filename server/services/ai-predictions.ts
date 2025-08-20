@@ -345,19 +345,40 @@ function buildPredictionPrompt(request: PredictionRequest): string {
     
     if (context.weather.condition) prompt += `Conditions: ${context.weather.condition}\n`;
     
-    // Previous weather comparison
+    // Previous weather comparison for dynamic analysis
     if (context.previousWeather) {
       const windChange = Math.abs((context.weather.windSpeed || 0) - (context.previousWeather.windSpeed || 0));
       const tempChange = Math.abs((context.weather.temperature || 0) - (context.previousWeather.temperature || 0));
       
       if (windChange >= 5) {
-        prompt += `🌪️ WIND SHIFT: Wind speed changed by ${windChange}mph from earlier\n`;
+        prompt += `🌪️ MAJOR WIND SHIFT: Wind speed changed by ${windChange}mph from earlier - affects pitcher/batter strategy\n`;
       }
       if (context.weather.windDirection !== context.previousWeather.windDirection) {
-        prompt += `🔄 WIND DIRECTION CHANGE: From ${context.previousWeather.windDirection || 'unknown'} to ${context.weather.windDirection || 'unknown'}\n`;
+        prompt += `🔄 WIND DIRECTION CHANGE: From ${context.previousWeather.windDirection || 'unknown'} to ${context.weather.windDirection || 'unknown'} - changes hitting approach\n`;
       }
       if (tempChange >= 10) {
-        prompt += `🌡️ TEMPERATURE SHIFT: ${tempChange}°F change from earlier in game\n`;
+        prompt += `🌡️ SIGNIFICANT TEMPERATURE SHIFT: ${tempChange}°F change from earlier affects ball carry distance\n`;
+      }
+    }
+    
+    // Batter-specific weather impact
+    if (context.currentBatter) {
+      prompt += `\nWEATHER IMPACT ON CURRENT BATTER:\n`;
+      const powerHitter = context.currentBatter.stats.hr && context.currentBatter.stats.hr > 15;
+      const contactHitter = context.currentBatter.stats.avg && context.currentBatter.stats.avg > 0.280;
+      
+      if (powerHitter && context.weather.windSpeed >= 10 && context.weather.windDirection?.includes('Out')) {
+        prompt += `⚾ POWER HITTER + TAILWIND: ${context.currentBatter.name}'s power (${context.currentBatter.stats.hr} HR) gets boost from ${context.weather.windSpeed}mph tailwind\n`;
+      } else if (powerHitter && context.weather.windSpeed >= 10 && context.weather.windDirection?.includes('In')) {
+        prompt += `⚾ POWER NEGATED: ${context.currentBatter.name}'s power reduced by ${context.weather.windSpeed}mph headwind\n`;
+      } else if (contactHitter && context.weather.windSpeed >= 15) {
+        prompt += `⚾ CONTACT HITTER CHALLENGE: ${context.currentBatter.name} (.${Math.round((context.currentBatter.stats.avg || 0) * 1000)} AVG) faces difficult conditions with ${context.weather.windSpeed}mph winds\n`;
+      }
+      
+      if (context.weather.temperature <= 50 && powerHitter) {
+        prompt += `🧊 COLD IMPACT: ${context.currentBatter.name}'s power reduced by cold ${context.weather.temperature}°F temperature\n`;
+      } else if (context.weather.temperature >= 85 && powerHitter) {
+        prompt += `🔥 HEAT BOOST: ${context.currentBatter.name}'s power enhanced by hot ${context.weather.temperature}°F conditions\n`;
       }
     }
   }

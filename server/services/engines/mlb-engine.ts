@@ -440,7 +440,29 @@ export class MLBEngine extends BaseSportEngine {
           hr: gameState.currentBatter.stats.hr,
           rbi: gameState.currentBatter.stats.rbi,
           obp: gameState.currentBatter.stats.obp,
-          ops: gameState.currentBatter.stats.ops
+          ops: gameState.currentBatter.stats.ops,
+          slg: gameState.currentBatter.stats.slg,
+          atBats: gameState.currentBatter.stats.atBats,
+          hits: gameState.currentBatter.stats.hits,
+          strikeOuts: gameState.currentBatter.stats.strikeOuts,
+          walks: gameState.currentBatter.stats.walks
+        }
+      } : undefined,
+      onDeckBatter: gameState.onDeckBatter ? {
+        id: gameState.onDeckBatter.id,
+        name: gameState.onDeckBatter.name,
+        batSide: gameState.onDeckBatter.batSide,
+        stats: {
+          avg: gameState.onDeckBatter.stats.avg,
+          hr: gameState.onDeckBatter.stats.hr,
+          rbi: gameState.onDeckBatter.stats.rbi,
+          obp: gameState.onDeckBatter.stats.obp,
+          ops: gameState.onDeckBatter.stats.ops,
+          slg: gameState.onDeckBatter.stats.slg,
+          atBats: gameState.onDeckBatter.stats.atBats,
+          hits: gameState.onDeckBatter.stats.hits,
+          strikeOuts: gameState.onDeckBatter.stats.strikeOuts,
+          walks: gameState.onDeckBatter.stats.walks
         }
       } : undefined,
       currentPitcher: gameState.currentPitcher ? {
@@ -451,8 +473,14 @@ export class MLBEngine extends BaseSportEngine {
           era: gameState.currentPitcher.stats.era,
           whip: gameState.currentPitcher.stats.whip,
           strikeOuts: gameState.currentPitcher.stats.strikeOuts,
+          walks: gameState.currentPitcher.stats.walks,
           wins: gameState.currentPitcher.stats.wins,
-          losses: gameState.currentPitcher.stats.losses
+          losses: gameState.currentPitcher.stats.losses,
+          saves: gameState.currentPitcher.stats.saves,
+          inningsPitched: gameState.currentPitcher.stats.inningsPitched,
+          hits: gameState.currentPitcher.stats.hits,
+          earnedRuns: gameState.currentPitcher.stats.earnedRuns,
+          homeRuns: gameState.currentPitcher.stats.homeRuns
         }
       } : undefined
     };
@@ -477,7 +505,9 @@ export class MLBEngine extends BaseSportEngine {
       currentPitcher: gameState.currentPitcher,
       homeTeam: gameState.homeTeam,
       awayTeam: gameState.awayTeam,
-      gameState: 'Live'
+      gameState: 'Live',
+      weather: undefined, // Will be populated by weather data
+      previousWeather: undefined // Will be populated by weather engine
     };
   }
   
