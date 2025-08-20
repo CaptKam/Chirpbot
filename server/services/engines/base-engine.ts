@@ -290,7 +290,9 @@ export abstract class BaseSportEngine implements SportEngine {
         minimumProbability: 60 // Default threshold
       };
 
-      const predictions = await generatePredictions(predictionRequest);
+      // TEMPORARILY DISABLED: Too many API calls, using fallback predictions only
+      // const predictions = await generatePredictions(predictionRequest);
+      const predictions = [];
 
       // Match predictions to alert configs
       const triggeredPredictions: AlertConfig[] = [];
