@@ -1,7 +1,8 @@
 import { storage } from "./storage";
 import { WebSocket } from "ws";
 import type { InsertAlert } from "@shared/schema";
-import { analyzeAlert } from "./services/openai";
+// DISABLED: Removing OpenAI import to ensure zero API calls
+// import { analyzeAlert } from "./services/openai";
 
 interface DemoGame {
   id: string;
