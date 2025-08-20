@@ -143,8 +143,34 @@ function generateFallbackPredictions(request: PredictionRequest): PredictionAnal
   return predictions;
 }
 
+// Cache for predictions with aggressive caching to reduce API calls
+const predictionCache = new Map<string, { predictions: PredictionAnalysis[], timestamp: number }>();
+const lastCallTime = new Map<string, number>();
+const CACHE_TTL = 300000; // 5 minutes cache
+const MIN_CALL_INTERVAL = 120000; // Minimum 2 minutes between API calls for same game
+
 export async function generatePredictions(request: PredictionRequest): Promise<PredictionAnalysis[]> {
   try {
+    // Create cache key based on game context
+    const gameKey = `${request.context.homeTeam}-${request.context.awayTeam}-${request.context.inning || request.context.quarter || 0}`;
+    const cacheKey = `${gameKey}-${JSON.stringify(request.eventTypes)}`;
+    
+    // Check cache first
+    const cached = predictionCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.predictions;
+    }
+    
+    // Rate limiting - prevent too frequent API calls for same game
+    const lastCall = lastCallTime.get(gameKey) || 0;
+    if (Date.now() - lastCall < MIN_CALL_INTERVAL) {
+      console.log(`AI predictions: Rate limited for ${gameKey}, using fallbacks`);
+      return generateFallbackPredictions(request);
+    }
+    
+    // Update last call time
+    lastCallTime.set(gameKey, Date.now());
+    
     const prompt = buildPredictionPrompt(request);
     
     const response = await openai.chat.completions.create({
@@ -190,11 +216,16 @@ Be realistic with probabilities - don't inflate them. Base them on actual statis
       ? predictions.filter(p => p.probability >= request.minimumProbability!)
       : predictions;
     
-    return filteredPredictions.map(p => ({
+    const finalPredictions = filteredPredictions.map(p => ({
       ...p,
       probability: Math.max(0, Math.min(100, p.probability)),
       confidence: Math.max(0, Math.min(100, p.confidence))
     }));
+    
+    // Cache successful API results
+    predictionCache.set(cacheKey, { predictions: finalPredictions, timestamp: Date.now() });
+    
+    return finalPredictions;
     
   } catch (error: any) {
     // Silently handle all OpenAI errors and use fallbacks
