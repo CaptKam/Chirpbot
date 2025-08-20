@@ -191,19 +191,6 @@ export default function Calendar() {
         username={user?.username || "Demo User"} 
       />
       
-      {/* Add a test button for development */}
-      {user?.username?.toLowerCase() === 'demo' && (
-        <Button
-          onClick={() => {
-            console.log("Test button clicked - opening modal");
-            setShowDemoOnboarding(true);
-          }}
-          className="fixed top-4 right-4 z-50 bg-purple-500 hover:bg-purple-600"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Show Tour
-        </Button>
-      )}
     
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
