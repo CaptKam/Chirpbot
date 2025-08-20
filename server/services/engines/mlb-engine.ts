@@ -710,22 +710,16 @@ export class MLBEngine extends BaseSportEngine {
         */
 
         const alertData: InsertAlert = {
-          id: randomUUID(),
           type: alert.type,
           sport: this.sport,
-          team: gameState.homeTeam,
-          opponent: gameState.awayTeam,
-          message: alert.description,
-          probability: alert.probability,
-          priority: alert.priority,
+          title: alert.type,
+          description: alert.description,
           gameInfo: {
             ...gameState,
             weather: weatherData
           },
           aiContext: aiAnalysis.context,
-          aiConfidence: aiAnalysis.confidence,
-          createdAt: new Date(),
-          isRead: false
+          aiConfidence: aiAnalysis.confidence
         };
 
         const createdAlert = await storage.createAlert(alertData);
