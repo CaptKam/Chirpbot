@@ -741,11 +741,7 @@ export class MLBEngine extends BaseSportEngine {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
       console.log(`📊 MLB Settings - AI Enabled: ${settings?.aiEnabled}`);
-      if (!settings?.aiEnabled) {
-        console.log(`⏸️ MLB monitoring disabled, skipping`);
-        return; // Skip if disabled
-      }
-
+      
       const liveGames = await mlbApi.getLiveGames();
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
