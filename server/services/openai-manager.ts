@@ -41,7 +41,7 @@ export class OpenAIManager {
   private cache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_TTL = 30000; // 30 seconds - shorter for fresh analysis
   private readonly MAX_LOGS = 1000; // Keep last 1000 logs
-  private quotaAvailable = true;
+  private quotaAvailable = false; // EMERGENCY: Disabled to prevent budget overrun
   private lastQuotaCheck = 0;
   private readonly QUOTA_CHECK_INTERVAL = 60000; // 1 minute
 
