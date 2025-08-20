@@ -410,6 +410,23 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`   Runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third}`);
       console.log(`   Outs: ${gameState.outs}, Balls: ${gameState.balls}, Strikes: ${gameState.strikes}`);
 
+      // BASES LOADED SPECIFIC DEBUG
+      const basesLoaded = gameState.runners.first && gameState.runners.second && gameState.runners.third;
+      if (basesLoaded) {
+        console.log(`🚨 BASES LOADED DETECTED! Outs: ${gameState.outs}`);
+        console.log(`   Raw offense data:`, linescore.offense);
+        console.log(`   Checking alert conditions...`);
+        
+        // Check each bases loaded condition
+        const basesLoaded0Out = basesLoaded && gameState.outs === 0;
+        const basesLoaded1Out = basesLoaded && gameState.outs === 1;
+        const basesLoaded2Out = basesLoaded && gameState.outs === 2;
+        
+        console.log(`   Bases Loaded 0 Out: ${basesLoaded0Out}`);
+        console.log(`   Bases Loaded 1 Out: ${basesLoaded1Out}`);
+        console.log(`   Bases Loaded 2 Out: ${basesLoaded2Out}`);
+      }
+
       if (gameState.currentBatter) {
         console.log(`   🏏 Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
       }
@@ -693,13 +710,29 @@ export class MLBEngine extends BaseSportEngine {
     const currentStateHash = this.createMLBStateHash(gameState, alertType);
     const lastStateHash = this.lastGameStates.get(key);
 
+    // Debug bases loaded specifically
+    const basesLoaded = gameState.runners.first && gameState.runners.second && gameState.runners.third;
+    if (basesLoaded && alertType.toLowerCase().includes('bases loaded')) {
+      console.log(`🔍 Duplicate check for "${alertType}":`);
+      console.log(`   Key: ${key}`);
+      console.log(`   Current state hash: ${currentStateHash}`);
+      console.log(`   Last state hash: ${lastStateHash || 'NONE'}`);
+      console.log(`   Should trigger: ${lastStateHash !== currentStateHash}`);
+    }
+
     if (lastStateHash === currentStateHash) {
       // Same game state, don't trigger duplicate alert
+      if (basesLoaded && alertType.toLowerCase().includes('bases loaded')) {
+        console.log(`❌ Skipping duplicate ${alertType} alert`);
+      }
       return false;
     }
 
     // New game state, allow alert and track it
     this.lastGameStates.set(key, currentStateHash);
+    if (basesLoaded && alertType.toLowerCase().includes('bases loaded')) {
+      console.log(`✅ Allowing ${alertType} alert - new game state`);
+    }
     return true;
   }
 
@@ -898,6 +931,15 @@ export class MLBEngine extends BaseSportEngine {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
             console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
             await this.processAlerts(triggeredAlerts, gameState);
+          } else {
+            // Debug why no alerts triggered
+            const basesLoaded = gameState.runners.first && gameState.runners.second && gameState.runners.third;
+            if (basesLoaded) {
+              console.log(`❌ BASES LOADED BUT NO ALERT! Checking settings...`);
+              const settings = await storage.getSettingsBySport(this.sport);
+              console.log(`   RISP setting enabled: ${settings?.alertTypes?.risp || 'NOT SET'}`);
+              console.log(`   All MLB settings:`, settings?.alertTypes);
+            }
 
             // AI analysis has been completely removed
           } else {
