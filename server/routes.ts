@@ -330,8 +330,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if this is a demo user
       const session = req.session as any;
       if (session?.isDemo && session?.userId === userId) {
-        // Start demo monitoring for this game
-        await demoSimulator.startGameMonitoring(gameId, userId, broadcast);
+        // Start demo monitoring for this game with team names
+        await demoSimulator.startGameMonitoring(gameId, userId, broadcast, {
+          sport,
+          homeTeamName,
+          awayTeamName
+        });
       }
       
       const monitoring = await storage.addUserMonitoredGame({

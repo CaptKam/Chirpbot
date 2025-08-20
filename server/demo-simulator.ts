@@ -261,7 +261,7 @@ export class DemoSimulator {
   }
 
   // Start monitoring a game (when user clicks on it)
-  async startGameMonitoring(gameId: string, userId: string, broadcast: (data: any) => void) {
+  async startGameMonitoring(gameId: string, userId: string, broadcast: (data: any) => void, gameInfo?: {sport: string, homeTeamName: string, awayTeamName: string}) {
     // Only work for demo user
     if (userId !== this.demoUserId) return;
 
@@ -272,11 +272,23 @@ export class DemoSimulator {
 
     console.log(`🎯 Starting demo monitoring for game: ${gameId}`);
     
-    // Parse game info from ID (format: sport-awayTeam-homeTeam)
-    const [sport, awayTeamShort, homeTeamShort] = gameId.split('-');
+    let sport, teamNames;
     
-    // Get full team names
-    const teamNames = this.getTeamNames(sport, awayTeamShort, homeTeamShort);
+    if (gameInfo) {
+      // Use provided game info
+      sport = gameInfo.sport;
+      teamNames = {
+        homeTeam: gameInfo.homeTeamName,
+        awayTeam: gameInfo.awayTeamName,
+        homeTeamShort: this.getTeamShort(gameInfo.homeTeamName),
+        awayTeamShort: this.getTeamShort(gameInfo.awayTeamName)
+      };
+    } else {
+      // Fallback: Parse game info from ID (format: sport-awayTeam-homeTeam)
+      const [sportPart, awayTeamShort, homeTeamShort] = gameId.split('-');
+      sport = sportPart;
+      teamNames = this.getTeamNames(sport, awayTeamShort, homeTeamShort);
+    }
     
     // Initialize alert count for this game
     if (!this.alertCount.has(gameId)) {
@@ -390,6 +402,31 @@ export class DemoSimulator {
     this.alertCount.set(gameId, (this.alertCount.get(gameId) || 0) + 1);
     
     console.log(`📢 Demo alert generated for ${alert.title}: ${alert.type}`);
+  }
+
+  // Get team short code from full name (reverse lookup)
+  private getTeamShort(teamName: string): string {
+    const reverseMap: Record<string, string> = {
+      // MLB
+      "Yankees": "NYY", "Red Sox": "BOS", "Dodgers": "LAD", "Giants": "SF",
+      "Padres": "SD", "Angels": "LAA", "Astros": "HOU", "Braves": "ATL",
+      "Cubs": "CHC", "Cardinals": "STL", "Phillies": "PHI", "Mets": "NYM",
+      "Blue Jays": "TOR", "Rays": "TB", "Orioles": "BAL", "Athletics": "OAK",
+      // NFL
+      "Chiefs": "KC", "Bills": "BUF", "Cowboys": "DAL", "Eagles": "PHI",
+      "49ers": "SF", "Packers": "GB", "Patriots": "NE", "Dolphins": "MIA",
+      "Rams": "LAR", "Bengals": "CIN", "Ravens": "BAL", "Steelers": "PIT",
+      // NBA
+      "Lakers": "LAL", "Celtics": "BOS", "Warriors": "GSW", "Heat": "MIA",
+      "76ers": "PHI", "Bucks": "MIL", "Suns": "PHO", "Nuggets": "DEN",
+      "Mavericks": "DAL", "Clippers": "LAC", "Nets": "BKN", "Knicks": "NYK",
+      // NHL
+      "Rangers": "NYR", "Bruins": "BOS", "Maple Leafs": "TOR", "Canadiens": "MTL",
+      "Avalanche": "COL", "Golden Knights": "VGK", "Lightning": "TB", "Panthers": "FLA",
+      "Oilers": "EDM", "Flames": "CAL", "Canucks": "VAN", "Kraken": "SEA"
+    };
+    
+    return reverseMap[teamName] || teamName.substring(0, 3).toUpperCase();
   }
 
   // Get full team names from abbreviations
