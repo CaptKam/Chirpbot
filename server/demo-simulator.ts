@@ -241,6 +241,8 @@ export class DemoSimulator {
   private demoUserId: string | null = null;
   private alertCount: Map<string, number> = new Map();
   private realTimeEnginesPaused: boolean = false;
+  private lastAlertTime: number = 0;
+  private MIN_ALERT_INTERVAL = 30000; // Minimum 30 seconds between ANY demo alerts
 
   // Start demo mode for a user
   async startDemo(userId: string, storage: any) {
@@ -302,23 +304,23 @@ export class DemoSimulator {
       this.alertCount.set(gameId, 0);
     }
 
-    // Generate first alert after a delay to let user see the popup tip
+    // Generate first alert after a longer delay to let user see the popup tip
     setTimeout(async () => {
-      await this.generateDemoAlert(sport, teamNames, broadcast);
-    }, 15000 + Math.random() * 10000); // 15-25 second delay before first alert
+      await this.generateDemoAlert(sport, teamNames, broadcast, gameId);
+    }, 30000 + Math.random() * 15000); // 30-45 second delay before first alert
 
-    // Then generate alerts every 15-25 seconds (slower pace for better UX)
+    // Then generate alerts every 45-60 seconds (much slower pace for impressive demo)
     const timer = setInterval(async () => {
-      await this.generateDemoAlert(sport, teamNames, broadcast);
+      await this.generateDemoAlert(sport, teamNames, broadcast, gameId);
       
-      // Stop after 5 alerts per game
+      // Stop after 3 alerts per game (reduced from 5)
       const count = this.alertCount.get(gameId) || 0;
-      if (count >= 5) {
+      if (count >= 3) {
         clearInterval(timer);
         this.activeGames.delete(gameId);
-        console.log(`✅ Demo completed for game: ${gameId}`);
+        console.log(`✅ Demo completed for game: ${gameId} (${count} alerts generated)`);
       }
-    }, 15000 + Math.random() * 10000); // 15-25 second intervals
+    }, 45000 + Math.random() * 15000); // 45-60 second intervals
 
     this.activeGames.set(gameId, timer);
   }
@@ -335,8 +337,16 @@ export class DemoSimulator {
     }
   }
 
-  // Generate a realistic demo alert
-  private async generateDemoAlert(sport: string, teamNames: any, broadcast: (data: any) => void) {
+  // Generate a realistic demo alert with rate limiting
+  private async generateDemoAlert(sport: string, teamNames: any, broadcast: (data: any) => void, gameId: string) {
+    // Global rate limiting - prevent alerts from different games from flooding
+    const now = Date.now();
+    const timeSinceLastAlert = now - this.lastAlertTime;
+    if (timeSinceLastAlert < this.MIN_ALERT_INTERVAL) {
+      console.log(`⏳ Skipping demo alert - too soon (${Math.round(timeSinceLastAlert/1000)}s since last alert, need ${Math.round(this.MIN_ALERT_INTERVAL/1000)}s)`);
+      return;
+    }
+    this.lastAlertTime = now;
     const alerts = DEMO_ALERTS[sport] || DEMO_ALERTS.MLB;
     const alertTemplate = alerts[Math.floor(Math.random() * alerts.length)];
     
@@ -406,11 +416,11 @@ export class DemoSimulator {
     // Broadcast to WebSocket
     broadcast({ type: 'new_alert', data: createdAlert });
     
-    // Update count
-    const gameId = `${sport}-${teamNames.awayTeamShort}-${teamNames.homeTeamShort}`;
-    this.alertCount.set(gameId, (this.alertCount.get(gameId) || 0) + 1);
+    // Update count for this specific game (use the passed gameId)
+    const currentCount = (this.alertCount.get(gameId) || 0) + 1;
+    this.alertCount.set(gameId, currentCount);
     
-    console.log(`📢 Demo alert generated for ${alert.title}: ${alert.type}`);
+    console.log(`📢 Demo alert #${currentCount}/3 generated for ${alert.title}: ${alert.type} (game: ${gameId})`);
   }
 
   // Get team short code from full name (reverse lookup)
