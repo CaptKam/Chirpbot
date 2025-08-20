@@ -292,7 +292,7 @@ export abstract class BaseSportEngine implements SportEngine {
 
       // TEMPORARILY DISABLED: Too many API calls, using fallback predictions only
       // const predictions = await generatePredictions(predictionRequest);
-      const predictions = [];
+      const predictions: any[] = [];
 
       // Match predictions to alert configs
       const triggeredPredictions: AlertConfig[] = [];
