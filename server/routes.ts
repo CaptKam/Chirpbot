@@ -755,6 +755,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test weather data specifically
+  app.get("/api/test/weather", async (req, res) => {
+    try {
+      const { getWeatherData } = await import("./services/weather");
+      
+      const testCities = [
+        'New York', 'Los Angeles', 'Chicago', 'Phoenix', 
+        'Miami', 'Boston', 'Denver', 'Seattle'
+      ];
+      
+      const weatherResults = [];
+      
+      for (const city of testCities) {
+        try {
+          const weatherData = await getWeatherData(city);
+          weatherResults.push({
+            city,
+            status: 'success',
+            data: weatherData,
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          weatherResults.push({
+            city,
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+      
+      const apiKeyStatus = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
+      
+      res.json({
+        timestamp: new Date().toISOString(),
+        apiKeyConfigured: !!(apiKeyStatus && 
+          apiKeyStatus !== "default_key" && 
+          apiKeyStatus !== "your_actual_openweathermap_api_key_here"),
+        apiKey: apiKeyStatus ? `${apiKeyStatus.substring(0, 8)}...` : 'Not configured',
+        results: weatherResults,
+        summary: {
+          total: weatherResults.length,
+          successful: weatherResults.filter(r => r.status === 'success').length,
+          failed: weatherResults.filter(r => r.status === 'failed').length
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Weather test failed', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
   // Test all data feeds
   app.get("/api/test/data-feeds", async (req, res) => {
     try {
