@@ -284,29 +284,20 @@ function LivePreview() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
-              className="space-y-4"
+              className="min-h-[120px]"
             >
-              {alerts.map((alert, index) => (
-                <div 
-                  key={index}
-                  className={`p-4 rounded-xl border transition-all ${
-                    index === activeAlert 
-                      ? 'bg-emerald-500/10 border-emerald-500/50' 
-                      : 'bg-slate-800/30 border-slate-700/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-emerald-400 text-sm font-semibold">{alert.type}</span>
-                    <span className="text-slate-400 text-xs">{alert.time}</span>
-                  </div>
-                  <h4 className="font-bold mb-1">{alert.title}</h4>
-                  <p className="text-sm text-slate-300 mb-2">{alert.description}</p>
-                  <div className="flex items-center gap-2">
-                    <div className="text-xs text-slate-400">Confidence:</div>
-                    <div className="text-xs font-semibold text-emerald-400">{alert.confidence}%</div>
-                  </div>
+              <div className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-emerald-400 text-sm font-semibold">{alerts[activeAlert].type}</span>
+                  <span className="text-slate-400 text-xs">{alerts[activeAlert].time}</span>
                 </div>
-              ))}
+                <h4 className="font-bold mb-1 text-slate-100">{alerts[activeAlert].title}</h4>
+                <p className="text-sm text-slate-300 mb-2">{alerts[activeAlert].description}</p>
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-slate-400">Confidence:</div>
+                  <div className="text-xs font-semibold text-emerald-400">{alerts[activeAlert].confidence}%</div>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>
