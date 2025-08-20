@@ -184,8 +184,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weatherData,
       });
 
-      // Send to Telegram if enabled
-      if (settings?.telegramEnabled) {
+      // Send to Telegram if both push notifications and telegram are enabled
+      if (settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
         const telegramConfig = {
           botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
@@ -448,8 +448,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const alert = await storage.createAlert(alertData);
 
-      // Send to Telegram if enabled
-      if (settings?.telegramEnabled) {
+      // Send to Telegram if both push notifications and telegram are enabled
+      if (settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
         const telegramConfig = {
           botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
