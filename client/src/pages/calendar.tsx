@@ -4,11 +4,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut } from "lucide-react";
+import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut, Eye } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { OnboardingTour } from "@/components/OnboardingTour";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 const TEST_USER_ID = "test-user-123"; // For demo purposes
@@ -16,6 +17,7 @@ const TEST_USER_ID = "test-user-123"; // For demo purposes
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { data: gamesData, isLoading } = useQuery<GameDay>({
     queryKey: ["/api/games/today", { sport: activeSport }],
@@ -53,6 +55,20 @@ export default function Calendar() {
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  // Check if user should see onboarding (e.g., new Test user)
+  useEffect(() => {
+    // Show onboarding for Test user or first-time users
+    const hasSeenOnboarding = localStorage.getItem('chirpbot-onboarding-seen');
+    if (!hasSeenOnboarding && (user?.email?.includes('test') || user?.username === 'Test')) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('chirpbot-onboarding-seen', 'true');
+  };
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -329,6 +345,20 @@ export default function Calendar() {
                       <Badge className="bg-emerald-500/20 text-emerald-300 px-3 py-1.5 rounded-full text-sm font-bold ring-1 ring-emerald-500/30">
                         {game.sport}
                       </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleGameSelection(game.id);
+                        }}
+                        className="p-2 text-slate-400 hover:text-emerald-400 transition-colors"
+                        data-testid={`toggle-monitoring-${game.id}`}
+                      >
+                        <Eye className={`w-5 h-5 ${
+                          isSelected ? 'text-emerald-400 fill-emerald-400/20' : 'text-slate-400'
+                        }`} />
+                      </Button>
                       {isSelected && (
                         <CheckCircle className="w-7 h-7 text-emerald-400" data-testid={`game-selected-${game.id}`} />
                       )}
@@ -383,6 +413,12 @@ export default function Calendar() {
           </div>
         )}
       </div>
+
+      {/* Onboarding Tour */}
+      <OnboardingTour 
+        isVisible={showOnboarding} 
+        onComplete={handleOnboardingComplete}
+      />
     </div>
   );
 }
