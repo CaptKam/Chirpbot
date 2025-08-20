@@ -8,53 +8,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap, User, Lock, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
-import DemoOnboarding from "@/components/DemoOnboarding";
 
 export default function Login() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showDemoOnboarding, setShowDemoOnboarding] = useState(false);
   const { toast } = useToast();
 
   const loginMutation = useMutation({
     mutationFn: async ({ usernameOrEmail, password }: { usernameOrEmail: string; password: string }) => {
-      console.log("Making login request...");
-      const response = await apiRequest("POST", "/api/auth/login", { usernameOrEmail, password });
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
-      const data = await response.json();
-      console.log("Parsed response data:", data);
-      return data;
+      return apiRequest("POST", "/api/auth/login", { usernameOrEmail, password });
     },
-    onSuccess: (data: any) => {
-      console.log("Login successful, user data:", data);
-      // Check if this is the demo account
-      if (data?.username === "Demo") {
-        console.log("Demo user detected - showing onboarding");
-        toast({
-          title: "Welcome to ChirpBot Demo!",
-          description: "Let's show you what we can do.",
-        });
-        console.log("Setting showDemoOnboarding to true");
-        // Use setTimeout to ensure the state update happens after any potential re-renders
-        setTimeout(() => {
-          console.log("Delayed setting of showDemoOnboarding");
-          setShowDemoOnboarding(true);
-        }, 100);
-        console.log("showDemoOnboarding state should now be:", true);
-        // Don't redirect for demo user - let onboarding complete first
-      } else {
-        console.log("Regular user login - redirecting to dashboard");
-        toast({
-          title: "Welcome back!",
-          description: "You have successfully signed in to ChirpBot.",
-        });
-        // Small delay to allow toast to show
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1000);
-      }
+    onSuccess: () => {
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in to ChirpBot.",
+      });
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
       toast({
@@ -91,17 +62,6 @@ export default function Login() {
 
     setIsLoading(true);
     loginMutation.mutate({ usernameOrEmail, password });
-  };
-
-  const handleDemoOnboardingClose = () => {
-    setShowDemoOnboarding(false);
-    // Redirect to dashboard after onboarding
-    window.location.href = "/dashboard";
-  };
-
-  const fillDemoCredentials = () => {
-    setUsernameOrEmail("Demo");
-    setPassword("demo123");
   };
 
   return (
@@ -174,35 +134,6 @@ export default function Login() {
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
-
-              {/* Demo Credentials Button */}
-              <div className="mt-4 text-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={fillDemoCredentials}
-                  className="text-sm bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400"
-                  disabled={isLoading}
-                >
-                  🎯 Try Demo Account
-                </Button>
-              </div>
-              
-              {/* Test Button for Debugging */}
-              <div className="mt-4 text-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    console.log("Test button clicked - opening modal");
-                    setShowDemoOnboarding(true);
-                  }}
-                  className="text-sm bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 hover:border-purple-400"
-                  disabled={isLoading}
-                >
-                  🧪 Test Modal
-                </Button>
-              </div>
             </form>
 
             {/* Social Auth Divider */}
@@ -271,12 +202,6 @@ export default function Login() {
           <p>📱 Seamless cross-device experience</p>
         </div>
       </div>
-
-      {/* Demo Onboarding Modal */}
-      <DemoOnboarding 
-        isOpen={showDemoOnboarding} 
-        onClose={handleDemoOnboardingClose} 
-      />
     </div>
   );
 }

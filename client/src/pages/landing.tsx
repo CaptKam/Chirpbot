@@ -231,7 +231,6 @@ function ValueProps() {
 
 function LivePreview() {
   const [visibleAlerts, setVisibleAlerts] = useState<number[]>([]);
-  const [showSportsbook, setShowSportsbook] = useState(false);
   const alerts = [
     {
       type: "RISP Alert",
@@ -262,52 +261,20 @@ function LivePreview() {
     }
   ];
 
-  const sportsbooks = [
-    {
-      name: "DraftKings",
-      game: "Yankees @ Red Sox", 
-      yankees: "-145",
-      redSox: "+125",
-      over: "8.5 (-110)",
-      under: "8.5 (-110)"
-    },
-    {
-      name: "FanDuel",
-      game: "Chiefs @ Bills",
-      chiefs: "-3.5 (-108)",
-      bills: "+3.5 (-112)", 
-      over: "54.5 (-105)",
-      under: "54.5 (-115)"
-    },
-    {
-      name: "BetMGM",
-      game: "Lakers @ Warriors",
-      Lakers: "+4.5 (-110)",
-      warriors: "-4.5 (-110)",
-      over: "225.5 (-108)",
-      under: "225.5 (-112)"
-    }
-  ];
-
   useEffect(() => {
     const interval = setInterval(() => {
       setVisibleAlerts((prev) => {
         if (prev.length === 0) {
-          setShowSportsbook(false);
           return [0]; // Show first alert
         } else if (prev.length === 1) {
           return [0, 1]; // Show first and second
         } else if (prev.length === 2) {
           return [0, 1, 2]; // Show all three
         } else {
-          // After showing all alerts, slide to show sportsbook
-          setTimeout(() => setShowSportsbook(true), 1000);
-          setTimeout(() => setShowSportsbook(false), 4000);
-          setTimeout(() => setVisibleAlerts([]), 5000);
-          return [0, 1, 2]; // Keep all visible while sportsbook shows
+          return []; // Reset to empty
         }
       });
-    }, 4000); // 4 seconds between each step
+    }, 4000); // Slower timing - 4 seconds between each step
     return () => clearInterval(interval);
   }, []);
 
@@ -320,108 +287,42 @@ function LivePreview() {
           </h2>
           <p className="text-lg text-slate-400">Live preview of real-time sports alerts</p>
         </div>
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-[#0B1220] rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
-            <div className="flex items-center gap-3 p-6 pb-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-[#0B1220] rounded-2xl border border-slate-800 p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
               <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span className="text-slate-400 text-sm ml-auto">ChirpBot Live</span>
             </div>
-            
-            <div className="relative h-[400px] overflow-hidden">
-              {/* Alerts Panel */}
-              <motion.div
-                animate={{ 
-                  x: showSportsbook ? "-50%" : "0%" 
-                }}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
-                className="absolute inset-0 px-6 pb-6"
-              >
-                <div className="space-y-4 min-h-[120px]">
-                  {visibleAlerts.slice().reverse().map((alertIndex, displayIndex) => (
-                    <motion.div
-                      key={`${alertIndex}-${displayIndex}`}
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: 0.1 }}
-                      className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/50"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-emerald-400 text-sm font-semibold">{alerts[alertIndex].type}</span>
-                        <span className="text-slate-400 text-xs">{alerts[alertIndex].time}</span>
-                      </div>
-                      <h4 className="font-bold mb-1 text-slate-100">{alerts[alertIndex].title}</h4>
-                      <p className="text-sm text-slate-300 mb-2">{alerts[alertIndex].description}</p>
-                      <div className="bg-slate-800/50 rounded-lg p-2 mb-2">
-                        <div className="text-xs text-blue-300 mb-1">🤖 AI Analysis:</div>
-                        <div className="text-xs text-slate-300">{alerts[alertIndex].aiContext}</div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs text-slate-400">Confidence:</div>
-                          <div className="text-xs font-semibold text-emerald-400">{alerts[alertIndex].confidence}%</div>
-                        </div>
-                        <div className="text-xs text-slate-400">{alerts[alertIndex].weather}</div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Sportsbook Panel */}
-              <motion.div
-                animate={{ 
-                  x: showSportsbook ? "0%" : "100%" 
-                }}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
-                className="absolute inset-0 px-6 pb-6 bg-gradient-to-r from-purple-900/20 to-indigo-900/20"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-purple-400 text-lg font-bold">📊 Live Odds</span>
-                  <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full">UPDATED</span>
-                </div>
-                
-                <div className="space-y-3">
-                  {sportsbooks.map((book, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: showSportsbook ? 1 : 0, x: showSportsbook ? 0 : 20 }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
-                      className="p-3 rounded-xl border bg-purple-500/5 border-purple-500/20"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-purple-400 text-sm font-semibold">{book.name}</span>
-                        <span className="text-slate-400 text-xs">Live</span>
-                      </div>
-                      <h4 className="font-bold text-slate-100 text-sm mb-2">{book.game}</h4>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-slate-800/30 rounded px-2 py-1">
-                          <span className="text-slate-400">ML: </span>
-                          <span className="text-green-400 font-semibold">
-                            {book.yankees || book.chiefs || book.Lakers}
-                          </span>
-                        </div>
-                        <div className="bg-slate-800/30 rounded px-2 py-1">
-                          <span className="text-slate-400">ML: </span>
-                          <span className="text-red-400 font-semibold">
-                            {book.redSox || book.bills || book.warriors}
-                          </span>
-                        </div>
-                        <div className="bg-slate-800/30 rounded px-2 py-1">
-                          <span className="text-slate-400">O: </span>
-                          <span className="text-blue-400 font-semibold">{book.over}</span>
-                        </div>
-                        <div className="bg-slate-800/30 rounded px-2 py-1">
-                          <span className="text-slate-400">U: </span>
-                          <span className="text-blue-400 font-semibold">{book.under}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
+            <div className="space-y-4 min-h-[120px]">
+              {visibleAlerts.slice().reverse().map((alertIndex, displayIndex) => (
+                <motion.div
+                  key={`${alertIndex}-${displayIndex}`}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/50"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-emerald-400 text-sm font-semibold">{alerts[alertIndex].type}</span>
+                    <span className="text-slate-400 text-xs">{alerts[alertIndex].time}</span>
+                  </div>
+                  <h4 className="font-bold mb-1 text-slate-100">{alerts[alertIndex].title}</h4>
+                  <p className="text-sm text-slate-300 mb-2">{alerts[alertIndex].description}</p>
+                  <div className="bg-slate-800/50 rounded-lg p-2 mb-2">
+                    <div className="text-xs text-blue-300 mb-1">🤖 AI Analysis:</div>
+                    <div className="text-xs text-slate-300">{alerts[alertIndex].aiContext}</div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-slate-400">Confidence:</div>
+                      <div className="text-xs font-semibold text-emerald-400">{alerts[alertIndex].confidence}%</div>
+                    </div>
+                    <div className="text-xs text-slate-400">{alerts[alertIndex].weather}</div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </div>

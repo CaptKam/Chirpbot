@@ -8,7 +8,6 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
-import { demoSimulator, DemoAlertSimulator } from "./demoSimulator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -335,13 +334,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         awayTeamName
       });
       
-      // Check if this is the demo user and start simulation
-      const demoUserId = await DemoAlertSimulator.getDemoUserId();
-      if (userId === demoUserId) {
-        console.log(`🎯 Demo user added game monitoring - starting simulation`);
-        await demoSimulator.startSimulation(userId);
-      }
-      
       res.json(monitoring);
     } catch (error) {
       console.error("Error adding monitored game:", error);
@@ -354,17 +346,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId, gameId } = req.params;
       
       await storage.removeUserMonitoredGame(userId, gameId);
-      
-      // Check if this is the demo user and they have no more games, stop simulation
-      const demoUserId = await DemoAlertSimulator.getDemoUserId();
-      if (userId === demoUserId) {
-        const remainingGames = await storage.getUserMonitoredGames(userId);
-        if (remainingGames.length === 0) {
-          console.log(`🎯 Demo user removed all games - stopping simulation`);
-          demoSimulator.stopSimulation();
-        }
-      }
-      
       res.json({ success: true });
     } catch (error) {
       console.error("Error removing monitored game:", error);
@@ -599,18 +580,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/logout", async (req, res) => {
     try {
-      const session = req.session as any;
-      const userId = session?.userId;
-      
-      // Check if this is the demo user and stop simulation
-      if (userId) {
-        const demoUserId = await DemoAlertSimulator.getDemoUserId();
-        if (userId === demoUserId) {
-          console.log(`🎯 Demo user logging out - stopping simulation`);
-          demoSimulator.stopSimulation();
-        }
-      }
-      
       req.session.destroy((err) => {
         if (err) {
           console.error("Session destroy error:", err);
