@@ -7,8 +7,8 @@ export interface WeatherData {
 
 export async function getWeatherData(location: string): Promise<WeatherData | null> {
   try {
-    // Using a free weather API (replace with your preferred service)
-    const apiKey = process.env.WEATHER_API_KEY || process.env.WEATHER_API_KEY_ENV_VAR || "default_key";
+    // Using OpenWeatherMap API
+    const apiKey = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY || "default_key";
     
     if (!apiKey || apiKey === "default_key") {
       console.log("Weather API key not configured, returning mock data");
