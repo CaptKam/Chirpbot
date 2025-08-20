@@ -56,11 +56,18 @@ function Nav() {
             <a className="text-sm text-slate-300 hover:text-white" href="#preview">Preview</a>
             <a className="text-sm text-slate-300 hover:text-white" href="#pricing">Pricing</a>
             <a className="text-sm text-slate-300 hover:text-white" href="#faq">FAQ</a>
-            <Link href="/signup">
-              <Button className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/25" data-testid="button-nav-mobile-signup">
-                Start Free
-              </Button>
-            </Link>
+            <div className="flex flex-col gap-3 pt-2">
+              <Link href="/login">
+                <Button variant="outline" className="w-full rounded-xl border-emerald-500 text-emerald-400 hover:bg-emerald-500 hover:text-slate-900 px-4 py-2 text-sm font-semibold" data-testid="button-nav-mobile-login">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/25" data-testid="button-nav-mobile-signup">
+                  Start Free
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       )}
