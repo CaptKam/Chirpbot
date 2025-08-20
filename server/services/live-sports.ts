@@ -289,9 +289,14 @@ class LiveSportsService {
       }
     }
 
+    // Filter out final games since they can't generate alerts
+    const activeGames = games.filter(game => game.status !== 'final');
+    
+    console.log(`Filtered out ${games.length - activeGames.length} final games, showing ${activeGames.length} active games`);
+
     return {
       date: today,
-      games,
+      games: activeGames,
     };
   }
 }
