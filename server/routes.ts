@@ -646,7 +646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Start demo simulator
-        await demoSimulator.startDemo(demoUser.id);
+        await demoSimulator.startDemo(demoUser.id, storage);
         
         // Start session
         (req.session as any).userId = demoUser.id;

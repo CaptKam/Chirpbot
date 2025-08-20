@@ -242,11 +242,13 @@ export class DemoSimulator {
   private alertCount: Map<string, number> = new Map();
 
   // Start demo mode for a user
-  async startDemo(userId: string) {
+  async startDemo(userId: string, storage: any) {
     this.demoUserId = userId;
     // Clear any existing demo data
     await this.resetDemo();
-    console.log(`🎮 Demo mode started for user: ${userId}`);
+    // Clear all monitored games for fresh demo experience
+    await storage.clearAllUserMonitoredGames(userId);
+    console.log(`🎮 Demo mode started for user: ${userId} - all game selections cleared`);
   }
 
   // Reset demo data

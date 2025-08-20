@@ -24,6 +24,7 @@ export interface IStorage {
   getUserMonitoredGamesBySport(userId: string, sport: string): Promise<UserMonitoredTeam[]>;
   addUserMonitoredGame(monitoring: InsertUserMonitoredTeam): Promise<UserMonitoredTeam>;
   removeUserMonitoredGame(userId: string, gameId: string): Promise<void>;
+  clearAllUserMonitoredGames(userId: string): Promise<void>;
   isGameMonitoredByUser(userId: string, gameId: string): Promise<boolean>;
 
   // Alerts
@@ -242,6 +243,10 @@ export class MemStorage implements IStorage {
   }
 
   async removeUserMonitoredGame(userId: string, gameId: string): Promise<void> {
+    // Mock implementation - do nothing
+  }
+
+  async clearAllUserMonitoredGames(userId: string): Promise<void> {
     // Mock implementation - do nothing
   }
 
@@ -466,6 +471,11 @@ export class DatabaseStorage implements IStorage {
   async removeUserMonitoredGame(userId: string, gameId: string): Promise<void> {
     await db.delete(userMonitoredTeams)
       .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.gameId, gameId)));
+  }
+
+  async clearAllUserMonitoredGames(userId: string): Promise<void> {
+    await db.delete(userMonitoredTeams)
+      .where(eq(userMonitoredTeams.userId, userId));
   }
 
   async isGameMonitoredByUser(userId: string, gameId: string): Promise<boolean> {
