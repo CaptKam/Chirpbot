@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
+// Slider component removed
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Zap, Bell, CheckCircle, AlertCircle, LogOut, UserPlus } from "lucide-react";
@@ -132,13 +132,7 @@ export default function Settings() {
     updateSettingsMutation.mutate({ alertTypes: updatedAlertTypes });
   };
 
-  const handleAIToggle = (enabled: boolean) => {
-    updateSettingsMutation.mutate({ aiEnabled: enabled });
-  };
-
-  const handleConfidenceThresholdChange = (value: number[]) => {
-    updateSettingsMutation.mutate({ aiConfidenceThreshold: value[0] });
-  };
+  // AI handlers removed
 
   const handleTelegramToggle = (enabled: boolean) => {
     updateSettingsMutation.mutate({ telegramEnabled: enabled });
@@ -230,55 +224,7 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* AI Settings Section */}
-            <div>
-              <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-4">
-                AI Analysis
-              </h2>
-
-              <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 space-y-4 hover:bg-white/10 transition-all duration-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-100">AI Context Enhancement</h3>
-                    <p className="text-sm text-slate-300 mt-1">Add AI analysis to all alerts</p>
-                  </div>
-                  <Switch
-                    checked={settings.aiEnabled}
-                    onCheckedChange={handleAIToggle}
-                    data-testid="toggle-ai"
-                    className="data-[state=checked]:bg-emerald-500"
-                  />
-                </div>
-
-                {settings.aiEnabled && (
-                  <div className="border-t border-white/10 pt-4">
-                    <label className="block text-sm font-medium text-slate-100 mb-2">
-                      AI Confidence Threshold
-                    </label>
-                    <div className="flex items-center space-x-4">
-                      <span className="text-sm text-slate-300">75%</span>
-                      <div className="flex-1">
-                        <Slider
-                          value={[settings.aiConfidenceThreshold]}
-                          onValueChange={handleConfidenceThresholdChange}
-                          min={75}
-                          max={100}
-                          step={5}
-                          className="w-full"
-                          data-testid="ai-confidence-slider"
-                        />
-                      </div>
-                      <span className="text-sm text-slate-300">100%</span>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-sm font-medium text-emerald-400" data-testid="current-threshold">
-                        Current: {settings.aiConfidenceThreshold}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            </div>
+            {/* Advanced Settings Removed */}
 
             {/* Notification Settings */}
             <div>
