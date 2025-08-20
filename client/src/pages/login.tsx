@@ -40,20 +40,24 @@ export default function Login() {
   });
 
   const handleDemoLogin = () => {
+    console.log("Demo button clicked");
+    
     // If fields are already filled with demo credentials, auto-login
     if (usernameOrEmail === "demo" && password === "demo123") {
+      console.log("Auto-logging in with demo credentials");
       setIsLoading(true);
       loginMutation.mutate({ usernameOrEmail: "demo", password: "demo123" });
       return;
     }
     
+    console.log("Filling demo credentials");
     // Otherwise, fill the fields
     setUsernameOrEmail("demo");
     setPassword("demo123");
     
     toast({
       title: "Demo credentials loaded",
-      description: "Click 'Try Demo Account' again to auto-login, or use the Sign In button.",
+      description: "Demo credentials have been filled in. Click 'Sign In' or click this button again to auto-login.",
     });
   };
 
@@ -158,14 +162,19 @@ export default function Login() {
             <div className="mt-4">
               <Button
                 type="button"
-                onClick={handleDemoLogin}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDemoLogin();
+                }}
                 data-testid="button-demo"
                 variant="outline"
-                className="w-full h-12 bg-blue-500/10 border-blue-400/30 text-blue-300 hover:bg-blue-500/20 hover:border-blue-400/50 hover:text-blue-200 font-medium"
+                className="w-full h-12 bg-blue-500/10 border-blue-400/30 text-blue-300 hover:bg-blue-500/20 hover:border-blue-400/50 hover:text-blue-200 font-medium cursor-pointer"
                 disabled={isLoading}
+                style={{ pointerEvents: 'auto' }}
               >
                 <Play className="w-4 h-4 mr-2" />
-                Try Demo Account
+                {usernameOrEmail === "demo" && password === "demo123" ? "Login with Demo" : "Try Demo Account"}
               </Button>
             </div>
 
