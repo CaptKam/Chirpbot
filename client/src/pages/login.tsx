@@ -37,16 +37,23 @@ export default function Login() {
           description: "Let's show you what we can do.",
         });
         console.log("Setting showDemoOnboarding to true");
-        setShowDemoOnboarding(true);
+        // Use setTimeout to ensure the state update happens after any potential re-renders
+        setTimeout(() => {
+          console.log("Delayed setting of showDemoOnboarding");
+          setShowDemoOnboarding(true);
+        }, 100);
         console.log("showDemoOnboarding state should now be:", true);
+        // Don't redirect for demo user - let onboarding complete first
       } else {
         console.log("Regular user login - redirecting to dashboard");
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in to ChirpBot.",
         });
-        // Redirect to dashboard for regular users
-        window.location.href = "/dashboard";
+        // Small delay to allow toast to show
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1000);
       }
     },
     onError: (error: Error) => {
@@ -178,6 +185,22 @@ export default function Login() {
                   disabled={isLoading}
                 >
                   🎯 Try Demo Account
+                </Button>
+              </div>
+              
+              {/* Test Button for Debugging */}
+              <div className="mt-4 text-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    console.log("Test button clicked - opening modal");
+                    setShowDemoOnboarding(true);
+                  }}
+                  className="text-sm bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 hover:border-purple-400"
+                  disabled={isLoading}
+                >
+                  🧪 Test Modal
                 </Button>
               </div>
             </form>
