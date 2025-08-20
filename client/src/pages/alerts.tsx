@@ -193,7 +193,6 @@ export default function Alerts() {
           </Button>
         </div>
       </header>
-
       {/* Filters */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 p-4">
         <div className="mb-3">
@@ -225,7 +224,6 @@ export default function Alerts() {
           ))}
         </div>
       </div>
-
       {/* Alerts Feed */}
       <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
         {isLoading ? (
@@ -278,33 +276,29 @@ export default function Alerts() {
                 {/* NEW badge for unseen alerts */}
                 {!alert.seen && (
                   <div className="absolute -top-2 -right-2 z-10">
-                    <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                    <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse ml-[10px] mr-[10px] mt-[8px] mb-[8px]">
                       NEW
                     </div>
                   </div>
                 )}
-                
                 {/* Quick Impact Header */}
                 <div className="text-center mb-2">
                   <h2 className="text-base font-black uppercase tracking-wide text-emerald-400">
                     ⚡ {alert.type.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}!
                   </h2>
                 </div>
-                
                 {/* Key Situation */}
                 <div className="text-center mb-2">
                   <h3 className="font-bold text-slate-100" style={{fontSize: '15px'}} data-testid={`alert-title-${alert.id}`}>
                     {alert.title.toUpperCase()}
                   </h3>
                 </div>
-
                 {/* Quick Action Insight */}
                 <div className="text-center">
                   <p className="text-sm font-medium text-slate-300" data-testid={`alert-description-${alert.id}`}>
                     {alert.description}
                   </p>
                 </div>
-
                 {/* AI Analysis */}
                 {alert.aiContext && (
                   <div className="mt-3 p-3 bg-emerald-500/10 backdrop-blur-sm rounded-lg ring-1 ring-emerald-500/30">
