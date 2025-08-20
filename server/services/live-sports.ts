@@ -50,11 +50,8 @@ class LiveSportsService {
   private CACHE_TTL = 5000; // 5 seconds
 
   private async fetchESPNGames(sport: 'MLB' | 'NFL' | 'NBA' | 'NHL'): Promise<Game[]> {
-    // Check cache first
-    const cached = this.espnCache.get(sport);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      return cached.data;
-    }
+    // Clear cache to ensure fresh data with updated filtering
+    this.espnCache.delete(sport);
     
     try {
       const url = this.ESPN_ENDPOINTS[sport];
@@ -80,6 +77,8 @@ class LiveSportsService {
           return null as any;
         }
 
+        const gameStatus = this.mapESPNStatus(game.status);
+        
         return {
           id: `${sport.toLowerCase()}-${game.id}`,
           sport,
@@ -94,7 +93,7 @@ class LiveSportsService {
             abbreviation: awayTeam.team.abbreviation,
           },
           startTime: game.date,
-          status: this.mapESPNStatus(game.status),
+          status: gameStatus,
           venue: competition.venue?.fullName || 'TBD',
           isSelected: false,
         };
@@ -113,7 +112,13 @@ class LiveSportsService {
     const state = status.type.state.toLowerCase();
     const name = status.type.name.toLowerCase();
     
-    if (status.type.completed) return 'final';
+    // More comprehensive final status detection
+    if (status.type.completed || 
+        name.includes('final') || 
+        state === 'post') {
+      return 'final';
+    }
+    
     if (state === 'in' || name.includes('halftime') || name.includes('break')) return 'live';
     return 'scheduled';
   }
