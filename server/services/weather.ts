@@ -11,8 +11,8 @@ export async function getWeatherData(location: string): Promise<WeatherData | nu
     const apiKey = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
     
     if (!apiKey || apiKey === "default_key" || apiKey === "your_actual_openweathermap_api_key_here") {
-      console.log(`🌤️ Weather API key not configured (${apiKey ? 'placeholder detected' : 'missing'}), returning mock data for ${location}`);
-      return getMockWeatherData(location);
+      console.log(`🌤️ Weather API key not configured (${apiKey ? 'placeholder detected' : 'missing'}), returning null for ${location}`);
+      return null;
     }
 
     console.log(`🌤️ Fetching real weather data for ${location}...`);
@@ -24,9 +24,9 @@ export async function getWeatherData(location: string): Promise<WeatherData | nu
     if (!response.ok) {
       console.error(`🌤️ Weather API request failed for ${location}:`, response.status, response.statusText);
       if (response.status === 401) {
-        console.error("🌤️ Invalid API key detected, falling back to mock data");
+        console.error("🌤️ Invalid API key detected");
       }
-      return getMockWeatherData(location);
+      return null;
     }
 
     const data = await response.json();
@@ -41,23 +41,11 @@ export async function getWeatherData(location: string): Promise<WeatherData | nu
     };
   } catch (error) {
     console.error(`🌤️ Weather service error for ${location}:`, error);
-    return getMockWeatherData(location);
+    return null;
   }
 }
 
-function getMockWeatherData(location: string): WeatherData {
-  // Return realistic weather data based on location patterns
-  const locationWeather: Record<string, WeatherData> = {
-    "Los Angeles": { temperature: 72, condition: "Clear", windSpeed: 5, windDirection: "SW" },
-    "San Francisco": { temperature: 65, condition: "Cloudy", windSpeed: 12, windDirection: "W" },
-    "San Diego": { temperature: 78, condition: "Sunny", windSpeed: 8, windDirection: "SW" },
-    "Kansas City": { temperature: 68, condition: "Clear", windSpeed: 10, windDirection: "S" },
-    "Buffalo": { temperature: 55, condition: "Overcast", windSpeed: 15, windDirection: "NW" },
-    "Boston": { temperature: 62, condition: "Partly Cloudy", windSpeed: 9, windDirection: "E" },
-  };
 
-  return locationWeather[location] || { temperature: 70, condition: "Clear", windSpeed: 5, windDirection: "W" };
-}
 
 function getWindDirection(degrees: number): string {
   const directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];

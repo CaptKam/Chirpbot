@@ -51,7 +51,7 @@ export class SportsDataService {
     ];
 
     const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-    
+
     if (Math.random() > randomEvent.probability) {
       return null; // Don't generate event this time
     }
@@ -145,7 +145,7 @@ export class SportsDataService {
     if (sport) {
       return this.getMockGames(sport);
     }
-    
+
     return [
       ...this.getMockGames("MLB"),
       ...this.getMockGames("NFL"),

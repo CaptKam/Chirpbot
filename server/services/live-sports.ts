@@ -45,7 +45,7 @@ class LiveSportsService {
     NBA: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
     NHL: 'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard'
   };
-  
+
   // Cache ESPN data for 5 seconds to reduce API calls
   private espnCache = new Map<string, { data: Game[], timestamp: number }>();
   private CACHE_TTL = 5000; // 5 seconds
@@ -53,7 +53,7 @@ class LiveSportsService {
   private async fetchESPNGames(sport: 'MLB' | 'NFL' | 'NBA' | 'NHL'): Promise<Game[]> {
     // Clear cache to ensure fresh data with updated filtering
     this.espnCache.delete(sport);
-    
+
     try {
       const url = this.ESPN_ENDPOINTS[sport];
       const data = await fetchJson<ESPNResponse>(url, {
@@ -62,7 +62,7 @@ class LiveSportsService {
         },
         timeoutMs: 8000
       });
-      
+
       if (!data.events || data.events.length === 0) {
         console.log(`No ${sport} games found for today`);
         return [];
@@ -79,7 +79,7 @@ class LiveSportsService {
         }
 
         const gameStatus = this.mapESPNStatus(game.status);
-        
+
         return {
           id: `${sport.toLowerCase()}-${game.id}`,
           sport,
@@ -99,7 +99,7 @@ class LiveSportsService {
           isSelected: false,
         };
       }).filter((game): game is Game => game !== null);
-      
+
       // Cache the results
       this.espnCache.set(sport, { data: games, timestamp: Date.now() });
       return games;
@@ -112,14 +112,14 @@ class LiveSportsService {
   private mapESPNStatus(status: ESPNGame['status']): 'scheduled' | 'live' | 'final' {
     const state = status.type.state.toLowerCase();
     const name = status.type.name.toLowerCase();
-    
+
     // More comprehensive final status detection
     if (status.type.completed || 
         name.includes('final') || 
         state === 'post') {
       return 'final';
     }
-    
+
     if (state === 'in' || name.includes('halftime') || name.includes('break')) return 'live';
     return 'scheduled';
   }
@@ -254,9 +254,9 @@ class LiveSportsService {
     try {
       const mlbGames = await mlbApi.getTodaysGames();
       const targetDate = date || new Date().toISOString().split('T')[0];
-      
+
       console.log(`Fetched ${mlbGames.length} MLB games from official MLB.com API`);
-      
+
       return {
         date: targetDate,
         games: mlbGames,
@@ -267,48 +267,49 @@ class LiveSportsService {
     }
   }
 
-  async getTodaysGames(sport?: string): Promise<GameDay> {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    let games: Game[] = [];
+  async getTodaysGames(sport?: string): Promise<{ date: string; games: Game[] }> {
+    const today = new Date().toISOString().split('T')[0];
 
-    if (!sport) {
-      // Use official MLB API for MLB games, SportsData.io for others
-      const [mlbGames, nflGames, nbaGames, nhlGames] = await Promise.all([
-        mlbApi.getTodaysGames(),  // Official MLB.com API
-        sportsDataService.getNFLGames(today),  // SportsData.io
-        sportsDataService.getNBAGames(today),  // SportsData.io
-        sportsDataService.getNHLGames(today),  // SportsData.io
-      ]);
-      games = [...mlbGames, ...nflGames, ...nbaGames, ...nhlGames];
-      console.log(`🏈 Fetched ${games.length} total games via SportsData.io + MLB.com (${mlbGames.length} MLB, ${nflGames.length} NFL, ${nbaGames.length} NBA, ${nhlGames.length} NHL)`);
-    } else if (sport.toUpperCase() === 'MLB') {
-      // Use official MLB API for MLB-only requests
-      games = await mlbApi.getTodaysGames();
-      console.log(`Fetched ${games.length} MLB games from official MLB.com API`);
-    } else {
-      // Use SportsData.io for other sports
-      const sportCode = sport.toUpperCase() as 'NFL' | 'NBA' | 'NHL';
-      if (sportCode === 'NFL') {
-        games = await sportsDataService.getNFLGames(today);
-      } else if (sportCode === 'NBA') {
-        games = await sportsDataService.getNBAGames(today);
-      } else if (sportCode === 'NHL') {
-        games = await sportsDataService.getNHLGames(today);
-      } else {
-        console.warn(`Unknown sport: ${sport}`);
+    try {
+      let games: Game[] = [];
+
+      if (!sport || sport === 'MLB') {
+        // Get real MLB games from official API
+        const mlbGames = await mlbApi.getTodaysGames();
+        games = games.concat(mlbGames);
       }
-      console.log(`🏈 Fetched ${games.length} ${sport} games from SportsData.io`);
+
+      if (!sport || sport === 'NFL') {
+        // Get real NFL games from SportsData.io
+        const nflGames = await sportsDataService.getNFLGames();
+        games = games.concat(nflGames);
+      }
+
+      if (!sport || sport === 'NBA') {
+        // Get real NBA games from SportsData.io
+        const nbaGames = await sportsDataService.getNBAGames();
+        games = games.concat(nbaGames);
+      }
+
+      if (!sport || sport === 'NHL') {
+        // Get real NHL games from SportsData.io
+        const nhlGames = await sportsDataService.getNHLGames();
+        games = games.concat(nhlGames);
+      }
+
+      return {
+        date: today,
+        games: sport ? games.filter(game => game.sport === sport) : games,
+      };
+    } catch (error) {
+      console.error(`Error fetching ${sport || 'all'} games:`, error);
+
+      // Return empty array instead of mock data on error
+      return {
+        date: today,
+        games: [],
+      };
     }
-
-    // Filter out final games since they can't generate alerts
-    const activeGames = games.filter(game => game.status !== 'final');
-    
-    console.log(`Filtered out ${games.length - activeGames.length} final games, showing ${activeGames.length} active games`);
-
-    return {
-      date: today,
-      games: activeGames,
-    };
   }
 }
 
