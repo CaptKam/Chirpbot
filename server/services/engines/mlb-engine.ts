@@ -699,15 +699,18 @@ export class MLBEngine extends BaseSportEngine {
         // Get weather data for context
         const weatherData = await getWeatherData(gameState.homeTeam);
 
-        // TEMPORARILY DISABLED: All OpenAI calls to reduce API usage
-        let aiAnalysis = { context: "Standard game situation", confidence: 0 };
-        // Commenting out to ensure zero API calls
-        /*
-        if (alert.priority >= 85) {
-          const { analyzeAlert } = await import('../openai');
-          aiAnalysis = await analyzeAlert(alert.type, this.sport, gameState, weatherData);
+        // Get AI analysis for ALL alerts when enabled
+        let aiAnalysis = { context: "Standard game situation", confidence: 75 };
+        
+        const sportSettings = await storage.getSettingsBySport(this.sport);
+        if (sportSettings?.aiEnabled) {
+          try {
+            const { analyzeAlert } = await import('../openai');
+            aiAnalysis = await analyzeAlert(alert.type, this.sport, gameState, weatherData);
+          } catch (error) {
+            console.log(`AI analysis skipped for ${alert.type}: ${error}`);
+          }
         }
-        */
 
         const alertData = {
           type: alert.type,

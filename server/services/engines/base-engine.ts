@@ -171,12 +171,12 @@ export abstract class BaseSportEngine implements SportEngine {
       try {
         const weatherData = await getWeatherData(gameState.homeTeam);
 
-        // Only get AI analysis for high-priority alerts (85+) to reduce API calls
+        // Get AI analysis for ALL alerts when AI is enabled
         let aiContext = `${alert.type} situation detected`;
         let aiConfidence = 75;
 
         // Use centralized OpenAI manager for AI analysis
-        if (alert.priority >= 85 && (await storage.getSettingsBySport(this.sport))?.aiEnabled) {
+        if ((await storage.getSettingsBySport(this.sport))?.aiEnabled) {
           try {
             const openaiManager = getOpenAIManager();
             const aiAnalysis = await openaiManager.analyzeAlert(
