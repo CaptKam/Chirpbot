@@ -62,7 +62,9 @@ interface MLBGameState {
 // Interface for the alert data to be inserted into storage
 interface InsertAlert {
   id: string;
+  title: string;
   type: string;
+  description: string;
   sport: string;
   team: string;
   opponent: string;
@@ -76,10 +78,12 @@ interface InsertAlert {
 
 export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
-  monitoringInterval = 2000; // 2 seconds for ultra-fast real-time monitoring
+  monitoringInterval = 15000; // 15 seconds - reasonable for external APIs
 
   // Track last game state to prevent duplicate alerts
   private lastGameStates = new Map<string, string>(); // key: gameId-alertType, value: state hash
+  private apiFailureCount = 0;
+  private lastApiError: Date | null = null;
 
   alertConfigs: AlertConfig[] = [
     {
@@ -699,10 +703,17 @@ export class MLBEngine extends BaseSportEngine {
 
         const alertData: InsertAlert = {
           id: randomUUID(),
-          type: alert.type,
-          sport: this.sport,
           title: alert.type,
+          type: alert.type,
           description: this.generateDynamicDescription(alert, gameState),
+          sport: this.sport,
+          team: gameState.homeTeam,
+          opponent: gameState.awayTeam,
+          message: this.generateDynamicDescription(alert, gameState),
+          probability: alert.probability,
+          priority: alert.priority,
+          createdAt: new Date(),
+          isRead: false,
           gameInfo: {
             homeTeam: gameState.homeTeam,
             awayTeam: gameState.awayTeam,
@@ -743,13 +754,7 @@ export class MLBEngine extends BaseSportEngine {
                 losses: gameState.currentPitcher.stats.losses
               }
             } : undefined
-          },
-          weatherData: weatherData ? {
-            temperature: weatherData.temperature,
-            condition: weatherData.condition,
-            windSpeed: weatherData.windSpeed,
-            windDirection: weatherData.windDirection
-          } : null
+          }
         };
 
         const createdAlert = await storage.createAlert(alertData);
@@ -791,7 +796,7 @@ export class MLBEngine extends BaseSportEngine {
       }
 
       const settings = await storage.getSettingsBySport(this.sport);
-      console.log(`📊 MLB Settings - AI Enabled: ${settings?.aiEnabled}`);
+      console.log(`📊 MLB Settings - Monitoring: ${settings ? 'Enabled' : 'Disabled'}`);
 
       // Enable core MLB settings if not set
       if (settings) {
@@ -840,6 +845,14 @@ export class MLBEngine extends BaseSportEngine {
             continue;
           }
 
+          // Skip if we've had too many API failures recently (circuit breaker)
+          if (this.apiFailureCount >= 3 && this.lastApiError && (Date.now() - this.lastApiError.getTime()) < 60000) {
+            if (this.apiFailureCount <= 3 || this.apiFailureCount % 20 === 0) {
+              console.log(`⏸️ Skipping API calls due to recent failures (${this.apiFailureCount} failures in last minute)`);
+            }
+            continue;
+          }
+
           console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
           const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
 
@@ -849,6 +862,10 @@ export class MLBEngine extends BaseSportEngine {
             continue;
           }
 
+          // Reset API failure count on success
+          this.apiFailureCount = 0;
+          this.lastApiError = null;
+          
           console.log(`✅ Got live feed data for game ${game.gamePk}, processing...`);
 
           const gameState = this.extractGameState(liveFeed);
@@ -868,7 +885,21 @@ export class MLBEngine extends BaseSportEngine {
           }
 
         } catch (gameError) {
-          console.error(`Error processing ${this.sport} game:`, gameError);
+          this.apiFailureCount++;
+          this.lastApiError = new Date();
+          
+          // Only log errors occasionally to reduce spam
+          if (this.apiFailureCount <= 3 || this.apiFailureCount % 10 === 0) {
+            console.error(`Error processing ${this.sport} game ${game.gamePk} (failure ${this.apiFailureCount}):`, gameError instanceof Error ? gameError.message : 'Unknown error');
+          }
+          
+          // Implement exponential backoff by increasing monitoring interval
+          if (this.apiFailureCount >= 5) {
+            this.monitoringInterval = Math.min(60000, 15000 * Math.min(this.apiFailureCount / 5, 4)); // Max 1 minute
+            if (this.apiFailureCount === 5) {
+              console.log(`🚨 Increased monitoring interval to ${this.monitoringInterval/1000}s due to API failures`);
+            }
+          }
         }
       }
 
