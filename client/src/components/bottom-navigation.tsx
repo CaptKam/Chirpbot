@@ -5,11 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 export function BottomNavigation() {
   const [location] = useLocation();
   
-  // Get unseen alerts count for badge
-  const { data: unseenCount } = useQuery<{ count: number }>({
-    queryKey: ["/api/alerts/unseen/count"],
-    refetchInterval: 10000, // Update every 10 seconds
-  });
 
   const navItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
@@ -22,8 +17,6 @@ export function BottomNavigation() {
       <div className="flex">
         {navItems.map(({ path, icon: Icon, label, testId }) => {
           const isActive = location === path || (path === "/dashboard" && location === "/");
-          const isAlertsTab = path === "/alerts";
-          const hasUnseenAlerts = unseenCount && unseenCount.count > 0;
           
           return (
             <Link
@@ -36,15 +29,7 @@ export function BottomNavigation() {
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <div className="relative inline-block">
-                <Icon className="w-6 h-6 mb-1 mx-auto" />
-                {/* Badge for unseen alerts */}
-                {isAlertsTab && hasUnseenAlerts && unseenCount && (
-                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg animate-pulse">
-                    {unseenCount.count > 99 ? '99+' : unseenCount.count}
-                  </div>
-                )}
-              </div>
+              <Icon className="w-6 h-6 mb-1 mx-auto" />
               <span className="text-xs font-semibold uppercase tracking-wider">
                 {label}
               </span>

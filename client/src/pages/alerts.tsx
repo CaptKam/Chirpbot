@@ -29,10 +29,6 @@ export default function Alerts() {
     refetchInterval: 10000, // Refetch every 10 seconds for more responsive updates
   });
 
-  const { data: unseenCount = { count: 0 } } = useQuery<{ count: number }>({
-    queryKey: ["/api/alerts/unseen/count"],
-    refetchInterval: 10000,
-  });
 
   const markAsSeenMutation = useMutation({
     mutationFn: (alertId: string) => 
@@ -182,16 +178,6 @@ export default function Alerts() {
             <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" className="relative p-0 text-slate-100 hover:text-emerald-300">
-            <Bell className="w-7 h-7" />
-            {unseenCount.count > 0 && (
-              <span className="absolute -top-1 -right-1 bg-emerald-500 text-slate-900 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                {unseenCount.count}
-              </span>
-            )}
-          </Button>
-        </div>
       </header>
       {/* Filters */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 p-4">
@@ -200,11 +186,6 @@ export default function Alerts() {
             <h2 className="text-lg font-black uppercase tracking-wide text-slate-100">
               Live Alerts
             </h2>
-            {unseenCount.count > 0 && (
-              <Badge className="bg-emerald-500 text-slate-900 px-2 py-1 text-xs font-bold">
-                {unseenCount.count} NEW
-              </Badge>
-            )}
           </div>
         </div>
         <div className="flex space-x-2 overflow-x-auto">
@@ -273,14 +254,6 @@ export default function Alerts() {
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
               >
-                {/* NEW badge for unseen alerts */}
-                {!alert.seen && (
-                  <div className="absolute -top-2 -right-2 z-10">
-                    <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse ml-[10px] mr-[10px] mt-[8px] mb-[8px]">
-                      NEW
-                    </div>
-                  </div>
-                )}
                 {/* Quick Impact Header */}
                 <div className="text-center mb-2">
                   <h2 className="text-base font-black uppercase tracking-wide text-emerald-400">
