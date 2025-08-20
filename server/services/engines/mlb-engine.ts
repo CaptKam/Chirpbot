@@ -701,22 +701,61 @@ export class MLBEngine extends BaseSportEngine {
           id: randomUUID(),
           type: alert.type,
           sport: this.sport,
-          team: gameState.homeTeam,
-          opponent: gameState.awayTeam,
-          message: alert.description,
-          probability: alert.probability,
-          priority: alert.priority,
+          title: alert.type,
+          description: this.generateDynamicDescription(alert, gameState),
           gameInfo: {
-            ...gameState,
-            weather: weatherData
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            status: 'Live',
+            inning: gameState.inning.toString(),
+            inningState: gameState.inningState,
+            outs: gameState.outs,
+            balls: gameState.balls,
+            strikes: gameState.strikes,
+            runners: gameState.runners,
+            score: {
+              home: gameState.homeScore,
+              away: gameState.awayScore
+            },
+            priority: alert.priority,
+            scoringProbability: this.calculateScoringProbability(gameState),
+            currentBatter: gameState.currentBatter ? {
+              id: gameState.currentBatter.id,
+              name: gameState.currentBatter.name,
+              batSide: gameState.currentBatter.batSide,
+              stats: {
+                avg: gameState.currentBatter.stats.avg,
+                hr: gameState.currentBatter.stats.hr,
+                rbi: gameState.currentBatter.stats.rbi,
+                obp: gameState.currentBatter.stats.obp,
+                ops: gameState.currentBatter.stats.ops
+              }
+            } : undefined,
+            currentPitcher: gameState.currentPitcher ? {
+              id: gameState.currentPitcher.id,
+              name: gameState.currentPitcher.name,
+              throwHand: gameState.currentPitcher.throwHand,
+              stats: {
+                era: gameState.currentPitcher.stats.era,
+                whip: gameState.currentPitcher.stats.whip,
+                strikeOuts: gameState.currentPitcher.stats.strikeOuts,
+                wins: gameState.currentPitcher.stats.wins,
+                losses: gameState.currentPitcher.stats.losses
+              }
+            } : undefined
           },
-          createdAt: new Date(),
-          isRead: false
+          weatherData: weatherData ? {
+            temperature: weatherData.temperature,
+            condition: weatherData.condition,
+            windSpeed: weatherData.windSpeed,
+            windDirection: weatherData.windDirection
+          } : null
         };
 
         const createdAlert = await storage.createAlert(alertData);
 
-        // Send to Telegram for high-priority alerts
+        // Send to Telegram for high-priority alerts  
+        const settings = await storage.getSettingsBySport(this.sport);
         if (alert.priority >= 75 && settings?.telegramEnabled) {
           const telegramConfig = {
             botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
