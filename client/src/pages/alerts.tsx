@@ -302,8 +302,16 @@ export default function Alerts() {
                     ⚡ {alert.type.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}!
                   </h2>
                 </div>
-                {/* Key Situation */}
+                {/* Teams & Situation */}
                 <div className="text-center mb-2">
+                  <div className="text-xs font-medium text-slate-400 mb-1" data-testid={`alert-teams-${alert.id}`}>
+                    {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
+                    {alert.gameInfo.score && (
+                      <span className="ml-2 text-slate-300">
+                        {alert.gameInfo.score.away} - {alert.gameInfo.score.home}
+                      </span>
+                    )}
+                  </div>
                   <h3 className="font-bold text-slate-100" style={{fontSize: '15px'}} data-testid={`alert-title-${alert.id}`}>
                     {alert.title.toUpperCase()}
                   </h3>
