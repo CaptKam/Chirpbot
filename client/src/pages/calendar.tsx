@@ -330,7 +330,7 @@ export default function Calendar() {
                         {game.sport}
                       </Badge>
                       {isSelected && (
-                        <CheckCircle className="w-7 h-7 text-emerald-400" data-testid={`game-selected-${game.id}`} />
+                        <CheckCircle className="w-7 h-7 text-red-500" data-testid={`game-selected-${game.id}`} />
                       )}
                     </div>
                   </div>
