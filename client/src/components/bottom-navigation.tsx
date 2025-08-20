@@ -38,7 +38,7 @@ export function BottomNavigation() {
                 <Icon className="w-6 h-6 mb-1 mx-auto" />
                 {/* Show subtle indicator for unseen alerts */}
                 {path === "/alerts" && unseenCount?.count > 0 && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                 )}
               </div>
               <span className="text-xs font-semibold uppercase tracking-wider">
