@@ -5,7 +5,6 @@ import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
-import { hssEngine, GameContext, GameDelta } from './hss-engine';
 
 interface MLBGameState {
   gameId: string;
@@ -81,10 +80,10 @@ interface MLBGameState {
 export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
   monitoringInterval = 2000; // 2 seconds for ultra-fast real-time monitoring
-
+  
   // Track last game state to prevent duplicate alerts
   private lastGameStates = new Map<string, string>(); // key: gameId-alertType, value: state hash
-
+  
   alertConfigs: AlertConfig[] = [
     {
       type: "Game Start",
@@ -269,34 +268,26 @@ export class MLBEngine extends BaseSportEngine {
       minimumPredictionProbability: 70
     }
   ];
-
-  constructor(storage: StorageInterface, onAlert?: (alert: any) => void) {
-    super('MLB', 2000, storage, onAlert); // 2 second intervals for ultra-fast MLB monitoring
-
-    // Show HSS example calculation on startup
-    console.log('🎯 HSS Engine Example Calculation:');
-    hssEngine.exampleCalculation();
-  }
-
+  
   extractGameState(liveFeed: any): MLBGameState | null {
     try {
       const linescore = liveFeed.liveData.linescore;
       const gameData = liveFeed.gameData;
-
+      
       // Extract current batter, on-deck batter, and pitcher data
       let currentBatter = undefined;
       let onDeckBatter = undefined;
       let currentPitcher = undefined;
-
+      
       try {
         const plays = liveFeed.liveData?.plays;
         const currentPlay = plays?.currentPlay;
-
+        
         // Get current batter
         if (currentPlay?.matchup?.batter) {
           const batter = currentPlay.matchup.batter;
           const batterStats = batter.stats?.find((stat: any) => stat.type?.displayName === 'statsSingleSeason')?.stats;
-
+          
           currentBatter = {
             id: batter.id,
             name: batter.fullName || 'Unknown Batter',
@@ -315,20 +306,20 @@ export class MLBEngine extends BaseSportEngine {
             }
           };
         }
-
+        
         // Get on-deck batter from lineup
         try {
           const lineup = liveFeed.liveData?.boxscore?.teams;
           const isTopInning = linescore.inningState === 'Top';
           const battingTeam = isTopInning ? lineup?.away : lineup?.home;
-
+          
           if (battingTeam?.battingOrder) {
             // Find current batter position in lineup
             const currentBatterIndex = battingTeam.battingOrder.findIndex((player: any) => player.id === currentBatter?.id);
             if (currentBatterIndex !== -1 && currentBatterIndex < battingTeam.battingOrder.length - 1) {
               const onDeckPlayer = battingTeam.battingOrder[currentBatterIndex + 1];
               const onDeckStats = onDeckPlayer.stats?.find((stat: any) => stat.type?.displayName === 'statsSingleSeason')?.stats;
-
+              
               onDeckBatter = {
                 id: onDeckPlayer.id,
                 name: onDeckPlayer.fullName || 'Unknown On-Deck',
@@ -351,12 +342,12 @@ export class MLBEngine extends BaseSportEngine {
         } catch (onDeckError) {
           console.log('On-deck batter data not available');
         }
-
+        
         // Get current pitcher
         if (currentPlay?.matchup?.pitcher) {
           const pitcher = currentPlay.matchup.pitcher;
           const pitcherStats = pitcher.stats?.find((stat: any) => stat.type?.displayName === 'statsSingleSeason')?.stats;
-
+          
           currentPitcher = {
             id: pitcher.id,
             name: pitcher.fullName || 'Unknown Pitcher',
@@ -379,7 +370,7 @@ export class MLBEngine extends BaseSportEngine {
       } catch (playerError) {
         console.log('Player data not available in current play');
       }
-
+      
       const gameState = {
         gameId: `mlb-${gameData.game.pk}`,
         gamePk: gameData.game.pk,
@@ -408,27 +399,27 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`   Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}`);
       console.log(`   Runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third}`);
       console.log(`   Outs: ${gameState.outs}, Balls: ${gameState.balls}, Strikes: ${gameState.strikes}`);
-
+      
       if (gameState.currentBatter) {
         console.log(`   🏏 Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
       }
-
+      
       if (gameState.onDeckBatter) {
         console.log(`   🔄 On-Deck: ${gameState.onDeckBatter.name} (${gameState.onDeckBatter.batSide}) - AVG: ${gameState.onDeckBatter.stats.avg}, HR: ${gameState.onDeckBatter.stats.hr}, RBI: ${gameState.onDeckBatter.stats.rbi}, OPS: ${gameState.onDeckBatter.stats.ops}`);
       }
-
+      
       if (gameState.currentPitcher) {
         console.log(`   ⚾ Current Pitcher: ${gameState.currentPitcher.name} (${gameState.currentPitcher.throwHand}) - ERA: ${gameState.currentPitcher.stats.era}, WHIP: ${gameState.currentPitcher.stats.whip}, K: ${gameState.currentPitcher.stats.strikeOuts}, W-L: ${gameState.currentPitcher.stats.wins}-${gameState.currentPitcher.stats.losses}`);
       }
-
-
+      
+      
       return gameState;
     } catch (error) {
       console.error('Error extracting MLB game state:', error);
       return null;
     }
   }
-
+  
   protected getGameSpecificInfo(gameState: MLBGameState) {
     return {
       inning: gameState.inning.toString(),
@@ -495,151 +486,123 @@ export class MLBEngine extends BaseSportEngine {
     };
   }
 
-  private buildGameContext(gameState: MLBGameState): GameContext {
+  protected buildGameContext(gameState: MLBGameState): GameContext {
+    const runnersOn: string[] = [];
+    if (gameState.runners.first) runnersOn.push("1st");
+    if (gameState.runners.second) runnersOn.push("2nd");
+    if (gameState.runners.third) runnersOn.push("3rd");
+
     return {
-      runners: gameState.runners,
-      outs: gameState.outs,
+      sport: this.sport,
       inning: gameState.inning,
-      inningState: gameState.inningState,
+      outs: gameState.outs,
       homeScore: gameState.homeScore,
       awayScore: gameState.awayScore,
-      batter: {
-        name: gameState.currentBatter?.name || 'Unknown',
-        hr: gameState.currentBatter?.stats.hr || 15, // Default values - should come from player stats
-        iso: gameState.currentBatter?.stats.ops - gameState.currentBatter?.stats.avg || 0.180 // Placeholder for ISO calculation
-      },
-      onDeck: {
-        name: gameState.onDeckBatter?.name || 'Unknown',
-        hr: gameState.onDeckBatter?.stats.hr || 12,
-        iso: gameState.onDeckBatter?.stats.ops - gameState.onDeckBatter?.stats.avg || 0.160 // Placeholder for ISO calculation
-      },
-      pitcher: {
-        name: gameState.currentPitcher?.name || 'Unknown',
-        pitchCount: gameState.pitcher?.stats.strikeOuts || 0, // Placeholder for pitch count
-        isStarter: gameState.pitcher?.stats.strikeOuts ? gameState.pitcher.stats.strikeOuts < 80 : true // Placeholder for starter check
-      },
-      leverageIndex: this.calculateLeverageIndex(gameState),
-      balls: gameState.balls,
-      strikes: gameState.strikes,
-      platoonAdvantage: 'neutral', // Would need batter/pitcher handedness data
-      wind: {
-        mph: 8, // Mock data - would come from weather service
-        direction: 'S',
-        toCenterField: true
-      },
-      park: {
-        hrFactor: 100 // Would come from park factors database
-      },
-      bullpenERA: 3.8 // Would come from team stats
+      scoreDifference: gameState.homeScore - gameState.awayScore,
+      runnersOn,
+      currentBatter: gameState.currentBatter,
+      onDeckBatter: gameState.onDeckBatter,
+      currentPitcher: gameState.currentPitcher,
+      homeTeam: gameState.homeTeam,
+      awayTeam: gameState.awayTeam,
+      gameState: 'Live',
+      weather: undefined, // Will be populated by weather data
+      previousWeather: undefined // Will be populated by weather engine
     };
   }
-
-  private calculateLeverageIndex(gameState: MLBGameState): number {
-    // Simplified LI calculation - would use more sophisticated formula in production
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    const inningWeight = gameState.inning >= 7 ? 1.5 : 1.0;
-    const runnersWeight = (gameState.runners.second || gameState.runners.third) ? 1.3 : 1.0;
-
-    let baseLI = 1.0;
-    if (scoreDiff <= 1) baseLI = 2.0;
-    else if (scoreDiff <= 2) baseLI = 1.5;
-    else if (scoreDiff <= 3) baseLI = 1.2;
-
-    return baseLI * inningWeight * runnersWeight;
-  }
-
+  
   private calculateScoringProbability(gameState: MLBGameState): number {
     let probability = 30; // Base probability
-
+    
     // Adjust based on runners
     if (gameState.runners.first) probability += 10;
     if (gameState.runners.second) probability += 20;  
     if (gameState.runners.third) probability += 25;
-
+    
     // Adjust based on outs
     if (gameState.outs === 0) probability += 20;
     else if (gameState.outs === 1) probability += 10;
     else probability -= 10;
-
+    
     // Late inning pressure
     if (gameState.inning >= 8) probability += 15;
-
+    
     return Math.min(95, Math.max(5, probability));
   }
-
+  
   // Generate dynamic description based on actual game state
   private generateDynamicDescription(alert: AlertConfig, gameState: MLBGameState): string {
     const runners = gameState.runners;
     const outs = gameState.outs;
     const scoringProb = this.calculateScoringProbability(gameState);
-
+    
     // Build runner description
     const runnerPositions = [];
     if (runners.first) runnerPositions.push('1ST');
     if (runners.second) runnerPositions.push('2ND');
     if (runners.third) runnerPositions.push('3RD');
-
+    
     switch (alert.type) {
       case 'Runner on 3rd, 1 Out':
         return `🎯 RUNNER ON 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
-
+      
       case 'Runners on 2nd & 3rd, 1 Out':
         return `🔥 RUNNERS ON 2ND & 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
-
+      
       case 'Bases Loaded 0 Outs':
         return `🚨 BASES LOADED, 0 OUTS! (${scoringProb}% scoring probability) - MAXIMUM opportunity!`;
-
+      
       case 'Bases Loaded 1 Out':
         return `🔥 BASES LOADED, 1 OUT! (${scoringProb}% scoring probability) - High-value scoring chance!`;
-
+      
       case 'Bases Loaded 2 Outs':
         return `🚨 BASES LOADED, 2 OUTS! (${scoringProb}% scoring probability) - MAXIMUM PRESSURE! Make or break moment!`;
-
+      
       case 'Runners In Scoring Position':
         const scoringRunners = [];
         if (runners.second) scoringRunners.push('2ND');
         if (runners.third) scoringRunners.push('3RD');
-
+        
         if (scoringRunners.length > 0) {
           const runnerText = scoringRunners.join(' & ');
           return `⚡ RUNNER${scoringRunners.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
         }
         return `⚡ PRESSURE COOKER! Runners in scoring position, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
-
+      
       case 'Runners on Base':
         if (runnerPositions.length > 0) {
           const runnerText = runnerPositions.join(' & ');
           return `🏃 RUNNER${runnerPositions.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
         }
         return `🏃 Runners on base, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
-
+      
       case 'Close Game':
         const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
         return `🔥 NAIL-BITER! ${scoreDiff}-run game in inning ${gameState.inning}! (${scoringProb}% scoring probability)`;
-
+      
       case 'Late Inning Pressure':
         return `⏰ CRUNCH TIME! Final innings - Inning ${gameState.inning}, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
-
+      
       case 'Tie Game 9th Inning':
         return `🔥 TIE GAME ${gameState.inning}TH INNING! (${scoringProb}% scoring probability) - FINAL INNING DRAMA!`;
-
+      
       case '7th Inning Warning':
         return `🚨 7TH INNING STRETCH! (${scoringProb}% scoring probability) - Critical innings ahead!`;
-
+      
       case 'Game Start':
         return `⚾ GAME START - First pitch! (${scoringProb}% scoring probability)`;
-
+      
       default:
         // For other alerts, use the original description but add scoring probability
         return `${alert.description} (${scoringProb}% scoring probability)`;
     }
   }
-
+  
   // Create a hash specific to MLB game state
   private createMLBStateHash(gameState: MLBGameState, alertType: string): string {
     // Only track properties relevant to each alert type
     let relevantState: any = {};
-
+    
     // For runner-based alerts, track runners and outs
     if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('bases')) {
       relevantState = {
@@ -673,26 +636,26 @@ export class MLBEngine extends BaseSportEngine {
         score: `${gameState.awayScore}-${gameState.homeScore}`
       };
     }
-
+    
     return JSON.stringify(relevantState);
   }
-
+  
   // Check if we should trigger this alert (no duplicates)
   private shouldTriggerMLBAlert(alertType: string, gameState: MLBGameState): boolean {
     const key = `${gameState.gameId}-${alertType}`;
     const currentStateHash = this.createMLBStateHash(gameState, alertType);
     const lastStateHash = this.lastGameStates.get(key);
-
+    
     if (lastStateHash === currentStateHash) {
       // Same game state, don't trigger duplicate alert
       return false;
     }
-
+    
     // New game state, allow alert and track it
     this.lastGameStates.set(key, currentStateHash);
     return true;
   }
-
+  
   // Override processAlerts to use dynamic descriptions
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
     for (const alert of triggeredAlerts) {
@@ -700,13 +663,13 @@ export class MLBEngine extends BaseSportEngine {
       if (!this.shouldTriggerMLBAlert(alert.type, gameState)) {
         continue;
       }
-
+      
       try {
         const weatherData = await getWeatherData(gameState.homeTeam);
-
+        
         // Generate dynamic description based on actual game state
         const dynamicDescription = this.generateDynamicDescription(alert, gameState);
-
+        
         const alertData = {
           type: alert.type,
           sport: this.sport,
@@ -734,7 +697,7 @@ export class MLBEngine extends BaseSportEngine {
 
         // Get settings for this sport
         const settings = await storage.getSettingsBySport(this.sport);
-
+        
         // Get AI analysis for high-priority alerts
         if (alert.priority >= 70 && settings?.aiEnabled) {
           const analysis = await analyzeAlert(
@@ -766,12 +729,12 @@ export class MLBEngine extends BaseSportEngine {
         }
 
         console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${alert.priority})`);
-
+        
         // Broadcast to clients if callback exists
         if (this.onAlert) {
           this.onAlert(createdAlert);
         }
-
+        
       } catch (error) {
         console.error(`Error processing ${this.sport} alert:`, error);
       }
@@ -782,7 +745,7 @@ export class MLBEngine extends BaseSportEngine {
     try {
       const settings = await storage.getSettingsBySport(this.sport);
       console.log(`📊 MLB Settings - AI Enabled: ${settings?.aiEnabled}`);
-
+      
       const liveGames = await mlbApi.getLiveGames();
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
@@ -792,34 +755,34 @@ export class MLBEngine extends BaseSportEngine {
       for (const game of liveGames) {
         try {
           console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (State: ${game.gameState}, PK: ${game.gamePk})`);
-
+          
           if (game.gameState !== 'Live') {
             console.log(`⏭️ Skipping non-live game (${game.gameState})`);
             continue;
           }
-
+          
           if (!game.gamePk) {
             console.log(`⏭️ Skipping game with no gamePk`);
             continue;
           }
-
+          
           console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
           const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
-
+          
           // Skip if live feed data isn't available yet (returns null for 404)
           if (!liveFeed) {
             console.log(`⚠️ No live feed data available for game ${game.gamePk} yet`);
             continue;
           }
-
+          
           console.log(`✅ Got live feed data for game ${game.gamePk}, processing...`);
-
+          
           const gameState = this.extractGameState(liveFeed);
-
+          
           if (!gameState) continue;
-
+          
           const triggeredAlerts = await this.checkAlertConditions(gameState);
-
+          
           if (triggeredAlerts.length > 0) {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
             console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
@@ -827,155 +790,14 @@ export class MLBEngine extends BaseSportEngine {
           } else {
             console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
           }
-
+          
         } catch (gameError) {
           console.error(`Error processing ${this.sport} game:`, gameError);
         }
       }
-
+      
     } catch (error) {
       console.error(`${this.sport} monitoring error:`, error);
-    }
-  }
-
-  // Placeholder for the checkAlertConditions method if it's defined in BaseSportEngine
-  private async checkAlertConditions(gameState: MLBGameState): Promise<AlertConfig[]> {
-    const triggeredAlerts: AlertConfig[] = [];
-    for (const alertConfig of this.alertConfigs) {
-      // Check if the alert is AI-prediction based or condition-based
-      if (alertConfig.isPrediction) {
-        // Logic to check against AI predictions would go here
-        // For now, we'll assume all prediction-based alerts are potentially triggerable
-        // In a real scenario, you'd fetch predictions and check against minimumProbability
-        // Example: if (await this.checkPrediction(alertConfig.predictionEvents, alertConfig.minimumPredictionProbability)) { ... }
-        
-        // For now, let's simulate a condition for demonstration
-        if (alertConfig.type === "Home Run Alert" && gameState.currentBatter?.stats.hr > 20) {
-          triggeredAlerts.push(alertConfig);
-        } else if (alertConfig.type === "RBI Opportunity" && gameState.currentBatter?.stats.rbi > 50) {
-          triggeredAlerts.push(alertConfig);
-        }
-      } else {
-        // Check static conditions
-        if (alertConfig.conditions && alertConfig.conditions(gameState)) {
-          triggeredAlerts.push(alertConfig);
-        }
-      }
-    }
-    return triggeredAlerts;
-  }
-
-  // Placeholder for isAlertTypeEnabled if it's defined in BaseSportEngine
-  private async isAlertTypeEnabled(settingKey: string): Promise<boolean> {
-    // In a real implementation, this would check the user's settings
-    // For now, assume all alerts are enabled
-    return true;
-  }
-
-  // Placeholder for createAlert if it's defined in BaseSportEngine
-  private async createAlert(alertDef: AlertConfig, gameState: MLBGameState, game: any): Promise<AlertConfig | null> {
-    // This method is usually implemented in the concrete engine to format the alert
-    // For this example, we'll just return the alert definition if it matches
-    return alertDef;
-  }
-
-  // Placeholder for shouldTriggerAlert if it's defined in BaseSportEngine
-  private shouldTriggerAlert(alertDef: AlertConfig, gameState: MLBGameState): boolean {
-    // This logic is now integrated into processAlerts and shouldTriggerMLBAlert
-    // Re-evaluate if this method is still needed or if its logic should be part of processAlerts
-    if (alertDef.isPrediction) {
-      // Placeholder logic for prediction-based alerts
-      if (alertDef.type === "Home Run Alert" && gameState.currentBatter?.stats.hr > 20) return true;
-      if (alertDef.type === "RBI Opportunity" && gameState.currentBatter?.stats.rbi > 50) return true;
-      return false;
-    } else {
-      // Static conditions are checked in checkAlertConditions
-      return alertDef.conditions ? alertDef.conditions(gameState) : false;
-    }
-  }
-
-  private async runEnhancedAnalysis(gameState: MLBGameState, game: any): Promise<void> {
-    try {
-      // Get weather data
-      const weatherData = await getWeatherData(
-        game.venue?.name || 'Unknown'
-      );
-
-      // Generate AI context with high-scoring situation analysis
-      const aiContext = await analyzeAlert(
-        "HSS Analysis", // Generic type for HSS analysis
-        this.sport,
-        {
-          ...this.getGameSpecificInfo(gameState),
-          awayTeam: gameState.awayTeam,
-          homeTeam: gameState.homeTeam,
-          currentBatter: gameState.currentBatter,
-          onDeckBatter: gameState.onDeckBatter,
-          currentPitcher: gameState.currentPitcher,
-        },
-        weatherData,
-        'high_scoring_probability' // Focus area for HSS
-      );
-
-      if (aiContext) {
-        console.log(`🤖 HSS AI Analysis: ${aiContext.context.substring(0, 100)}...`);
-        // Could create special HSS alert here based on aiContext.confidence
-      }
-    } catch (error) {
-      console.error('❌ Error in enhanced HSS analysis:', error);
-    }
-  }
-
-  async processGame(game: any): Promise<void> {
-    if (game.status.statusCode !== '2') return; // Only process live games
-
-    console.log(`🎮 Processing game: ${game.teams.away?.team?.name} @ ${game.teams.home?.team?.name} (State: ${game.status.detailedState}, PK: ${game.gamePk})`);
-
-    try {
-      const gameState = this.extractGameState(game); // Use extracted game state directly
-      if (!gameState) {
-        console.log(`❌ No game state available for game ${game.gamePk}`);
-        return;
-      }
-
-      console.log(`🔍 MLB Game State Debug - ${gameState.awayTeam} @ ${gameState.homeTeam}:`);
-      console.log(`   Inning: ${gameState.inning} ${gameState.inningState}`);
-      console.log(`   Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}`);
-      console.log(`   Runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third}`);
-      console.log(`   Outs: ${gameState.outs}, Balls: ${gameState.balls}, Strikes: ${gameState.strikes}`);
-
-      // HSS Event-Driven Evaluation
-      const gameId = `mlb-${gameState.gamePk}`;
-      const currentContext = this.buildGameContext(gameState);
-      const deltas = hssEngine.identifyDeltas(undefined, currentContext); // TODO: Get previous context from storage if available
-
-      const hssScore = hssEngine.calculateHSSScore(currentContext);
-      console.log(`🎯 HSS Score: ${hssScore.toFixed(3)} (${deltas.length > 0 ? 'deltas: ' + deltas.join(', ') : 'no deltas'})`);
-
-      // Check if we should run LLM evaluation
-      if (hssEngine.shouldRunLLM(gameId, currentContext, deltas)) {
-        console.log(`🚀 HSS triggered LLM evaluation (score: ${hssScore.toFixed(3)})`);
-
-        // Run enhanced AI analysis
-        await this.runEnhancedAnalysis(gameState, game);
-
-        // Set cooldown
-        hssEngine.setCooldown(gameId, currentContext);
-      }
-
-      // Check traditional alert types (for now, keeping both systems)
-      const triggeredAlerts = await this.checkAlertConditions(gameState);
-
-      if (triggeredAlerts.length > 0) {
-        console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
-        console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
-        await this.processAlerts(triggeredAlerts, gameState);
-      } else {
-        console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`);
-      }
-
-    } catch (error) {
-      console.error(`❌ Error processing game ${game.gamePk}:`, error);
     }
   }
 }
