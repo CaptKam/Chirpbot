@@ -175,11 +175,12 @@ export abstract class BaseSportEngine implements SportEngine {
         let aiContext = `${alert.type} situation detected`;
         let aiConfidence = 75;
 
-        // Use centralized OpenAI manager for AI analysis
+        // Use centralized OpenAI manager for AI analysis with timeout protection
         if ((await storage.getSettingsBySport(this.sport))?.aiEnabled) {
           try {
             const openaiManager = getOpenAIManager();
-            const aiAnalysis = await openaiManager.analyzeAlert(
+            // Add timeout protection to prevent blocking alert creation
+            const aiAnalysisPromise = openaiManager.analyzeAlert(
               alert.type,
               this.sport,
               {
@@ -187,17 +188,27 @@ export abstract class BaseSportEngine implements SportEngine {
                   away: gameState.awayScore,
                   home: gameState.homeScore
                 },
-                status: 'Live', // Assuming 'Live' status for alerts
+                status: 'Live',
                 awayTeam: gameState.awayTeam,
                 homeTeam: gameState.homeTeam,
                 ...this.getGameSpecificInfo(gameState)
               },
               weatherData
             );
+            
+            // Timeout after 3 seconds to avoid blocking alert creation
+            const aiAnalysis = await Promise.race([
+              aiAnalysisPromise,
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('AI analysis timeout - proceeding with alert')), 3000)
+              )
+            ]);
+            
             aiContext = aiAnalysis.context;
             aiConfidence = aiAnalysis.confidence;
           } catch (error) {
-            console.log(`AI analysis skipped for ${alert.type}: ${error}`);
+            console.log(`AI analysis skipped for ${alert.type}: ${error} - creating alert anyway`);
+            // Continue with default context if AI fails
           }
         }
 
