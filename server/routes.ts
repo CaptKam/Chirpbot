@@ -921,5 +921,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OpenAI logs and stats endpoint
+  app.get("/api/openai/logs", async (req, res) => {
+    try {
+      const { getOpenAIManager } = await import('./services/openai-manager');
+      const openaiManager = getOpenAIManager();
+      
+      const limit = parseInt(req.query.limit as string) || 100;
+      const logsOnly = req.query.logsOnly === 'true';
+      const errorsOnly = req.query.errorsOnly === 'true';
+      
+      if (errorsOnly) {
+        const errorLogs = openaiManager.getErrorLogs();
+        res.json({
+          type: 'error_logs',
+          count: errorLogs.length,
+          logs: errorLogs
+        });
+      } else if (logsOnly) {
+        const logs = openaiManager.getLogs(limit);
+        res.json({
+          type: 'recent_logs',
+          count: logs.length,
+          logs
+        });
+      } else {
+        // Return comprehensive stats and recent logs
+        const stats = openaiManager.getStats();
+        const recentLogs = openaiManager.getLogs(50);
+        const errorLogs = openaiManager.getErrorLogs();
+        
+        res.json({
+          stats,
+          recentLogs: {
+            count: recentLogs.length,
+            logs: recentLogs
+          },
+          errorLogs: {
+            count: errorLogs.length,
+            logs: errorLogs.slice(-20) // Last 20 errors
+          },
+          summary: {
+            totalApiCalls: stats.totalCalls,
+            successRate: `${((stats.successfulCalls / stats.totalCalls) * 100).toFixed(2)}%`,
+            errorRate: `${stats.errorRate.toFixed(2)}%`,
+            cacheHitRate: `${((stats.cachedResponses / stats.totalCalls) * 100).toFixed(2)}%`,
+            totalCost: `$${stats.totalCost.toFixed(4)}`,
+            averageLatency: `${stats.averageLatency.toFixed(0)}ms`,
+            quotaStatus: stats.quotaExceeded ? 'EXCEEDED' : 'AVAILABLE'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching OpenAI logs:', error);
+      res.status(500).json({ message: 'Failed to fetch OpenAI logs' });
+    }
+  });
+
+  // OpenAI health check endpoint
+  app.get("/api/openai/health", async (req, res) => {
+    try {
+      const { getOpenAIManager } = await import('./services/openai-manager');
+      const openaiManager = getOpenAIManager();
+      
+      const isHealthy = await openaiManager.checkHealth();
+      const stats = openaiManager.getStats();
+      
+      res.json({
+        healthy: isHealthy,
+        quotaAvailable: !stats.quotaExceeded,
+        lastQuotaCheck: stats.lastQuotaCheck,
+        totalCalls: stats.totalCalls,
+        errorRate: stats.errorRate
+      });
+    } catch (error) {
+      console.error('Error checking OpenAI health:', error);
+      res.status(500).json({ 
+        healthy: false,
+        error: 'Failed to check OpenAI health' 
+      });
+    }
+  });
+
+  // Clear old OpenAI logs endpoint
+  app.post("/api/openai/clear-logs", async (req, res) => {
+    try {
+      const { getOpenAIManager } = await import('./services/openai-manager');
+      const openaiManager = getOpenAIManager();
+      
+      const keepLast = parseInt(req.body.keepLast as string) || 100;
+      openaiManager.clearOldLogs(keepLast);
+      
+      res.json({ 
+        message: `Cleared old logs, keeping last ${keepLast}`,
+        success: true 
+      });
+    } catch (error) {
+      console.error('Error clearing OpenAI logs:', error);
+      res.status(500).json({ message: 'Failed to clear OpenAI logs' });
+    }
+  });
+
   return httpServer;
 }

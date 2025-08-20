@@ -1,8 +1,8 @@
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
-import { analyzeAlert } from '../openai';
 import { sendTelegramAlert } from '../telegram';
-import { generatePredictions, PredictionRequest, GameContext, PREDICTION_EVENTS } from '../ai-predictions';
+import { PredictionRequest, GameContext, PREDICTION_EVENTS } from '../ai-predictions';
+import { getOpenAIManager } from '../openai-manager';
 import { randomUUID } from 'crypto'; // Assuming crypto is available for randomUUID
 
 export interface AlertConfig {
@@ -172,28 +172,24 @@ export abstract class BaseSportEngine implements SportEngine {
         let aiContext = `${alert.type} situation detected`;
         let aiConfidence = 75;
 
-        // TEMPORARILY DISABLED: All OpenAI calls to reduce API usage
-        // Commenting out to ensure zero API calls
-        /*
+        // Use centralized OpenAI manager for AI analysis
         if (alert.priority >= 85 && (await storage.getSettingsBySport(this.sport))?.aiEnabled) {
           try {
-            const { analyzeAlert } = await import('../openai');
-            const aiAnalysis = await analyzeAlert(
+            const openaiManager = getOpenAIManager();
+            const aiAnalysis = await openaiManager.analyzeAlert(
               alert.type,
               this.sport,
               {
-                gameInfo: {
-                  score: {
-                    away: gameState.awayScore,
-                    home: gameState.homeScore
-                  },
-                  status: 'Live', // Assuming 'Live' status for alerts
-                  awayTeam: gameState.awayTeam,
-                  homeTeam: gameState.homeTeam,
-                  ...this.getGameSpecificInfo(gameState)
+                score: {
+                  away: gameState.awayScore,
+                  home: gameState.homeScore
                 },
-                weatherData
-              }
+                status: 'Live', // Assuming 'Live' status for alerts
+                awayTeam: gameState.awayTeam,
+                homeTeam: gameState.homeTeam,
+                ...this.getGameSpecificInfo(gameState)
+              },
+              weatherData
             );
             aiContext = aiAnalysis.context;
             aiConfidence = aiAnalysis.confidence;
@@ -201,7 +197,6 @@ export abstract class BaseSportEngine implements SportEngine {
             console.log(`AI analysis skipped for ${alert.type}: ${error}`);
           }
         }
-        */
 
         const alertData = {
           type: alert.type,
@@ -294,9 +289,13 @@ export abstract class BaseSportEngine implements SportEngine {
         minimumProbability: 60 // Default threshold
       };
 
-      // TEMPORARILY DISABLED: Too many API calls, using fallback predictions only
-      // const predictions = await generatePredictions(predictionRequest);
-      const predictions: any[] = [];
+      // Use centralized OpenAI manager for predictions
+      const openaiManager = getOpenAIManager();
+      const predictions = await openaiManager.generatePredictions(
+        predictionRequest.eventTypes,
+        predictionRequest.context,
+        predictionRequest.minimumProbability
+      );
 
       // Match predictions to alert configs
       const triggeredPredictions: AlertConfig[] = [];

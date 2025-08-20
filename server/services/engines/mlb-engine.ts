@@ -709,23 +709,27 @@ export class MLBEngine extends BaseSportEngine {
         }
         */
 
-        const alertData: InsertAlert = {
+        const alertData = {
           type: alert.type,
           sport: this.sport,
-          title: alert.type,
+          title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
           description: alert.description,
           gameInfo: {
             ...gameState,
             weather: weatherData
           },
           aiContext: aiAnalysis.context,
-          aiConfidence: aiAnalysis.confidence
+          aiConfidence: aiAnalysis.confidence,
+          sentToTelegram: false
         };
 
         const createdAlert = await storage.createAlert(alertData);
 
+        // Get settings for this sport
+        const settings = await storage.getSettingsBySport(this.sport);
+        
         // Send to Telegram for high-priority alerts
-        if (alert.priority >= 75 && settings?.telegramEnabled) {
+        if (alert.priority >= 75 && settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
           const telegramConfig = {
             botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
             chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",

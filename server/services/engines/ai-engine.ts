@@ -1,7 +1,8 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
-import { GameContext, generatePredictions, PREDICTION_EVENTS } from '../ai-predictions';
+import { GameContext, PREDICTION_EVENTS } from '../ai-predictions';
 import { getWeatherData } from '../weather';
 import { storage } from '../../storage';
+import { getOpenAIManager } from '../openai-manager';
 
 interface AIGameAnalysis {
   gameId: string;
@@ -274,7 +275,7 @@ export class AIEngine extends BaseSportEngine {
         awayTeam: gameState.awayTeam,
         gameState,
         weatherData,
-        complexityScore: this.calculateComplexityScore({ gameState, weatherData, sport }),
+        complexityScore: this.calculateComplexityScore({ gameId, sport, homeTeam: gameState.homeTeam, awayTeam: gameState.awayTeam, gameState, weatherData, complexityScore: 0, predictionOpportunities: [] }),
         predictionOpportunities: sport === 'MLB' ? [...PREDICTION_EVENTS.MLB] : 
                                sport === 'NFL' ? [...PREDICTION_EVENTS.NFL] :
                                sport === 'NBA' ? [...PREDICTION_EVENTS.NBA] :
