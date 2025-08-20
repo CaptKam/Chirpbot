@@ -193,8 +193,15 @@ export class OpenAIManager {
     // Check quota availability
     this.checkQuotaAvailability();
     
-    // Prioritize high-value alerts
-    const highPriorityTypes = ['Runners on 2nd & 3rd, 1 Out', 'Runner on 3rd, 1 Out', 'Runners In Scoring Position'];
+    // Prioritize high-value alerts and prediction-based alerts
+    const highPriorityTypes = [
+      'Runners on 2nd & 3rd, 1 Out', 
+      'Runner on 3rd, 1 Out', 
+      'Runners In Scoring Position',
+      'Clutch Moment Prediction',
+      'Buzzer Beater Prediction',
+      'Three Point Opportunity'
+    ];
     if (!highPriorityTypes.includes(alertType) || !this.quotaAvailable) {
       const fallback = {
         context: `${alertType} situation - monitoring for scoring opportunities`,
@@ -345,7 +352,7 @@ Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key 
             }
           ],
           temperature: 0.4,
-          max_tokens: 500,
+          max_tokens: 800,
           response_format: { type: "json_object" }
         }),
         new Promise<never>((_, reject) => 
@@ -362,11 +369,38 @@ Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key 
         const cleanContent = content.trim();
         
         // Validate that we have proper JSON structure
-        if (!cleanContent.startsWith('{') || !cleanContent.endsWith('}')) {
-          throw new Error('Invalid JSON structure: response does not appear to be valid JSON');
+        if (!cleanContent.startsWith('{')) {
+          throw new Error('Invalid JSON structure: response does not start with {');
         }
         
-        result = JSON.parse(cleanContent);
+        // Handle truncated JSON responses
+        if (!cleanContent.endsWith('}')) {
+          console.warn('JSON response appears truncated, attempting to fix...');
+          // Find last complete object and close it
+          let braceCount = 0;
+          let lastValidIndex = -1;
+          for (let i = 0; i < cleanContent.length; i++) {
+            if (cleanContent[i] === '{') braceCount++;
+            if (cleanContent[i] === '}') {
+              braceCount--;
+              if (braceCount === 0) lastValidIndex = i;
+            }
+          }
+          
+          if (lastValidIndex > 0) {
+            const truncatedContent = cleanContent.substring(0, lastValidIndex + 1);
+            console.log('Fixed truncated JSON, trying to parse:', truncatedContent.substring(0, 100) + '...');
+            try {
+              result = JSON.parse(truncatedContent);
+            } catch {
+              throw new Error('Invalid JSON structure: response truncated and could not be fixed');
+            }
+          } else {
+            throw new Error('Invalid JSON structure: response does not appear to be valid JSON');
+          }
+        } else {
+          result = JSON.parse(cleanContent);
+        }
         
         // Validate the expected structure
         if (!result || typeof result !== 'object') {
