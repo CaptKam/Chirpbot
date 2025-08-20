@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, User, Lock, ArrowLeft, Play } from "lucide-react";
+import { Zap, User, Lock, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Login() {
@@ -38,28 +38,6 @@ export default function Login() {
       setIsLoading(false);
     },
   });
-
-  const handleDemoLogin = () => {
-    console.log("Demo button clicked");
-    
-    // If fields are already filled with demo credentials, auto-login
-    if (usernameOrEmail === "demo" && password === "demo123") {
-      console.log("Auto-logging in with demo credentials");
-      setIsLoading(true);
-      loginMutation.mutate({ usernameOrEmail: "demo", password: "demo123" });
-      return;
-    }
-    
-    console.log("Filling demo credentials");
-    // Otherwise, fill the fields
-    setUsernameOrEmail("demo");
-    setPassword("demo123");
-    
-    toast({
-      title: "Demo credentials loaded",
-      description: "Demo credentials have been filled in. Click 'Sign In' or click this button again to auto-login.",
-    });
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,26 +135,6 @@ export default function Login() {
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
-
-            {/* Demo Button */}
-            <div className="mt-4">
-              <Button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleDemoLogin();
-                }}
-                data-testid="button-demo"
-                variant="outline"
-                className="w-full h-12 bg-blue-500/10 border-blue-400/30 text-blue-300 hover:bg-blue-500/20 hover:border-blue-400/50 hover:text-blue-200 font-medium cursor-pointer"
-                disabled={isLoading}
-                style={{ pointerEvents: 'auto' }}
-              >
-                <Play className="w-4 h-4 mr-2" />
-                {usernameOrEmail === "demo" && password === "demo123" ? "Login with Demo" : "Try Demo Account"}
-              </Button>
-            </div>
 
             {/* Social Auth Divider */}
             <div className="my-6 flex items-center">
