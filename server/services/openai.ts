@@ -20,6 +20,29 @@ let lastQuotaCheck = 0;
 let quotaAvailable = true;
 const QUOTA_CHECK_INTERVAL = 60000; // Check quota every minute
 
+function generateDetailedFallback(alertType: string, gameInfo: any, weatherData?: any): string {
+  const score = gameInfo.score ? `${gameInfo.score.away}-${gameInfo.score.home}` : 'Unknown score';
+  const inning = gameInfo.inning ? ` in the ${gameInfo.inning}${gameInfo.inningState ? ` ${gameInfo.inningState}` : ''}` : '';
+  const outs = gameInfo.outs !== undefined ? ` with ${gameInfo.outs} out${gameInfo.outs !== 1 ? 's' : ''}` : '';
+  const scoringProb = gameInfo.scoringProbability ? ` (${gameInfo.scoringProbability}% scoring probability)` : '';
+  
+  let context = `Critical moment${inning}${outs}. Score: ${score}${scoringProb}.`;
+  
+  // Weather impact
+  if (weatherData?.windSpeed && weatherData.windSpeed >= 10) {
+    context += ` Wind: ${weatherData.windSpeed}mph ${weatherData.windDirection || ''} affecting ball flight.`;
+  }
+  
+  // Batter context
+  if (gameInfo.currentBatter?.name) {
+    const batter = gameInfo.currentBatter;
+    const hrRate = batter.stats?.hr && batter.stats?.atBats ? `${((batter.stats.hr / batter.stats.atBats) * 100).toFixed(1)}%` : 'Unknown';
+    context += ` ${batter.name} batting (${batter.stats?.avg || '?'} AVG, ${hrRate} HR rate).`;
+  }
+  
+  return context;
+}
+
 export async function analyzeAlert(
   alertType: string,
   sport: string,
@@ -41,11 +64,11 @@ export async function analyzeAlert(
     console.log("Retrying OpenAI API - quota may be restored");
   }
   
-  // Only use AI for high priority alerts to conserve quota
-  const highPriorityTypes = ['Runners on 2nd & 3rd, 1 Out', 'Runner on 3rd, 1 Out', 'Runners In Scoring Position'];
-  if (!highPriorityTypes.includes(alertType) || !quotaAvailable) {
+  // Enhanced analysis for high-priority situations
+  const detailedAnalysisTypes = ['Runners on 2nd & 3rd, 1 Out', 'Runner on 3rd, 1 Out', 'Runners In Scoring Position', 'Clutch Moment Prediction', 'RBI Opportunity'];
+  if (!detailedAnalysisTypes.includes(alertType) || !quotaAvailable) {
     const fallbackAnalysis = {
-      context: `${alertType} situation - monitoring for scoring opportunities`,
+      context: `${alertType} situation - ${generateDetailedFallback(alertType, gameInfo, weatherData)}`,
       confidence: 75
     };
     analysisCache.set(cacheKey, { analysis: fallbackAnalysis, timestamp: Date.now() });
@@ -53,15 +76,26 @@ export async function analyzeAlert(
   }
   
   try {
-    const prompt = `Analyze this sports alert briefly:
+    const prompt = `Analyze this critical sports situation with enhanced detail:
     
 Alert Type: ${alertType}
 Sport: ${sport}  
 Game: ${gameInfo.homeTeam} vs ${gameInfo.awayTeam}
+Score: ${gameInfo.score?.away || 0} - ${gameInfo.score?.home || 0}
 Status: ${gameInfo.status}
-Weather: ${weatherData ? `${weatherData.temperature}°F, ${weatherData.condition}` : 'Not available'}
+${sport === 'MLB' ? `Inning: ${gameInfo.inning || '?'} ${gameInfo.inningState || ''}` : ''}
+${sport === 'MLB' ? `Outs: ${gameInfo.outs || '?'}` : ''}
+${gameInfo.runners ? `Runners: ${Object.entries(gameInfo.runners).filter(([_, value]) => value).map(([base]) => base).join(', ') || 'None'}` : ''}
 
-Provide analysis in JSON format with 'context' (1-2 sentences max, focus on key impact) and 'confidence' (0-100) fields.`;
+Current Batter: ${gameInfo.currentBatter?.name || 'Unknown'} ${gameInfo.currentBatter?.stats ? `(${gameInfo.currentBatter.stats.avg || '?'} AVG, ${gameInfo.currentBatter.stats.hr || 0} HR, ${gameInfo.currentBatter.stats.rbi || 0} RBI, ${gameInfo.currentBatter.stats.ops || '?'} OPS)` : ''}
+
+Weather Impact: ${weatherData ? `${weatherData.temperature}°F, ${weatherData.windSpeed || 0}mph ${weatherData.windDirection || ''} wind, ${weatherData.condition}` : 'Not available'}
+
+Scoring Probability: ${gameInfo.scoringProbability || '?'}%
+
+Analyze the tactical significance, momentum impact, and why this moment matters. Consider weather effects on play outcomes.
+
+Provide analysis in JSON format with 'context' (2-3 detailed sentences about situation significance and tactical implications) and 'confidence' (0-100) fields.`;
 
     // Add timeout using Promise.race
     const timeoutPromise = new Promise<never>((_, reject) => 
