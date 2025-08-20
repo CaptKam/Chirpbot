@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, User, Lock, ArrowLeft } from "lucide-react";
+import { Zap, User, Lock, ArrowLeft, Play } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Login() {
@@ -38,6 +38,15 @@ export default function Login() {
       setIsLoading(false);
     },
   });
+
+  const handleDemoLogin = () => {
+    setUsernameOrEmail("demo");
+    setPassword("demo123");
+    toast({
+      title: "Demo credentials loaded",
+      description: "You can now sign in with the demo account or click the demo button again to auto-login.",
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +144,21 @@ export default function Login() {
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
+
+            {/* Demo Button */}
+            <div className="mt-4">
+              <Button
+                type="button"
+                onClick={handleDemoLogin}
+                data-testid="button-demo"
+                variant="outline"
+                className="w-full h-12 bg-blue-500/10 border-blue-400/30 text-blue-300 hover:bg-blue-500/20 hover:border-blue-400/50 hover:text-blue-200 font-medium"
+                disabled={isLoading}
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Try Demo Account
+              </Button>
+            </div>
 
             {/* Social Auth Divider */}
             <div className="my-6 flex items-center">
