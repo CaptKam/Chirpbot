@@ -5,6 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 export function BottomNavigation() {
   const [location] = useLocation();
   
+  // Get unseen alerts count
+  const { data: unseenCount } = useQuery({
+    queryKey: ['/api/alerts/unseen/count'],
+    refetchInterval: 5000, // Check every 5 seconds
+  });
 
   const navItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
@@ -29,7 +34,13 @@ export function BottomNavigation() {
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <Icon className="w-6 h-6 mb-1 mx-auto" />
+              <div className="relative">
+                <Icon className="w-6 h-6 mb-1 mx-auto" />
+                {/* Show subtle indicator for unseen alerts */}
+                {path === "/alerts" && unseenCount?.count > 0 && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                )}
+              </div>
               <span className="text-xs font-semibold uppercase tracking-wider">
                 {label}
               </span>
