@@ -44,9 +44,29 @@ export class WeatherEngine extends BaseSportEngine {
       // Get all monitored teams and check weather for their venues
       const monitoredTeams = await storage.getMonitoredTeams();
       
+      // Map team names to cities for weather data
+      const teamCityMap: Record<string, string> = {
+        'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
+        'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco',
+        'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
+        'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
+        'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
+        'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
+        'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
+        'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
+        'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
+        'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
+        'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
+        'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
+        'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
+        'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
+        'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
+      };
+
       for (const team of monitoredTeams) {
         try {
-          const weatherData = await getWeatherData(team.name);
+          const cityName = teamCityMap[team.name] || team.name;
+          const weatherData = await getWeatherData(cityName);
           if (!weatherData) continue;
           
           const previousWeather = this.weatherHistory.get(team.name);
@@ -262,12 +282,47 @@ export class WeatherEngine extends BaseSportEngine {
       const { engineCoordinator } = await import('../engine-coordinator');
       const allGames = await engineCoordinator.getAllLiveGames();
       
+      // Map team names to their actual cities for better weather data
+      const teamCityMap: Record<string, string> = {
+        // MLB Teams
+        'Los Angeles Angels': 'Los Angeles',
+        'Los Angeles Dodgers': 'Los Angeles',
+        'Oakland Athletics': 'Oakland',
+        'San Francisco Giants': 'San Francisco',
+        'Seattle Mariners': 'Seattle',
+        'Texas Rangers': 'Arlington',
+        'Houston Astros': 'Houston',
+        'Minnesota Twins': 'Minneapolis',
+        'Kansas City Royals': 'Kansas City',
+        'Chicago White Sox': 'Chicago',
+        'Chicago Cubs': 'Chicago',
+        'Cleveland Guardians': 'Cleveland',
+        'Detroit Tigers': 'Detroit',
+        'Milwaukee Brewers': 'Milwaukee',
+        'St. Louis Cardinals': 'St. Louis',
+        'Atlanta Braves': 'Atlanta',
+        'Miami Marlins': 'Miami',
+        'New York Yankees': 'New York',
+        'New York Mets': 'New York',
+        'Philadelphia Phillies': 'Philadelphia',
+        'Washington Nationals': 'Washington',
+        'Boston Red Sox': 'Boston',
+        'Toronto Blue Jays': 'Toronto',
+        'Baltimore Orioles': 'Baltimore',
+        'Tampa Bay Rays': 'Tampa',
+        'Pittsburgh Pirates': 'Pittsburgh',
+        'Cincinnati Reds': 'Cincinnati',
+        'Colorado Rockies': 'Denver',
+        'Arizona Diamondbacks': 'Phoenix',
+        'San Diego Padres': 'San Diego'
+      };
+      
       const games = allGames.map(game => ({
         gameId: game.gameId,
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
-        venue: `${game.homeTeam} Stadium`, // Fallback venue name
-        city: game.homeTeam, // Use team name as city fallback
+        venue: `${game.homeTeam} Stadium`,
+        city: teamCityMap[game.homeTeam] || game.homeTeam, // Use proper city mapping
         sport: game.sport
       }));
       
