@@ -297,8 +297,10 @@ export class DemoSimulator {
       this.alertCount.set(gameId, 0);
     }
 
-    // Generate first alert immediately
-    await this.generateDemoAlert(sport, teamNames, broadcast);
+    // Generate first alert after a delay to let user see the popup tip
+    setTimeout(async () => {
+      await this.generateDemoAlert(sport, teamNames, broadcast);
+    }, 15000 + Math.random() * 10000); // 15-25 second delay before first alert
 
     // Then generate alerts every 15-25 seconds (slower pace for better UX)
     const timer = setInterval(async () => {

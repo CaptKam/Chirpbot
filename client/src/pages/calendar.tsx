@@ -18,6 +18,7 @@ export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
   const [showDemoOnboarding, setShowDemoOnboarding] = useState(false);
+  const [showGameTip, setShowGameTip] = useState(false);
 
   const { data: gamesData, isLoading } = useQuery<GameDay>({
     queryKey: ["/api/games/today", { sport: activeSport }],
@@ -89,7 +90,29 @@ export default function Calendar() {
   
   const handleOnboardingComplete = () => {
     setShowDemoOnboarding(false);
+    // Show game tip after onboarding for demo users
+    if (user?.username?.toLowerCase() === 'demo') {
+      setTimeout(() => {
+        setShowGameTip(true);
+        // Auto-hide tip after 8 seconds
+        setTimeout(() => setShowGameTip(false), 8000);
+      }, 1000);
+    }
   };
+
+  // Show game tip for demo users who already completed onboarding in this session
+  useEffect(() => {
+    if (user?.username?.toLowerCase() === 'demo' && !showDemoOnboarding && games.length > 0) {
+      const hasShownOnboarding = sessionStorage.getItem('demo-onboarding-shown');
+      if (hasShownOnboarding && !showGameTip) {
+        setTimeout(() => {
+          setShowGameTip(true);
+          // Auto-hide tip after 8 seconds
+          setTimeout(() => setShowGameTip(false), 8000);
+        }, 1500);
+      }
+    }
+  }, [user, showDemoOnboarding, games.length, showGameTip]);
 
   // Load persisted monitored games - use actual user ID for demo users
   const userId = user?.id || TEST_USER_ID;
@@ -320,7 +343,7 @@ export default function Calendar() {
                 // Then by start time
                 return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
               })
-              .map((game) => {
+              .map((game, index) => {
               const isSelected = selectedGames.has(game.id);
               const weather = getWeatherData();
               const startTime = new Date(game.startTime);
@@ -330,17 +353,17 @@ export default function Calendar() {
               });
 
               return (
-                <Card 
-                  key={game.id} 
-                  className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] hover:bg-white/10 ${
-                    isSelected 
-                      ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
-                      : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
-                  }`}
-                  style={{ borderRadius: '12px' }}
-                  onClick={() => toggleGameSelection(game.id)}
-                  data-testid={`game-card-${game.id}`}
-                >
+                <div key={game.id} className="relative">
+                  <Card 
+                    className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] hover:bg-white/10 ${
+                      isSelected 
+                        ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
+                        : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
+                    }`}
+                    style={{ borderRadius: '12px' }}
+                    onClick={() => toggleGameSelection(game.id)}
+                    data-testid={`game-card-${game.id}`}
+                  >
                   {/* Header with teams and selection indicator */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-4">
@@ -414,6 +437,20 @@ export default function Calendar() {
                     </div>
                   </div>
                 </Card>
+                
+                {/* Demo game tip popup - only show on first game */}
+                {index === 0 && showGameTip && user?.username?.toLowerCase() === 'demo' && (
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full z-50">
+                    <div className="bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium relative animate-pulse">
+                      👆 Click to start monitoring
+                      {/* Arrow pointing up */}
+                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
+                        <div className="w-2 h-2 bg-emerald-500 rotate-45"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               );
             })}
           </div>
