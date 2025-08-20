@@ -54,15 +54,4 @@ export const queryClient = new QueryClient({
       retry: false,
     },
   },
-  // Add global error handler to prevent unhandled promise rejections
-  mutationCache: {
-    onError: (error: unknown) => {
-      console.error('Query client mutation error:', error);
-    }
-  },
-  queryCache: {
-    onError: (error: unknown) => {
-      console.error('Query client query error:', error);
-    }
-  }
 });
