@@ -815,12 +815,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const feedStatus = {
         timestamp: new Date().toISOString(),
         feeds: {
-          mlb: { status: 'unknown', games: 0, error: null },
-          nfl: { status: 'unknown', games: 0, error: null },
-          nba: { status: 'unknown', games: 0, error: null },
-          nhl: { status: 'unknown', games: 0, error: null },
-          weather: { status: 'unknown', data: null, error: null },
-          sportsDataApi: { status: 'unknown', configured: false }
+          mlb: { status: 'unknown' as string, games: 0, error: null as string | null },
+          nfl: { status: 'unknown' as string, games: 0, error: null as string | null },
+          nba: { status: 'unknown' as string, games: 0, error: null as string | null },
+          nhl: { status: 'unknown' as string, games: 0, error: null as string | null },
+          weather: { status: 'unknown' as string, data: null as any, error: null as string | null },
+          sportsDataApi: { status: 'unknown' as string, configured: false }
         }
       };
 
@@ -871,9 +871,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const weatherData = await import("./services/weather").then(m => m.getWeatherData("New York"));
         feedStatus.feeds.weather = { 
-          status: weatherData.isError ? 'failed' : 'success', 
+          status: weatherData ? 'success' : 'failed', 
           data: weatherData, 
-          error: weatherData.isError ? 'API key or location issue' : null 
+          error: weatherData ? null : 'API key or location issue' 
         };
       } catch (error) {
         feedStatus.feeds.weather = { 

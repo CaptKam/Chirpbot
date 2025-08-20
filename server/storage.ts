@@ -114,6 +114,12 @@ export class MemStorage implements IStorage {
           inningChange: false,
           homeRunAlert: sport === "MLB",
           strikeouts: false,
+          
+          // RE24 System
+          useRE24System: sport === "MLB",
+          re24Level1: sport === "MLB",
+          re24Level2: sport === "MLB",
+          re24Level3: sport === "MLB",
 
           // NFL Alert Types  
           redZone: sport === "NFL",
