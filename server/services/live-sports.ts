@@ -1,5 +1,6 @@
 import type { Game, GameDay } from "@shared/schema";
 import { mlbApi } from "./mlb-api";
+import { sportsDataService } from "./sportsdata-api";
 import { fetchJson } from './http';
 
 // ESPN API Interfaces
@@ -271,27 +272,32 @@ class LiveSportsService {
     let games: Game[] = [];
 
     if (!sport) {
-      // Use official MLB API for MLB games, ESPN for others
+      // Use official MLB API for MLB games, SportsData.io for others
       const [mlbGames, nflGames, nbaGames, nhlGames] = await Promise.all([
         mlbApi.getTodaysGames(),  // Official MLB.com API
-        this.fetchESPNGames('NFL'),
-        this.fetchESPNGames('NBA'),
-        this.fetchESPNGames('NHL'),
+        sportsDataService.getNFLGames(today),  // SportsData.io
+        sportsDataService.getNBAGames(today),  // SportsData.io
+        sportsDataService.getNHLGames(today),  // SportsData.io
       ]);
       games = [...mlbGames, ...nflGames, ...nbaGames, ...nhlGames];
-      console.log(`Fetched ${games.length} total games (${mlbGames.length} MLB from official API)`);
+      console.log(`🏈 Fetched ${games.length} total games via SportsData.io + MLB.com (${mlbGames.length} MLB, ${nflGames.length} NFL, ${nbaGames.length} NBA, ${nhlGames.length} NHL)`);
     } else if (sport.toUpperCase() === 'MLB') {
       // Use official MLB API for MLB-only requests
       games = await mlbApi.getTodaysGames();
       console.log(`Fetched ${games.length} MLB games from official MLB.com API`);
     } else {
-      // Use ESPN for other sports
+      // Use SportsData.io for other sports
       const sportCode = sport.toUpperCase() as 'NFL' | 'NBA' | 'NHL';
-      if (['NFL', 'NBA', 'NHL'].includes(sportCode)) {
-        games = await this.fetchESPNGames(sportCode);
+      if (sportCode === 'NFL') {
+        games = await sportsDataService.getNFLGames(today);
+      } else if (sportCode === 'NBA') {
+        games = await sportsDataService.getNBAGames(today);
+      } else if (sportCode === 'NHL') {
+        games = await sportsDataService.getNHLGames(today);
       } else {
         console.warn(`Unknown sport: ${sport}`);
       }
+      console.log(`🏈 Fetched ${games.length} ${sport} games from SportsData.io`);
     }
 
     // Filter out final games since they can't generate alerts
