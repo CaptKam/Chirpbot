@@ -188,6 +188,15 @@ export class MLBEngine extends BaseSportEngine {
         state.runners.second && state.runners.third && !state.runners.first && state.outs === 1
     },
     {
+      type: "Runners on 1st & 2nd",
+      settingKey: "risp",
+      priority: 75,
+      probability: 0.85,
+      description: "🔥 RUNNERS ON 1ST & 2ND! Double-steal or big hit opportunity!",
+      conditions: (state: MLBGameState) => 
+        state.runners.first && state.runners.second && !state.runners.third && state.outs < 2
+    },
+    {
       type: "Runners In Scoring Position",
       settingKey: "risp",
       priority: 70,
@@ -579,6 +588,9 @@ export class MLBEngine extends BaseSportEngine {
 
       case 'Bases Loaded 2 Outs':
         return `🚨 BASES LOADED, 2 OUTS! (${scoringProb}% scoring probability) - MAXIMUM PRESSURE! Make or break moment!`;
+
+      case 'Runners on 1st & 2nd':
+        return `🔥 RUNNERS ON 1ST & 2ND, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability) Double-steal or big hit opportunity!`;
 
       case 'Runners In Scoring Position':
         const scoringRunners = [];
