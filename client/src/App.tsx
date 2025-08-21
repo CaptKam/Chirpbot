@@ -80,10 +80,10 @@ function AppContent() {
     return <AdminLogin />;
   }
 
-  // Now safe to call useAuth for regular app routes
-  const { lastMessage } = useWebSocket();
+  // Now safe to call useAuth and useWebSocket for regular app routes
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
+  const { lastMessage } = useWebSocket();
   
   // Get settings to check if push notifications are enabled
   const { data: settings } = useQuery({
