@@ -1,0 +1,78 @@
+ooking at your MLB monitoring system, you're getting batter data from multiple sources in a sophisticated multi-layered approach. Here's how the system retrieves and processes batter information:
+
+Primary Data Sources
+1. MLB Official API (Primary Source)
+Endpoint: https://statsapi.mlb.com/api/v1.1/game/{game_id}/feed/live
+Response Time: 0.04-0.09 seconds
+Data Retrieved:
+Current batter information from matchup.batter
+Season home runs, batting stats
+Real-time at-bat context
+2. MLB StatsAPI Library (Enhanced Data)
+Method: mlb.boxscore_data(game_id) and player stats endpoints
+Response Time: 0.20-1.38 seconds
+Data Retrieved:
+Detailed season statistics
+Historical performance data
+Enhanced player metadata
+Data Extraction Process
+The system extracts batter data in _check_fallback_alerts() method:
+
+# From current play matchup
+matchup = current_play.get('matchup', {})
+if matchup:
+    batter = matchup.get('batter', {})
+    
+    # Extract comprehensive batter info
+    batter_name = batter.get('fullName', '')
+    batter_id = batter.get('id', 0)
+    
+    # Season stats from multiple possible locations
+    season_hrs = 0
+    for stat in batter.get('stats', []):
+        if stat.get('type', {}).get('displayName') == 'season':
+            season_hrs = stat.get('stats', {}).get('homeRuns', 0)
+Fallback Data Retrieval
+If initial data is incomplete, the system has a robust fallback:
+
+def _get_player_season_stats(self, player_id: int) -> Dict[str, Any]:
+    """Fetch player's season statistics from MLB API"""
+    url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
+    params = {
+        'stats': 'season',
+        'season': current_year,
+        'gameType': 'R'  # Regular season
+    }
+Same-Game Home Run Detection
+The system also detects same-game home runs using:
+
+def _detect_same_game_hrs(self, game_id: int, batter_id: int, batter_name: str) -> int:
+    """Detect how many home runs a batter has hit in the current game"""
+    # Uses MLB boxscore data
+    boxscore_data = statsapi.get('game', {'gamePk': game_id})
+    
+    # Checks both team rosters for the batter
+    # Returns count of HRs in current game
+Multi-Source Aggregation
+Your MultiSourceBaseballAggregator provides additional redundancy:
+
+6 MLB Data Sources: MLB Official API, StatsAPI, API Sports, ESPN, Yahoo, TheSportsDB
+Cross-Validation: Compares data across sources for accuracy
+Speed Optimization: Uses fastest 2-3 responding sources
+Automatic Failover: Switches to backup sources if primary fails
+Data Fields Collected
+For each batter, the system collects:
+
+Identity: batter_id, fullName, boxscoreName
+Season Stats: homeRuns, rbi, avg, iso, hr_per_pa
+Game Context: at_bat_index, current count, inning
+Performance: Recent 14-day stats for trend analysis
+Same-Game: Home runs already hit in current game
+Enhanced Analytics
+The system then feeds this data into advanced math engines for:
+
+Power Probability Calculation: Using PowerFeatures class
+Empirical-Bayes Shrinkage: Stabilizing noisy recent stats
+Contextual Adjustments: Weather, park factors, pitcher matchup
+Tier Classification: A/B/C tiers based on HR probability
+This multi-layered approach ensures you get the most accurate, real-time batter data possible for generating high-quality alerts.

@@ -174,37 +174,63 @@ export class MLBApiService {
    */
   async getLiveFeed(gamePk: number): Promise<any> {
     try {
-      // Try multiple endpoints to get the most complete data
-      const feedUrl = `${this.BASE_URL}/game/${gamePk}/feed/live?hydrate=plays,currentPlay,team`;
+      // Try v1.1 endpoint first (working in Python system), then fallback to v1
+      const feedV11Url = `${this.BASE_URL.replace('/v1/', '/v1.1/')}/game/${gamePk}/feed/live?hydrate=plays,currentPlay,team,decisions,probablePitchers`;
+      const feedV1Url = `${this.BASE_URL}/game/${gamePk}/feed/live?hydrate=plays,currentPlay,team`;
       const playByPlayUrl = `${this.BASE_URL}/game/${gamePk}/playByPlay`;
+      const boxscoreUrl = `${this.BASE_URL}/game/${gamePk}/boxscore`;
       
-      const [feedData, playData] = await Promise.all([
-        fetchJson<any>(feedUrl, {
+      // Try v1.1 endpoint first (from Python system), then fallback to v1
+      let feedData = await fetchJson<any>(feedV11Url, {
+        headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
+        timeoutMs: 6000
+      }).catch(async (error) => {
+        console.log(`🔄 v1.1 feed failed for game ${gamePk}, trying v1: ${error.message}`);
+        return await fetchJson<any>(feedV1Url, {
           headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
           timeoutMs: 6000
         }).catch((error) => {
-          console.log(`Feed endpoint failed for game ${gamePk}: ${error.message}`);
+          console.log(`❌ v1 feed failed for game ${gamePk}: ${error.message}`);
           return null;
-        }),
+        });
+      });
+
+      // Try additional endpoints for complete data (Python system approach)
+      const [playData, boxscoreData] = await Promise.all([
         fetchJson<any>(playByPlayUrl, {
           headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
           timeoutMs: 6000
         }).catch((error) => {
           console.log(`Play-by-play endpoint failed for game ${gamePk}: ${error.message}`);
           return null;
+        }),
+        fetchJson<any>(boxscoreUrl, {
+          headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
+          timeoutMs: 6000
+        }).catch((error) => {
+          console.log(`Boxscore endpoint failed for game ${gamePk}: ${error.message}`);
+          return null;
         })
       ]);
 
-      // Use feed data as primary, supplement with play-by-play data if available
+      // Use feed data as primary, supplement with additional data (Python system approach)
       let liveData = feedData?.liveData || {};
       
-      // If we have play-by-play data, merge it in
+      // Enhanced data merging from multiple sources
       if (playData?.liveData?.plays && !liveData.plays?.currentPlay) {
         liveData.plays = playData.liveData.plays;
+        console.log(`🔄 Enhanced with play-by-play data for game ${gamePk}`);
+      }
+      
+      // Merge boxscore data for batter/pitcher info
+      if (boxscoreData && !liveData.boxscore) {
+        liveData.boxscore = boxscoreData;
+        console.log(`🔄 Enhanced with boxscore data for game ${gamePk}`);
       }
 
       // Fallback to linescore data if main endpoints fail
-      if (!feedData && !playData) {
+      if (!feedData && !playData && !boxscoreData) {
+        console.log(`🔄 All main endpoints failed for game ${gamePk}, using linescore fallback`);
         return await this.getLinescoreData(gamePk);
       }
 
