@@ -593,20 +593,49 @@ export class MLBEngine extends BaseSportEngine {
         balls: linescore.balls || 0,
         strikes: linescore.strikes || 0,
         runners: (() => {
-          // Original MLB API data
-          const apiRunners = {
-            first: !!linescore.offense?.first,
-            second: !!linescore.offense?.second, 
-            third: !!linescore.offense?.third,
-          };
+          // Try to get runner data from plays/currentPlay
+          let runnersOnBase = { first: false, second: false, third: false };
           
-          // 🧪 TESTING: Simulate bases loaded occasionally to test alert system
-          if (Math.random() < 0.4) { // 40% chance to simulate bases loaded
-            console.log(`🧪 TESTING: Simulating BASES LOADED for alert testing`);
-            return { first: true, second: true, third: true };
+          // Check current play for runners
+          if (gameData.liveData?.plays?.currentPlay?.runners) {
+            const runners = gameData.liveData.plays.currentPlay.runners;
+            runners.forEach((runner: any) => {
+              if (runner.movement?.end === 'first' || runner.movement?.start === 'first') {
+                runnersOnBase.first = true;
+              }
+              if (runner.movement?.end === 'second' || runner.movement?.start === 'second') {
+                runnersOnBase.second = true;
+              }
+              if (runner.movement?.end === 'third' || runner.movement?.start === 'third') {
+                runnersOnBase.third = true;
+              }
+            });
           }
           
-          return apiRunners;
+          // Check all plays if current play has no data
+          if (!runnersOnBase.first && !runnersOnBase.second && !runnersOnBase.third) {
+            if (gameData.liveData?.plays?.allPlays && gameData.liveData.plays.allPlays.length > 0) {
+              const lastPlay = gameData.liveData.plays.allPlays[gameData.liveData.plays.allPlays.length - 1];
+              if (lastPlay.runners) {
+                lastPlay.runners.forEach((runner: any) => {
+                  if (runner.movement?.end === 'first') runnersOnBase.first = true;
+                  if (runner.movement?.end === 'second') runnersOnBase.second = true;
+                  if (runner.movement?.end === 'third') runnersOnBase.third = true;
+                });
+              }
+            }
+          }
+          
+          // Fallback to linescore.offense if available (though usually empty)
+          if (!runnersOnBase.first && !runnersOnBase.second && !runnersOnBase.third) {
+            runnersOnBase = {
+              first: !!linescore.offense?.first,
+              second: !!linescore.offense?.second,
+              third: !!linescore.offense?.third,
+            };
+          }
+          
+          return runnersOnBase;
         })(),
         homeScore: linescore.teams?.home?.runs || 0,
         awayScore: linescore.teams?.away?.runs || 0,
