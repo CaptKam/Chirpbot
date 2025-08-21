@@ -23,10 +23,14 @@ export function AdminLogin() {
       // Redirect to admin dashboard
       setLocation("/admin");
     },
+    onError: (error) => {
+      console.error("Login error:", error);
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Submitting credentials:", { username: credentials.username, password: credentials.password ? "***" : "empty" });
     loginMutation.mutate(credentials);
   };
 
