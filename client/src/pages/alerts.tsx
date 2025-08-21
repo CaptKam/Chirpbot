@@ -165,25 +165,18 @@ export default function Alerts() {
     }) : [];
 
   return (
-    <div className="pb-20 bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white antialiased min-h-screen relative overflow-hidden">
-      {/* Animated Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] animate-pulse"></div>
-      </div>
-      
-      {/* Modern Header with Sports Action Background */}
-      <header className="relative bg-gradient-to-r from-red-600/80 via-orange-500/80 to-yellow-500/80 backdrop-blur-xl border-b border-white/20 text-white p-6 shadow-2xl">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%23ffffff" fill-opacity="0.1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,133.3C672,139,768,181,864,197.3C960,213,1056,203,1152,181.3C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E')] opacity-20"></div>
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-14 h-14 bg-gradient-to-r from-yellow-400 to-red-500 rounded-2xl flex items-center justify-center shadow-xl">
-              <Zap className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black uppercase tracking-wider text-white drop-shadow-lg">🎰 BetBot</h1>
-              <p className="text-yellow-200 text-sm font-bold">Live Betting Intelligence</p>
-            </div>
+    <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
+      {/* Header */}
+      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
+            <Zap className="w-5 h-5 text-emerald-400" />
           </div>
+          <div>
+            <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
+            <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
+          </div>
+        </div>
         {/* Mark all as read button */}
         {filteredAlerts.some(a => !a.seen) && (
           <Button
