@@ -340,17 +340,23 @@ export class MLBApiService {
         return null;
       }
 
+      // Skip SportsDataIO current batter functionality if it consistently fails
+      // The main MLB API from MLB.com provides sufficient game data
+      console.log('🔍 SportsDataIO current batter feature is disabled due to API limitations');
+      console.log('✅ Game situation alerts will still work using official MLB API data');
+      return null;
+
       // Get today's date for SportsDataIO API
       const today = new Date().toISOString().split('T')[0];
       
-      // Fetch live box scores for today (use BoxScoresByDateLive for real-time data)
-      const url = `${this.SPORTSDATA_BASE_URL}/BoxScoresByDateLive/${today}`;
+      // Use the standard scores endpoint since BoxScoresByDateLive doesn't exist
+      const url = `${this.SPORTSDATA_BASE_URL}/ScoresByDate/${today}`;
       
       const response = await fetchJson<any[]>(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
           'Accept': 'application/json',
-          'Ocp-Apim-Subscription-Key': apiKey
+          'Ocp-Apim-Subscription-Key': apiKey!
         },
         timeoutMs: 8000
       });
