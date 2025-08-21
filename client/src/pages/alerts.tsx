@@ -306,28 +306,8 @@ export default function Alerts() {
                 <div className="text-center mb-3">
                   <div className="font-medium text-slate-400 mb-1 text-[14px]" data-testid={`alert-teams-${alert.id}`}>
                     {(() => {
-                      // Handle both string and object team data
-                      const getTeamName = (teamData: any) => {
-                        if (!teamData) return 'Team';
-                        
-                        // If it's a string, extract the team name
-                        if (typeof teamData === 'string') {
-                          // For generic fallbacks like "Home Team", just use as-is
-                          if (teamData === 'Home Team' || teamData === 'Away Team') {
-                            return teamData;
-                          }
-                          // Extract last word from full team name
-                          return teamData.split(' ').slice(-1)[0];
-                        }
-                        
-                        // If it's an object, try to find name property
-                        if (typeof teamData === 'object') {
-                          return teamData.name || teamData.teamName || teamData.abbreviation || 'Team';
-                        }
-                        
-                        return String(teamData);
-                      };
-                      
+                      // Extract team names without cities
+                      const getTeamName = (fullTeam: string) => fullTeam.split(' ').slice(-1)[0];
                       const awayTeamName = getTeamName(alert.gameInfo.awayTeam);
                       const homeTeamName = getTeamName(alert.gameInfo.homeTeam);
                       

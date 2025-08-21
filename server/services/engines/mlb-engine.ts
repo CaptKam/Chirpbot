@@ -3,15 +3,8 @@ import { mlbApi } from '../mlb-api';
 import { mlbMultiSourceAggregator } from '../mlb-multi-source-aggregator';
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
-import { getEnhancedWeatherData, generateWeatherAlert } from '../weather-ai-enhanced';
 import { sendTelegramAlert } from '../telegram';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
-import { 
-  enhanceAlertWithOpenAI, 
-  analyzeWeatherImpact,
-  generatePreGameInsights,
-  analyzeGameMomentum 
-} from '../openai-enhancements';
 import { randomUUID } from 'crypto';
 
 // RE24 (Run Expectancy) Table
@@ -424,15 +417,6 @@ export class MLBEngine extends BaseSportEngine {
             console.log(`   - Checking decisions: ${Object.keys(liveFeed.liveData.decisions).join(', ')}`);
           }
           
-          // Check boxscore if it exists for current batter
-          if (liveFeed.liveData.boxscore && liveFeed.liveData.boxscore.teams) {
-            console.log(`   - Checking boxscore for batter info...`);
-            const boxscoreTeams = liveFeed.liveData.boxscore.teams;
-            if (boxscoreTeams.away?.batters || boxscoreTeams.home?.batters) {
-              console.log(`   - Boxscore has batter data available`);
-            }
-          }
-          
           // Check if there's any other section with current player info
           const allLiveDataSections = Object.keys(liveFeed.liveData);
           for (const section of allLiveDataSections) {
@@ -490,36 +474,19 @@ export class MLBEngine extends BaseSportEngine {
           };
           console.log(`   ✅ Real MLB batter found: ${currentBatter.name} (${currentBatter.batSide}) - AVG: ${currentBatter.stats.avg}, HR: ${currentBatter.stats.hr}, RBI: ${currentBatter.stats.rbi}`);
         } else {
-          // AI-Enhanced Fallback: Try to predict/estimate current batter
-          console.log(`   🔍 Trying AI-Enhanced batter prediction...`);
+          // Try SportsDataIO as fallback for current batter data
+          console.log(`   🔍 Trying SportsDataIO for current batter information...`);
+          // Multi-source aggregator handles current batter data from multiple sources
+          // This functionality is now integrated into the live feed data
+          currentBatter = null; // Will be populated by multi-source aggregator in live feed
           
-          // Use game context to make educated guesses about current batter
-          const isTopInning = linescore.inningState === 'Top';
-          const battingTeam = isTopInning ? 'away' : 'home';
-          const inning = linescore.currentInning || 1;
-          
-          console.log(`   🧠 AI Context: ${battingTeam} team batting in ${isTopInning ? 'top' : 'bottom'} ${inning}`);
-          
-          // Create a placeholder batter with context-based data
-          // This allows batter-specific alerts to work with estimated data
-          const estimatedBatter = {
-            id: `estimated-batter-${Date.now()}`,
-            name: `${battingTeam === 'home' ? 'Home' : 'Away'} Batter`,
-            batSide: 'U', // Unknown
-            stats: {
-              avg: 0.250,  // League average
-              hr: 15,      // Reasonable estimate  
-              rbi: 45,     // Reasonable estimate
-              obp: 0.320,  // League average
-              ops: 0.750   // League average
-            }
-          };
-          
-          // Only use estimated batter for non-critical situations
-          // This enables alerts while being transparent about data quality
-          currentBatter = estimatedBatter;
-          console.log(`   🤖 AI Estimated Batter: ${currentBatter.name} (avg stats)`);
-          console.log(`   ⚠️ Using AI estimation - alerts will be marked as estimated`);
+          if (!currentBatter) {
+            // NO FALLBACK - Don't create alerts with fake data
+            console.log(`   🏏 ❌ No real current batter found - batter-specific alerts will be skipped`);
+            console.log(`   ✅ Game situation alerts will still work (scores, innings, runners)`);
+            console.log(`   🔍 Need to find where MLB API stores current batter information`);
+            currentBatter = null; // Set to null instead of fake data
+          }
         }
 
         // Get current pitcher
@@ -550,47 +517,6 @@ export class MLBEngine extends BaseSportEngine {
         console.log('Player data not available in current play');
       }
 
-      // Debug team data structure to find team names
-      console.log(`🔍 DEEP Team Structure Analysis:`);
-      console.log(`   - Full gameData keys:`, gameData ? Object.keys(gameData).join(', ') : 'none');
-      console.log(`   - Full linescore keys:`, linescore ? Object.keys(linescore).join(', ') : 'none');
-      
-      // Check if team names are in top-level gameData
-      if (gameData?.players) {
-        console.log(`   - gameData.players exists (might contain team data)`);
-      }
-      if (gameData?.teams) {
-        console.log(`   - gameData.teams:`, JSON.stringify(gameData.teams, null, 2));
-      }
-      
-      // Check linescore structure more thoroughly  
-      if (linescore?.teams) {
-        console.log(`   - linescore.teams:`, JSON.stringify(linescore.teams, null, 2));
-      }
-      
-      // Check if team names are embedded differently
-      if (gameData) {
-        console.log(`   - Complete gameData sample:`, JSON.stringify({
-          ...gameData,
-          players: '[TRUNCATED]' // Don't log massive player data
-        }, null, 2));
-      }
-
-      // Try multiple paths for team names with enhanced extraction
-      const homeTeamName = 
-        gameData.teams?.home?.name ||
-        gameData.game?.teams?.home?.team?.name ||
-        linescore.teams?.home?.team?.name ||
-        'Home Team';
-      
-      const awayTeamName = 
-        gameData.teams?.away?.name ||
-        gameData.game?.teams?.away?.team?.name ||
-        linescore.teams?.away?.team?.name ||
-        'Away Team';
-
-      console.log(`🏟️ Team Names - Away: ${awayTeamName}, Home: ${homeTeamName}`);
-
       const gameState = {
         gameId: `mlb-${gameData.game.pk}`,
         gamePk: gameData.game.pk,
@@ -599,61 +525,15 @@ export class MLBEngine extends BaseSportEngine {
         outs: linescore.outs || 0,
         balls: linescore.balls || 0,
         strikes: linescore.strikes || 0,
-        runners: (() => {
-          // Try to get runner data from plays/currentPlay
-          let runnersOnBase = { first: false, second: false, third: false };
-          
-          // Check current play for runners
-          if (gameData.liveData?.plays?.currentPlay?.runners) {
-            const runners = gameData.liveData.plays.currentPlay.runners;
-            runners.forEach((runner: any) => {
-              if (runner.movement?.end === 'first' || runner.movement?.start === 'first') {
-                runnersOnBase.first = true;
-              }
-              if (runner.movement?.end === 'second' || runner.movement?.start === 'second') {
-                runnersOnBase.second = true;
-              }
-              if (runner.movement?.end === 'third' || runner.movement?.start === 'third') {
-                runnersOnBase.third = true;
-              }
-            });
-          }
-          
-          // Check all plays if current play has no data
-          if (!runnersOnBase.first && !runnersOnBase.second && !runnersOnBase.third) {
-            if (gameData.liveData?.plays?.allPlays && gameData.liveData.plays.allPlays.length > 0) {
-              const lastPlay = gameData.liveData.plays.allPlays[gameData.liveData.plays.allPlays.length - 1];
-              if (lastPlay.runners) {
-                lastPlay.runners.forEach((runner: any) => {
-                  if (runner.movement?.end === 'first') runnersOnBase.first = true;
-                  if (runner.movement?.end === 'second') runnersOnBase.second = true;
-                  if (runner.movement?.end === 'third') runnersOnBase.third = true;
-                });
-              }
-            }
-          }
-          
-          // Check linescore.offense for runner objects (MLB API stores runners as player objects)
-          if (!runnersOnBase.first && !runnersOnBase.second && !runnersOnBase.third) {
-            // In v1.1 API, runners are stored as player objects with id/fullName, not booleans
-            runnersOnBase = {
-              first: !!(linescore.offense?.first && typeof linescore.offense.first === 'object'),
-              second: !!(linescore.offense?.second && typeof linescore.offense.second === 'object'),
-              third: !!(linescore.offense?.third && typeof linescore.offense.third === 'object'),
-            };
-            
-            // Log if we found runners this way
-            if (runnersOnBase.first || runnersOnBase.second || runnersOnBase.third) {
-              console.log(`🏃 Found runners from linescore.offense: 1st=${runnersOnBase.first}, 2nd=${runnersOnBase.second}, 3rd=${runnersOnBase.third}`);
-            }
-          }
-          
-          return runnersOnBase;
-        })(),
+        runners: {
+          first: !!linescore.offense?.first,
+          second: !!linescore.offense?.second, 
+          third: !!linescore.offense?.third,
+        },
         homeScore: linescore.teams?.home?.runs || 0,
         awayScore: linescore.teams?.away?.runs || 0,
-        homeTeam: homeTeamName,
-        awayTeam: awayTeamName,
+        homeTeam: gameData.teams?.home?.name || 'Home Team',
+        awayTeam: gameData.teams?.away?.name || 'Away Team',
         currentBatter: currentBatter || undefined,
         currentPitcher,
       };
@@ -915,10 +795,6 @@ export class MLBEngine extends BaseSportEngine {
         const situation = runnerDesc.length > 0 ? runnerDesc.join(' & ') : 'Empty bases';
         return `📊 HIGH RE24! ${situation}, ${outs} out${outs !== 1 ? 's' : ''} = ${expectedRuns.toFixed(2)} expected runs (${re24Prob}% probability)`;
 
-      case 'Inning Change':
-        // Inning Change alerts don't need scoring probability
-        return alert.description;
-
       default:
         // For other alerts, use the original description but add scoring probability
         return `${alert.description} (${scoringProb}% scoring probability)`;
@@ -982,18 +858,13 @@ export class MLBEngine extends BaseSportEngine {
 
         // Generate custom title with batter name for batter-related alerts
         let customTitle = alert.type;
-        if (gameState.currentBatter && !['Inning Change', 'Game Start', 'Weather Alert'].includes(alert.type)) {
-          // Show batter name on all alerts except game-level ones
+        if (gameState.currentBatter && ['Star Batter Alert', 'Power Hitter Alert', 'Elite Hitter in Clutch', '300+ Hitter Alert', 'RBI Machine Alert'].includes(alert.type)) {
           customTitle = `${alert.type}: ${gameState.currentBatter.name}`;
         }
 
         // Enhance high-priority alerts with AI (priority >= 85)
         let finalDescription = this.generateDynamicDescription(alert, gameState);
-        
-        // Use OpenAI for all alerts priority >= 50 when API key is available
-        const useOpenAI = process.env.OPENAI_API_KEY && alert.priority >= 50;
-        
-        if (useOpenAI) {
+        if (alert.priority >= 85) {
           const gameContext = {
             sport: this.sport,
             homeTeam: gameState.homeTeam,
@@ -1002,41 +873,19 @@ export class MLBEngine extends BaseSportEngine {
             score: { home: gameState.homeScore, away: gameState.awayScore },
             runners: gameState.runners,
             outs: gameState.outs,
-            currentBatter: gameState.currentBatter,
-            currentPitcher: gameState.currentPitcher,
-            weatherData: gameState.weatherData
+            currentBatter: gameState.currentBatter
           };
 
-          // Try OpenAI enhancement first
-          const openAIEnhanced = await enhanceAlertWithOpenAI(
+          const enhanced = await enhanceHighPriorityAlert(
             alert.type,
             gameContext,
             finalDescription,
             alert.priority
           );
 
-          if (openAIEnhanced) {
-            finalDescription = openAIEnhanced.enhancedDescription;
-            console.log(`🤖 OpenAI enhanced alert: ${alert.type}`);
-            console.log(`   📊 Insights:`, openAIEnhanced.insights);
-            console.log(`   🎯 Confidence: ${openAIEnhanced.confidence}%`);
-            if (openAIEnhanced.weatherImpact) {
-              console.log(`   🌤️ Weather Impact: ${openAIEnhanced.weatherImpact}`);
-              finalDescription += ` | ${openAIEnhanced.weatherImpact}`;
-            }
-          } else if (alert.priority >= 85) {
-            // Fallback to original AI enhancement for high-priority alerts
-            const enhanced = await enhanceHighPriorityAlert(
-              alert.type,
-              gameContext,
-              finalDescription,
-              alert.priority
-            );
-
-            if (enhanced) {
-              finalDescription = enhanced.enhancedDescription;
-              console.log(`🤖 AI enhanced alert: ${alert.type} -> ${enhanced.enhancedDescription}`);
-            }
+          if (enhanced) {
+            finalDescription = enhanced.enhancedDescription;
+            console.log(`🤖 AI enhanced alert: ${alert.type} -> ${enhanced.enhancedDescription}`);
           }
         }
 
@@ -1171,18 +1020,7 @@ export class MLBEngine extends BaseSportEngine {
 
       for (const game of liveGames) {
         try {
-          // Extract team names from objects if needed
-          const getTeamName = (team: any) => {
-            if (typeof team === 'string') return team;
-            if (typeof team === 'object' && team?.name) return team.name;
-            if (typeof team === 'object' && team?.abbreviation) return team.abbreviation;
-            return 'Unknown Team';
-          };
-          
-          const awayTeamName = getTeamName(game.awayTeam);
-          const homeTeamName = getTeamName(game.homeTeam);
-          
-          console.log(`🎮 Processing game: ${awayTeamName} @ ${homeTeamName} (State: ${game.gameState}, PK: ${game.gamePk})`);
+          console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (State: ${game.gameState}, PK: ${game.gamePk})`);
 
           if (game.gameState !== 'Live') {
             console.log(`⏭️ Skipping non-live game (${game.gameState})`);
@@ -1202,7 +1040,7 @@ export class MLBEngine extends BaseSportEngine {
             continue;
           }
 
-          console.log(`🔍 Fetching live feed for game ${game.gamePk} (${awayTeamName} @ ${homeTeamName})`);
+          console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
           const liveFeed = await mlbMultiSourceAggregator.getLiveFeed(game.gamePk, game.venue);
 
           // Skip if live feed data isn't available yet (returns null for 404)

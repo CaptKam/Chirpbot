@@ -605,53 +605,21 @@ export class MLBMultiSourceAggregator {
         switch (source.id) {
           case 'mlb-stats-enhanced':
           case 'mlb-official':
-            // Try multiple endpoints in parallel (including v1.1 linescore for runner data)
+            // Try multiple endpoints in parallel
             const feedUrl = `/game/${gamePk}/feed/live?hydrate=plays,currentPlay,team`;
             const playByPlayUrl = `/game/${gamePk}/playByPlay`;
-            const linescoreUrl = `https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`;
             
-            const [feedResponse, playResponse, linescoreResponse] = await Promise.all([
+            const [feedResponse, playResponse] = await Promise.all([
               this.fetchFromMLBStatsEnhanced(feedUrl).catch(() => ({ success: false, source: source.name, responseTime: 0 })),
-              this.fetchFromMLBStatsEnhanced(playByPlayUrl).catch(() => ({ success: false, source: source.name, responseTime: 0 })),
-              // Fetch v1.1 API directly for linescore with runner data
-              fetchJson(linescoreUrl, { timeoutMs: 5000 }).then(
-                data => ({ success: true, data }),
-                () => ({ success: false })
-              )
+              this.fetchFromMLBStatsEnhanced(playByPlayUrl).catch(() => ({ success: false, source: source.name, responseTime: 0 }))
             ]);
             
-            // Extract data from v1.1 API if available
-            let v11LiveData = null;
-            if (linescoreResponse.success && 'data' in linescoreResponse) {
-              const v11Data = linescoreResponse.data as any;
-              v11LiveData = v11Data?.liveData || null;
-            }
-            
-            if (feedResponse.success || playResponse.success || v11LiveData) {
-              const baseFeed = feedResponse.success && 'data' in feedResponse ? feedResponse.data : null;
-              const playData = playResponse.success && 'data' in playResponse ? playResponse.data : null;
-              
-              // Start with base feed/play data merge
-              liveFeed = this.mergeLiveFeedData(baseFeed, playData, gamePk);
-              
-              // Override with v1.1 data if available (has runner and batter data)
-              if (v11LiveData && liveFeed) {
-                // Merge v1.1 linescore data (contains offense with batter/runner info)
-                if (v11LiveData.linescore) {
-                  liveFeed.liveData.linescore = {
-                    ...liveFeed.liveData.linescore,
-                    ...v11LiveData.linescore,
-                    offense: v11LiveData.linescore.offense || liveFeed.liveData.linescore.offense || {},
-                    defense: v11LiveData.linescore.defense || liveFeed.liveData.linescore.defense || {}
-                  };
-                }
-                
-                // Merge plays data if v1.1 has it
-                if (v11LiveData.plays && !liveFeed.liveData.plays?.currentPlay) {
-                  liveFeed.liveData.plays = v11LiveData.plays;
-                }
-              }
-              
+            if (feedResponse.success || playResponse.success) {
+              liveFeed = this.mergeLiveFeedData(
+                feedResponse.success && 'data' in feedResponse ? feedResponse.data : null, 
+                playResponse.success && 'data' in playResponse ? playResponse.data : null, 
+                gamePk
+              );
               successfulSource = source.name;
             }
             break;
@@ -836,23 +804,18 @@ export class MLBMultiSourceAggregator {
       liveData.plays = playData.liveData.plays;
     }
     
-    // If playData has linescore (from v1.1 API), use it instead
-    if (playData && !liveData.linescore) {
-      liveData.linescore = playData;
-    }
-    
     return {
       gameData: feedData?.gameData || { game: { pk: gamePk } },
       liveData: {
         linescore: {
           ...liveData.linescore,
-          outs: liveData.linescore?.outs || playData?.outs || 0,
-          balls: liveData.linescore?.balls || playData?.balls || 0,
-          strikes: liveData.linescore?.strikes || playData?.strikes || 0,
-          offense: liveData.linescore?.offense || playData?.offense || {},
-          defense: liveData.linescore?.defense || playData?.defense || {}
+          outs: liveData.linescore?.outs || 0,
+          balls: liveData.linescore?.balls || 0,
+          strikes: liveData.linescore?.strikes || 0,
+          offense: liveData.linescore?.offense || {},
+          defense: liveData.linescore?.defense || {}
         },
-        plays: liveData.plays || playData?.allPlays ? { allPlays: playData.allPlays, currentPlay: playData.currentPlay } : {},
+        plays: liveData.plays,
         boxscore: liveData.boxscore
       }
     };

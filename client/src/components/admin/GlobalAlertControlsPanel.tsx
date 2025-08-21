@@ -51,28 +51,13 @@ interface AlertControlsResponse {
 }
 
 const SPORTS = ["ALL", "MLB", "NFL", "NBA", "NHL", "WEATHER"];
-const CATEGORIES = [
-  "game_situations", 
-  "runners_risp", 
-  "batter_specific", 
-  "base_runners",
-  "nba_situations", 
-  "nfl_situations", 
-  "nhl_situations", 
-  "weather_conditions", 
-  "ai_predictions"
-];
+const CATEGORIES = ["scoring", "situational", "weather", "prediction"];
 
 const CATEGORY_CONFIG = {
-  game_situations: { color: "bg-blue-100 text-blue-800", icon: "⚾", label: "Game Situations Alerts" },
-  runners_risp: { color: "bg-green-100 text-green-800", icon: "🏃", label: "Runners in Scoring Position" },
-  batter_specific: { color: "bg-orange-100 text-orange-800", icon: "🏏", label: "Batter-Specific Alerts" },
-  base_runners: { color: "bg-cyan-100 text-cyan-800", icon: "🔄", label: "Base Runner Alerts" },
-  nba_situations: { color: "bg-red-100 text-red-800", icon: "🏀", label: "NBA Game Situations" },
-  nfl_situations: { color: "bg-emerald-100 text-emerald-800", icon: "🏈", label: "NFL Game Situations" },
-  nhl_situations: { color: "bg-indigo-100 text-indigo-800", icon: "🏒", label: "NHL Game Situations" },
-  weather_conditions: { color: "bg-yellow-100 text-yellow-800", icon: "🌦️", label: "Weather Conditions" },
-  ai_predictions: { color: "bg-purple-100 text-purple-800", icon: "🔮", label: "AI Predictions" }
+  scoring: { color: "bg-green-100 text-green-800", icon: "🎯", label: "Scoring" },
+  situational: { color: "bg-blue-100 text-blue-800", icon: "⚡", label: "Situational" },
+  weather: { color: "bg-yellow-100 text-yellow-800", icon: "🌦️", label: "Weather" },
+  prediction: { color: "bg-purple-100 text-purple-800", icon: "🔮", label: "AI Prediction" }
 };
 
 const SPORT_COLORS = {

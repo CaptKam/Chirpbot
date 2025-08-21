@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import type { Settings } from "@/types";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "WEATHER"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
@@ -32,25 +32,6 @@ const ALERT_TYPE_CONFIG = {
     { key: "avgHitter", label: ".300+ Hitter Alert", description: "Premium contact hitters at bat" },
     { key: "rbiMachine", label: "RBI Machine Alert", description: "80+ RBI producers with scoring chances" },
     { key: "re24Advanced", label: "RE24 Advanced Analytics", description: "MLB Run Expectancy 24 (RE24) mathematical analysis system" },
-    
-    // Special Game Situations
-    { key: "specialPlay", label: "Special Plays", description: "Infield fly rule, balks, and unusual situations" },
-    { key: "extraInnings", label: "Extra Innings", description: "Bonus baseball beyond 9th inning" },
-    { key: "perfectGame", label: "Perfect Game Watch", description: "Historic perfect game potential" },
-    { key: "noHitter", label: "No Hitter Watch", description: "No-hit performance tracking" },
-    { key: "cycle", label: "Cycle Watch", description: "Player hitting for the cycle potential" },
-    
-    // AI Prediction Alerts
-    { key: "Hot Streak Prediction", label: "🔥 Hot Streak Prediction", description: "AI predicts batter on fire" },
-    { key: "Clutch Hit Prediction", label: "⚡ Clutch Hit Prediction", description: "AI predicts high-pressure clutch moment" },
-    { key: "Stolen Base Prediction", label: "💨 Stolen Base Prediction", description: "AI predicts base stealing opportunity" },
-    { key: "Home Run Prediction", label: "💥 Home Run Prediction", description: "AI predicts long ball potential" },
-    { key: "Double Play Prediction", label: "⚡ Double Play Prediction", description: "AI predicts defensive momentum shift" },
-    { key: "Walk-off Prediction", label: "🚨 Walk-off Prediction", description: "AI predicts game-winning opportunity" },
-    
-    // Weather-Enhanced Alerts
-    { key: "Weather Home Run Boost", label: "🌬️ Weather Home Run Boost", description: "Wind conditions favoring home runs" },
-    { key: "Weather Pitching Advantage", label: "🌧️ Weather Pitching Advantage", description: "Weather conditions favoring pitchers" },
   ],
   NFL: [
     { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line" },
@@ -62,28 +43,11 @@ const ALERT_TYPE_CONFIG = {
     { key: "clutchTime", label: "Clutch Time", description: "Final 2 minutes of close games" },
     { key: "nbaCloseGame", label: "NBA Close Game", description: "Single-digit games in 4th quarter" },
     { key: "overtime", label: "Overtime", description: "Extra period situations" },
-    
-    // AI Prediction Alerts
-    { key: "Buzzer Beater Prediction", label: "🚨 Buzzer Beater Prediction", description: "AI predicts final seconds magic" },
-    { key: "Three Point Opportunity", label: "🎯 Three Point Opportunity", description: "AI predicts high three-point probability" },
   ],
   NHL: [
     { key: "powerPlay", label: "Power Play", description: "Man advantage situations" },
     { key: "nhlCloseGame", label: "NHL Close Game", description: "One-goal games in final period" },
     { key: "emptyNet", label: "Empty Net", description: "Goalie pulled for extra attacker" },
-    
-    // AI Prediction Alerts
-    { key: "Power Play Goal Prediction", label: "⚡ Power Play Goal Prediction", description: "AI predicts man advantage opportunity" },
-    { key: "Game Winner Prediction", label: "🏆 Game Winner Prediction", description: "AI predicts clutch goal opportunity" },
-  ],
-  WEATHER: [
-    { key: "Wind Shift Alert", label: "🌪️ Wind Direction Shift", description: "Game conditions changed due to wind" },
-    { key: "High Wind Alert", label: "💨 High Wind Alert", description: "Wind speeds affecting play" },
-    { key: "Wind Speed Change", label: "🌬️ Wind Speed Change", description: "Conditions shifting during game" },
-    { key: "Temperature Drop", label: "🥶 Temperature Drop", description: "Cold weather affecting performance" },
-    { key: "Weather Condition Change", label: "🌦️ Weather Change", description: "Playing conditions altered" },
-    { key: "Perfect Weather", label: "☀️ Perfect Conditions", description: "Ideal weather for big plays" },
-    { key: "Dome Game", label: "🏟️ Dome Game", description: "Weather not a factor" },
   ],
 };
 
