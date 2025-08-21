@@ -33,7 +33,8 @@ adminRouter.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
     
-    // Set admin session
+    // Set admin session - use standard userId for RBAC middleware compatibility
+    (req as any).session.userId = user.id;
     (req as any).session.adminUser = {
       id: user.id,
       username: user.username,
@@ -46,6 +47,22 @@ adminRouter.post("/login", async (req, res) => {
   } catch (error) {
     console.error("Admin login error:", error);
     res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// Admin logout
+adminRouter.post("/logout", async (req, res) => {
+  try {
+    (req as any).session.destroy((err: any) => {
+      if (err) {
+        console.error("Admin logout error:", err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  } catch (error) {
+    console.error("Admin logout error:", error);
+    res.status(500).json({ error: "Logout failed" });
   }
 });
 

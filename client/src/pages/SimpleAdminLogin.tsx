@@ -29,7 +29,7 @@ export function SimpleAdminLogin() {
         setMessage("Login successful! Redirecting...");
         setTimeout(() => {
           window.location.href = "/admin";
-        }, 1000);
+        }, 500);
       } else {
         setMessage(data.message || "Login failed");
       }
