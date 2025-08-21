@@ -2,8 +2,52 @@ import { Router } from "express";
 import { requireRole, logAdminAction } from "../middleware/rbac";
 import { storage } from "../storage";
 import { insertAiSettingsSchema, insertAiLearningLogSchema } from "@shared/schema";
+import bcrypt from "bcryptjs";
 
 export const adminRouter = Router();
+
+// ===================
+// Admin Authentication
+// ===================
+
+// Admin login - separate from regular user auth
+adminRouter.post("/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
+    }
+    
+    // Find user by username
+    const user = await storage.getUserByUsername(username);
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+    
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password || '');
+    
+    if (!isValidPassword) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+    
+    // Set admin session
+    (req as any).session.adminUser = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    };
+    
+    await logAdminAction(user.id, "admin_login", "session", null, null, null, { username });
+    
+    res.json({ message: "Login successful", user: { id: user.id, username: user.username, role: user.role } });
+  } catch (error) {
+    console.error("Admin login error:", error);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
 
 // ===================
 // AI Settings Routes  
@@ -89,7 +133,7 @@ adminRouter.patch("/ai-settings/:sport", requireRole("manager"), async (req, res
       user.id, 
       "update_ai_settings", 
       "ai_settings", 
-      updatedSettings?.id,
+      updatedSettings?.id || null,
       currentSettings,
       updatedSettings,
       { sport }
@@ -108,7 +152,7 @@ adminRouter.get("/ai-settings", requireRole("admin"), async (req, res) => {
     const user = (req as any).user;
     const allSettings = await storage.getAllAiSettings();
     
-    await logAdminAction(user.id, "view_all_ai_settings", "ai_settings");
+    await logAdminAction(user.id, "view_all_ai_settings", "ai_settings", null, null, null);
     
     res.json(allSettings);
   } catch (error) {

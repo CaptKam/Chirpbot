@@ -1,11 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, AlertTriangle, Settings, Shield } from "lucide-react";
+import { Calendar, AlertTriangle, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
 
 export function BottomNavigation() {
   const [location] = useLocation();
-  const { isAdmin } = useAuth();
   
   // Get unseen alerts count
   const { data: unseenCount } = useQuery<{ count: number }>({
@@ -17,7 +15,6 @@ export function BottomNavigation() {
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
     { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts" },
     { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
-    ...(isAdmin ? [{ path: "/admin", icon: Shield, label: "Admin", testId: "nav-admin" }] : []),
   ];
 
   return (
