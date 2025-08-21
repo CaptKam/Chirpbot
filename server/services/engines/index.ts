@@ -43,14 +43,13 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     // Check each sport for monitored games before starting
     for (const [sport, engine] of Array.from(this.engines.entries())) {
       if (!this.intervalIds.has(sport)) {
-        // Skip weather engine - it should always run
-        if (sport === 'WEATHER') {
-          this.startEngine(sport, engine);
-          continue;
-        }
+        // Weather engine now also conditional on monitored games
         
         // Check if there are any monitored games for this sport
-        const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
+        // For weather engine, check if there are ANY monitored games across all sports
+        const hasMonitoredGames = sport === 'WEATHER' 
+          ? await this.hasAnyMonitoredGames()
+          : await this.hasMonitoredGamesForSport(sport);
         
         if (hasMonitoredGames) {
           console.log(`🔧 Starting ${sport} engine - found monitored games`);
@@ -106,11 +105,24 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     }
   }
   
+  private async hasAnyMonitoredGames(): Promise<boolean> {
+    try {
+      const allMonitoredGames = await this.getAllMonitoredGames();
+      return allMonitoredGames.length > 0;
+    } catch (error) {
+      console.error('Error checking for any monitored games:', error);
+      return false;
+    }
+  }
+  
   private async checkAndUpdateEngines(): Promise<void> {
     for (const [sport, engine] of Array.from(this.engines.entries())) {
-      if (sport === 'WEATHER') continue; // Weather always runs
+      // Weather engine is now conditional like other sports
       
-      const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
+      // For weather engine, check if there are ANY monitored games across all sports
+      const hasMonitoredGames = sport === 'WEATHER' 
+        ? await this.hasAnyMonitoredGames()
+        : await this.hasMonitoredGamesForSport(sport);
       const isRunning = this.intervalIds.has(sport);
       
       if (hasMonitoredGames && !isRunning) {
