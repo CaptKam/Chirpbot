@@ -305,12 +305,24 @@ export default function Alerts() {
                 {/* Teams & Situation */}
                 <div className="text-center mb-3">
                   <div className="text-xs font-medium text-slate-400 mb-1" data-testid={`alert-teams-${alert.id}`}>
-                    {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
-                    {alert.gameInfo.score && (
-                      <span className="ml-2 text-slate-300">
-                        {alert.gameInfo.score.away} - {alert.gameInfo.score.home}
-                      </span>
-                    )}
+                    {(() => {
+                      // Extract team names without cities
+                      const getTeamName = (fullTeam: string) => fullTeam.split(' ').slice(-1)[0];
+                      const awayTeamName = getTeamName(alert.gameInfo.awayTeam);
+                      const homeTeamName = getTeamName(alert.gameInfo.homeTeam);
+                      
+                      return alert.gameInfo.score ? (
+                        <>
+                          {awayTeamName}{' '}
+                          <span className="font-bold text-slate-300">
+                            ({alert.gameInfo.score.away} - {alert.gameInfo.score.home})
+                          </span>
+                          {' '}{homeTeamName}
+                        </>
+                      ) : (
+                        `${awayTeamName} @ ${homeTeamName}`
+                      );
+                    })()}
                   </div>
                 </div>
                 {/* Quick Action Insight */}
