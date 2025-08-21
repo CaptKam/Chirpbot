@@ -417,6 +417,15 @@ export class MLBEngine extends BaseSportEngine {
             console.log(`   - Checking decisions: ${Object.keys(liveFeed.liveData.decisions).join(', ')}`);
           }
           
+          // Check boxscore if it exists for current batter
+          if (liveFeed.liveData.boxscore && liveFeed.liveData.boxscore.teams) {
+            console.log(`   - Checking boxscore for batter info...`);
+            const boxscoreTeams = liveFeed.liveData.boxscore.teams;
+            if (boxscoreTeams.away?.batters || boxscoreTeams.home?.batters) {
+              console.log(`   - Boxscore has batter data available`);
+            }
+          }
+          
           // Check if there's any other section with current player info
           const allLiveDataSections = Object.keys(liveFeed.liveData);
           for (const section of allLiveDataSections) {
