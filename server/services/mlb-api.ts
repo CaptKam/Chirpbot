@@ -181,12 +181,18 @@ export class MLBApiService {
       const [feedData, playData] = await Promise.all([
         fetchJson<any>(feedUrl, {
           headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
-          timeoutMs: 8000
-        }).catch(() => null),
+          timeoutMs: 6000
+        }).catch((error) => {
+          console.log(`Feed endpoint failed for game ${gamePk}: ${error.message}`);
+          return null;
+        }),
         fetchJson<any>(playByPlayUrl, {
           headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
-          timeoutMs: 8000
-        }).catch(() => null)
+          timeoutMs: 6000
+        }).catch((error) => {
+          console.log(`Play-by-play endpoint failed for game ${gamePk}: ${error.message}`);
+          return null;
+        })
       ]);
 
       // Use feed data as primary, supplement with play-by-play data if available

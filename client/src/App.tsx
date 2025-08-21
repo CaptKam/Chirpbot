@@ -78,7 +78,9 @@ function AppContent() {
           const alertData = lastMessage.data as any;
           
           // Find the sport-specific settings
-          const sportSettings = settings?.find((s: any) => s.sport === alertData.sport);
+          // Settings can be either an array of settings objects or undefined
+          const settingsArray = Array.isArray(settings) ? settings : [];
+          const sportSettings = settingsArray.find((s: any) => s.sport === alertData.sport);
           
           // Only show toast if push notifications are enabled
           if (!sportSettings?.pushNotificationsEnabled) {
