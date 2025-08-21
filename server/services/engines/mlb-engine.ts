@@ -862,6 +862,10 @@ export class MLBEngine extends BaseSportEngine {
         const situation = runnerDesc.length > 0 ? runnerDesc.join(' & ') : 'Empty bases';
         return `📊 HIGH RE24! ${situation}, ${outs} out${outs !== 1 ? 's' : ''} = ${expectedRuns.toFixed(2)} expected runs (${re24Prob}% probability)`;
 
+      case 'Inning Change':
+        // Inning Change alerts don't need scoring probability
+        return alert.description;
+
       default:
         // For other alerts, use the original description but add scoring probability
         return `${alert.description} (${scoringProb}% scoring probability)`;
@@ -925,7 +929,8 @@ export class MLBEngine extends BaseSportEngine {
 
         // Generate custom title with batter name for batter-related alerts
         let customTitle = alert.type;
-        if (gameState.currentBatter && ['Star Batter Alert', 'Power Hitter Alert', 'Elite Hitter in Clutch', '300+ Hitter Alert', 'RBI Machine Alert'].includes(alert.type)) {
+        if (gameState.currentBatter && !['Inning Change', 'Game Start', 'Weather Alert'].includes(alert.type)) {
+          // Show batter name on all alerts except game-level ones
           customTitle = `${alert.type}: ${gameState.currentBatter.name}`;
         }
 
