@@ -25,7 +25,7 @@ def test_mlb_api():
     today = datetime.now().strftime("%Y-%m-%d")
     
     # MLB API endpoint - same as ChirpBot V2 uses
-    mlb_url = f"https://statsapi.mlb.com/api/v1/schedule?date={today}"
+    mlb_url = f"https://statsapi.mlb.com/api/v1/schedule/games/?date={today}&sportId=1"
     
     try:
         response = requests.get(mlb_url, timeout=10)
