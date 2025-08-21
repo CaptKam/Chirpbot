@@ -9,16 +9,13 @@ import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { DemoOnboarding } from "@/components/demo-onboarding";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
-const TEST_USER_ID = "test-user-123"; // For demo purposes
+const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
-  const [showDemoOnboarding, setShowDemoOnboarding] = useState(false);
-  const [showGameTip, setShowGameTip] = useState(false);
 
   const { data: gamesData, isLoading } = useQuery<GameDay>({
     queryKey: ["/api/games/today", { sport: activeSport }],
@@ -53,21 +50,6 @@ export default function Calendar() {
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   
-  // Check if this is a demo user and show onboarding (only once per session)
-  useEffect(() => {
-    if (user?.username?.toLowerCase() === 'demo') {
-      const hasShownOnboarding = sessionStorage.getItem('demo-onboarding-shown');
-      if (!hasShownOnboarding) {
-        console.log("Demo user detected - showing onboarding for first time this session");
-        // Set a small delay to ensure smooth transition after login
-        const timer = setTimeout(() => {
-          setShowDemoOnboarding(true);
-          sessionStorage.setItem('demo-onboarding-shown', 'true');
-        }, 500);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [user]);
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -75,47 +57,14 @@ export default function Calendar() {
       return response.json();
     },
     onSuccess: () => {
-      // Clear demo flags for demo users so they show again on next login
-      if (user?.username?.toLowerCase() === 'demo') {
-        sessionStorage.removeItem('demo-onboarding-shown');
-        sessionStorage.removeItem('demo-game-tip-shown');
-      }
       queryClient.clear();
       window.location.reload();
     },
   });
   
-  const handleOnboardingComplete = () => {
-    setShowDemoOnboarding(false);
-    // Show game tip after onboarding for demo users
-    if (user?.username?.toLowerCase() === 'demo') {
-      setTimeout(() => {
-        setShowGameTip(true);
-        // Auto-hide tip after 8 seconds
-        setTimeout(() => setShowGameTip(false), 8000);
-      }, 1000);
-    }
-  };
 
-  // Show game tip for demo users who already completed onboarding in this session
-  useEffect(() => {
-    if (user?.username?.toLowerCase() === 'demo' && !showDemoOnboarding && games.length > 0) {
-      const hasShownOnboarding = sessionStorage.getItem('demo-onboarding-shown');
-      const hasShownGameTip = sessionStorage.getItem('demo-game-tip-shown');
-      
-      // Only show if onboarding was shown but game tip hasn't been shown yet this session
-      if (hasShownOnboarding && !hasShownGameTip) {
-        setTimeout(() => {
-          setShowGameTip(true);
-          sessionStorage.setItem('demo-game-tip-shown', 'true');
-          // Auto-hide tip after 8 seconds
-          setTimeout(() => setShowGameTip(false), 8000);
-        }, 1500);
-      }
-    }
-  }, [user, showDemoOnboarding, games.length]);
 
-  // Load persisted monitored games - use actual user ID for demo users
+  // Load persisted monitored games
   const userId = user?.id || TEST_USER_ID;
   const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
     queryKey: [`/api/user/${userId}/monitored-games`, { sport: activeSport }],
@@ -212,12 +161,6 @@ export default function Calendar() {
 
   return (
     <>
-      {/* Demo Onboarding Modal */}
-      <DemoOnboarding 
-        isOpen={showDemoOnboarding} 
-        onComplete={handleOnboardingComplete} 
-        username={user?.username || "Demo User"} 
-      />
       
     
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
@@ -427,18 +370,6 @@ export default function Calendar() {
                   </div>
                 </Card>
                 
-                {/* Demo game tip popup - only show on first game */}
-                {index === 0 && showGameTip && user?.username?.toLowerCase() === 'demo' && (
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full z-50">
-                    <div className="bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium relative animate-pulse">
-                      👆 Click to start monitoring
-                      {/* Arrow pointing up */}
-                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
-                        <div className="w-2 h-2 bg-emerald-500 rotate-45"></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
               );
             })}

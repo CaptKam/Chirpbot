@@ -7,7 +7,6 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 import { getWeatherData } from "./services/weather";
 import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
-import { demoSimulator } from "./demo-simulator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -327,16 +326,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { gameId, sport, homeTeamName, awayTeamName } = req.body;
       
-      // Check if this is a demo user
-      const session = req.session as any;
-      if (session?.isDemo && session?.userId === userId) {
-        // Start demo monitoring for this game with team names
-        await demoSimulator.startGameMonitoring(gameId, userId, broadcast, {
-          sport,
-          homeTeamName,
-          awayTeamName
-        });
-      }
       
       const monitoring = await storage.addUserMonitoredGame({
         userId,
@@ -357,12 +346,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId, gameId } = req.params;
       
-      // Check if this is a demo user
-      const session = req.session as any;
-      if (session?.isDemo && session?.userId === userId) {
-        // Stop demo monitoring for this game
-        demoSimulator.stopGameMonitoring(gameId, userId);
-      }
       
       await storage.removeUserMonitoredGame(userId, gameId);
       res.json({ success: true });
@@ -410,71 +393,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simulate sports events (for development)
-  app.post("/api/sports/simulate", async (req, res) => {
-    try {
-      const event = sportsService.generateSportsEvent();
-      if (!event) {
-        return res.json({ message: "No event generated" });
-      }
-
-      // Create alert from the simulated event with city name
-      const teamCityMap: Record<string, string> = {
-        'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
-        'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
-        'Athletics': 'Oakland', 'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
-        'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
-        'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
-        'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
-        'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
-        'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
-        'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
-        'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
-        'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
-        'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
-        'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
-        'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
-        'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
-      };
-      
-      const cityName = teamCityMap[event.game.homeTeam] || event.game.homeTeam;
-      const weatherData = await getWeatherData(cityName);
-      
-      const alertData = {
-        type: event.type,
-        sport: event.type.includes("RedZone") ? "NFL" : event.type.includes("ClutchTime") ? "NBA" : "MLB",
-        title: `${event.game.homeTeam} - ${event.type} Alert`,
-        description: event.description,
-        gameInfo: event.game,
-        weatherData,
-        sentToTelegram: false,
-      };
-
-      const settings = await storage.getSettingsBySport(alertData.sport);
-      const alert = await storage.createAlert(alertData);
-
-      // Send to Telegram if both push notifications and telegram are enabled
-      if (settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
-          chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
-        };
-
-        const sent = await sendTelegramAlert(telegramConfig, alert);
-        if (sent) {
-          await storage.markAlertSentToTelegram(alert.id);
-        }
-      }
-
-      // Broadcast new alert
-      broadcast({ type: 'new_alert', data: alert });
-
-      res.json(alert);
-    } catch (error) {
-      console.error("Failed to simulate sports event:", error);
-      res.status(500).json({ message: "Failed to simulate event" });
-    }
-  });
 
   // Import modular sport engines
   const { alertEngineManager } = await import('./services/engines');
@@ -603,10 +521,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       
-      // Stop demo if it's a demo user
-      if (session?.isDemo) {
-        demoSimulator.stopDemo();
-      }
       
       req.session.destroy((err) => {
         if (err) {
@@ -630,50 +544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username/email and password are required" });
       }
 
-      // Handle demo account specially
-      if (usernameOrEmail.toLowerCase() === 'demo' && password === 'demo123') {
-        // Create or get demo user
-        let demoUser = await storage.getUserByUsername('demo');
-        
-        if (!demoUser) {
-          const bcrypt = await import('bcryptjs');
-          const hashedPassword = await bcrypt.hash('demo123', 10);
-          demoUser = await storage.createUser({
-            username: 'demo',
-            password: hashedPassword,
-            firstName: 'Demo',
-            lastName: 'User',
-            authMethod: 'local' as const
-          });
-        }
-        
-        // Start demo simulator and clear all existing alerts
-        console.log(`🎮 Starting demo for user ${demoUser.id} - clearing all alerts`);
-        await demoSimulator.startDemo(demoUser.id, storage);
-        console.log(`✅ Demo started and alerts cleared for user ${demoUser.id}`);
-        
-        // Start session
-        (req.session as any).userId = demoUser.id;
-        (req.session as any).userInfo = {
-          id: demoUser.id,
-          username: demoUser.username,
-          email: demoUser.email,
-          firstName: demoUser.firstName,
-          lastName: demoUser.lastName
-        };
-        (req.session as any).isDemo = true;
-
-        return res.json({ 
-          id: demoUser.id, 
-          username: demoUser.username,
-          email: demoUser.email,
-          firstName: demoUser.firstName,
-          lastName: demoUser.lastName,
-          message: "Demo login successful - fresh session started" 
-        });
-      }
-
-      // Regular user login
+      // User login
       const user = await storage.getUserByUsername(usernameOrEmail);
       if (!user || !user.password) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -695,7 +566,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: user.firstName,
         lastName: user.lastName
       };
-      (req.session as any).isDemo = false;
 
       res.json({ 
         id: user.id, 

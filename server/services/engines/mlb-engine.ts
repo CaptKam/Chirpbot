@@ -523,7 +523,7 @@ export class MLBEngine extends BaseSportEngine {
         awayScore: linescore.teams.away.runs || 0,
         homeTeam: gameData.teams.home.name,
         awayTeam: gameData.teams.away.name,
-        currentBatter,
+        currentBatter: currentBatter || undefined,
         currentPitcher,
       };
 
@@ -941,12 +941,7 @@ export class MLBEngine extends BaseSportEngine {
 
   async monitor() {
     try {
-      // Check if demo mode is active and real-time alerts should be paused
-      const { demoSimulator } = await import('../../demo-simulator');
-      if (demoSimulator.shouldPauseRealTimeAlerts()) {
-        console.log('⏸️ MLB monitoring paused - demo mode active');
-        return;
-      }
+      // Real-time alerts are always active (no demo mode)
 
       const settings = await storage.getSettingsBySport(this.sport);
       console.log(`📊 MLB Settings - Monitoring: ${settings ? 'Enabled' : 'Disabled'}`);

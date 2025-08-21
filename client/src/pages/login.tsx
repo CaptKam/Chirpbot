@@ -64,14 +64,6 @@ export default function Login() {
     loginMutation.mutate({ usernameOrEmail, password });
   };
 
-  const loginWithDemo = () => {
-    setIsLoading(true);
-    toast({
-      title: "Starting demo...",
-      description: "Logging you into the ChirpBot demo experience.",
-    });
-    loginMutation.mutate({ usernameOrEmail: "demo", password: "demo123" });
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] flex items-center justify-center p-4">
@@ -149,14 +141,12 @@ export default function Login() {
             <div className="mt-4">
               <Button
                 type="button"
-                data-testid="button-demo"
-                onClick={loginWithDemo}
-                className="w-full h-10 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 text-blue-300 font-medium"
-                disabled={isLoading}
+                disabled={true}
+                className="w-full h-10 bg-slate-600/20 border border-slate-500/30 text-slate-400 font-medium opacity-50 cursor-not-allowed"
                 variant="outline"
               >
                 <Play className="w-4 h-4 mr-2" />
-                {isLoading ? "Starting Demo..." : "Try Demo Account"}
+                Demo Removed
               </Button>
             </div>
 
