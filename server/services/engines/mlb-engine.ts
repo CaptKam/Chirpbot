@@ -228,7 +228,7 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "⭐ STAR BATTER UP! Elite hitter at the plate!",
       conditions: (state: MLBGameState) => {
-        if (!state.currentBatter) return false;
+        if (!state.currentBatter || state.outs >= 3) return false;
         const stats = state.currentBatter.stats;
         return stats.avg >= 0.300 || stats.hr >= 20 || stats.ops >= 0.900;
       }
@@ -240,7 +240,7 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "💪 POWER HITTER! 25+ HR slugger with runners on base!",
       conditions: (state: MLBGameState) => {
-        if (!state.currentBatter) return false;
+        if (!state.currentBatter || state.outs >= 3) return false;
         const hasRunnersOn = state.runners.first || state.runners.second || state.runners.third;
         return state.currentBatter.stats.hr >= 25 && hasRunnersOn;
       }
@@ -252,7 +252,7 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "🔥 ELITE HITTER IN CLUTCH! High OPS batter in pressure situation!",
       conditions: (state: MLBGameState) => {
-        if (!state.currentBatter) return false;
+        if (!state.currentBatter || state.outs >= 3) return false;
         const isClutch = (state.runners.second || state.runners.third) && state.outs >= 1;
         const isLateInning = state.inning >= 7;
         return state.currentBatter.stats.ops >= 0.850 && (isClutch || isLateInning);
@@ -265,7 +265,7 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "🎯 .300+ HITTER! Premium contact hitter at bat!",
       conditions: (state: MLBGameState) => {
-        if (!state.currentBatter) return false;
+        if (!state.currentBatter || state.outs >= 3) return false;
         return state.currentBatter.stats.avg >= 0.300;
       }
     },
@@ -276,7 +276,7 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "🏃‍♂️ RBI MACHINE! 80+ RBI producer with scoring opportunity!",
       conditions: (state: MLBGameState) => {
-        if (!state.currentBatter) return false;
+        if (!state.currentBatter || state.outs >= 3) return false;
         const scoringPosition = state.runners.second || state.runners.third;
         return state.currentBatter.stats.rbi >= 80 && scoringPosition;
       }
@@ -289,7 +289,7 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "🏃 Runners on Base - Scoring opportunity developing!",
       conditions: (state: MLBGameState) => 
-        state.runners.first || state.runners.second || state.runners.third
+        state.outs < 3 && (state.runners.first || state.runners.second || state.runners.third)
     },
     {
       type: "Inning Change",
