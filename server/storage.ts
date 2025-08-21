@@ -896,59 +896,68 @@ export class DatabaseStorage implements IStorage {
 
     // Define all alert types from the engines
     const alertControlsData = [
-      // MLB Engine Alerts (23 types)
-      { sport: "MLB", alertType: "Game Start", settingKey: "inningChange", enabled: true, priority: 40, probability: 100, description: "⚾ GAME START - First pitch!", category: "situational" },
-      { sport: "MLB", alertType: "7th Inning Warning", settingKey: "lateInning", enabled: true, priority: 50, probability: 100, description: "🚨 7TH INNING STRETCH - Critical innings ahead!", category: "situational" },
-      { sport: "MLB", alertType: "Tie Game 9th Inning", settingKey: "closeGame", enabled: true, priority: 85, probability: 100, description: "🔥 TIE GAME 9TH INNING - FINAL INNING DRAMA!", category: "situational" },
-      { sport: "MLB", alertType: "Bases Loaded 0 Outs", settingKey: "risp", enabled: true, priority: 95, probability: 100, description: "🚨 BASES LOADED, 0 OUTS! - MAXIMUM scoring opportunity!", category: "scoring" },
-      { sport: "MLB", alertType: "Bases Loaded 1 Out", settingKey: "risp", enabled: true, priority: 85, probability: 100, description: "🔥 BASES LOADED, 1 OUT! - High-value scoring chance!", category: "scoring" },
-      { sport: "MLB", alertType: "Bases Loaded 2 Outs", settingKey: "risp", enabled: true, priority: 95, probability: 100, description: "🚨 BASES LOADED, 2 OUTS! - MAXIMUM PRESSURE! Make or break moment!", category: "scoring" },
-      { sport: "MLB", alertType: "Runner on 3rd, 1 Out", settingKey: "risp", enabled: true, priority: 80, probability: 85, description: "🎯 RUNNER ON 3RD, 1 OUT! (55% scoring probability)", category: "scoring" },
-      { sport: "MLB", alertType: "Runners on 2nd & 3rd, 1 Out", settingKey: "risp", enabled: true, priority: 85, probability: 90, description: "🎯 RUNNERS ON 2ND & 3RD, 1 OUT! High scoring potential!", category: "scoring" },
-      { sport: "MLB", alertType: "300+ Hitter Alert", settingKey: "avgHitter", enabled: true, priority: 75, probability: 100, description: "🎯 .300+ HITTER! Premium contact hitter at bat!", category: "situational" },
-      { sport: "MLB", alertType: "Hot Streak Prediction", settingKey: null, enabled: true, priority: 80, probability: 100, description: "🔥 HOT STREAK PREDICTION - Batter on fire!", category: "prediction" },
-      { sport: "MLB", alertType: "Clutch Hit Prediction", settingKey: null, enabled: true, priority: 90, probability: 100, description: "⚡ CLUTCH HIT POTENTIAL - High-pressure moment!", category: "prediction" },
-      { sport: "MLB", alertType: "Stolen Base Prediction", settingKey: null, enabled: true, priority: 70, probability: 100, description: "💨 STOLEN BASE OPPORTUNITY - Speed on display!", category: "prediction" },
-      { sport: "MLB", alertType: "Home Run Prediction", settingKey: null, enabled: true, priority: 95, probability: 100, description: "💥 HOME RUN POTENTIAL - Long ball opportunity!", category: "prediction" },
-      { sport: "MLB", alertType: "Double Play Prediction", settingKey: null, enabled: true, priority: 75, probability: 100, description: "⚡ DOUBLE PLAY POTENTIAL - Defensive momentum!", category: "prediction" },
-      { sport: "MLB", alertType: "Walk-off Prediction", settingKey: null, enabled: true, priority: 100, probability: 100, description: "🚨 WALK-OFF POTENTIAL - Game winner opportunity!", category: "prediction" },
-      { sport: "MLB", alertType: "Weather Home Run Boost", settingKey: null, enabled: true, priority: 85, probability: 100, description: "🌬️ WEATHER BOOST - Wind helping home runs!", category: "weather" },
-      { sport: "MLB", alertType: "Weather Pitching Advantage", settingKey: null, enabled: true, priority: 75, probability: 100, description: "🌧️ PITCHING CONDITIONS - Weather favors pitchers!", category: "weather" },
-      { sport: "MLB", alertType: "Infield Fly Rule", settingKey: "specialPlay", enabled: true, priority: 60, probability: 80, description: "📋 INFIELD FLY RULE - Special situation!", category: "situational" },
-      { sport: "MLB", alertType: "Balk Alert", settingKey: "specialPlay", enabled: true, priority: 65, probability: 70, description: "⚠️ BALK ALERT - Unusual pitcher movement!", category: "situational" },
-      { sport: "MLB", alertType: "Extra Innings", settingKey: "extraInnings", enabled: true, priority: 90, probability: 100, description: "⚡ EXTRA INNINGS - Bonus baseball!", category: "situational" },
-      { sport: "MLB", alertType: "Perfect Game Watch", settingKey: "perfectGame", enabled: true, priority: 100, probability: 100, description: "🎯 PERFECT GAME WATCH - Historic potential!", category: "situational" },
-      { sport: "MLB", alertType: "No Hitter Watch", settingKey: "noHitter", enabled: true, priority: 95, probability: 100, description: "🚨 NO HITTER WATCH - Special performance!", category: "situational" },
-      { sport: "MLB", alertType: "Cycle Watch", settingKey: "cycle", enabled: true, priority: 85, probability: 80, description: "🎯 CYCLE WATCH - Triple away from history!", category: "situational" },
+      // MLB Engine Alerts - Game Situations (3 types)
+      { sport: "MLB", alertType: "Game Start", settingKey: "inningChange", enabled: true, priority: 40, probability: 100, description: "⚾ GAME START - First pitch!", category: "game_situations" },
+      { sport: "MLB", alertType: "7th Inning Warning", settingKey: "lateInning", enabled: true, priority: 50, probability: 100, description: "🚨 7TH INNING STRETCH - Critical innings ahead!", category: "game_situations" },
+      { sport: "MLB", alertType: "Tie Game 9th Inning", settingKey: "closeGame", enabled: true, priority: 85, probability: 100, description: "🔥 TIE GAME 9TH INNING - FINAL INNING DRAMA!", category: "game_situations" },
+      
+      // MLB Engine Alerts - Runners in Scoring Position (5 types)
+      { sport: "MLB", alertType: "Bases Loaded 0 Outs", settingKey: "risp", enabled: true, priority: 95, probability: 100, description: "🚨 BASES LOADED, 0 OUTS! - MAXIMUM scoring opportunity!", category: "runners_risp" },
+      { sport: "MLB", alertType: "Bases Loaded 1 Out", settingKey: "risp", enabled: true, priority: 85, probability: 100, description: "🔥 BASES LOADED, 1 OUT! - High-value scoring chance!", category: "runners_risp" },
+      { sport: "MLB", alertType: "Bases Loaded 2 Outs", settingKey: "risp", enabled: true, priority: 95, probability: 100, description: "🚨 BASES LOADED, 2 OUTS! - MAXIMUM PRESSURE! Make or break moment!", category: "runners_risp" },
+      { sport: "MLB", alertType: "Runner on 3rd, 1 Out", settingKey: "risp", enabled: true, priority: 80, probability: 85, description: "🎯 RUNNER ON 3RD, 1 OUT! (55% scoring probability)", category: "runners_risp" },
+      { sport: "MLB", alertType: "Runners on 2nd & 3rd, 1 Out", settingKey: "risp", enabled: true, priority: 85, probability: 90, description: "🎯 RUNNERS ON 2ND & 3RD, 1 OUT! High scoring potential!", category: "runners_risp" },
+      
+      // MLB Engine Alerts - Batter-Specific (1 type)
+      { sport: "MLB", alertType: "300+ Hitter Alert", settingKey: "avgHitter", enabled: true, priority: 75, probability: 100, description: "🎯 .300+ HITTER! Premium contact hitter at bat!", category: "batter_specific" },
+      // MLB Engine Alerts - AI Predictions (6 types)
+      { sport: "MLB", alertType: "Hot Streak Prediction", settingKey: null, enabled: true, priority: 80, probability: 100, description: "🔥 HOT STREAK PREDICTION - Batter on fire!", category: "ai_predictions" },
+      { sport: "MLB", alertType: "Clutch Hit Prediction", settingKey: null, enabled: true, priority: 90, probability: 100, description: "⚡ CLUTCH HIT POTENTIAL - High-pressure moment!", category: "ai_predictions" },
+      { sport: "MLB", alertType: "Stolen Base Prediction", settingKey: null, enabled: true, priority: 70, probability: 100, description: "💨 STOLEN BASE OPPORTUNITY - Speed on display!", category: "ai_predictions" },
+      { sport: "MLB", alertType: "Home Run Prediction", settingKey: null, enabled: true, priority: 95, probability: 100, description: "💥 HOME RUN POTENTIAL - Long ball opportunity!", category: "ai_predictions" },
+      { sport: "MLB", alertType: "Double Play Prediction", settingKey: null, enabled: true, priority: 75, probability: 100, description: "⚡ DOUBLE PLAY POTENTIAL - Defensive momentum!", category: "ai_predictions" },
+      { sport: "MLB", alertType: "Walk-off Prediction", settingKey: null, enabled: true, priority: 100, probability: 100, description: "🚨 WALK-OFF POTENTIAL - Game winner opportunity!", category: "ai_predictions" },
+      
+      // MLB Engine Alerts - Weather Related (2 types)
+      { sport: "MLB", alertType: "Weather Home Run Boost", settingKey: null, enabled: true, priority: 85, probability: 100, description: "🌬️ WEATHER BOOST - Wind helping home runs!", category: "weather_conditions" },
+      { sport: "MLB", alertType: "Weather Pitching Advantage", settingKey: null, enabled: true, priority: 75, probability: 100, description: "🌧️ PITCHING CONDITIONS - Weather favors pitchers!", category: "weather_conditions" },
+      
+      // MLB Engine Alerts - Special Game Situations (7 types)
+      { sport: "MLB", alertType: "Infield Fly Rule", settingKey: "specialPlay", enabled: true, priority: 60, probability: 80, description: "📋 INFIELD FLY RULE - Special situation!", category: "game_situations" },
+      { sport: "MLB", alertType: "Balk Alert", settingKey: "specialPlay", enabled: true, priority: 65, probability: 70, description: "⚠️ BALK ALERT - Unusual pitcher movement!", category: "game_situations" },
+      { sport: "MLB", alertType: "Extra Innings", settingKey: "extraInnings", enabled: true, priority: 90, probability: 100, description: "⚡ EXTRA INNINGS - Bonus baseball!", category: "game_situations" },
+      { sport: "MLB", alertType: "Perfect Game Watch", settingKey: "perfectGame", enabled: true, priority: 100, probability: 100, description: "🎯 PERFECT GAME WATCH - Historic potential!", category: "game_situations" },
+      { sport: "MLB", alertType: "No Hitter Watch", settingKey: "noHitter", enabled: true, priority: 95, probability: 100, description: "🚨 NO HITTER WATCH - Special performance!", category: "game_situations" },
+      { sport: "MLB", alertType: "Cycle Watch", settingKey: "cycle", enabled: true, priority: 85, probability: 80, description: "🎯 CYCLE WATCH - Triple away from history!", category: "game_situations" },
 
       // NFL Engine Alerts (4 types)
-      { sport: "NFL", alertType: "NFL Close Game", settingKey: "nflCloseGame", enabled: true, priority: 80, probability: 80, description: "🏈 ONE SCORE GAME! High-pressure moment", category: "scoring" },
-      { sport: "NFL", alertType: "Red Zone Situations", settingKey: "redZone", enabled: true, priority: 85, probability: 90, description: "🚨 RED ZONE ALERT! Touchdown territory", category: "scoring" },
-      { sport: "NFL", alertType: "Two Minute Warning", settingKey: "twoMinuteWarning", enabled: true, priority: 90, probability: 100, description: "⏰ TWO MINUTE WARNING! Crunch time", category: "situational" },
-      { sport: "NFL", alertType: "Fourth Down", settingKey: "fourthDown", enabled: true, priority: 95, probability: 90, description: "🎯 4TH DOWN! Go for it or punt?", category: "situational" },
+      { sport: "NFL", alertType: "NFL Close Game", settingKey: "nflCloseGame", enabled: true, priority: 80, probability: 80, description: "🏈 ONE SCORE GAME! High-pressure moment", category: "nfl_situations" },
+      { sport: "NFL", alertType: "Red Zone Situations", settingKey: "redZone", enabled: true, priority: 85, probability: 90, description: "🚨 RED ZONE ALERT! Touchdown territory", category: "nfl_situations" },
+      { sport: "NFL", alertType: "Two Minute Warning", settingKey: "twoMinuteWarning", enabled: true, priority: 90, probability: 100, description: "⏰ TWO MINUTE WARNING! Crunch time", category: "nfl_situations" },
+      { sport: "NFL", alertType: "Fourth Down", settingKey: "fourthDown", enabled: true, priority: 95, probability: 90, description: "🎯 4TH DOWN! Go for it or punt?", category: "nfl_situations" },
 
       // NBA Engine Alerts (5 types)
-      { sport: "NBA", alertType: "Clutch Time", settingKey: "clutchTime", enabled: true, priority: 90, probability: 90, description: "🏀 CLUTCH TIME! Under 5 minutes in close game", category: "situational" },
-      { sport: "NBA", alertType: "Overtime", settingKey: "overtime", enabled: true, priority: 95, probability: 100, description: "⚡ OVERTIME! Extra basketball action", category: "situational" },
-      { sport: "NBA", alertType: "NBA Close Game", settingKey: "nbaCloseGame", enabled: true, priority: 80, probability: 80, description: "🔥 TIGHT CONTEST! Anyone's game", category: "scoring" },
-      { sport: "NBA", alertType: "Buzzer Beater Prediction", settingKey: null, enabled: true, priority: 95, probability: 100, description: "🚨 BUZZER BEATER POTENTIAL - Final seconds magic!", category: "prediction" },
-      { sport: "NBA", alertType: "Three Point Opportunity", settingKey: null, enabled: true, priority: 80, probability: 100, description: "🎯 HIGH THREE-POINT PROBABILITY - Shooter ready!", category: "prediction" },
+      { sport: "NBA", alertType: "Clutch Time", settingKey: "clutchTime", enabled: true, priority: 90, probability: 90, description: "🏀 CLUTCH TIME! Under 5 minutes in close game", category: "nba_situations" },
+      { sport: "NBA", alertType: "Overtime", settingKey: "overtime", enabled: true, priority: 95, probability: 100, description: "⚡ OVERTIME! Extra basketball action", category: "nba_situations" },
+      { sport: "NBA", alertType: "NBA Close Game", settingKey: "nbaCloseGame", enabled: true, priority: 80, probability: 80, description: "🔥 TIGHT CONTEST! Anyone's game", category: "nba_situations" },
+      { sport: "NBA", alertType: "Buzzer Beater Prediction", settingKey: null, enabled: true, priority: 95, probability: 100, description: "🚨 BUZZER BEATER POTENTIAL - Final seconds magic!", category: "ai_predictions" },
+      { sport: "NBA", alertType: "Three Point Opportunity", settingKey: null, enabled: true, priority: 80, probability: 100, description: "🎯 HIGH THREE-POINT PROBABILITY - Shooter ready!", category: "ai_predictions" },
 
       // NHL Engine Alerts (5 types)
-      { sport: "NHL", alertType: "Power Play", settingKey: "powerPlay", enabled: true, priority: 85, probability: 90, description: "⚡ POWER PLAY! Man advantage opportunity", category: "situational" },
-      { sport: "NHL", alertType: "Empty Net", settingKey: "emptyNet", enabled: true, priority: 95, probability: 100, description: "😨 EMPTY NET! Goalie pulled for extra attacker", category: "situational" },
-      { sport: "NHL", alertType: "NHL Close Game", settingKey: "nhlCloseGame", enabled: true, priority: 75, probability: 70, description: "🏆 ONE-GOAL GAME! Tight contest", category: "scoring" },
-      { sport: "NHL", alertType: "Power Play Goal Prediction", settingKey: null, enabled: true, priority: 90, probability: 100, description: "⚡ POWER PLAY GOAL POTENTIAL - Man advantage opportunity!", category: "prediction" },
-      { sport: "NHL", alertType: "Game Winner Prediction", settingKey: null, enabled: true, priority: 95, probability: 100, description: "🏆 GAME WINNER POTENTIAL - Clutch goal opportunity!", category: "prediction" },
+      { sport: "NHL", alertType: "Power Play", settingKey: "powerPlay", enabled: true, priority: 85, probability: 90, description: "⚡ POWER PLAY! Man advantage opportunity", category: "nhl_situations" },
+      { sport: "NHL", alertType: "Empty Net", settingKey: "emptyNet", enabled: true, priority: 95, probability: 100, description: "😨 EMPTY NET! Goalie pulled for extra attacker", category: "nhl_situations" },
+      { sport: "NHL", alertType: "NHL Close Game", settingKey: "nhlCloseGame", enabled: true, priority: 75, probability: 70, description: "🏆 ONE-GOAL GAME! Tight contest", category: "nhl_situations" },
+      { sport: "NHL", alertType: "Power Play Goal Prediction", settingKey: null, enabled: true, priority: 90, probability: 100, description: "⚡ POWER PLAY GOAL POTENTIAL - Man advantage opportunity!", category: "ai_predictions" },
+      { sport: "NHL", alertType: "Game Winner Prediction", settingKey: null, enabled: true, priority: 95, probability: 100, description: "🏆 GAME WINNER POTENTIAL - Clutch goal opportunity!", category: "ai_predictions" },
 
       // Weather Engine Alerts (7 types)
-      { sport: "WEATHER", alertType: "Wind Shift Alert", settingKey: null, enabled: true, priority: 80, probability: 100, description: "🌪️ WIND DIRECTION SHIFT - Game conditions changed!", category: "weather" },
-      { sport: "WEATHER", alertType: "High Wind Alert", settingKey: null, enabled: true, priority: 85, probability: 100, description: "💨 HIGH WINDS - Wind speeds affecting play!", category: "weather" },
-      { sport: "WEATHER", alertType: "Wind Speed Change", settingKey: null, enabled: true, priority: 75, probability: 100, description: "🌬️ WIND SPEED CHANGE - Conditions shifting!", category: "weather" },
-      { sport: "WEATHER", alertType: "Temperature Drop", settingKey: null, enabled: true, priority: 70, probability: 100, description: "🥶 TEMPERATURE DROP - Cold weather affecting play!", category: "weather" },
-      { sport: "WEATHER", alertType: "Weather Condition Change", settingKey: null, enabled: true, priority: 90, probability: 100, description: "🌦️ WEATHER CHANGE - Playing conditions altered!", category: "weather" },
-      { sport: "WEATHER", alertType: "Perfect Weather", settingKey: null, enabled: true, priority: 60, probability: 30, description: "☀️ PERFECT CONDITIONS - Ideal weather for big plays!", category: "weather" },
-      { sport: "WEATHER", alertType: "Dome Game", settingKey: null, enabled: true, priority: 40, probability: 20, description: "🏟️ DOME GAME - Weather not a factor", category: "weather" }
+      { sport: "WEATHER", alertType: "Wind Shift Alert", settingKey: null, enabled: true, priority: 80, probability: 100, description: "🌪️ WIND DIRECTION SHIFT - Game conditions changed!", category: "weather_conditions" },
+      { sport: "WEATHER", alertType: "High Wind Alert", settingKey: null, enabled: true, priority: 85, probability: 100, description: "💨 HIGH WINDS - Wind speeds affecting play!", category: "weather_conditions" },
+      { sport: "WEATHER", alertType: "Wind Speed Change", settingKey: null, enabled: true, priority: 75, probability: 100, description: "🌬️ WIND SPEED CHANGE - Conditions shifting!", category: "weather_conditions" },
+      { sport: "WEATHER", alertType: "Temperature Drop", settingKey: null, enabled: true, priority: 70, probability: 100, description: "🥶 TEMPERATURE DROP - Cold weather affecting play!", category: "weather_conditions" },
+      { sport: "WEATHER", alertType: "Weather Condition Change", settingKey: null, enabled: true, priority: 90, probability: 100, description: "🌦️ WEATHER CHANGE - Playing conditions altered!", category: "weather_conditions" },
+      { sport: "WEATHER", alertType: "Perfect Weather", settingKey: null, enabled: true, priority: 60, probability: 30, description: "☀️ PERFECT CONDITIONS - Ideal weather for big plays!", category: "weather_conditions" },
+      { sport: "WEATHER", alertType: "Dome Game", settingKey: null, enabled: true, priority: 40, probability: 20, description: "🏟️ DOME GAME - Weather not a factor", category: "weather_conditions" }
     ];
 
     console.log(`📊 Initializing ${alertControlsData.length} alert controls...`);
