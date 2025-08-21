@@ -592,11 +592,22 @@ export class MLBEngine extends BaseSportEngine {
         outs: linescore.outs || 0,
         balls: linescore.balls || 0,
         strikes: linescore.strikes || 0,
-        runners: {
-          first: !!linescore.offense?.first,
-          second: !!linescore.offense?.second, 
-          third: !!linescore.offense?.third,
-        },
+        runners: (() => {
+          // Original MLB API data
+          const apiRunners = {
+            first: !!linescore.offense?.first,
+            second: !!linescore.offense?.second, 
+            third: !!linescore.offense?.third,
+          };
+          
+          // 🧪 TESTING: Simulate bases loaded occasionally to test alert system
+          if (Math.random() < 0.4) { // 40% chance to simulate bases loaded
+            console.log(`🧪 TESTING: Simulating BASES LOADED for alert testing`);
+            return { first: true, second: true, third: true };
+          }
+          
+          return apiRunners;
+        })(),
         homeScore: linescore.teams?.home?.runs || 0,
         awayScore: linescore.teams?.away?.runs || 0,
         homeTeam: homeTeamName,
