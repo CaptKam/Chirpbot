@@ -304,7 +304,7 @@ export default function Alerts() {
                 </div>
                 {/* Teams & Situation */}
                 <div className="text-center mb-3">
-                  <div className="text-xs font-medium text-slate-400 mb-1" data-testid={`alert-teams-${alert.id}`}>
+                  <div className="font-medium text-slate-400 mb-1 text-[14px]" data-testid={`alert-teams-${alert.id}`}>
                     {(() => {
                       // Extract team names without cities
                       const getTeamName = (fullTeam: string) => fullTeam.split(' ').slice(-1)[0];
