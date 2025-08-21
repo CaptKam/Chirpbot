@@ -107,9 +107,6 @@ interface InsertAlert {
 export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
   monitoringInterval = 15000; // 15 seconds - reasonable for external APIs
-
-  // Track last game state to prevent duplicate alerts
-  private lastGameStates = new Map<string, string>(); // key: gameId-alertType, value: state hash
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
 
@@ -782,13 +779,9 @@ export class MLBEngine extends BaseSportEngine {
     return true;
   }
 
-  // Override processAlerts to use dynamic descriptions and conditional AI analysis
+  // Override processAlerts to use dynamic descriptions and deduplication system
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
     for (const alert of triggeredAlerts) {
-      // Use MLB-specific duplicate detection
-      if (!this.shouldTriggerMLBAlert(alert.type, gameState)) {
-        continue;
-      }
 
       try {
         // Get weather data for context using city name instead of team name
@@ -814,7 +807,30 @@ export class MLBEngine extends BaseSportEngine {
         const cityName = teamCityMap[gameState.homeTeam] || gameState.homeTeam;
         const weatherData = await getWeatherData(cityName);
 
-        // AI analysis has been completely removed
+        // Use deduplication system to prevent duplicate alerts
+        const frame = {
+          gamePk: gameState.gamePk,
+          inning: gameState.inning,
+          half: gameState.inningState as "top" | "bottom",
+          outs: gameState.outs,
+          runners: gameState.runners,
+          batterId: gameState.currentBatter?.id ?? null,
+          onDeckId: null, // MLB API doesn't provide on-deck batter reliably
+          windDir: null   // Could add weather wind direction if available
+        };
+
+        // Import deduplication system
+        const { dedup } = await import('../engine-coordinator');
+        const { Deduper } = await import('../dedup');
+
+        // Check if we should emit this alert based on situation fingerprint
+        const cooldownType = ['Star Batter Alert', 'Power Hitter Alert'].includes(alert.type) ? alert.type.toLowerCase().replace(' ', '') : undefined;
+        if (!dedup.shouldEmit(alert.type, frame, cooldownType)) {
+          console.log(`🔄 Dedup: Skipping duplicate ${alert.type} alert for current situation`);
+          continue;
+        }
+
+        console.log(`✅ Dedup: Allowing ${alert.type} alert - new situation fingerprint`);
 
         // Generate custom title with batter name for batter-related alerts
         let customTitle = alert.type;
