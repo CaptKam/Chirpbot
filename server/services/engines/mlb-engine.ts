@@ -110,6 +110,9 @@ export class MLBEngine extends BaseSportEngine {
   monitoringInterval = 15000; // 15 seconds - reasonable for external APIs
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
+  
+  // Add onAlert callback for real-time broadcasting
+  onAlert?: (alert: any) => void;
 
   alertConfigs: AlertConfig[] = [
     {
@@ -999,7 +1002,7 @@ export class MLBEngine extends BaseSportEngine {
         const cooldownType = ['Star Batter Alert', 'Power Hitter Alert'].includes(alert.type) ? alert.type.toLowerCase().replace(' ', '') : undefined;
         if (!dedup.shouldEmit(alert.type, frame, cooldownType)) {
           console.log(`🔄 Dedup: Skipping duplicate ${alert.type} alert for current situation`);
-          continue;
+          return; // Exit early since we're only processing one alert now
         }
 
         console.log(`✅ Dedup: Allowing ${alert.type} alert - new situation fingerprint`);
@@ -1122,6 +1125,7 @@ export class MLBEngine extends BaseSportEngine {
       } catch (error) {
         console.error(`Error processing ${this.sport} alert:`, error);
       }
+  }
 
   async monitor() {
     try {
