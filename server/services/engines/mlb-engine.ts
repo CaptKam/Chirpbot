@@ -626,13 +626,19 @@ export class MLBEngine extends BaseSportEngine {
             }
           }
           
-          // Fallback to linescore.offense if available (though usually empty)
+          // Check linescore.offense for runner objects (MLB API stores runners as player objects)
           if (!runnersOnBase.first && !runnersOnBase.second && !runnersOnBase.third) {
+            // In v1.1 API, runners are stored as player objects with id/fullName, not booleans
             runnersOnBase = {
-              first: !!linescore.offense?.first,
-              second: !!linescore.offense?.second,
-              third: !!linescore.offense?.third,
+              first: !!(linescore.offense?.first && typeof linescore.offense.first === 'object'),
+              second: !!(linescore.offense?.second && typeof linescore.offense.second === 'object'),
+              third: !!(linescore.offense?.third && typeof linescore.offense.third === 'object'),
             };
+            
+            // Log if we found runners this way
+            if (runnersOnBase.first || runnersOnBase.second || runnersOnBase.third) {
+              console.log(`🏃 Found runners from linescore.offense: 1st=${runnersOnBase.first}, 2nd=${runnersOnBase.second}, 3rd=${runnersOnBase.third}`);
+            }
           }
           
           return runnersOnBase;
