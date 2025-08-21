@@ -3,8 +3,15 @@ import { mlbApi } from '../mlb-api';
 import { mlbMultiSourceAggregator } from '../mlb-multi-source-aggregator';
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
+import { getEnhancedWeatherData, generateWeatherAlert } from '../weather-ai-enhanced';
 import { sendTelegramAlert } from '../telegram';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
+import { 
+  enhanceAlertWithOpenAI, 
+  analyzeWeatherImpact,
+  generatePreGameInsights,
+  analyzeGameMomentum 
+} from '../openai-enhancements';
 import { randomUUID } from 'crypto';
 
 // RE24 (Run Expectancy) Table
@@ -982,7 +989,11 @@ export class MLBEngine extends BaseSportEngine {
 
         // Enhance high-priority alerts with AI (priority >= 85)
         let finalDescription = this.generateDynamicDescription(alert, gameState);
-        if (alert.priority >= 85) {
+        
+        // Use OpenAI for all alerts priority >= 50 when API key is available
+        const useOpenAI = process.env.OPENAI_API_KEY && alert.priority >= 50;
+        
+        if (useOpenAI) {
           const gameContext = {
             sport: this.sport,
             homeTeam: gameState.homeTeam,
@@ -991,19 +1002,41 @@ export class MLBEngine extends BaseSportEngine {
             score: { home: gameState.homeScore, away: gameState.awayScore },
             runners: gameState.runners,
             outs: gameState.outs,
-            currentBatter: gameState.currentBatter
+            currentBatter: gameState.currentBatter,
+            currentPitcher: gameState.currentPitcher,
+            weatherData: gameState.weatherData
           };
 
-          const enhanced = await enhanceHighPriorityAlert(
+          // Try OpenAI enhancement first
+          const openAIEnhanced = await enhanceAlertWithOpenAI(
             alert.type,
             gameContext,
             finalDescription,
             alert.priority
           );
 
-          if (enhanced) {
-            finalDescription = enhanced.enhancedDescription;
-            console.log(`🤖 AI enhanced alert: ${alert.type} -> ${enhanced.enhancedDescription}`);
+          if (openAIEnhanced) {
+            finalDescription = openAIEnhanced.enhancedDescription;
+            console.log(`🤖 OpenAI enhanced alert: ${alert.type}`);
+            console.log(`   📊 Insights:`, openAIEnhanced.insights);
+            console.log(`   🎯 Confidence: ${openAIEnhanced.confidence}%`);
+            if (openAIEnhanced.weatherImpact) {
+              console.log(`   🌤️ Weather Impact: ${openAIEnhanced.weatherImpact}`);
+              finalDescription += ` | ${openAIEnhanced.weatherImpact}`;
+            }
+          } else if (alert.priority >= 85) {
+            // Fallback to original AI enhancement for high-priority alerts
+            const enhanced = await enhanceHighPriorityAlert(
+              alert.type,
+              gameContext,
+              finalDescription,
+              alert.priority
+            );
+
+            if (enhanced) {
+              finalDescription = enhanced.enhancedDescription;
+              console.log(`🤖 AI enhanced alert: ${alert.type} -> ${enhanced.enhancedDescription}`);
+            }
           }
         }
 
