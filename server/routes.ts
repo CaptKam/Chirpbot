@@ -734,10 +734,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('🌤️ === WEATHER API DEBUG TEST STARTING ===');
       
       // Check environment variables first
-      const apiKeyStatus = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
+      const apiKeyStatus = process.env.ACCUWEATHER_API_KEY;
       console.log(`🔑 API Key Status: ${apiKeyStatus ? 'Present' : 'Missing'}`);
       console.log(`🔑 API Key Value: ${apiKeyStatus ? `${apiKeyStatus.substring(0, 8)}...` : 'None'}`);
-      console.log(`🔑 Is placeholder key: ${apiKeyStatus === "default_key" || apiKeyStatus === "your_actual_openweathermap_api_key_here"}`);
+      console.log(`🔑 Is placeholder key: ${apiKeyStatus === "default_key" || apiKeyStatus === "your_actual_accuweather_api_key_here"}`);
       
       const testCities = [
         'New York', 'Los Angeles', 'Chicago', 'Phoenix', 
@@ -800,7 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString(),
         apiKeyConfigured: !!(apiKeyStatus && 
           apiKeyStatus !== "default_key" && 
-          apiKeyStatus !== "your_actual_openweathermap_api_key_here"),
+          apiKeyStatus !== "your_actual_accuweather_api_key_here"),
         apiKey: apiKeyStatus ? `${apiKeyStatus.substring(0, 8)}...` : 'Not configured',
         cityResults: weatherResults,
         teamResults: teamResults,

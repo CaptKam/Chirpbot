@@ -65,7 +65,7 @@ Preferred communication style: Simple, everyday language.
 - **Connection Testing**: Built-in Telegram connectivity validation
 
 ## Weather Integration
-- **OpenWeatherMap API**: Real-time weather data for outdoor sports venues
+- **AccuWeather API**: Real-time weather data for outdoor sports venues with enhanced accuracy
 - **Fallback System**: Mock weather data when API keys are unavailable
 - **Location-based Data**: City-specific weather conditions for game context
 

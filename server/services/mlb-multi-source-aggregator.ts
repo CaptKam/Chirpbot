@@ -382,9 +382,9 @@ export class MLBMultiSourceAggregator {
       return cached.data;
     }
 
-    const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+    const apiKey = process.env.ACCUWEATHER_API_KEY;
     if (!apiKey) {
-      console.log('⚠️ OpenWeatherMap API key not available');
+      console.log('⚠️ AccuWeather API key not available');
       return null;
     }
 
@@ -406,7 +406,8 @@ export class MLBMultiSourceAggregator {
         return null;
       }
 
-      const weatherData = await fetchJson<WeatherAPIResponse>(`https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lon}&appid=${apiKey}&units=imperial`, {
+      // AccuWeather requires location key first, then current conditions
+      const locationData = await fetchJson<any[]>(`https://dataservice.accuweather.com/locations/v1/search?apikey=${apiKey}&q=${encodeURIComponent(venue)}`, {
         timeoutMs: 5000
       });
 
