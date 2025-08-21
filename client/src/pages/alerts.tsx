@@ -319,21 +319,16 @@ export default function Alerts() {
                     {alert.description}
                   </p>
                 </div>
-                {/* AI Analysis */}
-                {alert.aiContext && (
+                {/* Game Info */}
+                {alert.gameInfo.currentBatter && (
                   <div className="mt-3 p-3 bg-emerald-500/10 backdrop-blur-sm rounded-lg ring-1 ring-emerald-500/30">
                     <div className="flex items-start">
-                      <span className="text-emerald-400 mr-2">🤖</span>
+                      <span className="text-emerald-400 mr-2">🏏</span>
                       <div className="flex-1">
-                        <p className="text-xs font-medium text-emerald-300 mb-1">AI ANALYSIS</p>
-                        <p className="text-sm text-slate-200" data-testid={`alert-ai-context-${alert.id}`}>
-                          {alert.aiContext}
+                        <p className="text-xs font-medium text-emerald-300 mb-1">CURRENT BATTER</p>
+                        <p className="text-sm text-slate-200" data-testid={`alert-current-batter-${alert.id}`}>
+                          {alert.gameInfo.currentBatter.name} ({alert.gameInfo.currentBatter.batSide}) - AVG: {alert.gameInfo.currentBatter.stats.avg.toFixed(3)}, HR: {alert.gameInfo.currentBatter.stats.hr}, RBI: {alert.gameInfo.currentBatter.stats.rbi}
                         </p>
-                        {alert.aiConfidence && (
-                          <p className="text-xs text-emerald-400 mt-2 font-medium">
-                            {alert.aiConfidence}% Confidence
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>

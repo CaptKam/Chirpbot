@@ -324,21 +324,27 @@ export class MLBEngine extends BaseSportEngine {
       let currentPitcher = undefined;
 
       try {
-        console.log(`🔍 NEW Batter Debug - Game ${gameData.game.pk}:`);
+        console.log(`🔍 ENHANCED Batter Debug - Game ${gameData.game.pk}:`);
         
-        // Debug: Show what's actually available in the API
-        console.log(`   🔍 API Structure Debug:`);
+        // Enhanced Debug: Show complete API structure
+        console.log(`   🔍 Complete API Structure:`);
         console.log(`   - liveData exists: ${!!liveFeed.liveData}`);
+        console.log(`   - liveData keys: ${liveFeed.liveData ? Object.keys(liveFeed.liveData).join(', ') : 'none'}`);
         console.log(`   - linescore exists: ${!!linescore}`);
         console.log(`   - linescore.offense exists: ${!!linescore.offense}`);
         if (linescore.offense) {
           console.log(`   - linescore.offense keys: ${Object.keys(linescore.offense).join(', ')}`);
+          console.log(`   - linescore.offense full structure:`, JSON.stringify(linescore.offense, null, 2));
         }
         console.log(`   - boxscore exists: ${!!liveFeed.liveData?.boxscore}`);
-        if (liveFeed.liveData?.boxscore?.teams) {
-          console.log(`   - boxscore.teams exists: ${!!liveFeed.liveData.boxscore.teams}`);
-          console.log(`   - away players count: ${liveFeed.liveData.boxscore.teams.away?.players ? Object.keys(liveFeed.liveData.boxscore.teams.away.players).length : 0}`);
-          console.log(`   - home players count: ${liveFeed.liveData.boxscore.teams.home?.players ? Object.keys(liveFeed.liveData.boxscore.teams.home.players).length : 0}`);
+        console.log(`   - decisions exists: ${!!liveFeed.liveData?.decisions}`);
+        console.log(`   - plays exists: ${!!liveFeed.liveData?.plays}`);
+        console.log(`   - plays keys: ${liveFeed.liveData?.plays ? Object.keys(liveFeed.liveData.plays).join(', ') : 'none'}`);
+        
+        // Check for any other potential locations for current batter data
+        if (liveFeed.liveData) {
+          const allKeys = Object.keys(liveFeed.liveData);
+          console.log(`   - All liveData keys: ${allKeys.join(', ')}`);
         }
 
         // Try multiple paths to get current batter information
@@ -355,10 +361,24 @@ export class MLBEngine extends BaseSportEngine {
           console.log(`   ✅ Path 1 SUCCESS: ${batter.fullName || batter.name}`);
         }
 
-        // Path 2: Try linescore.offense approach
-        if (!batter && linescore.offense?.batter) {
-          batter = linescore.offense.batter;
-          console.log(`   ✅ Found batter via linescore.offense: ${batter.fullName || batter.name}`);
+        // Path 2: Try linescore.offense approach - check for any offensive player data
+        if (!batter && linescore.offense) {
+          // Check if we can find any player data in the offense structure
+          const offenseKeys = Object.keys(linescore.offense);
+          console.log(`   Path 2 - offense keys available: ${offenseKeys.join(', ')}`);
+          
+          // Look for any player data that might indicate current batter
+          for (const key of offenseKeys) {
+            const player = linescore.offense[key];
+            if (player && typeof player === 'object' && player.fullName) {
+              // If it's not a base position, it might be the current batter
+              if (!['first', 'second', 'third'].includes(key)) {
+                batter = player;
+                console.log(`   ✅ Path 2 SUCCESS via ${key}: ${batter.fullName || batter.name}`);
+                break;
+              }
+            }
+          }
         }
 
         // Path 3: Try boxscore current batter
