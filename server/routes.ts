@@ -597,6 +597,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Demo login route
+  app.post("/api/auth/demo-login", async (req, res) => {
+    try {
+      // Find or create demo user
+      let demoUser = await storage.getUserByUsername('demo');
+      
+      if (!demoUser) {
+        const bcrypt = await import('bcryptjs');
+        const hashedPassword = await bcrypt.hash('demo123', 10);
+        
+        demoUser = await storage.createUser({
+          username: 'demo',
+          password: hashedPassword,
+          email: 'demo@example.com',
+          firstName: 'Demo',
+          lastName: 'User',
+          role: 'user',
+          authMethod: 'local',
+          emailVerified: true
+        });
+      }
+
+      // Start session
+      (req.session as any).userId = demoUser.id;
+      (req.session as any).userInfo = {
+        id: demoUser.id,
+        username: demoUser.username,
+        email: demoUser.email,
+        firstName: demoUser.firstName,
+        lastName: demoUser.lastName
+      };
+
+      res.json({ 
+        id: demoUser.id, 
+        username: demoUser.username,
+        email: demoUser.email,
+        firstName: demoUser.firstName,
+        lastName: demoUser.lastName,
+        message: "Demo login successful" 
+      });
+    } catch (error) {
+      console.error("Demo login error:", error);
+      res.status(500).json({ message: "Demo login failed" });
+    }
+  });
+
   app.get("/api/auth/user", (req, res) => {
     const session = req.session as any;
     if (session?.userId) {

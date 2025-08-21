@@ -39,6 +39,27 @@ export default function Login() {
     },
   });
 
+  const demoLoginMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/auth/demo-login", {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Welcome to ChirpBot Demo!",
+        description: "You're now logged in with the demo account. Explore all features!",
+      });
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Demo login failed",
+        description: error.message || "Could not access demo account.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -62,6 +83,10 @@ export default function Login() {
 
     setIsLoading(true);
     loginMutation.mutate({ usernameOrEmail, password });
+  };
+
+  const handleDemoLogin = () => {
+    demoLoginMutation.mutate();
   };
 
 
@@ -141,12 +166,14 @@ export default function Login() {
             <div className="mt-4">
               <Button
                 type="button"
-                disabled={true}
-                className="w-full h-10 bg-slate-600/20 border border-slate-500/30 text-slate-400 font-medium opacity-50 cursor-not-allowed"
+                onClick={handleDemoLogin}
+                disabled={demoLoginMutation.isPending}
+                className="w-full h-10 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-medium hover:bg-emerald-500/30 hover:border-emerald-500/40 transition-all duration-200 disabled:opacity-50"
                 variant="outline"
+                data-testid="button-demo-login"
               >
                 <Play className="w-4 h-4 mr-2" />
-                Demo Removed
+                {demoLoginMutation.isPending ? "Signing in..." : "Try Demo Account"}
               </Button>
             </div>
 
