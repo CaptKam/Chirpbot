@@ -280,90 +280,99 @@ export default function Alerts() {
                     markAlertAsSeen(alert.id);
                   }
                 }}
-                className={`bg-white/5 backdrop-blur-sm rounded-xl p-3 hover:bg-white/10 transition-all duration-500 relative overflow-hidden mb-4 border-b-4 border-slate-600/30 ${
+                className={`bg-slate-900/80 backdrop-blur-sm rounded-lg hover:bg-slate-900/90 transition-all duration-300 relative mb-3 ${
                   alert.seen 
-                    ? 'ring-1 ring-slate-600/50 opacity-75' 
-                    : 'ring-2 ring-emerald-500 shadow-xl shadow-emerald-500/30 border-2 border-emerald-400/50'
+                    ? 'border border-slate-800 opacity-60' 
+                    : 'border border-blue-500/30 shadow-lg'
                 }`}
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
               >
-                {/* 🔥 COMPACT SPORTS ALERT */}
-                <div className="relative">
+                {/* Premium Alert Design */}
+                <div className="p-4">
+                  {/* Live Indicator - Subtle */}
                   {!alert.seen && (
-                    <div className="absolute -top-1 -right-1 z-20">
-                      <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs font-black px-2 py-1 rounded-full animate-pulse shadow-lg">
-                        LIVE
-                      </div>
+                    <div className="absolute top-4 right-4">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                     </div>
                   )}
                   
-                  {/* COMPACT HEADER */}
-                  <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-3 mb-2 border border-slate-600/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xl">⚡</span>
-                        <div>
-                          <div className="text-emerald-400 font-black text-sm uppercase tracking-wide">
-                            {/* Show the actual situation as the title, not the generic type */}
-                            {alert.description.split('!')[0].replace(/[🏃⚡🔥💥🚨💯⏰🎯]/g, '').trim()}!
-                          </div>
-                          <div className="text-slate-400 text-xs">
-                            {new Date(alert.timestamp).toLocaleTimeString()}
-                          </div>
-                        </div>
+                  {/* Main Alert Content */}
+                  <div className="space-y-3">
+                    {/* Title & Score */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-white font-semibold text-base leading-tight">
+                          {alert.description.split('!')[0].replace(/[🏃⚡🔥💥🚨💯⏰🎯⭐]/g, '').trim()}
+                        </h3>
+                        <p className="text-slate-400 text-xs mt-1">
+                          {new Date(alert.timestamp).toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}
+                        </p>
                       </div>
-                      <div className="text-emerald-400 font-bold text-lg">
-                        {alert.gameInfo.score?.away || 0}-{alert.gameInfo.score?.home || 0}
+                      <div className="text-right ml-4">
+                        <div className="text-blue-400 font-mono text-lg font-medium">
+                          {alert.gameInfo.score?.away || 0}-{alert.gameInfo.score?.home || 0}
+                        </div>
+                        {alert.gameInfo.inning && (
+                          <div className="text-slate-500 text-xs mt-0.5">
+                            {alert.gameInfo.inningState === 'top' ? '▲' : '▼'} {alert.gameInfo.inning}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* GAME & DESCRIPTION - Compact */}
-                  <div className="bg-slate-800/60 rounded-lg p-3 border-l-3 border-emerald-400">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-emerald-300 font-medium text-sm">
-                        🏟️ {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
-                      </div>
-                      <div className="flex space-x-3 text-xs">
-                        <span className="text-slate-400">
-                          {alert.gameInfo.inning ? `Inn ${alert.gameInfo.inning}` : ''}
+                    {/* Game Info */}
+                    <div className="border-t border-slate-800 pt-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-300">
+                          {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
                         </span>
-                        <span className="text-slate-400">
-                          {alert.gameInfo.outs !== undefined ? `${alert.gameInfo.outs} Outs` : ''}
-                        </span>
+                        {alert.gameInfo.outs !== undefined && (
+                          <span className="text-slate-500 text-xs">
+                            {alert.gameInfo.outs} {alert.gameInfo.outs === 1 ? 'out' : 'outs'}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    
-                    <div className="text-center">
-                      {/* Show the explanation part after the exclamation mark */}
-                      <div className="text-slate-100 text-sm">
-                        {alert.description.split('!')[1] ? 
-                          alert.description.split('!').slice(1).join('!').split('(')[0].trim() 
-                          : ''}
-                      </div>
-                      {alert.description.includes('(') && (
-                        <div className="text-slate-300 text-sm mt-1">
-                          ({alert.description.split('(')[1]}
+
+                    {/* Probability Badge */}
+                    {alert.description.includes('(') && (
+                      <div className="flex justify-center">
+                        <div className="bg-slate-800/60 px-3 py-1 rounded-full">
+                          <span className="text-blue-400 text-xs font-medium">
+                            {alert.description.match(/\(([^)]+)\)/)?.[1]}
+                          </span>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Batter Info - Clean */}
+                    {alert.gameInfo.currentBatter && (
+                      <div className="border-t border-slate-800 pt-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <div>
+                            <span className="text-slate-500 text-xs">AT BAT</span>
+                            <div className="text-slate-200 font-medium">
+                              {alert.gameInfo.currentBatter.name}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-slate-400 font-mono text-xs">
+                              .{alert.gameInfo.currentBatter.stats.avg.toFixed(3)}
+                            </div>
+                            <div className="text-slate-500 text-xs">
+                              {alert.gameInfo.currentBatter.stats.hr} HR
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {/* Compact Batter Info */}
-                {alert.gameInfo.currentBatter && (
-                  <div className="mt-2 p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                    <div className="flex items-center">
-                      <span className="text-emerald-400 mr-2 text-sm">🏏</span>
-                      <div className="flex-1">
-                        <div className="text-emerald-300 text-xs font-medium">AT BAT</div>
-                        <div className="text-slate-200 text-xs" data-testid={`alert-current-batter-${alert.id}`}>
-                          {alert.gameInfo.currentBatter.name} - .{alert.gameInfo.currentBatter.stats.avg.toFixed(3)}, {alert.gameInfo.currentBatter.stats.hr}HR
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </SwipeableCard>
             );
           })}
