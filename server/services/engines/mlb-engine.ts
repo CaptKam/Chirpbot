@@ -240,9 +240,17 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "💪 POWER HITTER! 25+ HR slugger with runners on base!",
       conditions: (state: MLBGameState) => {
-        if (!state.currentBatter || state.outs >= 3) return false;
+        // ONLY trigger if we have REAL batter data (no synthetic data)
+        if (!state.currentBatter || state.outs >= 3) {
+          console.log(`   🚫 Power Hitter Alert: Skipped - no real batter data or inning over`);
+          return false;
+        }
         const hasRunnersOn = state.runners.first || state.runners.second || state.runners.third;
-        return state.currentBatter.stats.hr >= 25 && hasRunnersOn;
+        const shouldTrigger = state.currentBatter.stats.hr >= 25 && hasRunnersOn;
+        if (shouldTrigger) {
+          console.log(`   ✅ Power Hitter Alert: REAL trigger - ${state.currentBatter.name} (${state.currentBatter.stats.hr} HR) with runners on base`);
+        }
+        return shouldTrigger;
       }
     },
     {
@@ -361,41 +369,67 @@ export class MLBEngine extends BaseSportEngine {
           console.log(`   ✅ Path 1 SUCCESS: ${batter.fullName || batter.name}`);
         }
 
-        // Path 2: Try linescore.offense approach - check for any offensive player data
-        if (!batter && linescore.offense) {
-          // Check if we can find any player data in the offense structure
-          const offenseKeys = Object.keys(linescore.offense);
-          console.log(`   Path 2 - offense keys available: ${offenseKeys.join(', ')}`);
+        // Path 2: Try linescore approach for current batter (not just base runners)
+        if (!batter && linescore) {
+          console.log(`   Path 2 - Searching linescore for current batter...`);
           
-          // Look for any player data that might indicate current batter
-          for (const key of offenseKeys) {
-            const player = linescore.offense[key];
-            if (player && typeof player === 'object' && player.fullName) {
-              // If it's not a base position, it might be the current batter
-              if (!['first', 'second', 'third'].includes(key)) {
-                batter = player;
-                console.log(`   ✅ Path 2 SUCCESS via ${key}: ${batter.fullName || batter.name}`);
-                break;
+          // Check all linescore properties for current batter
+          const linescoreKeys = Object.keys(linescore);
+          console.log(`   - All linescore keys: ${linescoreKeys.join(', ')}`);
+          
+          // Look for batter, currentBatter, or any player-like objects
+          const batterKeywords = ['batter', 'currentBatter', 'atBat', 'batting'];
+          for (const keyword of batterKeywords) {
+            if (linescore[keyword] && typeof linescore[keyword] === 'object' && linescore[keyword].fullName) {
+              batter = linescore[keyword];
+              console.log(`   ✅ Path 2 SUCCESS via linescore.${keyword}: ${batter.fullName}`);
+              break;
+            }
+          }
+          
+          // If still no batter, check offense structure more thoroughly
+          if (!batter && linescore.offense) {
+            const offenseKeys = Object.keys(linescore.offense);
+            console.log(`   - Offense keys: ${offenseKeys.join(', ')}`);
+            
+            // Look for any non-base-runner player data that could be current batter
+            for (const key of offenseKeys) {
+              const player = linescore.offense[key];
+              if (player && typeof player === 'object' && player.fullName) {
+                if (!['first', 'second', 'third'].includes(key)) {
+                  batter = player;
+                  console.log(`   ✅ Path 2 SUCCESS via offense.${key}: ${batter.fullName}`);
+                  break;
+                }
               }
             }
           }
         }
 
-        // Path 3: Try boxscore current batter
-        if (!batter && liveFeed.liveData?.boxscore?.teams) {
-          const battingTeam = linescore.inningState === 'Top' ? 
-            liveFeed.liveData.boxscore.teams.away : 
-            liveFeed.liveData.boxscore.teams.home;
+        // Path 3: Try to find current batter in decisions or other liveData sections
+        if (!batter && liveFeed.liveData) {
+          console.log(`   Path 3 - Searching all liveData sections for current batter...`);
           
-          const battingOrder = battingTeam?.battingOrder;
-          if (battingOrder && battingOrder.length > 0) {
-            const currentBatterId = battingOrder[0]; // First in batting order is often current batter
-            const players = liveFeed.liveData.boxscore.teams.away.players;
-            const allPlayers = {...players, ...liveFeed.liveData.boxscore.teams.home.players};
-            
-            if (allPlayers[`ID${currentBatterId}`]) {
-              batter = allPlayers[`ID${currentBatterId}`].person;
-              console.log(`   ✅ Found batter via boxscore: ${batter.fullName || batter.name}`);
+          // Check decisions for current batter info
+          if (liveFeed.liveData.decisions) {
+            console.log(`   - Checking decisions: ${Object.keys(liveFeed.liveData.decisions).join(', ')}`);
+          }
+          
+          // Check if there's any other section with current player info
+          const allLiveDataSections = Object.keys(liveFeed.liveData);
+          for (const section of allLiveDataSections) {
+            if (section !== 'linescore' && section !== 'plays') {
+              const sectionData = liveFeed.liveData[section];
+              if (sectionData && typeof sectionData === 'object') {
+                console.log(`   - Checking ${section} for batter data...`);
+                
+                // Look for any batter-related data in this section
+                if (sectionData.currentBatter && sectionData.currentBatter.fullName) {
+                  batter = sectionData.currentBatter;
+                  console.log(`   ✅ Path 3 SUCCESS via ${section}.currentBatter: ${batter.fullName}`);
+                  break;
+                }
+              }
             }
           }
         }
@@ -438,43 +472,10 @@ export class MLBEngine extends BaseSportEngine {
           };
           console.log(`   ✅ Real MLB batter found: ${currentBatter.name} (${currentBatter.batSide}) - AVG: ${currentBatter.stats.avg}, HR: ${currentBatter.stats.hr}, RBI: ${currentBatter.stats.rbi}`);
         } else {
-          // Fallback: Create consistent synthetic batter data to prevent duplicate alerts
-          console.log(`   ⚠️ No current batter found, using fallback data`);
-          
-          // Use game-specific consistent data to avoid duplicate alerts
-          const gameSpecificSeed = parseInt(gameData.game.pk.toString().slice(-3)) || 1;
-          const fallbackNames = [
-            'Mike Trout', 'Aaron Judge', 'Juan Soto', 'Mookie Betts', 'Ronald Acuna Jr.',
-            'Jose Altuve', 'Freddie Freeman', 'Vladimir Guerrero Jr.', 'Fernando Tatis Jr.',
-            'Bo Bichette', 'Rafael Devers', 'Pete Alonso', 'Kyle Tucker', 'Austin Riley',
-            'Yordan Alvarez', 'Matt Olson', 'Francisco Lindor', 'Julio Rodriguez',
-            'Corey Seager', 'Jose Ramirez', 'Trea Turner', 'Xander Bogaerts',
-            'Bryce Harper', 'Nolan Arenado', 'Paul Goldschmidt'
-          ];
-          
-          // Use consistent data based on game to prevent every situation looking "new"
-          const nameIndex = gameSpecificSeed % fallbackNames.length;
-          const batterId = 100000 + gameSpecificSeed; // Consistent ID per game
-          const randomSide = gameSpecificSeed % 3 === 0 ? 'L' : 'R';
-          
-          currentBatter = {
-            id: batterId,
-            name: fallbackNames[nameIndex],
-            batSide: randomSide,
-            stats: {
-              avg: 0.285 + (gameSpecificSeed % 100) * 0.001, // Consistent but varied AVG
-              hr: 10 + (gameSpecificSeed % 40), // Consistent HR count
-              rbi: 40 + (gameSpecificSeed % 80), // Consistent RBI count  
-              obp: 0.320 + (gameSpecificSeed % 100) * 0.001, // Consistent OBP
-              ops: 0.750 + (gameSpecificSeed % 300) * 0.001, // Consistent OPS
-              slg: 0.420 + (gameSpecificSeed % 200) * 0.001, // Consistent SLG
-              atBats: 400 + (gameSpecificSeed % 200), // Consistent AB
-              hits: 100 + (gameSpecificSeed % 100), // Consistent H
-              strikeOuts: 80 + (gameSpecificSeed % 100), // Consistent K
-              walks: 40 + (gameSpecificSeed % 60) // Consistent BB
-            }
-          };
-          console.log(`   🎲 Using synthetic batter data - ${fallbackNames[nameIndex]} (${randomSide}) - AVG: ${currentBatter.stats.avg.toFixed(3)}, HR: ${currentBatter.stats.hr}, OPS: ${currentBatter.stats.ops.toFixed(3)}`);
+          // NO FALLBACK - Don't create alerts with fake data
+          console.log(`   ❌ No real current batter found - SKIPPING alert generation to avoid fake data`);
+          console.log(`   🔍 Need to find where MLB API stores current batter information`);
+          currentBatter = null; // Set to null instead of fake data
         }
 
         // Get current pitcher
@@ -551,9 +552,9 @@ export class MLBEngine extends BaseSportEngine {
       }
 
       if (gameState.currentBatter) {
-        console.log(`   🏏 Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
+        console.log(`   🏏 ✅ REAL Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
       } else {
-        console.log(`   🏏 Current Batter: No batter data available`);
+        console.log(`   🏏 ❌ No real current batter found - ALERTS DISABLED for this game to prevent fake data`);
       }
 
       if (gameState.currentPitcher) {
