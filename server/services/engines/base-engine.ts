@@ -35,7 +35,7 @@ export abstract class BaseSportEngine implements SportEngine {
   private MAX_KEYS = 5000;
   private MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
   private lastFireAt = new Map<string, number>(); // track last fire time
-  private MIN_REFIRE_MS = 20000; // 20 seconds minimum between same alerts
+  private MIN_REFIRE_MS = Number(process.env.ALERT_MIN_REFIRE_MS ?? 5000); // configurable: default 5s
 
   abstract extractGameState(apiData: any): any;
   abstract monitor(): Promise<void>;

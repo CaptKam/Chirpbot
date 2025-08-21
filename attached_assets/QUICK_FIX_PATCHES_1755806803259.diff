@@ -1,0 +1,88 @@
+--- /mnt/data/chirpbot-v2/client/src/hooks/use-toast.ts
++++ /mnt/data/chirpbot-v2/client/src/hooks/use-toast.ts
+@@ -5,8 +5,8 @@
+   ToastProps,
+ } from "@/components/ui/toast"
+ 
+-const TOAST_LIMIT = 1
+-const TOAST_REMOVE_DELAY = 1000000
++const TOAST_LIMIT = 3
++const TOAST_REMOVE_DELAY = 20000
+ 
+ type ToasterToast = ToastProps & {
+   id: string
+
+--- /mnt/data/chirpbot-v2/client/src/App.tsx
++++ /mnt/data/chirpbot-v2/client/src/App.tsx
+@@ -83,7 +83,22 @@
+     enabled: isAuthenticated,
+   });
+ 
++  
++  /* AUTO-TOAST ON NEW ALERT */
+   useEffect(() => {
++    if (lastMessage && lastMessage.type === 'new_alert' && lastMessage.data && (lastMessage.data as any).type) {
++      const a: any = lastMessage.data;
++      const title = a.type || 'Alert';
++      const priority = a.gameInfo?.priority ?? a.priority ?? 0;
++      const pTag = priority >= 90 ? "L3" : priority >= 80 ? "L2" : "L1";
++      toast({
++        title: `${pTag} • ${title}`,
++        description: `${a.title} — ${a.description}`,
++        // Radix handles dismissal; our hook removes after TOAST_REMOVE_DELAY
++      });
++    }
++  }, [lastMessage]);
++useEffect(() => {
+     if (lastMessage && isAuthenticated) {
+       switch (lastMessage.type) {
+         case 'new_alert':
+
+--- /mnt/data/chirpbot-v2/server/services/engines/base-engine.ts
++++ /mnt/data/chirpbot-v2/server/services/engines/base-engine.ts
+@@ -35,7 +35,7 @@
+   private MAX_KEYS = 5000;
+   private MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+   private lastFireAt = new Map<string, number>(); // track last fire time
+-  private MIN_REFIRE_MS = 20000; // 20 seconds minimum between same alerts
++  private MIN_REFIRE_MS = Number(process.env.ALERT_MIN_REFIRE_MS ?? 5000); // configurable: default 5s
+ 
+   abstract extractGameState(apiData: any): any;
+   abstract monitor(): Promise<void>;
+
+--- /mnt/data/chirpbot-v2/server/services/engines/mlb-engine.ts
++++ /mnt/data/chirpbot-v2/server/services/engines/mlb-engine.ts
+@@ -106,6 +106,17 @@
+   isRead: boolean;
+ }
+ 
++function computePriorityBoost(state: MLBGameState): number {
++  let boost = 0;
++  // Power hitter at bat
++  const hr = state.currentBatter?.stats?.hr ?? 0;
++  if (hr >= 30) boost += 10;
++  else if (hr >= 20) boost += 6;
++  // Late inning leverage
++  if (state.inning >= 7) boost += 4;
++  // Runner in scoring position baseline handled by alertConfigs
++  return boost;
++}
+ export class MLBEngine extends BaseSportEngine {
+   sport = 'MLB';
+   monitoringInterval = 15000; // 15 seconds - reasonable for external APIs
+@@ -892,6 +903,7 @@
+             homeTeam: gameState.homeTeam,
+             awayTeam: gameState.awayTeam,
+             inning: gameState.inning,
++            priority: alert.priority,
+             score: { home: gameState.homeScore, away: gameState.awayScore },
+             runners: gameState.runners,
+             outs: gameState.outs,
+@@ -934,6 +946,7 @@
+             balls: gameState.balls,
+             strikes: gameState.strikes,
+             runners: gameState.runners,
++            priority: alert.priority,
+             score: {
+               home: gameState.homeScore,
+               away: gameState.awayScore

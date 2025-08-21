@@ -1,0 +1,81 @@
+Download my patch bundle
+
+Apply this to your repo (or the extracted folder I used):
+
+Download the patch file
+
+(Optional) Grab the example env: .env.example
+
+Apply with git:
+
+git apply QUICK_FIX_PATCHES.diff
+
+
+or with patch:
+
+patch -p0 < QUICK_FIX_PATCHES.diff
+
+Exactly what the patch does
+
+client/src/hooks/use-toast.ts
+
+TOAST_REMOVE_DELAY → 20000 (was 1000000)
+
+TOAST_LIMIT → 3 (was 1)
+
+client/src/App.tsx
+
+Imports useToast and shows a toast whenever a new_alert WS message arrives.
+
+The toast title prefixes L1/L2/L3 based on (effective) priority.
+
+No style changes; uses your existing shadcn Toaster.
+
+server/services/engines/base-engine.ts
+
+MIN_REFIRE_MS now Number(process.env.ALERT_MIN_REFIRE_MS ?? 5000)
+(was hard‑coded 20000)
+
+server/services/engines/mlb-engine.ts
+
+Adds a tiny computePriorityBoost() (power bats + late innings).
+
+Applies the boost before emitting and includes priority in gameInfo so the UI can read it.
+
+.env.example (new)
+
+Keys for ALERT_MIN_REFIRE_MS, MLB_POLL_MS_MIN, ACCUWEATHER_API_KEY, TELEGRAM_*, RAPIDAPI_KEY, SPORTSDATA_API_KEY, etc.
+
+How to run now
+# from repo root
+cp .env.example .env   # then fill in DB URL; weather/telegram are optional
+npm i
+npm run dev            # starts server (Vite serves client through it)
+
+
+WebSocket endpoint: /ws
+
+HTTP API: /api/*
+
+Scripts (from your package.json): dev, build, start, db:push, check
+
+Quick notes from the audit (so you’re oriented)
+
+Dedup is solid: you’ve got a global deduper (server/services/dedup.ts) using a situation fingerprint (gamePk, inning/half, outs, runners, batterId, wind bucket, etc.). I left it intact and just made the base-engine’s refire guard configurable to avoid double‑gating.
+
+MLB live feed: you’re already probing multiple paths (liveData.plays.currentPlay, linescore.offense, and fallbacks) to find the current batter—good coverage.
+
+Weather: getWeatherData is present but returns null without a real ACCUWEATHER_API_KEY. That’s fine; alerts still work—just won’t show wind details until you add a key.
+
+Telegram: implemented; stays off unless you set TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID.
+
+Next improvements (when you catch your breath)
+
+Expose poll cadence via env
+Add MLB_POLL_MS_MIN support in the MLB engine; you already have backoff on API failure.
+
+Unify dedupe
+Long‑term, consider removing the base-engine refire guard entirely (or set it to 0) and rely only on the global Deduper to avoid odd interactions.
+
+UI: compact audit row
+On toast dismiss, append a one‑liner to an audit pane (you already store alerts; a tiny “Recent” strip helps trust).

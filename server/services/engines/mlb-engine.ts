@@ -106,6 +106,18 @@ interface InsertAlert {
   isRead: boolean;
 }
 
+function computePriorityBoost(state: MLBGameState): number {
+  let boost = 0;
+  // Power hitter at bat
+  const hr = state.currentBatter?.stats?.hr ?? 0;
+  if (hr >= 30) boost += 10;
+  else if (hr >= 20) boost += 6;
+  // Late inning leverage
+  if (state.inning >= 7) boost += 4;
+  // Runner in scoring position baseline handled by alertConfigs
+  return boost;
+}
+
 export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
   monitoringInterval = 15000; // 15 seconds - reasonable for external APIs
@@ -884,14 +896,18 @@ export class MLBEngine extends BaseSportEngine {
           customTitle = `${alert.type}: ${gameState.currentBatter.name}`;
         }
 
+        // Apply priority boost for power hitters and late innings
+        const boostedPriority = alert.priority + computePriorityBoost(gameState);
+        
         // Enhance high-priority alerts with AI (priority >= 85)
         let finalDescription = this.generateDynamicDescription(alert, gameState);
-        if (alert.priority >= 85) {
+        if (boostedPriority >= 85) {
           const gameContext = {
             sport: this.sport,
             homeTeam: gameState.homeTeam,
             awayTeam: gameState.awayTeam,
             inning: gameState.inning,
+            priority: boostedPriority,
             score: { home: gameState.homeScore, away: gameState.awayScore },
             runners: gameState.runners,
             outs: gameState.outs,
@@ -921,7 +937,7 @@ export class MLBEngine extends BaseSportEngine {
           opponent: gameState.awayTeam,
           message: finalDescription,
           probability: alert.probability,
-          priority: alert.priority,
+          priority: boostedPriority,
           createdAt: new Date(),
           isRead: false,
           gameInfo: {
@@ -934,11 +950,11 @@ export class MLBEngine extends BaseSportEngine {
             balls: gameState.balls,
             strikes: gameState.strikes,
             runners: gameState.runners,
+            priority: boostedPriority,
             score: {
               home: gameState.homeScore,
               away: gameState.awayScore
             },
-            priority: alert.priority,
             scoringProbability: this.calculateScoringProbability(gameState),
             re24Probability: this.calculateRE24Probability(gameState),
             re24Key: reKey(gameState.runners, gameState.outs),
