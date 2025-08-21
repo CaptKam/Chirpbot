@@ -169,44 +169,57 @@ export class MLBApiService {
   }
 
   /**
-   * Get detailed live feed for a specific game
+   * Get detailed live feed for a specific game with enhanced play data
    */
   async getLiveFeed(gamePk: number): Promise<any> {
     try {
-      const url = `${this.BASE_URL}/game/${gamePk}/feed/live`;
+      // Try multiple endpoints to get the most complete data
+      const feedUrl = `${this.BASE_URL}/game/${gamePk}/feed/live?hydrate=plays,currentPlay,team`;
+      const playByPlayUrl = `${this.BASE_URL}/game/${gamePk}/playByPlay`;
       
-      const data = await fetchJson<MLBLiveFeedResponse>(url, {
-        headers: {
-          'User-Agent': 'ChirpBot/2.0',
-          'Accept': 'application/json'
-        },
-        timeoutMs: 8000
-      }).catch(async (error) => {
-        if (error.message?.includes('404')) {
-          // Live feed not available - try alternative linescore endpoint
-          return await this.getLinescoreData(gamePk);
-        }
-        throw error;
-      });
+      const [feedData, playData] = await Promise.all([
+        fetchJson<any>(feedUrl, {
+          headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
+          timeoutMs: 8000
+        }).catch(() => null),
+        fetchJson<any>(playByPlayUrl, {
+          headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
+          timeoutMs: 8000
+        }).catch(() => null)
+      ]);
+
+      // Use feed data as primary, supplement with play-by-play data if available
+      let liveData = feedData?.liveData || {};
       
-      // Enhanced live feed with play-by-play data
+      // If we have play-by-play data, merge it in
+      if (playData?.liveData?.plays && !liveData.plays?.currentPlay) {
+        liveData.plays = playData.liveData.plays;
+      }
+
+      // Fallback to linescore data if main endpoints fail
+      if (!feedData && !playData) {
+        return await this.getLinescoreData(gamePk);
+      }
+
       return {
-        gameData: data.gameData,
+        gameData: feedData?.gameData || { game: { pk: gamePk } },
         liveData: {
           linescore: {
-            ...data.liveData.linescore,
-            outs: data.liveData.linescore?.outs || 0,
-            balls: data.liveData.linescore?.balls || 0,
-            strikes: data.liveData.linescore?.strikes || 0,
-            offense: data.liveData.linescore?.offense || {},
-            defense: data.liveData.linescore?.defense || {}
+            ...liveData.linescore,
+            outs: liveData.linescore?.outs || 0,
+            balls: liveData.linescore?.balls || 0,
+            strikes: liveData.linescore?.strikes || 0,
+            offense: liveData.linescore?.offense || {},
+            defense: liveData.linescore?.defense || {}
           },
-          plays: data.liveData.plays
+          plays: liveData.plays,
+          boxscore: liveData.boxscore
         }
       };
     } catch (error) {
       console.error(`Error fetching live feed for game ${gamePk}:`, error);
-      throw error;
+      // Final fallback to linescore
+      return await this.getLinescoreData(gamePk);
     }
   }
 
