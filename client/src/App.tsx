@@ -73,10 +73,17 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
 }
 
 function AppContent() {
+  const [, setLocation] = useLocation();
+  
+  // Check for admin routes FIRST - before any authentication calls
+  if (window.location.pathname === '/admin-login' || window.location.pathname === '/admin/login') {
+    return <AdminLogin />;
+  }
+
+  // Now safe to call useAuth for regular app routes
   const { lastMessage } = useWebSocket();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
   
   // Get settings to check if push notifications are enabled
   const { data: settings } = useQuery({
@@ -129,10 +136,6 @@ function AppContent() {
       }
     }
   }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
-
-  if (window.location.pathname === '/admin-login' || window.location.pathname === '/admin/login') {
-    return <AdminLogin />;
-  }
 
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
