@@ -76,6 +76,7 @@ export interface IStorage {
   updateGlobalAlertControl(id: string, updates: Partial<GlobalAlertControl>): Promise<GlobalAlertControl | undefined>;
   toggleGlobalAlertControl(id: string, enabled: boolean): Promise<GlobalAlertControl | undefined>;
   initializeGlobalAlertControls(): Promise<void>;
+  getEnabledAlertTypes(sport?: string): Promise<string[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -575,6 +576,7 @@ export class MemStorage implements IStorage {
   async updateGlobalAlertControl(id: string, updates: Partial<GlobalAlertControl>): Promise<GlobalAlertControl | undefined> { return undefined; }
   async toggleGlobalAlertControl(id: string, enabled: boolean): Promise<GlobalAlertControl | undefined> { return undefined; }
   async initializeGlobalAlertControls(): Promise<void> { }
+  async getEnabledAlertTypes(sport?: string): Promise<string[]> { return []; }
 }
 
 // Database Storage Implementation
@@ -982,6 +984,21 @@ export class DatabaseStorage implements IStorage {
     
     console.log("📋 Summary by sport:", summary);
     console.log(`🎯 Total alert controls: ${final.length}`);
+  }
+
+  async getEnabledAlertTypes(sport?: string): Promise<string[]> {
+    let query = db.select({ settingKey: globalAlertControls.settingKey })
+      .from(globalAlertControls)
+      .where(eq(globalAlertControls.enabled, true));
+    
+    if (sport) {
+      query = query.where(and(eq(globalAlertControls.enabled, true), eq(globalAlertControls.sport, sport)));
+    }
+    
+    const results = await query;
+    return results
+      .filter(result => result.settingKey !== null)
+      .map(result => result.settingKey as string);
   }
 }
 

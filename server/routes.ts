@@ -259,6 +259,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get enabled alert types based on global controls
+  app.get("/api/enabled-alert-types", async (req, res) => {
+    try {
+      const sport = req.query.sport as string;
+      const enabledAlertTypes = await storage.getEnabledAlertTypes(sport);
+      res.json({ enabledAlertTypes });
+    } catch (error) {
+      console.error("Error fetching enabled alert types:", error);
+      res.status(500).json({ message: "Failed to fetch enabled alert types" });
+    }
+  });
+
   // Settings routes
   app.get("/api/settings", async (req, res) => {
     try {

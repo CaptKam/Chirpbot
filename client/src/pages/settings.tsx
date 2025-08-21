@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
@@ -56,6 +56,40 @@ export default function Settings() {
   const [telegramStatus, setTelegramStatus] = useState<boolean | null>(null);
   const { toast } = useToast();
 
+  // Fetch enabled alert types from global controls
+  const { data: enabledAlertTypesData } = useQuery({
+    queryKey: ["/api/enabled-alert-types", activeSport],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (activeSport !== "ALL") {
+        params.append('sport', activeSport);
+      }
+      const url = `/api/enabled-alert-types${params.toString() ? '?' + params.toString() : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
+    },
+  });
+
+  // Filter alert types based on global controls
+  const filteredAlertTypes = useMemo(() => {
+    if (!enabledAlertTypesData?.enabledAlertTypes) {
+      return ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] || [];
+    }
+    
+    const enabledKeys = enabledAlertTypesData.enabledAlertTypes;
+    const sportConfig = ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] || [];
+    
+    return sportConfig.filter(alertType => enabledKeys.includes(alertType.key));
+  }, [activeSport, enabledAlertTypesData]);
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -201,7 +235,7 @@ export default function Settings() {
                 Alert Types
               </h2>
               <div className="space-y-4">
-                {ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]?.map((alertConfig) => (
+                {filteredAlertTypes?.map((alertConfig) => (
                   <Card key={alertConfig.key} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-200">
                     <div className="flex items-center justify-between">
                       <div>
