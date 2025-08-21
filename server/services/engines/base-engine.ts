@@ -185,10 +185,10 @@ export abstract class BaseSportEngine implements SportEngine {
       let finalDescription = alert.description;
       let finalPriority = alert.priority;
       
-      // 🤖 FORCE AI ENHANCEMENT FOR ALL ALERTS - Demo mode
-      if (alert.priority >= 60) {
+      // 🎰 FORCE BETTING INTELLIGENCE FOR ALL ALERTS 
+      if (alert.priority >= 50) {
         const settings = await storage.getSettingsBySport(this.sport);
-        console.log(`🤖 AI Check: Priority ${alert.priority}, AI Enabled: ${(settings as any)?.aiEnabled}, Type: ${alert.type}`);
+        console.log(`🎰 BETTING INTEL: Priority ${alert.priority}, AI Enabled: ${(settings as any)?.aiEnabled}, Type: ${alert.type}`);
         if (settings && (settings as any).aiEnabled) {
           try {
             const gameContext = this.buildGameContext(gameState);

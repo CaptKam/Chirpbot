@@ -23,7 +23,7 @@ interface EnhancedAlert {
   priority: number;
 }
 
-// 🤖 ADVANCED AI ENHANCEMENT ENGINE - Professional Sports Analytics
+// 🎰 INSTANT BETTING INTELLIGENCE ENGINE - 3-Second Decision Making
 export async function enhanceHighPriorityAlert(
   alertType: string,
   gameContext: GameContext,
@@ -31,47 +31,39 @@ export async function enhanceHighPriorityAlert(
   priority: number
 ): Promise<EnhancedAlert | null> {
   
-  // Only enhance alerts with priority >= 80 to control costs
-  if (priority < 80) {
+  // Lower threshold for more betting opportunities
+  if (priority < 60) {
     return null;
   }
 
   try {
-    // 🧠 ADVANCED ANALYTICS PROMPT - Professional Grade
+    // 💰 BETTING-FOCUSED PROMPT - Sportsbook Decision Intelligence
     const prompt = `
-You are an elite sports analytics AI with advanced statistical modeling capabilities. Analyze this high-impact sports moment with professional-grade insights:
+You are an elite betting intelligence AI. Analyze this moment for IMMEDIATE BETTING OPPORTUNITIES:
 
-🏟️ GAME SITUATION ANALYSIS:
-Alert Type: ${alertType}
-Matchup: ${gameContext.awayTeam} @ ${gameContext.homeTeam}
-Current Score: ${gameContext.awayTeam} ${gameContext.score.away} - ${gameContext.homeTeam} ${gameContext.score.home}
-${gameContext.inning ? `⚾ Inning: ${gameContext.inning}` : ''}
-${gameContext.outs !== undefined ? `🔢 Outs: ${gameContext.outs}` : ''}
-${gameContext.runners ? `🏃 Base Runners: ${Object.entries(gameContext.runners).filter(([_, on]) => on).map(([base]) => base.toUpperCase()).join(', ') || 'None'}` : ''}
-${gameContext.currentBatter ? `🏏 At Bat: ${gameContext.currentBatter.name}` : ''}
+🎯 BETTING SITUATION:
+${alertType}: ${gameContext.awayTeam} @ ${gameContext.homeTeam}
+Score: ${gameContext.score.away}-${gameContext.score.home}
+${gameContext.inning ? `Inning ${gameContext.inning}` : ''}${gameContext.outs !== undefined ? ` | ${gameContext.outs} outs` : ''}
 
-📊 REQUIRED ANALYSIS FRAMEWORK:
-1. Win Probability Impact (±% change)
-2. Leverage Index (0.0-2.5 scale)
-3. Momentum Shift Indicator
-4. Historical Context & Pattern Recognition
-5. Pressure Rating (1-10 scale)
+🚨 CREATE INSTANT BETTING ALERT (20-30 words max):
+- Start with betting recommendation: "BET NOW:", "VALUE ALERT:", "LIVE BET:", "MOMENTUM SHIFT:"
+- Include specific opportunity: Over/Under, ML, Spread
+- Add ONE key stat that justifies the bet
+- Use urgency language for immediate action
 
-Generate a sophisticated, data-driven alert enhancement (60-80 words) that includes:
-- Advanced statistical context
-- Win probability metrics
-- Leverage situation analysis
-- Professional sports terminology
-- Excitement factor with analytical backing
+EXAMPLES:
+"BET NOW: Over 8.5 runs | 73% hit rate when bases loaded + elite hitter | Current pace: 11 total"
+"VALUE ALERT: Home ML +110 | 81% win rate after momentum shift | Sharp money incoming"
+"LIVE BET: Under next inning | Ace reliever entering + cold bats trend | 87% success"
 
-Format: Professional analyst tone with quantified insights and sports science terminology.
-`;
+Write ONE betting alert - be specific and actionable!`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Better for complex analysis
+      model: "gpt-3.5-turbo", // Fast for betting decisions
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 150, // More space for advanced analysis
-      temperature: 0.6, // Balance creativity with accuracy
+      max_tokens: 60, // Short and actionable
+      temperature: 0.3, // More focused for betting
     });
 
     const enhancedDescription = response.choices[0]?.message?.content?.trim();
@@ -80,11 +72,12 @@ Format: Professional analyst tone with quantified insights and sports science te
       return null;
     }
 
+    // 🎰 Betting alerts get maximum priority boost
     return {
       originalDescription,
       enhancedDescription,
-      contextualInsight: enhancedDescription,
-      priority: Math.min(priority + 8, 100) // Higher boost for advanced AI analysis
+      contextualInsight: "🎰 BETTING OPPORTUNITY DETECTED",
+      priority: Math.min(priority + 15, 100) // Maximum priority for betting intelligence
     };
 
   } catch (error) {

@@ -322,7 +322,10 @@ export class MLBEngine extends BaseSportEngine {
         }
       }
 
-      const liveGames = await mlbApi.getTodaysGames();
+      // 🔧 Use aggregator instead of broken API call
+      const aggregator = await import('../multi-source-aggregator');
+      const gameData = await aggregator.getMLBGames(new Date().toISOString().split('T')[0]);
+      const liveGames = gameData.games.filter(game => game.status?.toLowerCase().includes('live') || game.status?.toLowerCase().includes('in progress'));
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 
