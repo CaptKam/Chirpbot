@@ -1,6 +1,7 @@
 import type { Game, GameDay } from "@shared/schema";
 import { mlbApi } from "./mlb-api";
 import { sportsDataService } from "./sportsdata-api";
+import { multiSourceAggregator } from "./multi-source-aggregator";
 import { fetchJson } from './http';
 
 // ESPN API Interfaces
@@ -274,30 +275,69 @@ class LiveSportsService {
       let games: Game[] = [];
 
       if (!sport) {
-        // No sport specified - fetch all sports
-        const mlbGames = await mlbApi.getTodaysGames();
-        const nflGames = await sportsDataService.getNFLGames();
-        const nbaGames = await sportsDataService.getNBAGames();
-        const nhlGames = await sportsDataService.getNHLGames();
+        // No sport specified - fetch all sports with fallback support
+        console.log('🔄 Fetching all sports with multi-source fallback...');
+        
+        // MLB with fallback
+        let mlbGames: Game[] = [];
+        try {
+          mlbGames = await mlbApi.getTodaysGames();
+          console.log(`✅ MLB primary source: ${mlbGames.length} games`);
+        } catch (error) {
+          console.log('⚠️ MLB primary failed, trying fallback sources...');
+          mlbGames = await multiSourceAggregator.getMLBGames(today);
+          console.log(`✅ MLB fallback sources: ${mlbGames.length} games`);
+        }
+        
+        // NFL with fallback  
+        let nflGames: Game[] = [];
+        try {
+          nflGames = await sportsDataService.getNFLGames();
+          console.log(`✅ NFL primary source: ${nflGames.length} games`);
+        } catch (error) {
+          console.log('⚠️ NFL primary failed, trying fallback sources...');
+          nflGames = await multiSourceAggregator.getNFLGames(today);
+          console.log(`✅ NFL fallback sources: ${nflGames.length} games`);
+        }
+        
+        // NBA/NHL (primary only for now)
+        const nbaGames = await sportsDataService.getNBAGames().catch(() => []);
+        const nhlGames = await sportsDataService.getNHLGames().catch(() => []);
         
         games = games.concat(mlbGames, nflGames, nbaGames, nhlGames);
       } else {
-        // Specific sport requested - fetch only that sport
+        // Specific sport requested - fetch only that sport with fallback
         switch (sport) {
           case 'MLB':
-            const mlbGames = await mlbApi.getTodaysGames();
-            games = games.concat(mlbGames);
+            try {
+              const mlbGames = await mlbApi.getTodaysGames();
+              games = games.concat(mlbGames);
+              console.log(`✅ MLB primary source: ${mlbGames.length} games`);
+            } catch (error) {
+              console.log('⚠️ MLB primary failed, using fallback sources...');
+              const fallbackGames = await multiSourceAggregator.getMLBGames(today);
+              games = games.concat(fallbackGames);
+              console.log(`✅ MLB fallback sources: ${fallbackGames.length} games`);
+            }
             break;
           case 'NFL':
-            const nflGames = await sportsDataService.getNFLGames();
-            games = games.concat(nflGames);
+            try {
+              const nflGames = await sportsDataService.getNFLGames();
+              games = games.concat(nflGames);
+              console.log(`✅ NFL primary source: ${nflGames.length} games`);
+            } catch (error) {
+              console.log('⚠️ NFL primary failed, using fallback sources...');
+              const fallbackGames = await multiSourceAggregator.getNFLGames(today);
+              games = games.concat(fallbackGames);
+              console.log(`✅ NFL fallback sources: ${fallbackGames.length} games`);
+            }
             break;
           case 'NBA':
-            const nbaGames = await sportsDataService.getNBAGames();
+            const nbaGames = await sportsDataService.getNBAGames().catch(() => []);
             games = games.concat(nbaGames);
             break;
           case 'NHL':
-            const nhlGames = await sportsDataService.getNHLGames();
+            const nhlGames = await sportsDataService.getNHLGames().catch(() => []);
             games = games.concat(nhlGames);
             break;
           default:
