@@ -210,6 +210,23 @@ export type Settings = typeof settings.$inferSelect;
 export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
 export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
 
+// Global Alert Type Master Controls - Admin can enable/disable any alert type globally
+export const globalAlertControls = pgTable("global_alert_controls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(), // 'MLB', 'NFL', 'NBA', 'NHL', 'WEATHER'
+  alertType: text("alert_type").notNull(), // The actual alert type from engines
+  settingKey: text("setting_key"), // Maps to user settings key
+  enabled: boolean("enabled").notNull().default(true),
+  priority: integer("priority").notNull(), // Override engine priority
+  probability: integer("probability").notNull(), // Override engine probability (0-100)
+  description: text("description").notNull(),
+  adminNotes: text("admin_notes"), // Internal notes for admins
+  category: text("category").notNull(), // 'scoring', 'situational', 'weather', 'prediction'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+
 export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
 export type AiSettings = typeof aiSettings.$inferSelect;
 
@@ -218,6 +235,16 @@ export type AiLearningLog = typeof aiLearningLogs.$inferSelect;
 
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
+
+// Insert schema for global alert controls (after table definition)
+export const insertGlobalAlertControlSchema = createInsertSchema(globalAlertControls).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGlobalAlertControl = z.infer<typeof insertGlobalAlertControlSchema>;
+export type GlobalAlertControl = typeof globalAlertControls.$inferSelect;
 
 // Game types for live sports data
 export interface Game {
