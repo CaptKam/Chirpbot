@@ -136,7 +136,8 @@ export default function Calendar() {
     setSelectedGames(newSelected);
   };
 
-  const selectedCount = selectedGames.size;
+  // Calculate selected count only for current sport's games
+  const selectedCount = games.filter(game => selectedGames.has(game.id)).length;
 
   const getWeatherIcon = (condition: string) => {
     switch (condition.toLowerCase()) {
