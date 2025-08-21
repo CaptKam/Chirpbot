@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,14 @@ export function GlobalAlertControlsPanel() {
       });
     },
   });
+
+  // Auto-initialize on first load if no controls exist
+  useEffect(() => {
+    if (controlsData && controlsData.totalControls === 0 && !initializeMutation.isPending) {
+      console.log("Auto-initializing global alert controls...");
+      initializeMutation.mutate();
+    }
+  }, [controlsData, initializeMutation]);
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
