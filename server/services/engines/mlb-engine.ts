@@ -321,17 +321,62 @@ export class MLBEngine extends BaseSportEngine {
         return re24Prob >= 75; // Trigger on 75%+ RE24 probability
       }
     },
-    // EARLY GAME TEST ALERT - Should fire immediately to prove system works!
-    {
-      type: "System Test Alert",
-      settingKey: "runnersOnBase", // Using enabled setting
-      priority: 30,
-      probability: 1.0,
-      description: "🧪 SYSTEM TEST - Alert system is working! Game detected in early innings.",
-      conditions: (state: MLBGameState) => 
-        state.inning <= 3 && state.outs >= 0 // Fire for any situation in first 3 innings
-    },
   ];
+
+  // Enhanced runner extraction with multiple MLB API data sources
+  private extractRunners(linescore: any, liveFeed: any): {first: boolean, second: boolean, third: boolean} {
+    console.log(`\\n🔍 RUNNER EXTRACTION DEBUG:`);
+    
+    // Method 1: Standard linescore.offense approach
+    const offense = linescore.offense || {};
+    console.log(`   Method 1 - linescore.offense:`, JSON.stringify(offense, null, 2));
+    
+    let runners = {
+      first: !!offense?.first,
+      second: !!offense?.second,
+      third: !!offense?.third
+    };
+    
+    // Method 2: Check linescore root level for runner info
+    const rootRunners = {
+      first: !!linescore?.first || !!linescore?.firstBase,
+      second: !!linescore?.second || !!linescore?.secondBase,
+      third: !!linescore?.third || !!linescore?.thirdBase
+    };
+    console.log(`   Method 2 - linescore root level:`, rootRunners);
+    
+    // Method 3: Check if runners are in the plays data
+    const currentPlay = liveFeed?.liveData?.plays?.currentPlay;
+    const latestPlay = liveFeed?.liveData?.plays?.allPlays?.slice(-1)[0];
+    const playToCheck = currentPlay || latestPlay;
+    
+    if (playToCheck?.runners) {
+      console.log(`   Method 3 - play runners:`, playToCheck.runners);
+      // Extract runner positions from play data
+      playToCheck.runners.forEach((runner: any) => {
+        if (runner.movement?.end === '1B') runners.first = true;
+        if (runner.movement?.end === '2B') runners.second = true;
+        if (runner.movement?.end === '3B') runners.third = true;
+      });
+    }
+    
+    // Method 4: Check boxscore for runner information
+    const boxscore = liveFeed?.liveData?.boxscore;
+    if (boxscore) {
+      console.log(`   Method 4 - checking boxscore for runners...`);
+      // The boxscore might have game situation data
+    }
+    
+    // Combine results - if any method finds runners, use them
+    const finalRunners = {
+      first: runners.first || rootRunners.first,
+      second: runners.second || rootRunners.second,
+      third: runners.third || rootRunners.third
+    };
+    
+    console.log(`   🏃 FINAL RUNNERS: 1st=${finalRunners.first}, 2nd=${finalRunners.second}, 3rd=${finalRunners.third}`);
+    return finalRunners;
+  }
 
   async extractGameState(liveFeed: any): Promise<MLBGameState | null> {
     try {
@@ -472,6 +517,18 @@ export class MLBEngine extends BaseSportEngine {
           if (!batter && linescore.offense) {
             const offenseKeys = Object.keys(linescore.offense);
             console.log(`   - Offense keys: ${offenseKeys.join(', ')}`);
+          console.log(`   - linescore.offense full structure: ${JSON.stringify(linescore.offense)}`);
+          
+          // NEW: Check if runners are stored differently in the API
+          if (linescore.offense && Object.keys(linescore.offense).length > 0) {
+            console.log(`   🔍 OFFENSE DATA FOUND! Checking for runner info...`);
+            Object.keys(linescore.offense).forEach(key => {
+              const value = linescore.offense[key];
+              if (value && typeof value === 'object' && value.fullName) {
+                console.log(`     - ${key}: ${value.fullName} (ID: ${value.id})`);
+              }
+            });
+          }
             
             // Look for any non-base-runner player data that could be current batter
             for (const key of offenseKeys) {
@@ -602,11 +659,7 @@ export class MLBEngine extends BaseSportEngine {
         outs: linescore.outs || 0,
         balls: linescore.balls || 0,
         strikes: linescore.strikes || 0,
-        runners: {
-          first: !!linescore.offense?.first,
-          second: !!linescore.offense?.second, 
-          third: !!linescore.offense?.third,
-        },
+        runners: this.extractRunners(linescore, liveFeed),
         homeScore: linescore.teams?.home?.runs || 0,
         awayScore: linescore.teams?.away?.runs || 0,
         homeTeam: gameData.teams?.home?.name || 'Home Team',
@@ -616,6 +669,11 @@ export class MLBEngine extends BaseSportEngine {
       };
 
       // Debug logging for live game state
+      // DEBUG: Full linescore structure for runner extraction
+      console.log(`\n🔍 FULL LINESCORE DEBUG:`);
+      console.log(`   - linescore keys: ${Object.keys(linescore).join(', ')}`);
+      console.log(`   - linescore structure:`, JSON.stringify(linescore, null, 2));
+      
       console.log(`🔍 MLB Game State Debug - ${gameState.awayTeam} @ ${gameState.homeTeam}:`);
       console.log(`   Inning: ${gameState.inning} ${gameState.inningState}`);
       console.log(`   Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}`);

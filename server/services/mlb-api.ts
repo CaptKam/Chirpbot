@@ -174,11 +174,15 @@ export class MLBApiService {
    */
   async getLiveFeed(gamePk: number): Promise<any> {
     try {
-      // Try v1.1 endpoint first (working in Python system), then fallback to v1
-      const feedV11Url = `${this.BASE_URL.replace('/v1/', '/v1.1/')}/game/${gamePk}/feed/live?hydrate=plays,currentPlay,team,decisions,probablePitchers`;
-      const feedV1Url = `${this.BASE_URL}/game/${gamePk}/feed/live?hydrate=plays,currentPlay,team`;
+      // FIXED: Correct MLB API endpoint construction
+      const feedV11Url = `https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live?hydrate=linescore,plays,currentPlay,team,decisions,probablePitchers`;
+      const feedV1Url = `https://statsapi.mlb.com/api/v1/game/${gamePk}/feed/live?hydrate=linescore,plays,currentPlay,team`;
       const playByPlayUrl = `${this.BASE_URL}/game/${gamePk}/playByPlay`;
       const boxscoreUrl = `${this.BASE_URL}/game/${gamePk}/boxscore`;
+      
+      console.log(`🔍 Trying MLB API endpoints for game ${gamePk}:`);
+      console.log(`   v1.1: ${feedV11Url}`);
+      console.log(`   v1: ${feedV1Url}`);
       
       // Try v1.1 endpoint first (from Python system), then fallback to v1
       let feedData = await fetchJson<any>(feedV11Url, {
@@ -189,9 +193,19 @@ export class MLBApiService {
         return await fetchJson<any>(feedV1Url, {
           headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
           timeoutMs: 6000
-        }).catch((error) => {
-          console.log(`❌ v1 feed failed for game ${gamePk}: ${error.message}`);
-          return null;
+        }).catch(async (v1Error) => {
+          console.log(`❌ v1 feed failed for game ${gamePk}: ${v1Error.message}`);
+          
+          // Try alternative endpoint with different hydration
+          const altUrl = `https://statsapi.mlb.com/api/v1/game/${gamePk}/feed/live?hydrate=linescore`;
+          console.log(`🔄 Trying alternative endpoint: ${altUrl}`);
+          return await fetchJson<any>(altUrl, {
+            headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
+            timeoutMs: 6000
+          }).catch((altError) => {
+            console.log(`❌ Alternative endpoint failed: ${altError.message}`);
+            return null;
+          });
         });
       });
 
