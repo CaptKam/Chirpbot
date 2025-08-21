@@ -33,11 +33,8 @@ export class WeatherEngine extends BaseSportEngine {
   
   async monitor() {
     try {
-      // Weather monitoring doesn't depend on AI settings - always run
-      const settings = await storage.getSettingsBySport('MLB');
-      if (!settings?.telegramEnabled) {
-        return;
-      }
+      // Weather monitoring runs independently
+      console.log(`🌤️ Weather monitoring active - checking conditions...`);
       
       console.log(`🌤️ Checking weather conditions for all active games...`);
       
