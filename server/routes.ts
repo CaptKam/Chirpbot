@@ -760,16 +760,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { getWeatherData } = await import("./services/weather");
       
+      console.log('🌤️ === WEATHER API DEBUG TEST STARTING ===');
+      
+      // Check environment variables first
+      const apiKeyStatus = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
+      console.log(`🔑 API Key Status: ${apiKeyStatus ? 'Present' : 'Missing'}`);
+      console.log(`🔑 API Key Value: ${apiKeyStatus ? `${apiKeyStatus.substring(0, 8)}...` : 'None'}`);
+      console.log(`🔑 Is placeholder key: ${apiKeyStatus === "default_key" || apiKeyStatus === "your_actual_openweathermap_api_key_here"}`);
+      
       const testCities = [
         'New York', 'Los Angeles', 'Chicago', 'Phoenix', 
-        'Miami', 'Boston', 'Denver', 'Seattle'
+        'Miami', 'Boston', 'Denver', 'Seattle',
+        'Kansas City', 'Tampa', 'Arlington'
       ];
       
       const weatherResults = [];
       
       for (const city of testCities) {
+        console.log(`\n🌤️ Testing weather for: ${city}`);
         try {
           const weatherData = await getWeatherData(city);
+          console.log(`✅ Success for ${city}:`, weatherData);
           weatherResults.push({
             city,
             status: 'success',
@@ -777,6 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             timestamp: new Date().toISOString()
           });
         } catch (error) {
+          console.log(`❌ Failed for ${city}:`, error);
           weatherResults.push({
             city,
             status: 'failed',
@@ -786,7 +798,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const apiKeyStatus = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
+      // Test problematic team names
+      console.log('\n🏟️ Testing problematic team names:');
+      const problemTeams = ['Kansas City Royals', 'New York Yankees', 'Los Angeles Dodgers'];
+      const teamResults = [];
+      
+      for (const team of problemTeams) {
+        console.log(`🏟️ Testing: ${team}`);
+        try {
+          const weatherData = await getWeatherData(team);
+          console.log(`✅ Team success for ${team}:`, weatherData);
+          teamResults.push({
+            team,
+            status: 'success',
+            data: weatherData
+          });
+        } catch (error) {
+          console.log(`❌ Team failed for ${team}:`, error);
+          teamResults.push({
+            team,
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+      
+      console.log('🌤️ === WEATHER API DEBUG TEST COMPLETE ===\n');
       
       res.json({
         timestamp: new Date().toISOString(),
@@ -794,11 +831,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           apiKeyStatus !== "default_key" && 
           apiKeyStatus !== "your_actual_openweathermap_api_key_here"),
         apiKey: apiKeyStatus ? `${apiKeyStatus.substring(0, 8)}...` : 'Not configured',
-        results: weatherResults,
+        cityResults: weatherResults,
+        teamResults: teamResults,
         summary: {
-          total: weatherResults.length,
-          successful: weatherResults.filter(r => r.status === 'success').length,
-          failed: weatherResults.filter(r => r.status === 'failed').length
+          cities: {
+            total: weatherResults.length,
+            successful: weatherResults.filter(r => r.status === 'success').length,
+            failed: weatherResults.filter(r => r.status === 'failed').length
+          },
+          teams: {
+            total: teamResults.length,
+            successful: teamResults.filter(r => r.status === 'success').length,
+            failed: teamResults.filter(r => r.status === 'failed').length
+          }
         }
       });
     } catch (error) {
