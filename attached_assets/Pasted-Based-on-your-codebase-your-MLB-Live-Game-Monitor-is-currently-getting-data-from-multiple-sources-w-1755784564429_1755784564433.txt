@@ -1,0 +1,56 @@
+Based on your codebase, your MLB Live Game Monitor is currently getting data from multiple sources with a sophisticated fallback system. Here's what I can see from your multi_source_aggregator.py and mlb_monitor.py:
+
+Primary Data Sources
+1. MLB-StatsAPI (Enhanced) - Priority 1
+URL: https://statsapi.mlb.com/api/v1
+Library: Uses the statsapi Python library
+Features: Live runners, play-by-play, enhanced tracking
+Performance: High speed score (10), 98% reliability
+Usage: Primary source for detailed live game data, boxscore data, player stats
+2. MLB Official API - Priority 2
+URL: https://statsapi.mlb.com/api/v1
+Features: Official game states, scores, innings
+Performance: Very fast response times (0.04-0.09 seconds)
+Usage: Fallback for basic game information
+3. API-Sports - Priority 3
+URL: https://v1.baseball.api-sports.io
+Auth: X-RapidAPI-Key required
+Performance: 90% reliability score
+Usage: Secondary backup source
+4. ESPN API - Priority 4
+URL: https://site.api.espn.com/apis/site/v2/sports/baseball/mlb
+Performance: 85% reliability
+Usage: Tertiary backup
+5. Yahoo Sports API - Priority 5
+URL: https://api.sports.yahoo.com/v1/editorial/s/baseball/mlb
+Performance: 80% reliability
+Usage: Additional backup
+6. TheSportsDB - Priority 6
+URL: https://www.thesportsdb.com/api/v1/json/3
+Performance: 75% reliability
+Usage: Final fallback option
+External Integrations
+OpenAI API
+Model: GPT-4o
+Usage: AI-powered game analysis, predictions, alert enhancements
+Features: Scoring probability, situational analysis, momentum assessment
+OpenWeatherMap API
+Usage: Real-time weather data for MLB stadiums
+Features: Wind speed/direction, temperature, HR probability boosts
+Polling: Every 60 seconds for selected live games
+Telegram Bot API
+Usage: Alert delivery to configured chat groups
+Bot: @chirpbetabot
+Features: Real-time notifications with deduplication
+How It Works
+Your system uses a multi-source aggregation strategy:
+
+Fastest Source Selection: Dynamically picks the 2-3 fastest responding sources
+Cross-Validation: Compares data across sources for accuracy
+Automatic Fallback: If primary sources fail, automatically switches to backups
+Performance Tracking: Continuously monitors response times and adjusts priorities
+Data Normalization: Converts all sources to a standard format
+Current Status
+From your console logs, I can see the system is actively running and monitoring live games. The multi-source system appears to be working well with the MLB-StatsAPI as the primary enhanced source, providing detailed player data and real-time game events.
+
+Your data sourcing strategy is quite robust - you have 6 different MLB data sources plus 3 external integrations, ensuring high availability and data accuracy even if individual sources experience issues.
