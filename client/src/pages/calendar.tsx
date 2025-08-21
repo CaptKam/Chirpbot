@@ -183,7 +183,11 @@ export default function Calendar() {
           {SPORTS.map((sport) => (
             <button
               key={sport}
-              onClick={() => setActiveSport(sport)}
+              onClick={() => {
+                setActiveSport(sport);
+                // Clear cache when switching sports to ensure fresh data
+                queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
+              }}
               data-testid={`sport-tab-${sport.toLowerCase()}`}
               className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
                 activeSport === sport
