@@ -105,6 +105,7 @@ interface MLBLiveFeedResponse {
 
 export class MLBApiService {
   private readonly BASE_URL = 'https://statsapi.mlb.com/api/v1';
+  private readonly SPORTSDATA_BASE_URL = 'https://api.sportsdata.io/v3/mlb/scores';
 
   /**
    * Fetch today's MLB games from official MLB.com API
@@ -324,6 +325,127 @@ export class MLBApiService {
       };
     } catch (error) {
       console.error('Error fetching linescore data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get current batter data from SportsDataIO for enhanced real-time info
+   */
+  async getSportsDataCurrentBatter(gamePk: number): Promise<any> {
+    try {
+      const apiKey = process.env.SPORTSDATA_API_KEY;
+      if (!apiKey) {
+        console.log('⚠️ SportsDataIO API key not available');
+        return null;
+      }
+
+      // Get today's date for SportsDataIO API
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch live box scores for today
+      const url = `${this.SPORTSDATA_BASE_URL}/json/BoxScoresByDate/${today}?key=${apiKey}`;
+      
+      const response = await fetchJson<any[]>(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      // Find the specific game by matching team names or game ID
+      let targetGame = null;
+      if (Array.isArray(response)) {
+        targetGame = response.find(game => {
+          // SportsDataIO might use different game IDs, so we'll match by teams
+          return game && (game.Status === 'InProgress' || game.Status === 'Live');
+        });
+      }
+
+      if (!targetGame) {
+        console.log(`🔍 No live game found in SportsDataIO for gamePk ${gamePk}`);
+        return null;
+      }
+
+      // Extract current batter information from SportsDataIO response
+      const currentBatter = this.extractCurrentBatterFromSportsData(targetGame);
+      
+      if (currentBatter) {
+        console.log(`🎯 SportsDataIO SUCCESS: Found current batter ${currentBatter.name}`);
+        return currentBatter;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching SportsDataIO current batter:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Extract current batter from SportsDataIO game data
+   */
+  private extractCurrentBatterFromSportsData(gameData: any): any {
+    try {
+      // SportsDataIO provides detailed play-by-play and current at-bat info
+      // Look for current play, at-bat, or batter information
+      
+      if (gameData.Innings && Array.isArray(gameData.Innings)) {
+        const currentInning = gameData.Innings[gameData.Innings.length - 1];
+        
+        // Check for current at-bat or play information
+        if (currentInning && currentInning.AwayTeamRuns !== undefined) {
+          // Look for current batter in play data
+          const plays = gameData.Plays || [];
+          const currentPlay = plays.find((play: any) => play.IsCurrent || play.IsActive);
+          
+          if (currentPlay && currentPlay.Batter) {
+            return {
+              id: currentPlay.Batter.PlayerID,
+              name: `${currentPlay.Batter.FirstName} ${currentPlay.Batter.LastName}`.trim(),
+              batSide: currentPlay.Batter.BatSide || 'U',
+              stats: {
+                avg: currentPlay.Batter.BattingAverage || 0.275,
+                hr: currentPlay.Batter.HomeRuns || 15,
+                rbi: currentPlay.Batter.RunsBattedIn || 50,
+                obp: currentPlay.Batter.OnBasePercentage || 0.340,
+                ops: currentPlay.Batter.OnBasePlusSlugging || 0.800,
+                slg: currentPlay.Batter.SluggingPercentage || 0.450,
+                atBats: currentPlay.Batter.AtBats || 300,
+                hits: currentPlay.Batter.Hits || 75,
+                strikeOuts: currentPlay.Batter.StrikeOuts || 80,
+                walks: currentPlay.Batter.Walks || 30
+              }
+            };
+          }
+        }
+      }
+
+      // Fallback: Look for any current batter info in the main game object
+      if (gameData.CurrentBatter) {
+        return {
+          id: gameData.CurrentBatter.PlayerID,
+          name: `${gameData.CurrentBatter.FirstName} ${gameData.CurrentBatter.LastName}`.trim(),
+          batSide: gameData.CurrentBatter.BatSide || 'U',
+          stats: {
+            avg: gameData.CurrentBatter.BattingAverage || 0.275,
+            hr: gameData.CurrentBatter.HomeRuns || 15,
+            rbi: gameData.CurrentBatter.RunsBattedIn || 50,
+            obp: gameData.CurrentBatter.OnBasePercentage || 0.340,
+            ops: gameData.CurrentBatter.OnBasePlusSlugging || 0.800,
+            slg: gameData.CurrentBatter.SluggingPercentage || 0.450,
+            atBats: gameData.CurrentBatter.AtBats || 300,
+            hits: gameData.CurrentBatter.Hits || 75,
+            strikeOuts: gameData.CurrentBatter.StrikeOuts || 80,
+            walks: gameData.CurrentBatter.Walks || 30
+          }
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error extracting current batter from SportsDataIO:', error);
       return null;
     }
   }

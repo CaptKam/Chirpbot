@@ -322,7 +322,7 @@ export class MLBEngine extends BaseSportEngine {
     },
   ];
 
-  extractGameState(liveFeed: any): MLBGameState | null {
+  async extractGameState(liveFeed: any): Promise<MLBGameState | null> {
     try {
       const linescore = liveFeed.liveData.linescore;
       const gameData = liveFeed.gameData;
@@ -472,11 +472,17 @@ export class MLBEngine extends BaseSportEngine {
           };
           console.log(`   ✅ Real MLB batter found: ${currentBatter.name} (${currentBatter.batSide}) - AVG: ${currentBatter.stats.avg}, HR: ${currentBatter.stats.hr}, RBI: ${currentBatter.stats.rbi}`);
         } else {
-          // NO FALLBACK - Don't create alerts with fake data
-          console.log(`   🏏 ❌ No real current batter found - batter-specific alerts will be skipped`);
-          console.log(`   ✅ Game situation alerts will still work (scores, innings, runners)`);
-          console.log(`   🔍 Need to find where MLB API stores current batter information`);
-          currentBatter = null; // Set to null instead of fake data
+          // Try SportsDataIO as fallback for current batter data
+          console.log(`   🔍 Trying SportsDataIO for current batter information...`);
+          currentBatter = await mlbApi.getSportsDataCurrentBatter(gameData.game.pk);
+          
+          if (!currentBatter) {
+            // NO FALLBACK - Don't create alerts with fake data
+            console.log(`   🏏 ❌ No real current batter found - batter-specific alerts will be skipped`);
+            console.log(`   ✅ Game situation alerts will still work (scores, innings, runners)`);
+            console.log(`   🔍 Need to find where MLB API stores current batter information`);
+            currentBatter = null; // Set to null instead of fake data
+          }
         }
 
         // Get current pitcher
@@ -1018,7 +1024,7 @@ export class MLBEngine extends BaseSportEngine {
           
           console.log(`✅ Got live feed data for game ${game.gamePk}, processing...`);
 
-          const gameState = this.extractGameState(liveFeed);
+          const gameState = await this.extractGameState(liveFeed);
 
           if (!gameState) continue;
 
