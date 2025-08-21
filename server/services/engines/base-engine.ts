@@ -158,9 +158,22 @@ export abstract class BaseSportEngine implements SportEngine {
   }
 
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: any): Promise<void> {
-    for (const alert of triggeredAlerts) {
+    // ANTI-BATCH FIX: Only send the highest priority alert to prevent batching
+    if (triggeredAlerts.length === 0) return;
+    
+    // Sort by priority (highest first) and only process the top alert
+    const sortedAlerts = triggeredAlerts.sort((a, b) => b.priority - a.priority);
+    const highestPriorityAlert = sortedAlerts[0];
+    
+    console.log(`🎯 Processing ONLY highest priority alert: ${highestPriorityAlert.type} (Priority: ${highestPriorityAlert.priority})`);
+    if (sortedAlerts.length > 1) {
+      console.log(`⏭️ Skipping ${sortedAlerts.length - 1} lower priority alerts: ${sortedAlerts.slice(1).map(a => a.type).join(', ')}`);
+    }
+    
+    // Process only the highest priority alert
+    const alert = highestPriorityAlert;
       if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
-        continue;
+        return; // Exit early if alert shouldn't trigger
       }
 
       try {
