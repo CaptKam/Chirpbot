@@ -33,8 +33,9 @@ export class WeatherEngine extends BaseSportEngine {
   
   async monitor() {
     try {
+      // Weather monitoring doesn't depend on AI settings - always run
       const settings = await storage.getSettingsBySport('MLB');
-      if (!settings?.aiEnabled) {
+      if (!settings?.telegramEnabled) {
         return;
       }
       
@@ -208,7 +209,7 @@ export class WeatherEngine extends BaseSportEngine {
     };
   }
 
-  protected buildGameContext(gameState: WeatherState): GameContext {
+  protected buildGameContext(gameState: WeatherState): any {
     return {
       sport: gameState.sport,
       homeScore: 0,
