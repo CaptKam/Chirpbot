@@ -131,9 +131,19 @@ function AppContent() {
   }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
 
   return (
-    <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
+    <>
       <Switch>
-        <Route path="/admin-login" component={AdminLogin} />
+        <Route path="/admin-login">
+          <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+            <div className="bg-white text-black p-8 rounded">
+              <h1>Admin Login Test Page</h1>
+              <p>If you see this, routing works!</p>
+            </div>
+          </div>
+        </Route>
+        <Route>
+          <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
+            <Switch>
         <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} requireAdmin={true} />} />
         <Route path="/" component={() => <PublicRoute component={Landing} />} />
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
@@ -141,10 +151,13 @@ function AppContent() {
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={Alerts} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route component={NotFound} />
+              <Route component={NotFound} />
+            </Switch>
+            {isAuthenticated && <BottomNavigation />}
+          </div>
+        </Route>
       </Switch>
-      {isAuthenticated && <BottomNavigation />}
-    </div>
+    </>
   );
 }
 
