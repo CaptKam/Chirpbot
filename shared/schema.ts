@@ -114,6 +114,10 @@ export const settings = pgTable("settings", {
     homeRunAlert: boolean;
     strikeouts: boolean;
     
+    // MLB AI System - Independent Controls
+    mlbAIEnabled: boolean;
+    mlbAIPrompt: string;
+    
     // RE24 System
     useRE24System: boolean;
     re24Level1: boolean;

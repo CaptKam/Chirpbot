@@ -724,6 +724,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // MLB AI System Control Endpoints
+  app.post("/api/mlb-ai/settings", async (req, res) => {
+    try {
+      const { enabled, customPrompt } = req.body;
+      
+      // Get current MLB settings
+      const settings = await storage.getSettingsBySport('MLB');
+      if (!settings) {
+        return res.status(404).json({ message: "MLB settings not found" });
+      }
+      
+      // Update MLB AI settings
+      const alertTypes = settings.alertTypes as any;
+      alertTypes.mlbAIEnabled = enabled;
+      if (customPrompt !== undefined) {
+        alertTypes.mlbAIPrompt = customPrompt;
+      }
+      
+      await storage.updateSettings('MLB', { alertTypes });
+      
+      // Update the AI system
+      const { getMLBAISystem } = await import("./services/mlb-ai-system");
+      const mlbAISystem = getMLBAISystem(storage);
+      await mlbAISystem.updateSettings(enabled, customPrompt);
+      
+      res.json({
+        success: true,
+        message: `MLB AI System ${enabled ? 'enabled' : 'disabled'}`,
+        settings: {
+          enabled,
+          customPrompt: customPrompt || ''
+        }
+      });
+    } catch (error: any) {
+      console.error("MLB AI settings update failed:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to update MLB AI settings",
+        error: error.message 
+      });
+    }
+  });
+  
+  // Get MLB AI System status
+  app.get("/api/mlb-ai/status", async (req, res) => {
+    try {
+      const settings = await storage.getSettingsBySport('MLB');
+      const alertTypes = settings?.alertTypes as any;
+      
+      const { getMLBAISystem } = await import("./services/mlb-ai-system");
+      const mlbAISystem = getMLBAISystem(storage);
+      const isEnabled = await mlbAISystem.isEnabled();
+      
+      res.json({
+        enabled: alertTypes?.mlbAIEnabled || false,
+        customPrompt: alertTypes?.mlbAIPrompt || '',
+        aiSystemReady: isEnabled,
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY
+      });
+    } catch (error: any) {
+      console.error("MLB AI status check failed:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to get MLB AI status",
+        error: error.message 
+      });
+    }
+  });
+  
+  // Test MLB AI System
+  app.post("/api/mlb-ai/test", async (req, res) => {
+    try {
+      const { getMLBAISystem } = await import("./services/mlb-ai-system");
+      const mlbAISystem = getMLBAISystem(storage);
+      
+      // Enable the system for testing
+      await mlbAISystem.updateSettings(true);
+      
+      // Test with a high-stakes scenario
+      const testContext = {
+        homeTeam: req.body.homeTeam || 'Yankees',
+        awayTeam: req.body.awayTeam || 'Red Sox',
+        score: req.body.score || { home: 5, away: 5 },
+        inning: req.body.inning || 9,
+        inningState: req.body.inningState || 'bottom' as 'bottom',
+        outs: req.body.outs || 2,
+        balls: req.body.balls || 3,
+        strikes: req.body.strikes || 2,
+        runners: req.body.runners || {
+          first: true,
+          second: true,
+          third: true
+        }
+      };
+      
+      const decision = await mlbAISystem.analyzeGameSituation(testContext);
+      
+      res.json({
+        success: true,
+        testContext,
+        aiDecision: decision || {
+          shouldTrigger: false,
+          priority: 0,
+          title: "No alert",
+          description: "AI did not trigger an alert for this situation"
+        }
+      });
+    } catch (error: any) {
+      console.error("MLB AI test failed:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "MLB AI test failed",
+        error: error.message 
+      });
+    }
+  });
+
   // Test weather data specifically
   app.get("/api/test/weather", async (req, res) => {
     try {
