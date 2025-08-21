@@ -273,33 +273,42 @@ class LiveSportsService {
     try {
       let games: Game[] = [];
 
-      if (!sport || sport === 'MLB') {
-        // Get real MLB games from official API
+      if (!sport) {
+        // No sport specified - fetch all sports
         const mlbGames = await mlbApi.getTodaysGames();
-        games = games.concat(mlbGames);
-      }
-
-      if (!sport || sport === 'NFL') {
-        // Get real NFL games from SportsData.io
         const nflGames = await sportsDataService.getNFLGames();
-        games = games.concat(nflGames);
-      }
-
-      if (!sport || sport === 'NBA') {
-        // Get real NBA games from SportsData.io
         const nbaGames = await sportsDataService.getNBAGames();
-        games = games.concat(nbaGames);
-      }
-
-      if (!sport || sport === 'NHL') {
-        // Get real NHL games from SportsData.io
         const nhlGames = await sportsDataService.getNHLGames();
-        games = games.concat(nhlGames);
+        
+        games = games.concat(mlbGames, nflGames, nbaGames, nhlGames);
+      } else {
+        // Specific sport requested - fetch only that sport
+        switch (sport) {
+          case 'MLB':
+            const mlbGames = await mlbApi.getTodaysGames();
+            games = games.concat(mlbGames);
+            break;
+          case 'NFL':
+            const nflGames = await sportsDataService.getNFLGames();
+            games = games.concat(nflGames);
+            break;
+          case 'NBA':
+            const nbaGames = await sportsDataService.getNBAGames();
+            games = games.concat(nbaGames);
+            break;
+          case 'NHL':
+            const nhlGames = await sportsDataService.getNHLGames();
+            games = games.concat(nhlGames);
+            break;
+          default:
+            console.warn(`Unknown sport requested: ${sport}`);
+            break;
+        }
       }
 
       return {
         date: today,
-        games: sport ? games.filter(game => game.sport === sport) : games,
+        games,
       };
     } catch (error) {
       console.error(`Error fetching ${sport || 'all'} games:`, error);
