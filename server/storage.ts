@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, users, userMonitoredTeams, teams, alerts, settings } from "@shared/schema";
+import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, type AiSettings, type InsertAiSettings, type AiLearningLog, type InsertAiLearningLog, type AuditLog, type InsertAuditLog, users, userMonitoredTeams, teams, alerts, settings, aiSettings, aiLearningLogs, auditLogs } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, sql, desc } from "drizzle-orm";
@@ -46,6 +46,27 @@ export interface IStorage {
   getAllSettings(): Promise<Settings[]>;
   createSettings(settings: InsertSettings): Promise<Settings>;
   updateSettings(sport: string, updates: Partial<Settings>): Promise<Settings | undefined>;
+
+  // Admin AI Settings
+  getAiSettingsBySport(sport: string): Promise<AiSettings | undefined>;
+  getAllAiSettings(): Promise<AiSettings[]>;
+  createAiSettings(settings: InsertAiSettings): Promise<AiSettings>;
+  updateAiSettings(sport: string, updates: Partial<AiSettings>): Promise<AiSettings | undefined>;
+
+  // AI Learning Logs
+  getAllAiLearningLogs(): Promise<AiLearningLog[]>;
+  getAiLearningLogsBySport(sport: string): Promise<AiLearningLog[]>;
+  getAiLearningLogsByType(sport: string, alertType: string): Promise<AiLearningLog[]>;
+  createAiLearningLog(log: InsertAiLearningLog): Promise<AiLearningLog>;
+  updateAiLearningLogFeedback(id: string, feedback: number, feedbackText?: string): Promise<AiLearningLog | undefined>;
+  getRecentAiLearningLogs(limit?: number): Promise<AiLearningLog[]>;
+
+  // Audit Logs
+  getAllAuditLogs(): Promise<AuditLog[]>;
+  getAuditLogsByUser(userId: string): Promise<AuditLog[]>;
+  getAuditLogsByResource(resource: string): Promise<AuditLog[]>;
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getRecentAuditLogs(limit?: number): Promise<AuditLog[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -190,6 +211,7 @@ export class MemStorage implements IStorage {
       profileImage: insertUser.profileImage || null,
       authMethod: insertUser.authMethod || 'local',
       emailVerified: insertUser.email ? false : false, // Will be true after email verification
+      role: 'user', // Default role for new users
       createdAt: now,
       updatedAt: now,
     };
@@ -401,6 +423,132 @@ export class MemStorage implements IStorage {
     this.settings.set(sport, updatedSettings);
     return updatedSettings;
   }
+
+  // Admin AI Settings methods (Mock implementations for MemStorage)
+  async getAiSettingsBySport(sport: string): Promise<AiSettings | undefined> {
+    // Mock implementation - return default settings
+    return {
+      id: randomUUID(),
+      sport,
+      enabled: false,
+      dryRun: true,
+      rateLimitMs: 30000,
+      minProbability: 65,
+      inningThreshold: 6,
+      allowTypes: [],
+      redactPii: true,
+      model: "gpt-4o-mini",
+      maxTokens: 500,
+      temperature: 70,
+      updatedBy: null,
+      updatedAt: new Date(),
+    };
+  }
+
+  async getAllAiSettings(): Promise<AiSettings[]> {
+    return []; // Mock implementation
+  }
+
+  async createAiSettings(settings: InsertAiSettings): Promise<AiSettings> {
+    const aiSettings: AiSettings = {
+      id: randomUUID(),
+      ...settings,
+      updatedAt: new Date(),
+    };
+    return aiSettings;
+  }
+
+  async updateAiSettings(sport: string, updates: Partial<AiSettings>): Promise<AiSettings | undefined> {
+    // Mock implementation - just return updated settings
+    return {
+      id: randomUUID(),
+      sport,
+      enabled: false,
+      dryRun: true,
+      rateLimitMs: 30000,
+      minProbability: 65,
+      inningThreshold: 6,
+      allowTypes: [],
+      redactPii: true,
+      model: "gpt-4o-mini",
+      maxTokens: 500,
+      temperature: 70,
+      updatedBy: null,
+      updatedAt: new Date(),
+      ...updates,
+    };
+  }
+
+  // AI Learning Logs methods (Mock implementations for MemStorage)
+  async getAllAiLearningLogs(): Promise<AiLearningLog[]> {
+    return []; // Mock implementation
+  }
+
+  async getAiLearningLogsBySport(sport: string): Promise<AiLearningLog[]> {
+    return []; // Mock implementation
+  }
+
+  async getAiLearningLogsByType(sport: string, alertType: string): Promise<AiLearningLog[]> {
+    return []; // Mock implementation
+  }
+
+  async createAiLearningLog(log: InsertAiLearningLog): Promise<AiLearningLog> {
+    const aiLog: AiLearningLog = {
+      id: randomUUID(),
+      ...log,
+      createdAt: new Date(),
+    };
+    return aiLog;
+  }
+
+  async updateAiLearningLogFeedback(id: string, feedback: number, feedbackText?: string): Promise<AiLearningLog | undefined> {
+    // Mock implementation
+    return {
+      id,
+      sport: "MLB",
+      alertType: "test",
+      gameId: null,
+      inputData: { originalAlert: { type: "test", title: "test", description: "test", confidence: 50 }, gameInfo: {} },
+      aiResponse: null,
+      success: false,
+      errorMessage: null,
+      confidence: null,
+      userFeedback: feedback,
+      userFeedbackText: feedbackText || null,
+      settings: { model: "gpt-4o-mini", temperature: 70, maxTokens: 500, redactPii: true },
+      createdAt: new Date(),
+    };
+  }
+
+  async getRecentAiLearningLogs(limit = 50): Promise<AiLearningLog[]> {
+    return []; // Mock implementation
+  }
+
+  // Audit Logs methods (Mock implementations for MemStorage)
+  async getAllAuditLogs(): Promise<AuditLog[]> {
+    return []; // Mock implementation
+  }
+
+  async getAuditLogsByUser(userId: string): Promise<AuditLog[]> {
+    return []; // Mock implementation
+  }
+
+  async getAuditLogsByResource(resource: string): Promise<AuditLog[]> {
+    return []; // Mock implementation
+  }
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const auditLog: AuditLog = {
+      id: randomUUID(),
+      ...log,
+      createdAt: new Date(),
+    };
+    return auditLog;
+  }
+
+  async getRecentAuditLogs(limit = 50): Promise<AuditLog[]> {
+    return []; // Mock implementation
+  }
 }
 
 // Database Storage Implementation
@@ -590,6 +738,90 @@ export class DatabaseStorage implements IStorage {
   async updateSettings(sport: string, updates: Partial<Settings>): Promise<Settings | undefined> {
     const [updatedSettings] = await db.update(settings).set(updates).where(eq(settings.sport, sport)).returning();
     return updatedSettings || undefined;
+  }
+
+  // Admin AI Settings methods
+  async getAiSettingsBySport(sport: string): Promise<AiSettings | undefined> {
+    const [aiSetting] = await db.select().from(aiSettings).where(eq(aiSettings.sport, sport));
+    return aiSetting || undefined;
+  }
+
+  async getAllAiSettings(): Promise<AiSettings[]> {
+    return await db.select().from(aiSettings);
+  }
+
+  async createAiSettings(settings: InsertAiSettings): Promise<AiSettings> {
+    const [aiSetting] = await db.insert(aiSettings).values(settings).returning();
+    return aiSetting;
+  }
+
+  async updateAiSettings(sport: string, updates: Partial<AiSettings>): Promise<AiSettings | undefined> {
+    const [updatedAiSettings] = await db.update(aiSettings).set(updates).where(eq(aiSettings.sport, sport)).returning();
+    return updatedAiSettings || undefined;
+  }
+
+  // AI Learning Logs methods
+  async getAllAiLearningLogs(): Promise<AiLearningLog[]> {
+    return await db.select().from(aiLearningLogs).orderBy(desc(aiLearningLogs.createdAt));
+  }
+
+  async getAiLearningLogsBySport(sport: string): Promise<AiLearningLog[]> {
+    return await db.select().from(aiLearningLogs)
+      .where(eq(aiLearningLogs.sport, sport))
+      .orderBy(desc(aiLearningLogs.createdAt));
+  }
+
+  async getAiLearningLogsByType(sport: string, alertType: string): Promise<AiLearningLog[]> {
+    return await db.select().from(aiLearningLogs)
+      .where(and(eq(aiLearningLogs.sport, sport), eq(aiLearningLogs.alertType, alertType)))
+      .orderBy(desc(aiLearningLogs.createdAt));
+  }
+
+  async createAiLearningLog(log: InsertAiLearningLog): Promise<AiLearningLog> {
+    const [aiLog] = await db.insert(aiLearningLogs).values(log).returning();
+    return aiLog;
+  }
+
+  async updateAiLearningLogFeedback(id: string, feedback: number, feedbackText?: string): Promise<AiLearningLog | undefined> {
+    const [updatedLog] = await db.update(aiLearningLogs)
+      .set({ userFeedback: feedback, userFeedbackText: feedbackText })
+      .where(eq(aiLearningLogs.id, id))
+      .returning();
+    return updatedLog || undefined;
+  }
+
+  async getRecentAiLearningLogs(limit = 50): Promise<AiLearningLog[]> {
+    return await db.select().from(aiLearningLogs)
+      .orderBy(desc(aiLearningLogs.createdAt))
+      .limit(limit);
+  }
+
+  // Audit Logs methods
+  async getAllAuditLogs(): Promise<AuditLog[]> {
+    return await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
+  }
+
+  async getAuditLogsByUser(userId: string): Promise<AuditLog[]> {
+    return await db.select().from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .orderBy(desc(auditLogs.createdAt));
+  }
+
+  async getAuditLogsByResource(resource: string): Promise<AuditLog[]> {
+    return await db.select().from(auditLogs)
+      .where(eq(auditLogs.resource, resource))
+      .orderBy(desc(auditLogs.createdAt));
+  }
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [auditLog] = await db.insert(auditLogs).values(log).returning();
+    return auditLog;
+  }
+
+  async getRecentAuditLogs(limit = 50): Promise<AuditLog[]> {
+    return await db.select().from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
   }
 }
 

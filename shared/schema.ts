@@ -17,6 +17,8 @@ export const users = pgTable("users", {
   // Authentication method tracking
   authMethod: text("auth_method").notNull().default("local"), // 'local', 'google', 'apple'
   emailVerified: boolean("email_verified").notNull().default(false),
+  // Admin role system
+  role: text("role").notNull().default("user"), // 'admin', 'manager', 'analyst', 'user'
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -208,6 +210,15 @@ export type Settings = typeof settings.$inferSelect;
 export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
 export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
 
+export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
+export type AiSettings = typeof aiSettings.$inferSelect;
+
+export type InsertAiLearningLog = z.infer<typeof insertAiLearningLogSchema>;
+export type AiLearningLog = typeof aiLearningLogs.$inferSelect;
+
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+
 // Game types for live sports data
 export interface Game {
   id: string;
@@ -241,3 +252,100 @@ export interface GameDay {
   date: string;
   games: Game[];
 }
+
+// Admin-specific tables for AI control and learning
+
+// AI Settings per sport for fine-tuned control
+export const aiSettings = pgTable("ai_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL
+  enabled: boolean("enabled").notNull().default(false),
+  dryRun: boolean("dry_run").notNull().default(true),
+  rateLimitMs: integer("rate_limit_ms").notNull().default(30000),
+  minProbability: integer("min_probability").notNull().default(65), // 0-100 scale for easier UI
+  inningThreshold: integer("inning_threshold").notNull().default(6),
+  allowTypes: jsonb("allow_types").$type<string[]>().notNull().default([]),
+  redactPii: boolean("redact_pii").notNull().default(true),
+  model: text("model").notNull().default("gpt-4o-mini"),
+  maxTokens: integer("max_tokens").default(500),
+  temperature: integer("temperature").notNull().default(70), // 0-100 scale
+  updatedBy: varchar("updated_by"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// AI Learning Logs to track all AI interactions
+export const aiLearningLogs = pgTable("ai_learning_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(),
+  alertType: text("alert_type").notNull(),
+  gameId: text("game_id"),
+  inputData: jsonb("input_data").$type<{
+    gameInfo: any;
+    weatherData?: any;
+    playerStats?: any;
+    situationalData?: any;
+    originalAlert: {
+      type: string;
+      title: string;
+      description: string;
+      confidence: number;
+    };
+  }>().notNull(),
+  aiResponse: jsonb("ai_response").$type<{
+    enhancedTitle?: string;
+    enhancedDescription?: string;
+    confidence: number;
+    reasoning: string;
+    tags: string[];
+    priority: number;
+    sentiment: 'positive' | 'neutral' | 'negative';
+    tokensUsed: number;
+    processingTimeMs: number;
+  }>(),
+  success: boolean("success").notNull().default(false),
+  errorMessage: text("error_message"),
+  confidence: integer("confidence"), // AI-determined confidence 0-100
+  userFeedback: integer("user_feedback"), // User rating 1-5 stars
+  userFeedbackText: text("user_feedback_text"),
+  settings: jsonb("settings").$type<{
+    model: string;
+    temperature: number;
+    maxTokens: number;
+    redactPii: boolean;
+  }>().notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Audit logs for admin actions
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  action: text("action").notNull(), // 'update_ai_settings', 'view_logs', 'feedback_submitted', etc.
+  resource: text("resource").notNull(), // 'ai_settings', 'ai_logs', 'alerts', etc.
+  resourceId: text("resource_id"),
+  before: jsonb("before"),
+  after: jsonb("after"),
+  metadata: jsonb("metadata").$type<{
+    sport?: string;
+    userAgent?: string;
+    ip?: string;
+    sessionId?: string;
+  }>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schemas for admin tables
+export const insertAiSettingsSchema = createInsertSchema(aiSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertAiLearningLogSchema = createInsertSchema(aiLearningLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});

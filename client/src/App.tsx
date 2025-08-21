@@ -11,14 +11,15 @@ import Alerts from "./pages/alerts";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
+import { AdminDashboard } from "./pages/AdminDashboard";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useAuth();
+function ProtectedRoute({ component: Component, requireAdmin = false }: { component: React.ComponentType; requireAdmin?: boolean }) {
+  const { isAuthenticated, isLoading, isAdmin } = useAuth();
 
   if (isLoading) {
     return (
@@ -33,6 +34,17 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (!isAuthenticated) {
     return <Redirect to="/" />;
+  }
+
+  if (requireAdmin && !isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
+        <div className="text-center p-8 bg-red-900/20 rounded-lg border border-red-500/30">
+          <h2 className="text-xl font-bold text-red-400 mb-2">Access Denied</h2>
+          <p className="text-slate-300">Admin privileges required to access this page.</p>
+        </div>
+      </div>
+    );
   }
 
   return <Component />;
@@ -126,6 +138,7 @@ function AppContent() {
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={Alerts} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+        <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} requireAdmin={true} />} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}

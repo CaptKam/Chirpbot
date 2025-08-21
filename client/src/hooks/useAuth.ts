@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 interface User {
   id: string;
   username: string;
+  email?: string;
+  role?: string;
 }
 
 export function useAuth() {
@@ -27,6 +29,9 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
+    isAdmin: user?.role === 'admin',
+    isManager: user?.role === 'manager' || user?.role === 'admin',
+    isAnalyst: user?.role === 'analyst' || user?.role === 'manager' || user?.role === 'admin',
     error,
   };
 }
