@@ -154,10 +154,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertAlertSchema.parse(req.body);
       
-      // Get weather data for the game location
+      // Get weather data for the game location using city name
       let weatherData = null;
       if (validatedData.gameInfo.homeTeam) {
-        weatherData = await getWeatherData(validatedData.gameInfo.homeTeam);
+        const teamCityMap: Record<string, string> = {
+          'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
+          'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
+          'Athletics': 'Oakland', // Handle short name
+          'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
+          'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
+          'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
+          'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
+          'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
+          'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
+          'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
+          'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
+          'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
+          'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
+          'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
+          'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
+          'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
+        };
+        
+        const cityName = teamCityMap[validatedData.gameInfo.homeTeam] || validatedData.gameInfo.homeTeam;
+        weatherData = await getWeatherData(cityName);
       }
 
       const settings = await storage.getSettingsBySport(validatedData.sport);
@@ -398,8 +418,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ message: "No event generated" });
       }
 
-      // Create alert from the simulated event
-      const weatherData = await getWeatherData(event.game.homeTeam);
+      // Create alert from the simulated event with city name
+      const teamCityMap: Record<string, string> = {
+        'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
+        'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
+        'Athletics': 'Oakland', 'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
+        'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
+        'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
+        'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
+        'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
+        'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
+        'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
+        'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
+        'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
+        'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
+        'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
+        'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
+        'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
+      };
+      
+      const cityName = teamCityMap[event.game.homeTeam] || event.game.homeTeam;
+      const weatherData = await getWeatherData(cityName);
       
       const alertData = {
         type: event.type,
@@ -1019,7 +1058,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create test alerts
       for (const alertData of [mlbAlert, nflAlert, nbaAlert, nhlAlert]) {
         try {
-          const weatherData = await getWeatherData(alertData.gameInfo.homeTeam);
+          const teamCityMap: Record<string, string> = {
+            'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
+            'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
+            'Athletics': 'Oakland', 'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
+            'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
+            'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
+            'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
+            'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
+            'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
+            'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
+            'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
+            'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
+            'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
+            'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
+            'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
+            'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
+          };
+          
+          const cityName = teamCityMap[alertData.gameInfo.homeTeam] || alertData.gameInfo.homeTeam;
+          const weatherData = await getWeatherData(cityName);
           
           const alert = await storage.createAlert({
             ...alertData,

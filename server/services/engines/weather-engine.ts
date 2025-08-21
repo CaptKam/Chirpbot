@@ -236,7 +236,8 @@ export class WeatherEngine extends BaseSportEngine {
       
       for (const game of allGames) {
         try {
-          const weatherData = await getWeatherData(game.homeTeam);
+          // Use the mapped city instead of team name
+          const weatherData = await getWeatherData(game.city);
           if (!weatherData) continue;
 
           const gameWeatherData = {

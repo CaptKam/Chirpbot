@@ -745,8 +745,28 @@ export class MLBEngine extends BaseSportEngine {
       }
 
       try {
-        // Get weather data for context
-        const weatherData = await getWeatherData(gameState.homeTeam);
+        // Get weather data for context using city name instead of team name
+        const teamCityMap: Record<string, string> = {
+          'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
+          'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
+          'Athletics': 'Oakland', // Handle short name
+          'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
+          'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
+          'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
+          'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
+          'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
+          'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
+          'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
+          'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
+          'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
+          'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
+          'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
+          'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
+          'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
+        };
+        
+        const cityName = teamCityMap[gameState.homeTeam] || gameState.homeTeam;
+        const weatherData = await getWeatherData(cityName);
 
         // AI analysis has been completely removed
 
