@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, Brain, Settings, Activity, Users, BarChart3 } from "lucide-react";
 import { AiSettingsPanel } from "@/components/admin/AiSettingsPanel";
-import { AiLearningLogsPanel } from "@/components/admin/AiLearningLogsPanel";
-import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
+// import { AiLearningLogsPanel } from "@/components/admin/AiLearningLogsPanel";
+// import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
 
 interface DashboardStats {
   aiLogs: {
@@ -233,12 +233,22 @@ export function AdminDashboard() {
 
           {/* AI Logs Tab */}
           <TabsContent value="ai-logs">
-            <AiLearningLogsPanel />
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Learning Logs</CardTitle>
+                <CardDescription>Coming soon - View AI decision history</CardDescription>
+              </CardHeader>
+            </Card>
           </TabsContent>
 
           {/* Audit Logs Tab */}
           <TabsContent value="audit-logs">
-            <AuditLogsPanel />
+            <Card>
+              <CardHeader>
+                <CardTitle>Audit Logs</CardTitle>
+                <CardDescription>Coming soon - View admin activity</CardDescription>
+              </CardHeader>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

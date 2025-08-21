@@ -16,15 +16,34 @@ export function AdminLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: { username: string; password: string }) => {
-      const response = await apiRequest("/api/admin/login", "POST", data);
-      return response;
+      try {
+        const response = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log("Login successful:", result);
+        return result;
+      } catch (error) {
+        console.error("Login request failed:", error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Login mutation success:", data);
       // Redirect to admin dashboard
-      setLocation("/admin");
+      window.location.href = "/admin";
     },
     onError: (error) => {
-      console.error("Login error:", error);
+      console.error("Login mutation error:", error);
     },
   });
 
