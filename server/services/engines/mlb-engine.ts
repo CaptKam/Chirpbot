@@ -806,78 +806,6 @@ export class MLBEngine extends BaseSportEngine {
 
   // Override processAlerts to use dynamic descriptions and deduplication system
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
-    // Check if MLB AI System is enabled and should handle alerts
-    const settings = await storage.getSettingsBySport(this.sport);
-    const mlbAISystem = getMLBAISystem(storage);
-    const aiEnabled = settings?.alertTypes?.mlbAIEnabled || false;
-    
-    if (aiEnabled) {
-      console.log('🤖 MLB AI System is ENABLED - Analyzing game situation...');
-      
-      // Prepare game context for AI
-      const gameContext = {
-        homeTeam: gameState.homeTeam,
-        awayTeam: gameState.awayTeam,
-        score: { home: gameState.homeScore, away: gameState.awayScore },
-        inning: gameState.inning,
-        inningState: gameState.inningState,
-        outs: gameState.outs,
-        balls: gameState.balls,
-        strikes: gameState.strikes,
-        runners: gameState.runners,
-        currentBatter: gameState.currentBatter,
-        currentPitcher: gameState.currentPitcher
-      };
-      
-      // Update AI settings with custom prompt if provided
-      const customPrompt = settings?.alertTypes?.mlbAIPrompt || '';
-      await mlbAISystem.updateSettings(true, customPrompt);
-      
-      // Let AI decide if an alert should be triggered
-      const aiDecision = await mlbAISystem.analyzeGameSituation(gameContext);
-      
-      if (aiDecision && aiDecision.shouldTrigger) {
-        // Create alert based on AI decision
-        const alertData = {
-          type: 'MLB AI Alert',
-          sport: this.sport,
-          title: aiDecision.title,
-          description: aiDecision.description,
-          gameInfo: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            inning: `${gameState.inning} ${gameState.inningState}`,
-            status: 'Live',
-            inningState: gameState.inningState,
-            outs: gameState.outs,
-            balls: gameState.balls,
-            strikes: gameState.strikes,
-            runners: gameState.runners,
-            score: {
-              home: gameState.homeScore,
-              away: gameState.awayScore
-            },
-            priority: aiDecision.priority,
-            scoringProbability: aiDecision.priority / 100,
-            currentBatter: gameState.currentBatter,
-            currentPitcher: gameState.currentPitcher
-          }
-        };
-        
-        const createdAlert = await storage.createAlert(alertData);
-        console.log(`🤖 MLB AI Alert created: ${aiDecision.title} (Priority: ${aiDecision.priority})`);
-        
-        // Broadcast to clients
-        if (this.onAlert) {
-          this.onAlert(createdAlert);
-        }
-      }
-      
-      // Skip regular alert processing when AI is enabled
-      return;
-    }
-    
-    // Continue with regular alert processing if AI is disabled
     for (const alert of triggeredAlerts) {
 
       try {
@@ -1133,6 +1061,80 @@ export class MLBEngine extends BaseSportEngine {
           if (!gameState) continue;
 
           const triggeredAlerts = await this.checkAlertConditions(gameState);
+
+          // Check if MLB AI System is enabled FIRST, before regular alerts
+          const settings = await storage.getSettingsBySport(this.sport);
+          const aiEnabled = settings?.alertTypes?.mlbAIEnabled || false;
+          
+          if (aiEnabled) {
+            console.log('🤖 MLB AI System is ENABLED - Analyzing game situation...');
+            
+            const mlbAISystem = getMLBAISystem(storage);
+            
+            // Prepare game context for AI
+            const gameContext = {
+              homeTeam: gameState.homeTeam,
+              awayTeam: gameState.awayTeam,
+              score: { home: gameState.homeScore, away: gameState.awayScore },
+              inning: gameState.inning,
+              inningState: gameState.inningState,
+              outs: gameState.outs,
+              balls: gameState.balls,
+              strikes: gameState.strikes,
+              runners: gameState.runners,
+              currentBatter: gameState.currentBatter,
+              currentPitcher: gameState.currentPitcher
+            };
+            
+            // Update AI settings with custom prompt if provided
+            const customPrompt = settings?.alertTypes?.mlbAIPrompt || '';
+            await mlbAISystem.updateSettings(true, customPrompt);
+            
+            // Let AI decide if an alert should be triggered
+            const aiDecision = await mlbAISystem.analyzeGameSituation(gameContext);
+            
+            if (aiDecision && aiDecision.shouldTrigger) {
+              // Create alert based on AI decision
+              const alertData = {
+                type: 'MLB AI Alert',
+                sport: this.sport,
+                title: aiDecision.title,
+                description: aiDecision.description,
+                gameInfo: {
+                  homeTeam: gameState.homeTeam,
+                  awayTeam: gameState.awayTeam,
+                  inning: `${gameState.inning} ${gameState.inningState}`,
+                  status: 'Live',
+                  inningState: gameState.inningState,
+                  outs: gameState.outs,
+                  balls: gameState.balls,
+                  strikes: gameState.strikes,
+                  runners: gameState.runners,
+                  score: {
+                    home: gameState.homeScore,
+                    away: gameState.awayScore
+                  },
+                  priority: aiDecision.priority,
+                  scoringProbability: aiDecision.priority / 100,
+                  currentBatter: gameState.currentBatter,
+                  currentPitcher: gameState.currentPitcher
+                }
+              };
+              
+              const createdAlert = await storage.createAlert(alertData);
+              console.log(`🤖 MLB AI Alert created: ${aiDecision.title} (Priority: ${aiDecision.priority})`);
+              
+              // Broadcast to clients
+              if (this.onAlert) {
+                this.onAlert(createdAlert);
+              }
+            } else {
+              console.log('🤖 AI analyzed situation - no alert needed');
+            }
+            
+            // Skip regular alert processing when AI is enabled
+            return;
+          }
 
           if (triggeredAlerts.length > 0) {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
