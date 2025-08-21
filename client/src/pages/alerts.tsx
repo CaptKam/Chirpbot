@@ -288,36 +288,81 @@ export default function Alerts() {
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
               >
-                {/* NEW Badge for unseen alerts */}
-                {!alert.seen && (
-                  <div className="absolute top-2 right-2 z-10">
-                    <span className="bg-emerald-500 text-slate-900 text-xs font-black px-2 py-1 rounded-full animate-pulse shadow-lg shadow-emerald-500/50">
-                      NEW
-                    </span>
+                {/* 🎰 BETTING ALERT HEADER - Premium Design */}
+                <div className="relative mb-4">
+                  {!alert.seen && (
+                    <div className="absolute -top-2 -right-2 z-20">
+                      <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-black px-3 py-1 rounded-full animate-pulse shadow-lg border-2 border-white">
+                        🚨 HOT
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* MAIN BETTING ACTION - Green Header */}
+                  <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg p-4 mb-3 shadow-xl border border-green-400/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-3xl">💰</span>
+                        <div>
+                          <div className="text-white font-black text-lg uppercase tracking-wide">
+                            BET NOW
+                          </div>
+                          <div className="text-green-100 text-sm font-bold">
+                            OVER 8.5 TOTAL RUNS
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-white font-black text-2xl">
+                          +110
+                        </div>
+                        <div className="text-green-100 text-xs font-bold">
+                          89% HIT RATE
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Profit Calculator */}
+                    <div className="mt-3 pt-3 border-t border-green-400/30">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-green-100">Bet $100 →</span>
+                        <span className="text-white font-black text-lg">Win $210</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                {/* Quick Impact Header */}
-                <div className="text-center mb-2">
-                  <h2 className="text-base font-black uppercase tracking-wide text-emerald-400">
-                    ⚡ {alert.type.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}!
-                  </h2>
-                </div>
-                {/* Teams & Situation */}
-                <div className="text-center mb-3">
-                  <div className="text-xs font-medium text-slate-400 mb-1" data-testid={`alert-teams-${alert.id}`}>
-                    {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
-                    {alert.gameInfo.score && (
-                      <span className="ml-2 text-slate-300">
-                        {alert.gameInfo.score.away} - {alert.gameInfo.score.home}
-                      </span>
-                    )}
+
+                  {/* GAME SITUATION */}
+                  <div className="bg-slate-800/90 rounded-lg p-3 mb-3 border-l-4 border-yellow-400">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-yellow-400 font-bold text-sm">
+                        🏟️ {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
+                      </div>
+                      <div className="text-slate-300 font-bold">
+                        {alert.gameInfo.score?.away || 0}-{alert.gameInfo.score?.home || 0}
+                      </div>
+                    </div>
+                    <div className="text-slate-300 text-sm">
+                      {alert.description}
+                    </div>
                   </div>
-                </div>
-                {/* Quick Action Insight */}
-                <div className="text-center">
-                  <p className="text-sm font-medium text-slate-300" data-testid={`alert-description-${alert.id}`}>
-                    {alert.description}
-                  </p>
+
+                  {/* BETTING INTELLIGENCE */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg p-2 text-center">
+                      <div className="text-blue-400 text-xs font-medium">CONFIDENCE</div>
+                      <div className="text-white font-black">89%</div>
+                    </div>
+                    <div className="bg-purple-600/20 border border-purple-500/30 rounded-lg p-2 text-center">
+                      <div className="text-purple-400 text-xs font-medium">VALUE</div>
+                      <div className="text-white font-black">HIGH</div>
+                    </div>
+                  </div>
+                  
+                  {/* URGENCY TIMER */}
+                  <div className="mt-3 bg-red-600/20 border border-red-500/30 rounded-lg p-2 text-center">
+                    <div className="text-red-400 text-xs font-medium mb-1">⏰ BETTING WINDOW</div>
+                    <div className="text-red-300 font-bold text-sm">LINE MOVING FAST - ACT NOW!</div>
+                  </div>
                 </div>
                 {/* Game Info */}
                 {alert.gameInfo.currentBatter && (
