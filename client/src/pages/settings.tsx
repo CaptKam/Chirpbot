@@ -16,38 +16,68 @@ const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
-    { key: "risp", label: "RISP (Runners in Scoring Position)", description: "2nd/3rd base situations" },
-    { key: "closeGame", label: "Close Game", description: "1-run games in late innings" },
-    { key: "lateInning", label: "Late Inning Pressure", description: "8th+ inning crucial moments" },
-    { key: "homeRun", label: "Home Run Situations", description: "High home run probability moments" },
-    { key: "runnersOnBase", label: "Runners on Base", description: "Any base runner situations" },
-    { key: "hits", label: "Hit Alerts", description: "Base hit notifications" },
-    { key: "scoring", label: "Scoring Plays", description: "RBI and run-scoring events" },
-    { key: "inningChange", label: "Inning Changes", description: "New inning momentum shifts" },
-    { key: "homeRunAlert", label: "Home Run Alerts", description: "Actual home run notifications" },
-    { key: "strikeouts", label: "Strikeout Alerts", description: "Pitcher strikeout notifications" },
-    { key: "starBatter", label: "Star Batter Alert", description: ".300+ AVG, 20+ HR, or .900+ OPS hitters" },
-    { key: "powerHitter", label: "Power Hitter Alert", description: "25+ HR sluggers with runners on base" },
-    { key: "eliteClutch", label: "Elite Clutch Hitter", description: "High OPS batters in pressure situations" },
-    { key: "avgHitter", label: ".300+ Hitter Alert", description: "Premium contact hitters at bat" },
-    { key: "rbiMachine", label: "RBI Machine Alert", description: "80+ RBI producers with scoring chances" },
-    { key: "re24Advanced", label: "RE24 Advanced Analytics", description: "MLB Run Expectancy 24 (RE24) mathematical analysis system" },
+    // === GAME SITUATION ALERTS ===
+    { key: "risp", label: "RISP (Runners in Scoring Position)", description: "2nd/3rd base situations", category: "Game Situations" },
+    { key: "basesLoaded", label: "Bases Loaded", description: "Maximum scoring opportunity - all bases occupied", category: "Game Situations" },
+    { key: "runnersOnBase", label: "Runners on Base", description: "Any base runner situations", category: "Game Situations" },
+    { key: "closeGame", label: "Close Game", description: "1-run games in late innings", category: "Game Situations" },
+    { key: "lateInning", label: "Late Inning Pressure", description: "8th+ inning crucial moments", category: "Game Situations" },
+    { key: "extraInnings", label: "Extra Innings", description: "Game extends beyond 9th inning", category: "Game Situations" },
+    
+    // === SCORING & HITTING ALERTS ===
+    { key: "homeRun", label: "Home Run Situations", description: "High home run probability moments", category: "Scoring Events" },
+    { key: "homeRunAlert", label: "Home Run Alerts", description: "Actual home run notifications", category: "Scoring Events" },
+    { key: "hits", label: "Hit Alerts", description: "Base hit notifications", category: "Scoring Events" },
+    { key: "scoring", label: "Scoring Plays", description: "RBI and run-scoring events", category: "Scoring Events" },
+    
+    // === PLAYER PERFORMANCE ALERTS ===
+    { key: "starBatter", label: "Star Batter Alert", description: ".300+ AVG, 20+ HR, or .900+ OPS hitters", category: "Player Performance" },
+    { key: "powerHitter", label: "Power Hitter Alert", description: "25+ HR sluggers with runners on base", category: "Player Performance" },
+    { key: "eliteClutch", label: "Elite Clutch Hitter", description: "High OPS batters in pressure situations", category: "Player Performance" },
+    { key: "avgHitter", label: ".300+ Hitter Alert", description: "Premium contact hitters at bat", category: "Player Performance" },
+    { key: "rbiMachine", label: "RBI Machine Alert", description: "80+ RBI producers with scoring chances", category: "Player Performance" },
+    { key: "strikeouts", label: "Strikeout Alerts", description: "Pitcher strikeout notifications", category: "Player Performance" },
+    
+    // === ADVANCED PREDICTION SYSTEM ===
+    { key: "Home Run Prediction", label: "🚀 HR Probability Model", description: "Mathematical home run prediction using logistic regression + weather physics", category: "AI Predictions" },
+    { key: "Walk-off Prediction", label: "🎯 Walk-off Situation", description: "Game-ending opportunity prediction with context analysis", category: "AI Predictions" },
+    { key: "Clutch Hit Prediction", label: "⚡ Clutch Performance", description: "AI-powered clutch hitting opportunity detection", category: "AI Predictions" },
+    { key: "Hot Streak Prediction", label: "🔥 Hot Streak Alert", description: "Player momentum and hot streak identification", category: "AI Predictions" },
+    { key: "Double Play Prediction", label: "⚾ Double Play Risk", description: "Situation analysis for potential double plays", category: "AI Predictions" },
+    { key: "Stolen Base Prediction", label: "💨 Steal Opportunity", description: "Base stealing probability and timing analysis", category: "AI Predictions" },
+    
+    // === WEATHER PHYSICS SYSTEM ===
+    { key: "Weather Home Run Boost", label: "🌬️ Weather HR Boost", description: "Wind and air density effects on home run probability", category: "Weather Physics" },
+    { key: "Weather Pitching Advantage", label: "🌡️ Pitching Weather Edge", description: "Temperature and humidity effects on pitcher performance", category: "Weather Physics" },
+    
+    // === SPECIAL EVENTS ===
+    { key: "noHitter", label: "No-Hitter Watch", description: "Potential no-hitter in progress", category: "Special Events" },
+    { key: "perfectGame", label: "Perfect Game Watch", description: "Perfect game opportunity tracking", category: "Special Events" },
+    { key: "cycle", label: "Cycle Watch", description: "Player pursuing hitting for the cycle", category: "Special Events" },
+    { key: "specialPlay", label: "Special Plays", description: "Rare and exceptional baseball plays", category: "Special Events" },
+    
+    // === GAME FLOW ===
+    { key: "inningChange", label: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },
+    
+    // === ADVANCED ANALYTICS ===
+    { key: "re24Advanced", label: "RE24 Advanced Analytics", description: "MLB Run Expectancy 24 (RE24) mathematical analysis system", category: "Advanced Analytics" },
+    { key: "mlbAIEnabled", label: "🧠 AI Analysis Engine", description: "Advanced AI context analysis for all alerts", category: "Advanced Analytics" },
   ],
   NFL: [
-    { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line" },
-    { key: "nflCloseGame", label: "NFL Close Game", description: "One-score games in final quarter" },
-    { key: "fourthDown", label: "Fourth Down", description: "Critical fourth down decisions" },
-    { key: "twoMinuteWarning", label: "Two Minute Warning", description: "Game-deciding final drives" },
+    { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line", category: "Scoring Opportunities" },
+    { key: "nflCloseGame", label: "NFL Close Game", description: "One-score games in final quarter", category: "Game Situations" },
+    { key: "fourthDown", label: "Fourth Down", description: "Critical fourth down decisions", category: "Critical Plays" },
+    { key: "twoMinuteWarning", label: "Two Minute Warning", description: "Game-deciding final drives", category: "Game Situations" },
   ],
   NBA: [
-    { key: "clutchTime", label: "Clutch Time", description: "Final 2 minutes of close games" },
-    { key: "nbaCloseGame", label: "NBA Close Game", description: "Single-digit games in 4th quarter" },
-    { key: "overtime", label: "Overtime", description: "Extra period situations" },
+    { key: "clutchTime", label: "Clutch Time", description: "Final 2 minutes of close games", category: "Game Situations" },
+    { key: "nbaCloseGame", label: "NBA Close Game", description: "Single-digit games in 4th quarter", category: "Game Situations" },
+    { key: "overtime", label: "Overtime", description: "Extra period situations", category: "Special Events" },
   ],
   NHL: [
-    { key: "powerPlay", label: "Power Play", description: "Man advantage situations" },
-    { key: "nhlCloseGame", label: "NHL Close Game", description: "One-goal games in final period" },
-    { key: "emptyNet", label: "Empty Net", description: "Goalie pulled for extra attacker" },
+    { key: "powerPlay", label: "Power Play", description: "Man advantage situations", category: "Special Situations" },
+    { key: "nhlCloseGame", label: "NHL Close Game", description: "One-goal games in final period", category: "Game Situations" },
+    { key: "emptyNet", label: "Empty Net", description: "Goalie pulled for extra attacker", category: "Special Situations" },
   ],
 };
 
@@ -198,30 +228,46 @@ export default function Settings() {
             {/* Alert Types Section */}
             <div>
               <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-4">
-                Alert Types
+                🚀 Advanced Alert System
               </h2>
-              <div className="space-y-4">
-                {ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]?.map((alertConfig) => (
-                  <Card key={alertConfig.key} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-slate-100" data-testid={`alert-type-${alertConfig.key}`}>
-                          {alertConfig.label}
-                        </h3>
-                        <p className="text-sm text-slate-300 mt-1">
-                          {alertConfig.description}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={!!(settings.alertTypes as any)[alertConfig.key]}
-                        onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
-                        data-testid={`toggle-${alertConfig.key}`}
-                        className="data-[state=checked]:bg-emerald-500"
-                      />
+              
+              {/* Group alerts by category */}
+              {(() => {
+                const alertConfigs = ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] || [];
+                const categories = Array.from(new Set(alertConfigs.map(config => config.category || 'General')));
+                
+                return categories.map(category => (
+                  <div key={category} className="mb-6">
+                    <h3 className="text-md font-bold text-emerald-400 mb-3 uppercase tracking-wide">
+                      {category}
+                    </h3>
+                    <div className="space-y-3">
+                      {alertConfigs
+                        .filter(config => (config.category || 'General') === category)
+                        .map((alertConfig) => (
+                          <Card key={alertConfig.key} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 pr-4">
+                                <h4 className="font-bold text-slate-100" data-testid={`alert-type-${alertConfig.key}`}>
+                                  {alertConfig.label}
+                                </h4>
+                                <p className="text-sm text-slate-300 mt-1 leading-relaxed">
+                                  {alertConfig.description}
+                                </p>
+                              </div>
+                              <Switch
+                                checked={!!(settings.alertTypes as any)[alertConfig.key]}
+                                onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
+                                data-testid={`toggle-${alertConfig.key}`}
+                                className="data-[state=checked]:bg-emerald-500 flex-shrink-0"
+                              />
+                            </div>
+                          </Card>
+                        ))}
                     </div>
-                  </Card>
-                ))}
-              </div>
+                  </div>
+                ));
+              })()}
             </div>
 
 
