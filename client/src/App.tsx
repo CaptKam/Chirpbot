@@ -11,13 +11,12 @@ import Alerts from "./pages/alerts";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
-import { AdminDashboard } from "./pages/AdminDashboard";
-import { AdminLogin } from "./pages/AdminLogin";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import AdminApp from "./AdminApp";
 
 function ProtectedRoute({ component: Component, requireAdmin = false }: { component: React.ComponentType; requireAdmin?: boolean }) {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -70,17 +69,6 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
   }
 
   return <Component />;
-}
-
-function AdminRoutes() {
-  // Admin routes - no authentication hooks called here
-  if (window.location.pathname === '/admin-login' || window.location.pathname === '/admin/login') {
-    return <AdminLogin />;
-  }
-  if (window.location.pathname === '/admin') {
-    return <AdminDashboard />;
-  }
-  return null;
 }
 
 function RegularAppContent() {
@@ -158,19 +146,19 @@ function RegularAppContent() {
 }
 
 function AppContent() {
-  // Check if this is an admin route BEFORE calling any hooks
+  return <RegularAppContent />;
+}
+
+function App() {
+  // Check for admin routes at the very top level - completely separate app
   const isAdminRoute = window.location.pathname === '/admin-login' || 
                        window.location.pathname === '/admin/login' || 
                        window.location.pathname === '/admin';
   
   if (isAdminRoute) {
-    return <AdminRoutes />;
+    return <AdminApp />;
   }
-  
-  return <RegularAppContent />;
-}
 
-function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
