@@ -3,6 +3,7 @@ import { mlbApi } from '../mlb-api';
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
+import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { randomUUID } from 'crypto';
 
 // RE24 (Run Expectancy) Table
@@ -858,15 +859,42 @@ export class MLBEngine extends BaseSportEngine {
           customTitle = `${alert.type}: ${gameState.currentBatter.name}`;
         }
 
+        // Enhance high-priority alerts with AI (priority >= 85)
+        let finalDescription = this.generateDynamicDescription(alert, gameState);
+        if (alert.priority >= 85) {
+          const gameContext = {
+            sport: this.sport,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            inning: gameState.inning,
+            score: { home: gameState.homeScore, away: gameState.awayScore },
+            runners: gameState.runners,
+            outs: gameState.outs,
+            currentBatter: gameState.currentBatter
+          };
+
+          const enhanced = await enhanceHighPriorityAlert(
+            alert.type,
+            gameContext,
+            finalDescription,
+            alert.priority
+          );
+
+          if (enhanced) {
+            finalDescription = enhanced.enhancedDescription;
+            console.log(`🤖 AI enhanced alert: ${alert.type} -> ${enhanced.enhancedDescription}`);
+          }
+        }
+
         const alertData: InsertAlert = {
           id: randomUUID(),
           title: customTitle,
           type: alert.type,
-          description: this.generateDynamicDescription(alert, gameState),
+          description: finalDescription,
           sport: this.sport,
           team: gameState.homeTeam,
           opponent: gameState.awayTeam,
-          message: this.generateDynamicDescription(alert, gameState),
+          message: finalDescription,
           probability: alert.probability,
           priority: alert.priority,
           createdAt: new Date(),
