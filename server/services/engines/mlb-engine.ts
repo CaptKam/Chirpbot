@@ -1107,13 +1107,20 @@ export class MLBEngine extends BaseSportEngine {
           // Load configuration from file or environment
           let engineMode = "legacy";
           try {
-            const alertConfig = require('../../config/alert-engine.config.js');
+            // Use dynamic import for ES module compatibility
+            const configPath = `../../config/alert-engine.config.js?t=${Date.now()}`;
+            const { default: alertConfig } = await import(configPath);
             engineMode = alertConfig.mode.toLowerCase();
-          } catch {
+            console.log(`📁 Loaded config from file: ${engineMode}`);
+          } catch (err) {
             engineMode = (process.env.ALERTS_ENGINE || "legacy").toLowerCase();
+            console.log(`🌐 Using environment/default: ${engineMode} (config load error: ${err.message})`);
           }
 
+          console.log(`🔧 Alert Engine Mode: ${engineMode}`);
+          
           if (engineMode === "new" || engineMode === "both") {
+            console.log(`🆕 Running NEW alert system (mode: ${engineMode})`);
             const frame: Frame = {
               gamePk: Number(gameState.gamePk),
               inning: gameState.inning,

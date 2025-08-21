@@ -1,7 +1,7 @@
 // Alert Engine Configuration
 // This file controls which alert engine is active
 
-module.exports = {
+export default {
   // Options: "legacy", "new", "both"
   // - legacy: Use existing alert system only (default)
   // - new: Use new startup-phase alert system only  
