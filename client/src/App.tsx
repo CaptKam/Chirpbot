@@ -130,7 +130,7 @@ function AppContent() {
     }
   }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
 
-  if (window.location.pathname === '/admin-login') {
+  if (window.location.pathname === '/admin-login' || window.location.pathname === '/admin/login') {
     return <AdminLogin />;
   }
 
