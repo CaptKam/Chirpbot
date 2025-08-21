@@ -78,8 +78,7 @@ class SportsDataService {
     // Try different date formats - SportsData.io might expect different formats
     const now = new Date();
     const targetDate = date || now.toISOString().split('T')[0]; // YYYY-MM-DD
-    // Use more specific cache key to prevent cross-contamination
-    const cacheKey = `sportsdata-${sport.toLowerCase()}-${targetDate}`;
+    const cacheKey = `${sport}-${targetDate}`;
     
     // Check cache
     const cached = this.cache.get(cacheKey);
@@ -166,13 +165,7 @@ class SportsDataService {
   }
 
   private processSportsDataGames(data: SportsDataScore[], sport: 'NFL' | 'NBA' | 'NHL' | 'MLB'): Game[] {
-    const games = data.map((game: SportsDataScore): Game | null => {
-      // Skip games with invalid or missing GameID
-      if (!game.GameID || game.GameID === null || game.GameID === undefined) {
-        console.warn(`Skipping ${sport} game with invalid GameID:`, game);
-        return null;
-      }
-      
+    const games = data.map((game: SportsDataScore): Game => {
       const gameStatus = this.mapSportsDataStatus(game.Status, game.IsClosed);
       
       return {
@@ -199,13 +192,10 @@ class SportsDataService {
         ...(sport === 'NBA' && { quarter: game.Quarter }),
         ...(sport === 'NHL' && { period: game.Quarter }),
       };
-    }).filter(game => game !== null) as Game[];
+    }).filter(game => game !== null);
     
-    // Double-check that all games have the correct sport
-    const validGames = games.filter(game => game.sport === sport);
-    
-    console.log(`✅ Processed ${validGames.length} ${sport} games from SportsData.io`);
-    return validGames;
+    console.log(`✅ Processed ${games.length} ${sport} games from SportsData.io`);
+    return games;
   }
 
   private mapSportsDataStatus(status: string, isClosed: boolean): 'scheduled' | 'live' | 'final' {
