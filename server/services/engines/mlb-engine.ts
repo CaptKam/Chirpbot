@@ -321,6 +321,16 @@ export class MLBEngine extends BaseSportEngine {
         return re24Prob >= 75; // Trigger on 75%+ RE24 probability
       }
     },
+    // EARLY GAME TEST ALERT - Should fire immediately to prove system works!
+    {
+      type: "System Test Alert",
+      settingKey: "runnersOnBase", // Using enabled setting
+      priority: 30,
+      probability: 1.0,
+      description: "🧪 SYSTEM TEST - Alert system is working! Game detected in early innings.",
+      conditions: (state: MLBGameState) => 
+        state.inning <= 3 && state.outs >= 0 // Fire for any situation in first 3 innings
+    },
   ];
 
   async extractGameState(liveFeed: any): Promise<MLBGameState | null> {
