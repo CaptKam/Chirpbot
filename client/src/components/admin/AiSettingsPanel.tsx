@@ -220,9 +220,9 @@ export function AiSettingsPanel() {
                   <Power className="h-4 w-4 mr-2" />
                   System Enabled
                 </Label>
-                <p className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   Master switch for {selectedSport} AI alerts
-                </p>
+                </span>
               </div>
               <Switch
                 checked={settings?.enabled || false}
@@ -235,9 +235,9 @@ export function AiSettingsPanel() {
             <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
               <div className="space-y-1">
                 <Label className="text-base font-semibold">Dry Run Mode</Label>
-                <p className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   Test without sending real alerts
-                </p>
+                </span>
               </div>
               <Switch
                 checked={settings?.dryRun || false}
@@ -252,9 +252,9 @@ export function AiSettingsPanel() {
                   <Shield className="inline h-4 w-4 mr-1" />
                   Redact PII
                 </Label>
-                <p className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   Remove personal information from alerts
-                </p>
+                </span>
               </div>
               <Switch
                 checked={settings?.redactPii || false}
@@ -281,9 +281,9 @@ export function AiSettingsPanel() {
                 step={5}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Minimum time between alerts (5s - 120s)
-              </p>
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -334,9 +334,9 @@ export function AiSettingsPanel() {
                 step={10}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 0 = Deterministic, 1 = Creative
-              </p>
+              </span>
             </div>
 
             {/* Max Tokens */}
@@ -373,9 +373,9 @@ export function AiSettingsPanel() {
                 step={5}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Minimum confidence for alert generation
-              </p>
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -461,9 +461,9 @@ You are a sports analyst AI. Focus on high-impact moments and provide exciting, 
                   value={customPrompt || settings?.customPrompt || ""}
                   onChange={(e) => setCustomPrompt(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Override the default AI prompt with custom instructions
-                </p>
+                </span>
               </div>
               <Button 
                 onClick={handleSaveCustomPrompt}
@@ -491,9 +491,9 @@ if (game.inning >= 7 && Math.abs(game.homeScore - game.awayScore) <= 2) {
                   value={alertLogic || settings?.alertLogic || ""}
                   onChange={(e) => setAlertLogic(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Custom JavaScript-like logic for alert conditions
-                </p>
+                </span>
               </div>
               <Button 
                 onClick={handleSaveAlertLogic}
@@ -518,9 +518,9 @@ Example:
 - Priority to nationally televised games"
                   className="min-h-[200px] font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Define how game data should be filtered and processed
-                </p>
+                </span>
               </div>
               <Button className="w-full" disabled={updateMutation.isPending}>
                 <Save className="h-4 w-4 mr-2" />
