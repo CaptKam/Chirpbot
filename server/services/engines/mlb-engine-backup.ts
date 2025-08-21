@@ -225,17 +225,14 @@ export class MLBEngine extends BaseSportEngine {
         state.inning >= 8 && Math.abs(state.homeScore - state.awayScore) <= 3
     },
     // Big-Time Hitter Alerts
+    // DISABLED: Star Batter Alert - merged with Runners on Base for better UX
     {
       type: "Star Batter Alert",
       settingKey: "starBatter",
       priority: 80,
       probability: 1.0,
       description: "⭐ STAR BATTER UP! Elite hitter at the plate!",
-      conditions: (state: MLBGameState) => {
-        if (!state.currentBatter || state.outs >= 3) return false;
-        const stats = state.currentBatter.stats;
-        return stats.avg >= 0.300 || stats.hr >= 20 || stats.ops >= 0.900;
-      }
+      conditions: (state: MLBGameState) => false // Disabled to prevent duplicates with runners on base
     },
     {
       type: "Power Hitter Alert",
@@ -300,8 +297,19 @@ export class MLBEngine extends BaseSportEngine {
       priority: 60,
       probability: 1.0,
       description: "🏃 Runners on Base - Scoring opportunity developing!",
-      conditions: (state: MLBGameState) => 
-        state.outs < 3 && (state.runners.first || state.runners.second || state.runners.third)
+      conditions: (state: MLBGameState) => {
+        if (state.outs >= 3) return false;
+        const hasRunners = state.runners.first || state.runners.second || state.runners.third;
+        if (!hasRunners) return false;
+        
+        // Check if we also have a star batter - enhance the alert
+        const isStarBatter = state.currentBatter && 
+          (state.currentBatter.stats.avg >= 0.300 || 
+           state.currentBatter.stats.hr >= 20 || 
+           state.currentBatter.stats.ops >= 0.900);
+        
+        return true; // Return true for all runners on base situations (enhanced description will handle star batter)
+      }
     },
     {
       type: "Inning Change",
@@ -898,7 +906,14 @@ export class MLBEngine extends BaseSportEngine {
         return `💥 PRESSURE COOKER MOMENT! Runners in scoring position, ${outs} out - clutch time with ${scoringProb}% scoring chance!`;
 
       case 'Runners on Base':
-        if (runnerPositions.length > 0) {
+        // Check if we have a star batter at the plate too for combined alert
+        const isStarBatter = batter && 
+          (batter.stats.avg >= 0.300 || batter.stats.hr >= 20 || batter.stats.ops >= 0.900);
+        
+        if (isStarBatter && runnerPositions.length > 0) {
+          const runnerText = runnerPositions.join(' & ');
+          return `⭐ STAR BATTER WITH RUNNERS ON BASE! ${batter.name} (${batter.stats.avg.toFixed(3)} AVG, ${batter.stats.hr} HR) at the plate with runners on ${runnerText}! Elite hitter with scoring opportunity - ${scoringProb}% chance to deliver!`;
+        } else if (runnerPositions.length > 0) {
           const runnerText = runnerPositions.join(' & ');
           return `🏃‍♂️ RUNNERS ON BASE! ${runnerText}, ${outs} out - rally potential brewing with ${scoringProb}% scoring opportunity!`;
         }
