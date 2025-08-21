@@ -517,6 +517,28 @@ export class MLBEngine extends BaseSportEngine {
         console.log('Player data not available in current play');
       }
 
+      // Debug team data structure to fix team names
+      console.log(`🔍 DEBUG Team Data Structure:`, {
+        'gameData.teams': gameData.teams,
+        'gameData.game.teams': gameData.game?.teams,
+        'linescore.teams': linescore.teams
+      });
+
+      // Try multiple paths for team names
+      const homeTeamName = 
+        gameData.teams?.home?.name ||
+        gameData.game?.teams?.home?.team?.name ||
+        linescore.teams?.home?.team?.name ||
+        'Home Team';
+      
+      const awayTeamName = 
+        gameData.teams?.away?.name ||
+        gameData.game?.teams?.away?.team?.name ||
+        linescore.teams?.away?.team?.name ||
+        'Away Team';
+
+      console.log(`🏟️ Team Names - Away: ${awayTeamName}, Home: ${homeTeamName}`);
+
       const gameState = {
         gameId: `mlb-${gameData.game.pk}`,
         gamePk: gameData.game.pk,
@@ -532,8 +554,8 @@ export class MLBEngine extends BaseSportEngine {
         },
         homeScore: linescore.teams?.home?.runs || 0,
         awayScore: linescore.teams?.away?.runs || 0,
-        homeTeam: gameData.teams?.home?.name || 'Home Team',
-        awayTeam: gameData.teams?.away?.name || 'Away Team',
+        homeTeam: homeTeamName,
+        awayTeam: awayTeamName,
         currentBatter: currentBatter || undefined,
         currentPitcher,
       };
