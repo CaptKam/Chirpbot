@@ -71,7 +71,7 @@ export const alerts = pgTable("alerts", {
         obp: number;
         ops: number;
       };
-    };
+    } | null;
     currentPitcher?: {
       id: number;
       name: string;

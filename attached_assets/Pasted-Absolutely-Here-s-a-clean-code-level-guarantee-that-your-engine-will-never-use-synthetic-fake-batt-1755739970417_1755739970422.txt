@@ -1,0 +1,252 @@
+Absolutely. Here’s a clean, code-level guarantee that your engine will never use synthetic/fake batter data again. We’ll do it by:
+
+Tagging all player data with a provenance stamp (where it came from).
+
+Validating every batter stat before use (source + freshness + completeness).
+
+Hard‑disabling demo/synthetic paths in production.
+
+Failing closed: if real data isn’t present, we don’t guess—we downgrade the alert level or skip the bump.
+
+Below are drop‑in files + minimal edits.
+
+1) Provenance & Validation (new file)
+
+server/services/provenance.ts
+
+// server/services/provenance.ts
+// Single source of truth for "real vs synthetic" data checks.
+
+export type Provenance =
+  | "mlb_api_live"      // live /feed/live
+  | "mlb_api_box"       // /linescore, /boxscore
+  | "mlb_api_cached"    // your persisted copy of MLB API
+  | "user_uploaded"     // user-supplied (never use for batter stats)
+  | "synthetic"         // fixtures, demos, simulators (NEVER ALLOWED)
+  | "unknown";
+
+export interface Provenanced<T> {
+  data: T;
+  source: Provenance;
+  fetchedAt: number;     // epoch ms
+  signature?: string;    // optional hash of payload for audit
+}
+
+export interface BatterStats {
+  id: number;
+  seasonHr?: number | null;
+  seasonOps?: number | null;
+  seasonAvg?: number | null;
+  // add other real fields you use
+}
+
+export interface BatterProfile extends Provenanced<BatterStats> {}
+
+export interface ValidationOptions {
+  maxAgeMs: number;                 // freshness window (e.g., 12h)
+  requireFields?: (keyof BatterStats)[]; // fields that must exist to use
+}
+
+// Runtime switch to absolutely forbid synthetic anywhere
+export const NO_SYNTHETIC = process.env.NO_SYNTHETIC === "1";
+
+export function isTrustedSource(p: Provenance): boolean {
+  return p === "mlb_api_live" || p === "mlb_api_box" || p === "mlb_api_cached";
+}
+
+export function assertRealBatter(
+  profile: BatterProfile | null | undefined,
+  opts: ValidationOptions
+): BatterStats | null {
+  if (!profile) return null;
+
+  const { source, fetchedAt, data } = profile;
+
+  // 1) Never allow synthetic/user/unknown
+  if (NO_SYNTHETIC && (!isTrustedSource(source))) {
+    // hard fail closed — do not use
+    return null;
+  }
+
+  if (!isTrustedSource(source)) {
+    // Even if NO_SYNTHETIC=0, don't use for batter stats
+    return null;
+  }
+
+  // 2) Freshness
+  const age = Date.now() - (fetchedAt || 0);
+  if (age < 0 || age > opts.maxAgeMs) {
+    return null;
+  }
+
+  // 3) Completeness
+  if (opts.requireFields?.length) {
+    for (const k of opts.requireFields) {
+      const v = (data as any)[k];
+      if (v === undefined || v === null) {
+        return null;
+      }
+    }
+  }
+
+  return data;
+}
+
+2) Safe Power Tier (no fallbacks to “avg”)
+
+server/services/batter-power.ts
+
+// server/services/batter-power.ts
+import { assertRealBatter, BatterProfile } from "./provenance";
+
+export type BatterPower = "low" | "avg" | "high" | null;
+
+/**
+ * Compute power tier ONLY from trusted MLB data.
+ * If data isn't present/valid, return null (caller must handle).
+ */
+export function powerTierFrom(profile: BatterProfile | null | undefined): BatterPower {
+  const stats = assertRealBatter(profile, {
+    maxAgeMs: 12 * 60 * 60 * 1000,                 // 12 hours
+    requireFields: ["seasonHr"],                   // minimum
+  });
+  if (!stats) return null;
+
+  const hr = Number(stats.seasonHr ?? 0);
+  if (hr >= 25) return "high";
+  if (hr >= 12) return "avg";
+  return "low";
+}
+
+
+Note: No “synthetic defaults”. If we can’t prove batter stats are real & fresh, we return null.
+
+3) Engine Integration (fail closed)
+
+Where you previously did something like:
+
+// ❌ old (dangerous): defaulted to "avg" when missing
+const batterPower = player ? powerTier(player) : "avg";
+
+
+Replace with:
+
+import { powerTierFrom } from "../batter-power";
+
+// ✅ new (safe): null when missing → no L2/L3 bumps
+const batterPower = powerTierFrom(game.batterProfile);       // BatterProfile with provenance
+const onDeckPower = powerTierFrom(game.onDeckProfile);
+
+// In your computeProb / level logic:
+const isLevel2Eligible = batterPower !== null || onDeckPower !== null;
+const isLevel3Eligible = isLevel2Eligible && !!game.weather; // example
+
+// If batterPower is null, DO NOT estimate/guess. Either:
+//  - downgrade to Level 1, or
+//  - keep L2/L3 suppressed for this frame.
+
+4) Never accept synthetic in the fetch layer
+
+When you build BatterProfile objects from your MLB service, tag them with trusted provenance. Do NOT produce these objects from demo sources.
+
+server/services/mlb-api.ts (example construction)
+
+import { BatterProfile } from "./provenance";
+
+export async function getBatterProfile(batterId: number): Promise<BatterProfile | null> {
+  const raw = await fetchFromMlbApi(batterId); // your existing call
+  if (!raw) return null;
+
+  return {
+    data: {
+      id: batterId,
+      seasonHr: raw?.stats?.seasonHr ?? null,
+      seasonOps: raw?.stats?.ops ?? null,
+      seasonAvg: raw?.stats?.avg ?? null,
+    },
+    source: "mlb_api_live",    // or mlb_api_box / mlb_api_cached
+    fetchedAt: Date.now(),
+    signature: raw?.signature  // if you add hashing server-side
+  };
+}
+
+
+IMPORTANT: Do not create BatterProfile from simulator/demo. If you must run demos, gate the whole call site (see #6).
+
+5) Level gating (don’t up-level without real batter data)
+
+In your level decision:
+
+// Level 1: pure state (always allowed)
+const canL1 = true;
+
+// Level 2: requires real batter OR on-deck power
+const canL2 = (batterPower !== null) || (onDeckPower !== null);
+
+// Level 3: requires L2 + weather & park context (and both from real feeds)
+const canL3 = canL2 && !!game.weather?.source === "mlb_api_live"; // or your weather provider’s trusted source flag
+
+
+If canL2 or canL3 is false → do not synthesize. Just emit L1 (or nothing).
+
+6) Kill demo/synthetic paths in prod (compile/runtime)
+
+Runtime: set NO_SYNTHETIC=1 in production.
+
+Compile‑time: guard demo imports so they’re tree‑shaken out or fail to build in prod.
+
+Example:
+
+// server/demo-simulator.ts
+if (process.env.NO_SYNTHETIC === "1") {
+  throw new Error("Demo simulator disabled (NO_SYNTHETIC=1).");
+}
+
+
+And in your engine coordinator, wrap demo usage:
+
+if (process.env.NODE_ENV !== "production" && process.env.NO_SYNTHETIC !== "1") {
+  // allow simulator in dev only
+  // import("./demo-simulator").then(...)
+}
+
+7) CI/Lint guard (belt & suspenders)
+
+Block any import of demo/synthetic in production code:
+
+.eslintrc.cjs
+
+module.exports = {
+  rules: {
+    'no-restricted-imports': ['error', {
+      paths: [
+        { name: './demo-simulator', message: 'Demo simulator is forbidden in prod code.' },
+        { name: 'faker', message: 'Synthetic generators forbidden for stats.' },
+      ],
+      patterns: ['**/*demo*', '**/*fixture*'],
+    }],
+  },
+};
+
+
+CI grep (simple):
+
+# ci/check-no-synthetic.sh
+set -e
+if grep -RniE "(demo-simulator|faker|synthetic)" server | grep -v "provenance.ts"; then
+  echo "❌ Synthetic/demo reference found in server code."
+  exit 1
+fi
+echo "✅ No synthetic references."
+
+8) Behavior you’ll see after this change
+
+If batter stats are missing or not from MLB API →
+
+No Level 2/3 alerts and no batter-based bumps.
+
+You’ll still get Level 1 (pure state) alerts.
+
+If weather/park is present but batter data isn’t →
+
+You can still apply weather to Level 1 if you want, or keep weather bumps for L3 only. Your call—either way, no fake batter data will be used.
