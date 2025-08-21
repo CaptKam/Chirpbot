@@ -288,12 +288,14 @@ export default function Settings() {
                                     {alertConfig.description}
                                   </p>
                                 </div>
-                                <Switch
-                                  checked={!!(settings.alertTypes as any)[alertConfig.key]}
-                                  onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
-                                  data-testid={`toggle-${alertConfig.key}`}
-                                  className="data-[state=checked]:bg-emerald-500 flex-shrink-0"
-                                />
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <Switch
+                                    checked={!!(settings.alertTypes as any)[alertConfig.key]}
+                                    onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
+                                    data-testid={`toggle-${alertConfig.key}`}
+                                    className="data-[state=checked]:bg-emerald-500 flex-shrink-0"
+                                  />
+                                </div>
                               </div>
                             </Card>
                           ))}
