@@ -613,9 +613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: 'demo@example.com',
           firstName: 'Demo',
           lastName: 'User',
-          role: 'user',
-          authMethod: 'local',
-          emailVerified: true
+          authMethod: 'local'
         });
       }
 

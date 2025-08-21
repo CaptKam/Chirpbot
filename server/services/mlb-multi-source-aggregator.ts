@@ -411,14 +411,37 @@ export class MLBMultiSourceAggregator {
         timeoutMs: 5000
       });
 
+      if (!locationData || locationData.length === 0) {
+        console.log(`⚠️ No AccuWeather location found for venue: ${venue}`);
+        return null;
+      }
+
+      const locationKey = locationData[0].Key;
+      
+      // Get current conditions using the location key
+      const currentConditions = await fetchJson<any[]>(`https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`, {
+        timeoutMs: 5000
+      });
+
+      if (!currentConditions || currentConditions.length === 0) {
+        console.log(`⚠️ No AccuWeather current conditions for venue: ${venue}`);
+        return null;
+      }
+
+      const weatherData = currentConditions[0];
+
       const weather: WeatherData = {
-        temperature: weatherData.main.temp,
-        windSpeed: weatherData.wind?.speed || 0,
-        windDirection: weatherData.wind?.deg || 0,
-        humidity: weatherData.main.humidity,
-        pressure: weatherData.main.pressure,
-        condition: weatherData.weather[0]?.main || 'Clear',
-        hrProbabilityBoost: this.calculateHRBoost(weatherData.wind?.speed || 0, weatherData.wind?.deg || 0, weatherData.main.temp)
+        temperature: weatherData.Temperature?.Imperial?.Value || 70,
+        windSpeed: weatherData.Wind?.Speed?.Imperial?.Value || 0,
+        windDirection: this.convertWindDirectionToNumber(weatherData.Wind?.Direction?.Degrees || 0),
+        humidity: weatherData.RelativeHumidity || 50,
+        pressure: weatherData.Pressure?.Imperial?.Value || 30,
+        condition: weatherData.WeatherText || 'Clear',
+        hrProbabilityBoost: this.calculateHRBoost(
+          weatherData.Wind?.Speed?.Imperial?.Value || 0, 
+          weatherData.Wind?.Direction?.Degrees || 0, 
+          weatherData.Temperature?.Imperial?.Value || 70
+        )
       };
 
       this.weatherCache.set(cacheKey, { data: weather, timestamp: Date.now() });
@@ -429,6 +452,10 @@ export class MLBMultiSourceAggregator {
       console.error(`❌ Error fetching weather data for ${venue}:`, error);
       return null;
     }
+  }
+
+  private convertWindDirectionToNumber(degrees: number): number {
+    return degrees || 0;
   }
 
   private calculateHRBoost(windSpeed: number, windDirection: number, temperature: number): number {
