@@ -357,40 +357,43 @@ export class MLBEngine extends BaseSportEngine {
           };
           console.log(`   ✅ Found batter: ${currentBatter.name}`);
         } else {
-          // Fallback: Create synthetic batter data for testing batter alerts
+          // Fallback: Create consistent synthetic batter data to prevent duplicate alerts
           console.log(`   ⚠️ No current batter found, using fallback data`);
           
-          // Realistic MLB player names for fallback
+          // Use game-specific consistent data to avoid duplicate alerts
+          const gameSpecificSeed = parseInt(gameData.game.pk.toString().slice(-3)) || 1;
           const fallbackNames = [
             'Mike Trout', 'Aaron Judge', 'Juan Soto', 'Mookie Betts', 'Ronald Acuna Jr.',
             'Jose Altuve', 'Freddie Freeman', 'Vladimir Guerrero Jr.', 'Fernando Tatis Jr.',
             'Bo Bichette', 'Rafael Devers', 'Pete Alonso', 'Kyle Tucker', 'Austin Riley',
             'Yordan Alvarez', 'Matt Olson', 'Francisco Lindor', 'Julio Rodriguez',
             'Corey Seager', 'Jose Ramirez', 'Trea Turner', 'Xander Bogaerts',
-            'Bryce Harper', 'Nolan Arenado', 'Paul Goldschmidt', 'Jose Altuve'
+            'Bryce Harper', 'Nolan Arenado', 'Paul Goldschmidt'
           ];
           
-          const randomName = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
-          const randomSide = Math.random() > 0.7 ? 'L' : 'R';
+          // Use consistent data based on game to prevent every situation looking "new"
+          const nameIndex = gameSpecificSeed % fallbackNames.length;
+          const batterId = 100000 + gameSpecificSeed; // Consistent ID per game
+          const randomSide = gameSpecificSeed % 3 === 0 ? 'L' : 'R';
           
           currentBatter = {
-            id: Math.floor(Math.random() * 1000000),
-            name: randomName,
+            id: batterId,
+            name: fallbackNames[nameIndex],
             batSide: randomSide,
             stats: {
-              avg: 0.285 + Math.random() * 0.100, // Random AVG between .285-.385
-              hr: Math.floor(Math.random() * 40) + 10, // Random HR between 10-50
-              rbi: Math.floor(Math.random() * 80) + 40, // Random RBI between 40-120
-              obp: 0.320 + Math.random() * 0.100, // Random OBP between .320-.420
-              ops: 0.750 + Math.random() * 0.300, // Random OPS between .750-1.050
-              slg: 0.420 + Math.random() * 0.200, // Random SLG between .420-.620
-              atBats: 400 + Math.floor(Math.random() * 200), // Random AB between 400-600
-              hits: 100 + Math.floor(Math.random() * 100), // Random H between 100-200
-              strikeOuts: 80 + Math.floor(Math.random() * 100), // Random K between 80-180
-              walks: 40 + Math.floor(Math.random() * 60) // Random BB between 40-100
+              avg: 0.285 + (gameSpecificSeed % 100) * 0.001, // Consistent but varied AVG
+              hr: 10 + (gameSpecificSeed % 40), // Consistent HR count
+              rbi: 40 + (gameSpecificSeed % 80), // Consistent RBI count  
+              obp: 0.320 + (gameSpecificSeed % 100) * 0.001, // Consistent OBP
+              ops: 0.750 + (gameSpecificSeed % 300) * 0.001, // Consistent OPS
+              slg: 0.420 + (gameSpecificSeed % 200) * 0.001, // Consistent SLG
+              atBats: 400 + (gameSpecificSeed % 200), // Consistent AB
+              hits: 100 + (gameSpecificSeed % 100), // Consistent H
+              strikeOuts: 80 + (gameSpecificSeed % 100), // Consistent K
+              walks: 40 + (gameSpecificSeed % 60) // Consistent BB
             }
           };
-          console.log(`   🎲 Using synthetic batter data - ${randomName} (${randomSide}) - AVG: ${currentBatter.stats.avg.toFixed(3)}, HR: ${currentBatter.stats.hr}, OPS: ${currentBatter.stats.ops.toFixed(3)}`);
+          console.log(`   🎲 Using synthetic batter data - ${fallbackNames[nameIndex]} (${randomSide}) - AVG: ${currentBatter.stats.avg.toFixed(3)}, HR: ${currentBatter.stats.hr}, OPS: ${currentBatter.stats.ops.toFixed(3)}`);
         }
 
         // Get current pitcher
@@ -705,79 +708,7 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // Create a hash specific to MLB game state
-  private createMLBStateHash(gameState: MLBGameState, alertType: string): string {
-    // Only track properties relevant to each alert type
-    let relevantState: any = {};
 
-    // For runner-based alerts, track runners and outs
-    if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('bases')) {
-      relevantState = {
-        runners: gameState.runners,
-        outs: gameState.outs,
-        inning: gameState.inning,
-        inningState: gameState.inningState
-      };
-    }
-    // For inning-based alerts, track inning changes
-    else if (alertType.toLowerCase().includes('inning')) {
-      relevantState = {
-        inning: gameState.inning,
-        inningState: gameState.inningState
-      };
-    }
-    // For score-based alerts
-    else if (alertType.toLowerCase().includes('score') || alertType.toLowerCase().includes('tie') || alertType.toLowerCase().includes('close')) {
-      relevantState = {
-        score: `${gameState.awayScore}-${gameState.homeScore}`,
-        inning: gameState.inning
-      };
-    }
-    // Default: track major game state changes
-    else {
-      relevantState = {
-        inning: gameState.inning,
-        inningState: gameState.inningState,
-        outs: gameState.outs,
-        runners: gameState.runners,
-        score: `${gameState.awayScore}-${gameState.homeScore}`
-      };
-    }
-
-    return JSON.stringify(relevantState);
-  }
-
-  // Check if we should trigger this alert (no duplicates)
-  private shouldTriggerMLBAlert(alertType: string, gameState: MLBGameState): boolean {
-    const key = `${gameState.gameId}-${alertType}`;
-    const currentStateHash = this.createMLBStateHash(gameState, alertType);
-    const lastStateHash = this.lastGameStates.get(key);
-
-    // Debug bases loaded specifically
-    const basesLoaded = gameState.runners.first && gameState.runners.second && gameState.runners.third;
-    if (basesLoaded && alertType.toLowerCase().includes('bases loaded')) {
-      console.log(`🔍 Duplicate check for "${alertType}":`);
-      console.log(`   Key: ${key}`);
-      console.log(`   Current state hash: ${currentStateHash}`);
-      console.log(`   Last state hash: ${lastStateHash || 'NONE'}`);
-      console.log(`   Should trigger: ${lastStateHash !== currentStateHash}`);
-    }
-
-    if (lastStateHash === currentStateHash) {
-      // Same game state, don't trigger duplicate alert
-      if (basesLoaded && alertType.toLowerCase().includes('bases loaded')) {
-        console.log(`❌ Skipping duplicate ${alertType} alert`);
-      }
-      return false;
-    }
-
-    // New game state, allow alert and track it
-    this.lastGameStates.set(key, currentStateHash);
-    if (basesLoaded && alertType.toLowerCase().includes('bases loaded')) {
-      console.log(`✅ Allowing ${alertType} alert - new game state`);
-    }
-    return true;
-  }
 
   // Override processAlerts to use dynamic descriptions and deduplication system
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
