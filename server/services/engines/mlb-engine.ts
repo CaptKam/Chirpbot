@@ -5,7 +5,6 @@ import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
-import { getMLBAISystem } from '../mlb-ai-system';
 import { randomUUID } from 'crypto';
 
 // RE24 (Run Expectancy) Table
@@ -518,6 +517,28 @@ export class MLBEngine extends BaseSportEngine {
         console.log('Player data not available in current play');
       }
 
+      // Debug team data structure to fix team names
+      console.log(`🔍 DEBUG Team Data Structure:`, {
+        'gameData.teams': gameData.teams,
+        'gameData.game.teams': gameData.game?.teams,
+        'linescore.teams': linescore.teams
+      });
+
+      // Try multiple paths for team names
+      const homeTeamName = 
+        gameData.teams?.home?.name ||
+        gameData.game?.teams?.home?.team?.name ||
+        linescore.teams?.home?.team?.name ||
+        'Home Team';
+      
+      const awayTeamName = 
+        gameData.teams?.away?.name ||
+        gameData.game?.teams?.away?.team?.name ||
+        linescore.teams?.away?.team?.name ||
+        'Away Team';
+
+      console.log(`🏟️ Team Names - Away: ${awayTeamName}, Home: ${homeTeamName}`);
+
       const gameState = {
         gameId: `mlb-${gameData.game.pk}`,
         gamePk: gameData.game.pk,
@@ -533,8 +554,8 @@ export class MLBEngine extends BaseSportEngine {
         },
         homeScore: linescore.teams?.home?.runs || 0,
         awayScore: linescore.teams?.away?.runs || 0,
-        homeTeam: gameData.teams?.home?.name || 'Home Team',
-        awayTeam: gameData.teams?.away?.name || 'Away Team',
+        homeTeam: homeTeamName,
+        awayTeam: awayTeamName,
         currentBatter: currentBatter || undefined,
         currentPitcher,
       };
@@ -991,11 +1012,14 @@ export class MLBEngine extends BaseSportEngine {
           risp: true,
           closeGame: true,
           lateInning: true,
-          starBatter: false, // Requires batter data, disable when no batter info
-          powerHitter: false, // Requires batter data, disable when no batter info
+          starBatter: true, // Enable for testing
+          powerHitter: true, // Enable for testing  
           runnersOnBase: true,
           inningChange: true,
-          re24Advanced: false // New RE24 system, disabled by default for testing
+          re24Advanced: true, // Enable RE24 system
+          avgHitter: true,    // Enable average hitter alerts
+          eliteClutch: true,  // Enable clutch alerts
+          rbiMachine: true    // Enable RBI alerts
         };
 
         let needsUpdate = false;
@@ -1061,80 +1085,6 @@ export class MLBEngine extends BaseSportEngine {
           if (!gameState) continue;
 
           const triggeredAlerts = await this.checkAlertConditions(gameState);
-
-          // Check if MLB AI System is enabled FIRST, before regular alerts
-          const settings = await storage.getSettingsBySport(this.sport);
-          const aiEnabled = settings?.alertTypes?.mlbAIEnabled || false;
-          
-          if (aiEnabled) {
-            console.log('🤖 MLB AI System is ENABLED - Analyzing game situation...');
-            
-            const mlbAISystem = getMLBAISystem(storage);
-            
-            // Prepare game context for AI
-            const gameContext = {
-              homeTeam: gameState.homeTeam,
-              awayTeam: gameState.awayTeam,
-              score: { home: gameState.homeScore, away: gameState.awayScore },
-              inning: gameState.inning,
-              inningState: gameState.inningState,
-              outs: gameState.outs,
-              balls: gameState.balls,
-              strikes: gameState.strikes,
-              runners: gameState.runners,
-              currentBatter: gameState.currentBatter,
-              currentPitcher: gameState.currentPitcher
-            };
-            
-            // Update AI settings with custom prompt if provided
-            const customPrompt = settings?.alertTypes?.mlbAIPrompt || '';
-            await mlbAISystem.updateSettings(true, customPrompt);
-            
-            // Let AI decide if an alert should be triggered
-            const aiDecision = await mlbAISystem.analyzeGameSituation(gameContext);
-            
-            if (aiDecision && aiDecision.shouldTrigger) {
-              // Create alert based on AI decision
-              const alertData = {
-                type: 'MLB AI Alert',
-                sport: this.sport,
-                title: aiDecision.title,
-                description: aiDecision.description,
-                gameInfo: {
-                  homeTeam: gameState.homeTeam,
-                  awayTeam: gameState.awayTeam,
-                  inning: `${gameState.inning} ${gameState.inningState}`,
-                  status: 'Live',
-                  inningState: gameState.inningState,
-                  outs: gameState.outs,
-                  balls: gameState.balls,
-                  strikes: gameState.strikes,
-                  runners: gameState.runners,
-                  score: {
-                    home: gameState.homeScore,
-                    away: gameState.awayScore
-                  },
-                  priority: aiDecision.priority,
-                  scoringProbability: aiDecision.priority / 100,
-                  currentBatter: gameState.currentBatter,
-                  currentPitcher: gameState.currentPitcher
-                }
-              };
-              
-              const createdAlert = await storage.createAlert(alertData);
-              console.log(`🤖 MLB AI Alert created: ${aiDecision.title} (Priority: ${aiDecision.priority})`);
-              
-              // Broadcast to clients
-              if (this.onAlert) {
-                this.onAlert(createdAlert);
-              }
-            } else {
-              console.log('🤖 AI analyzed situation - no alert needed');
-            }
-            
-            // Skip regular alert processing when AI is enabled
-            return;
-          }
 
           if (triggeredAlerts.length > 0) {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
