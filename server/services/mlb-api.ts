@@ -105,7 +105,7 @@ interface MLBLiveFeedResponse {
 
 export class MLBApiService {
   private readonly BASE_URL = 'https://statsapi.mlb.com/api/v1';
-  private readonly SPORTSDATA_BASE_URL = 'https://api.sportsdata.io/v3/mlb/scores';
+  private readonly SPORTSDATA_BASE_URL = 'https://api.sportsdata.io/v3/mlb/scores/json';
 
   /**
    * Fetch today's MLB games from official MLB.com API
@@ -343,13 +343,14 @@ export class MLBApiService {
       // Get today's date for SportsDataIO API
       const today = new Date().toISOString().split('T')[0];
       
-      // Fetch live box scores for today
-      const url = `${this.SPORTSDATA_BASE_URL}/json/BoxScoresByDate/${today}?key=${apiKey}`;
+      // Fetch live box scores for today (use BoxScoresByDateLive for real-time data)
+      const url = `${this.SPORTSDATA_BASE_URL}/BoxScoresByDateLive/${today}`;
       
       const response = await fetchJson<any[]>(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Ocp-Apim-Subscription-Key': apiKey
         },
         timeoutMs: 8000
       });
