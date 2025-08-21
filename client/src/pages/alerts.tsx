@@ -305,7 +305,8 @@ export default function Alerts() {
                         <span className="text-xl">⚡</span>
                         <div>
                           <div className="text-emerald-400 font-black text-sm uppercase tracking-wide">
-                            {alert.type.replace(/([A-Z])/g, ' $1').trim()}
+                            {/* Show the actual situation as the title, not the generic type */}
+                            {alert.description.split('!')[0].replace(/[🏃⚡🔥💥🚨💯⏰🎯]/g, '').trim()}!
                           </div>
                           <div className="text-slate-400 text-xs">
                             {new Date(alert.timestamp).toLocaleTimeString()}
@@ -335,8 +336,11 @@ export default function Alerts() {
                     </div>
                     
                     <div className="text-center">
-                      <div className="text-slate-100 text-base font-bold">
-                        {alert.description.split('(')[0].trim()}
+                      {/* Show the explanation part after the exclamation mark */}
+                      <div className="text-slate-100 text-sm">
+                        {alert.description.split('!')[1] ? 
+                          alert.description.split('!').slice(1).join('!').split('(')[0].trim() 
+                          : ''}
                       </div>
                       {alert.description.includes('(') && (
                         <div className="text-slate-300 text-sm mt-1">
