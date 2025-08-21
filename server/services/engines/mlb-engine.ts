@@ -79,7 +79,7 @@ export class MLBEngine extends BaseSportEngine {
     {
       type: "300+ Hitter Alert",
       settingKey: "avgHitter",
-      priority: 70,
+      priority: 75, // Boost for AI enhancement
       probability: 1.0,
       description: "🎯 HIGH AVERAGE BATTER (.300+) stepping up to plate!",
       conditions: (state: MLBGameState) => {
