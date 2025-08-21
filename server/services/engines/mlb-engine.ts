@@ -543,26 +543,33 @@ export class MLBEngine extends BaseSportEngine {
         console.log('Player data not available in current play');
       }
 
-      // Debug team data structure to fix team names
-      console.log(`🔍 DEBUG Team Data Structure:`);
-      console.log(`   - gameData exists: ${!!gameData}`);
-      console.log(`   - gameData.teams exists: ${!!gameData?.teams}`);
-      console.log(`   - gameData.game exists: ${!!gameData?.game}`);
-      console.log(`   - gameData.game.teams exists: ${!!gameData?.game?.teams}`);
-      console.log(`   - linescore.teams exists: ${!!linescore?.teams}`);
+      // Debug team data structure to find team names
+      console.log(`🔍 DEEP Team Structure Analysis:`);
+      console.log(`   - Full gameData keys:`, gameData ? Object.keys(gameData).join(', ') : 'none');
+      console.log(`   - Full linescore keys:`, linescore ? Object.keys(linescore).join(', ') : 'none');
       
-      // Log the actual structure to find team names
+      // Check if team names are in top-level gameData
+      if (gameData?.players) {
+        console.log(`   - gameData.players exists (might contain team data)`);
+      }
       if (gameData?.teams) {
         console.log(`   - gameData.teams:`, JSON.stringify(gameData.teams, null, 2));
       }
-      if (gameData?.game?.teams) {
-        console.log(`   - gameData.game.teams:`, JSON.stringify(gameData.game.teams, null, 2));
-      }
+      
+      // Check linescore structure more thoroughly  
       if (linescore?.teams) {
         console.log(`   - linescore.teams:`, JSON.stringify(linescore.teams, null, 2));
       }
+      
+      // Check if team names are embedded differently
+      if (gameData) {
+        console.log(`   - Complete gameData sample:`, JSON.stringify({
+          ...gameData,
+          players: '[TRUNCATED]' // Don't log massive player data
+        }, null, 2));
+      }
 
-      // Try multiple paths for team names
+      // Try multiple paths for team names with enhanced extraction
       const homeTeamName = 
         gameData.teams?.home?.name ||
         gameData.game?.teams?.home?.team?.name ||
@@ -1080,7 +1087,18 @@ export class MLBEngine extends BaseSportEngine {
 
       for (const game of liveGames) {
         try {
-          console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (State: ${game.gameState}, PK: ${game.gamePk})`);
+          // Extract team names from objects if needed
+          const getTeamName = (team: any) => {
+            if (typeof team === 'string') return team;
+            if (typeof team === 'object' && team?.name) return team.name;
+            if (typeof team === 'object' && team?.abbreviation) return team.abbreviation;
+            return 'Unknown Team';
+          };
+          
+          const awayTeamName = getTeamName(game.awayTeam);
+          const homeTeamName = getTeamName(game.homeTeam);
+          
+          console.log(`🎮 Processing game: ${awayTeamName} @ ${homeTeamName} (State: ${game.gameState}, PK: ${game.gamePk})`);
 
           if (game.gameState !== 'Live') {
             console.log(`⏭️ Skipping non-live game (${game.gameState})`);
@@ -1100,7 +1118,7 @@ export class MLBEngine extends BaseSportEngine {
             continue;
           }
 
-          console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
+          console.log(`🔍 Fetching live feed for game ${game.gamePk} (${awayTeamName} @ ${homeTeamName})`);
           const liveFeed = await mlbMultiSourceAggregator.getLiveFeed(game.gamePk, game.venue);
 
           // Skip if live feed data isn't available yet (returns null for 404)
