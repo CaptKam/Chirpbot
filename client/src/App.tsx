@@ -72,15 +72,19 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
   return <Component />;
 }
 
-function AppContent() {
-  const [, setLocation] = useLocation();
-  
-  // Check for admin routes FIRST - before any authentication calls
+function AdminRoutes() {
+  // Admin routes - no authentication hooks called here
   if (window.location.pathname === '/admin-login' || window.location.pathname === '/admin/login') {
     return <AdminLogin />;
   }
+  if (window.location.pathname === '/admin') {
+    return <AdminDashboard />;
+  }
+  return null;
+}
 
-  // Now safe to call useAuth and useWebSocket for regular app routes
+function RegularAppContent() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const { lastMessage } = useWebSocket();
@@ -140,7 +144,6 @@ function AppContent() {
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
       <Switch>
-        <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} requireAdmin={true} />} />
         <Route path="/" component={() => <PublicRoute component={Landing} />} />
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
         <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
@@ -152,6 +155,19 @@ function AppContent() {
       {isAuthenticated && <BottomNavigation />}
     </div>
   );
+}
+
+function AppContent() {
+  // Check if this is an admin route BEFORE calling any hooks
+  const isAdminRoute = window.location.pathname === '/admin-login' || 
+                       window.location.pathname === '/admin/login' || 
+                       window.location.pathname === '/admin';
+  
+  if (isAdminRoute) {
+    return <AdminRoutes />;
+  }
+  
+  return <RegularAppContent />;
 }
 
 function App() {
