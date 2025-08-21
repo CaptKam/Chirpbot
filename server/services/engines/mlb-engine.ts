@@ -473,7 +473,8 @@ export class MLBEngine extends BaseSportEngine {
           console.log(`   ✅ Real MLB batter found: ${currentBatter.name} (${currentBatter.batSide}) - AVG: ${currentBatter.stats.avg}, HR: ${currentBatter.stats.hr}, RBI: ${currentBatter.stats.rbi}`);
         } else {
           // NO FALLBACK - Don't create alerts with fake data
-          console.log(`   ❌ No real current batter found - SKIPPING alert generation to avoid fake data`);
+          console.log(`   🏏 ❌ No real current batter found - batter-specific alerts will be skipped`);
+          console.log(`   ✅ Game situation alerts will still work (scores, innings, runners)`);
           console.log(`   🔍 Need to find where MLB API stores current batter information`);
           currentBatter = null; // Set to null instead of fake data
         }
@@ -554,7 +555,7 @@ export class MLBEngine extends BaseSportEngine {
       if (gameState.currentBatter) {
         console.log(`   🏏 ✅ REAL Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
       } else {
-        console.log(`   🏏 ❌ No real current batter found - ALERTS DISABLED for this game to prevent fake data`);
+        console.log(`   🏏 ❌ No real current batter found - batter-specific alerts will be skipped`);
       }
 
       if (gameState.currentPitcher) {
@@ -952,8 +953,8 @@ export class MLBEngine extends BaseSportEngine {
           risp: true,
           closeGame: true,
           lateInning: true,
-          starBatter: true,
-          powerHitter: true,
+          starBatter: false, // Requires batter data, disable when no batter info
+          powerHitter: false, // Requires batter data, disable when no batter info
           runnersOnBase: true,
           inningChange: true,
           re24Advanced: false // New RE24 system, disabled by default for testing
