@@ -344,7 +344,7 @@ export class MLBEngine extends BaseSportEngine {
           console.log(`   - ID: ${batter.id}`);
           
           // Extract season stats from batter object (Python system approach)
-          let seasonStats = {};
+          let seasonStats: any = {};
           if (batter.stats) {
             for (const stat of batter.stats) {
               if (stat.type?.displayName === 'season') {
@@ -432,11 +432,11 @@ export class MLBEngine extends BaseSportEngine {
 
         // Path 1: Try currentPlay approach
         const plays = liveFeed.liveData?.plays;
-        const currentPlay = plays?.currentPlay;
-        console.log(`   Path 1 - plays: ${!!plays}, currentPlay: ${!!currentPlay}`);
+        const oldCurrentPlay = plays?.currentPlay;
+        console.log(`   Path 1 - plays: ${!!plays}, currentPlay: ${!!oldCurrentPlay}`);
         
-        if (currentPlay?.matchup?.batter) {
-          batter = currentPlay.matchup.batter;
+        if (oldCurrentPlay?.matchup?.batter) {
+          batter = oldCurrentPlay.matchup.batter;
           console.log(`   ✅ Path 1 SUCCESS: ${batter.fullName || batter.name}`);
         }
 
