@@ -6,7 +6,7 @@ The complete application is packaged in: **chirpbot-v2-complete.tar.gz** (435KB)
 ## Prerequisites
 - Node.js 18+ 
 - PostgreSQL database
-- API Keys: OpenAI, AccuWeather (optional)
+- API Keys: OpenAI, OpenWeatherMap (optional)
 
 ## Installation Steps
 
@@ -25,7 +25,7 @@ Create a `.env` file with:
 ```
 DATABASE_URL=your_postgresql_connection_string
 OPENAI_API_KEY=your_openai_key
-ACCUWEATHER_API_KEY=your_weather_key (optional)
+OPENWEATHER_API_KEY=your_weather_key (optional)
 ```
 
 4. **Initialize database:**

@@ -259,18 +259,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get enabled alert types based on global controls
-  app.get("/api/enabled-alert-types", async (req, res) => {
-    try {
-      const sport = req.query.sport as string;
-      const enabledAlertTypes = await storage.getEnabledAlertTypes(sport);
-      res.json({ enabledAlertTypes });
-    } catch (error) {
-      console.error("Error fetching enabled alert types:", error);
-      res.status(500).json({ message: "Failed to fetch enabled alert types" });
-    }
-  });
-
   // Settings routes
   app.get("/api/settings", async (req, res) => {
     try {
@@ -597,50 +585,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Demo login route
-  app.post("/api/auth/demo-login", async (req, res) => {
-    try {
-      // Find or create demo user
-      let demoUser = await storage.getUserByUsername('demo');
-      
-      if (!demoUser) {
-        const bcrypt = await import('bcryptjs');
-        const hashedPassword = await bcrypt.hash('demo123', 10);
-        
-        demoUser = await storage.createUser({
-          username: 'demo',
-          password: hashedPassword,
-          email: 'demo@example.com',
-          firstName: 'Demo',
-          lastName: 'User',
-          authMethod: 'local'
-        });
-      }
-
-      // Start session
-      (req.session as any).userId = demoUser.id;
-      (req.session as any).userInfo = {
-        id: demoUser.id,
-        username: demoUser.username,
-        email: demoUser.email,
-        firstName: demoUser.firstName,
-        lastName: demoUser.lastName
-      };
-
-      res.json({ 
-        id: demoUser.id, 
-        username: demoUser.username,
-        email: demoUser.email,
-        firstName: demoUser.firstName,
-        lastName: demoUser.lastName,
-        message: "Demo login successful" 
-      });
-    } catch (error) {
-      console.error("Demo login error:", error);
-      res.status(500).json({ message: "Demo login failed" });
-    }
-  });
-
   app.get("/api/auth/user", (req, res) => {
     const session = req.session as any;
     if (session?.userId) {
@@ -724,123 +668,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // MLB AI System Control Endpoints
-  app.post("/api/mlb-ai/settings", async (req, res) => {
-    try {
-      const { enabled, customPrompt } = req.body;
-      
-      // Get current MLB settings
-      const settings = await storage.getSettingsBySport('MLB');
-      if (!settings) {
-        return res.status(404).json({ message: "MLB settings not found" });
-      }
-      
-      // Update MLB AI settings
-      const alertTypes = settings.alertTypes as any;
-      alertTypes.mlbAIEnabled = enabled;
-      if (customPrompt !== undefined) {
-        alertTypes.mlbAIPrompt = customPrompt;
-      }
-      
-      await storage.updateSettings('MLB', { alertTypes });
-      
-      // Update the AI system
-      const { getMLBAISystem } = await import("./services/mlb-ai-system");
-      const mlbAISystem = getMLBAISystem(storage);
-      await mlbAISystem.updateSettings(enabled, customPrompt);
-      
-      res.json({
-        success: true,
-        message: `MLB AI System ${enabled ? 'enabled' : 'disabled'}`,
-        settings: {
-          enabled,
-          customPrompt: customPrompt || ''
-        }
-      });
-    } catch (error: any) {
-      console.error("MLB AI settings update failed:", error);
-      res.status(500).json({ 
-        success: false,
-        message: "Failed to update MLB AI settings",
-        error: error.message 
-      });
-    }
-  });
-  
-  // Get MLB AI System status
-  app.get("/api/mlb-ai/status", async (req, res) => {
-    try {
-      const settings = await storage.getSettingsBySport('MLB');
-      const alertTypes = settings?.alertTypes as any;
-      
-      const { getMLBAISystem } = await import("./services/mlb-ai-system");
-      const mlbAISystem = getMLBAISystem(storage);
-      const isEnabled = await mlbAISystem.isEnabled();
-      
-      res.json({
-        enabled: alertTypes?.mlbAIEnabled || false,
-        customPrompt: alertTypes?.mlbAIPrompt || '',
-        aiSystemReady: isEnabled,
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY
-      });
-    } catch (error: any) {
-      console.error("MLB AI status check failed:", error);
-      res.status(500).json({ 
-        success: false,
-        message: "Failed to get MLB AI status",
-        error: error.message 
-      });
-    }
-  });
-  
-  // Test MLB AI System
-  app.post("/api/mlb-ai/test", async (req, res) => {
-    try {
-      const { getMLBAISystem } = await import("./services/mlb-ai-system");
-      const mlbAISystem = getMLBAISystem(storage);
-      
-      // Enable the system for testing
-      await mlbAISystem.updateSettings(true);
-      
-      // Test with a high-stakes scenario
-      const testContext = {
-        homeTeam: req.body.homeTeam || 'Yankees',
-        awayTeam: req.body.awayTeam || 'Red Sox',
-        score: req.body.score || { home: 5, away: 5 },
-        inning: req.body.inning || 9,
-        inningState: req.body.inningState || 'bottom' as 'bottom',
-        outs: req.body.outs || 2,
-        balls: req.body.balls || 3,
-        strikes: req.body.strikes || 2,
-        runners: req.body.runners || {
-          first: true,
-          second: true,
-          third: true
-        }
-      };
-      
-      const decision = await mlbAISystem.analyzeGameSituation(testContext);
-      
-      res.json({
-        success: true,
-        testContext,
-        aiDecision: decision || {
-          shouldTrigger: false,
-          priority: 0,
-          title: "No alert",
-          description: "AI did not trigger an alert for this situation"
-        }
-      });
-    } catch (error: any) {
-      console.error("MLB AI test failed:", error);
-      res.status(500).json({ 
-        success: false,
-        message: "MLB AI test failed",
-        error: error.message 
-      });
-    }
-  });
-
   // Test weather data specifically
   app.get("/api/test/weather", async (req, res) => {
     try {
@@ -849,10 +676,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('🌤️ === WEATHER API DEBUG TEST STARTING ===');
       
       // Check environment variables first
-      const apiKeyStatus = process.env.ACCUWEATHER_API_KEY;
+      const apiKeyStatus = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
       console.log(`🔑 API Key Status: ${apiKeyStatus ? 'Present' : 'Missing'}`);
       console.log(`🔑 API Key Value: ${apiKeyStatus ? `${apiKeyStatus.substring(0, 8)}...` : 'None'}`);
-      console.log(`🔑 Is placeholder key: ${apiKeyStatus === "default_key" || apiKeyStatus === "your_actual_accuweather_api_key_here"}`);
+      console.log(`🔑 Is placeholder key: ${apiKeyStatus === "default_key" || apiKeyStatus === "your_actual_openweathermap_api_key_here"}`);
       
       const testCities = [
         'New York', 'Los Angeles', 'Chicago', 'Phoenix', 
@@ -915,7 +742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString(),
         apiKeyConfigured: !!(apiKeyStatus && 
           apiKeyStatus !== "default_key" && 
-          apiKeyStatus !== "your_actual_accuweather_api_key_here"),
+          apiKeyStatus !== "your_actual_openweathermap_api_key_here"),
         apiKey: apiKeyStatus ? `${apiKeyStatus.substring(0, 8)}...` : 'Not configured',
         cityResults: weatherResults,
         teamResults: teamResults,

@@ -1,14 +1,10 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { mlbApi } from '../mlb-api';
-import { mlbMultiSourceAggregator } from '../mlb-multi-source-aggregator';
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { randomUUID } from 'crypto';
-// ADD for new alert system
-import { processFrame as processNewAlerts } from "../../alerts-core";
-import type { Frame } from "../../alerts-core";
 
 // RE24 (Run Expectancy) Table
 const RE24: Record<string, number> = {
@@ -107,18 +103,6 @@ interface InsertAlert {
   gameInfo: any; // Using 'any' for broader compatibility, but ideally a specific type
   createdAt: Date;
   isRead: boolean;
-}
-
-function computePriorityBoost(state: MLBGameState): number {
-  let boost = 0;
-  // Power hitter at bat
-  const hr = state.currentBatter?.stats?.hr ?? 0;
-  if (hr >= 30) boost += 10;
-  else if (hr >= 20) boost += 6;
-  // Late inning leverage
-  if (state.inning >= 7) boost += 4;
-  // Runner in scoring position baseline handled by alertConfigs
-  return boost;
 }
 
 export class MLBEngine extends BaseSportEngine {
@@ -491,9 +475,7 @@ export class MLBEngine extends BaseSportEngine {
         } else {
           // Try SportsDataIO as fallback for current batter data
           console.log(`   🔍 Trying SportsDataIO for current batter information...`);
-          // Multi-source aggregator handles current batter data from multiple sources
-          // This functionality is now integrated into the live feed data
-          currentBatter = null; // Will be populated by multi-source aggregator in live feed
+          currentBatter = await mlbApi.getSportsDataCurrentBatter(gameData.game.pk);
           
           if (!currentBatter) {
             // NO FALLBACK - Don't create alerts with fake data
@@ -532,28 +514,6 @@ export class MLBEngine extends BaseSportEngine {
         console.log('Player data not available in current play');
       }
 
-      // Debug team data structure to fix team names
-      console.log(`🔍 DEBUG Team Data Structure:`, {
-        'gameData.teams': gameData.teams,
-        'gameData.game.teams': gameData.game?.teams,
-        'linescore.teams': linescore.teams
-      });
-
-      // Try multiple paths for team names
-      const homeTeamName = 
-        gameData.teams?.home?.name ||
-        gameData.game?.teams?.home?.team?.name ||
-        linescore.teams?.home?.team?.name ||
-        'Home Team';
-      
-      const awayTeamName = 
-        gameData.teams?.away?.name ||
-        gameData.game?.teams?.away?.team?.name ||
-        linescore.teams?.away?.team?.name ||
-        'Away Team';
-
-      console.log(`🏟️ Team Names - Away: ${awayTeamName}, Home: ${homeTeamName}`);
-
       const gameState = {
         gameId: `mlb-${gameData.game.pk}`,
         gamePk: gameData.game.pk,
@@ -569,8 +529,8 @@ export class MLBEngine extends BaseSportEngine {
         },
         homeScore: linescore.teams?.home?.runs || 0,
         awayScore: linescore.teams?.away?.runs || 0,
-        homeTeam: homeTeamName,
-        awayTeam: awayTeamName,
+        homeTeam: gameData.teams?.home?.name || 'Home Team',
+        awayTeam: gameData.teams?.away?.name || 'Away Team',
         currentBatter: currentBatter || undefined,
         currentPitcher,
       };
@@ -899,18 +859,14 @@ export class MLBEngine extends BaseSportEngine {
           customTitle = `${alert.type}: ${gameState.currentBatter.name}`;
         }
 
-        // Apply priority boost for power hitters and late innings
-        const boostedPriority = alert.priority + computePriorityBoost(gameState);
-        
         // Enhance high-priority alerts with AI (priority >= 85)
         let finalDescription = this.generateDynamicDescription(alert, gameState);
-        if (boostedPriority >= 85) {
+        if (alert.priority >= 85) {
           const gameContext = {
             sport: this.sport,
             homeTeam: gameState.homeTeam,
             awayTeam: gameState.awayTeam,
             inning: gameState.inning,
-            priority: boostedPriority,
             score: { home: gameState.homeScore, away: gameState.awayScore },
             runners: gameState.runners,
             outs: gameState.outs,
@@ -940,7 +896,7 @@ export class MLBEngine extends BaseSportEngine {
           opponent: gameState.awayTeam,
           message: finalDescription,
           probability: alert.probability,
-          priority: boostedPriority,
+          priority: alert.priority,
           createdAt: new Date(),
           isRead: false,
           gameInfo: {
@@ -953,11 +909,11 @@ export class MLBEngine extends BaseSportEngine {
             balls: gameState.balls,
             strikes: gameState.strikes,
             runners: gameState.runners,
-            priority: boostedPriority,
             score: {
               home: gameState.homeScore,
               away: gameState.awayScore
             },
+            priority: alert.priority,
             scoringProbability: this.calculateScoringProbability(gameState),
             re24Probability: this.calculateRE24Probability(gameState),
             re24Key: reKey(gameState.runners, gameState.outs),
@@ -1031,14 +987,11 @@ export class MLBEngine extends BaseSportEngine {
           risp: true,
           closeGame: true,
           lateInning: true,
-          starBatter: true, // Enable for testing
-          powerHitter: true, // Enable for testing  
+          starBatter: false, // Requires batter data, disable when no batter info
+          powerHitter: false, // Requires batter data, disable when no batter info
           runnersOnBase: true,
           inningChange: true,
-          re24Advanced: true, // Enable RE24 system
-          avgHitter: true,    // Enable average hitter alerts
-          eliteClutch: true,  // Enable clutch alerts
-          rbiMachine: true    // Enable RBI alerts
+          re24Advanced: false // New RE24 system, disabled by default for testing
         };
 
         let needsUpdate = false;
@@ -1056,7 +1009,7 @@ export class MLBEngine extends BaseSportEngine {
         }
       }
 
-      const liveGames = await mlbMultiSourceAggregator.getLiveGames();
+      const liveGames = await mlbApi.getLiveGames();
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 
@@ -1085,7 +1038,7 @@ export class MLBEngine extends BaseSportEngine {
           }
 
           console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
-          const liveFeed = await mlbMultiSourceAggregator.getLiveFeed(game.gamePk, game.venue);
+          const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
 
           // Skip if live feed data isn't available yet (returns null for 404)
           if (!liveFeed) {
@@ -1103,106 +1056,24 @@ export class MLBEngine extends BaseSportEngine {
 
           if (!gameState) continue;
 
-          // NEW ALERT SYSTEM INTEGRATION
-          // Load configuration from file or environment
-          let engineMode = "legacy";
-          try {
-            // Use dynamic import for ES module compatibility
-            const configPath = `../../config/alert-engine.config.js?t=${Date.now()}`;
-            const { default: alertConfig } = await import(configPath);
-            engineMode = alertConfig.mode.toLowerCase();
-            console.log(`📁 Loaded config from file: ${engineMode}`);
-          } catch (err) {
-            engineMode = (process.env.ALERTS_ENGINE || "legacy").toLowerCase();
-            console.log(`🌐 Using environment/default: ${engineMode} (config load error: ${err.message})`);
-          }
+          const triggeredAlerts = await this.checkAlertConditions(gameState);
 
-          console.log(`🔧 Alert Engine Mode: ${engineMode}`);
-          
-          if (engineMode === "new" || engineMode === "both") {
-            console.log(`🆕 Running NEW alert system (mode: ${engineMode})`);
-            const frame: Frame = {
-              gamePk: Number(gameState.gamePk),
-              inning: gameState.inning,
-              half: gameState.inningState as "top" | "bottom",
-              outs: Math.min(2, Math.max(0, Number(gameState.outs))) as 0|1|2,
-              runners: {
-                first: !!gameState.runners?.first,
-                second: !!gameState.runners?.second,
-                third: !!gameState.runners?.third,
-              },
-              score: { home: Number(gameState.homeScore), away: Number(gameState.awayScore) },
-              batterId: gameState.currentBatter?.id ?? null,
-              onDeckId: gameState.onDeck?.id ?? null,
-            };
-
-            const newEvents = processNewAlerts(frame);
-
-            // When in "both" mode, DO NOT broadcast new engine alerts (shadow mode).
-            // Just store them into a light audit row so we can compare volumes/latency.
-            const shadowOnly = engineMode === "both";
-
-            for (const evt of newEvents) {
-              const alertLike = {
-                type: evt.kind,
-                sport: this.sport,
-                title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
-                description: `${evt.title} — ${evt.description}`,
-                gameInfo: {
-                  // put priority here so UI can badge/sort if desired
-                  priority: evt.priority,
-                  awayTeam: gameState.awayTeam,
-                  homeTeam: gameState.homeTeam,
-                  inning: gameState.inning.toString(),
-                  inningState: gameState.inningState,
-                  outs: gameState.outs,
-                  score: { away: gameState.awayScore, home: gameState.homeScore },
-                  runners: gameState.runners,
-                },
-                weatherData: null,  // startup phase: no weather effect
-              };
-
-              if (shadowOnly) {
-                // Keep it out of user-facing channels; store in audit log
-                console.log(`🔍 SHADOW Alert: ${evt.kind} - ${evt.title} (Priority: ${evt.priority})`);
-                continue;
-              }
-
-              // In "new" mode, send through your existing pipeline (DB + WS + Telegram)
-              await storage.createAlert({
-                id: randomUUID(),
-                ...alertLike,
-                sentToTelegram: false,
-                seen: false,
-              });
-
-              console.log(`✨ NEW Alert created: ${evt.kind} - ${evt.title} (Priority: ${evt.priority})`);
-              
-              // Your existing broadcast/Telegram hooks should pick it up as usual
+          if (triggeredAlerts.length > 0) {
+            console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
+            console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
+            await this.processAlerts(triggeredAlerts, gameState);
+          } else {
+            // Debug why no alerts triggered
+            const basesLoaded = gameState.runners.first && gameState.runners.second && gameState.runners.third;
+            if (basesLoaded) {
+              console.log(`❌ BASES LOADED BUT NO ALERT! Checking settings...`);
+              const settings = await storage.getSettingsBySport(this.sport);
+              console.log(`   RISP setting enabled: ${settings?.alertTypes?.risp || 'NOT SET'}`);
+              console.log(`   All MLB settings:`, settings?.alertTypes);
             }
-          }
 
-          // Run legacy alerts if not in "new" mode exclusively
-          if (engineMode !== "new") {
-            const triggeredAlerts = await this.checkAlertConditions(gameState);
-
-            if (triggeredAlerts.length > 0) {
-              console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
-              console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
-              await this.processAlerts(triggeredAlerts, gameState);
-            } else {
-              // Debug why no alerts triggered
-              const basesLoaded = gameState.runners.first && gameState.runners.second && gameState.runners.third;
-              if (basesLoaded) {
-                console.log(`❌ BASES LOADED BUT NO ALERT! Checking settings...`);
-                const settings = await storage.getSettingsBySport(this.sport);
-                console.log(`   RISP setting enabled: ${settings?.alertTypes?.risp || 'NOT SET'}`);
-                console.log(`   All MLB settings:`, settings?.alertTypes);
-              }
-
-              // AI analysis has been completely removed
-              console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
-            }
+            // AI analysis has been completely removed
+            console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
           }
 
         } catch (gameError) {

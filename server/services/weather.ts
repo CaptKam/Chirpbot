@@ -7,67 +7,40 @@ export interface WeatherData {
 
 export async function getWeatherData(location: string): Promise<WeatherData | null> {
   try {
-    // Using AccuWeather API
-    const apiKey = process.env.ACCUWEATHER_API_KEY;
+    // Using OpenWeatherMap API
+    const apiKey = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
     
-    if (!apiKey || apiKey === "default_key" || apiKey === "your_actual_accuweather_api_key_here") {
-      console.log(`🌤️ AccuWeather API key not configured (${apiKey ? 'placeholder detected' : 'missing'}), returning null for ${location}`);
+    if (!apiKey || apiKey === "default_key" || apiKey === "your_actual_openweathermap_api_key_here") {
+      console.log(`🌤️ Weather API key not configured (${apiKey ? 'placeholder detected' : 'missing'}), returning null for ${location}`);
       return null;
     }
 
-    console.log(`🌤️ Fetching weather data from AccuWeather for ${location}...`);
+    console.log(`🌤️ Fetching real weather data for ${location}...`);
     
-    // First, get the location key from AccuWeather
-    const locationResponse = await fetch(
-      `https://dataservice.accuweather.com/locations/v1/search?apikey=${apiKey}&q=${encodeURIComponent(location)}`
+    const response = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${apiKey}&units=imperial`
     );
 
-    if (!locationResponse.ok) {
-      console.error(`🌤️ AccuWeather location search failed for ${location}:`, locationResponse.status, locationResponse.statusText);
-      if (locationResponse.status === 401) {
-        console.error("🌤️ Invalid AccuWeather API key detected");
+    if (!response.ok) {
+      console.error(`🌤️ Weather API request failed for ${location}:`, response.status, response.statusText);
+      if (response.status === 401) {
+        console.error("🌤️ Invalid API key detected");
       }
       return null;
     }
 
-    const locationData = await locationResponse.json();
+    const data = await response.json();
     
-    if (!locationData || locationData.length === 0) {
-      console.error(`🌤️ No location found for ${location}`);
-      return null;
-    }
-
-    const locationKey = locationData[0].Key;
-    
-    // Now get current conditions using the location key
-    const weatherResponse = await fetch(
-      `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`
-    );
-
-    if (!weatherResponse.ok) {
-      console.error(`🌤️ AccuWeather current conditions failed for ${location}:`, weatherResponse.status, weatherResponse.statusText);
-      return null;
-    }
-
-    const weatherData = await weatherResponse.json();
-    
-    if (!weatherData || weatherData.length === 0) {
-      console.error(`🌤️ No weather data found for ${location}`);
-      return null;
-    }
-
-    const currentWeather = weatherData[0];
-    
-    console.log(`✅ AccuWeather data retrieved for ${location}: ${Math.round(currentWeather.Temperature.Imperial.Value)}°F, ${currentWeather.WeatherText}, Wind: ${Math.round(currentWeather.Wind?.Speed?.Imperial?.Value || 0)}mph`);
+    console.log(`✅ Real weather data retrieved for ${location}: ${Math.round(data.main.temp)}°F, ${data.weather[0].main}, Wind: ${Math.round(data.wind?.speed || 0)}mph`);
 
     return {
-      temperature: Math.round(currentWeather.Temperature.Imperial.Value),
-      condition: currentWeather.WeatherText,
-      windSpeed: Math.round(currentWeather.Wind?.Speed?.Imperial?.Value || 0),
-      windDirection: currentWeather.Wind?.Direction?.English || 'N/A',
+      temperature: Math.round(data.main.temp),
+      condition: data.weather[0].main,
+      windSpeed: Math.round(data.wind?.speed || 0),
+      windDirection: getWindDirection(data.wind?.deg || 0),
     };
   } catch (error) {
-    console.error(`🌤️ AccuWeather service error for ${location}:`, error);
+    console.error(`🌤️ Weather service error for ${location}:`, error);
     return null;
   }
 }

@@ -83,21 +83,6 @@ function RegularAppContent() {
     enabled: isAuthenticated,
   });
 
-  /* AUTO-TOAST ON NEW ALERT */
-  useEffect(() => {
-    if (lastMessage && lastMessage.type === 'new_alert' && lastMessage.data && (lastMessage.data as any).type) {
-      const a: any = lastMessage.data;
-      const title = a.type || 'Alert';
-      const priority = a.gameInfo?.priority ?? a.priority ?? 0;
-      const pTag = priority >= 90 ? "L3" : priority >= 80 ? "L2" : "L1";
-      toast({
-        title: `${pTag} • ${title}`,
-        description: `${a.title} — ${a.description}`,
-        // Radix handles dismissal; our hook removes after TOAST_REMOVE_DELAY
-      });
-    }
-  }, [lastMessage]);
-
   useEffect(() => {
     if (lastMessage && isAuthenticated) {
       switch (lastMessage.type) {
