@@ -285,7 +285,7 @@ export default function Calendar() {
               });
 
               return (
-                <div key={game.id || `${activeSport}-game-${index}`} className="relative">
+                <div key={game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-game-${index}`} className="relative">
                   <Card 
                     className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] hover:bg-white/10 ${
                       isSelected 

@@ -165,11 +165,14 @@ class SportsDataService {
   }
 
   private processSportsDataGames(data: SportsDataScore[], sport: 'NFL' | 'NBA' | 'NHL' | 'MLB'): Game[] {
-    const games = data.map((game: SportsDataScore): Game => {
+    const games = data.map((game: SportsDataScore, index: number): Game => {
       const gameStatus = this.mapSportsDataStatus(game.Status, game.IsClosed);
       
+      // Generate a safe ID - use GameID if available, otherwise fallback to index
+      const safeGameId = game.GameID || `fallback-${index}-${Date.now()}`;
+      
       return {
-        id: `${sport.toLowerCase()}-sd-${game.GameID}`,
+        id: `${sport.toLowerCase()}-sd-${safeGameId}`,
         sport,
         homeTeam: {
           id: game.HomeTeamID.toString(),
