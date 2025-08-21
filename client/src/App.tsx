@@ -139,7 +139,7 @@ function AppContent() {
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={Alerts} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route path="/admin/login" component={AdminLogin} />
+        <Route path="/admin/login" component={() => <AdminLogin />} />
         <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} requireAdmin={true} />} />
         <Route component={NotFound} />
       </Switch>

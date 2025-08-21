@@ -40,7 +40,7 @@ adminRouter.post("/login", async (req, res) => {
       role: user.role,
     };
     
-    await logAdminAction(user.id, "admin_login", "session", null, null, null, { username });
+    await logAdminAction(user.id, "admin_login", "session", undefined, null, null, { username });
     
     res.json({ message: "Login successful", user: { id: user.id, username: user.username, role: user.role } });
   } catch (error) {
@@ -133,7 +133,7 @@ adminRouter.patch("/ai-settings/:sport", requireRole("manager"), async (req, res
       user.id, 
       "update_ai_settings", 
       "ai_settings", 
-      updatedSettings?.id || null,
+      updatedSettings?.id || undefined,
       currentSettings,
       updatedSettings,
       { sport }
@@ -152,7 +152,7 @@ adminRouter.get("/ai-settings", requireRole("admin"), async (req, res) => {
     const user = (req as any).user;
     const allSettings = await storage.getAllAiSettings();
     
-    await logAdminAction(user.id, "view_all_ai_settings", "ai_settings", null, null, null);
+    await logAdminAction(user.id, "view_all_ai_settings", "ai_settings", undefined, null, null);
     
     res.json(allSettings);
   } catch (error) {
@@ -181,7 +181,7 @@ adminRouter.get("/ai-logs", requireRole("analyst"), async (req, res) => {
       logs = await storage.getRecentAiLearningLogs(logLimit);
     }
     
-    await logAdminAction(user.id, "view_ai_logs", "ai_learning_logs", null, null, null, { sport, alertType, limit });
+    await logAdminAction(user.id, "view_ai_logs", "ai_learning_logs", undefined, null, null, { sport, alertType, limit });
     
     res.json(logs);
   } catch (error) {
