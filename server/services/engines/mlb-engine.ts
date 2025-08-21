@@ -322,7 +322,7 @@ export class MLBEngine extends BaseSportEngine {
         }
       }
 
-      const liveGames = await mlbApi.getLiveGamesFromCache();
+      const liveGames = await mlbApi.getTodaysGames();
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 

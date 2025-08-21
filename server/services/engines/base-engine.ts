@@ -1,7 +1,7 @@
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
-import { enhanceHighPriorityAlert } from '../ai-analysis';
+import { enhanceHighPriorityAlert, generateAdvancedPredictions } from '../ai-analysis';
 import { randomUUID } from 'crypto';
 
 export interface AlertConfig {
@@ -200,6 +200,14 @@ export abstract class BaseSportEngine implements SportEngine {
             if (enhanced) {
               finalDescription = enhanced.enhancedDescription;
               finalPriority = enhanced.priority;
+              
+              // 🚀 GENERATE ADVANCED PREDICTIONS
+              const predictions = await generateAdvancedPredictions(gameContext, alert.type);
+              if (predictions) {
+                finalDescription += ` | 📊 Analytics: WP±${predictions.winProbabilityShift}% | Leverage: ${predictions.leverageIndex} | Clutch: ${predictions.clutchRating}% | ${predictions.predictedOutcome}`;
+                console.log(`🧠 Advanced AI Prediction: ${predictions.predictedOutcome}`);
+              }
+              
               console.log(`🤖 AI Enhanced: ${alert.type} - "${enhanced.enhancedDescription}"`);
             }
           } catch (error) {
