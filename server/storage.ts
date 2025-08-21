@@ -996,7 +996,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEnabledAlertTypes(sport?: string): Promise<string[]> {
-    let query = db.select({ settingKey: globalAlertControls.settingKey })
+    let query = db.select({ alertType: globalAlertControls.alertType, settingKey: globalAlertControls.settingKey })
       .from(globalAlertControls)
       .where(eq(globalAlertControls.enabled, true));
     
@@ -1005,9 +1005,8 @@ export class DatabaseStorage implements IStorage {
     }
     
     const results = await query;
-    return results
-      .filter(result => result.settingKey !== null)
-      .map(result => result.settingKey as string);
+    // Return both settingKey-based and alertType-based identifiers
+    return results.map(result => result.settingKey || result.alertType);
   }
 }
 
