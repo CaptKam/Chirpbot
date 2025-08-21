@@ -869,22 +869,22 @@ export class MLBEngine extends BaseSportEngine {
 
       case 'Runner on 3rd, 1 Out':
       case 'Runner on 3rd, 1 Out':
-        return `🎯 RUNNER ON 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
+        return `🚨 RUNNER 90 FEET FROM HOME! Third base, ${outs} out - any contact scores the run! Prime scoring opportunity with ${scoringProb}% success rate!`;
 
       case 'Runners on 2nd & 3rd, 1 Out':
-        return `🔥 RUNNERS ON 2ND & 3RD, ${outs} OUT! (${scoringProb}% scoring probability)`;
+        return `💥 MULTIPLE RUNNERS IN SCORING POSITION! Second and third, ${outs} out - any hit brings home 2 runs! Explosive moment with ${scoringProb}% scoring odds!`;
 
       case 'Bases Loaded 0 Outs':
-        return `🚨 BASES LOADED, 0 OUTS! (${scoringProb}% scoring probability) - MAXIMUM opportunity!`;
+        return `🔥 BASES LOADED, NO OUTS! Maximum opportunity to break the game open - runs are waiting to pour in! ${scoringProb}% chance to score multiple!`;
 
       case 'Bases Loaded 1 Out':
-        return `🔥 BASES LOADED, 1 OUT! (${scoringProb}% scoring probability) - High-value scoring chance!`;
+        return `🚨 BASES LOADED, 1 OUT! Perfect setup for a grand slam or clutch hit - three runners ready to score! High-value moment with ${scoringProb}% odds!`;
 
       case 'Bases Loaded 2 Outs':
-        return `🚨 BASES LOADED, 2 OUTS! (${scoringProb}% scoring probability) - MAXIMUM PRESSURE! Make or break moment!`;
+        return `💯 BASES LOADED, 2 OUTS! Final chance to deliver - one swing decides everything! Maximum pressure with ${scoringProb}% clutch opportunity!`;
 
       case 'Runners on 1st & 2nd':
-        return `🔥 RUNNERS ON 1ST & 2ND, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability) Double-steal or big hit opportunity!`;
+        return `⚡ RUNNERS ON FIRST AND SECOND! ${outs} out - perfect setup for a big inning or double steal! Rally building with ${scoringProb}% scoring potential!`;
 
       case 'Runners In Scoring Position':
         const scoringRunners = [];
@@ -893,16 +893,16 @@ export class MLBEngine extends BaseSportEngine {
 
         if (scoringRunners.length > 0) {
           const runnerText = scoringRunners.join(' & ');
-          return `⚡ RUNNER${scoringRunners.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
+          return `🔥 RUNNERS IN SCORING POSITION! ${runnerText} base, ${outs} out - one hit changes everything! Prime opportunity with ${scoringProb}% success rate!`;
         }
-        return `⚡ PRESSURE COOKER! Runners in scoring position, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
+        return `💥 PRESSURE COOKER MOMENT! Runners in scoring position, ${outs} out - clutch time with ${scoringProb}% scoring chance!`;
 
       case 'Runners on Base':
         if (runnerPositions.length > 0) {
           const runnerText = runnerPositions.join(' & ');
-          return `🏃 RUNNER${runnerPositions.length > 1 ? 'S' : ''} ON ${runnerText}, ${outs} OUT${outs !== 1 ? 'S' : ''}! (${scoringProb}% scoring probability)`;
+          return `🏃‍♂️ RUNNERS ON BASE! ${runnerText}, ${outs} out - rally potential brewing with ${scoringProb}% scoring opportunity!`;
         }
-        return `🏃 Runners on base, ${outs} out${outs !== 1 ? 's' : ''}! (${scoringProb}% scoring probability)`;
+        return `🚨 BASERUNNERS THREATENING! ${outs} out - momentum building with ${scoringProb}% chance to score!`;
 
       case 'Close Game':
         const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
