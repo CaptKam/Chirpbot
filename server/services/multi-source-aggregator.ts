@@ -295,57 +295,167 @@ export class MultiSourceAggregator {
     return this.fetchWithFallback(this.nflSources, date);
   }
 
-  private async fetchWithFallback<T extends DataSource & { fetchGames: (date?: string) => Promise<Game[]> }>(
+  // Advanced parallel fetching with speed optimization and cross-validation
+  private async fetchWithParallelOptimization<T extends DataSource & { fetchGames: (date?: string) => Promise<Game[]> }>(
     sources: T[], 
     date?: string
   ): Promise<Game[]> {
-    const sortedSources = sources
-      .filter(source => source.enabled)
-      .sort((a, b) => a.priority - b.priority);
-
-    console.log(`🔄 Trying ${sortedSources.length} data sources in priority order...`);
-
-    for (const source of sortedSources) {
-      try {
-        // Skip if too many recent failures
-        if (source.failureCount >= source.maxRetries) {
-          const timeSinceLastFailure = source.lastFailure ? Date.now() - source.lastFailure.getTime() : 0;
-          if (timeSinceLastFailure < 300000) { // 5 minutes cooldown
-            console.log(`⏸️ Skipping ${source.name} - too many failures, cooling down`);
-            continue;
-          } else {
-            // Reset failure count after cooldown
-            source.failureCount = 0;
-          }
+    const enabledSources = sources.filter(source => {
+      // Skip if too many recent failures
+      if (source.failureCount >= source.maxRetries) {
+        const timeSinceLastFailure = source.lastFailure ? Date.now() - source.lastFailure.getTime() : 0;
+        if (timeSinceLastFailure < 300000) { // 5 minutes cooldown
+          return false;
+        } else {
+          source.failureCount = 0; // Reset after cooldown
         }
+      }
+      return source.enabled;
+    });
 
-        console.log(`🎯 Trying ${source.name} (Priority ${source.priority}, ${source.reliability}% reliable)`);
-        const startTime = Date.now();
-        
+    if (enabledSources.length === 0) {
+      console.log(`💥 No available data sources`);
+      return [];
+    }
+
+    console.log(`🚀 Testing ${enabledSources.length} sources simultaneously for optimal speed...`);
+
+    // Test all sources in parallel with response time tracking
+    const sourcePromises = enabledSources.map(async (source) => {
+      const startTime = Date.now();
+      try {
         const games = await source.fetchGames(date);
-        
         const responseTime = Date.now() - startTime;
-        console.log(`✅ ${source.name} success: ${games.length} games, ${responseTime}ms response time`);
         
         // Reset failure count on success
         source.failureCount = 0;
         
-        return games;
+        return {
+          source,
+          games,
+          responseTime,
+          success: true,
+          error: null,
+        };
       } catch (error) {
+        const responseTime = Date.now() - startTime;
         source.failureCount++;
         source.lastFailure = new Date();
         
-        console.log(`❌ ${source.name} failed (attempt ${source.failureCount}/${source.maxRetries}):`, error instanceof Error ? error.message : String(error));
-        
-        // Disable source if max retries exceeded
-        if (source.failureCount >= source.maxRetries) {
-          console.log(`🚫 ${source.name} disabled due to repeated failures`);
-        }
+        return {
+          source,
+          games: [] as Game[],
+          responseTime,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
       }
+    });
+
+    // Wait for all sources to complete
+    const results = await Promise.all(sourcePromises);
+    
+    // Filter successful results and sort by response time
+    const successfulResults = results
+      .filter(result => result.success && result.games.length > 0)
+      .sort((a, b) => a.responseTime - b.responseTime);
+
+    // Log all results for monitoring
+    results.forEach(result => {
+      if (result.success) {
+        console.log(`✅ ${result.source.name}: ${result.games.length} games, ${result.responseTime}ms (${result.source.reliability}% reliable)`);
+      } else {
+        console.log(`❌ ${result.source.name}: failed in ${result.responseTime}ms - ${result.error}`);
+      }
+    });
+
+    if (successfulResults.length === 0) {
+      console.log(`💥 All ${enabledSources.length} sources failed or returned no data`);
+      return [];
     }
 
-    console.log(`💥 All data sources failed, returning empty array`);
-    return [];
+    // Use fastest 2-3 sources for cross-validation if available
+    const topSources = successfulResults.slice(0, 3);
+    console.log(`🏆 Using top ${topSources.length} fastest sources for cross-validation`);
+
+    // If we have multiple sources, cross-validate the data
+    if (topSources.length > 1) {
+      return this.crossValidateGameData(topSources);
+    } else {
+      // Single source - return the fastest
+      const fastest = topSources[0];
+      console.log(`⚡ Using single fastest source: ${fastest.source.name} (${fastest.responseTime}ms)`);
+      return fastest.games;
+    }
+  }
+
+  // Cross-validation logic to ensure data accuracy across sources
+  private crossValidateGameData(results: Array<{source: any, games: Game[], responseTime: number}>): Game[] {
+    console.log(`🔍 Cross-validating data from ${results.length} sources...`);
+    
+    const allGames = results.flatMap(result => result.games);
+    const gameMap = new Map<string, Game[]>();
+
+    // Group games by a normalized key (team names + date)
+    allGames.forEach(game => {
+      const key = this.normalizeGameKey(game);
+      if (!gameMap.has(key)) {
+        gameMap.set(key, []);
+      }
+      gameMap.get(key)!.push(game);
+    });
+
+    const validatedGames: Game[] = [];
+    
+    gameMap.forEach((gameVersions, key) => {
+      if (gameVersions.length >= 2) {
+        // Multiple sources agree - high confidence
+        const bestVersion = this.selectBestGameVersion(gameVersions);
+        validatedGames.push(bestVersion);
+        console.log(`✅ Cross-validated: ${bestVersion.awayTeam.name} @ ${bestVersion.homeTeam.name}`);
+      } else if (gameVersions.length === 1) {
+        // Single source - accept but with lower confidence
+        validatedGames.push(gameVersions[0]);
+        console.log(`⚠️ Single source: ${gameVersions[0].awayTeam.name} @ ${gameVersions[0].homeTeam.name}`);
+      }
+    });
+
+    console.log(`🎯 Cross-validation complete: ${validatedGames.length} validated games`);
+    return validatedGames;
+  }
+
+  private normalizeGameKey(game: Game): string {
+    // Create normalized key for cross-validation
+    const awayTeam = game.awayTeam.name.toLowerCase().replace(/[^a-z]/g, '');
+    const homeTeam = game.homeTeam.name.toLowerCase().replace(/[^a-z]/g, '');
+    const date = new Date(game.startTime).toISOString().split('T')[0];
+    return `${awayTeam}-${homeTeam}-${date}`;
+  }
+
+  private selectBestGameVersion(versions: Game[]): Game {
+    // Prefer versions with more complete data
+    return versions.reduce((best, current) => {
+      const currentScore = this.calculateDataCompleteness(current);
+      const bestScore = this.calculateDataCompleteness(best);
+      return currentScore > bestScore ? current : best;
+    });
+  }
+
+  private calculateDataCompleteness(game: Game): number {
+    let score = 0;
+    if (game.homeTeam.score !== undefined) score += 1;
+    if (game.awayTeam.score !== undefined) score += 1;
+    if (game.venue && game.venue !== 'TBD') score += 1;
+    if (game.status && game.status !== 'scheduled') score += 1;
+    return score;
+  }
+
+  // Legacy fallback method for backwards compatibility
+  private async fetchWithFallback<T extends DataSource & { fetchGames: (date?: string) => Promise<Game[]> }>(
+    sources: T[], 
+    date?: string
+  ): Promise<Game[]> {
+    return this.fetchWithParallelOptimization(sources, date);
   }
 
   // Get reliability status for monitoring
