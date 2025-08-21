@@ -15,11 +15,6 @@ interface WeatherState {
     condition: string;
     humidity?: number;
     pressure?: number;
-    uvIndex?: number;
-    visibility?: number;
-    cloudCover?: number;
-    dewPoint?: number;
-    feelsLike?: number;
   };
   previousWeather?: {
     temperature: number;
@@ -83,14 +78,7 @@ export class WeatherEngine extends BaseSportEngine {
               temperature: weatherData.temperature || 0,
               windSpeed: weatherData.windSpeed || 0,
               windDirection: weatherData.windDirection || 'N',
-              condition: weatherData.condition,
-              humidity: weatherData.humidity,
-              pressure: weatherData.pressure,
-              uvIndex: weatherData.uvIndex,
-              visibility: weatherData.visibility,
-              cloudCover: weatherData.cloudCover,
-              dewPoint: weatherData.dewPoint,
-              feelsLike: weatherData.feelsLike
+              condition: weatherData.condition
             },
             previousWeather,
             sport: 'WEATHER'
@@ -182,48 +170,6 @@ export class WeatherEngine extends BaseSportEngine {
       description: "🏟️ DOME GAME - Weather not a factor",
       conditions: (state: WeatherState) => 
         ['Dome', 'Indoor', 'Retractable Roof Closed'].includes(state.currentWeather.condition)
-    },
-    {
-      type: "High UV Alert",
-      priority: 50,
-      probability: 0.4,
-      description: "☀️ HIGH UV INDEX - Intense sun affecting play!",
-      conditions: (state: WeatherState) => 
-        (state.currentWeather.uvIndex || 0) >= 8
-    },
-    {
-      type: "Low Visibility Alert",
-      priority: 85,
-      probability: 1.0,
-      description: "🌫️ LOW VISIBILITY - Weather impacting game!",
-      conditions: (state: WeatherState) => 
-        (state.currentWeather.visibility || 10) <= 3
-    },
-    {
-      type: "Extreme Heat Alert",
-      priority: 75,
-      probability: 0.8,
-      description: "🔥 EXTREME HEAT - Dangerous playing conditions!",
-      conditions: (state: WeatherState) => 
-        state.currentWeather.temperature >= 100 || 
-        (state.currentWeather.feelsLike || 0) >= 105
-    },
-    {
-      type: "Heavy Cloud Cover",
-      priority: 45,
-      probability: 0.3,
-      description: "☁️ HEAVY CLOUDS - Overcast conditions!",
-      conditions: (state: WeatherState) => 
-        (state.currentWeather.cloudCover || 0) >= 90
-    },
-    {
-      type: "High Humidity Alert",
-      priority: 60,
-      probability: 0.5,
-      description: "💧 HIGH HUMIDITY - Muggy conditions affecting play!",
-      conditions: (state: WeatherState) => 
-        (state.currentWeather.humidity || 0) >= 85 &&
-        state.currentWeather.temperature >= 80
     }
   ];
 
