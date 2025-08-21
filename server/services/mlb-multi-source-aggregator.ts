@@ -397,7 +397,6 @@ export class MLBMultiSourceAggregator {
         "Fenway Park": { lat: 42.3467, lon: -71.0972 },
         "Wrigley Field": { lat: 41.9484, lon: -87.6553 },
         "Dodger Stadium": { lat: 34.0739, lon: -118.2400 },
-        "Target Field": { lat: 44.9817, lon: -93.2776 }, // Minnesota Twins
         // Add more venues as needed
       };
 
