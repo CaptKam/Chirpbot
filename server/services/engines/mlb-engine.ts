@@ -322,7 +322,7 @@ export class MLBEngine extends BaseSportEngine {
         }
       }
 
-      const liveGames = await mlbApi.getLiveGames();
+      const liveGames = await mlbApi.getLiveGamesFromCache();
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 
@@ -400,3 +400,6 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 }
+
+// Export instance for use in other parts of the application
+export const mlbEngine = new MLBEngine();

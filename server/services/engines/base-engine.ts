@@ -1,6 +1,7 @@
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
+import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { randomUUID } from 'crypto';
 
 export interface AlertConfig {
@@ -87,7 +88,8 @@ export abstract class BaseSportEngine implements SportEngine {
 
     if (this.lastAlertStates.size > this.MAX_KEYS) {
       const cutoff = now - this.MAX_AGE_MS;
-      for (const [k, v] of this.lastAlertStates.entries()) {
+      const entries = Array.from(this.lastAlertStates.entries());
+      for (const [k, v] of entries) {
         if (v.ts < cutoff) {
           this.lastAlertStates.delete(k);
         }
@@ -179,11 +181,40 @@ export abstract class BaseSportEngine implements SportEngine {
       
       const weatherData = await getWeatherData(cityName);
 
+      // 🤖 AI ENHANCEMENT: For high-priority alerts (80+), use AI to enhance descriptions
+      let finalDescription = alert.description;
+      let finalPriority = alert.priority;
+      
+      if (alert.priority >= 80) {
+        const settings = await storage.getSettingsBySport(this.sport);
+        if (settings && (settings as any).aiEnabled) {
+          try {
+            const gameContext = this.buildGameContext(gameState);
+            const enhanced = await enhanceHighPriorityAlert(
+              alert.type,
+              gameContext,
+              alert.description,
+              alert.priority
+            );
+            
+            if (enhanced) {
+              finalDescription = enhanced.enhancedDescription;
+              finalPriority = enhanced.priority;
+              console.log(`🤖 AI Enhanced: ${alert.type} - "${enhanced.enhancedDescription}"`);
+            }
+          } catch (error) {
+            console.log(`🤖 AI enhancement failed for ${alert.type}:`, error instanceof Error ? error.message : 'Unknown error');
+          }
+        } else {
+          console.log(`🤖 AI enhancement skipped - AI disabled in settings`);
+        }
+      }
+
       const alertData = {
         type: alert.type,
         sport: this.sport,
         title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
-        description: alert.description,
+        description: finalDescription,
         gameInfo: {
           score: {
             away: gameState.awayScore,
@@ -196,13 +227,15 @@ export abstract class BaseSportEngine implements SportEngine {
         },
         weatherData,
         sentToTelegram: false,
+        priority: finalPriority, // Use AI-enhanced priority if available
+        probability: alert.probability
       };
 
       const settings = await storage.getSettingsBySport(this.sport);
       const createdAlert = await storage.createAlert(alertData);
 
-      // Send to Telegram for high-priority alerts 
-      if (alert.priority >= 75 && settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
+      // Send to Telegram for high-priority alerts (using enhanced priority)
+      if (finalPriority >= 75 && settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
         const telegramConfig = {
           botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
           chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
@@ -213,7 +246,7 @@ export abstract class BaseSportEngine implements SportEngine {
         }
       }
 
-      console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${alert.priority})`);
+      console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${finalPriority}${finalPriority !== alert.priority ? ` - AI Enhanced from ${alert.priority}` : ''})`);
 
       // INSTANT BROADCAST: Send alert immediately via WebSocket
       if (this.onAlert) {
