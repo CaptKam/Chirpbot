@@ -1,163 +1,98 @@
 import type { Game } from "@shared/schema";
 import { fetchJson } from './http';
 
-// MLB Stats API Interfaces (official MLB.com API)
-interface MLBGame {
-  gamePk: number;
-  gameDate: string;
-  status: {
-    abstractGameState: string;
-    detailedState: string;
-    statusCode: string;
-  };
-  teams: {
-    away: {
-      team: {
-        id: number;
-        name: string;
-        abbreviation: string;
-      };
-      score?: number;
-    };
-    home: {
-      team: {
-        id: number;
-        name: string;
-        abbreviation: string;
-      };
-      score?: number;
-    };
-  };
-  venue: {
-    id: number;
-    name: string;
-  };
-  linescore?: {
-    currentInning?: number;
-    currentInningOrdinal?: string;
-    inningState?: string;
-    innings?: Array<{
-      num: number;
-      ordinalNum: string;
-      home?: {
-        runs?: number;
-        hits?: number;
-        errors?: number;
-      };
-      away?: {
-        runs?: number;
-        hits?: number;
-        errors?: number;
-      };
-    }>;
-  };
+// SportsData.io MLB API Interfaces (unified with other sports)
+interface SportsDataMLBGame {
+  GameID: number;
+  Season: number;
+  SeasonType: number;
+  Status: string;
+  Day: string;
+  DateTime: string;
+  AwayTeam: string;
+  HomeTeam: string;
+  AwayTeamID: number;
+  HomeTeamID: number;
+  Stadium?: string;
+  Channel?: string;
+  Attendance?: number;
+  AwayTeamRuns?: number;
+  HomeTeamRuns?: number;
+  AwayTeamHits?: number;
+  HomeTeamHits?: number;
+  AwayTeamErrors?: number;
+  HomeTeamErrors?: number;
+  Updated: string;
+  Inning?: number;
+  InningHalf?: string;
+  GlobalGameID: number;
+  GlobalAwayTeamID: number;
+  GlobalHomeTeamID: number;
+  IsClosed: boolean;
+  GameEndDateTime?: string;
+  NeutralVenue?: boolean;
 }
 
-interface MLBScheduleResponse {
-  dates: Array<{
-    date: string;
-    games: MLBGame[];
-  }>;
-}
-
-interface MLBLiveFeedResponse {
-  gameData: {
-    game: {
-      pk: number;
-    };
-    status: {
-      abstractGameState: string;
-      detailedState: string;
-    };
-    teams: {
-      away: {
-        id: number;
-        name: string;
-        abbreviation: string;
-      };
-      home: {
-        id: number;
-        name: string;
-        abbreviation: string;
-      };
-    };
-  };
-  liveData: {
-    linescore: {
-      currentInning?: number;
-      currentInningOrdinal?: string;
-      inningState?: string;
-      teams: {
-        home: {
-          runs?: number;
-          hits?: number;
-          errors?: number;
-        };
-        away: {
-          runs?: number;
-          hits?: number;
-          errors?: number;
-        };
-      };
-    };
-  };
-}
+// SportsData.io returns an array of games directly
+type SportsDataMLBResponse = SportsDataMLBGame[];
 
 export class MLBApiService {
-  private readonly BASE_URL = 'https://statsapi.mlb.com/api/v1';
-  private readonly SPORTSDATA_BASE_URL = 'https://api.sportsdata.io/v3/mlb/scores/json';
+  private readonly BASE_URL = 'https://api.sportsdata.io/v3/mlb/scores/json';
+  private readonly apiKey = process.env.SPORTSDATA_API_KEY;
+  
+  // Cache for API responses to reduce calls
+  private cache = new Map<string, { data: SportsDataMLBGame[], timestamp: number }>();
+  private CACHE_TTL = 30000; // 30 seconds
 
   /**
-   * Fetch today's MLB games from official MLB.com API
+   * Fetch today's MLB games from SportsData.io API
    */
   async getTodaysGames(): Promise<Game[]> {
+    if (!this.apiKey) {
+      console.log('🔑 SportsData.io API key not configured for MLB, skipping');
+      return [];
+    }
+
     try {
       // Get both today and yesterday in case games are still ongoing from previous day
       const today = new Date().toISOString().split('T')[0];
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      console.log(`Fetching MLB games for today (${today}) and yesterday (${yesterday})`);
+      console.log(`🏈 Fetching MLB games from SportsData.io for ${today}...`);
       
-      // Fetch both today's and yesterday's games to catch any ongoing games
-      const [todayData, yesterdayData] = await Promise.all([
-        fetchJson<MLBScheduleResponse>(
-          `${this.BASE_URL}/schedule?sportId=1&date=${today}&hydrate=linescore,team`,
-          {
-            headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
-            timeoutMs: 8000
-          }
-        ),
-        fetchJson<MLBScheduleResponse>(
-          `${this.BASE_URL}/schedule?sportId=1&date=${yesterday}&hydrate=linescore,team`,
-          {
-            headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
-            timeoutMs: 8000
-          }
-        )
-      ]);
-      
-      // Combine all games and filter for live ones or those scheduled for today
-      const allGames: MLBGame[] = [];
-      
-      // Add today's games
-      if (todayData.dates && todayData.dates.length > 0) {
-        allGames.push(...(todayData.dates[0]?.games || []));
+      // Check cache first
+      const cacheKey = `mlb-${today}`;
+      const cached = this.cache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
+        console.log('📦 Using cached MLB data for', today);
+        return cached.data.map(this.transformSportsDataGame);
       }
       
-      // Add yesterday's games that are still live
-      if (yesterdayData.dates && yesterdayData.dates.length > 0) {
-        const yesterdayLiveGames = (yesterdayData.dates[0]?.games || []).filter(game => 
-          game.status.abstractGameState === 'Live'
-        );
-        allGames.push(...yesterdayLiveGames);
-      }
+      console.log('🔍 SportsData.io Debug - URL:', `${this.BASE_URL}/GamesByDate/${today}?key=API_KEY_HIDDEN`);
+      
+      // Fetch today's games
+      const todayData = await fetchJson<SportsDataMLBResponse>(
+        `${this.BASE_URL}/GamesByDate/${today}`,
+        {
+          headers: {
+            'Ocp-Apim-Subscription-Key': this.apiKey,
+            'User-Agent': 'ChirpBot/2.0',
+            'Accept': 'application/json'
+          },
+          timeoutMs: 8000
+        }
+      );
+      
+      // Cache the results
+      this.cache.set(cacheKey, { data: todayData, timestamp: Date.now() });
+      
+      console.log(`✅ Processed ${todayData.length} MLB games from SportsData.io`);
 
-      console.log(`Found ${allGames.length} total MLB games (today: ${todayData.dates?.[0]?.games?.length || 0}, yesterday live: ${yesterdayData.dates?.[0]?.games?.filter(g => g.status.abstractGameState === 'Live').length || 0})`);
-
-      return allGames.map(this.transformMLBGame);
+      return todayData.map(this.transformSportsDataGame);
     } catch (error) {
-      console.error('Error fetching MLB games:', error);
-      throw error;
+      console.error('Error fetching MLB games from SportsData.io:', error);
+      // Return empty array instead of throwing to keep the system running
+      return [];
     }
   }
 
@@ -231,37 +166,38 @@ export class MLBApiService {
   }
 
   /**
-   * Transform MLB API game data to our internal Game format
+   * Transform SportsData.io MLB game data to our internal Game format
    */
-  private transformMLBGame = (mlbGame: MLBGame): Game => {
-    const isLive = mlbGame.status.abstractGameState === 'Live';
-    const isCompleted = mlbGame.status.abstractGameState === 'Final';
+  private transformSportsDataGame = (sportsDataGame: SportsDataMLBGame): Game => {
+    const isLive = sportsDataGame.Status === 'InProgress' || sportsDataGame.Status === 'Live';
+    const isCompleted = sportsDataGame.Status === 'Final' || sportsDataGame.Status === 'Closed';
+    const isScheduled = sportsDataGame.Status === 'Scheduled' || sportsDataGame.Status === 'Pregame';
     
     return {
-      id: `mlb-${mlbGame.gamePk}`,
+      id: `mlb-${sportsDataGame.GameID}`,
       sport: 'MLB',
-      startTime: mlbGame.gameDate,
+      startTime: sportsDataGame.DateTime,
       status: isLive ? 'live' : (isCompleted ? 'final' : 'scheduled'),
       isLive,
       isCompleted,
       homeTeam: {
-        id: mlbGame.teams.home.team.id.toString(),
-        name: mlbGame.teams.home.team.name,
-        abbreviation: mlbGame.teams.home.team.abbreviation,
-        score: mlbGame.teams.home.score || 0
+        id: sportsDataGame.HomeTeamID.toString(),
+        name: sportsDataGame.HomeTeam,
+        abbreviation: sportsDataGame.HomeTeam.substring(0, 3).toUpperCase(), // Extract abbreviation
+        score: sportsDataGame.HomeTeamRuns || 0
       },
       awayTeam: {
-        id: mlbGame.teams.away.team.id.toString(),
-        name: mlbGame.teams.away.team.name,
-        abbreviation: mlbGame.teams.away.team.abbreviation,
-        score: mlbGame.teams.away.score || 0
+        id: sportsDataGame.AwayTeamID.toString(),
+        name: sportsDataGame.AwayTeam,
+        abbreviation: sportsDataGame.AwayTeam.substring(0, 3).toUpperCase(), // Extract abbreviation
+        score: sportsDataGame.AwayTeamRuns || 0
       },
-      venue: mlbGame.venue.name,
-      inning: mlbGame.linescore?.currentInning,
-      inningState: mlbGame.linescore?.inningState,
-      // Additional MLB-specific data
-      gameState: mlbGame.status.abstractGameState,
-      gamePk: mlbGame.gamePk
+      venue: sportsDataGame.Stadium || 'Unknown Stadium',
+      inning: sportsDataGame.Inning,
+      inningState: sportsDataGame.InningHalf,
+      // Additional MLB-specific data from SportsData.io
+      gameState: sportsDataGame.Status,
+      gamePk: sportsDataGame.GameID
     };
   };
 
@@ -356,7 +292,7 @@ export class MLBApiService {
       const today = new Date().toISOString().split('T')[0];
       
       // Use the standard scores endpoint since BoxScoresByDateLive doesn't exist
-      const url = `${this.SPORTSDATA_BASE_URL}/ScoresByDate/${today}`;
+      const url = `${this.BASE_URL}/GamesByDate/${today}`;
       
       const response = await fetchJson<any[]>(url, {
         headers: {
