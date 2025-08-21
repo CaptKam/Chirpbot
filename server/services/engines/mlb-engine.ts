@@ -228,17 +228,9 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "⭐ STAR BATTER UP! Elite hitter at the plate!",
       conditions: (state: MLBGameState) => {
-        // PROVENANCE SYSTEM: Only trigger with REAL MLB data
-        if (!state.currentBatter || state.outs >= 3) {
-          console.log(`   🚫 Star Batter Alert: No real batter data or inning over`);
-          return false;
-        }
+        if (!state.currentBatter || state.outs >= 3) return false;
         const stats = state.currentBatter.stats;
-        const shouldTrigger = stats.avg >= 0.300 || stats.hr >= 20 || stats.ops >= 0.900;
-        if (shouldTrigger) {
-          console.log(`   ✅ Star Batter Alert: REAL trigger - ${state.currentBatter.name} (AVG: ${stats.avg}, HR: ${stats.hr}, OPS: ${stats.ops})`);
-        }
-        return shouldTrigger;
+        return stats.avg >= 0.300 || stats.hr >= 20 || stats.ops >= 0.900;
       }
     },
     {
@@ -268,18 +260,10 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "🔥 ELITE HITTER IN CLUTCH! High OPS batter in pressure situation!",
       conditions: (state: MLBGameState) => {
-        // PROVENANCE SYSTEM: Only trigger with REAL MLB data
-        if (!state.currentBatter || state.outs >= 3) {
-          console.log(`   🚫 Elite Clutch Alert: No real batter data or inning over`);
-          return false;
-        }
+        if (!state.currentBatter || state.outs >= 3) return false;
         const isClutch = (state.runners.second || state.runners.third) && state.outs >= 1;
         const isLateInning = state.inning >= 7;
-        const shouldTrigger = state.currentBatter.stats.ops >= 0.850 && (isClutch || isLateInning);
-        if (shouldTrigger) {
-          console.log(`   ✅ Elite Clutch Alert: REAL trigger - ${state.currentBatter.name} (OPS: ${state.currentBatter.stats.ops}) in clutch situation`);
-        }
-        return shouldTrigger;
+        return state.currentBatter.stats.ops >= 0.850 && (isClutch || isLateInning);
       }
     },
     {
@@ -488,10 +472,10 @@ export class MLBEngine extends BaseSportEngine {
           };
           console.log(`   ✅ Real MLB batter found: ${currentBatter.name} (${currentBatter.batSide}) - AVG: ${currentBatter.stats.avg}, HR: ${currentBatter.stats.hr}, RBI: ${currentBatter.stats.rbi}`);
         } else {
-          // NO SYNTHETIC DATA - HARD FAIL CLOSED
-          console.log(`   🚫 ZERO TOLERANCE: No real current batter found in MLB API`);
-          console.log(`   🔒 FAIL CLOSED: All batter-based alerts DISABLED for this game`);
-          currentBatter = null; // Explicitly null - no synthetic fallback allowed
+          // NO FALLBACK - Don't create alerts with fake data
+          console.log(`   ❌ No real current batter found - SKIPPING alert generation to avoid fake data`);
+          console.log(`   🔍 Need to find where MLB API stores current batter information`);
+          currentBatter = null; // Set to null instead of fake data
         }
 
         // Get current pitcher
@@ -568,9 +552,9 @@ export class MLBEngine extends BaseSportEngine {
       }
 
       if (gameState.currentBatter) {
-        console.log(`   🏏 ✅ VERIFIED REAL Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
+        console.log(`   🏏 ✅ REAL Current Batter: ${gameState.currentBatter.name} (${gameState.currentBatter.batSide}) - AVG: ${gameState.currentBatter.stats.avg}, HR: ${gameState.currentBatter.stats.hr}, RBI: ${gameState.currentBatter.stats.rbi}, OPS: ${gameState.currentBatter.stats.ops}`);
       } else {
-        console.log(`   🏏 🚫 PROVENANCE SYSTEM: No real current batter - ALL BATTER ALERTS DISABLED`);
+        console.log(`   🏏 ❌ No real current batter found - ALERTS DISABLED for this game to prevent fake data`);
       }
 
       if (gameState.currentPitcher) {
