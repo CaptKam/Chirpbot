@@ -234,7 +234,7 @@ export default function Alerts() {
         </div>
       </div>
       {/* Alerts Feed */}
-      <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+      <div className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -280,7 +280,7 @@ export default function Alerts() {
                     markAlertAsSeen(alert.id);
                   }
                 }}
-                className={`bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all duration-500 relative overflow-hidden ${
+                className={`bg-white/5 backdrop-blur-sm rounded-xl p-3 hover:bg-white/10 transition-all duration-500 relative overflow-hidden mb-4 border-b-4 border-slate-600/30 ${
                   alert.seen 
                     ? 'ring-1 ring-slate-600/50 opacity-75' 
                     : 'ring-2 ring-emerald-500 shadow-xl shadow-emerald-500/30 border-2 border-emerald-400/50'
@@ -288,84 +288,67 @@ export default function Alerts() {
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
               >
-                {/* 🔥 PREMIUM SPORTS ALERT - Clean & Informative */}
-                <div className="relative mb-4">
+                {/* 🔥 COMPACT SPORTS ALERT */}
+                <div className="relative">
                   {!alert.seen && (
-                    <div className="absolute -top-2 -right-2 z-20">
-                      <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs font-black px-3 py-1 rounded-full animate-pulse shadow-lg border-2 border-white">
-                        🚨 LIVE
+                    <div className="absolute -top-1 -right-1 z-20">
+                      <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs font-black px-2 py-1 rounded-full animate-pulse shadow-lg">
+                        LIVE
                       </div>
                     </div>
                   )}
                   
-                  {/* ALERT TYPE HEADER */}
-                  <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-4 mb-3 shadow-xl border border-slate-600/50">
+                  {/* COMPACT HEADER */}
+                  <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-3 mb-2 border border-slate-600/50">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-3xl">⚡</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xl">⚡</span>
                         <div>
-                          <div className="text-emerald-400 font-black text-lg uppercase tracking-wide">
+                          <div className="text-emerald-400 font-black text-sm uppercase tracking-wide">
                             {alert.type.replace(/([A-Z])/g, ' $1').trim()}
                           </div>
-                          <div className="text-slate-300 text-sm font-medium">
-                            High Impact Moment
+                          <div className="text-slate-400 text-xs">
+                            {new Date(alert.timestamp).toLocaleTimeString()}
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-emerald-400 font-black text-sm">
-                          LIVE
-                        </div>
-                        <div className="text-slate-400 text-xs">
-                          {new Date(alert.timestamp).toLocaleTimeString()}
-                        </div>
+                      <div className="text-emerald-400 font-bold text-lg">
+                        {alert.gameInfo.score?.away || 0}-{alert.gameInfo.score?.home || 0}
                       </div>
                     </div>
                   </div>
 
-                  {/* GAME SITUATION - Enhanced */}
-                  <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 rounded-lg p-4 mb-3 border-l-4 border-emerald-400">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-emerald-400 font-bold text-lg">
+                  {/* GAME & DESCRIPTION - Compact */}
+                  <div className="bg-slate-800/60 rounded-lg p-3 border-l-3 border-emerald-400">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-emerald-300 font-medium text-sm">
                         🏟️ {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
                       </div>
-                      <div className="text-white font-black text-xl">
-                        {alert.gameInfo.score?.away || 0}-{alert.gameInfo.score?.home || 0}
+                      <div className="flex space-x-3 text-xs">
+                        <span className="text-slate-400">
+                          {alert.gameInfo.inning ? `Inn ${alert.gameInfo.inning}` : ''}
+                        </span>
+                        <span className="text-slate-400">
+                          {alert.gameInfo.outs !== undefined ? `${alert.gameInfo.outs} Outs` : ''}
+                        </span>
                       </div>
                     </div>
                     
-                    {/* Alert Description */}
-                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-600/30">
-                      <div className="text-slate-100 font-medium leading-relaxed">
-                        {alert.description}
-                      </div>
-                    </div>
-                    
-                    {/* Game Context */}
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <div className="bg-slate-900/30 rounded-lg p-2 text-center">
-                        <div className="text-slate-400 text-xs font-medium">INNING</div>
-                        <div className="text-slate-200 font-bold">{alert.gameInfo.inning || 'N/A'}</div>
-                      </div>
-                      <div className="bg-slate-900/30 rounded-lg p-2 text-center">
-                        <div className="text-slate-400 text-xs font-medium">SITUATION</div>
-                        <div className="text-slate-200 font-bold">
-                          {alert.gameInfo.outs !== undefined ? `${alert.gameInfo.outs} Outs` : 'Live'}
-                        </div>
-                      </div>
+                    <div className="text-slate-100 text-sm font-medium">
+                      {alert.description}
                     </div>
                   </div>
                 </div>
-                {/* Game Info */}
+                {/* Compact Batter Info */}
                 {alert.gameInfo.currentBatter && (
-                  <div className="mt-3 p-3 bg-emerald-500/10 backdrop-blur-sm rounded-lg ring-1 ring-emerald-500/30">
-                    <div className="flex items-start">
-                      <span className="text-emerald-400 mr-2">🏏</span>
+                  <div className="mt-2 p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                    <div className="flex items-center">
+                      <span className="text-emerald-400 mr-2 text-sm">🏏</span>
                       <div className="flex-1">
-                        <p className="text-xs font-medium text-emerald-300 mb-1">CURRENT BATTER</p>
-                        <p className="text-sm text-slate-200" data-testid={`alert-current-batter-${alert.id}`}>
-                          {alert.gameInfo.currentBatter.name} ({alert.gameInfo.currentBatter.batSide}) - AVG: {alert.gameInfo.currentBatter.stats.avg.toFixed(3)}, HR: {alert.gameInfo.currentBatter.stats.hr}, RBI: {alert.gameInfo.currentBatter.stats.rbi}
-                        </p>
+                        <div className="text-emerald-300 text-xs font-medium">AT BAT</div>
+                        <div className="text-slate-200 text-xs" data-testid={`alert-current-batter-${alert.id}`}>
+                          {alert.gameInfo.currentBatter.name} - .{alert.gameInfo.currentBatter.stats.avg.toFixed(3)}, {alert.gameInfo.currentBatter.stats.hr}HR
+                        </div>
                       </div>
                     </div>
                   </div>
