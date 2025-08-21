@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Bell, CheckCircle, AlertCircle, LogOut, UserPlus } from "lucide-react";
+import { Zap, Bell, CheckCircle, AlertCircle, LogOut, UserPlus, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
@@ -84,6 +84,7 @@ const ALERT_TYPE_CONFIG = {
 export default function Settings() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [telegramStatus, setTelegramStatus] = useState<boolean | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["Game Situations", "AI Predictions"]));
   const { toast } = useToast();
 
 
@@ -172,6 +173,18 @@ export default function Settings() {
     updateSettingsMutation.mutate({ pushNotificationsEnabled: enabled });
   };
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
@@ -236,37 +249,59 @@ export default function Settings() {
                 const alertConfigs = ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] || [];
                 const categories = Array.from(new Set(alertConfigs.map(config => config.category || 'General')));
                 
-                return categories.map(category => (
-                  <div key={category} className="mb-6">
-                    <h3 className="text-md font-bold text-emerald-400 mb-3 uppercase tracking-wide">
-                      {category}
-                    </h3>
-                    <div className="space-y-3">
-                      {alertConfigs
-                        .filter(config => (config.category || 'General') === category)
-                        .map((alertConfig) => (
-                          <Card key={alertConfig.key} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-200">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1 pr-4">
-                                <h4 className="font-bold text-slate-100" data-testid={`alert-type-${alertConfig.key}`}>
-                                  {alertConfig.label}
-                                </h4>
-                                <p className="text-sm text-slate-300 mt-1 leading-relaxed">
-                                  {alertConfig.description}
-                                </p>
+                return categories.map(category => {
+                  const isExpanded = expandedCategories.has(category);
+                  const categoryAlerts = alertConfigs.filter(config => (config.category || 'General') === category);
+                  
+                  return (
+                    <div key={category} className="mb-6">
+                      <button
+                        onClick={() => toggleCategory(category)}
+                        className="w-full flex items-center justify-between p-3 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl hover:bg-white/10 transition-all duration-200 group"
+                        data-testid={`category-toggle-${category.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <h3 className="text-md font-bold text-emerald-400 uppercase tracking-wide group-hover:text-emerald-300 transition-colors">
+                          {category}
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <Badge className="bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-emerald-500/30">
+                            {categoryAlerts.length}
+                          </Badge>
+                          {isExpanded ? (
+                            <ChevronUp className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+                          )}
+                        </div>
+                      </button>
+                      
+                      {isExpanded && (
+                        <div className="mt-3 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                          {categoryAlerts.map((alertConfig) => (
+                            <Card key={alertConfig.key} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1 pr-4">
+                                  <h4 className="font-bold text-slate-100" data-testid={`alert-type-${alertConfig.key}`}>
+                                    {alertConfig.label}
+                                  </h4>
+                                  <p className="text-sm text-slate-300 mt-1 leading-relaxed">
+                                    {alertConfig.description}
+                                  </p>
+                                </div>
+                                <Switch
+                                  checked={!!(settings.alertTypes as any)[alertConfig.key]}
+                                  onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
+                                  data-testid={`toggle-${alertConfig.key}`}
+                                  className="data-[state=checked]:bg-emerald-500 flex-shrink-0"
+                                />
                               </div>
-                              <Switch
-                                checked={!!(settings.alertTypes as any)[alertConfig.key]}
-                                onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
-                                data-testid={`toggle-${alertConfig.key}`}
-                                className="data-[state=checked]:bg-emerald-500 flex-shrink-0"
-                              />
-                            </div>
-                          </Card>
-                        ))}
+                            </Card>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ));
+                  );
+                });
               })()}
             </div>
 
