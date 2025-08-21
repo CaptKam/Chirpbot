@@ -327,7 +327,7 @@ export default function Alerts() {
                 </div>
                 {/* Quick Action Insight */}
                 <div className="text-center">
-                  <p className="text-sm font-medium text-slate-300" data-testid={`alert-description-${alert.id}`}>
+                  <p className="font-medium text-slate-300 text-[16px]" data-testid={`alert-description-${alert.id}`}>
                     {alert.description}
                   </p>
                 </div>
