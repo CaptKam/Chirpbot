@@ -15,6 +15,25 @@ Features persistent team monitoring that saves user game selections to the datab
 
 Preferred communication style: Simple, everyday language.
 
+# Recent Updates (August 21, 2025)
+
+## New Alert System Integration
+- **Startup-Phase Alert Core**: Implemented clean, testable alert system without AI complexity
+- **Dual-Engine Support**: Both legacy and new systems can run simultaneously
+- **Configuration**: Alert engine mode controlled via `server/config/alert-engine.config.js`
+  - Options: "legacy" (existing system), "new" (startup system), "both" (shadow mode)
+- **Modular Architecture**: Separated concerns into types, scoring, rules, orchestration, and deduplication
+- **MLB Integration**: New system integrated into MLB engine with Frame-based processing
+
+## Alert System Files
+- `server/alerts-core/`: New alert system directory
+  - `types.ts`: Core type definitions (Frame, Event, Rules)
+  - `score.ts`: Scoring and priority calculation
+  - `rules.ts`: Alert rules definition (bases loaded, close game, etc.)
+  - `orchestrator.ts`: Frame processing and deduplication
+  - `index.ts`: Main entry point
+- `server/config/alert-engine.config.js`: Configuration file for engine mode selection
+
 # System Architecture
 
 ## Frontend Architecture

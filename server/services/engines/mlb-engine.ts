@@ -6,6 +6,9 @@ import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { randomUUID } from 'crypto';
+// ADD for new alert system
+import { processFrame as processNewAlerts } from "../../alerts-core";
+import type { Frame } from "../../alerts-core";
 
 // RE24 (Run Expectancy) Table
 const RE24: Record<string, number> = {
@@ -1100,24 +1103,99 @@ export class MLBEngine extends BaseSportEngine {
 
           if (!gameState) continue;
 
-          const triggeredAlerts = await this.checkAlertConditions(gameState);
+          // NEW ALERT SYSTEM INTEGRATION
+          // Load configuration from file or environment
+          let engineMode = "legacy";
+          try {
+            const alertConfig = require('../../config/alert-engine.config.js');
+            engineMode = alertConfig.mode.toLowerCase();
+          } catch {
+            engineMode = (process.env.ALERTS_ENGINE || "legacy").toLowerCase();
+          }
 
-          if (triggeredAlerts.length > 0) {
-            console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
-            console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
-            await this.processAlerts(triggeredAlerts, gameState);
-          } else {
-            // Debug why no alerts triggered
-            const basesLoaded = gameState.runners.first && gameState.runners.second && gameState.runners.third;
-            if (basesLoaded) {
-              console.log(`❌ BASES LOADED BUT NO ALERT! Checking settings...`);
-              const settings = await storage.getSettingsBySport(this.sport);
-              console.log(`   RISP setting enabled: ${settings?.alertTypes?.risp || 'NOT SET'}`);
-              console.log(`   All MLB settings:`, settings?.alertTypes);
+          if (engineMode === "new" || engineMode === "both") {
+            const frame: Frame = {
+              gamePk: Number(gameState.gamePk),
+              inning: gameState.inning,
+              half: gameState.inningState as "top" | "bottom",
+              outs: Math.min(2, Math.max(0, Number(gameState.outs))) as 0|1|2,
+              runners: {
+                first: !!gameState.runners?.first,
+                second: !!gameState.runners?.second,
+                third: !!gameState.runners?.third,
+              },
+              score: { home: Number(gameState.homeScore), away: Number(gameState.awayScore) },
+              batterId: gameState.currentBatter?.id ?? null,
+              onDeckId: gameState.onDeck?.id ?? null,
+            };
+
+            const newEvents = processNewAlerts(frame);
+
+            // When in "both" mode, DO NOT broadcast new engine alerts (shadow mode).
+            // Just store them into a light audit row so we can compare volumes/latency.
+            const shadowOnly = engineMode === "both";
+
+            for (const evt of newEvents) {
+              const alertLike = {
+                type: evt.kind,
+                sport: this.sport,
+                title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
+                description: `${evt.title} — ${evt.description}`,
+                gameInfo: {
+                  // put priority here so UI can badge/sort if desired
+                  priority: evt.priority,
+                  awayTeam: gameState.awayTeam,
+                  homeTeam: gameState.homeTeam,
+                  inning: gameState.inning.toString(),
+                  inningState: gameState.inningState,
+                  outs: gameState.outs,
+                  score: { away: gameState.awayScore, home: gameState.homeScore },
+                  runners: gameState.runners,
+                },
+                weatherData: null,  // startup phase: no weather effect
+              };
+
+              if (shadowOnly) {
+                // Keep it out of user-facing channels; store in audit log
+                console.log(`🔍 SHADOW Alert: ${evt.kind} - ${evt.title} (Priority: ${evt.priority})`);
+                continue;
+              }
+
+              // In "new" mode, send through your existing pipeline (DB + WS + Telegram)
+              await storage.createAlert({
+                id: randomUUID(),
+                ...alertLike,
+                sentToTelegram: false,
+                seen: false,
+              });
+
+              console.log(`✨ NEW Alert created: ${evt.kind} - ${evt.title} (Priority: ${evt.priority})`);
+              
+              // Your existing broadcast/Telegram hooks should pick it up as usual
             }
+          }
 
-            // AI analysis has been completely removed
-            console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
+          // Run legacy alerts if not in "new" mode exclusively
+          if (engineMode !== "new") {
+            const triggeredAlerts = await this.checkAlertConditions(gameState);
+
+            if (triggeredAlerts.length > 0) {
+              console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
+              console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
+              await this.processAlerts(triggeredAlerts, gameState);
+            } else {
+              // Debug why no alerts triggered
+              const basesLoaded = gameState.runners.first && gameState.runners.second && gameState.runners.third;
+              if (basesLoaded) {
+                console.log(`❌ BASES LOADED BUT NO ALERT! Checking settings...`);
+                const settings = await storage.getSettingsBySport(this.sport);
+                console.log(`   RISP setting enabled: ${settings?.alertTypes?.risp || 'NOT SET'}`);
+                console.log(`   All MLB settings:`, settings?.alertTypes);
+              }
+
+              // AI analysis has been completely removed
+              console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`)
+            }
           }
 
         } catch (gameError) {
