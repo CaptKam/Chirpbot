@@ -77,7 +77,25 @@ export function GlobalAlertControlsPanel() {
   const queryClient = useQueryClient();
 
   const { data: controlsData, isLoading } = useQuery<AlertControlsResponse>({
-    queryKey: ["/api/admin/alert-controls", { sport: selectedSport === "ALL" ? undefined : selectedSport }],
+    queryKey: ["/api/admin/alert-controls", selectedSport],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedSport !== "ALL") {
+        params.append('sport', selectedSport);
+      }
+      const url = `/api/admin/alert-controls${params.toString() ? '?' + params.toString() : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
+    },
     refetchInterval: 30000,
   });
 
