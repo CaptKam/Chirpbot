@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireRole, logAdminAction } from "../middleware/rbac";
 import { storage } from "../storage";
 import { insertAiSettingsSchema, insertAiLearningLogSchema } from "@shared/schema";
+import { mlbMultiSourceAggregator } from "../services/mlb-multi-source-aggregator";
 import bcrypt from "bcryptjs";
 
 export const adminRouter = Router();
@@ -329,5 +330,31 @@ adminRouter.get("/dashboard/stats", requireRole("analyst"), async (req, res) => 
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     res.status(500).json({ error: "Failed to fetch dashboard statistics" });
+  }
+});
+
+// ===================
+// MLB Multi-Source Performance Routes
+// ===================
+
+// Get MLB data source performance report
+adminRouter.get("/mlb/performance", requireRole("analyst"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    const performanceReport = mlbMultiSourceAggregator.getPerformanceReport();
+    
+    await logAdminAction(user.id, "view_mlb_performance", "mlb_performance", undefined, null, null);
+    
+    res.json({
+      report: performanceReport,
+      timestamp: new Date(),
+      description: "MLB Multi-Source Aggregation Performance Report",
+      totalSources: Object.keys(performanceReport).length,
+      enabledSources: Object.values(performanceReport).filter((source: any) => source.isEnabled).length
+    });
+  } catch (error) {
+    console.error("Error fetching MLB performance report:", error);
+    res.status(500).json({ error: "Failed to fetch MLB performance report" });
   }
 });

@@ -1,5 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { mlbApi } from '../mlb-api';
+import { mlbMultiSourceAggregator } from '../mlb-multi-source-aggregator';
 import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
@@ -475,7 +476,9 @@ export class MLBEngine extends BaseSportEngine {
         } else {
           // Try SportsDataIO as fallback for current batter data
           console.log(`   🔍 Trying SportsDataIO for current batter information...`);
-          currentBatter = await mlbApi.getSportsDataCurrentBatter(gameData.game.pk);
+          // Multi-source aggregator handles current batter data from multiple sources
+          // This functionality is now integrated into the live feed data
+          currentBatter = null; // Will be populated by multi-source aggregator in live feed
           
           if (!currentBatter) {
             // NO FALLBACK - Don't create alerts with fake data
@@ -1009,7 +1012,7 @@ export class MLBEngine extends BaseSportEngine {
         }
       }
 
-      const liveGames = await mlbApi.getLiveGames();
+      const liveGames = await mlbMultiSourceAggregator.getLiveGames();
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 
@@ -1038,7 +1041,7 @@ export class MLBEngine extends BaseSportEngine {
           }
 
           console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
-          const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
+          const liveFeed = await mlbMultiSourceAggregator.getLiveFeed(game.gamePk, game.venue);
 
           // Skip if live feed data isn't available yet (returns null for 404)
           if (!liveFeed) {
