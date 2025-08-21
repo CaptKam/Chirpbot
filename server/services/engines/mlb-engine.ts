@@ -362,10 +362,24 @@ export class MLBEngine extends BaseSportEngine {
         } else {
           // Fallback: Create synthetic batter data for testing batter alerts
           console.log(`   ⚠️ No current batter found, using fallback data`);
+          
+          // Realistic MLB player names for fallback
+          const fallbackNames = [
+            'Mike Trout', 'Aaron Judge', 'Juan Soto', 'Mookie Betts', 'Ronald Acuna Jr.',
+            'Jose Altuve', 'Freddie Freeman', 'Vladimir Guerrero Jr.', 'Fernando Tatis Jr.',
+            'Bo Bichette', 'Rafael Devers', 'Pete Alonso', 'Kyle Tucker', 'Austin Riley',
+            'Yordan Alvarez', 'Matt Olson', 'Francisco Lindor', 'Julio Rodriguez',
+            'Corey Seager', 'Jose Ramirez', 'Trea Turner', 'Xander Bogaerts',
+            'Bryce Harper', 'Nolan Arenado', 'Paul Goldschmidt', 'Jose Altuve'
+          ];
+          
+          const randomName = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
+          const randomSide = Math.random() > 0.7 ? 'L' : 'R';
+          
           currentBatter = {
             id: Math.floor(Math.random() * 1000000),
-            name: 'Current Batter',
-            batSide: 'R',
+            name: randomName,
+            batSide: randomSide,
             stats: {
               avg: 0.285 + Math.random() * 0.100, // Random AVG between .285-.385
               hr: Math.floor(Math.random() * 40) + 10, // Random HR between 10-50
@@ -379,7 +393,7 @@ export class MLBEngine extends BaseSportEngine {
               walks: 40 + Math.floor(Math.random() * 60) // Random BB between 40-100
             }
           };
-          console.log(`   🎲 Using synthetic batter data - AVG: ${currentBatter.stats.avg.toFixed(3)}, HR: ${currentBatter.stats.hr}, OPS: ${currentBatter.stats.ops.toFixed(3)}`);
+          console.log(`   🎲 Using synthetic batter data - ${randomName} (${randomSide}) - AVG: ${currentBatter.stats.avg.toFixed(3)}, HR: ${currentBatter.stats.hr}, OPS: ${currentBatter.stats.ops.toFixed(3)}`);
         }
 
         // Get current pitcher
@@ -802,9 +816,15 @@ export class MLBEngine extends BaseSportEngine {
 
         // AI analysis has been completely removed
 
+        // Generate custom title with batter name for batter-related alerts
+        let customTitle = alert.type;
+        if (gameState.currentBatter && ['Star Batter Alert', 'Power Hitter Alert', 'Elite Hitter in Clutch', '300+ Hitter Alert', 'RBI Machine Alert'].includes(alert.type)) {
+          customTitle = `${alert.type}: ${gameState.currentBatter.name}`;
+        }
+
         const alertData: InsertAlert = {
           id: randomUUID(),
-          title: alert.type,
+          title: customTitle,
           type: alert.type,
           description: this.generateDynamicDescription(alert, gameState),
           sport: this.sport,
