@@ -133,9 +133,7 @@ function AppContent() {
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
       <Switch>
-        <Route path="/admin/login">
-          <AdminLogin />
-        </Route>
+        <Route path="/admin-login" component={AdminLogin} />
         <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} requireAdmin={true} />} />
         <Route path="/" component={() => <PublicRoute component={Landing} />} />
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
