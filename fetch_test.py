@@ -72,8 +72,10 @@ def test_sportsdata_api():
         "NHL": f"https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/{today}"
     }
     
-    # Note: Using placeholder API key - would need real key for actual data
-    headers = {"Ocp-Apim-Subscription-Key": "YOUR_API_KEY_HERE"}
+    # Use real API key from environment
+    import os
+    api_key = os.getenv('SPORTSDATA_API_KEY', 'YOUR_API_KEY_HERE')
+    headers = {"Ocp-Apim-Subscription-Key": api_key}
     
     for sport, url in sports.items():
         try:
