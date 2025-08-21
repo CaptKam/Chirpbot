@@ -334,8 +334,15 @@ export default function Alerts() {
                       </div>
                     </div>
                     
-                    <div className="text-slate-100 text-sm font-medium">
-                      {alert.description}
+                    <div className="text-center">
+                      <div className="text-slate-100 text-base font-bold">
+                        {alert.description.split('(')[0].trim()}
+                      </div>
+                      {alert.description.includes('(') && (
+                        <div className="text-slate-300 text-sm mt-1">
+                          ({alert.description.split('(')[1]}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
