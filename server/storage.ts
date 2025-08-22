@@ -10,6 +10,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByOAuthId(provider: 'google' | 'apple', oauthId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserTelegramSettings(id: string, telegramBotToken: string, telegramChatId: string, enabled: boolean): Promise<User | undefined>;
+  getUsersWithTelegramEnabled(): Promise<User[]>;
 
   // Teams
   getAllTeams(): Promise<Team[]>;
@@ -299,11 +301,31 @@ export class MemStorage implements IStorage {
       authMethod: insertUser.authMethod || 'local',
       emailVerified: insertUser.email ? false : false, // Will be true after email verification
       role: 'user', // Default role for new users
+      telegramBotToken: insertUser.telegramBotToken || null,
+      telegramChatId: insertUser.telegramChatId || null,
+      telegramEnabled: insertUser.telegramEnabled || false,
       createdAt: now,
       updatedAt: now,
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUserTelegramSettings(id: string, telegramBotToken: string, telegramChatId: string, enabled: boolean): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (user) {
+      user.telegramBotToken = telegramBotToken;
+      user.telegramChatId = telegramChatId;
+      user.telegramEnabled = enabled;
+      user.updatedAt = new Date();
+      this.users.set(id, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async getUsersWithTelegramEnabled(): Promise<User[]> {
+    return Array.from(this.users.values()).filter(user => user.telegramEnabled);
   }
 
   // Team methods
@@ -806,6 +828,25 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async updateUserTelegramSettings(id: string, telegramBotToken: string, telegramChatId: string, enabled: boolean): Promise<User | undefined> {
+    const [user] = await db.update(users)
+      .set({
+        telegramBotToken,
+        telegramChatId,
+        telegramEnabled: enabled,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async getUsersWithTelegramEnabled(): Promise<User[]> {
+    return await db.select()
+      .from(users)
+      .where(eq(users.telegramEnabled, true));
   }
 
   // Team methods (legacy, but maintained for compatibility)

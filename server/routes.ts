@@ -375,7 +375,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Telegram test route
+  // User Telegram settings routes
+  app.put("/api/user/:userId/telegram", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { telegramBotToken, telegramChatId, telegramEnabled } = req.body;
+
+      const user = await storage.updateUserTelegramSettings(userId, telegramBotToken, telegramChatId, telegramEnabled);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ 
+        message: "Telegram settings updated successfully",
+        telegramEnabled: user.telegramEnabled 
+      });
+    } catch (error) {
+      console.error("Error updating user Telegram settings:", error);
+      res.status(500).json({ message: "Failed to update Telegram settings" });
+    }
+  });
+
+  app.post("/api/user/:userId/telegram/test", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found", connected: false });
+      }
+
+      if (!user.telegramBotToken || !user.telegramChatId) {
+        return res.status(400).json({ message: "Telegram credentials not configured", connected: false });
+      }
+
+      const telegramConfig = {
+        botToken: user.telegramBotToken,
+        chatId: user.telegramChatId,
+      };
+
+      const isConnected = await testTelegramConnection(telegramConfig);
+      res.json({ connected: isConnected });
+    } catch (error) {
+      console.error("Error testing user Telegram connection:", error);
+      res.status(500).json({ message: "Failed to test Telegram connection", connected: false });
+    }
+  });
+
+  app.get("/api/user/:userId/telegram", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({
+        telegramEnabled: user.telegramEnabled,
+        hasCredentials: !!(user.telegramBotToken && user.telegramChatId)
+      });
+    } catch (error) {
+      console.error("Error fetching user Telegram settings:", error);
+      res.status(500).json({ message: "Failed to fetch Telegram settings" });
+    }
+  });
+
+  // Legacy global Telegram test route (for backward compatibility)
   app.post("/api/telegram/test", async (req, res) => {
     try {
       const telegramConfig = {

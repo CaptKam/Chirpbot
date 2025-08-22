@@ -19,6 +19,10 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   // Admin role system
   role: text("role").notNull().default("user"), // 'admin', 'manager', 'analyst', 'user'
+  // Individual Telegram configuration
+  telegramBotToken: text("telegram_bot_token"),
+  telegramChatId: text("telegram_chat_id"),
+  telegramEnabled: boolean("telegram_enabled").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -908,15 +908,22 @@ export class MLBEngine extends BaseSportEngine {
         }
       };
 
-      // Send to Telegram if configured and enabled
-      const settings = await storage.getSettingsBySport(this.sport);
-      if (settings?.telegramBotToken && settings.telegramChatId) {
-        await sendTelegramAlert(
-          settings.telegramBotToken,
-          settings.telegramChatId,
-          `⚾ ${this.sport} Alert: ${customTitle}`,
-          `Inning: ${gameState.inning} ${gameState.inningState}\nScore: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}\n\n${finalDescription}`
-        );
+      // Send to Telegram for users who have it enabled
+      const usersWithTelegram = await storage.getUsersWithTelegramEnabled();
+      for (const user of usersWithTelegram) {
+        if (user.telegramBotToken && user.telegramChatId) {
+          const telegramConfig = {
+            botToken: user.telegramBotToken,
+            chatId: user.telegramChatId,
+          };
+
+          const sent = await sendTelegramAlert(telegramConfig, alertData);
+          if (sent) {
+            console.log(`📱 Telegram alert sent to ${user.username || 'User'} for: ${customTitle}`);
+          } else {
+            console.log(`❌ Failed to send Telegram alert to ${user.username || 'User'} for: ${customTitle}`);
+          }
+        }
       }
 
       // Store the alert
