@@ -51,6 +51,7 @@ export interface MLBGameState {
     isHomeRun?: boolean;
     isScoringPlay?: boolean;
     isHit?: boolean;
+    isStrikeout?: boolean;
     runnersMoved?: boolean;
     rbiCount?: number;
     hitType?: string; // 'single', 'double', 'triple', 'home_run'
@@ -264,6 +265,16 @@ export class MLBEngine extends BaseSportEngine {
                  state.recentPlay.rbiCount >= 2 && 
                  !state.recentPlay?.isHomeRun);
       }
+    },
+    {
+      type: "Strikeout Alert",
+      settingKey: "strikeouts",
+      priority: 80,
+      probability: 1.0,
+      description: "⚡ STRIKEOUT! Batter goes down swinging!",
+      conditions: (state: MLBGameState) => {
+        return !!(state.recentPlay?.isStrikeout);
+      }
     }
   ];
 
@@ -341,6 +352,14 @@ export class MLBEngine extends BaseSportEngine {
                       playResult.event?.includes('Triple') ||
                       isHomeRun);
         
+        // Strikeout Detection
+        const isStrikeout = playResult.type === 'atBat' && 
+                          (playResult.event?.includes('Strikeout') ||
+                           playResult.event?.includes('Strike Out') ||
+                           playDescription.toLowerCase().includes('strikes out') ||
+                           playDescription.toLowerCase().includes('strikeout') ||
+                           playDescription.toLowerCase().includes('struck out'));
+        
         // Scoring Play Detection
         const isScoringPlay = playResult.rbi > 0 || 
                             playDescription.toLowerCase().includes('scores') ||
@@ -358,6 +377,7 @@ export class MLBEngine extends BaseSportEngine {
           description: playDescription,
           isHomeRun,
           isHit,
+          isStrikeout,
           isScoringPlay,
           rbiCount: playResult.rbi || 0,
           hitType,
