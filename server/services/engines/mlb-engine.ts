@@ -6,6 +6,7 @@ import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { analyzeHybridRE24, generateHybridAlertDescription, cleanupCache } from './hybrid-re24-ai';
+import { enhancedWeatherService } from '../enhanced-weather';
 
 export interface MLBGameState {
   gameId: string;
@@ -278,13 +279,37 @@ export class MLBEngine extends BaseSportEngine {
         return !!(state.recentPlay?.isStrikeout);
       }
     },
-    // RE24 Advanced Alert
+    // RE24 Advanced Alert with Weather
     {
       type: "High RE24 Situation",
       settingKey: "re24Advanced",
       priority: 85,
       probability: 1.0,
-      description: "📊 HIGH RE24! Advanced scoring probability detected",
+      description: async (state: MLBGameState) => {
+        const re24Prob = this.calculateRE24Probability(state);
+        const runners = [];
+        if (state.runners.first) runners.push('1ST');
+        if (state.runners.second) runners.push('2ND');
+        if (state.runners.third) runners.push('3RD');
+        const runnerText = runners.length > 0 ? runners.join(' & ') : 'Empty bases';
+        
+        // Get weather data
+        let weatherText = '';
+        try {
+          const stadiumName = `${state.homeTeam} Stadium`;
+          const weatherData = await enhancedWeatherService.getEnhancedWeatherData(stadiumName);
+          if (weatherData) {
+            const windComponent = weatherData.calculations.windComponent;
+            const windDirection = windComponent > 0 ? 'helping' : windComponent < 0 ? 'hindering' : 'crosswind';
+            const weatherSummary = enhancedWeatherService.getWeatherEffectsSummary(weatherData);
+            weatherText = ` | ${weatherSummary.emoji} Wind: ${weatherData.windSpeed}mph (${Math.abs(windComponent)}mph ${windDirection} toward CF)`;
+          }
+        } catch (error) {
+          // Weather unavailable, continue without it
+        }
+        
+        return `📊 HIGH RE24! ${runnerText}, ${state.outs} out - ${re24Prob}% scoring probability${weatherText}`;
+      },
       conditions: (state: MLBGameState) => {
         const re24Prob = this.calculateRE24Probability(state);
         return re24Prob >= 75; // Trigger on 75%+ RE24 probability

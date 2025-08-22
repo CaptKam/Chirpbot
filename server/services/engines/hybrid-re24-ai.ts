@@ -1,6 +1,7 @@
 
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
+import { enhancedWeatherService } from '../enhanced-weather';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -67,6 +68,15 @@ interface HybridRE24Result {
   finalProbability: number;
   aiInsight: string;
   confidence: number;
+  
+  // Weather integration
+  weatherEffects?: {
+    windSpeed: number;
+    windDirection: string;
+    windComponentToCenter: number;
+    weatherDescription: string;
+    weatherEmoji: string;
+  };
   
   // Combined analysis
   isHighLeverage: boolean;
@@ -233,12 +243,43 @@ FORMAT: "Multiplier: X.X | Insight: [key factor] | Confidence: XX"
   }
 }
 
+// Stadium to team mapping for weather data
+const TEAM_STADIUM_MAP: Record<string, string> = {
+  'Los Angeles Angels': 'Angel Stadium',
+  'Oakland Athletics': 'Oakland Coliseum',
+  'Boston Red Sox': 'Fenway Park',
+  'New York Yankees': 'Yankee Stadium',
+  'Colorado Rockies': 'Coors Field',
+  'Houston Astros': 'Minute Maid Park',
+  // Add more as needed - fallback will use team name
+};
+
 // Main hybrid analysis function
 export async function analyzeHybridRE24(gameState: MLBGameState): Promise<HybridRE24Result> {
   // Step 1: Fast mathematical foundation (always runs)
   const baseAnalysis = calculateBaseRE24(gameState);
   
-  // Step 2: AI contextual enhancement (selective)
+  // Step 2: Get weather data for better context
+  let weatherEffects = undefined;
+  try {
+    const stadiumName = TEAM_STADIUM_MAP[gameState.homeTeam] || `${gameState.homeTeam} Stadium`;
+    const weatherData = await enhancedWeatherService.getEnhancedWeatherData(stadiumName);
+    
+    if (weatherData) {
+      const weatherSummary = enhancedWeatherService.getWeatherEffectsSummary(weatherData);
+      weatherEffects = {
+        windSpeed: weatherData.windSpeed,
+        windDirection: `${weatherData.windDirection}°`,
+        windComponentToCenter: Math.round(weatherData.calculations.windComponent * 10) / 10,
+        weatherDescription: weatherSummary.description,
+        weatherEmoji: weatherSummary.emoji
+      };
+    }
+  } catch (error) {
+    console.warn('Weather data unavailable for RE24 analysis:', error);
+  }
+  
+  // Step 3: AI contextual enhancement (selective)
   const aiContext = await getAIContextMultiplier(gameState, baseAnalysis.probability);
   
   // Step 3: Combine results
@@ -290,6 +331,9 @@ export async function analyzeHybridRE24(gameState: MLBGameState): Promise<Hybrid
     aiInsight: aiContext.insight,
     confidence: aiContext.confidence,
     
+    // Weather integration
+    weatherEffects,
+    
     // Combined analysis
     isHighLeverage,
     betingRecommendation,
@@ -319,6 +363,19 @@ export function generateHybridAlertDescription(
   
   if (batter && analysis.confidence >= 85) {
     description += ` | ${batter.name} at bat`;
+  }
+  
+  // Add weather effects to description
+  if (analysis.weatherEffects) {
+    const { windSpeed, windComponentToCenter, weatherEmoji, weatherDescription } = analysis.weatherEffects;
+    const windDirection = windComponentToCenter > 0 ? 'helping' : windComponentToCenter < 0 ? 'hindering' : 'crosswind';
+    
+    description += ` | ${weatherEmoji} Wind: ${windSpeed}mph (${Math.abs(windComponentToCenter)}mph ${windDirection} toward CF)`;
+    
+    // Add weather context if significant
+    if (Math.abs(windComponentToCenter) >= 5) {
+      description += ` - ${weatherDescription}`;
+    }
   }
   
   if (analysis.aiInsight && analysis.aiInsight !== "Standard situation") {
