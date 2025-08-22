@@ -303,18 +303,24 @@ export async function analyzeHybridRE24(gameState: MLBGameState): Promise<Hybrid
   // Step 5: Enhanced betting intelligence with market context
   const isHighLeverage = finalProbability >= 75 || gameState.inning >= 8;
   const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+  const totalScore = gameState.homeScore + gameState.awayScore;
 
   let bettingRecommendation = undefined;
 
-  // Advanced betting scenarios
-  if (isHighLeverage && finalProbability >= 85) {
-    bettingRecommendation = `🚨 PREMIUM BET: ${finalProbability}% probability | Live Over ${(gameState.homeScore + gameState.awayScore + 2.5).toFixed(1)} | High Confidence`;
-  } else if (finalProbability >= 80 && gameState.runners.first && gameState.runners.second && gameState.runners.third) {
-    bettingRecommendation = `💎 BASES LOADED VALUE: ${finalProbability}% | Multiple run potential | Consider team total over`;
-  } else if (finalProbability <= 20 && gameState.inning >= 8 && scoreDiff <= 3) {
-    bettingRecommendation = `🛡️ UNDER LOCK: ${finalProbability}% scoring | Late inning defense | Under ${(gameState.homeScore + gameState.awayScore + 0.5).toFixed(1)}`;
-  } else if (finalProbability >= 75 && gameState.currentBatter?.stats.hr >= 15) {
-    bettingRecommendation = `⚡ POWER PLAY: ${gameState.currentBatter.name} HR prop | ${finalProbability}% situation`;
+  // Advanced betting scenarios with specific lines and confidence
+  if (isHighLeverage && finalProbability >= 90) {
+    bettingRecommendation = `🔥 ELITE BET: ${finalProbability}% | Live Over ${(totalScore + 2.5).toFixed(1)} | MAX UNIT SIZE`;
+  } else if (finalProbability >= 85 && gameState.runners.first && gameState.runners.second && gameState.runners.third) {
+    const expectedRuns = gameState.runners.first && gameState.runners.second && gameState.runners.third ? 3.2 : 1.8;
+    bettingRecommendation = `💎 BASES LOADED: ${finalProbability}% | Team Total Over ${(Math.floor((gameState.inningState === 'top' ? gameState.awayScore : gameState.homeScore) + expectedRuns) - 0.5).toFixed(1)} | Expected: +${expectedRuns.toFixed(1)} runs`;
+  } else if (finalProbability >= 80 && gameState.currentBatter?.stats.hr >= 20) {
+    bettingRecommendation = `⚡ HR PROP: ${gameState.currentBatter.name} +350 | ${finalProbability}% leverage | Wind: ${gameState.weather?.windSpeed || 'N/A'}mph`;
+  } else if (finalProbability >= 75 && gameState.inning >= 8 && scoreDiff <= 1) {
+    bettingRecommendation = `🎯 LIVE OVER: ${finalProbability}% | Next 0.5 runs | Leverage: ${(finalProbability * 0.01 * 2.5).toFixed(1)}x`;
+  } else if (finalProbability <= 25 && gameState.inning >= 8 && scoreDiff <= 3) {
+    bettingRecommendation = `🛡️ UNDER LOCK: ${100-finalProbability}% confidence | Live Under ${(totalScore + 0.5).toFixed(1)} | Defensive situation`;
+  } else if (finalProbability >= 70 && gameState.currentPitcher?.stats.era >= 4.50) {
+    bettingRecommendation = `📈 PITCHER FADE: ${gameState.currentPitcher.name} struggling (${gameState.currentPitcher.stats.era} ERA) | Over team total`;
   }
 
   // Step 6: Calculate alert priority
