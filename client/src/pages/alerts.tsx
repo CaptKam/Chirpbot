@@ -293,10 +293,7 @@ export default function Alerts() {
                   {/* Intelligent Status Indicator */}
                   {!alert.seen && (
                     <div className="absolute top-4 right-4">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
-                        <span className="text-emerald-400 text-xs font-medium">LIVE</span>
-                      </div>
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
                     </div>
                   )}
                   
