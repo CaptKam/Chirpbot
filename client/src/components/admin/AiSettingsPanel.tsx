@@ -540,7 +540,7 @@ Example:
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Status</p>
-              <p className="font-mono text-sm flex items-center">
+              <div className="font-mono text-sm flex items-center">
                 {settings?.enabled ? (
                   <>
                     <div className="h-2 w-2 bg-green-500 rounded-full mr-2 animate-pulse" />
@@ -552,7 +552,7 @@ Example:
                     Inactive
                   </>
                 )}
-              </p>
+              </div>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Mode</p>
