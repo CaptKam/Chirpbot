@@ -1,6 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { storage } from '../../storage';
-import { sportsDataService } from '../sportsdata-api';
+import { multiSourceAggregator } from '../multi-source-aggregator';
 
 interface NFLGameState {
   gameId: string;
@@ -33,8 +33,8 @@ export class NFLEngine extends BaseSportEngine {
       
       console.log(`⚡ Checking ${this.sport} games for alerts...`);
       
-      // Fetch live NFL games from SportsData.io
-      const games = await sportsDataService.getNFLGames();
+      // Fetch live NFL games from all available sources (SportsData.io, ESPN)
+      const games = await multiSourceAggregator.getNFLGames();
       const liveGames = games.filter(game => game.status === 'live');
       
       if (liveGames.length === 0) {
