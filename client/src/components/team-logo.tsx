@@ -84,6 +84,78 @@ const teamNameToAbbr: Record<string, string> = {
   'Nashville Predators': 'NSH'
 };
 
+// ESPN team logo URLs - these return actual mascot logos
+const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
+  // ESPN logo URLs by sport
+  const espnLogos: Record<string, Record<string, string>> = {
+    NFL: {
+      'NYJ': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
+      'PHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png',
+      'DAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png',
+      'ATL': 'https://a.espncdn.com/i/teamlogos/nfl/500/atl.png',
+      'TEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png',
+      'MIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png',
+      'KC': 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png',
+      'CHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png',
+      'BUF': 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
+      'NE': 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png',
+      'MIA': 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png',
+      'PIT': 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png',
+      'BAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png',
+      'CIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/cin.png',
+      'CLE': 'https://a.espncdn.com/i/teamlogos/nfl/500/cle.png',
+      'HOU': 'https://a.espncdn.com/i/teamlogos/nfl/500/hou.png',
+      'IND': 'https://a.espncdn.com/i/teamlogos/nfl/500/ind.png',
+      'JAX': 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png',
+      'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
+      'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
+      'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
+    },
+    MLB: {
+      'LAD': 'https://a.espncdn.com/i/teamlogos/mlb/500/lad.png',
+      'SF': 'https://a.espncdn.com/i/teamlogos/mlb/500/sf.png',
+      'NYY': 'https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png',
+      'BOS': 'https://a.espncdn.com/i/teamlogos/mlb/500/bos.png',
+      'CHC': 'https://a.espncdn.com/i/teamlogos/mlb/500/chc.png',
+      'MIL': 'https://a.espncdn.com/i/teamlogos/mlb/500/mil.png',
+      'DET': 'https://a.espncdn.com/i/teamlogos/mlb/500/det.png',
+      'HOU': 'https://a.espncdn.com/i/teamlogos/mlb/500/hou.png',
+      'PIT': 'https://a.espncdn.com/i/teamlogos/mlb/500/pit.png',
+      'TOR': 'https://a.espncdn.com/i/teamlogos/mlb/500/tor.png',
+      'MIA': 'https://a.espncdn.com/i/teamlogos/mlb/500/mia.png',
+      'STL': 'https://a.espncdn.com/i/teamlogos/mlb/500/stl.png',
+      'PHI': 'https://a.espncdn.com/i/teamlogos/mlb/500/phi.png',
+      'SEA': 'https://a.espncdn.com/i/teamlogos/mlb/500/sea.png',
+      'BAL': 'https://a.espncdn.com/i/teamlogos/mlb/500/bal.png',
+      'ATL': 'https://a.espncdn.com/i/teamlogos/mlb/500/atl.png',
+      'CWS': 'https://a.espncdn.com/i/teamlogos/mlb/500/chw.png',
+      'KC': 'https://a.espncdn.com/i/teamlogos/mlb/500/kc.png',
+      'TEX': 'https://a.espncdn.com/i/teamlogos/mlb/500/tex.png',
+      'COL': 'https://a.espncdn.com/i/teamlogos/mlb/500/col.png',
+      'LAA': 'https://a.espncdn.com/i/teamlogos/mlb/500/laa.png',
+      'CIN': 'https://a.espncdn.com/i/teamlogos/mlb/500/cin.png',
+      'AZ': 'https://a.espncdn.com/i/teamlogos/mlb/500/ari.png',
+      'CLE': 'https://a.espncdn.com/i/teamlogos/mlb/500/cle.png',
+      'SD': 'https://a.espncdn.com/i/teamlogos/mlb/500/sd.png',
+      'NYM': 'https://a.espncdn.com/i/teamlogos/mlb/500/nym.png',
+      'WSH': 'https://a.espncdn.com/i/teamlogos/mlb/500/wsh.png',
+      'OAK': 'https://a.espncdn.com/i/teamlogos/mlb/500/oak.png',
+      'ATH': 'https://a.espncdn.com/i/teamlogos/mlb/500/oak.png',
+      'MIN': 'https://a.espncdn.com/i/teamlogos/mlb/500/min.png',
+      'TB': 'https://a.espncdn.com/i/teamlogos/mlb/500/tb.png',
+    }
+  };
+
+  // Try to find logo in each sport
+  for (const [sportKey, logos] of Object.entries(espnLogos)) {
+    if (logos[teamAbbr]) {
+      return logos[teamAbbr];
+    }
+  }
+  
+  return null;
+};
+
 export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }: TeamLogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
@@ -387,6 +459,25 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
 
   // Get abbreviation from prop or lookup from team name
   const teamAbbr = abbreviation || teamNameToAbbr[teamName];
+  
+  // Try to get the official team logo URL first
+  const logoUrl = getTeamLogoUrl(teamAbbr);
+  
+  if (logoUrl) {
+    // Use official team logo from ESPN
+    return (
+      <img 
+        src={logoUrl} 
+        alt={teamName}
+        className={`${sizeClasses[size]} ${className} object-contain`}
+        onError={(e) => {
+          // If image fails to load, hide it and show fallback
+          console.log(`Failed to load logo for ${teamName}`);
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
+  }
   
   // Generic fallback logo with better styling
   const defaultLogo = (
