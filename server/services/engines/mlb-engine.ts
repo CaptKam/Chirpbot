@@ -1,7 +1,7 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { getWeatherData } from '../weather';
 import { storage } from '../../storage';
-import * as mlbApi from '../mlb-api';
+import { mlbApi } from '../mlb-api';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
