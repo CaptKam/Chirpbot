@@ -59,6 +59,11 @@ const teamNameToAbbr: Record<string, string> = {
   'Denver Broncos': 'DEN',
   'Las Vegas Raiders': 'LV',
   'Los Angeles Chargers': 'LAC',
+  'Dallas Cowboys': 'DAL',
+  'Philadelphia Eagles': 'PHI',
+  'Atlanta Falcons': 'ATL',
+  'Chicago Bears': 'CHI',
+  'Minnesota Vikings': 'MIN',
   
   // NBA Teams  
   'Los Angeles Lakers': 'LAL',
@@ -150,22 +155,10 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
         <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">TOR</text>
       </svg>
     ),
-    'MIA': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#00A3E0" stroke="#EF3340" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">MIA</text>
-      </svg>
-    ),
     'STL': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#C41E3A" stroke="#FEDB00" strokeWidth="3"/>
         <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">STL</text>
-      </svg>
-    ),
-    'PHI': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#E81828" stroke="#002D72" strokeWidth="3"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">PHI</text>
       </svg>
     ),
     'SEA': (
@@ -250,6 +243,78 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
         <text x="50" y="65" textAnchor="middle" className="fill-white font-black text-sm font-sans">BILLS</text>
       </svg>
     ),
+    'NYJ': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#125740" stroke="#FFFFFF" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-lg font-sans">NYJ</text>
+      </svg>
+    ),
+    'DAL': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#041E42" stroke="#869397" strokeWidth="2"/>
+        <polygon points="50,25 58,45 78,45 62,58 68,78 50,65 32,78 38,58 22,45 42,45" fill="#869397"/>
+      </svg>
+    ),
+    'TEN': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#0C2340" stroke="#4B92DB" strokeWidth="3"/>
+        <polygon points="30,45 50,25 70,45 60,45 60,70 40,70 40,45" fill="#4B92DB"/>
+      </svg>
+    ),
+    'CHI': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#0B162A" stroke="#C83803" strokeWidth="3"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-orange-500 font-black text-2xl font-sans">C</text>
+      </svg>
+    ),
+    'PHI': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#004C54" stroke="#A5ACAF" strokeWidth="2"/>
+        <path d="M 30 50 Q 50 30 70 50 Q 50 70 30 50" fill="#A5ACAF"/>
+      </svg>
+    ),
+    'NE': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#002244" stroke="#C60C30" strokeWidth="3"/>
+        <polygon points="25,50 50,25 75,50 50,75" fill="#C60C30"/>
+      </svg>
+    ),
+    'MIA': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#008E97" stroke="#FC4C02" strokeWidth="3"/>
+        <ellipse cx="50" cy="50" rx="20" ry="15" fill="#FC4C02"/>
+      </svg>
+    ),
+    'DEN': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#FB4F14" stroke="#002244" strokeWidth="3"/>
+        <polygon points="30,40 70,40 60,60 40,60" fill="#002244"/>
+      </svg>
+    ),
+    'LV': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#A5ACAF" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-gray-400 font-black text-base font-sans">LV</text>
+      </svg>
+    ),
+    'LAC': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#0080C6" stroke="#FFC20E" strokeWidth="3"/>
+        <polygon points="30,50 50,20 70,50 50,30" fill="#FFC20E"/>
+      </svg>
+    ),
+    'IND': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#002C5F" stroke="#FFFFFF" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">IND</text>
+      </svg>
+    ),
+    'JAX': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#006778" stroke="#D7A22A" strokeWidth="3"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-base font-sans">JAX</text>
+      </svg>
+    ),
 
     // NBA Teams  
     'LAL': (
@@ -295,6 +360,12 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
       </svg>
     ),
     'OAK': (
+      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+        <circle cx="50" cy="50" r="48" fill="#003831" stroke="#EFB21E" strokeWidth="2"/>
+        <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-xl font-sans">A</text>
+      </svg>
+    ),
+    'ATH': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#003831" stroke="#EFB21E" strokeWidth="2"/>
         <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-xl font-sans">A</text>
