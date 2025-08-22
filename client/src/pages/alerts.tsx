@@ -288,89 +288,129 @@ export default function Alerts() {
                 data-testid={`alert-card-${alert.id}`}
                 data-alert-id={alert.id}
               >
-                {/* Premium Alert Design */}
-                <div className="p-4">
-                  {/* Live Indicator - Subtle */}
+                {/* OpenAI-Inspired Alert Design */}
+                <div className="p-5">
+                  {/* Intelligent Status Indicator */}
                   {!alert.seen && (
                     <div className="absolute top-4 right-4">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+                        <span className="text-emerald-400 text-xs font-medium">LIVE</span>
+                      </div>
                     </div>
                   )}
                   
-                  {/* Main Alert Content */}
-                  <div className="space-y-3">
-                    {/* Title & Score */}
+                  {/* AI-Enhanced Content */}
+                  <div className="space-y-4">
+                    {/* Intelligent Headline */}
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-white font-semibold text-base leading-tight">
+                      <div className="flex-1 pr-4">
+                        <h2 className="text-white font-semibold text-lg leading-tight mb-1">
                           {alert.description.split('!')[0].replace(/[🏃⚡🔥💥🚨💯⏰🎯⭐]/g, '').trim()}
-                        </h3>
-                        <p className="text-slate-400 text-xs mt-1">
-                          {new Date(alert.timestamp).toLocaleTimeString('en-US', { 
-                            hour: 'numeric', 
-                            minute: '2-digit',
-                            hour12: true 
-                          })}
+                        </h2>
+                        <p className="text-slate-300 text-sm leading-relaxed">
+                          {alert.description.split('!')[1] ? 
+                            alert.description.split('!').slice(1).join('!').split('(')[0].trim().replace(/^[\s-]+/, '') 
+                            : 'High-impact moment developing'}
                         </p>
                       </div>
-                      <div className="text-right ml-4">
-                        <div className="text-blue-400 font-mono text-lg font-medium">
+                      <div className="text-right shrink-0">
+                        <div className="text-emerald-400 font-mono text-xl font-bold">
                           {alert.gameInfo.score?.away || 0}-{alert.gameInfo.score?.home || 0}
                         </div>
                         {alert.gameInfo.inning && (
-                          <div className="text-slate-500 text-xs mt-0.5">
+                          <div className="text-slate-400 text-sm mt-0.5">
                             {alert.gameInfo.inningState === 'top' ? '▲' : '▼'} {alert.gameInfo.inning}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Game Info */}
-                    <div className="border-t border-slate-800 pt-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-300">
+                    {/* Context & Intelligence */}
+                    <div className="bg-slate-800/40 rounded-lg p-3 border border-slate-700/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-slate-200 font-medium text-sm">
                           {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
                         </span>
-                        {alert.gameInfo.outs !== undefined && (
-                          <span className="text-slate-500 text-xs">
-                            {alert.gameInfo.outs} {alert.gameInfo.outs === 1 ? 'out' : 'outs'}
+                        <div className="flex items-center space-x-3 text-xs">
+                          {alert.gameInfo.outs !== undefined && (
+                            <span className="text-slate-400">
+                              {alert.gameInfo.outs} {alert.gameInfo.outs === 1 ? 'out' : 'outs'}
+                            </span>
+                          )}
+                          <span className="text-slate-500">
+                            {new Date(alert.timestamp).toLocaleTimeString('en-US', { 
+                              hour: 'numeric', 
+                              minute: '2-digit',
+                              hour12: true 
+                            })}
                           </span>
-                        )}
+                        </div>
+                      </div>
+                      
+                      {/* AI Insight */}
+                      <div className="text-slate-300 text-xs leading-relaxed">
+                        {alert.gameInfo.outs === 2 ? 
+                          "Critical moment - two outs means maximum pressure on the batter" :
+                          alert.gameInfo.outs === 1 ?
+                          "Moderate pressure situation with one out remaining" :
+                          "Early in the sequence with no outs - prime opportunity"}
                       </div>
                     </div>
 
-                    {/* Probability Badge */}
-                    {alert.description.includes('(') && (
-                      <div className="flex justify-center">
-                        <div className="bg-slate-800/60 px-3 py-1 rounded-full">
-                          <span className="text-blue-400 text-xs font-medium">
+                    {/* Probability & Player Intelligence */}
+                    <div className="flex items-center justify-between">
+                      {/* Smart Probability */}
+                      {alert.description.includes('(') && (
+                        <div className="bg-gradient-to-r from-emerald-500/20 to-blue-500/20 px-4 py-2 rounded-full border border-emerald-500/30">
+                          <span className="text-emerald-300 text-sm font-semibold">
                             {alert.description.match(/\(([^)]+)\)/)?.[1]}
                           </span>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Batter Info - Clean */}
-                    {alert.gameInfo.currentBatter && (
-                      <div className="border-t border-slate-800 pt-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <div>
-                            <span className="text-slate-500 text-xs">AT BAT</span>
-                            <div className="text-slate-200 font-medium">
-                              {alert.gameInfo.currentBatter.name}
-                            </div>
+                      )}
+                      
+                      {/* Batter Intelligence */}
+                      {alert.gameInfo.currentBatter && (
+                        <div className="text-right">
+                          <div className="text-white font-medium text-sm">
+                            {alert.gameInfo.currentBatter.name}
                           </div>
-                          <div className="text-right">
-                            <div className="text-slate-400 font-mono text-xs">
+                          <div className="flex items-center justify-end space-x-3 text-xs mt-0.5">
+                            <span className="text-slate-400 font-mono">
                               .{alert.gameInfo.currentBatter.stats.avg.toFixed(3)}
-                            </div>
-                            <div className="text-slate-500 text-xs">
+                            </span>
+                            <span className="text-slate-500">
                               {alert.gameInfo.currentBatter.stats.hr} HR
-                            </div>
+                            </span>
+                            <span className="text-emerald-400">
+                              {alert.gameInfo.currentBatter.stats.avg >= 0.300 ? 'Elite' : 
+                               alert.gameInfo.currentBatter.stats.avg >= 0.250 ? 'Solid' : 'Struggling'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* AI-Powered Next Action Insight */}
+                    <div className="bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg p-3 border-l-2 border-emerald-400">
+                      <div className="flex items-start space-x-2">
+                        <div className="w-4 h-4 rounded-full bg-emerald-400/20 flex items-center justify-center mt-0.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                        </div>
+                        <div>
+                          <div className="text-emerald-300 text-xs font-medium mb-1">AI INSIGHT</div>
+                          <div className="text-slate-300 text-xs leading-relaxed">
+                            {alert.gameInfo.currentBatter ? 
+                              (alert.gameInfo.currentBatter.stats.avg >= 0.300 ? 
+                                "Strong contact hitter at the plate - watch for gap shots" :
+                                alert.gameInfo.currentBatter.stats.hr >= 20 ?
+                                "Power threat - any mistake pitch could leave the yard" :
+                                "Batter struggling recently - pitcher has the advantage") :
+                              "Monitor this developing situation for value opportunities"}
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </SwipeableCard>
