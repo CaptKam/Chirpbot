@@ -331,3 +331,228 @@ adminRouter.get("/dashboard/stats", requireRole("analyst"), async (req, res) => 
     res.status(500).json({ error: "Failed to fetch dashboard statistics" });
   }
 });
+
+// ===================
+// Alert Settings Control Panel Routes
+// ===================
+
+// Get all users' settings for admin control panel
+adminRouter.get("/settings/all", requireRole("admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    // Get all users and their settings
+    const allUsers = await storage.getAllUsers();
+    const allSettings = await storage.getAllSettings();
+    
+    // Group settings by sport (settings are currently global, not per user)
+    const settingsMap = new Map();
+    allSettings.forEach(setting => {
+      settingsMap.set(setting.sport, setting);
+    });
+    
+    // Build response with user data and settings
+    const usersWithSettings = allUsers.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      settings: {
+        MLB: settingsMap.get('MLB') || null,
+        NFL: settingsMap.get('NFL') || null,
+        NBA: settingsMap.get('NBA') || null,
+        NHL: settingsMap.get('NHL') || null,
+      }
+    }));
+    
+    await logAdminAction(user.id, "view_all_settings", "settings", undefined, null, null, { userCount: allUsers.length });
+    
+    res.json({ users: usersWithSettings });
+  } catch (error) {
+    console.error("Error fetching all settings:", error);
+    res.status(500).json({ error: "Failed to fetch settings" });
+  }
+});
+
+// Get default alert settings template
+adminRouter.get("/settings/defaults", requireRole("admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    // Return default settings template for each sport
+    const defaults = {
+      MLB: {
+        // Game Situations  
+        risp: true,
+        basesLoaded: true,
+        runnersOnBase: true,
+        closeGame: true,
+        lateInning: true,
+        extraInnings: false,
+        
+        // Scoring & Hitting
+        homeRun: true,
+        homeRunAlert: true,
+        hits: false,
+        scoring: true,
+        
+        // Player Performance
+        starBatter: false, // Disabled to prevent duplicates
+        powerHitter: true,
+        eliteClutch: false,
+        avgHitter: false,
+        rbiMachine: false,
+        strikeouts: false,
+        
+        // AI Predictions
+        "Home Run Prediction": false,
+        "Walk-off Prediction": false,
+        "Clutch Hit Prediction": false,
+        "Hot Streak Prediction": false,
+        "Double Play Prediction": false,
+        "Stolen Base Prediction": false,
+        
+        // Weather Physics
+        "Weather Home Run Boost": false,
+        "Weather Pitching Advantage": false,
+        
+        // Special Events
+        noHitter: true,
+        perfectGame: true,
+        cycle: false,
+        specialPlay: false,
+        
+        // Game Flow
+        inningChange: false,
+        
+        // Advanced Analytics
+        re24Advanced: false,
+        mlbAIEnabled: true,
+      },
+      NFL: {
+        redZone: true,
+        nflCloseGame: true,
+        fourthDown: true,
+        twoMinuteWarning: true,
+      },
+      NBA: {
+        clutchTime: true,
+        nbaCloseGame: true,
+        overtime: true,
+      },
+      NHL: {
+        powerPlay: true,
+        nhlCloseGame: true,
+        emptyNet: true,
+      }
+    };
+    
+    await logAdminAction(user.id, "view_default_settings", "settings", undefined, null, null, {});
+    
+    res.json(defaults);
+  } catch (error) {
+    console.error("Error fetching default settings:", error);
+    res.status(500).json({ error: "Failed to fetch default settings" });
+  }
+});
+
+// Update user settings (admin override)
+adminRouter.patch("/settings/:userId/:sport", requireRole("admin"), async (req, res) => {
+  try {
+    const { userId, sport } = req.params;
+    const user = (req as any).user;
+    const updates = req.body;
+    
+    // Get current settings for audit
+    const currentSettings = await storage.getSettingsByUserAndSport(userId, sport);
+    
+    // Update or create settings
+    let updatedSettings;
+    if (currentSettings) {
+      updatedSettings = await storage.updateUserSettings(userId, sport, updates);
+    } else {
+      updatedSettings = await storage.createUserSettings(userId, sport, updates);
+    }
+    
+    await logAdminAction(
+      user.id,
+      "admin_update_user_settings",
+      "settings",
+      updatedSettings?.id,
+      currentSettings,
+      updatedSettings,
+      { targetUserId: userId, sport }
+    );
+    
+    res.json(updatedSettings);
+  } catch (error) {
+    console.error("Error updating user settings:", error);
+    res.status(500).json({ error: "Failed to update user settings" });
+  }
+});
+
+// Bulk update settings for multiple users
+adminRouter.post("/settings/bulk-update", requireRole("admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const { userIds, sport, updates } = req.body;
+    
+    if (!userIds || !sport || !updates) {
+      return res.status(400).json({ error: "Missing required fields: userIds, sport, updates" });
+    }
+    
+    const results = [];
+    
+    for (const userId of userIds) {
+      try {
+        const currentSettings = await storage.getSettingsByUserAndSport(userId, sport);
+        let updatedSettings;
+        
+        if (currentSettings) {
+          updatedSettings = await storage.updateUserSettings(userId, sport, updates);
+        } else {
+          updatedSettings = await storage.createUserSettings(userId, sport, updates);
+        }
+        
+        results.push({ userId, success: true, settings: updatedSettings });
+      } catch (error) {
+        results.push({ userId, success: false, error: String(error) });
+      }
+    }
+    
+    await logAdminAction(
+      user.id,
+      "bulk_update_settings",
+      "settings",
+      undefined,
+      null,
+      null,
+      { userCount: userIds.length, sport, updatesApplied: updates }
+    );
+    
+    res.json({ results, summary: { 
+      total: userIds.length, 
+      successful: results.filter(r => r.success).length, 
+      failed: results.filter(r => !r.success).length 
+    }});
+  } catch (error) {
+    console.error("Error bulk updating settings:", error);
+    res.status(500).json({ error: "Failed to bulk update settings" });
+  }
+});
+
+// Get alert statistics for admin dashboard
+adminRouter.get("/settings/stats", requireRole("admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    const stats = await storage.getAlertSettingsStats();
+    
+    await logAdminAction(user.id, "view_alert_stats", "settings", undefined, null, null, {});
+    
+    res.json(stats);
+  } catch (error) {
+    console.error("Error fetching alert stats:", error);
+    res.status(500).json({ error: "Failed to fetch alert statistics" });
+  }
+});
