@@ -220,6 +220,9 @@ export type AiLearningLog = typeof aiLearningLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 
+export type InsertMasterAlertControl = z.infer<typeof insertMasterAlertControlSchema>;
+export type MasterAlertControl = typeof masterAlertControls.$inferSelect;
+
 // Game types for live sports data
 export interface Game {
   id: string;
@@ -317,6 +320,19 @@ export const aiLearningLogs = pgTable("ai_learning_logs", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Master Alert Controls - Admin can globally enable/disable alert types
+export const masterAlertControls = pgTable("master_alert_controls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertKey: text("alert_key").notNull(), // e.g., "basesLoaded", "redZone", "clutchTime"
+  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL
+  enabled: boolean("enabled").notNull().default(true),
+  displayName: text("display_name").notNull(), // e.g., "Bases Loaded", "Red Zone Alert"
+  description: text("description"), // Optional description for admin reference
+  category: text("category").notNull(), // e.g., "Game Situations", "Player Performance"
+  updatedBy: varchar("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Audit logs for admin actions
 export const auditLogs = pgTable("audit_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -349,4 +365,9 @@ export const insertAiLearningLogSchema = createInsertSchema(aiLearningLogs).omit
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertMasterAlertControlSchema = createInsertSchema(masterAlertControls).omit({
+  id: true,
+  updatedAt: true,
 });

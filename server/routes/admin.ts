@@ -291,6 +291,77 @@ adminRouter.get("/users/:id", requireRole("admin"), async (req, res) => {
 });
 
 // ===================
+// Master Alert Controls Routes
+// ===================
+
+// Get all master alert controls or filter by sport
+adminRouter.get("/master-alert-controls", requireRole("admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const sport = req.query.sport as string;
+    
+    const controls = sport 
+      ? await storage.getMasterAlertControlsBySport(sport)
+      : await storage.getAllMasterAlertControls();
+    
+    await logAdminAction(user.id, "view_master_alert_controls", "master_alert_controls", undefined, null, null, { sport });
+    
+    res.json(controls);
+  } catch (error) {
+    console.error("Error fetching master alert controls:", error);
+    res.status(500).json({ error: "Failed to fetch master alert controls" });
+  }
+});
+
+// Update a specific master alert control
+adminRouter.patch("/master-alert-controls/:sport/:alertKey", requireRole("admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const { sport, alertKey } = req.params;
+    const updates = req.body;
+    
+    // Get current control for audit log
+    const currentControl = await storage.getMasterAlertControl(alertKey, sport);
+    
+    const updated = await storage.updateMasterAlertControl(alertKey, sport, {
+      ...updates,
+      updatedBy: user.id,
+    });
+    
+    if (!updated) {
+      return res.status(404).json({ error: "Master alert control not found" });
+    }
+    
+    await logAdminAction(
+      user.id, 
+      "update_master_alert_control", 
+      "master_alert_controls", 
+      updated.id,
+      currentControl,
+      updated,
+      { sport, alertKey }
+    );
+    
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating master alert control:", error);
+    res.status(500).json({ error: "Failed to update master alert control" });
+  }
+});
+
+// Get enabled alert keys for a sport (used by user settings)
+adminRouter.get("/enabled-alert-keys/:sport", requireRole("user"), async (req, res) => {
+  try {
+    const { sport } = req.params;
+    const enabledKeys = await storage.getEnabledAlertKeysBySport(sport);
+    res.json({ enabledKeys });
+  } catch (error) {
+    console.error("Error fetching enabled alert keys:", error);
+    res.status(500).json({ error: "Failed to fetch enabled alert keys" });
+  }
+});
+
+// ===================
 // Dashboard Stats Routes
 // ===================
 

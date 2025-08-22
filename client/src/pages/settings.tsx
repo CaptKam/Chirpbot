@@ -115,6 +115,19 @@ export default function Settings() {
     },
   });
 
+  // Fetch enabled alert keys from master controls
+  const { data: enabledAlertKeys, isLoading: isLoadingEnabledKeys } = useQuery<{ enabledKeys: string[] }>({
+    queryKey: ["/api/admin/enabled-alert-keys", activeSport],
+    queryFn: async ({ queryKey }) => {
+      const [url, sport] = queryKey;
+      const response = await fetch(`${url}/${sport}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch enabled alert keys");
+      return response.json();
+    },
+  });
+
   const updateSettingsMutation = useMutation({
     mutationFn: async (updates: Partial<Settings>) => {
       const response = await apiRequest("PATCH", `/api/settings/${activeSport}`, updates);
@@ -222,7 +235,7 @@ export default function Settings() {
 
       {/* Settings Content */}
       <div className="p-4 space-y-6">
-        {isLoading ? (
+        {(isLoading || isLoadingEnabledKeys) ? (
           <div className="space-y-6">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="animate-pulse">
@@ -246,7 +259,14 @@ export default function Settings() {
               
               {/* Group alerts by category */}
               {(() => {
-                const alertConfigs = ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] || [];
+                const allAlertConfigs = ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] || [];
+                const enabledKeys = enabledAlertKeys?.enabledKeys || [];
+                
+                // Filter alert configs to only show those enabled in master controls
+                const alertConfigs = allAlertConfigs.filter(config => 
+                  enabledKeys.length === 0 || enabledKeys.includes(config.key) // Show all if no master controls loaded, otherwise filter
+                );
+                
                 const categories = Array.from(new Set(alertConfigs.map(config => config.category || 'General')));
                 
                 return categories.map(category => {

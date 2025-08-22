@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Brain, Settings, Activity, Users, BarChart3 } from "lucide-react";
+import { AlertCircle, Brain, Settings, Activity, Users, BarChart3, Shield } from "lucide-react";
 import { AiSettingsPanel } from "@/components/admin/AiSettingsPanel";
+import MasterAlertControls from "@/components/admin/MasterAlertControls";
 // import { AiLearningLogsPanel } from "@/components/admin/AiLearningLogsPanel";
 // import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
 
@@ -63,7 +64,7 @@ export function AdminDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4" />
               <span>Overview</span>
@@ -71,6 +72,10 @@ export function AdminDashboard() {
             <TabsTrigger value="ai-settings" className="flex items-center space-x-2">
               <Brain className="h-4 w-4" />
               <span>AI Settings</span>
+            </TabsTrigger>
+            <TabsTrigger value="alert-controls" className="flex items-center space-x-2">
+              <Shield className="h-4 w-4" />
+              <span>Alert Controls</span>
             </TabsTrigger>
             <TabsTrigger value="ai-logs" className="flex items-center space-x-2">
               <Activity className="h-4 w-4" />
@@ -229,6 +234,11 @@ export function AdminDashboard() {
           {/* AI Settings Tab */}
           <TabsContent value="ai-settings">
             <AiSettingsPanel />
+          </TabsContent>
+
+          {/* Master Alert Controls Tab */}
+          <TabsContent value="alert-controls">
+            <MasterAlertControls />
           </TabsContent>
 
           {/* AI Logs Tab */}

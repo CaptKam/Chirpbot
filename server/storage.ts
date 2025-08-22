@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, type AiSettings, type InsertAiSettings, type AiLearningLog, type InsertAiLearningLog, type AuditLog, type InsertAuditLog, users, userMonitoredTeams, teams, alerts, settings, aiSettings, aiLearningLogs, auditLogs } from "@shared/schema";
+import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, type AiSettings, type InsertAiSettings, type AiLearningLog, type InsertAiLearningLog, type AuditLog, type InsertAuditLog, type MasterAlertControl, type InsertMasterAlertControl, users, userMonitoredTeams, teams, alerts, settings, aiSettings, aiLearningLogs, auditLogs, masterAlertControls } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, sql, desc } from "drizzle-orm";
@@ -67,6 +67,14 @@ export interface IStorage {
   getAuditLogsByResource(resource: string): Promise<AuditLog[]>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getRecentAuditLogs(limit?: number): Promise<AuditLog[]>;
+
+  // Master Alert Controls
+  getAllMasterAlertControls(): Promise<MasterAlertControl[]>;
+  getMasterAlertControlsBySport(sport: string): Promise<MasterAlertControl[]>;
+  getMasterAlertControl(alertKey: string, sport: string): Promise<MasterAlertControl | undefined>;
+  createMasterAlertControl(control: InsertMasterAlertControl): Promise<MasterAlertControl>;
+  updateMasterAlertControl(alertKey: string, sport: string, updates: Partial<MasterAlertControl>): Promise<MasterAlertControl | undefined>;
+  getEnabledAlertKeysBySport(sport: string): Promise<string[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -74,12 +82,14 @@ export class MemStorage implements IStorage {
   private teams: Map<string, Team>;
   private alerts: Map<string, Alert>;
   private settings: Map<string, Settings>;
+  private masterAlertControls: Map<string, MasterAlertControl>;
 
   constructor() {
     this.users = new Map();
     this.teams = new Map();
     this.alerts = new Map();
     this.settings = new Map();
+    this.masterAlertControls = new Map();
 
     // Initialize with default teams and settings
     this.initializeDefaultData();
@@ -549,6 +559,53 @@ export class MemStorage implements IStorage {
   async getRecentAuditLogs(limit = 50): Promise<AuditLog[]> {
     return []; // Mock implementation
   }
+
+  // Master Alert Control methods (Mock implementations for MemStorage)
+  async getAllMasterAlertControls(): Promise<MasterAlertControl[]> {
+    return Array.from(this.masterAlertControls.values());
+  }
+
+  async getMasterAlertControlsBySport(sport: string): Promise<MasterAlertControl[]> {
+    return Array.from(this.masterAlertControls.values()).filter(control => control.sport === sport);
+  }
+
+  async getMasterAlertControl(alertKey: string, sport: string): Promise<MasterAlertControl | undefined> {
+    const key = `${sport}-${alertKey}`;
+    return this.masterAlertControls.get(key);
+  }
+
+  async createMasterAlertControl(control: InsertMasterAlertControl): Promise<MasterAlertControl> {
+    const id = randomUUID();
+    const masterControl: MasterAlertControl = {
+      ...control,
+      id,
+      enabled: control.enabled ?? true,
+      updatedAt: new Date(),
+    };
+    const key = `${control.sport}-${control.alertKey}`;
+    this.masterAlertControls.set(key, masterControl);
+    return masterControl;
+  }
+
+  async updateMasterAlertControl(alertKey: string, sport: string, updates: Partial<MasterAlertControl>): Promise<MasterAlertControl | undefined> {
+    const key = `${sport}-${alertKey}`;
+    const existing = this.masterAlertControls.get(key);
+    if (!existing) return undefined;
+
+    const updated = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.masterAlertControls.set(key, updated);
+    return updated;
+  }
+
+  async getEnabledAlertKeysBySport(sport: string): Promise<string[]> {
+    return Array.from(this.masterAlertControls.values())
+      .filter(control => control.sport === sport && control.enabled)
+      .map(control => control.alertKey);
+  }
 }
 
 // Database Storage Implementation
@@ -822,6 +879,44 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(auditLogs)
       .orderBy(desc(auditLogs.createdAt))
       .limit(limit);
+  }
+
+  // Master Alert Control methods
+  async getAllMasterAlertControls(): Promise<MasterAlertControl[]> {
+    return await db.select().from(masterAlertControls);
+  }
+
+  async getMasterAlertControlsBySport(sport: string): Promise<MasterAlertControl[]> {
+    return await db.select().from(masterAlertControls)
+      .where(eq(masterAlertControls.sport, sport));
+  }
+
+  async getMasterAlertControl(alertKey: string, sport: string): Promise<MasterAlertControl | undefined> {
+    const [control] = await db.select().from(masterAlertControls)
+      .where(and(eq(masterAlertControls.alertKey, alertKey), eq(masterAlertControls.sport, sport)));
+    return control || undefined;
+  }
+
+  async createMasterAlertControl(control: InsertMasterAlertControl): Promise<MasterAlertControl> {
+    const [masterControl] = await db.insert(masterAlertControls)
+      .values(control)
+      .returning();
+    return masterControl;
+  }
+
+  async updateMasterAlertControl(alertKey: string, sport: string, updates: Partial<MasterAlertControl>): Promise<MasterAlertControl | undefined> {
+    const [updated] = await db.update(masterAlertControls)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(masterAlertControls.alertKey, alertKey), eq(masterAlertControls.sport, sport)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getEnabledAlertKeysBySport(sport: string): Promise<string[]> {
+    const controls = await db.select({ alertKey: masterAlertControls.alertKey })
+      .from(masterAlertControls)
+      .where(and(eq(masterAlertControls.sport, sport), eq(masterAlertControls.enabled, true)));
+    return controls.map(control => control.alertKey);
   }
 }
 
