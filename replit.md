@@ -1,6 +1,6 @@
 # Overview
 
-ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, the application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) using authentic ESPN API data and generates intelligent alerts for high-impact game situations. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. 
+ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, with major MLB alert system enhancements completed on August 22, 2025. The application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) using authentic ESPN API data and generates intelligent alerts for high-impact game situations. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. 
 
 **Design System Updates (August 18, 2025):**
 - Implemented modern, bold, sports-centric design with professional color palette
@@ -10,6 +10,16 @@ ChirpBot V2 is a fully functional modern sports alert application providing real
 - Active monitoring indicated with blue border and background
 
 Features persistent team monitoring that saves user game selections to the database and restores them on page reload. Alert generation system correctly filters for live games only.
+
+**MLB Alert System Enhancement (August 22, 2025):**
+- Implemented 8 new MLB alert types for comprehensive game coverage
+- Home Run Situations: Detects optimal conditions for potential home runs (power hitters, favorable count, runners on base)
+- Home Run Alerts: Real-time notifications when home runs occur with automatic Grand Slam detection
+- Hit Alerts: Base hit notifications with enhanced detection for singles, doubles, triples 
+- Scoring Play Alerts: Multiple RBI play detection and general run scoring notifications
+- Extended MLBGameState interface with recent play tracking, ball/strike counts, and ballpark conditions
+- Weather integration for home run probability calculations (wind speed/direction factors)
+- Alert priority system: Grand Slams (100), Home Runs (100), Multiple RBI Plays (95), Close Game (90)
 
 # User Preferences
 

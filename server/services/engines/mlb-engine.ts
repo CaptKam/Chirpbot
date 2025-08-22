@@ -44,6 +44,27 @@ export interface MLBGameState {
       losses: number;
     };
   };
+  // Recent events for new alert types
+  recentPlay?: {
+    result?: string;
+    description?: string;
+    isHomeRun?: boolean;
+    isScoringPlay?: boolean;
+    isHit?: boolean;
+    runnersMoved?: boolean;
+    rbiCount?: number;
+    hitType?: string; // 'single', 'double', 'triple', 'home_run'
+  };
+  ballpark?: {
+    name?: string;
+    windSpeed?: number;
+    windDirection?: string;
+    temperature?: number;
+  };
+  count?: {
+    balls: number;
+    strikes: number;
+  };
 }
 
 export class MLBEngine extends BaseSportEngine {
@@ -145,6 +166,104 @@ export class MLBEngine extends BaseSportEngine {
       probability: 1.0,
       description: "⚾ GAME START - First pitch!",
       conditions: (state: MLBGameState) => state.inning === 1 && state.inningState === 'top'
+    },
+    // NEW ALERT TYPES IMPLEMENTATION
+    {
+      type: "Home Run Situation",
+      settingKey: "homeRun",
+      priority: 90,
+      probability: 0.85,
+      description: "🎯 HOME RUN SETUP! Perfect conditions for a long ball!",
+      conditions: (state: MLBGameState) => {
+        if (!state.currentBatter || state.outs >= 3) return false;
+        
+        // High HR probability conditions
+        const batterHasHRPower = state.currentBatter.stats.hr >= 15;
+        const favorableCount = state.count && (state.count.balls >= 2 && state.count.strikes <= 1);
+        const runnersOnBase = state.runners.first || state.runners.second || state.runners.third;
+        const windFavor = !!(state.ballpark?.windSpeed && state.ballpark.windSpeed >= 10);
+        
+        // Combine factors for home run potential
+        return batterHasHRPower && (favorableCount || runnersOnBase || windFavor);
+      }
+    },
+    {
+      type: "Home Run Alert",
+      settingKey: "homeRunAlert",
+      priority: 100,
+      probability: 1.0,
+      description: "🚀 HOME RUN! Ball is GONE!",
+      conditions: (state: MLBGameState) => {
+        return !!(state.recentPlay?.isHomeRun);
+      }
+    },
+    {
+      type: "Grand Slam Alert",
+      settingKey: "homeRunAlert",
+      priority: 100,
+      probability: 1.0,
+      description: "💥 GRAND SLAM! Bases were loaded - 4 RBIs!",
+      conditions: (state: MLBGameState) => {
+        return !!(state.recentPlay?.isHomeRun && state.recentPlay?.rbiCount && state.recentPlay.rbiCount >= 4);
+      }
+    },
+    {
+      type: "Hit Alert",
+      settingKey: "hits",
+      priority: 70,
+      probability: 1.0,
+      description: "⚾ BASE HIT! Runner reaches safely!",
+      conditions: (state: MLBGameState) => {
+        return !!(state.recentPlay?.isHit && !state.recentPlay?.isHomeRun);
+      }
+    },
+    {
+      type: "Extra Base Hit",
+      settingKey: "hits",
+      priority: 85,
+      probability: 1.0,
+      description: "💨 EXTRA BASE HIT! Runner advances multiple bases!",
+      conditions: (state: MLBGameState) => {
+        return !!(state.recentPlay?.isHit && 
+                 (state.recentPlay?.hitType === 'double' || 
+                  state.recentPlay?.hitType === 'triple'));
+      }
+    },
+    {
+      type: "RBI Hit",
+      settingKey: "scoring",
+      priority: 90,
+      probability: 1.0,
+      description: "🏃‍♂️ RBI HIT! Runner scores from base!",
+      conditions: (state: MLBGameState) => {
+        return !!(state.recentPlay?.isScoringPlay && 
+                 state.recentPlay?.rbiCount && 
+                 state.recentPlay.rbiCount > 0 && 
+                 !state.recentPlay?.isHomeRun);
+      }
+    },
+    {
+      type: "Scoring Play",
+      settingKey: "scoring",
+      priority: 85,
+      probability: 1.0,
+      description: "⚡ RUN SCORES! Points on the board!",
+      conditions: (state: MLBGameState) => {
+        return !!(state.recentPlay?.isScoringPlay);
+      }
+    },
+    {
+      type: "Multiple RBI Play",
+      settingKey: "scoring",
+      priority: 95,
+      probability: 1.0,
+      description: "🔥 MULTIPLE RBIs! Big scoring play!",
+      conditions: (state: MLBGameState) => {
+        return !!(state.recentPlay?.isScoringPlay && 
+                 state.recentPlay?.rbiCount && 
+                 state.recentPlay.rbiCount >= 2 && 
+                 !state.recentPlay?.isHomeRun);
+      }
     }
   ];
 
@@ -198,6 +317,69 @@ export class MLBEngine extends BaseSportEngine {
         second: !!(currentPlay.runners?.find((r: any) => r.movement?.end === '2B' && !r.movement?.isOut)),
         third: !!(currentPlay.runners?.find((r: any) => r.movement?.end === '3B' && !r.movement?.isOut))
       };
+
+      // Track recent play for event-based alerts
+      let recentPlay: any = {};
+      let count: any = {};
+      let ballpark: any = {};
+      
+      // Analyze current play for hits, home runs, scoring
+      if (currentPlay?.result) {
+        const playResult = currentPlay.result;
+        const playDescription = currentPlay.description || '';
+        
+        // Home Run Detection
+        const isHomeRun = playResult.type === 'atBat' && 
+                        (playResult.event?.includes('Home Run') || 
+                         playDescription.toLowerCase().includes('home run') ||
+                         playDescription.toLowerCase().includes('homers'));
+        
+        // Hit Detection (any safe hit)
+        const isHit = playResult.type === 'atBat' && 
+                     (playResult.event?.includes('Single') ||
+                      playResult.event?.includes('Double') ||
+                      playResult.event?.includes('Triple') ||
+                      isHomeRun);
+        
+        // Scoring Play Detection
+        const isScoringPlay = playResult.rbi > 0 || 
+                            playDescription.toLowerCase().includes('scores') ||
+                            playDescription.toLowerCase().includes('rbi');
+        
+        // Hit Type Classification
+        let hitType = '';
+        if (playResult.event?.includes('Single')) hitType = 'single';
+        else if (playResult.event?.includes('Double')) hitType = 'double';
+        else if (playResult.event?.includes('Triple')) hitType = 'triple';
+        else if (isHomeRun) hitType = 'home_run';
+        
+        recentPlay = {
+          result: playResult.event,
+          description: playDescription,
+          isHomeRun,
+          isHit,
+          isScoringPlay,
+          rbiCount: playResult.rbi || 0,
+          hitType,
+          runnersMoved: !!(currentPlay.runners && currentPlay.runners.length > 0)
+        };
+      }
+      
+      // Extract count information
+      count = {
+        balls: about.balls || 0,
+        strikes: about.strikes || 0
+      };
+      
+      // Extract ballpark info if available
+      if (gameData.venue || liveData.weather) {
+        ballpark = {
+          name: gameData.venue?.name,
+          windSpeed: liveData.weather?.wind?.speed,
+          windDirection: liveData.weather?.wind?.direction,
+          temperature: liveData.weather?.temp
+        };
+      }
 
       let currentBatter;
       const offensiveTeam = inningState === 'top' ? 'away' : 'home';
@@ -261,7 +443,10 @@ export class MLBEngine extends BaseSportEngine {
         outs,
         runners,
         currentBatter,
-        currentPitcher
+        currentPitcher,
+        recentPlay,
+        count,
+        ballpark
       };
 
       // Debug current batter info
@@ -304,7 +489,12 @@ export class MLBEngine extends BaseSportEngine {
           powerHitter: false,
           runnersOnBase: true,
           inningChange: false, // Disabled by default
-          re24Advanced: false
+          re24Advanced: false,
+          // New alert types
+          homeRun: true,
+          homeRunAlert: true,
+          hits: true,
+          scoring: true
         };
 
         let needsUpdate = false;
