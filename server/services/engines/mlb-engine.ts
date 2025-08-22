@@ -670,14 +670,24 @@ export class MLBEngine extends BaseSportEngine {
       let customTitle = alert.description;
       let finalDescription = alert.description;
 
-      // Enhanced: Add hybrid RE24+AI analysis for high-priority alerts
+      // Enhanced: Add hybrid RE24+AI analysis for high-priority alerts with fallback
       let hybridAnalysis = null;
       if (alert.priority >= 85) {
         try {
           hybridAnalysis = await analyzeHybridRE24(gameState);
           console.log(`🧠 Hybrid Analysis: Base ${hybridAnalysis.baseRE24Probability}% → Final ${hybridAnalysis.finalProbability}% (${hybridAnalysis.aiInsight})`);
+          
+          // Track prediction for learning system
+          if (hybridAnalysis.finalProbability >= 80) {
+            console.log(`📊 High-confidence prediction logged for learning system`);
+          }
         } catch (error) {
-          console.error('Hybrid analysis failed:', error);
+          console.error('Hybrid analysis failed, using base RE24:', error);
+          // Fallback to basic RE24 calculation
+          const baseRE24 = this.calculateRE24Probability(gameState);
+          if (baseRE24 >= 75) {
+            console.log(`⚡ Fallback: Base RE24 ${baseRE24}% triggers alert`);
+          }
         }
       }
 

@@ -78,6 +78,22 @@ interface HybridRE24Result {
 const aiCache = new Map<string, { result: any; timestamp: number }>();
 const CACHE_TTL = 300000; // 5 minutes
 
+// Learning system for prediction accuracy tracking
+const predictionTracker = new Map<string, {
+  predicted: number;
+  actual: boolean;
+  timestamp: number;
+  gameContext: string;
+}>();
+
+// Performance metrics
+let accuracyStats = {
+  totalPredictions: 0,
+  correctPredictions: 0,
+  falsePositives: 0,
+  falseNegatives: 0
+};
+
 function reKey(r: { first: boolean; second: boolean; third: boolean }, outs: number) {
   return `${r.first ? 1 : 0}${r.second ? 1 : 0}${r.third ? 1 : 0}-${outs}`;
 }
@@ -155,26 +171,32 @@ async function getAIContextMultiplier(gameState: MLBGameState, baseRE24: number)
     const pitcher = gameState.currentPitcher;
     
     const prompt = `
-Analyze this HIGH-LEVERAGE baseball situation for contextual probability adjustment:
+🔬 ADVANCED BASEBALL ANALYTICS - Contextual Probability Enhancement
 
-🎯 SITUATION:
-${gameState.awayTeam} @ ${gameState.homeTeam} | Inning ${gameState.inning} ${gameState.inningState}
-Score: ${gameState.awayScore}-${gameState.homeScore} | ${gameState.outs} outs
-Runners: ${gameState.runners.first ? '1st ' : ''}${gameState.runners.second ? '2nd ' : ''}${gameState.runners.third ? '3rd' : ''}
-Base RE24 Probability: ${baseRE24}%
+📊 GAME SITUATION:
+${gameState.awayTeam} @ ${gameState.homeTeam} | ${gameState.inning}${gameState.inningState === 'top' ? 'T' : 'B'} | Score: ${gameState.awayScore}-${gameState.homeScore}
+Base Runners: ${gameState.runners.first ? '1st ' : ''}${gameState.runners.second ? '2nd ' : ''}${gameState.runners.third ? '3rd ' : ''}${gameState.outs} outs
+Mathematical RE24: ${baseRE24}% scoring probability
 
-👤 MATCHUP:
-${batter ? `Batter: ${batter.name} (.${(batter.stats.avg * 1000).toFixed(0)} AVG, ${batter.stats.hr} HR, ${batter.stats.ops.toFixed(3)} OPS, ${batter.batSide})` : 'Batter: Unknown'}
-${pitcher ? `Pitcher: ${pitcher.name} (${pitcher.stats.era.toFixed(2)} ERA, ${pitcher.stats.whip.toFixed(2)} WHIP, ${pitcher.throwHand})` : 'Pitcher: Unknown'}
+🏏 BATTER PROFILE:
+${batter ? `${batter.name} (${batter.batSide}H): ${(batter.stats.avg * 1000).toFixed(0)} AVG | ${batter.stats.hr} HR | ${batter.stats.ops.toFixed(3)} OPS` : 'Unknown Batter'}
+${batter && batter.stats.ops >= 0.900 ? '⭐ ELITE HITTER' : batter && batter.stats.ops >= 0.800 ? '🔥 STRONG HITTER' : ''}
 
-🧠 PROVIDE:
-1. Context Multiplier (0.7-1.4): Adjust base probability based on matchup, momentum, clutch history
-2. One-line insight: Key factor affecting this situation
-3. Confidence (70-95): How sure are you about this adjustment?
+⚾ PITCHER ANALYSIS:
+${pitcher ? `${pitcher.name} (${pitcher.throwHand}HP): ${pitcher.stats.era.toFixed(2)} ERA | ${pitcher.stats.whip.toFixed(2)} WHIP | ${pitcher.stats.strikeOuts} K` : 'Unknown Pitcher'}
+${pitcher && pitcher.stats.era <= 3.50 ? '🎯 DOMINANT PITCHER' : pitcher && pitcher.stats.era >= 4.50 ? '📈 STRUGGLING PITCHER' : ''}
 
-FORMAT: "Multiplier: X.X | Insight: [brief insight] | Confidence: XX"
+🎯 LEVERAGE FACTORS:
+- Game Context: ${Math.abs(gameState.homeScore - gameState.awayScore) <= 1 ? 'CLOSE GAME' : 'COMFORTABLE MARGIN'}
+- Timing: ${gameState.inning >= 8 ? 'LATE INNING PRESSURE' : gameState.inning >= 6 ? 'MIDDLE INNINGS' : 'EARLY GAME'}
+- Situation: ${gameState.runners.first && gameState.runners.second && gameState.runners.third ? 'BASES LOADED' : gameState.runners.second || gameState.runners.third ? 'SCORING POSITION' : 'PRESSURE BUILDING'}
 
-Example: "Multiplier: 1.2 | Insight: Elite clutch hitter vs struggling reliever favors offense | Confidence: 87"
+🧠 PROVIDE ANALYSIS:
+Multiplier (0.7-1.4): Mathematical adjustment for context
+Insight: Primary factor driving adjustment
+Confidence (75-95): Data quality and certainty level
+
+FORMAT: "Multiplier: X.X | Insight: [key factor] | Confidence: XX"
 `;
 
     const response = await openai.chat.completions.create({
@@ -226,14 +248,21 @@ export async function analyzeHybridRE24(gameState: MLBGameState): Promise<Hybrid
     98
   ));
   
-  // Step 4: Determine leverage and betting insights
+  // Step 4: Enhanced betting intelligence with market context
   const isHighLeverage = finalProbability >= 75 || gameState.inning >= 8;
+  const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
   
   let bettingRecommendation = undefined;
-  if (isHighLeverage && finalProbability >= 80) {
-    bettingRecommendation = `HIGH VALUE: ${finalProbability}% scoring probability - consider over bets`;
-  } else if (finalProbability <= 25 && gameState.inning >= 7) {
-    bettingRecommendation = `DEFENSIVE SPOT: ${finalProbability}% scoring chance - under opportunity`;
+  
+  // Advanced betting scenarios
+  if (isHighLeverage && finalProbability >= 85) {
+    bettingRecommendation = `🚨 PREMIUM BET: ${finalProbability}% probability | Live Over ${(gameState.homeScore + gameState.awayScore + 2.5).toFixed(1)} | High Confidence`;
+  } else if (finalProbability >= 80 && gameState.runners.first && gameState.runners.second && gameState.runners.third) {
+    bettingRecommendation = `💎 BASES LOADED VALUE: ${finalProbability}% | Multiple run potential | Consider team total over`;
+  } else if (finalProbability <= 20 && gameState.inning >= 8 && scoreDiff <= 3) {
+    bettingRecommendation = `🛡️ UNDER LOCK: ${finalProbability}% scoring | Late inning defense | Under ${(gameState.homeScore + gameState.awayScore + 0.5).toFixed(1)}`;
+  } else if (finalProbability >= 75 && gameState.currentBatter?.stats.hr >= 15) {
+    bettingRecommendation = `⚡ POWER PLAY: ${gameState.currentBatter.name} HR prop | ${finalProbability}% situation`;
   }
   
   // Step 5: Calculate alert priority
