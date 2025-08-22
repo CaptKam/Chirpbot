@@ -127,7 +127,7 @@ export default function AdminControlPanel() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   // Check admin access
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!isAuthenticated || (user as any)?.role !== 'admin') {
     return (
       <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
         <div className="flex items-center justify-center min-h-screen">
@@ -237,7 +237,7 @@ export default function AdminControlPanel() {
       return;
     }
 
-    const alertUpdates = {};
+    const alertUpdates: Record<string, boolean> = {};
     bulkUpdate.selectedAlerts.forEach(alertKey => {
       alertUpdates[alertKey] = true; // Enable selected alerts
     });
