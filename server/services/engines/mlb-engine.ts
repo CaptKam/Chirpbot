@@ -48,7 +48,7 @@ export interface MLBGameState {
 
 export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
-  monitoringInterval = 15000;
+  monitoringInterval = 1000; // 1 second for lightning-fast betting alerts
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
 
@@ -322,10 +322,10 @@ export class MLBEngine extends BaseSportEngine {
         }
       }
 
-      // 🔧 Use aggregator instead of broken API call
-      const aggregator = await import('../multi-source-aggregator');
-      const gameData = await aggregator.getMLBGames(new Date().toISOString().split('T')[0]);
-      const liveGames = gameData.games.filter(game => game.status?.toLowerCase().includes('live') || game.status?.toLowerCase().includes('in progress'));
+      // 🔧 Use multi-source aggregator for fast data
+      const { multiSourceAggregator } = await import('../multi-source-aggregator');
+      const games = await multiSourceAggregator.getMLBGames(new Date().toISOString().split('T')[0]);
+      const liveGames = games.filter(game => game.status?.toLowerCase().includes('live') || game.status?.toLowerCase().includes('in progress'));
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 

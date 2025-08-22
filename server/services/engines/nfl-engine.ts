@@ -20,7 +20,7 @@ interface NFLGameState {
 
 export class NFLEngine extends BaseSportEngine {
   sport = 'NFL';
-  monitoringInterval = 5000; // 5 seconds for fast NFL monitoring
+  monitoringInterval = 1000; // 1 second for lightning-fast betting alerts
   
   async monitor() {
     try {
