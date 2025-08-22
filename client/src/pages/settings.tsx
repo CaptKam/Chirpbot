@@ -198,6 +198,16 @@ export default function Settings() {
             <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
           </div>
         </div>
+        <div className="flex items-center space-x-3">
+          {user?.role === 'admin' && (
+            <Link to="/admin/control-panel">
+              <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                <Settings className="w-4 h-4 mr-2" />
+                Admin Panel
+              </Button>
+            </Link>
+          )}
+        </div>
       </header>
 
       {/* Sport Tabs */}
