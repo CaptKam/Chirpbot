@@ -43,12 +43,6 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     // Check each sport for monitored games before starting
     for (const [sport, engine] of Array.from(this.engines.entries())) {
       if (!this.intervalIds.has(sport)) {
-        // Skip weather engine - it should always run
-        if (sport === 'WEATHER') {
-          this.startEngine(sport, engine);
-          continue;
-        }
-        
         // Check if there are any monitored games for this sport
         const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
         
@@ -88,6 +82,12 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   private async hasMonitoredGamesForSport(sport: string): Promise<boolean> {
     try {
       const allMonitoredGames = await this.getAllMonitoredGames();
+      
+      // For weather engine, check if there are ANY monitored games (weather applies to all sports)
+      if (sport === 'WEATHER') {
+        return allMonitoredGames.length > 0;
+      }
+      
       return allMonitoredGames.some(game => game.sport === sport);
     } catch (error) {
       console.error(`Error checking monitored games for ${sport}:`, error);
@@ -108,7 +108,6 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   
   private async checkAndUpdateEngines(): Promise<void> {
     for (const [sport, engine] of Array.from(this.engines.entries())) {
-      if (sport === 'WEATHER') continue; // Weather always runs
       
       const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
       const isRunning = this.intervalIds.has(sport);
