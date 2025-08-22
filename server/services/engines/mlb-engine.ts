@@ -69,6 +69,16 @@ export interface MLBGameState {
     balls: number;
     strikes: number;
   };
+  // Added for weather integration
+  venue?: string;
+  weather?: {
+    temperature?: number;
+    windSpeed?: number;
+    windDirection?: string;
+    humidity?: number;
+    pressure?: number;
+    condition?: string; // e.g., 'Dome', 'Retractable Roof', 'Outdoor'
+  };
 }
 
 export class MLBEngine extends BaseSportEngine {
@@ -292,7 +302,7 @@ export class MLBEngine extends BaseSportEngine {
         if (state.runners.second) runners.push('2ND');
         if (state.runners.third) runners.push('3RD');
         const runnerText = runners.length > 0 ? runners.join(' & ') : 'Empty bases';
-        
+
         // Get weather data
         let weatherText = '';
         try {
@@ -307,7 +317,7 @@ export class MLBEngine extends BaseSportEngine {
         } catch (error) {
           // Weather unavailable, continue without it
         }
-        
+
         return `📊 HIGH RE24! ${runnerText}, ${state.outs} out - ${re24Prob}% scoring probability${weatherText}`;
       },
       conditions: (state: MLBGameState) => {
@@ -358,158 +368,246 @@ export class MLBEngine extends BaseSportEngine {
     };
   }
 
-  async extractGameState(liveFeed: any): Promise<MLBGameState | null> {
+  async extractGameState(gameData: any): Promise<MLBGameState | null> {
     try {
-      if (!liveFeed?.liveData?.plays?.currentPlay) {
+      // Handle different data source formats
+      let gameId, gamePk, homeTeam, awayTeam, inning, inningState, homeScore, awayScore, outs;
+      let runners: { first: boolean; second: boolean; third: boolean } = { first: false, second: false, third: false };
+      let currentBatter, currentPitcher, recentPlay, venue;
+      let ballparkConditions: any = {}; // Default empty object
+
+      // ESPN format detection
+      if (gameData.competitions && gameData.competitions[0]) {
+        const competition = gameData.competitions[0];
+        const competitors = competition.competitors;
+
+        gameId = gameData.id || `espn-${gameData.uid}`;
+        gamePk = parseInt(gameData.id) || 0;
+        venue = competition.venue?.fullName || 'Unknown Venue';
+
+        const homeCompetitor = competitors.find((c: any) => c.homeAway === 'home');
+        const awayCompetitor = competitors.find((c: any) => c.homeAway === 'away');
+
+        homeTeam = homeCompetitor?.team?.displayName || 'Unknown Home';
+        awayTeam = awayCompetitor?.team?.displayName || 'Unknown Away';
+        homeScore = parseInt(homeCompetitor?.score || '0');
+        awayScore = parseInt(awayCompetitor?.score || '0');
+
+        // ESPN game situation
+        const situation = competition.situation;
+        if (situation) {
+          inning = situation.inning || 1;
+          inningState = situation.inningHalf === 'top' ? 'top' : 'bottom';
+          outs = situation.outs || 0;
+
+          // Base runners
+          if (situation.onFirst) runners.first = true;
+          if (situation.onSecond) runners.second = true;
+          if (situation.onThird) runners.third = true;
+
+          // Current batter
+          if (situation.batter) {
+            currentBatter = {
+              id: situation.batter.playerId || 0,
+              name: situation.batter.displayName || 'Unknown',
+              batSide: situation.batter.batSide || 'R',
+              stats: {
+                avg: parseFloat(situation.batter.avg || '0.250'),
+                hr: parseInt(situation.batter.homeRuns || '0'),
+                rbi: parseInt(situation.batter.rbi || '0'),
+                obp: parseFloat(situation.batter.onBasePercentage || '0.320'),
+                ops: parseFloat(situation.batter.onBasePlusSlugging || '0.720'),
+                slg: parseFloat(situation.batter.sluggingPercentage || '0.400')
+              }
+            };
+          }
+        }
+      }
+      // MLB.com API format
+      else if (gameData.liveData || gameData.gamePk) {
+        const gameDataMLBApi = gameData; // Rename to avoid conflict
+        const liveData = gameDataMLBApi.liveData;
+        const gameDataInfo = gameDataMLBApi.gameData;
+
+        gameId = gameDataInfo.game.id;
+        gamePk = gameDataInfo.game.pk;
+        venue = gameDataInfo.venue?.fullName || 'Unknown Venue';
+
+        homeTeam = gameDataInfo.teams.home.name;
+        awayTeam = gameDataInfo.teams.away.name;
+        homeScore = liveData.linescore?.teams?.home?.runs || 0;
+        awayScore = liveData.linescore?.teams?.away?.runs || 0;
+
+        const about = liveData.plays.currentPlay?.about || {};
+        inning = about.inning || 1;
+        inningState = about.isTopInning ? 'top' : 'bottom';
+        outs = about.outs || 0;
+
+        const situation = liveData.situation;
+        if (situation) {
+          runners.first = situation.isRunnerOnFirst;
+          runners.second = situation.isRunnerOnSecond;
+          runners.third = situation.isRunnerOnThird;
+        }
+
+        const currentPlay = liveData.plays.currentPlay;
+        const boxscore = liveData.boxscore;
+
+        // Track recent play for event-based alerts
+        recentPlay = {};
+        let count: any = {};
+
+        // Analyze current play for hits, home runs, scoring
+        if (currentPlay?.result) {
+          const playResult = currentPlay.result;
+          const playDescription = currentPlay.description || '';
+
+          // Home Run Detection
+          const isHomeRun = playResult.type === 'atBat' &&
+                          (playResult.event?.includes('Home Run') ||
+                           playDescription.toLowerCase().includes('home run') ||
+                           playDescription.toLowerCase().includes('homers'));
+
+          // Hit Detection (any safe hit)
+          const isHit = playResult.type === 'atBat' &&
+                       (playResult.event?.includes('Single') ||
+                        playResult.event?.includes('Double') ||
+                        playResult.event?.includes('Triple') ||
+                        isHomeRun);
+
+          // Strikeout Detection
+          const isStrikeout = playResult.type === 'atBat' &&
+                            (playResult.event?.includes('Strikeout') ||
+                             playResult.event?.includes('Strike Out') ||
+                             playDescription.toLowerCase().includes('strikes out') ||
+                             playDescription.toLowerCase().includes('strikeout') ||
+                             playDescription.toLowerCase().includes('struck out'));
+
+          // Scoring Play Detection
+          const isScoringPlay = playResult.rbi > 0 ||
+                              playDescription.toLowerCase().includes('scores') ||
+                              playDescription.toLowerCase().includes('rbi');
+
+          // Hit Type Classification
+          let hitType = '';
+          if (playResult.event?.includes('Single')) hitType = 'single';
+          else if (playResult.event?.includes('Double')) hitType = 'double';
+          else if (playResult.event?.includes('Triple')) hitType = 'triple';
+          else if (isHomeRun) hitType = 'home_run';
+
+          recentPlay = {
+            result: playResult.event,
+            description: playDescription,
+            isHomeRun,
+            isHit,
+            isStrikeout,
+            isScoringPlay,
+            rbiCount: playResult.rbi || 0,
+            hitType,
+            runnersMoved: !!(currentPlay.runners && currentPlay.runners.length > 0)
+          };
+        }
+
+        // Extract count information
+        count = {
+          balls: about.balls || 0,
+          strikes: about.strikes || 0
+        };
+
+        // Extract ballpark info if available (from liveData.weather if present, otherwise from gameData.venue)
+        if (liveData.weather) {
+          ballparkConditions = {
+            windSpeed: liveData.weather.wind?.speed,
+            windDirection: liveData.weather.wind?.direction,
+            temperature: liveData.weather.temp
+          };
+        } else if (gameDataInfo.venue) {
+          ballparkConditions = {
+            windSpeed: gameDataInfo.venue.wind?.speed,
+            windDirection: gameDataInfo.venue.wind?.direction,
+            temperature: gameDataInfo.venue.temp
+          };
+        }
+
+
+        const offensiveTeam = inningState === 'top' ? 'away' : 'home';
+        const currentBatterId = currentPlay?.matchup?.batter?.id;
+
+        if (currentBatterId && boxscore?.teams?.[offensiveTeam]?.players) {
+          const playerKey = `ID${currentBatterId}`;
+          const batterData = boxscore.teams[offensiveTeam].players[playerKey];
+
+          if (batterData?.person) {
+            const battingStats = batterData.stats?.batting || {};
+            currentBatter = {
+              id: currentBatterId,
+              name: batterData.person.fullName,
+              battingOrder: batterData.battingOrder || 0,
+              batSide: batterData.person.batSide?.code || 'U',
+              stats: {
+                avg: parseFloat(battingStats.avg || '0.000'),
+                hr: parseInt(battingStats.homeRuns || '0'),
+                rbi: parseInt(battingStats.rbi || '0'),
+                ops: parseFloat(battingStats.ops || '0.000')
+              }
+            };
+          }
+        }
+
+        const pitchingTeam = inningState === 'top' ? 'home' : 'away';
+        const currentPitcherId = currentPlay?.matchup?.pitcher?.id;
+
+        if (currentPitcherId && boxscore?.teams?.[pitchingTeam]?.players) {
+          const playerKey = `ID${currentPitcherId}`;
+          const pitcherData = boxscore.teams[pitchingTeam].players[playerKey];
+
+          if (pitcherData?.person) {
+            const pitchingStats = pitcherData.stats?.pitching || {};
+            currentPitcher = {
+              id: currentPitcherId,
+              name: pitcherData.person.fullName,
+              throwHand: pitcherData.person.pitchHand?.code || 'U',
+              stats: {
+                era: parseFloat(pitchingStats.era || '0.00'),
+                whip: parseFloat(pitchingStats.whip || '0.00'),
+                strikeOuts: parseInt(pitchingStats.strikeOuts || '0'),
+                wins: parseInt(pitchingStats.wins || '0'),
+                losses: parseInt(pitchingStats.losses || '0')
+              }
+            };
+          }
+        }
+      } else {
+        console.log("⚠️ Unknown game data format encountered.");
         return null;
       }
 
-      const gameData = liveFeed.gameData;
-      const liveData = liveFeed.liveData;
-      const currentPlay = liveData.plays.currentPlay;
-      const boxscore = liveData.boxscore;
-
-      const homeTeam = gameData.teams.home.name;
-      const awayTeam = gameData.teams.away.name;
-      const homeScore = liveData.linescore?.teams?.home?.runs || 0;
-      const awayScore = liveData.linescore?.teams?.away?.runs || 0;
-
-      const about = currentPlay.about || {};
-      const inning = about.inning || 1;
-      const inningState = about.isTopInning ? 'top' : 'bottom';
-      const outs = about.outs || 0;
-
-      const runners = {
-        first: !!(currentPlay.runners?.find((r: any) => r.movement?.end === '1B' && !r.movement?.isOut)),
-        second: !!(currentPlay.runners?.find((r: any) => r.movement?.end === '2B' && !r.movement?.isOut)),
-        third: !!(currentPlay.runners?.find((r: any) => r.movement?.end === '3B' && !r.movement?.isOut))
-      };
-
-      // Track recent play for event-based alerts
-      let recentPlay: any = {};
-      let count: any = {};
-      let ballpark: any = {};
-
-      // Analyze current play for hits, home runs, scoring
-      if (currentPlay?.result) {
-        const playResult = currentPlay.result;
-        const playDescription = currentPlay.description || '';
-
-        // Home Run Detection
-        const isHomeRun = playResult.type === 'atBat' &&
-                        (playResult.event?.includes('Home Run') ||
-                         playDescription.toLowerCase().includes('home run') ||
-                         playDescription.toLowerCase().includes('homers'));
-
-        // Hit Detection (any safe hit)
-        const isHit = playResult.type === 'atBat' &&
-                     (playResult.event?.includes('Single') ||
-                      playResult.event?.includes('Double') ||
-                      playResult.event?.includes('Triple') ||
-                      isHomeRun);
-
-        // Strikeout Detection
-        const isStrikeout = playResult.type === 'atBat' &&
-                          (playResult.event?.includes('Strikeout') ||
-                           playResult.event?.includes('Strike Out') ||
-                           playDescription.toLowerCase().includes('strikes out') ||
-                           playDescription.toLowerCase().includes('strikeout') ||
-                           playDescription.toLowerCase().includes('struck out'));
-
-        // Scoring Play Detection
-        const isScoringPlay = playResult.rbi > 0 ||
-                            playDescription.toLowerCase().includes('scores') ||
-                            playDescription.toLowerCase().includes('rbi');
-
-        // Hit Type Classification
-        let hitType = '';
-        if (playResult.event?.includes('Single')) hitType = 'single';
-        else if (playResult.event?.includes('Double')) hitType = 'double';
-        else if (playResult.event?.includes('Triple')) hitType = 'triple';
-        else if (isHomeRun) hitType = 'home_run';
-
-        recentPlay = {
-          result: playResult.event,
-          description: playDescription,
-          isHomeRun,
-          isHit,
-          isStrikeout,
-          isScoringPlay,
-          rbiCount: playResult.rbi || 0,
-          hitType,
-          runnersMoved: !!(currentPlay.runners && currentPlay.runners.length > 0)
-        };
-      }
-
-      // Extract count information
-      count = {
-        balls: about.balls || 0,
-        strikes: about.strikes || 0
-      };
-
-      // Extract ballpark info if available
-      if (gameData.venue || liveData.weather) {
-        ballpark = {
-          name: gameData.venue?.name,
-          windSpeed: liveData.weather?.wind?.speed,
-          windDirection: liveData.weather?.wind?.direction,
-          temperature: liveData.weather?.temp
-        };
-      }
-
-      let currentBatter;
-      const offensiveTeam = inningState === 'top' ? 'away' : 'home';
-      const currentBatterId = currentPlay.matchup?.batter?.id;
-
-      if (currentBatterId && boxscore?.teams?.[offensiveTeam]?.players) {
-        const playerKey = `ID${currentBatterId}`;
-        const batterData = boxscore.teams[offensiveTeam].players[playerKey];
-
-        if (batterData?.person) {
-          const battingStats = batterData.stats?.batting || {};
-          currentBatter = {
-            id: currentBatterId,
-            name: batterData.person.fullName,
-            battingOrder: batterData.battingOrder || 0,
-            batSide: batterData.person.batSide?.code || 'U',
-            stats: {
-              avg: parseFloat(battingStats.avg || '0.000'),
-              hr: parseInt(battingStats.homeRuns || '0'),
-              rbi: parseInt(battingStats.rbi || '0'),
-              ops: parseFloat(battingStats.ops || '0.000')
-            }
-          };
+      // Fetch weather data for the game location
+      let weather = null;
+      try {
+        if (venue && venue !== 'Unknown Venue') {
+          const weatherData = await enhancedWeatherService.getEnhancedWeatherData(venue);
+          if (weatherData) {
+            weather = {
+              temperature: weatherData.temperature,
+              windSpeed: weatherData.windSpeed,
+              windDirection: weatherData.windDirection,
+              humidity: weatherData.humidity,
+              pressure: weatherData.pressure,
+              condition: weatherData.stadium.features.dome ? 'Dome' :
+                        weatherData.stadium.features.retractableRoof ? 'Retractable Roof' :
+                        'Outdoor'
+            };
+          }
         }
+      } catch (weatherError) {
+        console.log(`⚠️ Weather data unavailable for ${venue}: ${weatherError}`);
       }
 
-      let currentPitcher;
-      const pitchingTeam = inningState === 'top' ? 'home' : 'away';
-      const currentPitcherId = currentPlay.matchup?.pitcher?.id;
-
-      if (currentPitcherId && boxscore?.teams?.[pitchingTeam]?.players) {
-        const playerKey = `ID${currentPitcherId}`;
-        const pitcherData = boxscore.teams[pitchingTeam].players[playerKey];
-
-        if (pitcherData?.person) {
-          const pitchingStats = pitcherData.stats?.pitching || {};
-          currentPitcher = {
-            id: currentPitcherId,
-            name: pitcherData.person.fullName,
-            throwHand: pitcherData.person.pitchHand?.code || 'U',
-            stats: {
-              era: parseFloat(pitchingStats.era || '0.00'),
-              whip: parseFloat(pitchingStats.whip || '0.00'),
-              strikeOuts: parseInt(pitchingStats.strikeOuts || '0'),
-              wins: parseInt(pitchingStats.wins || '0'),
-              losses: parseInt(pitchingStats.losses || '0')
-            }
-          };
-        }
-      }
 
       const gameState: MLBGameState = {
-        gameId: gameData.game.id,
-        gamePk: gameData.game.pk,
+        gameId,
+        gamePk,
         homeTeam,
         awayTeam,
         homeScore,
@@ -518,11 +616,13 @@ export class MLBEngine extends BaseSportEngine {
         inningState,
         outs,
         runners,
+        venue,
+        weather,
         currentBatter,
         currentPitcher,
         recentPlay,
         count,
-        ballpark
+        ballpark: ballparkConditions // Assign extracted ballpark data
       };
 
       // Debug current batter info
@@ -530,10 +630,13 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`   Inning: ${inning} ${inningState}`);
       console.log(`   Score: ${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`);
       console.log(`   Runners: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
-      console.log(`   Outs: ${outs}, Balls: ${about.balls || 0}, Strikes: ${about.strikes || 0}`);
+      console.log(`   Outs: ${outs}, Balls: ${count?.balls || 0}, Strikes: ${count?.strikes || 0}`);
+      if (gameState.weather) {
+        console.log(`   Weather: ${gameState.weather.condition}, Temp: ${gameState.weather.temperature}°F, Wind: ${gameState.weather.windSpeed}mph ${gameState.weather.windDirection}`);
+      }
 
       if (currentBatter) {
-        console.log(`   🏏 ✅ REAL Current Batter: ${currentBatter.name} (${currentBatter.batSide}) - AVG: ${currentBatter.stats.avg.toFixed(3)}, HR: ${currentBatter.stats.hr}, RBI: ${currentBatter.stats.rbi}, OPS: ${currentBatter.stats.ops.toFixed(3)}`);
+        console.log(`   🏏 ✅ Current Batter: ${currentBatter.name} (${currentBatter.batSide}) - AVG: ${currentBatter.stats.avg.toFixed(3)}, HR: ${currentBatter.stats.hr}, RBI: ${currentBatter.stats.rbi}, OPS: ${currentBatter.stats.ops.toFixed(3)}`);
       } else {
         console.log(`   🏏 ❌ No current batter data available`);
       }
@@ -686,6 +789,27 @@ export class MLBEngine extends BaseSportEngine {
     if (state.inning >= 7) probability += 25;
     if (state.homeScore === state.awayScore) probability += 10;
 
+    // Incorporate weather factors
+    if (state.weather) {
+      // Wind affecting hit distance
+      if (state.weather.windSpeed && state.weather.windDirection) {
+        // Simplified logic: assume wind blowing out is favorable for HRs
+        // In a real system, you'd need wind direction relative to CF, batter splits, etc.
+        const windFromBehind = state.weather.windDirection === 'from_front' || state.weather.windDirection === 'from_behind'; // Placeholder values
+        const windTowardsCF = state.weather.windDirection === 'towards_cf'; // Placeholder value
+        if (windTowardsCF && state.weather.windSpeed > 10) {
+          probability += 10; // Favorable wind
+        } else if (windFromBehind && state.weather.windSpeed > 8) {
+          probability += 5; // Slightly favorable
+        }
+      }
+      // Temperature effects (less significant for baseball, but can be modeled)
+      if (state.weather.temperature && state.weather.temperature > 80) {
+        probability += 2; // Warmer conditions might slightly increase offense
+      }
+    }
+
+
     // Ensure probability is within 0-100
     return Math.min(Math.max(probability, 0), 100);
   }
@@ -701,7 +825,7 @@ export class MLBEngine extends BaseSportEngine {
         try {
           hybridAnalysis = await analyzeHybridRE24(gameState);
           console.log(`🧠 Hybrid Analysis: Base ${hybridAnalysis.baseRE24Probability}% → Final ${hybridAnalysis.finalProbability}% (${hybridAnalysis.aiInsight})`);
-          
+
           // Track prediction for learning system
           if (hybridAnalysis.finalProbability >= 80) {
             console.log(`📊 High-confidence prediction logged for learning system`);

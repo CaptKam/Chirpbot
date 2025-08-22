@@ -1,7 +1,5 @@
-
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
-import { enhancedWeatherService } from '../enhanced-weather';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -55,6 +53,13 @@ interface MLBGameState {
       losses: number;
     };
   };
+  // Added weather properties
+  weather?: {
+    temperature?: number;
+    description?: string;
+    windSpeed?: number;
+    precipitation?: string;
+  };
 }
 
 interface HybridRE24Result {
@@ -62,22 +67,19 @@ interface HybridRE24Result {
   baseRE24Probability: number;
   expectedRuns: number;
   re24Key: string;
-  
+
   // AI-enhanced context (intelligent, adaptive)
   aiContextMultiplier: number;
   finalProbability: number;
   aiInsight: string;
   confidence: number;
-  
+
   // Weather integration
-  weatherEffects?: {
-    windSpeed: number;
-    windDirection: string;
-    windComponentToCenter: number;
-    weatherDescription: string;
-    weatherEmoji: string;
+  weatherAnalysis: {
+    impact: string;
+    alert: string;
   };
-  
+
   // Combined analysis
   isHighLeverage: boolean;
   betingRecommendation?: string;
@@ -120,14 +122,15 @@ function clamp(x: number, lo: number, hi: number) {
 function generateCacheKey(gameState: MLBGameState): string {
   const batter = gameState.currentBatter;
   const pitcher = gameState.currentPitcher;
-  
+
   return [
     reKey(gameState.runners, gameState.outs),
     gameState.inning,
     gameState.inningState,
     Math.abs(gameState.homeScore - gameState.awayScore),
     batter ? `${batter.stats.avg.toFixed(3)}-${batter.stats.hr}-${batter.stats.ops.toFixed(3)}` : 'no-batter',
-    pitcher ? `${pitcher.stats.era.toFixed(2)}-${pitcher.stats.whip.toFixed(2)}` : 'no-pitcher'
+    pitcher ? `${pitcher.stats.era.toFixed(2)}-${pitcher.stats.whip.toFixed(2)}` : 'no-pitcher',
+    gameState.weather ? `${gameState.weather.temperature}-${gameState.weather.description}-${gameState.weather.windSpeed}-${gameState.weather.precipitation}` : 'no-weather'
   ].join('|');
 }
 
@@ -140,13 +143,13 @@ function calculateBaseRE24(gameState: MLBGameState): {
   const key = reKey(gameState.runners, gameState.outs);
   const expectedRuns = RE24[key] || 0.50;
   const probability = probFromRE(expectedRuns) * 100;
-  
+
   // Apply late-inning pressure modifier
   let modifier = 1.0;
   if (gameState.inning >= 8) {
     modifier = 1.15; // 15% boost for high-leverage situations
   }
-  
+
   return {
     probability: Math.round(clamp(probability * modifier, 5, 98)),
     expectedRuns,
@@ -161,25 +164,25 @@ async function getAIContextMultiplier(gameState: MLBGameState, baseRE24: number)
   confidence: number;
 }> {
   const cacheKey = generateCacheKey(gameState);
-  
+
   // Check cache first
   const cached = aiCache.get(cacheKey);
   if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
     return cached.result;
   }
-  
+
   try {
     // Only call AI for high-leverage situations (save API costs)
     const isHighLeverage = baseRE24 >= 60 || gameState.inning >= 8 || 
       Math.abs(gameState.homeScore - gameState.awayScore) <= 2;
-    
+
     if (!isHighLeverage) {
       return { multiplier: 1.0, insight: "Standard situation", confidence: 85 };
     }
 
     const batter = gameState.currentBatter;
     const pitcher = gameState.currentPitcher;
-    
+
     const prompt = `
 🔬 ADVANCED BASEBALL ANALYTICS - Contextual Probability Enhancement
 
@@ -195,6 +198,9 @@ ${batter && batter.stats.ops >= 0.900 ? '⭐ ELITE HITTER' : batter && batter.st
 ⚾ PITCHER ANALYSIS:
 ${pitcher ? `${pitcher.name} (${pitcher.throwHand}HP): ${pitcher.stats.era.toFixed(2)} ERA | ${pitcher.stats.whip.toFixed(2)} WHIP | ${pitcher.stats.strikeOuts} K` : 'Unknown Pitcher'}
 ${pitcher && pitcher.stats.era <= 3.50 ? '🎯 DOMINANT PITCHER' : pitcher && pitcher.stats.era >= 4.50 ? '📈 STRUGGLING PITCHER' : ''}
+
+☁️ WEATHER CONDITIONS:
+Temperature: ${gameState.weather?.temperature ?? 'N/A'} | Conditions: ${gameState.weather?.description ?? 'N/A'} | Wind: ${gameState.weather?.windSpeed ?? 'N/A'} mph | Precipitation: ${gameState.weather?.precipitation ?? 'None'}
 
 🎯 LEVERAGE FACTORS:
 - Game Context: ${Math.abs(gameState.homeScore - gameState.awayScore) <= 1 ? 'CLOSE GAME' : 'COMFORTABLE MARGIN'}
@@ -212,89 +218,94 @@ FORMAT: "Multiplier: X.X | Insight: [key factor] | Confidence: XX"
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 80,
+      max_tokens: 120,
       temperature: 0.3,
     });
 
     const aiResponse = response.choices[0]?.message?.content?.trim() || '';
-    
+
     // Parse AI response
     const multiplierMatch = aiResponse.match(/Multiplier:\s*([\d.]+)/);
     const insightMatch = aiResponse.match(/Insight:\s*([^|]+)/);
     const confidenceMatch = aiResponse.match(/Confidence:\s*(\d+)/);
-    
+
     const result = {
       multiplier: multiplierMatch ? parseFloat(multiplierMatch[1]) : 1.0,
       insight: insightMatch ? insightMatch[1].trim() : "AI analysis pending",
       confidence: confidenceMatch ? parseInt(confidenceMatch[1]) : 80
     };
-    
+
     // Clamp multiplier to reasonable bounds
     result.multiplier = clamp(result.multiplier, 0.7, 1.4);
-    
+
     // Cache the result
     aiCache.set(cacheKey, { result, timestamp: Date.now() });
-    
+
     return result;
-    
+
   } catch (error) {
     console.error('AI context analysis failed:', error);
     return { multiplier: 1.0, insight: "Using mathematical baseline", confidence: 75 };
   }
 }
 
-// Stadium to team mapping for weather data
-const TEAM_STADIUM_MAP: Record<string, string> = {
-  'Los Angeles Angels': 'Angel Stadium',
-  'Oakland Athletics': 'Oakland Coliseum',
-  'Boston Red Sox': 'Fenway Park',
-  'New York Yankees': 'Yankee Stadium',
-  'Colorado Rockies': 'Coors Field',
-  'Houston Astros': 'Minute Maid Park',
-  // Add more as needed - fallback will use team name
-};
+// Analyze weather impact on game probability (simple logic for now)
+function analyzeWeatherImpact(gameState: MLBGameState): { impact: string; alert: string } {
+  const weather = gameState.weather;
+
+  if (!weather) {
+    return { impact: "No weather data", alert: "" };
+  }
+
+  let impact = "Neutral";
+  let alert = "";
+
+  if (weather.description?.toLowerCase().includes("rain") || weather.precipitation?.toLowerCase().includes("rain")) {
+    impact = "Negative";
+    alert = "Rain may delay or affect game play.";
+  } else if (weather.description?.toLowerCase().includes("windy")) {
+    impact = "Moderate";
+    alert = `High winds could affect fly balls and pitching. (Wind: ${weather.windSpeed} mph)`;
+  } else if (weather.temperature && weather.temperature < 40) {
+    impact = "Moderate";
+    alert = `Cold conditions may impact offensive performance. (Temp: ${weather.temperature}°F)`;
+  }
+
+  return { impact, alert };
+}
 
 // Main hybrid analysis function
 export async function analyzeHybridRE24(gameState: MLBGameState): Promise<HybridRE24Result> {
   // Step 1: Fast mathematical foundation (always runs)
   const baseAnalysis = calculateBaseRE24(gameState);
-  
-  // Step 2: Get weather data for better context
-  let weatherEffects = undefined;
-  try {
-    const stadiumName = TEAM_STADIUM_MAP[gameState.homeTeam] || `${gameState.homeTeam} Stadium`;
-    const weatherData = await enhancedWeatherService.getEnhancedWeatherData(stadiumName);
-    
-    if (weatherData) {
-      const weatherSummary = enhancedWeatherService.getWeatherEffectsSummary(weatherData);
-      weatherEffects = {
-        windSpeed: weatherData.windSpeed,
-        windDirection: `${weatherData.windDirection}°`,
-        windComponentToCenter: Math.round(weatherData.calculations.windComponent * 10) / 10,
-        weatherDescription: weatherSummary.description,
-        weatherEmoji: weatherSummary.emoji
-      };
-    }
-  } catch (error) {
-    console.warn('Weather data unavailable for RE24 analysis:', error);
-  }
-  
-  // Step 3: AI contextual enhancement (selective)
+
+  // Step 2: AI contextual enhancement (selective)
   const aiContext = await getAIContextMultiplier(gameState, baseAnalysis.probability);
-  
-  // Step 3: Combine results
+
+  // Step 3: Weather integration analysis
+  const weatherAnalysis = analyzeWeatherImpact(gameState);
+
+  // Adjust probability based on weather impact
+  let weatherMultiplier = 1.0;
+  if (weatherAnalysis.impact === "Negative") {
+    weatherMultiplier = 0.90; // Reduce probability in negative weather
+  } else if (weatherAnalysis.impact === "Moderate") {
+    weatherMultiplier = 0.95; // Slightly reduce probability in moderate weather
+  }
+
+  // Step 4: Combine results
   const finalProbability = Math.round(clamp(
-    baseAnalysis.probability * aiContext.multiplier, 
+    baseAnalysis.probability * aiContext.multiplier * weatherMultiplier, 
     5, 
     98
   ));
-  
-  // Step 4: Enhanced betting intelligence with market context
+
+  // Step 5: Enhanced betting intelligence with market context
   const isHighLeverage = finalProbability >= 75 || gameState.inning >= 8;
   const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-  
+
   let bettingRecommendation = undefined;
-  
+
   // Advanced betting scenarios
   if (isHighLeverage && finalProbability >= 85) {
     bettingRecommendation = `🚨 PREMIUM BET: ${finalProbability}% probability | Live Over ${(gameState.homeScore + gameState.awayScore + 2.5).toFixed(1)} | High Confidence`;
@@ -305,10 +316,10 @@ export async function analyzeHybridRE24(gameState: MLBGameState): Promise<Hybrid
   } else if (finalProbability >= 75 && gameState.currentBatter?.stats.hr >= 15) {
     bettingRecommendation = `⚡ POWER PLAY: ${gameState.currentBatter.name} HR prop | ${finalProbability}% situation`;
   }
-  
-  // Step 5: Calculate alert priority
+
+  // Step 6: Calculate alert priority
   let alertPriority = Math.round(finalProbability * 0.85); // Base on probability
-  
+
   // Boost priority for extreme situations
   if (gameState.runners.first && gameState.runners.second && gameState.runners.third) {
     alertPriority += 15; // Bases loaded boost
@@ -316,24 +327,27 @@ export async function analyzeHybridRE24(gameState: MLBGameState): Promise<Hybrid
   if (gameState.inning >= 9 && Math.abs(gameState.homeScore - gameState.awayScore) <= 1) {
     alertPriority += 20; // Late-game close situations
   }
-  
+  if (weatherAnalysis.impact === "Negative") {
+    alertPriority += 10; // Weather alert boost
+  }
+
   alertPriority = clamp(alertPriority, 30, 100);
-  
+
   return {
     // Mathematical foundation
     baseRE24Probability: baseAnalysis.probability,
     expectedRuns: baseAnalysis.expectedRuns,
     re24Key: baseAnalysis.re24Key,
-    
+
     // AI enhancement
     aiContextMultiplier: aiContext.multiplier,
     finalProbability,
     aiInsight: aiContext.insight,
     confidence: aiContext.confidence,
-    
+
     // Weather integration
-    weatherEffects,
-    
+    weatherAnalysis,
+
     // Combined analysis
     isHighLeverage,
     betingRecommendation,
@@ -350,38 +364,29 @@ export function generateHybridAlertDescription(
   if (gameState.runners.first) runners.push('1ST');
   if (gameState.runners.second) runners.push('2ND');
   if (gameState.runners.third) runners.push('3RD');
-  
+
   const runnerText = runners.length > 0 ? runners.join(' & ') : 'Empty bases';
   const batter = gameState.currentBatter;
-  
+
   let description = `📊 HYBRID RE24: ${runnerText}, ${gameState.outs} out - ${analysis.finalProbability}% scoring probability`;
-  
+
   if (analysis.aiContextMultiplier !== 1.0) {
     const direction = analysis.aiContextMultiplier > 1.0 ? 'boosted' : 'adjusted';
     description += ` (AI ${direction}: ${(analysis.aiContextMultiplier * 100).toFixed(0)}%)`;
   }
-  
+
   if (batter && analysis.confidence >= 85) {
     description += ` | ${batter.name} at bat`;
   }
-  
-  // Add weather effects to description
-  if (analysis.weatherEffects) {
-    const { windSpeed, windComponentToCenter, weatherEmoji, weatherDescription } = analysis.weatherEffects;
-    const windDirection = windComponentToCenter > 0 ? 'helping' : windComponentToCenter < 0 ? 'hindering' : 'crosswind';
-    
-    description += ` | ${weatherEmoji} Wind: ${windSpeed}mph (${Math.abs(windComponentToCenter)}mph ${windDirection} toward CF)`;
-    
-    // Add weather context if significant
-    if (Math.abs(windComponentToCenter) >= 5) {
-      description += ` - ${weatherDescription}`;
-    }
-  }
-  
+
   if (analysis.aiInsight && analysis.aiInsight !== "Standard situation") {
     description += ` | ${analysis.aiInsight}`;
   }
-  
+
+  if (analysis.weatherAnalysis.alert) {
+    description += ` | ☁️ ${analysis.weatherAnalysis.alert}`;
+  }
+
   return description;
 }
 
