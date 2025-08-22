@@ -416,7 +416,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const isConnected = await testTelegramConnection(telegramConfig);
-      res.json({ connected: isConnected });
+      
+      if (!isConnected) {
+        return res.json({ 
+          connected: false, 
+          message: "Connection failed. Please check your bot token and chat ID. Make sure your bot is active and you've started a conversation with it." 
+        });
+      }
+      
+      res.json({ connected: true, message: "Successfully connected to your Telegram bot!" });
     } catch (error) {
       console.error("Error testing user Telegram connection:", error);
       res.status(500).json({ message: "Failed to test Telegram connection", connected: false });

@@ -177,6 +177,11 @@ export default function Settings() {
   useEffect(() => {
     if (userTelegramSettings) {
       setPersonalTelegramEnabled(userTelegramSettings.telegramEnabled);
+      // Set token and chat ID from stored settings but don't display them for security
+      if (userTelegramSettings.hasCredentials) {
+        setTelegramBotToken("••••••••••"); // Masked display
+        setTelegramChatId("••••••••••");  // Masked display
+      }
     }
   }, [userTelegramSettings]);
 
@@ -284,7 +289,7 @@ export default function Settings() {
   };
 
   const handleSaveTelegramCredentials = () => {
-    if (!telegramBotToken || !telegramChatId) {
+    if (!telegramBotToken || !telegramChatId || telegramBotToken === "••••••••••" || telegramChatId === "••••••••••") {
       toast({
         title: "Missing Information",
         description: "Please enter both bot token and chat ID.",
@@ -467,9 +472,14 @@ export default function Settings() {
                           type="password"
                           value={telegramBotToken}
                           onChange={(e) => setTelegramBotToken(e.target.value)}
-                          placeholder="7123456789:AABCDEFabcdef123456789..."
+                          placeholder={userTelegramSettings?.hasCredentials ? "••••••••••  (enter new to update)" : "7123456789:AABCDEFabcdef123456789..."}
                           className="bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                           disabled={updateUserTelegramMutation.isPending}
+                          onFocus={() => {
+                            if (telegramBotToken === "••••••••••") {
+                              setTelegramBotToken("");
+                            }
+                          }}
                         />
                       </div>
 
@@ -483,19 +493,24 @@ export default function Settings() {
                           type="text"
                           value={telegramChatId}
                           onChange={(e) => setTelegramChatId(e.target.value)}
-                          placeholder="123456789 or -100123456789"
+                          placeholder={userTelegramSettings?.hasCredentials ? "••••••••••  (enter new to update)" : "123456789 or -100123456789"}
                           className="bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
                           disabled={updateUserTelegramMutation.isPending}
+                          onFocus={() => {
+                            if (telegramChatId === "••••••••••") {
+                              setTelegramChatId("");
+                            }
+                          }}
                         />
                       </div>
 
                       <Button
                         onClick={handleSaveTelegramCredentials}
-                        disabled={updateUserTelegramMutation.isPending || !telegramBotToken || !telegramChatId}
+                        disabled={updateUserTelegramMutation.isPending || !telegramBotToken || !telegramChatId || telegramBotToken === "••••••••••" || telegramChatId === "••••••••••"}
                         className="w-full bg-emerald-500 text-slate-900 hover:bg-emerald-400 font-medium"
                         data-testid="save-telegram-credentials"
                       >
-                        {updateUserTelegramMutation.isPending ? "Saving..." : "Save Credentials"}
+                        {updateUserTelegramMutation.isPending ? "Saving..." : userTelegramSettings?.hasCredentials ? "Update Credentials" : "Save Credentials"}
                       </Button>
                     </div>
                   </div>
