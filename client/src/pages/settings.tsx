@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
@@ -6,7 +6,9 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Bell, CheckCircle, AlertCircle, LogOut, UserPlus, ChevronDown, ChevronUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Zap, Bell, CheckCircle, AlertCircle, LogOut, UserPlus, ChevronDown, ChevronUp, Settings as SettingsIcon, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
@@ -91,8 +93,10 @@ export default function Settings() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [telegramStatus, setTelegramStatus] = useState<boolean | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["Game Situations", "AI Predictions"]));
+  const [telegramBotToken, setTelegramBotToken] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [personalTelegramEnabled, setPersonalTelegramEnabled] = useState(false);
   const { toast } = useToast();
-
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -155,6 +159,82 @@ export default function Settings() {
     },
   });
 
+  // Personal Telegram settings queries and mutations
+  const { data: userTelegramSettings, isLoading: isLoadingTelegramSettings } = useQuery({
+    queryKey: [`/api/user/${user?.id}/telegram`],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const response = await fetch(`/api/user/${user.id}/telegram`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch Telegram settings");
+      return response.json();
+    },
+    enabled: !!user?.id,
+  });
+
+  // Update local state when user telegram settings are loaded
+  useEffect(() => {
+    if (userTelegramSettings) {
+      setPersonalTelegramEnabled(userTelegramSettings.telegramEnabled);
+    }
+  }, [userTelegramSettings]);
+
+  const updateUserTelegramMutation = useMutation({
+    mutationFn: async ({ telegramBotToken, telegramChatId, telegramEnabled }: { 
+      telegramBotToken: string; 
+      telegramChatId: string; 
+      telegramEnabled: boolean; 
+    }) => {
+      if (!user?.id) throw new Error("User not authenticated");
+      const response = await apiRequest("PUT", `/api/user/${user.id}/telegram`, {
+        telegramBotToken,
+        telegramChatId,
+        telegramEnabled,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/telegram`] });
+      toast({
+        title: "Telegram Settings Updated",
+        description: "Your personal Telegram configuration has been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update Telegram settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const testUserTelegramMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("User not authenticated");
+      const response = await apiRequest("POST", `/api/user/${user.id}/telegram/test`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setTelegramStatus(data.connected);
+      toast({
+        title: data.connected ? "Your Telegram Connected" : "Telegram Connection Failed",
+        description: data.connected 
+          ? "Your personal Telegram bot is working correctly." 
+          : data.message || "Check your bot token and chat ID configuration.",
+        variant: data.connected ? "default" : "destructive",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Connection Test Failed",
+        description: error.message || "Unable to test Telegram connection.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const testTelegramMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/telegram/test", {});
@@ -163,10 +243,10 @@ export default function Settings() {
     onSuccess: (data) => {
       setTelegramStatus(data.connected);
       toast({
-        title: data.connected ? "Telegram Connected" : "Telegram Connection Failed",
+        title: data.connected ? "Global Telegram Connected" : "Global Telegram Connection Failed",
         description: data.connected 
-          ? "Your Telegram bot is working correctly." 
-          : "Check your bot token and chat ID configuration.",
+          ? "The system Telegram bot is working correctly." 
+          : "Check the global bot token and chat ID configuration.",
         variant: data.connected ? "default" : "destructive",
       });
     },
@@ -190,6 +270,34 @@ export default function Settings() {
 
   const handlePushNotificationsToggle = (enabled: boolean) => {
     updateSettingsMutation.mutate({ pushNotificationsEnabled: enabled });
+  };
+
+  const handlePersonalTelegramToggle = (enabled: boolean) => {
+    setPersonalTelegramEnabled(enabled);
+    if (telegramBotToken && telegramChatId) {
+      updateUserTelegramMutation.mutate({
+        telegramBotToken,
+        telegramChatId,
+        telegramEnabled: enabled,
+      });
+    }
+  };
+
+  const handleSaveTelegramCredentials = () => {
+    if (!telegramBotToken || !telegramChatId) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both bot token and chat ID.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateUserTelegramMutation.mutate({
+      telegramBotToken,
+      telegramChatId,
+      telegramEnabled: personalTelegramEnabled,
+    });
   };
 
   const toggleCategory = (category: string) => {
@@ -333,6 +441,127 @@ export default function Settings() {
               })()}
             </div>
 
+            {/* Personal Telegram Configuration */}
+            {isAuthenticated && (
+              <div>
+                <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-4 flex items-center">
+                  <SettingsIcon className="w-5 h-5 mr-2 text-emerald-400" />
+                  Your Personal Telegram Bot
+                </h2>
+
+                <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 space-y-4 hover:bg-white/10 transition-all duration-200">
+                  <div className="border-b border-white/10 pb-4">
+                    <h3 className="font-bold text-slate-100 mb-2">Configure Your Bot</h3>
+                    <p className="text-sm text-slate-300 mb-4">
+                      Set up your personal Telegram bot to receive alerts directly in your own chat.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="telegram-bot-token" className="text-sm font-medium text-slate-200">
+                          Telegram Bot Token
+                        </Label>
+                        <Input
+                          id="telegram-bot-token"
+                          data-testid="input-telegram-bot-token"
+                          type="password"
+                          value={telegramBotToken}
+                          onChange={(e) => setTelegramBotToken(e.target.value)}
+                          placeholder="7123456789:AABCDEFabcdef123456789..."
+                          className="bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
+                          disabled={updateUserTelegramMutation.isPending}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="telegram-chat-id" className="text-sm font-medium text-slate-200">
+                          Chat ID
+                        </Label>
+                        <Input
+                          id="telegram-chat-id"
+                          data-testid="input-telegram-chat-id"
+                          type="text"
+                          value={telegramChatId}
+                          onChange={(e) => setTelegramChatId(e.target.value)}
+                          placeholder="123456789 or -100123456789"
+                          className="bg-white/10 border-white/20 text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500/50"
+                          disabled={updateUserTelegramMutation.isPending}
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleSaveTelegramCredentials}
+                        disabled={updateUserTelegramMutation.isPending || !telegramBotToken || !telegramChatId}
+                        className="w-full bg-emerald-500 text-slate-900 hover:bg-emerald-400 font-medium"
+                        data-testid="save-telegram-credentials"
+                      >
+                        {updateUserTelegramMutation.isPending ? "Saving..." : "Save Credentials"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-slate-100">Enable Personal Alerts</h3>
+                        <p className="text-sm text-slate-300 mt-1">Send alerts to your personal Telegram bot</p>
+                      </div>
+                      <Switch
+                        checked={personalTelegramEnabled}
+                        onCheckedChange={handlePersonalTelegramToggle}
+                        data-testid="toggle-personal-telegram"
+                        className="data-[state=checked]:bg-emerald-500"
+                        disabled={!userTelegramSettings?.hasCredentials}
+                      />
+                    </div>
+
+                    {userTelegramSettings?.hasCredentials && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-300">Personal Bot Status</span>
+                        {telegramStatus === null ? (
+                          <Badge className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-slate-600">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Unknown
+                          </Badge>
+                        ) : telegramStatus ? (
+                          <Badge className="bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-emerald-500/30">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Connected
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-red-500/20 text-red-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-red-500/30">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Disconnected
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {userTelegramSettings?.hasCredentials && (
+                      <Button
+                        onClick={() => testUserTelegramMutation.mutate()}
+                        disabled={testUserTelegramMutation.isPending}
+                        size="sm"
+                        className="w-full bg-blue-500 text-slate-100 hover:bg-blue-400 font-medium"
+                        data-testid="test-personal-telegram-button"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        {testUserTelegramMutation.isPending ? "Testing..." : "Test My Bot"}
+                      </Button>
+                    )}
+
+                    {!userTelegramSettings?.hasCredentials && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                        <p className="text-sm text-yellow-300">
+                          <AlertCircle className="w-4 h-4 inline mr-2" />
+                          Enter your bot token and chat ID above to enable personal Telegram alerts.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            )}
 
             {/* Notification Settings */}
             <div>
@@ -369,7 +598,7 @@ export default function Settings() {
 
                 <div className="border-t border-white/10 pt-4">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-slate-300">Telegram Bot Status</span>
+                    <span className="text-sm font-medium text-slate-300">Global Bot Status</span>
                     {telegramStatus === null ? (
                       <Badge className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-slate-600">
                         <AlertCircle className="w-3 h-3 mr-1" />
@@ -392,10 +621,10 @@ export default function Settings() {
                     onClick={() => testTelegramMutation.mutate()}
                     disabled={testTelegramMutation.isPending}
                     size="sm"
-                    className="w-full bg-emerald-500 text-slate-900 hover:bg-emerald-400 font-medium"
+                    className="w-full bg-orange-500 text-slate-100 hover:bg-orange-400 font-medium"
                     data-testid="test-telegram-button"
                   >
-                    {testTelegramMutation.isPending ? "Testing..." : "Test Connection"}
+                    {testTelegramMutation.isPending ? "Testing..." : "Test Global Bot"}
                   </Button>
                 </div>
               </Card>
