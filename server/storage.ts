@@ -687,6 +687,95 @@ export class MemStorage implements IStorage {
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {
+  constructor() {
+    // Initialize master alert controls when the database storage is created
+    this.initializeMasterAlertControls().catch(console.error);
+  }
+
+  private async initializeMasterAlertControls() {
+    try {
+      // Check if controls already exist
+      const existingControls = await db.select().from(masterAlertControls).limit(1);
+      if (existingControls.length > 0) {
+        return; // Already initialized
+      }
+
+      // MLB Master Alert Controls
+      const mlbAlerts = [
+        // Game Situations
+        { alertKey: "risp", title: "RISP Alert", description: "Runners in scoring position", category: "Game Situations" },
+        { alertKey: "closeGame", title: "Close Game Alert", description: "1-run games in late innings", category: "Game Situations" },
+        { alertKey: "lateInning", title: "Late Inning Alert", description: "8th+ inning crucial moments", category: "Game Situations" },
+        { alertKey: "runnersOnBase", title: "Runners On Base", description: "Any base runner situations", category: "Game Situations" },
+        
+        // Scoring Events
+        { alertKey: "homeRun", title: "Home Run Situations", description: "High home run probability moments", category: "Scoring Events" },
+        { alertKey: "homeRunAlert", title: "Home Run Alerts", description: "Actual home run notifications", category: "Scoring Events" },
+        { alertKey: "hits", title: "Hit Alerts", description: "Base hit notifications", category: "Scoring Events" },
+        { alertKey: "scoring", title: "Scoring Plays", description: "RBI and run-scoring events", category: "Scoring Events" },
+        
+        // Player Performance
+        { alertKey: "strikeouts", title: "Strikeout Alerts", description: "Pitcher strikeout notifications", category: "Player Performance" },
+        
+        // RE24+AI Hybrid System
+        { alertKey: "useRE24System", title: "RE24+AI Hybrid System", description: "Advanced Run Expectancy analytics enhanced with AI predictions", category: "AI Predictions" },
+        { alertKey: "re24Level1", title: "RE24 Level 1", description: "Basic situational analysis with AI enhancement", category: "AI Predictions" },
+        { alertKey: "re24Level2", title: "RE24 Level 2", description: "Intermediate player analytics with contextual AI", category: "AI Predictions" },
+        { alertKey: "re24Level3", title: "RE24 Level 3", description: "Elite sabermetrics with advanced AI predictions", category: "AI Predictions" },
+        
+        // Game Flow
+        { alertKey: "inningChange", title: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },
+      ];
+
+      // NFL Master Alert Controls
+      const nflAlerts = [
+        { alertKey: "redZone", title: "Red Zone Alert", description: "Team driving inside the 20-yard line", category: "Scoring Opportunities" },
+        { alertKey: "nflCloseGame", title: "Close Game Alert", description: "One-score games in final quarter", category: "Game Situations" },
+        { alertKey: "fourthDown", title: "Fourth Down Alert", description: "Critical fourth down decisions", category: "Critical Plays" },
+        { alertKey: "twoMinuteWarning", title: "Two Minute Warning", description: "Game-deciding final drives", category: "Game Situations" },
+      ];
+
+      // NBA Master Alert Controls  
+      const nbaAlerts = [
+        { alertKey: "clutchTime", title: "Clutch Time Alert", description: "Final 2 minutes of close games", category: "Game Situations" },
+        { alertKey: "nbaCloseGame", title: "Close Game Alert", description: "Single-digit games in 4th quarter", category: "Game Situations" },
+        { alertKey: "overtime", title: "Overtime Alert", description: "Extra period situations", category: "Special Events" },
+      ];
+
+      // NHL Master Alert Controls
+      const nhlAlerts = [
+        { alertKey: "powerPlay", title: "Power Play Alert", description: "Man advantage situations", category: "Special Situations" },
+        { alertKey: "nhlCloseGame", title: "Close Game Alert", description: "One-goal games in final period", category: "Game Situations" },
+        { alertKey: "emptyNet", title: "Empty Net Alert", description: "Goalie pulled for extra attacker", category: "Special Situations" },
+      ];
+
+      // Create master alert controls for all sports
+      const allAlerts = [
+        ...mlbAlerts.map(alert => ({ ...alert, sport: "MLB" })),
+        ...nflAlerts.map(alert => ({ ...alert, sport: "NFL" })),
+        ...nbaAlerts.map(alert => ({ ...alert, sport: "NBA" })),
+        ...nhlAlerts.map(alert => ({ ...alert, sport: "NHL" })),
+      ];
+
+      // Insert all controls into database
+      if (allAlerts.length > 0) {
+        await db.insert(masterAlertControls).values(
+          allAlerts.map(alert => ({
+            sport: alert.sport,
+            alertKey: alert.alertKey,
+            title: alert.title,
+            description: alert.description,
+            category: alert.category,
+            enabled: true,
+          }))
+        );
+        console.log(`✅ Initialized ${allAlerts.length} master alert controls`);
+      }
+    } catch (error) {
+      console.error("Error initializing master alert controls:", error);
+    }
+  }
+
   // User methods
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
