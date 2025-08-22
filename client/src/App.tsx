@@ -11,7 +11,6 @@ import Alerts from "./pages/alerts";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
-import AdminControlPanel from "./pages/admin-control-panel";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
@@ -139,7 +138,6 @@ function RegularAppContent() {
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={Alerts} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route path="/admin/control-panel" component={() => <ProtectedRoute component={AdminControlPanel} requireAdmin={true} />} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}

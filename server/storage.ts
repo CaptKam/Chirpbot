@@ -6,7 +6,6 @@ import { eq, and, sql, desc } from "drizzle-orm";
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
-  getAllUsers(): Promise<User[]>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByOAuthId(provider: 'google' | 'apple', oauthId: string): Promise<User | undefined>;
@@ -44,13 +43,9 @@ export interface IStorage {
 
   // Settings
   getSettingsBySport(sport: string): Promise<Settings | undefined>;
-  getSettingsByUserAndSport(userId: string, sport: string): Promise<Settings | undefined>;
   getAllSettings(): Promise<Settings[]>;
   createSettings(settings: InsertSettings): Promise<Settings>;
-  createUserSettings(userId: string, sport: string, settings: any): Promise<Settings>;
   updateSettings(sport: string, updates: Partial<Settings>): Promise<Settings | undefined>;
-  updateUserSettings(userId: string, sport: string, updates: any): Promise<Settings | undefined>;
-  getAlertSettingsStats(): Promise<any>;
 
   // Admin AI Settings
   getAiSettingsBySport(sport: string): Promise<AiSettings | undefined>;
@@ -181,10 +176,6 @@ export class MemStorage implements IStorage {
       (user.username && user.username.toLowerCase() === lowerInput) ||
       (user.email && user.email.toLowerCase() === lowerInput)
     );
-  }
-
-  async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -433,42 +424,6 @@ export class MemStorage implements IStorage {
     return updatedSettings;
   }
 
-  async getSettingsByUserAndSport(userId: string, sport: string): Promise<Settings | undefined> {
-    // For MemStorage, settings are global per sport
-    return this.getSettingsBySport(sport);
-  }
-
-  async createUserSettings(userId: string, sport: string, settings: any): Promise<Settings> {
-    // For MemStorage, create global settings for sport
-    return this.createSettings({ sport, ...settings });
-  }
-
-  async updateUserSettings(userId: string, sport: string, updates: any): Promise<Settings | undefined> {
-    // For MemStorage, update global settings for sport
-    return this.updateSettings(sport, updates);
-  }
-
-  async getAlertSettingsStats(): Promise<any> {
-    const allSettings = await this.getAllSettings();
-    const stats = {
-      totalUsers: this.users.size,
-      settingsByAlert: {},
-      settingsBySport: {}
-    };
-    
-    allSettings.forEach(setting => {
-      stats.settingsBySport[setting.sport] = setting;
-      if (setting.alertTypes) {
-        Object.entries(setting.alertTypes).forEach(([key, value]) => {
-          if (!stats.settingsByAlert[key]) stats.settingsByAlert[key] = 0;
-          if (value) stats.settingsByAlert[key]++;
-        });
-      }
-    });
-    
-    return stats;
-  }
-
   // Admin AI Settings methods (Mock implementations for MemStorage)
   async getAiSettingsBySport(sport: string): Promise<AiSettings | undefined> {
     // Mock implementation - return default settings
@@ -617,10 +572,6 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users)
       .where(sql`LOWER(${users.email}) = ${lowerEmail}`);
     return user || undefined;
-  }
-
-  async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
   }
 
   async getUserByOAuthId(provider: 'google' | 'apple', oauthId: string): Promise<User | undefined> {
@@ -787,54 +738,6 @@ export class DatabaseStorage implements IStorage {
   async updateSettings(sport: string, updates: Partial<Settings>): Promise<Settings | undefined> {
     const [updatedSettings] = await db.update(settings).set(updates).where(eq(settings.sport, sport)).returning();
     return updatedSettings || undefined;
-  }
-
-  async getSettingsByUserAndSport(userId: string, sport: string): Promise<Settings | undefined> {
-    // For now, settings are global per sport, but we can extend this for user-specific settings later
-    return this.getSettingsBySport(sport);
-  }
-
-  async createUserSettings(userId: string, sport: string, settingsData: any): Promise<Settings> {
-    // For now, create global settings for sport, but we can extend this for user-specific settings later
-    return this.createSettings({ sport, ...settingsData });
-  }
-
-  async updateUserSettings(userId: string, sport: string, updates: any): Promise<Settings | undefined> {
-    // For now, update global settings for sport, but we can extend this for user-specific settings later
-    return this.updateSettings(sport, updates);
-  }
-
-  async getAlertSettingsStats(): Promise<any> {
-    const allUsers = await this.getAllUsers();
-    const allSettings = await this.getAllSettings();
-    
-    const stats = {
-      totalUsers: allUsers.length,
-      totalSettings: allSettings.length,
-      settingsByAlert: {},
-      settingsBySport: {},
-      enabledAlerts: 0,
-      totalAlerts: 0
-    };
-    
-    allSettings.forEach(setting => {
-      stats.settingsBySport[setting.sport] = setting;
-      if (setting.alertTypes) {
-        Object.entries(setting.alertTypes).forEach(([key, value]) => {
-          if (!stats.settingsByAlert[key]) {
-            stats.settingsByAlert[key] = { enabled: 0, total: 0 };
-          }
-          stats.settingsByAlert[key].total++;
-          stats.totalAlerts++;
-          if (value) {
-            stats.settingsByAlert[key].enabled++;
-            stats.enabledAlerts++;
-          }
-        });
-      }
-    });
-    
-    return stats;
   }
 
   // Admin AI Settings methods
