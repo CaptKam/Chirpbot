@@ -293,7 +293,13 @@ class LiveSportsService {
         let nflGames: Game[] = [];
         try {
           nflGames = await sportsDataService.getNFLGames();
-          console.log(`✅ NFL primary source: ${nflGames.length} games`);
+          if (nflGames.length > 0) {
+            console.log(`✅ NFL primary source: ${nflGames.length} games`);
+          } else {
+            console.log('⚠️ NFL primary returned 0 games, trying fallback sources...');
+            nflGames = await multiSourceAggregator.getNFLGames(today);
+            console.log(`✅ NFL fallback sources: ${nflGames.length} games`);
+          }
         } catch (error) {
           console.log('⚠️ NFL primary failed, trying fallback sources...');
           nflGames = await multiSourceAggregator.getNFLGames(today);
@@ -323,8 +329,15 @@ class LiveSportsService {
           case 'NFL':
             try {
               const nflGames = await sportsDataService.getNFLGames();
-              games = games.concat(nflGames);
-              console.log(`✅ NFL primary source: ${nflGames.length} games`);
+              if (nflGames.length > 0) {
+                games = games.concat(nflGames);
+                console.log(`✅ NFL primary source: ${nflGames.length} games`);
+              } else {
+                console.log('⚠️ NFL primary returned 0 games, trying fallback sources...');
+                const fallbackGames = await multiSourceAggregator.getNFLGames(today);
+                games = games.concat(fallbackGames);
+                console.log(`✅ NFL fallback sources: ${fallbackGames.length} games`);
+              }
             } catch (error) {
               console.log('⚠️ NFL primary failed, using fallback sources...');
               const fallbackGames = await multiSourceAggregator.getNFLGames(today);
