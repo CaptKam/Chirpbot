@@ -39,10 +39,26 @@ export class WeatherEngine extends BaseSportEngine {
         return;
       }
       
-      console.log(`🌤️ Checking weather conditions for all active games...`);
+      console.log(`🌤️ Checking weather conditions for user-monitored games...`);
       
-      // Get all monitored teams and check weather for their venues
-      const monitoredTeams = await storage.getMonitoredTeams();
+      // Get only games that users are actually monitoring
+      const allMonitoredGames = await storage.getAllMonitoredGames();
+      
+      // Create unique set of games to avoid duplicate weather requests
+      const uniqueGames = new Map<string, { homeTeam: string; awayTeam: string; sport: string }>();
+      
+      for (const monitoredGame of allMonitoredGames) {
+        const gameKey = `${monitoredGame.homeTeamName}_${monitoredGame.awayTeamName}`;
+        if (!uniqueGames.has(gameKey)) {
+          uniqueGames.set(gameKey, {
+            homeTeam: monitoredGame.homeTeamName,
+            awayTeam: monitoredGame.awayTeamName,
+            sport: monitoredGame.sport
+          });
+        }
+      }
+      
+      console.log(`🌤️ Found ${uniqueGames.size} unique monitored games (from ${allMonitoredGames.length} user selections)`);
       
       // Map team names to cities for weather data
       const teamCityMap: Record<string, string> = {
@@ -63,20 +79,20 @@ export class WeatherEngine extends BaseSportEngine {
         'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
       };
 
-      for (const team of monitoredTeams) {
+      for (const [gameKey, game] of Array.from(uniqueGames)) {
         try {
-          const cityName = teamCityMap[team.name] || team.name;
+          const cityName = teamCityMap[game.homeTeam] || game.homeTeam;
           const weatherData = await getWeatherData(cityName);
           if (!weatherData) continue;
           
-          const previousWeather = this.weatherHistory.get(team.name);
+          const previousWeather = this.weatherHistory.get(gameKey);
           
           const weatherState: WeatherState = {
-            gameId: `weather-${team.name}`,
-            homeTeam: team.name,
-            awayTeam: 'N/A',
-            venue: team.name,
-            city: team.name,
+            gameId: `weather-${gameKey}`,
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            venue: `${game.homeTeam} Stadium`,
+            city: cityName,
             currentWeather: {
               temperature: weatherData.temperature || 0,
               windSpeed: weatherData.windSpeed || 0,
@@ -84,22 +100,22 @@ export class WeatherEngine extends BaseSportEngine {
               condition: weatherData.condition
             },
             previousWeather,
-            sport: 'WEATHER'
+            sport: game.sport
           };
           
           // Check for weather alerts
           const triggeredAlerts = await this.checkAlertConditions(weatherState);
           
           if (triggeredAlerts.length > 0) {
-            console.log(`🌪️ Weather alerts for ${team.name}:`, triggeredAlerts.length);
+            console.log(`🌪️ Weather alerts for ${game.homeTeam} vs ${game.awayTeam}:`, triggeredAlerts.length);
             await this.processAlerts(triggeredAlerts, weatherState);
           }
           
           // Update weather history
-          this.weatherHistory.set(team.name, weatherState.currentWeather);
+          this.weatherHistory.set(gameKey, weatherState.currentWeather);
           
         } catch (error) {
-          console.error(`Weather check failed for ${team.name}:`, error);
+          console.error(`Weather check failed for ${game.homeTeam} vs ${game.awayTeam}:`, error);
         }
       }
       
@@ -229,59 +245,27 @@ export class WeatherEngine extends BaseSportEngine {
 
   async monitorWeatherForAllGames(): Promise<void> {
     try {
-      console.log('🌤️ Monitoring weather conditions for all active games...');
+      console.log('🌤️ Monitoring weather conditions for user-monitored games...');
       
-      // Get all live games from different sports
-      const allGames = await this.getAllLiveGames();
+      // Get only games that users are actually monitoring
+      const allMonitoredGames = await storage.getAllMonitoredGames();
       
-      for (const game of allGames) {
-        try {
-          // Use the mapped city instead of team name
-          const weatherData = await getWeatherData(game.city);
-          if (!weatherData) continue;
-
-          const gameWeatherData = {
-            gameId: game.gameId,
-            homeTeam: game.homeTeam,
-            awayTeam: game.awayTeam,
-            venue: game.venue,
-            city: game.city,
-            sport: game.sport,
-            weather: {
-              temperature: weatherData.temperature,
-              windSpeed: weatherData.windSpeed,
-              windDirection: weatherData.windDirection,
-              condition: weatherData.condition
-            }
-          };
-
-          const weatherState = this.extractGameState(gameWeatherData);
-          if (!weatherState) continue;
-
-          const triggeredAlerts = await this.checkAlertConditions(weatherState);
-          
-          if (triggeredAlerts.length > 0) {
-            console.log(`🌪️ Found ${triggeredAlerts.length} weather alerts for ${weatherState.homeTeam} vs ${weatherState.awayTeam}`);
-            await this.processAlerts(triggeredAlerts, weatherState);
-          }
-
-          // Update weather history
-          this.weatherHistory.set(game.gameId, weatherState.currentWeather);
-          
-        } catch (gameError) {
-          console.error(`Error processing weather for game:`, gameError);
+      // Create unique set of games to avoid duplicate weather requests
+      const uniqueGames = new Map<string, { homeTeam: string; awayTeam: string; sport: string; gameId: string }>();
+      
+      for (const monitoredGame of allMonitoredGames) {
+        const gameKey = `${monitoredGame.homeTeamName}_${monitoredGame.awayTeamName}`;
+        if (!uniqueGames.has(gameKey)) {
+          uniqueGames.set(gameKey, {
+            homeTeam: monitoredGame.homeTeamName,
+            awayTeam: monitoredGame.awayTeamName,
+            sport: monitoredGame.sport,
+            gameId: monitoredGame.gameId
+          });
         }
       }
       
-    } catch (error) {
-      console.error('Weather monitoring error:', error);
-    }
-  }
-
-  private async getAllLiveGames(): Promise<any[]> {
-    try {
-      const { engineCoordinator } = await import('../engine-coordinator');
-      const allGames = await engineCoordinator.getAllLiveGames();
+      console.log(`🌤️ Found ${uniqueGames.size} unique monitored games (from ${allMonitoredGames.length} user selections)`);
       
       // Map team names to their actual cities for better weather data
       const teamCityMap: Record<string, string> = {
@@ -318,20 +302,48 @@ export class WeatherEngine extends BaseSportEngine {
         'San Diego Padres': 'San Diego'
       };
       
-      const games = allGames.map(game => ({
-        gameId: game.gameId,
-        homeTeam: game.homeTeam,
-        awayTeam: game.awayTeam,
-        venue: `${game.homeTeam} Stadium`,
-        city: teamCityMap[game.homeTeam] || game.homeTeam, // Use proper city mapping
-        sport: game.sport
-      }));
+      for (const [gameKey, game] of Array.from(uniqueGames)) {
+        try {
+          // Use the mapped city instead of team name
+          const cityName = teamCityMap[game.homeTeam] || game.homeTeam;
+          const weatherData = await getWeatherData(cityName);
+          if (!weatherData) continue;
+
+          const gameWeatherData = {
+            gameId: game.gameId,
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            venue: `${game.homeTeam} Stadium`,
+            city: cityName,
+            sport: game.sport,
+            weather: {
+              temperature: weatherData.temperature,
+              windSpeed: weatherData.windSpeed,
+              windDirection: weatherData.windDirection,
+              condition: weatherData.condition
+            }
+          };
+
+          const weatherState = this.extractGameState(gameWeatherData);
+          if (!weatherState) continue;
+
+          const triggeredAlerts = await this.checkAlertConditions(weatherState);
+          
+          if (triggeredAlerts.length > 0) {
+            console.log(`🌪️ Found ${triggeredAlerts.length} weather alerts for ${weatherState.homeTeam} vs ${weatherState.awayTeam}`);
+            await this.processAlerts(triggeredAlerts, weatherState);
+          }
+
+          // Update weather history
+          this.weatherHistory.set(game.gameId, weatherState.currentWeather);
+          
+        } catch (gameError) {
+          console.error(`Error processing weather for game ${game.homeTeam} vs ${game.awayTeam}:`, gameError);
+        }
+      }
       
-      console.log(`🌤️ Weather engine found ${games.length} live games to monitor`);
-      return games;
     } catch (error) {
-      console.error('Error getting live games for weather monitoring:', error);
-      return [];
+      console.error('Weather monitoring error:', error);
     }
   }
 
