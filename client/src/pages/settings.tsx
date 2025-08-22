@@ -611,37 +611,6 @@ export default function Settings() {
                   />
                 </div>
 
-                <div className="border-t border-white/10 pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-slate-300">Global Bot Status</span>
-                    {telegramStatus === null ? (
-                      <Badge className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-slate-600">
-                        <AlertCircle className="w-3 h-3 mr-1" />
-                        Unknown
-                      </Badge>
-                    ) : telegramStatus ? (
-                      <Badge className="bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-emerald-500/30">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Connected
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-red-500/20 text-red-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-red-500/30">
-                        <AlertCircle className="w-3 h-3 mr-1" />
-                        Disconnected
-                      </Badge>
-                    )}
-                  </div>
-
-                  <Button
-                    onClick={() => testTelegramMutation.mutate()}
-                    disabled={testTelegramMutation.isPending}
-                    size="sm"
-                    className="w-full bg-orange-500 text-slate-100 hover:bg-orange-400 font-medium"
-                    data-testid="test-telegram-button"
-                  >
-                    {testTelegramMutation.isPending ? "Testing..." : "Test Global Bot"}
-                  </Button>
-                </div>
               </Card>
             </div>
 
