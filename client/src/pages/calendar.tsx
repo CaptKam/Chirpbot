@@ -9,6 +9,7 @@ import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { removeCity } from "@/lib/team-utils";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
@@ -129,8 +130,8 @@ export default function Calendar() {
       addMonitoringMutation.mutate({
         gameId,
         sport: activeSport,
-        homeTeamName: game.homeTeam.name,
-        awayTeamName: game.awayTeam.name
+        homeTeamName: removeCity(game.homeTeam.name),
+        awayTeamName: removeCity(game.awayTeam.name)
       });
     }
     setSelectedGames(newSelected);
@@ -306,14 +307,14 @@ export default function Calendar() {
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-3">
                         <TeamLogo
-                          teamName={game.awayTeam.name}
+                          teamName={removeCity(game.awayTeam.name)}
                           abbreviation={game.awayTeam.abbreviation}
                           size="md"
                           className="shadow-sm"
                         />
                         <span className="text-slate-300 font-bold text-lg">@</span>
                         <TeamLogo
-                          teamName={game.homeTeam.name}
+                          teamName={removeCity(game.homeTeam.name)}
                           abbreviation={game.homeTeam.abbreviation}
                           size="md"
                           className="shadow-sm"
@@ -334,7 +335,7 @@ export default function Calendar() {
                   {/* Team names */}
                   <div className="mb-3">
                     <h3 className="font-bold text-slate-100 text-lg leading-tight" data-testid={`game-title-${game.id}`}>
-                      {game.awayTeam.name} @ {game.homeTeam.name}
+                      {removeCity(game.awayTeam.name)} @ {removeCity(game.homeTeam.name)}
                     </h3>
                   </div>
 
