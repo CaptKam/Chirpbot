@@ -8,6 +8,7 @@ import type { Alert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { SwipeableCard } from "@/components/SwipeableCard";
+import { removeCity } from "@/lib/team-utils";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
@@ -327,7 +328,7 @@ export default function Alerts() {
                     <div className="bg-slate-800/40 rounded-lg p-3 border border-slate-700/50">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-slate-200 font-medium text-sm">
-                          {alert.gameInfo.awayTeam} @ {alert.gameInfo.homeTeam}
+                          {removeCity(alert.gameInfo.awayTeam)} @ {removeCity(alert.gameInfo.homeTeam)}
                         </span>
                         <div className="flex items-center space-x-3 text-xs">
                           {alert.gameInfo.outs !== undefined && (
