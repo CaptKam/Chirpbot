@@ -353,12 +353,6 @@ export default function Calendar() {
                         {game.status === 'scheduled' && <Clock className="w-4 h-4 mr-1.5" />}
                         {game.status === 'live' ? 'LIVE' : game.status.toUpperCase()}
                       </Badge>
-                      
-                      {/* Weather badge */}
-                      <Badge className="bg-slate-600/50 text-slate-300 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ring-slate-500">
-                        {getWeatherIcon(weather.condition)}
-                        <span className="ml-1.5">{weather.temperature}°F</span>
-                      </Badge>
                     </div>
                     
                     {/* Time and venue */}
