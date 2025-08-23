@@ -708,15 +708,18 @@ export class MLBEngine extends BaseSportEngine {
 
       for (const game of liveGames) {
         try {
-          console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (State: ${game.gameState}, PK: ${game.gamePk})`);
+          // Map the game ID from multi-source aggregator to gamePk
+          const gamePk = game.id || game.gamePk;
+          console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (Status: ${game.status}, ID/PK: ${gamePk})`);
 
-          if (game.gameState !== 'Live') {
-            console.log(`⏭️ Skipping non-live game (${game.gameState})`);
+          // Already filtered for live games above, but double-check
+          if (!game.status?.toLowerCase().includes('live') && !game.status?.toLowerCase().includes('in progress')) {
+            console.log(`⏭️ Skipping non-live game (${game.status})`);
             continue;
           }
 
-          if (!game.gamePk) {
-            console.log(`⏭️ Skipping game with no gamePk`);
+          if (!gamePk) {
+            console.log(`⏭️ Skipping game with no game ID`);
             continue;
           }
 
@@ -728,18 +731,18 @@ export class MLBEngine extends BaseSportEngine {
             continue;
           }
 
-          console.log(`🔍 Fetching live feed for game ${game.gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
-          const liveFeed = await mlbApi.getLiveFeed(game.gamePk);
+          console.log(`🔍 Fetching live feed for game ${gamePk} (${game.awayTeam} @ ${game.homeTeam})`);
+          const liveFeed = await mlbApi.getLiveFeed(gamePk);
 
           if (!liveFeed) {
-            console.log(`⚠️ No live feed data available for game ${game.gamePk} yet`);
+            console.log(`⚠️ No live feed data available for game ${gamePk} yet`);
             continue;
           }
 
           this.apiFailureCount = 0;
           this.lastApiError = null;
 
-          console.log(`✅ Got live feed data for game ${game.gamePk}, processing...`);
+          console.log(`✅ Got live feed data for game ${gamePk}, processing...`);
 
           const gameState = await this.extractGameState(liveFeed);
 
@@ -761,7 +764,7 @@ export class MLBEngine extends BaseSportEngine {
           this.lastApiError = new Date();
 
           if (this.apiFailureCount <= 3 || this.apiFailureCount % 10 === 0) {
-            console.error(`Error processing ${this.sport} game ${game.gamePk} (failure ${this.apiFailureCount}):`, gameError instanceof Error ? gameError.message : 'Unknown error');
+            console.error(`Error processing ${this.sport} game ${gamePk} (failure ${this.apiFailureCount}):`, gameError instanceof Error ? gameError.message : 'Unknown error');
           }
 
           if (this.apiFailureCount >= 5) {
