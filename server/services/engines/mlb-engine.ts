@@ -714,13 +714,14 @@ export class MLBEngine extends BaseSportEngine {
           powerHitter: false,
           runnersOnBase: true,
           inningChange: false, // Disabled by default
-          re24Advanced: false,
+          re24Advanced: true,  // ✅ Enable RE24 hybrid system
           // New alert types
           homeRun: true,
           homeRunAlert: true,
           hits: true,
           scoring: true,
-          strikeouts: true // Enable strikeout alerts by default
+          strikeouts: true, // Enable strikeout alerts by default
+          basesLoaded: true // ✅ Enable bases loaded alerts
         };
 
         let needsUpdate = false;
