@@ -88,53 +88,16 @@ export abstract class BaseSportEngine implements SportEngine {
   protected filterOverlappingAlerts(alerts: AlertConfig[]): AlertConfig[] {
     if (alerts.length <= 1) return alerts;
 
-    // Find the highest priority runner alert to keep
-    const runnerAlerts = alerts.filter(a => 
-      a.type.includes('Runners') || a.type.includes('Bases Loaded')
-    );
+    // 🎯 ULTRA ANTI-SPAM: Return only the highest priority alert
+    const sortedByPriority = alerts.sort((a, b) => b.priority - a.priority);
+    const topAlert = sortedByPriority[0];
     
-    if (runnerAlerts.length <= 1) return alerts;
-
-    // Keep only the highest priority runner alert
-    let keepRunnerAlert: AlertConfig | null = null;
-    
-    for (const alert of runnerAlerts) {
-      if (alert.type === 'Bases Loaded') {
-        keepRunnerAlert = alert;
-        console.log(`🎯 Keeping BASES LOADED, suppressing other runner alerts`);
-        break;
-      }
-    }
-    
-    if (!keepRunnerAlert) {
-      for (const alert of runnerAlerts) {
-        if (alert.type === 'Runners in Scoring Position') {
-          keepRunnerAlert = alert;
-          console.log(`🎯 Keeping RISP, suppressing general runner alerts`);
-          break;
-        }
-      }
-    }
-    
-    if (!keepRunnerAlert) {
-      keepRunnerAlert = runnerAlerts.find(a => a.type === 'Runners on Base') || runnerAlerts[0];
+    console.log(`🎯 ULTRA FILTER: Keeping only TOP priority alert: ${topAlert.type} (Priority: ${topAlert.priority})`);
+    if (sortedByPriority.length > 1) {
+      console.log(`⏭️ Suppressed ${sortedByPriority.length - 1} lower priority alerts: ${sortedByPriority.slice(1).map(a => a.type).join(', ')}`);
     }
 
-    // Return filtered list with only one runner alert
-    const result = alerts.filter(a => {
-      if (a.type.includes('Runners') || a.type.includes('Bases Loaded')) {
-        return a === keepRunnerAlert;
-      }
-      return true;
-    });
-
-    // Log suppressed alerts
-    const suppressed = alerts.filter(a => !result.includes(a));
-    if (suppressed.length > 0) {
-      console.log(`⏭️ Suppressed overlapping alerts: ${suppressed.map(a => a.type).join(', ')}`);
-    }
-
-    return result;
+    return [topAlert];
   }
 
   protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
@@ -225,16 +188,16 @@ export abstract class BaseSportEngine implements SportEngine {
   }
 
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: any): Promise<void> {
-    // ANTI-BATCH FIX: Only send the highest priority alert to prevent batching
+    // 🎯 ULTIMATE ANTI-SPAM: Only ONE alert per game per polling cycle
     if (triggeredAlerts.length === 0) return;
     
-    // Sort by priority (highest first) and only process the top alert
+    // Get the highest priority alert only
     const sortedAlerts = triggeredAlerts.sort((a, b) => b.priority - a.priority);
     const alert = sortedAlerts[0];
     
-    console.log(`🎯 Processing ONLY highest priority alert: ${alert.type} (Priority: ${alert.priority})`);
+    console.log(`🎯 Processing ONLY ONE alert per game: ${alert.type} (Priority: ${alert.priority})`);
     if (sortedAlerts.length > 1) {
-      console.log(`⏭️ Skipping ${sortedAlerts.length - 1} lower priority alerts: ${sortedAlerts.slice(1).map(a => a.type).join(', ')}`);
+      console.log(`⏭️ Suppressing ${sortedAlerts.length - 1} other alerts: ${sortedAlerts.slice(1).map(a => a.type).join(', ')}`);
     }
     
     if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
