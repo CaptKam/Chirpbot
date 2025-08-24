@@ -174,10 +174,20 @@ export class MLBApiService {
    */
   async getLiveFeed(gamePkOrId: number | string, apiVersion: 'v1' | 'v1.1' = 'v1.1'): Promise<any> {
     try {
-      // Extract numeric gamePk from string IDs like 'mlb-776610' or 'mlb-espn-401696856'
-      const gamePk = typeof gamePkOrId === 'string' 
-        ? gamePkOrId.replace(/^(mlb-|mlb-espn-|mlb-sportsdb-)/, '')
-        : gamePkOrId;
+      // Extract numeric gamePk from string IDs like 'mlb-776610'
+      // REJECT ESPN IDs since they don't work with MLB API
+      let gamePk: string | number = gamePkOrId;
+      
+      if (typeof gamePkOrId === 'string') {
+        // Block ESPN IDs that cause 404 errors
+        if (gamePkOrId.includes('espn-')) {
+          console.log(`❌ Rejecting ESPN game ID ${gamePkOrId} - not compatible with MLB API`);
+          throw new Error(`ESPN game ID ${gamePkOrId} not supported by MLB API`);
+        }
+        
+        // Only process MLB PKs
+        gamePk = gamePkOrId.replace(/^mlb-/, '');
+      }
 
       console.log(`🔍 Extracted gamePk: ${gamePk} from input: ${gamePkOrId}`);
       

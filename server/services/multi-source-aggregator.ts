@@ -81,7 +81,7 @@ class ESPNMLBSource implements MLBSource {
   priority = 2;
   reliability = 85;
   speedScore = 8;
-  enabled = true;
+  enabled = false; // DISABLED: ESPN IDs don't work with MLB API for detailed game data
   failureCount = 0;
   maxRetries = 3;
 
