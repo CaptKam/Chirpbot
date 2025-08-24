@@ -29,16 +29,19 @@ export class SportsDataService {
   }
 
   private startGameSimulations() {
+    // 🚫 DISABLED: Mock sports events - using real MLB API data instead
     // Simulate live game events every 30-60 seconds
-    const interval = setInterval(() => {
-      try {
-        this.generateRandomSportsEvent();
-      } catch (error) {
-        console.error('Error generating random sports event:', error);
-      }
-    }, 30000 + Math.random() * 30000); // 30-60 seconds
+    // const interval = setInterval(() => {
+    //   try {
+    //     this.generateRandomSportsEvent();
+    //   } catch (error) {
+    //     console.error('Error generating random sports event:', error);
+    //   }
+    // }, 30000 + Math.random() * 30000); // 30-60 seconds
 
-    this.gameSimulations.set("main", interval);
+    // this.gameSimulations.set("main", interval);
+    
+    console.log('🚫 Mock sports simulations disabled - using real data only');
   }
 
   private generateRandomSportsEvent(): SportsEvent | null {

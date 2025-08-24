@@ -274,18 +274,18 @@ export class MLBEngine extends BaseSportEngine {
         return !!(state.recentPlay?.isStrikeout);
       }
     },
-    // RE24 Advanced Alert with corrected RP24 probability
-    {
-      type: "High RE24 Situation",
-      settingKey: "re24Advanced",
-      priority: 85,
-      probability: 1.0,
-      description: "📊 HIGH RP24! High probability scoring situation!",
-      conditions: (state: MLBGameState) => {
-        const rp24Prob = this.calculateRP24Probability(state);
-        return rp24Prob >= 0.75; // Trigger on 75%+ RP24 probability
-      }
-    },
+    // 🚫 DISABLED: High RE24 Situation - causes duplicate alerts with RISP/Bases Loaded
+    // {
+    //   type: "High RE24 Situation", 
+    //   settingKey: "re24Advanced",
+    //   priority: 85,
+    //   probability: 1.0,
+    //   description: "📊 HIGH RP24! High probability scoring situation!",
+    //   conditions: (state: MLBGameState) => {
+    //     const rp24Prob = this.calculateRP24Probability(state);
+    //     return rp24Prob >= 0.75; // Trigger on 75%+ RP24 probability
+    //   }
+    // },
   ];
 
   protected getGameSpecificInfo(gameState: any): any {
