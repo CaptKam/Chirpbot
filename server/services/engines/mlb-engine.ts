@@ -475,13 +475,18 @@ export class MLBEngine extends BaseSportEngine {
                         playResult.event?.includes('Triple') ||
                         isHomeRun);
 
-          // Strikeout Detection
+          // Strikeout Detection - Enhanced pattern matching
           const isStrikeout = playResult.type === 'atBat' &&
                             (playResult.event?.includes('Strikeout') ||
                              playResult.event?.includes('Strike Out') ||
+                             playResult.event?.includes('Struck Out') ||
                              playDescription.toLowerCase().includes('strikes out') ||
                              playDescription.toLowerCase().includes('strikeout') ||
-                             playDescription.toLowerCase().includes('struck out'));
+                             playDescription.toLowerCase().includes('struck out') ||
+                             playDescription.toLowerCase().includes('swinging') ||
+                             playDescription.toLowerCase().includes('looking') ||
+                             (playResult.event?.toLowerCase().includes('strike') && 
+                              playResult.event?.toLowerCase().includes('out')));
 
           // Scoring Play Detection
           const isScoringPlay = playResult.rbi > 0 ||
@@ -513,6 +518,16 @@ export class MLBEngine extends BaseSportEngine {
           balls: about.balls || 0,
           strikes: about.strikes || 0
         };
+
+        // Fallback strikeout detection from count and outs
+        if (!recentPlay.isStrikeout && count.strikes === 3 && gameState.outs !== undefined) {
+          const previousPlay = liveData.plays?.allPlays?.[liveData.plays.allPlays.length - 1];
+          if (previousPlay?.result?.type === 'atBat' && previousPlay.about?.outs > about.outs) {
+            recentPlay.isStrikeout = true;
+            recentPlay.result = previousPlay.result?.event || 'Strikeout';
+            recentPlay.description = previousPlay.description || 'Batter struck out';
+          }
+        }
 
         // Extract ballpark info if available (from liveData.weather if present, otherwise from gameData.venue)
         if (liveData.weather) {
@@ -641,6 +656,15 @@ export class MLBEngine extends BaseSportEngine {
         console.log(`   🏏 ❌ No current batter data available`);
       }
 
+      // Debug recent play events for strikeout detection
+      if (recentPlay?.result) {
+        console.log(`   🎯 Recent Play: ${recentPlay.result} - ${recentPlay.description}`);
+        console.log(`   ⚡ Strikeout detected: ${recentPlay.isStrikeout ? 'YES' : 'NO'}`);
+        if (recentPlay.isStrikeout) {
+          console.log(`   🚨 STRIKEOUT ALERT should trigger!`);
+        }
+      }
+
       if (currentPitcher) {
         console.log(`   ⚾ Current Pitcher: ${currentPitcher.name} (${currentPitcher.throwHand}) - ERA: ${currentPitcher.stats.era}, WHIP: ${currentPitcher.stats.whip}, K: ${currentPitcher.stats.strikeOuts}, W-L: ${currentPitcher.stats.wins}-${currentPitcher.stats.losses}`);
       }
@@ -679,7 +703,8 @@ export class MLBEngine extends BaseSportEngine {
           homeRun: true,
           homeRunAlert: true,
           hits: true,
-          scoring: true
+          scoring: true,
+          strikeouts: true // Enable strikeout alerts by default
         };
 
         let needsUpdate = false;
