@@ -308,7 +308,7 @@ export default function Alerts() {
                           <span className="text-red-400 text-xs font-medium uppercase tracking-wide">LIVE ALERT</span>
                         </div>
                         <h2 className="text-white font-semibold text-lg leading-tight mb-1">
-                          {alert.gameInfo.currentBatter?.name || 'Unknown Batter'} • 
+                          <span className="text-emerald-400">{alert.type}</span> • {alert.gameInfo.currentBatter?.name || 'Unknown Batter'} • 
                           {alert.gameInfo.count ? `${alert.gameInfo.count.balls}-${alert.gameInfo.count.strikes}` : '0-0'} Count
                         </h2>
                         <p className="text-slate-300 text-sm leading-relaxed">
