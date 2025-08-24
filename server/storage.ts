@@ -161,10 +161,11 @@ export class MemStorage implements IStorage {
           id: controlId,
           sport,
           alertKey: alert.alertKey,
-          title: alert.title,
+          displayName: alert.title,
           description: alert.description,
           category: alert.category,
           enabled: true,
+          updatedBy: null,
           updatedAt: new Date(),
         });
       });
@@ -246,6 +247,7 @@ export class MemStorage implements IStorage {
         },
         telegramEnabled: true,
         pushNotificationsEnabled: true,
+        aiEnabled: false,
       });
     });
 
@@ -301,9 +303,9 @@ export class MemStorage implements IStorage {
       authMethod: insertUser.authMethod || 'local',
       emailVerified: insertUser.email ? false : false, // Will be true after email verification
       role: 'user', // Default role for new users
-      telegramBotToken: insertUser.telegramBotToken || null,
-      telegramChatId: insertUser.telegramChatId || null,
-      telegramEnabled: insertUser.telegramEnabled || false,
+      telegramBotToken: null,
+      telegramChatId: null,
+      telegramEnabled: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -518,7 +520,8 @@ export class MemStorage implements IStorage {
       id,
       alertTypes: insertSettings.alertTypes || { risp: false, homeRun: false, lateInning: false, redZone: false, clutchTime: false },
       telegramEnabled: insertSettings.telegramEnabled ?? true,
-      pushNotificationsEnabled: insertSettings.pushNotificationsEnabled ?? true
+      pushNotificationsEnabled: insertSettings.pushNotificationsEnabled ?? true,
+      aiEnabled: insertSettings.aiEnabled ?? false
     };
     this.settings.set(settings.sport, settings);
     return settings;
@@ -562,6 +565,7 @@ export class MemStorage implements IStorage {
     const aiSettings: AiSettings = {
       id: randomUUID(),
       ...settings,
+      temperature: settings.temperature ?? 70,
       updatedAt: new Date(),
     };
     return aiSettings;
@@ -605,6 +609,7 @@ export class MemStorage implements IStorage {
     const aiLog: AiLearningLog = {
       id: randomUUID(),
       ...log,
+      gameId: log.gameId ?? null,
       createdAt: new Date(),
     };
     return aiLog;
@@ -650,6 +655,7 @@ export class MemStorage implements IStorage {
     const auditLog: AuditLog = {
       id: randomUUID(),
       ...log,
+      metadata: log.metadata ?? null,
       createdAt: new Date(),
     };
     return auditLog;
@@ -679,6 +685,8 @@ export class MemStorage implements IStorage {
       ...control,
       id,
       enabled: control.enabled ?? true,
+      description: control.description ?? null,
+      updatedBy: control.updatedBy ?? null,
       updatedAt: new Date(),
     };
     const key = `${control.sport}-${control.alertKey}`;
