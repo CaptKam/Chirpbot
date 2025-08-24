@@ -792,7 +792,7 @@ export class MLBEngine extends BaseSportEngine {
           this.lastApiError = new Date();
 
           if (this.apiFailureCount <= 3 || this.apiFailureCount % 10 === 0) {
-            console.error(`Error processing ${this.sport} game ${gamePk} (failure ${this.apiFailureCount}):`, gameError instanceof Error ? gameError.message : 'Unknown error');
+            console.error(`Error processing ${this.sport} game (failure ${this.apiFailureCount}):`, gameError instanceof Error ? gameError.message : 'Unknown error');
           }
 
           if (this.apiFailureCount >= 5) {
