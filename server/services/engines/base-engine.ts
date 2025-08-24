@@ -103,49 +103,21 @@ export abstract class BaseSportEngine implements SportEngine {
   }
 
   protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
-    // 🎯 GAMBLING ALERTS: Allow Hybrid RE24+AI to fire every time for 3-second decision windows
-    if (alertType.includes('Hybrid RE24+AI')) {
-      const key = `${gameId}_${alertType}`;
-      const now = Date.now();
-      const lastFire = this.lastFireAt.get(key);
-      
-      // Only wait 2 seconds for gambling alerts
-      if (lastFire && (now - lastFire) < 2000) {
-        return false;
-      }
-      this.lastFireAt.set(key, now);
-      return true;
-    }
-
-    const stateHash = this.generateGameStateHash(alertType, gameState);
-    const key = `${gameId}_${alertType}`;
+    // 🎯 GLOBAL DEDUPLICATION: Only ONE alert per alert type across ALL games
+    // Use alertType as key instead of gameId_alertType
+    const globalKey = alertType;
     const now = Date.now();
+    const cooldownMs = 30000; // 30 seconds between same alert types globally
 
-    const lastFire = this.lastFireAt.get(key);
-    if (lastFire && (now - lastFire) < this.MIN_REFIRE_MS) {
+    const lastGlobalFire = this.lastFireAt.get(globalKey);
+    if (lastGlobalFire && (now - lastGlobalFire) < cooldownMs) {
+      console.log(`🚫 GLOBAL DEDUP: Alert type '${alertType}' blocked - fired ${((now - lastGlobalFire) / 1000).toFixed(1)}s ago`);
       return false;
     }
 
-    const lastState = this.lastAlertStates.get(key);
-    // Fixed cooldown - keep it simple and fast
-    const cooldownMs = 2000; // 2 seconds for all alerts - simple and effective
-    
-    if (lastState && lastState.hash === stateHash && (now - lastState.ts) < cooldownMs) {
-      return false;
-    }
-
-    this.lastAlertStates.set(key, { hash: stateHash, ts: now });
-    this.lastFireAt.set(key, now);
-
-    if (this.lastAlertStates.size > this.MAX_KEYS) {
-      const cutoff = now - this.MAX_AGE_MS;
-      const entries = Array.from(this.lastAlertStates.entries());
-      for (const [k, v] of entries) {
-        if (v.ts < cutoff) {
-          this.lastAlertStates.delete(k);
-        }
-      }
-    }
+    // For Game Situations, only trigger once per alert type regardless of which game has it
+    this.lastFireAt.set(globalKey, now);
+    console.log(`✅ GLOBAL ALERT: '${alertType}' allowed - first occurrence in 30s window`);
 
     return true;
   }
