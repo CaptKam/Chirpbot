@@ -71,7 +71,70 @@ export abstract class BaseSportEngine implements SportEngine {
       }
     }
 
-    return triggeredAlerts;
+    console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.awayTeam} vs ${gameState.homeTeam}`);
+    if (triggeredAlerts.length > 0) {
+      console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
+    }
+
+    // 🎯 ANTI-SPAM: Filter overlapping alerts to prevent spam
+    const filteredAlerts = this.filterOverlappingAlerts(triggeredAlerts);
+    if (filteredAlerts.length !== triggeredAlerts.length) {
+      console.log(`🔧 After overlap filtering: ${filteredAlerts.length} alerts (removed ${triggeredAlerts.length - filteredAlerts.length} overlapping)`);
+    }
+
+    return filteredAlerts;
+  }
+
+  protected filterOverlappingAlerts(alerts: AlertConfig[]): AlertConfig[] {
+    if (alerts.length <= 1) return alerts;
+
+    // Find the highest priority runner alert to keep
+    const runnerAlerts = alerts.filter(a => 
+      a.type.includes('Runners') || a.type.includes('Bases Loaded')
+    );
+    
+    if (runnerAlerts.length <= 1) return alerts;
+
+    // Keep only the highest priority runner alert
+    let keepRunnerAlert: AlertConfig | null = null;
+    
+    for (const alert of runnerAlerts) {
+      if (alert.type === 'Bases Loaded') {
+        keepRunnerAlert = alert;
+        console.log(`🎯 Keeping BASES LOADED, suppressing other runner alerts`);
+        break;
+      }
+    }
+    
+    if (!keepRunnerAlert) {
+      for (const alert of runnerAlerts) {
+        if (alert.type === 'Runners in Scoring Position') {
+          keepRunnerAlert = alert;
+          console.log(`🎯 Keeping RISP, suppressing general runner alerts`);
+          break;
+        }
+      }
+    }
+    
+    if (!keepRunnerAlert) {
+      keepRunnerAlert = runnerAlerts.find(a => a.type === 'Runners on Base') || runnerAlerts[0];
+    }
+
+    // Return filtered list with only one runner alert
+    const result = alerts.filter(a => {
+      if (a.type.includes('Runners') || a.type.includes('Bases Loaded')) {
+        return a === keepRunnerAlert;
+      }
+      return true;
+    });
+
+    // Log suppressed alerts
+    const suppressed = alerts.filter(a => !result.includes(a));
+    if (suppressed.length > 0) {
+      console.log(`⏭️ Suppressed overlapping alerts: ${suppressed.map(a => a.type).join(', ')}`);
+    }
+
+    return result;
   }
 
   protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
