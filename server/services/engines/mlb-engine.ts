@@ -831,6 +831,12 @@ export class MLBEngine extends BaseSportEngine {
 
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
     for (const alert of triggeredAlerts) {
+      // 🔥 CRITICAL: Check deduplication BEFORE processing
+      if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
+        console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
+        continue;
+      }
+
       let customTitle = alert.description;
       let finalDescription = alert.description;
 
