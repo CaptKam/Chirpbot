@@ -118,7 +118,7 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "Bases Loaded",
-      settingKey: "risp",
+      settingKey: "basesLoaded",
       priority: 95,
       probability: 1.0,
       description: "🔥 BASES LOADED! Maximum pressure situation!",
@@ -305,6 +305,21 @@ export class MLBEngine extends BaseSportEngine {
     };
   }
 
+  private async getHybridAnalysis(gameState: MLBGameState): Promise<any> {
+    try {
+      const { analyzeHybridRE24 } = await import('./hybrid-re24-ai');
+      // Convert our gameState to the expected format with numeric gamePk
+      const hybridGameState = {
+        ...gameState,
+        gamePk: Number(gameState.gamePk) || 0
+      };
+      return await analyzeHybridRE24(hybridGameState);
+    } catch (error) {
+      console.error('Failed to get hybrid analysis:', error);
+      return null;
+    }
+  }
+
   async extractGameState(gameData: any): Promise<MLBGameState | null> {
     try {
       // Handle different data source formats
@@ -319,7 +334,7 @@ export class MLBEngine extends BaseSportEngine {
         const competitors = competition.competitors;
 
         gameId = gameData.id || `espn-${gameData.uid}`;
-        gamePk = parseInt(gameData.id) || 0;
+        gamePk = Number(gameData.id) || 0;
         venue = competition.venue?.fullName || 'Unknown Venue';
 
         const homeCompetitor = competitors.find((c: any) => c.homeAway === 'home');
@@ -469,13 +484,13 @@ export class MLBEngine extends BaseSportEngine {
         if (liveData.weather) {
           ballparkConditions = {
             windSpeed: liveData.weather.wind?.speed,
-            windDirection: liveData.weather.wind?.direction,
+            windDirection: String(liveData.weather.wind?.direction || ''),
             temperature: liveData.weather.temp
           };
         } else if (gameDataInfo.venue) {
           ballparkConditions = {
             windSpeed: gameDataInfo.venue.wind?.speed,
-            windDirection: gameDataInfo.venue.wind?.direction,
+            windDirection: String(gameDataInfo.venue.wind?.direction || ''),
             temperature: gameDataInfo.venue.temp
           };
         }
@@ -597,7 +612,7 @@ export class MLBEngine extends BaseSportEngine {
             weather = {
               temperature: weatherData.temperature,
               windSpeed: weatherData.windSpeed,
-              windDirection: weatherData.windDirection,
+              windDirection: String(weatherData.windDirection),
               humidity: weatherData.humidity,
               pressure: weatherData.pressure,
               condition: weatherData.stadium.features.dome ? 'Dome' :
@@ -836,9 +851,18 @@ export class MLBEngine extends BaseSportEngine {
       let customTitle = alert.description;
       let finalDescription = alert.description;
 
-      // Apply AI enhancement for specific alert types if handler exists
-      if (enhanceHighPriorityAlert[alert.settingKey]) {
-        finalDescription = enhanceHighPriorityAlert[alert.settingKey](gameState, alert.description);
+      // Apply AI enhancement for high priority alerts
+      if (alert.priority >= 80) {
+        try {
+          const { enhanceHighPriorityAlert } = await import('../ai-analysis');
+          const gameContext = this.buildGameContext(gameState);
+          const enhanced = await enhanceHighPriorityAlert(alert.type, gameContext, alert.description, alert.priority);
+          if (enhanced) {
+            finalDescription = enhanced.enhancedDescription;
+          }
+        } catch (error) {
+          console.error('AI enhancement failed:', error);
+        }
       }
 
       const alertData = {
@@ -889,7 +913,7 @@ export class MLBEngine extends BaseSportEngine {
             }
           } : undefined,
           // NEW: Hybrid RE24+AI Analysis Data
-          hybridAnalysis: undefined
+          hybridAnalysis: await this.getHybridAnalysis(gameState).catch(() => null)
         }
       };
 
