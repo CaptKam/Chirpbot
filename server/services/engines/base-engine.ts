@@ -99,15 +99,8 @@ export abstract class BaseSportEngine implements SportEngine {
     }
 
     const lastState = this.lastAlertStates.get(key);
-    // Adaptive cooldown based on alert type (from your successful system)
-    let cooldownMs = 1500; // Default 1.5 seconds
-    if (alertType.toLowerCase().includes('bases loaded') && gameState.outs === 0) {
-      cooldownMs = 15000; // 15 seconds for bases loaded no outs (plate appearance scope)
-    } else if (alertType.toLowerCase().includes('power') || alertType.toLowerCase().includes('hitter')) {
-      cooldownMs = 15000; // 15 seconds for power hitter alerts  
-    } else if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('risp')) {
-      cooldownMs = 3000; // 3 seconds for runner alerts
-    }
+    // Fixed cooldown - keep it simple and fast
+    const cooldownMs = 2000; // 2 seconds for all alerts - simple and effective
     
     if (lastState && lastState.hash === stateHash && (now - lastState.ts) < cooldownMs) {
       return false;
@@ -141,11 +134,8 @@ export abstract class BaseSportEngine implements SportEngine {
         r2: !!gameState.runners?.second,
         r3: !!gameState.runners?.third,
         away: gameState.awayScore,
-        home: gameState.homeScore,
-        batter: gameState.currentBatter?.id || gameState.currentBatter?.name || 'unknown',
-        batterId: gameState.currentBatter?.id, // Separate batter ID for plate appearance tracking
-        paId: `${gameState.gameId}-${gameState.inning}-${gameState.currentBatter?.id}`, // Plate appearance ID
-        pitch: gameState.count?.balls + '-' + gameState.count?.strikes // Count for pitch tracking
+        home: gameState.homeScore
+        // Removed batter and pitch count - only situation matters for runners
       };
     } else if (alertType.toLowerCase().includes('inning')) {
       relevantState = {
