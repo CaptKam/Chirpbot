@@ -99,16 +99,8 @@ export abstract class BaseSportEngine implements SportEngine {
     }
 
     const lastState = this.lastAlertStates.get(key);
-    
-    // Different cooldown periods for different alert types
-    let cooldownMs = 5000; // Default 5 seconds
-    if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('risp') || alertType.toLowerCase().includes('bases')) {
-      cooldownMs = 30000; // 30 seconds for runner alerts - they persist longer
-    } else if (alertType.toLowerCase().includes('close') || alertType.toLowerCase().includes('tie')) {
-      cooldownMs = 60000; // 1 minute for score alerts
-    }
-    
-    if (lastState && lastState.hash === stateHash && (now - lastState.ts) < cooldownMs) {
+    // Fast 2-second cooldown for all alerts - prevents rapid duplicates but allows quick updates
+    if (lastState && lastState.hash === stateHash && (now - lastState.ts) < 2000) {
       return false;
     }
 
@@ -141,7 +133,8 @@ export abstract class BaseSportEngine implements SportEngine {
         r3: !!gameState.runners?.third,
         away: gameState.awayScore,
         home: gameState.homeScore,
-        batter: gameState.currentBatter?.name || 'unknown' // Add batter to make hash more specific
+        batter: gameState.currentBatter?.id || gameState.currentBatter?.name || 'unknown', // Use batter ID for uniqueness
+        pitch: gameState.count?.balls + '-' + gameState.count?.strikes // Add count to detect new pitches
       };
     } else if (alertType.toLowerCase().includes('inning')) {
       relevantState = {

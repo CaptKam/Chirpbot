@@ -26,7 +26,7 @@ export interface MLBGameState {
   currentBatter?: {
     id: number;
     name: string;
-    battingOrder: number;
+    battingOrder?: number;  // Made optional to fix TypeScript error
     batSide: string;
     stats: {
       avg: number;
