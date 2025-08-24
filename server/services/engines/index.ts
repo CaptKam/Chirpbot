@@ -38,13 +38,21 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   async startAllEngines(): Promise<void> {
-    console.log('🛑 ALL ALERT ENGINES DISABLED - Starting fresh from the beginning');
+    console.log('🎯 Starting Game Situations alerts system...');
     
     // Stop all running engines first
     this.stopAllEngines();
     
-    // Do not start any engines - user requested to stop everything
-    console.log('🔇 All alert systems stopped. Ready for fresh start.');
+    // Enable only MLB engine for Game Situations
+    const hasMonitoredGames = await this.hasMonitoredGamesForSport('MLB');
+    if (hasMonitoredGames) {
+      console.log('🔧 Starting MLB engine for Game Situations alerts');
+      this.startEngine('MLB', this.engines.get('MLB')!);
+    } else {
+      console.log('⏸️ No monitored MLB games found');
+    }
+    
+    console.log('✅ Game Situations alert system ready');
   }
   
   private startEngine(sport: string, engine: BaseSportEngine): void {

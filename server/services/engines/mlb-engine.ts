@@ -87,19 +87,9 @@ export class MLBEngine extends BaseSportEngine {
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
 
+  // 🎯 GAME SITUATIONS ALERTS ONLY - Focus on key game moments
   alertConfigs: AlertConfig[] = [
-    {
-      type: "Star Batter Alert",
-      settingKey: "starBatter",
-      priority: 80,
-      probability: 1.0,
-      description: "⭐ STAR BATTER UP! Elite hitter at the plate!",
-      conditions: (state: MLBGameState) => {
-        if (!state.currentBatter || state.outs >= 3) return false;
-        const stats = state.currentBatter.stats;
-        return stats.avg >= 0.300 || stats.hr >= 20 || stats.ops >= 0.900;
-      }
-    },
+    // === CORE GAME SITUATIONS ===
     {
       type: "Runners in Scoring Position",
       settingKey: "risp",
@@ -109,20 +99,20 @@ export class MLBEngine extends BaseSportEngine {
       conditions: (state: MLBGameState) => state.runners.second || state.runners.third
     },
     {
-      type: "Runners on Base",
-      settingKey: "runnersOnBase",
-      priority: 60,
-      probability: 1.0,
-      description: "🏃‍♂️ RUNNERS ON BASE! Scoring opportunity!",
-      conditions: (state: MLBGameState) => state.runners.first || state.runners.second || state.runners.third
-    },
-    {
       type: "Bases Loaded",
       settingKey: "basesLoaded",
       priority: 95,
       probability: 1.0,
       description: "🔥 BASES LOADED! Maximum pressure situation!",
       conditions: (state: MLBGameState) => state.runners.first && state.runners.second && state.runners.third
+    },
+    {
+      type: "Runners on Base",
+      settingKey: "runnersOnBase",
+      priority: 60,
+      probability: 1.0,
+      description: "🏃‍♂️ RUNNERS ON BASE! Scoring opportunity!",
+      conditions: (state: MLBGameState) => state.runners.first || state.runners.second || state.runners.third
     },
     {
       type: "Close Game Alert",
@@ -151,141 +141,13 @@ export class MLBEngine extends BaseSportEngine {
       }
     },
     {
-      type: "Inning Change",
-      settingKey: "inningChange",
-      priority: 50,
-      probability: 1.0,
-      description: "⚾ Inning change - new opportunities!",
-      conditions: (state: MLBGameState) => state.inning >= 1
-    },
-    {
-      type: "Game Start",
-      settingKey: "inningChange",
-      priority: 40,
-      probability: 1.0,
-      description: "⚾ GAME START - First pitch!",
-      conditions: (state: MLBGameState) => state.inning === 1 && state.inningState === 'top'
-    },
-    // NEW ALERT TYPES IMPLEMENTATION
-    {
-      type: "Home Run Situation",
-      settingKey: "homeRun",
-      priority: 90,
-      probability: 0.85,
-      description: "🎯 HOME RUN SETUP! Perfect conditions for a long ball!",
-      conditions: (state: MLBGameState) => {
-        if (!state.currentBatter || state.outs >= 3) return false;
-
-        // High HR probability conditions
-        const batterHasHRPower = state.currentBatter.stats.hr >= 15;
-        const favorableCount = state.count && (state.count.balls >= 2 && state.count.strikes <= 1);
-        const runnersOnBase = state.runners.first || state.runners.second || state.runners.third;
-        const windFavor = !!(state.ballpark?.windSpeed && state.ballpark.windSpeed >= 10);
-
-        // Combine factors for home run potential
-        return batterHasHRPower && (favorableCount || runnersOnBase || windFavor);
-      }
-    },
-    {
-      type: "Home Run Alert",
-      settingKey: "homeRunAlert",
+      type: "Extra Innings",
+      settingKey: "extraInnings",
       priority: 100,
       probability: 1.0,
-      description: "🚀 HOME RUN! Ball is GONE!",
-      conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isHomeRun);
-      }
-    },
-    {
-      type: "Grand Slam Alert",
-      settingKey: "homeRunAlert",
-      priority: 100,
-      probability: 1.0,
-      description: "💥 GRAND SLAM! Bases were loaded - 4 RBIs!",
-      conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isHomeRun && state.recentPlay?.rbiCount && state.recentPlay.rbiCount >= 4);
-      }
-    },
-    {
-      type: "Hit Alert",
-      settingKey: "hits",
-      priority: 70,
-      probability: 1.0,
-      description: "⚾ BASE HIT! Runner reaches safely!",
-      conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isHit && !state.recentPlay?.isHomeRun);
-      }
-    },
-    {
-      type: "Extra Base Hit",
-      settingKey: "hits",
-      priority: 85,
-      probability: 1.0,
-      description: "💨 EXTRA BASE HIT! Runner advances multiple bases!",
-      conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isHit &&
-                 (state.recentPlay?.hitType === 'double' ||
-                  state.recentPlay?.hitType === 'triple'));
-      }
-    },
-    {
-      type: "RBI Hit",
-      settingKey: "scoring",
-      priority: 90,
-      probability: 1.0,
-      description: "🏃‍♂️ RBI HIT! Runner scores from base!",
-      conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isScoringPlay &&
-                 state.recentPlay?.rbiCount &&
-                 state.recentPlay.rbiCount > 0 &&
-                 !state.recentPlay?.isHomeRun);
-      }
-    },
-    {
-      type: "Scoring Play",
-      settingKey: "scoring",
-      priority: 85,
-      probability: 1.0,
-      description: "⚡ RUN SCORES! Points on the board!",
-      conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isScoringPlay);
-      }
-    },
-    {
-      type: "Multiple RBI Play",
-      settingKey: "scoring",
-      priority: 95,
-      probability: 1.0,
-      description: "🔥 MULTIPLE RBIs! Big scoring play!",
-      conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isScoringPlay &&
-                 state.recentPlay?.rbiCount &&
-                 state.recentPlay.rbiCount >= 2 &&
-                 !state.recentPlay?.isHomeRun);
-      }
-    },
-    {
-      type: "Strikeout Alert",
-      settingKey: "strikeouts",
-      priority: 80,
-      probability: 1.0,
-      description: "⚡ STRIKEOUT! Batter goes down swinging!",
-      conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isStrikeout);
-      }
-    },
-    // 🚫 DISABLED: High RE24 Situation - causes duplicate alerts with RISP/Bases Loaded
-    // {
-    //   type: "High RE24 Situation", 
-    //   settingKey: "re24Advanced",
-    //   priority: 85,
-    //   probability: 1.0,
-    //   description: "📊 HIGH RP24! High probability scoring situation!",
-    //   conditions: (state: MLBGameState) => {
-    //     const rp24Prob = this.calculateRP24Probability(state);
-    //     return rp24Prob >= 0.75; // Trigger on 75%+ RP24 probability
-    //   }
-    // },
+      description: "⚾ EXTRA INNINGS! Game extends beyond the 9th!",
+      conditions: (state: MLBGameState) => state.inning >= 10
+    }
   ];
 
   protected getGameSpecificInfo(gameState: any): any {
