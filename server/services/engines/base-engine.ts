@@ -10,7 +10,7 @@ export interface AlertConfig {
   priority: number;
   probability: number;
   description: string;
-  conditions?: (gameState: any) => boolean;
+  conditions?: (gameState: any) => boolean | Promise<boolean>;
   isPrediction?: boolean;
   predictionEvents?: string[];
   minimumPredictionProbability?: number;
@@ -57,7 +57,11 @@ export abstract class BaseSportEngine implements SportEngine {
       if (!config.conditions) continue;
 
       try {
-        if (config.conditions(gameState)) {
+        // Handle both sync and async conditions properly
+        const conditionResult = config.conditions(gameState);
+        const shouldTrigger = conditionResult instanceof Promise ? await conditionResult : conditionResult;
+        
+        if (shouldTrigger) {
           triggeredAlerts.push(config);
         }
       } catch (error) {
