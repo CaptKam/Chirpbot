@@ -284,11 +284,9 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "strikeouts",
       priority: 80,
       probability: 1.0,
-      description: "⚡ STRIKEOUT with runners on base!",
+      description: "⚡ STRIKEOUT! Batter goes down swinging!",
       conditions: (state: MLBGameState) => {
-        // Only trigger strikeout alerts when there are runners on base (more meaningful for betting)
-        const hasRunners = state.runners.first || state.runners.second || state.runners.third;
-        return !!(state.recentPlay?.isStrikeout && hasRunners);
+        return !!(state.recentPlay?.isStrikeout);
       }
     },
     // RE24 Advanced Alert with corrected RP24 probability
