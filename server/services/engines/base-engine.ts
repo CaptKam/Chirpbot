@@ -37,7 +37,7 @@ export abstract class BaseSportEngine implements SportEngine {
   private MAX_KEYS = 5000;
   private MAX_AGE_MS = 30 * 60 * 1000;
   private lastFireAt = new Map<string, number>();
-  private MIN_REFIRE_MS = 3000;  // Gambling alerts need 3-second windows!
+  private MIN_REFIRE_MS = 700;  // 0.7 seconds for critical situations like your successful system
 
   abstract extractGameState(apiData: any): any;
   abstract monitor(): Promise<void>;
@@ -99,8 +99,17 @@ export abstract class BaseSportEngine implements SportEngine {
     }
 
     const lastState = this.lastAlertStates.get(key);
-    // Fast 2-second cooldown for all alerts - prevents rapid duplicates but allows quick updates
-    if (lastState && lastState.hash === stateHash && (now - lastState.ts) < 2000) {
+    // Adaptive cooldown based on alert type (from your successful system)
+    let cooldownMs = 1500; // Default 1.5 seconds
+    if (alertType.toLowerCase().includes('bases loaded') && gameState.outs === 0) {
+      cooldownMs = 15000; // 15 seconds for bases loaded no outs (plate appearance scope)
+    } else if (alertType.toLowerCase().includes('power') || alertType.toLowerCase().includes('hitter')) {
+      cooldownMs = 15000; // 15 seconds for power hitter alerts  
+    } else if (alertType.toLowerCase().includes('runner') || alertType.toLowerCase().includes('risp')) {
+      cooldownMs = 3000; // 3 seconds for runner alerts
+    }
+    
+    if (lastState && lastState.hash === stateHash && (now - lastState.ts) < cooldownMs) {
       return false;
     }
 
@@ -133,8 +142,10 @@ export abstract class BaseSportEngine implements SportEngine {
         r3: !!gameState.runners?.third,
         away: gameState.awayScore,
         home: gameState.homeScore,
-        batter: gameState.currentBatter?.id || gameState.currentBatter?.name || 'unknown', // Use batter ID for uniqueness
-        pitch: gameState.count?.balls + '-' + gameState.count?.strikes // Add count to detect new pitches
+        batter: gameState.currentBatter?.id || gameState.currentBatter?.name || 'unknown',
+        batterId: gameState.currentBatter?.id, // Separate batter ID for plate appearance tracking
+        paId: `${gameState.gameId}-${gameState.inning}-${gameState.currentBatter?.id}`, // Plate appearance ID
+        pitch: gameState.count?.balls + '-' + gameState.count?.strikes // Count for pitch tracking
       };
     } else if (alertType.toLowerCase().includes('inning')) {
       relevantState = {

@@ -83,7 +83,7 @@ export interface MLBGameState {
 
 export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
-  monitoringInterval = 1000; // 1 second for lightning-fast betting alerts
+  monitoringInterval = 1500; // 1.5 seconds normal polling (optimized from your successful system)
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
 
