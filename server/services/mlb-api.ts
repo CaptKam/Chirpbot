@@ -172,9 +172,16 @@ export class MLBApiService {
   /**
    * Get detailed live feed for a specific game with enhanced play data
    */
-  async getLiveFeed(gamePk: number): Promise<any> {
+  async getLiveFeed(gamePkOrId: number | string, apiVersion: 'v1' | 'v1.1' = 'v1.1'): Promise<any> {
     try {
-      // FIXED: Correct MLB API endpoint construction
+      // Extract numeric gamePk from string IDs like 'mlb-776610' or 'mlb-espn-401696856'
+      const gamePk = typeof gamePkOrId === 'string' 
+        ? gamePkOrId.replace(/^(mlb-|mlb-espn-|mlb-sportsdb-)/, '')
+        : gamePkOrId;
+
+      console.log(`🔍 Extracted gamePk: ${gamePk} from input: ${gamePkOrId}`);
+      
+      // OPTIMIZED: Use fastest endpoints for real-time alerts
       const feedV11Url = `https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live?hydrate=linescore,plays,currentPlay,team,decisions,probablePitchers`;
       const feedV1Url = `https://statsapi.mlb.com/api/v1/game/${gamePk}/feed/live?hydrate=linescore,plays,currentPlay,team`;
       const playByPlayUrl = `${this.BASE_URL}/game/${gamePk}/playByPlay`;
