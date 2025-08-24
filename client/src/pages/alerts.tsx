@@ -304,12 +304,18 @@ export default function Alerts() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 pr-4">
                         <h2 className="text-white font-semibold text-lg leading-tight mb-1">
-                          {alert.description.split('!')[0].replace(/[🏃⚡🔥💥🚨💯⏰🎯⭐]/g, '').trim()}
+                          {alert.gameInfo.currentBatter?.name || 'Unknown Batter'} • 
+                          {alert.gameInfo.count ? `${alert.gameInfo.count.balls}-${alert.gameInfo.count.strikes}` : '0-0'} Count
                         </h2>
                         <p className="text-slate-300 text-sm leading-relaxed">
-                          {alert.description.split('!')[1] ? 
-                            alert.description.split('!').slice(1).join('!').split('(')[0].trim().replace(/^[\s-]+/, '') 
-                            : 'High-impact moment developing'}
+                          {alert.gameInfo.runners?.first || alert.gameInfo.runners?.second || alert.gameInfo.runners?.third ? 
+                            `Runners: ${[
+                              alert.gameInfo.runners?.first && '1st',
+                              alert.gameInfo.runners?.second && '2nd', 
+                              alert.gameInfo.runners?.third && '3rd'
+                            ].filter(Boolean).join(', ')} • ${alert.gameInfo.outs || 0} ${alert.gameInfo.outs === 1 ? 'out' : 'outs'}` :
+                            `Bases empty • ${alert.gameInfo.outs || 0} ${alert.gameInfo.outs === 1 ? 'out' : 'outs'} • ${alert.gameInfo.inningState === 'top' ? 'Top' : 'Bottom'} ${alert.gameInfo.inning || '?'}`
+                          }
                         </p>
                       </div>
                       <div className="text-right shrink-0">
