@@ -864,7 +864,7 @@ export class MLBEngine extends BaseSportEngine {
         finalDescription = enhanceHighPriorityAlert[alert.settingKey](gameState, alert.description);
       }
 
-      const alertData: InsertAlert = {
+      const alertData = {
         id: randomUUID(),
         title: customTitle,
         type: alert.type,
@@ -942,7 +942,7 @@ export class MLBEngine extends BaseSportEngine {
       }
 
       // Store the alert
-      await storage.insertAlert(alertData);
+      await storage.createAlert(alertData);
       console.log(`✅ Alert '${customTitle}' processed and stored.`);
     }
   }
