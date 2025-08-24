@@ -1,3 +1,4 @@
+
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
 
@@ -5,16 +6,32 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Your existing RE24 table from mlb-engine-backup.ts
-const RE24: Record<string, number> = {
-  "000-0": 0.50, "000-1": 0.27, "000-2": 0.11,
-  "100-0": 0.90, "100-1": 0.54, "100-2": 0.25,
-  "010-0": 1.14, "010-1": 0.70, "010-2": 0.33,
-  "001-0": 1.32, "001-1": 0.94, "001-2": 0.36,
-  "110-0": 1.50, "110-1": 0.95, "110-2": 0.45,
-  "101-0": 1.68, "101-1": 1.08, "101-2": 0.47,
-  "011-0": 1.95, "011-1": 1.24, "011-2": 0.54,
-  "111-0": 2.25, "111-1": 1.54, "111-2": 0.76,
+// Enhanced RE24 + RP24 table with both expected runs AND probability of scoring ≥1 run
+const RE24_RP24: Record<string, { RE: number; RP: number }> = {
+  "000-0": { RE: 0.50, RP: 0.27 }, // Empty bases: 50% expected runs, 27% chance of ≥1 run
+  "000-1": { RE: 0.27, RP: 0.17 },
+  "000-2": { RE: 0.11, RP: 0.07 },
+  "100-0": { RE: 0.90, RP: 0.43 }, // Runner on 1st: 90% expected runs, 43% chance of ≥1 run
+  "100-1": { RE: 0.54, RP: 0.28 },
+  "100-2": { RE: 0.25, RP: 0.14 },
+  "010-0": { RE: 1.14, RP: 0.62 }, // Runner on 2nd: higher scoring probability
+  "010-1": { RE: 0.70, RP: 0.43 },
+  "010-2": { RE: 0.33, RP: 0.23 },
+  "001-0": { RE: 1.32, RP: 0.68 }, // Runner on 3rd: very high scoring probability
+  "001-1": { RE: 0.94, RP: 0.67 },
+  "001-2": { RE: 0.36, RP: 0.30 },
+  "110-0": { RE: 1.50, RP: 0.61 }, // Runners on 1st & 2nd
+  "110-1": { RE: 0.95, RP: 0.44 },
+  "110-2": { RE: 0.45, RP: 0.23 },
+  "101-0": { RE: 1.68, RP: 0.69 }, // Runners on 1st & 3rd
+  "101-1": { RE: 1.08, RP: 0.56 },
+  "101-2": { RE: 0.47, RP: 0.32 },
+  "011-0": { RE: 1.95, RP: 0.84 }, // Runners on 2nd & 3rd
+  "011-1": { RE: 1.24, RP: 0.71 },
+  "011-2": { RE: 0.54, RP: 0.41 },
+  "111-0": { RE: 2.25, RP: 0.85 }, // Bases loaded: 225% expected runs, 85% chance of ≥1 run
+  "111-1": { RE: 1.54, RP: 0.66 }, // This is the corrected example from your note
+  "111-2": { RE: 0.76, RP: 0.41 }, // 0.76 expected runs ≠ 76% probability!
 };
 
 interface MLBGameState {
@@ -53,7 +70,6 @@ interface MLBGameState {
       losses: number;
     };
   };
-  // Added weather properties
   weather?: {
     temperature?: number;
     description?: string;
@@ -63,13 +79,15 @@ interface MLBGameState {
 }
 
 interface HybridRE24Result {
-  // Mathematical foundation (fast, reliable)
-  baseRE24Probability: number;
-  expectedRuns: number;
+  // Mathematical foundation
+  expectedRuns: number; // RE: How big could the inning be?
+  scoringProbability: number; // RP: Will at least one run score?
   re24Key: string;
 
-  // AI-enhanced context (intelligent, adaptive)
+  // AI-enhanced context
+  leverageFactor: number;
   aiContextMultiplier: number;
+  weatherMultiplier: number;
   finalProbability: number;
   aiInsight: string;
   confidence: number;
@@ -82,15 +100,15 @@ interface HybridRE24Result {
 
   // Combined analysis
   isHighLeverage: boolean;
-  betingRecommendation?: string;
+  bettingRecommendation?: string;
   alertPriority: number;
 }
 
-// Cache for AI results to avoid excessive API calls
+// Cache for AI results
 const aiCache = new Map<string, { result: any; timestamp: number }>();
 const CACHE_TTL = 300000; // 5 minutes
 
-// Learning system for prediction accuracy tracking
+// Prediction tracking for calibration
 const predictionTracker = new Map<string, {
   predicted: number;
   actual: boolean;
@@ -98,24 +116,20 @@ const predictionTracker = new Map<string, {
   gameContext: string;
 }>();
 
-// Performance metrics
-let accuracyStats = {
-  totalPredictions: 0,
-  correctPredictions: 0,
-  falsePositives: 0,
-  falseNegatives: 0
-};
-
 function reKey(r: { first: boolean; second: boolean; third: boolean }, outs: number) {
   return `${r.first ? 1 : 0}${r.second ? 1 : 0}${r.third ? 1 : 0}-${outs}`;
 }
 
-function probFromRE(re: number) {
-  return Math.max(0.05, Math.min(0.98, re / 2.2));
-}
-
 function clamp(x: number, lo: number, hi: number) { 
   return Math.max(lo, Math.min(hi, x)); 
+}
+
+// Smooth priority mapping using logistic function
+function calculateSmoothPriority(probability: number, k: number = 8, m: number = 0.7): number {
+  // Logistic function: priority = 100 / (1 + exp(-k*(prob - m)))
+  // k controls steepness, m controls midpoint
+  const logistic = 100 / (1 + Math.exp(-k * (probability - m)));
+  return Math.round(clamp(logistic, 30, 100));
 }
 
 // Generate cache key for AI context analysis
@@ -134,31 +148,49 @@ function generateCacheKey(gameState: MLBGameState): string {
   ].join('|');
 }
 
-// Fast mathematical RE24 calculation (always runs)
-function calculateBaseRE24(gameState: MLBGameState): {
-  probability: number;
+// Fast mathematical RE24+RP24 calculation (always runs)
+function calculateBaseRE24RP24(gameState: MLBGameState): {
   expectedRuns: number;
+  scoringProbability: number;
   re24Key: string;
 } {
   const key = reKey(gameState.runners, gameState.outs);
-  const expectedRuns = RE24[key] || 0.50;
-  const probability = probFromRE(expectedRuns) * 100;
-
-  // Apply late-inning pressure modifier
-  let modifier = 1.0;
-  if (gameState.inning >= 8) {
-    modifier = 1.15; // 15% boost for high-leverage situations
-  }
+  const data = RE24_RP24[key] || { RE: 0.50, RP: 0.27 }; // Default fallback
 
   return {
-    probability: Math.round(clamp(probability * modifier, 5, 98)),
-    expectedRuns,
+    expectedRuns: data.RE,
+    scoringProbability: data.RP, // Use RP directly, not derived from RE
     re24Key: key
   };
 }
 
+// Calculate leverage factor (separate from AI/weather)
+function calculateLeverageFactor(gameState: MLBGameState): number {
+  let leverage = 1.0;
+
+  // Late-inning pressure (inning 8+)
+  if (gameState.inning >= 8) {
+    leverage *= 1.15;
+  }
+
+  // Close game pressure (≤2 run difference)
+  const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+  if (scoreDiff <= 1) {
+    leverage *= 1.10;
+  } else if (scoreDiff <= 2) {
+    leverage *= 1.05;
+  }
+
+  // High-leverage base-out states (runners in scoring position with <2 outs)
+  if ((gameState.runners.second || gameState.runners.third) && gameState.outs < 2) {
+    leverage *= 1.08;
+  }
+
+  return leverage;
+}
+
 // AI contextual enhancement (selective, cached)
-async function getAIContextMultiplier(gameState: MLBGameState, baseRE24: number): Promise<{
+async function getAIContextMultiplier(gameState: MLBGameState, baseProbability: number): Promise<{
   multiplier: number;
   insight: string;
   confidence: number;
@@ -173,7 +205,7 @@ async function getAIContextMultiplier(gameState: MLBGameState, baseRE24: number)
 
   try {
     // Only call AI for high-leverage situations (save API costs)
-    const isHighLeverage = baseRE24 >= 60 || gameState.inning >= 8 || 
+    const isHighLeverage = baseProbability >= 0.60 || gameState.inning >= 8 || 
       Math.abs(gameState.homeScore - gameState.awayScore) <= 2;
 
     if (!isHighLeverage) {
@@ -184,31 +216,24 @@ async function getAIContextMultiplier(gameState: MLBGameState, baseRE24: number)
     const pitcher = gameState.currentPitcher;
 
     const prompt = `
-🔬 ADVANCED BASEBALL ANALYTICS - Contextual Probability Enhancement
+🔬 BASEBALL ANALYTICS - Contextual Probability Enhancement
 
 📊 GAME SITUATION:
 ${gameState.awayTeam} @ ${gameState.homeTeam} | ${gameState.inning}${gameState.inningState === 'top' ? 'T' : 'B'} | Score: ${gameState.awayScore}-${gameState.homeScore}
 Base Runners: ${gameState.runners.first ? '1st ' : ''}${gameState.runners.second ? '2nd ' : ''}${gameState.runners.third ? '3rd ' : ''}${gameState.outs} outs
-Mathematical RE24: ${baseRE24}% scoring probability
+Base Scoring Probability: ${(baseProbability * 100).toFixed(1)}%
 
 🏏 BATTER PROFILE:
 ${batter ? `${batter.name} (${batter.batSide}H): ${(batter.stats.avg * 1000).toFixed(0)} AVG | ${batter.stats.hr} HR | ${batter.stats.ops.toFixed(3)} OPS` : 'Unknown Batter'}
-${batter && batter.stats.ops >= 0.900 ? '⭐ ELITE HITTER' : batter && batter.stats.ops >= 0.800 ? '🔥 STRONG HITTER' : ''}
 
 ⚾ PITCHER ANALYSIS:
 ${pitcher ? `${pitcher.name} (${pitcher.throwHand}HP): ${pitcher.stats.era.toFixed(2)} ERA | ${pitcher.stats.whip.toFixed(2)} WHIP | ${pitcher.stats.strikeOuts} K` : 'Unknown Pitcher'}
-${pitcher && pitcher.stats.era <= 3.50 ? '🎯 DOMINANT PITCHER' : pitcher && pitcher.stats.era >= 4.50 ? '📈 STRUGGLING PITCHER' : ''}
 
 ☁️ WEATHER CONDITIONS:
-Temperature: ${gameState.weather?.temperature ?? 'N/A'} | Conditions: ${gameState.weather?.description ?? 'N/A'} | Wind: ${gameState.weather?.windSpeed ?? 'N/A'} mph | Precipitation: ${gameState.weather?.precipitation ?? 'None'}
-
-🎯 LEVERAGE FACTORS:
-- Game Context: ${Math.abs(gameState.homeScore - gameState.awayScore) <= 1 ? 'CLOSE GAME' : 'COMFORTABLE MARGIN'}
-- Timing: ${gameState.inning >= 8 ? 'LATE INNING PRESSURE' : gameState.inning >= 6 ? 'MIDDLE INNINGS' : 'EARLY GAME'}
-- Situation: ${gameState.runners.first && gameState.runners.second && gameState.runners.third ? 'BASES LOADED' : gameState.runners.second || gameState.runners.third ? 'SCORING POSITION' : 'PRESSURE BUILDING'}
+Temperature: ${gameState.weather?.temperature ?? 'N/A'} | Conditions: ${gameState.weather?.description ?? 'N/A'} | Wind: ${gameState.weather?.windSpeed ?? 'N/A'} mph
 
 🧠 PROVIDE ANALYSIS:
-Multiplier (0.7-1.4): Mathematical adjustment for context
+Multiplier (0.8-1.3): Mathematical adjustment for context
 Insight: Primary factor driving adjustment
 Confidence (75-95): Data quality and certainty level
 
@@ -236,7 +261,7 @@ FORMAT: "Multiplier: X.X | Insight: [key factor] | Confidence: XX"
     };
 
     // Clamp multiplier to reasonable bounds
-    result.multiplier = clamp(result.multiplier, 0.7, 1.4);
+    result.multiplier = clamp(result.multiplier, 0.8, 1.3);
 
     // Cache the result
     aiCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -249,122 +274,115 @@ FORMAT: "Multiplier: X.X | Insight: [key factor] | Confidence: XX"
   }
 }
 
-// Analyze weather impact on game probability (simple logic for now)
-function analyzeWeatherImpact(gameState: MLBGameState): { impact: string; alert: string } {
+// Analyze weather impact
+function analyzeWeatherImpact(gameState: MLBGameState): { 
+  multiplier: number; 
+  impact: string; 
+  alert: string; 
+} {
   const weather = gameState.weather;
 
   if (!weather) {
-    return { impact: "No weather data", alert: "" };
+    return { multiplier: 1.0, impact: "No weather data", alert: "" };
   }
 
+  let multiplier = 1.0;
   let impact = "Neutral";
   let alert = "";
 
   if (weather.description?.toLowerCase().includes("rain") || weather.precipitation?.toLowerCase().includes("rain")) {
+    multiplier = 0.85;
     impact = "Negative";
     alert = "Rain may delay or affect game play.";
-  } else if (weather.description?.toLowerCase().includes("windy")) {
+  } else if (weather.description?.toLowerCase().includes("windy") && weather.windSpeed && weather.windSpeed > 15) {
+    multiplier = 0.90;
     impact = "Moderate";
     alert = `High winds could affect fly balls and pitching. (Wind: ${weather.windSpeed} mph)`;
   } else if (weather.temperature && weather.temperature < 40) {
+    multiplier = 0.93;
     impact = "Moderate";
     alert = `Cold conditions may impact offensive performance. (Temp: ${weather.temperature}°F)`;
+  } else if (weather.windSpeed && weather.windSpeed > 10 && weather.windSpeed <= 15) {
+    multiplier = 1.05; // Slight boost for favorable wind
+    impact = "Favorable";
+    alert = `Favorable wind conditions for offense. (Wind: ${weather.windSpeed} mph)`;
   }
 
-  return { impact, alert };
+  return { multiplier, impact, alert };
 }
 
-// Main hybrid analysis function
+// Main hybrid analysis function using Path A (probability path)
 export async function analyzeHybridRE24(gameState: MLBGameState): Promise<HybridRE24Result> {
   // Step 1: Fast mathematical foundation (always runs)
-  const baseAnalysis = calculateBaseRE24(gameState);
+  const baseAnalysis = calculateBaseRE24RP24(gameState);
 
-  // Step 2: AI contextual enhancement (selective)
-  const aiContext = await getAIContextMultiplier(gameState, baseAnalysis.probability);
+  // Step 2: Calculate leverage factor (separate from AI/weather)
+  const leverageFactor = calculateLeverageFactor(gameState);
 
-  // Step 3: Weather integration analysis
+  // Step 3: AI contextual enhancement (selective)
+  const aiContext = await getAIContextMultiplier(gameState, baseAnalysis.scoringProbability);
+
+  // Step 4: Weather integration analysis
   const weatherAnalysis = analyzeWeatherImpact(gameState);
 
-  // Adjust probability based on weather impact
-  let weatherMultiplier = 1.0;
-  if (weatherAnalysis.impact === "Negative") {
-    weatherMultiplier = 0.90; // Reduce probability in negative weather
-  } else if (weatherAnalysis.impact === "Moderate") {
-    weatherMultiplier = 0.95; // Slightly reduce probability in moderate weather
-  }
+  // Step 5: Path A - Apply all factors to probability
+  const finalProbability = clamp(
+    baseAnalysis.scoringProbability * leverageFactor * aiContext.multiplier * weatherAnalysis.multiplier,
+    0.02, // 2% minimum
+    0.98  // 98% maximum
+  );
 
-  // Step 4: Combine results
-  const finalProbability = Math.round(clamp(
-    baseAnalysis.probability * aiContext.multiplier * weatherMultiplier, 
-    5, 
-    98
-  ));
+  // Step 6: Calculate smooth priority using logistic function
+  const alertPriority = calculateSmoothPriority(finalProbability);
 
-  // Step 5: Enhanced betting intelligence with market context
-  const isHighLeverage = finalProbability >= 75 || gameState.inning >= 8;
+  // Step 7: Enhanced betting intelligence
+  const isHighLeverage = finalProbability >= 0.75 || gameState.inning >= 8;
   const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
   const totalScore = gameState.homeScore + gameState.awayScore;
 
   let bettingRecommendation = undefined;
 
-  // Advanced betting scenarios with specific lines and confidence
-  if (isHighLeverage && finalProbability >= 90) {
-    bettingRecommendation = `🔥 ELITE BET: ${finalProbability}% | Live Over ${(totalScore + 2.5).toFixed(1)} | MAX UNIT SIZE`;
-  } else if (finalProbability >= 85 && gameState.runners.first && gameState.runners.second && gameState.runners.third) {
-    const expectedRuns = gameState.runners.first && gameState.runners.second && gameState.runners.third ? 3.2 : 1.8;
-    bettingRecommendation = `💎 BASES LOADED: ${finalProbability}% | Team Total Over ${(Math.floor((gameState.inningState === 'top' ? gameState.awayScore : gameState.homeScore) + expectedRuns) - 0.5).toFixed(1)} | Expected: +${expectedRuns.toFixed(1)} runs`;
-  } else if (finalProbability >= 80 && gameState.currentBatter?.stats.hr >= 20) {
-    bettingRecommendation = `⚡ HR PROP: ${gameState.currentBatter.name} +350 | ${finalProbability}% leverage | Wind: ${gameState.weather?.windSpeed || 'N/A'}mph`;
-  } else if (finalProbability >= 75 && gameState.inning >= 8 && scoreDiff <= 1) {
-    bettingRecommendation = `🎯 LIVE OVER: ${finalProbability}% | Next 0.5 runs | Leverage: ${(finalProbability * 0.01 * 2.5).toFixed(1)}x`;
-  } else if (finalProbability <= 25 && gameState.inning >= 8 && scoreDiff <= 3) {
-    bettingRecommendation = `🛡️ UNDER LOCK: ${100-finalProbability}% confidence | Live Under ${(totalScore + 0.5).toFixed(1)} | Defensive situation`;
-  } else if (finalProbability >= 70 && gameState.currentPitcher?.stats.era >= 4.50) {
-    bettingRecommendation = `📈 PITCHER FADE: ${gameState.currentPitcher.name} struggling (${gameState.currentPitcher.stats.era} ERA) | Over team total`;
+  if (isHighLeverage && finalProbability >= 0.90) {
+    bettingRecommendation = `🔥 ELITE BET: ${(finalProbability * 100).toFixed(1)}% | Live Over ${(totalScore + 2.5).toFixed(1)} | MAX UNIT SIZE`;
+  } else if (finalProbability >= 0.85 && gameState.runners.first && gameState.runners.second && gameState.runners.third) {
+    bettingRecommendation = `💎 BASES LOADED: ${(finalProbability * 100).toFixed(1)}% | Expected: +${baseAnalysis.expectedRuns.toFixed(1)} runs`;
+  } else if (finalProbability >= 0.80 && gameState.currentBatter?.stats.hr >= 20) {
+    bettingRecommendation = `⚡ HR PROP: ${gameState.currentBatter.name} +350 | ${(finalProbability * 100).toFixed(1)}% leverage`;
+  } else if (finalProbability <= 0.25 && gameState.inning >= 8 && scoreDiff <= 3) {
+    bettingRecommendation = `🛡️ UNDER LOCK: ${((1-finalProbability) * 100).toFixed(1)}% confidence | Defensive situation`;
   }
-
-  // Step 6: Calculate alert priority
-  let alertPriority = Math.round(finalProbability * 0.85); // Base on probability
-
-  // Boost priority for extreme situations
-  if (gameState.runners.first && gameState.runners.second && gameState.runners.third) {
-    alertPriority += 15; // Bases loaded boost
-  }
-  if (gameState.inning >= 9 && Math.abs(gameState.homeScore - gameState.awayScore) <= 1) {
-    alertPriority += 20; // Late-game close situations
-  }
-  if (weatherAnalysis.impact === "Negative") {
-    alertPriority += 10; // Weather alert boost
-  }
-
-  alertPriority = clamp(alertPriority, 30, 100);
 
   return {
     // Mathematical foundation
-    baseRE24Probability: baseAnalysis.probability,
     expectedRuns: baseAnalysis.expectedRuns,
+    scoringProbability: baseAnalysis.scoringProbability,
     re24Key: baseAnalysis.re24Key,
 
-    // AI enhancement
+    // Enhancement factors
+    leverageFactor,
     aiContextMultiplier: aiContext.multiplier,
+    weatherMultiplier: weatherAnalysis.multiplier,
     finalProbability,
     aiInsight: aiContext.insight,
     confidence: aiContext.confidence,
 
     // Weather integration
-    weatherAnalysis,
+    weatherAnalysis: {
+      impact: weatherAnalysis.impact,
+      alert: weatherAnalysis.alert
+    },
 
     // Combined analysis
     isHighLeverage,
-    betingRecommendation,
+    bettingRecommendation,
     alertPriority
   };
 }
 
 // Utility function to generate enhanced alert descriptions
 export function generateHybridAlertDescription(
-  gameState: MLBGameState, 
-  analysis: HybridRE24Result
+  analysis: HybridRE24Result,
+  gameState: MLBGameState
 ): string {
   const runners = [];
   if (gameState.runners.first) runners.push('1ST');
@@ -374,7 +392,12 @@ export function generateHybridAlertDescription(
   const runnerText = runners.length > 0 ? runners.join(' & ') : 'Empty bases';
   const batter = gameState.currentBatter;
 
-  let description = `📊 HYBRID RE24: ${runnerText}, ${gameState.outs} out - ${analysis.finalProbability}% scoring probability`;
+  let description = `📊 HYBRID RE24: ${runnerText}, ${gameState.outs} out - ${(analysis.finalProbability * 100).toFixed(1)}% scoring probability`;
+
+  // Show enhancement factors if significant
+  if (analysis.leverageFactor > 1.05) {
+    description += ` (Leverage: ${(analysis.leverageFactor * 100).toFixed(0)}%)`;
+  }
 
   if (analysis.aiContextMultiplier !== 1.0) {
     const direction = analysis.aiContextMultiplier > 1.0 ? 'boosted' : 'adjusted';
@@ -393,10 +416,15 @@ export function generateHybridAlertDescription(
     description += ` | ☁️ ${analysis.weatherAnalysis.alert}`;
   }
 
+  // Add expected runs context for big innings
+  if (analysis.expectedRuns >= 1.5) {
+    description += ` | Expected: ${analysis.expectedRuns.toFixed(1)} runs`;
+  }
+
   return description;
 }
 
-// Cache cleanup function (call periodically)
+// Cache cleanup function
 export function cleanupCache() {
   const now = Date.now();
   for (const [key, value] of aiCache.entries()) {
@@ -404,4 +432,48 @@ export function cleanupCache() {
       aiCache.delete(key);
     }
   }
+}
+
+// Track prediction for calibration (call this when actual outcomes are known)
+export function trackPrediction(
+  gameId: string,
+  predicted: number,
+  actual: boolean,
+  gameContext: string
+) {
+  predictionTracker.set(gameId, {
+    predicted,
+    actual,
+    timestamp: Date.now(),
+    gameContext
+  });
+}
+
+// Get calibration metrics
+export function getCalibrationMetrics(): {
+  totalPredictions: number;
+  averageCalibration: number;
+  recentAccuracy: number;
+} {
+  const predictions = Array.from(predictionTracker.values());
+  
+  if (predictions.length === 0) {
+    return { totalPredictions: 0, averageCalibration: 0, recentAccuracy: 0 };
+  }
+
+  // Simple calibration: are our 70% predictions right ~70% of the time?
+  const totalPredictions = predictions.length;
+  const correctPredictions = predictions.filter(p => p.actual).length;
+  const averageCalibration = correctPredictions / totalPredictions;
+
+  // Recent accuracy (last 50 predictions)
+  const recentPredictions = predictions.slice(-50);
+  const recentCorrect = recentPredictions.filter(p => p.actual).length;
+  const recentAccuracy = recentCorrect / recentPredictions.length;
+
+  return {
+    totalPredictions,
+    averageCalibration,
+    recentAccuracy
+  };
 }

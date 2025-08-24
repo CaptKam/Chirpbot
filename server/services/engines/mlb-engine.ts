@@ -289,14 +289,14 @@ export class MLBEngine extends BaseSportEngine {
         return !!(state.recentPlay?.isStrikeout);
       }
     },
-    // RE24 Advanced Alert with Weather
+    // RE24 Advanced Alert with corrected RP24 probability
     {
       type: "High RE24 Situation",
       settingKey: "re24Advanced",
       priority: 85,
       probability: 1.0,
       description: async (state: MLBGameState) => {
-        const re24Prob = this.calculateRE24Probability(state);
+        const rp24Prob = this.calculateRP24Probability(state);
         const runners = [];
         if (state.runners.first) runners.push('1ST');
         if (state.runners.second) runners.push('2ND');
@@ -318,11 +318,11 @@ export class MLBEngine extends BaseSportEngine {
           // Weather unavailable, continue without it
         }
 
-        return `📊 HIGH RE24! ${runnerText}, ${state.outs} out - ${re24Prob}% scoring probability${weatherText}`;
+        return `📊 HIGH RP24! ${runnerText}, ${state.outs} out - ${(rp24Prob * 100).toFixed(1)}% scoring probability${weatherText}`;
       },
       conditions: (state: MLBGameState) => {
-        const re24Prob = this.calculateRE24Probability(state);
-        return re24Prob >= 75; // Trigger on 75%+ RE24 probability
+        const rp24Prob = this.calculateRP24Probability(state);
+        return rp24Prob >= 0.75; // Trigger on 75%+ RP24 probability
       }
     },
     // NEW: Hybrid RE24+AI Alert
@@ -331,11 +331,11 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "hybridRE24",
       priority: 90,
       probability: 1.0,
-      description: "🧠 HYBRID ANALYSIS! AI-enhanced RE24 probability detected",
+      description: "🧠 HYBRID ANALYSIS! AI-enhanced RP24 probability detected",
       conditions: async (state: MLBGameState) => {
         try {
           const analysis = await analyzeHybridRE24(state);
-          return analysis.finalProbability >= 80 && analysis.confidence >= 85;
+          return analysis.finalProbability >= 0.80 && analysis.confidence >= 85;
         } catch (error) {
           console.error('Hybrid RE24 analysis failed:', error);
           return false;
@@ -781,40 +781,24 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // Placeholder for calculateRE24Probability if not defined elsewhere
-  private calculateRE24Probability(state: MLBGameState): number {
-    // This is a simplified placeholder. A real implementation would involve complex calculations.
-    // For demonstration, we'll just return a value based on some game state factors.
-    let probability = 0;
-    if (state.runners.first && state.runners.second) probability += 20;
-    if (state.runners.third) probability += 30;
-    if (state.outs < 2) probability += 15;
-    if (state.inning >= 7) probability += 25;
-    if (state.homeScore === state.awayScore) probability += 10;
+  // Corrected RP24 probability calculation using actual scoring probabilities
+  private calculateRP24Probability(state: MLBGameState): number {
+    // Use the same RP24 table as in hybrid-re24-ai.ts for consistency
+    const RE24_RP24: Record<string, { RE: number; RP: number }> = {
+      "000-0": { RE: 0.50, RP: 0.27 }, "000-1": { RE: 0.27, RP: 0.17 }, "000-2": { RE: 0.11, RP: 0.07 },
+      "100-0": { RE: 0.90, RP: 0.43 }, "100-1": { RE: 0.54, RP: 0.28 }, "100-2": { RE: 0.25, RP: 0.14 },
+      "010-0": { RE: 1.14, RP: 0.62 }, "010-1": { RE: 0.70, RP: 0.43 }, "010-2": { RE: 0.33, RP: 0.23 },
+      "001-0": { RE: 1.32, RP: 0.68 }, "001-1": { RE: 0.94, RP: 0.67 }, "001-2": { RE: 0.36, RP: 0.30 },
+      "110-0": { RE: 1.50, RP: 0.61 }, "110-1": { RE: 0.95, RP: 0.44 }, "110-2": { RE: 0.45, RP: 0.23 },
+      "101-0": { RE: 1.68, RP: 0.69 }, "101-1": { RE: 1.08, RP: 0.56 }, "101-2": { RE: 0.47, RP: 0.32 },
+      "011-0": { RE: 1.95, RP: 0.84 }, "011-1": { RE: 1.24, RP: 0.71 }, "011-2": { RE: 0.54, RP: 0.41 },
+      "111-0": { RE: 2.25, RP: 0.85 }, "111-1": { RE: 1.54, RP: 0.66 }, "111-2": { RE: 0.76, RP: 0.41 },
+    };
 
-    // Incorporate weather factors
-    if (state.weather) {
-      // Wind affecting hit distance
-      if (state.weather.windSpeed && state.weather.windDirection) {
-        // Simplified logic: assume wind blowing out is favorable for HRs
-        // In a real system, you'd need wind direction relative to CF, batter splits, etc.
-        const windFromBehind = state.weather.windDirection === 'from_front' || state.weather.windDirection === 'from_behind'; // Placeholder values
-        const windTowardsCF = state.weather.windDirection === 'towards_cf'; // Placeholder value
-        if (windTowardsCF && state.weather.windSpeed > 10) {
-          probability += 10; // Favorable wind
-        } else if (windFromBehind && state.weather.windSpeed > 8) {
-          probability += 5; // Slightly favorable
-        }
-      }
-      // Temperature effects (less significant for baseball, but can be modeled)
-      if (state.weather.temperature && state.weather.temperature > 80) {
-        probability += 2; // Warmer conditions might slightly increase offense
-      }
-    }
-
-
-    // Ensure probability is within 0-100
-    return Math.min(Math.max(probability, 0), 100);
+    const key = `${state.runners.first ? 1 : 0}${state.runners.second ? 1 : 0}${state.runners.third ? 1 : 0}-${state.outs}`;
+    const data = RE24_RP24[key] || { RE: 0.50, RP: 0.27 };
+    
+    return data.RP; // Return actual probability of scoring ≥1 run, not derived from expected runs
   }
 
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
