@@ -325,7 +325,7 @@ export class MLBEngine extends BaseSportEngine {
         return rp24Prob >= 0.75; // Trigger on 75%+ RP24 probability
       }
     },
-    // NEW: Hybrid RE24+AI Alert
+    // NEW: Hybrid RE24+AI Alert - Fixed to reduce false triggers
     {
       type: "Hybrid RE24+AI Analysis",
       settingKey: "useRE24System",  // Fixed: was 'hybridRE24' which doesn't exist
@@ -335,7 +335,16 @@ export class MLBEngine extends BaseSportEngine {
       conditions: async (state: MLBGameState) => {
         try {
           const analysis = await analyzeHybridRE24(state);
-          return analysis.finalProbability >= 0.80 && analysis.confidence >= 85;
+          console.log(`🔍 Hybrid RE24 Debug: finalProbability=${analysis.finalProbability}, confidence=${analysis.confidence}, threshold=0.85`);
+          
+          // Increase thresholds to reduce false triggers, especially for empty bases
+          const minProbability = 0.85; // Increased from 0.80 to 0.85 (85%)
+          const minConfidence = 90;     // Increased from 85 to 90
+          
+          const shouldTrigger = analysis.finalProbability >= minProbability && analysis.confidence >= minConfidence;
+          console.log(`🎯 Hybrid RE24 Alert Decision: ${shouldTrigger} (prob: ${(analysis.finalProbability * 100).toFixed(1)}%, conf: ${analysis.confidence}%)`);
+          
+          return shouldTrigger;
         } catch (error) {
           console.error('Hybrid RE24 analysis failed:', error);
           return false;
