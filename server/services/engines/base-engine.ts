@@ -245,10 +245,10 @@ export abstract class BaseSportEngine implements SportEngine {
       const createdAlert = await storage.createAlert(alertData);
 
       // Send to Telegram for high-priority alerts (using enhanced priority)
-      if (finalPriority >= 75 && settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
+      if (finalPriority >= 75 && settings?.telegramEnabled) {
         const telegramConfig = {
-          botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
-          chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+          botToken: process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_TOKEN || "default_key",
+          chatId: process.env.TELEGRAM_CHAT_ID || process.env.CHAT_ID || "default_key",
         };
         const sent = await sendTelegramAlert(telegramConfig, createdAlert);
         if (sent) {
