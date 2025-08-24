@@ -325,32 +325,6 @@ export class MLBEngine extends BaseSportEngine {
         return rp24Prob >= 0.75; // Trigger on 75%+ RP24 probability
       }
     },
-    // NEW: Hybrid RE24+AI Alert - Fixed to reduce false triggers
-    {
-      type: "Hybrid RE24+AI Analysis",
-      settingKey: "useRE24System",  // Fixed: was 'hybridRE24' which doesn't exist
-      priority: 90,
-      probability: 1.0,
-      description: "🧠 HYBRID ANALYSIS! AI-enhanced RP24 probability detected",
-      conditions: async (state: MLBGameState) => {
-        try {
-          const analysis = await analyzeHybridRE24(state);
-          console.log(`🔍 Hybrid RE24 Debug: finalProbability=${analysis.finalProbability}, confidence=${analysis.confidence}, threshold=0.85`);
-          
-          // Increase thresholds to reduce false triggers, especially for empty bases
-          const minProbability = 0.85; // Increased from 0.80 to 0.85 (85%)
-          const minConfidence = 90;     // Increased from 85 to 90
-          
-          const shouldTrigger = analysis.finalProbability >= minProbability && analysis.confidence >= minConfidence;
-          console.log(`🎯 Hybrid RE24 Alert Decision: ${shouldTrigger} (prob: ${(analysis.finalProbability * 100).toFixed(1)}%, conf: ${analysis.confidence}%)`);
-          
-          return shouldTrigger;
-        } catch (error) {
-          console.error('Hybrid RE24 analysis failed:', error);
-          return false;
-        }
-      }
-    },
   ];
 
   protected getGameSpecificInfo(gameState: any): any {
@@ -849,33 +823,8 @@ export class MLBEngine extends BaseSportEngine {
       let customTitle = alert.description;
       let finalDescription = alert.description;
 
-      // Enhanced: Add hybrid RE24+AI analysis for high-priority alerts with fallback
-      let hybridAnalysis = null;
-      if (alert.priority >= 85) {
-        try {
-          hybridAnalysis = await analyzeHybridRE24(gameState);
-          console.log(`🧠 Hybrid Analysis: Base ${hybridAnalysis.baseRE24Probability}% → Final ${hybridAnalysis.finalProbability}% (${hybridAnalysis.aiInsight})`);
-
-          // Track prediction for learning system
-          if (hybridAnalysis.finalProbability >= 80) {
-            console.log(`📊 High-confidence prediction logged for learning system`);
-          }
-        } catch (error) {
-          console.error('Hybrid analysis failed, using base RE24:', error);
-          // Fallback to basic RE24 calculation
-          const baseRE24 = this.calculateRP24Probability(gameState);
-          if (baseRE24 >= 75) {
-            console.log(`⚡ Fallback: Base RE24 ${baseRE24}% triggers alert`);
-          }
-        }
-      }
-
-      // Generate a more descriptive message using AI if available and applicable
-      if (hybridAnalysis && alert.settingKey === 'hybridRE24') {
-        finalDescription = generateHybridAlertDescription(hybridAnalysis, gameState);
-        customTitle = `Hybrid RE24+AI: ${gameState.awayTeam} @ ${gameState.homeTeam}`; // More specific title for this alert type
-      } else if (enhanceHighPriorityAlert[alert.settingKey]) {
-        // Apply generic AI enhancement for other high-priority alerts if a specific handler exists
+      // Apply AI enhancement for specific alert types if handler exists
+      if (enhanceHighPriorityAlert[alert.settingKey]) {
         finalDescription = enhanceHighPriorityAlert[alert.settingKey](gameState, alert.description);
       }
 
@@ -889,7 +838,7 @@ export class MLBEngine extends BaseSportEngine {
         opponent: gameState.awayTeam,
         message: finalDescription,
         probability: alert.probability,
-        priority: hybridAnalysis?.alertPriority || alert.priority, // Use AI-enhanced priority if available
+        priority: alert.priority,
         createdAt: new Date(),
         isRead: false,
         gameInfo: {
