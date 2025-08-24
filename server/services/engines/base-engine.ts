@@ -164,14 +164,9 @@ export abstract class BaseSportEngine implements SportEngine {
       console.log(`⏭️ Skipping ${sortedAlerts.length - 1} lower priority alerts: ${sortedAlerts.slice(1).map(a => a.type).join(', ')}`);
     }
     
-    // 🎯 GAMBLING FIX: Skip deduplication for gambling alerts in base engine
-    if (alert.type !== 'Hybrid RE24+AI Analysis') {
-      if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
-        console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
-        return;
-      }
-    } else {
-      console.log(`🎯 BASE ENGINE: Processing gambling alert '${alert.type}' without deduplication!`);
+    if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
+      console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
+      return;
     }
 
     try {

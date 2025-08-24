@@ -105,6 +105,12 @@ export class AlertDeduplication {
       scope: { level: 'plate-appearance', timeWindow: 120000, maxAlerts: 3 },
       escalationOnly: false,
       contextFactors: ['pitcher', 'severity']
+    },
+    {
+      alertType: 'Hybrid RE24+AI Analysis',
+      scope: { level: 'plate-appearance', timeWindow: 3000, maxAlerts: 1 },
+      escalationOnly: false,
+      contextFactors: ['batter', 'inning', 'pitcher']
     }
   ];
 
