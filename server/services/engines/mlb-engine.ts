@@ -636,7 +636,10 @@ export class MLBEngine extends BaseSportEngine {
         currentBatter,
         currentPitcher,
         recentPlay,
-        count,
+        count: {
+          balls: gameData.liveData?.plays?.currentPlay?.count?.balls || 0,
+          strikes: gameData.liveData?.plays?.currentPlay?.count?.strikes || 0
+        },
         ballpark: ballparkConditions // Assign extracted ballpark data
       };
 
@@ -645,7 +648,7 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`   Inning: ${inning} ${inningState}`);
       console.log(`   Score: ${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`);
       console.log(`   Runners: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
-      console.log(`   Outs: ${outs}, Balls: ${count?.balls || 0}, Strikes: ${count?.strikes || 0}`);
+      console.log(`   Outs: ${outs}, Balls: ${gameState.count?.balls || 0}, Strikes: ${gameState.count?.strikes || 0}`);
       if (gameState.weather) {
         console.log(`   Weather: ${gameState.weather.condition}, Temp: ${gameState.weather.temperature}°F, Wind: ${gameState.weather.windSpeed}mph ${gameState.weather.windDirection}`);
       }
