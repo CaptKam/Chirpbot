@@ -882,6 +882,7 @@ export class MLBEngine extends BaseSportEngine {
           gamePk: gameState.gamePk,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
+          status: 'live',
           inning: gameState.inning,
           inningState: gameState.inningState,
           outs: gameState.outs,
