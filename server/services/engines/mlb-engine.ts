@@ -831,10 +831,19 @@ export class MLBEngine extends BaseSportEngine {
 
   async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
     for (const alert of triggeredAlerts) {
-      // 🔥 CRITICAL: Check deduplication BEFORE processing
-      if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
-        console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
-        continue;
+      // 🎯 DEBUG: Log exact alert type to debug deduplication bypass
+      console.log(`🔍 DEBUG: Alert type = '${alert.type}' (length: ${alert.type.length})`);
+      
+      // 🎯 GAMBLING FIX: Skip deduplication for Hybrid RE24+AI Analysis completely
+      if (alert.type !== 'Hybrid RE24+AI Analysis') {
+        console.log(`❌ Not gambling alert, checking deduplication...`);
+        // 🔥 CRITICAL: Check deduplication BEFORE processing
+        if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
+          console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
+          continue;
+        }
+      } else {
+        console.log(`🎯 GAMBLING ALERT: Processing '${alert.type}' without deduplication checks!`);
       }
 
       let customTitle = alert.description;

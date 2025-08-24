@@ -69,6 +69,20 @@ export abstract class BaseSportEngine implements SportEngine {
   }
 
   protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
+    // 🎯 GAMBLING ALERTS: Allow Hybrid RE24+AI to fire every time for 3-second decision windows
+    if (alertType.includes('Hybrid RE24+AI')) {
+      const key = `${gameId}_${alertType}`;
+      const now = Date.now();
+      const lastFire = this.lastFireAt.get(key);
+      
+      // Only wait 2 seconds for gambling alerts
+      if (lastFire && (now - lastFire) < 2000) {
+        return false;
+      }
+      this.lastFireAt.set(key, now);
+      return true;
+    }
+
     const stateHash = this.generateGameStateHash(alertType, gameState);
     const key = `${gameId}_${alertType}`;
     const now = Date.now();
@@ -79,7 +93,7 @@ export abstract class BaseSportEngine implements SportEngine {
     }
 
     const lastState = this.lastAlertStates.get(key);
-    if (lastState && lastState.hash === stateHash && (now - lastState.ts) < 60000) {
+    if (lastState && lastState.hash === stateHash && (now - lastState.ts) < 5000) {  // Reduced from 60s to 5s
       return false;
     }
 
@@ -150,8 +164,14 @@ export abstract class BaseSportEngine implements SportEngine {
       console.log(`⏭️ Skipping ${sortedAlerts.length - 1} lower priority alerts: ${sortedAlerts.slice(1).map(a => a.type).join(', ')}`);
     }
     
-    if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
-      return;
+    // 🎯 GAMBLING FIX: Skip deduplication for gambling alerts in base engine
+    if (alert.type !== 'Hybrid RE24+AI Analysis') {
+      if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
+        console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
+        return;
+      }
+    } else {
+      console.log(`🎯 BASE ENGINE: Processing gambling alert '${alert.type}' without deduplication!`);
     }
 
     try {
