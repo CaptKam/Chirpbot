@@ -854,7 +854,7 @@ export class MLBEngine extends BaseSportEngine {
         } catch (error) {
           console.error('Hybrid analysis failed, using base RE24:', error);
           // Fallback to basic RE24 calculation
-          const baseRE24 = this.calculateRE24Probability(gameState);
+          const baseRE24 = this.calculateRP24Probability(gameState);
           if (baseRE24 >= 75) {
             console.log(`⚡ Fallback: Base RE24 ${baseRE24}% triggers alert`);
           }
@@ -919,13 +919,13 @@ export class MLBEngine extends BaseSportEngine {
           } : undefined,
           // NEW: Hybrid RE24+AI Analysis Data
           hybridAnalysis: hybridAnalysis ? {
-            baseRE24Probability: hybridAnalysis.baseRE24Probability,
+            baseProbability: hybridAnalysis.baseProbability,
             aiContextMultiplier: hybridAnalysis.aiContextMultiplier,
             finalProbability: hybridAnalysis.finalProbability,
             aiInsight: hybridAnalysis.aiInsight,
             confidence: hybridAnalysis.confidence,
             isHighLeverage: hybridAnalysis.isHighLeverage,
-            bettingRecommendation: hybridAnalysis.betingRecommendation
+            bettingRecommendation: hybridAnalysis.bettingRecommendation
           } : undefined
         }
       };

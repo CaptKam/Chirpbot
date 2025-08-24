@@ -37,7 +37,7 @@ export abstract class BaseSportEngine implements SportEngine {
   private MAX_KEYS = 5000;
   private MAX_AGE_MS = 30 * 60 * 1000;
   private lastFireAt = new Map<string, number>();
-  private MIN_REFIRE_MS = 20000;
+  private MIN_REFIRE_MS = 3000;  // Gambling alerts need 3-second windows!
 
   abstract extractGameState(apiData: any): any;
   abstract monitor(): Promise<void>;
