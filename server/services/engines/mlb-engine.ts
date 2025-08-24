@@ -226,9 +226,11 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "hits",
       priority: 70,
       probability: 1.0,
-      description: "⚾ BASE HIT! Runner reaches safely!",
+      description: "⚾ BASE HIT with runners on base!",
       conditions: (state: MLBGameState) => {
-        return !!(state.recentPlay?.isHit && !state.recentPlay?.isHomeRun);
+        // Only trigger hit alerts when there are runners who could advance/score
+        const hasRunners = state.runners.first || state.runners.second || state.runners.third;
+        return !!(state.recentPlay?.isHit && !state.recentPlay?.isHomeRun && hasRunners);
       }
     },
     {
