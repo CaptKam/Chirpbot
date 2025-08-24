@@ -369,13 +369,14 @@ export class MLBEngine extends BaseSportEngine {
             currentBatter = {
               id: situation.batter.playerId || 0,
               name: situation.batter.displayName || 'Unknown',
-              battingOrder: 0,
               batSide: situation.batter.batSide || 'R',
               stats: {
                 avg: parseFloat(situation.batter.avg || '0.250'),
                 hr: parseInt(situation.batter.homeRuns || '0'),
                 rbi: parseInt(situation.batter.rbi || '0'),
-                ops: parseFloat(situation.batter.onBasePlusSlugging || '0.720')
+                obp: parseFloat(situation.batter.onBasePercentage || '0.320'),
+                ops: parseFloat(situation.batter.onBasePlusSlugging || '0.720'),
+                slg: parseFloat(situation.batter.sluggingPercentage || '0.400')
               }
             };
           }
@@ -396,11 +397,12 @@ export class MLBEngine extends BaseSportEngine {
         homeScore = liveData.linescore?.teams?.home?.runs || 0;
         awayScore = liveData.linescore?.teams?.away?.runs || 0;
 
-        const about = liveData.plays.currentPlay?.about || {};
+        const currentPlay = liveData.plays.currentPlay;
+        const about = currentPlay?.about || {};
         inning = about.inning || 1;
         inningState = about.isTopInning ? 'top' : 'bottom';
         outs = about.outs || 0;
-
+        
         // Try multiple sources for runner data
         const situation = liveData.situation;
         if (situation) {
@@ -420,6 +422,21 @@ export class MLBEngine extends BaseSportEngine {
           });
         }
         
+        // Fallback: Check recent plays for runner movements
+        if (!situation && liveData.plays?.allPlays) {
+          const recentPlays = liveData.plays.allPlays.slice(-5); // Check last 5 plays
+          recentPlays.forEach((play: any) => {
+            if (play.runners && play.runners.length > 0) {
+              console.log(`🔍 Found runners in recent play:`, play.runners);
+              play.runners.forEach((runner: any) => {
+                if (runner.movement?.end === '1B' && !runner.movement?.isOut) runners.first = true;
+                if (runner.movement?.end === '2B' && !runner.movement?.isOut) runners.second = true;
+                if (runner.movement?.end === '3B' && !runner.movement?.isOut) runners.third = true;
+              });
+            }
+          });
+        }
+        
         // Fallback: Check linescore offense data
         if (!situation && liveData.linescore?.offense) {
           const offense = liveData.linescore.offense;
@@ -429,12 +446,22 @@ export class MLBEngine extends BaseSportEngine {
           if (offense.third) runners.third = true;
         }
         
+        // Emergency fallback: Manual runner detection from play descriptions
+        if (!situation && currentPlay?.result?.description) {
+          const desc = currentPlay.result.description.toLowerCase();
+          if (desc.includes('runner') || desc.includes('on base')) {
+            console.log(`🔍 Detecting runners from play description: "${currentPlay.result.description}"`);
+            if (desc.includes('first') || desc.includes('1st')) runners.first = true;
+            if (desc.includes('second') || desc.includes('2nd')) runners.second = true;
+            if (desc.includes('third') || desc.includes('3rd')) runners.third = true;
+          }
+        }
+        
         // Debug: Log final runner state for troubleshooting
         if (runners.first || runners.second || runners.third) {
           console.log(`✅ RUNNERS DETECTED: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third} for ${homeTeam} vs ${awayTeam}`);
         }
-
-        const currentPlay = liveData.plays.currentPlay;
+        
         const boxscore = liveData.boxscore;
 
         // Track recent play for event-based alerts
