@@ -38,30 +38,13 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   async startAllEngines(): Promise<void> {
-    console.log('🚀 Starting sport engines based on monitored games...');
-
-    // Check each sport for monitored games before starting
-    for (const [sport, engine] of Array.from(this.engines.entries())) {
-      if (!this.intervalIds.has(sport)) {
-        // Check if there are any monitored games for this sport
-        const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
-        
-        if (hasMonitoredGames) {
-          console.log(`🔧 Starting ${sport} engine - found monitored games`);
-          this.startEngine(sport, engine);
-        } else {
-          console.log(`⏸️ Skipping ${sport} engine - no monitored games`);
-        }
-      }
-    }
-
-    // Set up a periodic check to start/stop engines based on monitored games
-    // Check every 30 seconds
-    setInterval(async () => {
-      await this.checkAndUpdateEngines();
-    }, 30000);
-
-    console.log('✅ Sport engines setup complete');
+    console.log('🛑 ALL ALERT ENGINES DISABLED - Starting fresh from the beginning');
+    
+    // Stop all running engines first
+    this.stopAllEngines();
+    
+    // Do not start any engines - user requested to stop everything
+    console.log('🔇 All alert systems stopped. Ready for fresh start.');
   }
   
   private startEngine(sport: string, engine: BaseSportEngine): void {
