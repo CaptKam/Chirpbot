@@ -51,11 +51,9 @@ export abstract class BaseSportEngine implements SportEngine {
     
     for (const config of this.alertConfigs) {
       console.log(`🔍 Processing alert: ${config.type} (settingKey: ${config.settingKey})`);
-      if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
-        console.log(`⏭️ Alert type '${config.type}' skipped - setting '${config.settingKey}' is disabled`);
-        continue;
-      }
-
+      
+      // 🚨 FORCE ALL ALERTS: No settings check - all important alerts fire!
+      
       if (!config.conditions) continue;
 
       try {
