@@ -303,6 +303,10 @@ export default function Alerts() {
                     {/* Intelligent Headline */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1 pr-4">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse"></div>
+                          <span className="text-red-400 text-xs font-medium uppercase tracking-wide">LIVE ALERT</span>
+                        </div>
                         <h2 className="text-white font-semibold text-lg leading-tight mb-1">
                           {alert.gameInfo.currentBatter?.name || 'Unknown Batter'} • 
                           {alert.gameInfo.count ? `${alert.gameInfo.count.balls}-${alert.gameInfo.count.strikes}` : '0-0'} Count
