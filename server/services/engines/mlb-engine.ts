@@ -101,28 +101,6 @@ export class MLBEngine extends BaseSportEngine {
       }
     },
     {
-      type: "Power Hitter Alert",
-      settingKey: "powerHitter",
-      priority: 75,
-      probability: 1.0,
-      description: "💥 POWER HITTER up to bat! Home run potential!",
-      conditions: (state: MLBGameState) => {
-        if (!state.currentBatter || state.outs >= 3) return false;
-        return state.currentBatter.stats.hr >= 15;
-      }
-    },
-    {
-      type: "300+ Hitter Alert",
-      settingKey: "starBatter",  // Fixed: was 'avgHitter' which doesn't exist
-      priority: 75, // Boost for AI enhancement
-      probability: 1.0,
-      description: "🎯 HIGH AVERAGE BATTER (.300+) stepping up to plate!",
-      conditions: (state: MLBGameState) => {
-        if (!state.currentBatter || state.outs >= 3) return false;
-        return state.currentBatter.stats.avg >= 0.300;
-      }
-    },
-    {
       type: "Runners in Scoring Position",
       settingKey: "risp",
       priority: 85,
@@ -140,7 +118,23 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "Bases Loaded",
-      settingKey: "risp",  // Fixed: was 'basesLoaded' which doesn't exist
+      settingKey: "risp",
+      priority: 95,
+      probability: 1.0,
+      description: "🔥 BASES LOADED! Maximum pressure situation!",
+      conditions: (state: MLBGameState) => state.runners.first && state.runners.second && state.runners.third
+    },
+    {
+      type: "Runners on Base",
+      settingKey: "runnersOnBase",
+      priority: 60,
+      probability: 1.0,
+      description: "🏃‍♂️ RUNNERS ON BASE! Scoring opportunity!",
+      conditions: (state: MLBGameState) => state.runners.first || state.runners.second || state.runners.third
+    },
+    {
+      type: "Bases Loaded",
+      settingKey: "risp",  // Use risp setting since bases loaded is the ultimate RISP situation
       priority: 95,
       probability: 1.0,
       description: "🔥 BASES LOADED! Maximum pressure situation!",
@@ -295,31 +289,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "re24Advanced",
       priority: 85,
       probability: 1.0,
-      description: async (state: MLBGameState) => {
-        const rp24Prob = this.calculateRP24Probability(state);
-        const runners = [];
-        if (state.runners.first) runners.push('1ST');
-        if (state.runners.second) runners.push('2ND');
-        if (state.runners.third) runners.push('3RD');
-        const runnerText = runners.length > 0 ? runners.join(' & ') : 'Empty bases';
-
-        // Get weather data
-        let weatherText = '';
-        try {
-          const stadiumName = `${state.homeTeam} Stadium`;
-          const weatherData = await enhancedWeatherService.getEnhancedWeatherData(stadiumName);
-          if (weatherData) {
-            const windComponent = weatherData.calculations.windComponent;
-            const windDirection = windComponent > 0 ? 'helping' : windComponent < 0 ? 'hindering' : 'crosswind';
-            const weatherSummary = enhancedWeatherService.getWeatherEffectsSummary(weatherData);
-            weatherText = ` | ${weatherSummary.emoji} Wind: ${weatherData.windSpeed}mph (${Math.abs(windComponent)}mph ${windDirection} toward CF)`;
-          }
-        } catch (error) {
-          // Weather unavailable, continue without it
-        }
-
-        return `📊 HIGH RP24! ${runnerText}, ${state.outs} out - ${(rp24Prob * 100).toFixed(1)}% scoring probability${weatherText}`;
-      },
+      description: "📊 HIGH RP24! High probability scoring situation!",
       conditions: (state: MLBGameState) => {
         const rp24Prob = this.calculateRP24Probability(state);
         return rp24Prob >= 0.75; // Trigger on 75%+ RP24 probability
@@ -759,6 +729,7 @@ export class MLBEngine extends BaseSportEngine {
 
           if (!gameState) continue;
 
+          console.log(`🔍 Processing ${this.alertConfigs.length} alert configs for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
           const triggeredAlerts = await this.checkAlertConditions(gameState);
 
           if (triggeredAlerts.length > 0) {
