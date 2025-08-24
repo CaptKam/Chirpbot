@@ -113,7 +113,7 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "300+ Hitter Alert",
-      settingKey: "avgHitter",
+      settingKey: "starBatter",  // Fixed: was 'avgHitter' which doesn't exist
       priority: 75, // Boost for AI enhancement
       probability: 1.0,
       description: "🎯 HIGH AVERAGE BATTER (.300+) stepping up to plate!",
@@ -140,7 +140,7 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "Bases Loaded",
-      settingKey: "basesLoaded",
+      settingKey: "risp",  // Fixed: was 'basesLoaded' which doesn't exist
       priority: 95,
       probability: 1.0,
       description: "🔥 BASES LOADED! Maximum pressure situation!",
@@ -328,7 +328,7 @@ export class MLBEngine extends BaseSportEngine {
     // NEW: Hybrid RE24+AI Alert
     {
       type: "Hybrid RE24+AI Analysis",
-      settingKey: "hybridRE24",
+      settingKey: "useRE24System",  // Fixed: was 'hybridRE24' which doesn't exist
       priority: 90,
       probability: 1.0,
       description: "🧠 HYBRID ANALYSIS! AI-enhanced RP24 probability detected",
