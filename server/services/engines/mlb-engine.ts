@@ -132,7 +132,9 @@ export class MLBEngine extends BaseSportEngine {
       description: "⚖️ CLOSE GAME! One-run game in late innings!",
       conditions: (state: MLBGameState) => {
         const scoreDiff = Math.abs(state.homeScore - state.awayScore);
-        return scoreDiff <= 1 && state.inning >= 7;
+        // Only trigger if there are runners on base or high-leverage situation
+        const hasRunners = state.runners.first || state.runners.second || state.runners.third;
+        return scoreDiff <= 1 && state.inning >= 7 && (hasRunners || state.outs === 2);
       }
     },
     {
@@ -141,7 +143,12 @@ export class MLBEngine extends BaseSportEngine {
       priority: 75,
       probability: 1.0,
       description: "⏰ LATE INNING PRESSURE! Critical moments ahead!",
-      conditions: (state: MLBGameState) => state.inning >= 8
+      conditions: (state: MLBGameState) => {
+        // Only trigger in late innings if there are runners or it's a critical situation
+        const hasRunners = state.runners.first || state.runners.second || state.runners.third;
+        const isCloseGame = Math.abs(state.homeScore - state.awayScore) <= 2;
+        return state.inning >= 8 && (hasRunners || (isCloseGame && state.outs === 2));
+      }
     },
     {
       type: "Inning Change",
