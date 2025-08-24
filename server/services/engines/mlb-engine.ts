@@ -401,11 +401,37 @@ export class MLBEngine extends BaseSportEngine {
         inningState = about.isTopInning ? 'top' : 'bottom';
         outs = about.outs || 0;
 
+        // Try multiple sources for runner data
         const situation = liveData.situation;
         if (situation) {
           runners.first = situation.isRunnerOnFirst;
           runners.second = situation.isRunnerOnSecond;
           runners.third = situation.isRunnerOnThird;
+          console.log(`🔍 Runner data from situation: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
+        }
+        
+        // Fallback: Check current play for runner data
+        if (!situation && currentPlay?.runners) {
+          console.log(`🔍 Checking currentPlay.runners:`, currentPlay.runners);
+          currentPlay.runners.forEach((runner: any) => {
+            if (runner.movement?.start === '1B') runners.first = true;
+            if (runner.movement?.start === '2B') runners.second = true;
+            if (runner.movement?.start === '3B') runners.third = true;
+          });
+        }
+        
+        // Fallback: Check linescore offense data
+        if (!situation && liveData.linescore?.offense) {
+          const offense = liveData.linescore.offense;
+          console.log(`🔍 Checking linescore offense:`, offense);
+          if (offense.first) runners.first = true;
+          if (offense.second) runners.second = true;
+          if (offense.third) runners.third = true;
+        }
+        
+        // Debug: Log final runner state for troubleshooting
+        if (runners.first || runners.second || runners.third) {
+          console.log(`✅ RUNNERS DETECTED: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third} for ${homeTeam} vs ${awayTeam}`);
         }
 
         const currentPlay = liveData.plays.currentPlay;
