@@ -283,6 +283,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public route for enabled alert keys - no authentication required
+  app.get("/api/settings/enabled-alert-keys/:sport", async (req, res) => {
+    try {
+      const { sport } = req.params;
+      const enabledKeys = await storage.getEnabledAlertKeysBySport(sport.toUpperCase());
+      res.json({ enabledKeys });
+    } catch (error) {
+      console.error("Error fetching enabled alert keys:", error);
+      res.status(500).json({ error: "Failed to fetch enabled alert keys" });
+    }
+  });
+
   app.post("/api/settings", async (req, res) => {
     try {
       const validatedData = insertSettingsSchema.parse(req.body);

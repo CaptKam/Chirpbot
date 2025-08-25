@@ -125,9 +125,9 @@ export default function Settings() {
     },
   });
 
-  // Fetch enabled alert keys from master controls
+  // Fetch enabled alert keys from master controls  
   const { data: enabledAlertKeys, isLoading: isLoadingEnabledKeys } = useQuery<{ enabledKeys: string[] }>({
-    queryKey: ["/api/admin/enabled-alert-keys", activeSport],
+    queryKey: ["/api/settings/enabled-alert-keys", activeSport],
     queryFn: async ({ queryKey }) => {
       const [url, sport] = queryKey;
       const response = await fetch(`${url}/${sport}`, {

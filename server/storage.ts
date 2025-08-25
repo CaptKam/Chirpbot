@@ -114,6 +114,10 @@ export class MemStorage implements IStorage {
       
       // Player Performance
       { alertKey: "strikeouts", title: "Strikeout Alerts", description: "Pitcher strikeout notifications", category: "Player Performance" },
+      { alertKey: "powerHitter", title: "Power Hitter Alert", description: "Advanced HR probability analysis with platoon advantages, park factors & wind effects", category: "Player Performance" },
+      { alertKey: "starBatter", title: "Star Batter Alert", description: ".300+ AVG, 20+ HR, or .900+ OPS hitters", category: "Player Performance" },
+      { alertKey: "basesLoaded", title: "Bases Loaded", description: "Maximum scoring opportunity - all bases occupied", category: "Game Situations" },
+      { alertKey: "extraInnings", title: "Extra Innings", description: "Game extends beyond 9th inning", category: "Game Situations" },
       
       // RE24+AI Hybrid System
       { alertKey: "useRE24System", title: "RE24+AI Hybrid System", description: "Advanced Run Expectancy analytics enhanced with AI predictions", category: "AI Predictions" },
