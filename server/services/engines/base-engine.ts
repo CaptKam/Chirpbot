@@ -2,6 +2,7 @@ import { storage } from '../../storage';
 import { getWeatherData } from '../weather';
 import { sendTelegramAlert } from '../telegram';
 import { enhanceHighPriorityAlert, generateAdvancedPredictions } from '../ai-analysis';
+import { alertDeduplicator, type MLBGameState } from './alert-deduplication';
 import { randomUUID } from 'crypto';
 
 export interface AlertConfig {
@@ -103,23 +104,53 @@ export abstract class BaseSportEngine implements SportEngine {
   }
 
   protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
-    // 🎯 GLOBAL DEDUPLICATION: Only ONE alert per alert type across ALL games
-    // Use alertType as key instead of gameId_alertType
-    const globalKey = alertType;
-    const now = Date.now();
-    const cooldownMs = 30000; // 30 seconds between same alert types globally
+    // 🎯 ENHANCED DEDUPLICATION: Use rich contextual factors and realert functionality
+    try {
+      // Convert gameState to MLBGameState format for deduplication
+      const mlbGameState: MLBGameState = {
+        gamePk: parseInt(gameState.gameId || gameId),
+        inning: gameState.inning || 1,
+        inningState: gameState.inningState === 'top' ? 'top' : 'bottom',
+        outs: gameState.outs || 0,
+        runners: {
+          first: gameState.runners?.first || false,
+          second: gameState.runners?.second || false,
+          third: gameState.runners?.third || false
+        },
+        currentBatter: gameState.currentBatter ? {
+          id: gameState.currentBatter.id || 0
+        } : undefined,
+        currentPitcher: gameState.currentPitcher ? {
+          id: gameState.currentPitcher.id || 0
+        } : undefined,
+        paId: gameState.paId // plate appearance ID if available
+      };
 
-    const lastGlobalFire = this.lastFireAt.get(globalKey);
-    if (lastGlobalFire && (now - lastGlobalFire) < cooldownMs) {
-      console.log(`🚫 GLOBAL DEDUP: Alert type '${alertType}' blocked - fired ${((now - lastGlobalFire) / 1000).toFixed(1)}s ago`);
-      return false;
+      const shouldTrigger = alertDeduplicator.shouldTriggerAlert(alertType, mlbGameState);
+      
+      if (!shouldTrigger) {
+        const debugInfo = alertDeduplicator.getDebugInfo(alertType, mlbGameState);
+        console.log(`🚫 ENHANCED DEDUP: Alert '${alertType}' blocked`, debugInfo);
+      } else {
+        console.log(`✅ ENHANCED DEDUP: Alert '${alertType}' allowed with rich context`);
+      }
+      
+      return shouldTrigger;
+    } catch (error) {
+      console.error('Error in enhanced deduplication:', error);
+      // Fallback to simple logic if there's an issue
+      const globalKey = alertType;
+      const now = Date.now();
+      const cooldownMs = 30000;
+
+      const lastGlobalFire = this.lastFireAt.get(globalKey);
+      if (lastGlobalFire && (now - lastGlobalFire) < cooldownMs) {
+        return false;
+      }
+
+      this.lastFireAt.set(globalKey, now);
+      return true;
     }
-
-    // For Game Situations, only trigger once per alert type regardless of which game has it
-    this.lastFireAt.set(globalKey, now);
-    console.log(`✅ GLOBAL ALERT: '${alertType}' allowed - first occurrence in 30s window`);
-
-    return true;
   }
 
   protected generateGameStateHash(alertType: string, gameState: any): string {

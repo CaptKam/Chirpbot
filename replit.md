@@ -21,6 +21,16 @@ Features persistent team monitoring that saves user game selections to the datab
 - Weather integration for home run probability calculations (wind speed/direction factors)
 - Alert priority system: Grand Slams (100), Home Runs (100), Multiple RBI Plays (95), Close Game (90)
 
+**Enhanced Deduplication System (August 25, 2025):**
+- Implemented sophisticated V1-style deduplication with rich contextual factors
+- Replaces simple 30-second global cooldown with intelligent context-aware rules
+- Advanced deduplication keys: gamePk:type:inning:half:outs:bases:batter:pa format
+- Context factors include: basesHash, outs, batterId, inning, inningState, pitcherId, paId
+- "Realert_after" concept: allows alerts to resurface after longer time periods
+- Rule-based timeframes: RISP (60s/180s realert), Bases Loaded (90s/300s), Close Game (180s/600s)
+- Alert scoping levels: plate-appearance, half-inning, full-inning, game
+- Memory management with automatic cleanup and fallback protection
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
