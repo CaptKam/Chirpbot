@@ -295,6 +295,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public route for master alert controls - no authentication required for viewing
+  app.get("/api/settings/master-alert-controls", async (req, res) => {
+    try {
+      const sport = req.query.sport as string;
+      const controls = sport 
+        ? await storage.getMasterAlertControlsBySport(sport.toUpperCase())
+        : await storage.getAllMasterAlertControls();
+      res.json(controls);
+    } catch (error) {
+      console.error("Error fetching master alert controls:", error);
+      res.status(500).json({ error: "Failed to fetch master alert controls" });
+    }
+  });
+
   app.post("/api/settings", async (req, res) => {
     try {
       const validatedData = insertSettingsSchema.parse(req.body);

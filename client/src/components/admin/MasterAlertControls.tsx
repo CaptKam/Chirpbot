@@ -29,11 +29,14 @@ export default function MasterAlertControls() {
 
   // Fetch master alert controls
   const { data: controls, isLoading } = useQuery<MasterAlertControl[]>({
-    queryKey: ["/api/admin/master-alert-controls", { sport: activeSport }],
+    queryKey: ["/api/settings/master-alert-controls", { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
       const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await apiRequest("GET", `${url}?${searchParams}`);
+      const response = await fetch(`${url}?${searchParams}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch master alert controls");
       return response.json();
     },
   });
@@ -53,7 +56,7 @@ export default function MasterAlertControls() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/master-alert-controls"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/master-alert-controls"] });
       toast({
         title: "Alert Control Updated",
         description: "Master alert control has been updated successfully.",
