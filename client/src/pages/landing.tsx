@@ -233,29 +233,29 @@ function LivePreview() {
   const [visibleAlerts, setVisibleAlerts] = useState<number[]>([]);
   const alerts = [
     {
-      type: "RISP Alert",
+      type: "Big Moment Alert",
       title: "Yankees @ Red Sox",
-      description: "RUNNERS ON 2ND & 3RD, 2 OUTS! Aaron Judge (.301 BA, 47 HRs) up to bat",
-      aiContext: "15 MPH wind blowing out to right field. Judge has .340 BA with RISP this season.",
-      weather: "Wind: 15 MPH → RF",
+      description: "Two runners in scoring position, 2 outs! Aaron Judge (.301 avg, 47 home runs) at bat",
+      aiContext: "Strong winds helping home runs today. Judge is batting .340 in these clutch situations.",
+      weather: "Wind: 15 MPH helping",
       time: "2s ago",
       confidence: 87
     },
     {
-      type: "Red Zone Alert", 
+      type: "Touchdown Zone Alert", 
       title: "Chiefs @ Bills",
-      description: "1ST & GOAL at 8-yard line! Mahomes targeting Kelce in critical formation",
-      aiContext: "Chiefs are 89% successful from this position. Kelce has 12 red zone TDs this season.",
+      description: "Chiefs at the 8-yard line, 1st down! Mahomes looking for Kelce in the end zone",
+      aiContext: "Chiefs score 89% of the time from this position. Kelce has 12 touchdowns this season.",
       weather: "Clear, 72°F",
       time: "5s ago",
       confidence: 92
     },
     {
-      type: "Clutch Time",
+      type: "Final Minutes Alert",
       title: "Lakers @ Warriors", 
-      description: "Under 2 minutes, 3-point game! LeBron has the ball, Curry defending",
-      aiContext: "LeBron shoots 45% in clutch time. Warriors allowing 1.02 PPP in final 2 minutes.",
-      weather: "Indoor venue",
+      description: "Under 2 minutes left, only 3-point difference! LeBron has the ball vs Curry",
+      aiContext: "LeBron makes 45% of shots in final minutes. Warriors struggling defensively late.",
+      weather: "Indoor arena",
       time: "8s ago",
       confidence: 79
     }
