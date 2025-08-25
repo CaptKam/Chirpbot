@@ -1,0 +1,230 @@
+What to change (quick wins)
+
+Smart popups policy
+
+Toast only when priority ≥ 85 OR type ∈ {BASES_LOADED, POWER_HITTER_AT_BAT[A], EXTRA_INNINGS}.
+
+Everything else lands in the feed silently (with a small “NEW” badge).
+
+Per-game batching (5s window)
+
+Group alerts by gamePk (and by PA when available) in a short window.
+
+Show one toast: title = highest-priority alert in the batch; subtitle = concise summary (“+2 more in NYY@BAL”).
+
+Feed still stores each alert item (no data loss).
+
+Escalation → update-in-place (don’t spawn new cards)
+
+If an alert with the same dedup entity arrives (e.g., same gamePk:type:paId), merge it: bump priority/tier, animate the card, and append a small “↑ Tier A” tag.
+
+Digest banner during bursts
+
+If >6 toasts would fire in 10s, suppress toasts and show one sticky banner:
+“9 new alerts across 4 games • [Open]” (opens a modal listing them).
+
+Prevents toast storms without hiding information.
+
+Time-aware throttling
+
+If document.hidden, queue non-critical toasts until page is visible (or summarize in one toast on return).
+
+Drop-in batching + popup code
+1) Add helpers (top of alerts.tsx)
+type IncomingAlert = {
+  id: string;
+  type: string;
+  priority: number;
+  title?: string;
+  description?: string;
+  createdAt?: string;
+  gameInfo?: {
+    gamePk?: number;
+    inning?: number;
+    inningState?: string; // "top"/"bottom"
+    paId?: number | string;
+    runners?: { first?: boolean; second?: boolean; third?: boolean };
+    score?: { home: number; away: number };
+    homeTeam?: string; awayTeam?: string;
+    tier?: "A"|"B"|"C";
+  };
+};
+
+type Batch = {
+  gamePk: number;
+  startedAt: number;
+  items: IncomingAlert[];
+};
+
+const BATCH_WINDOW_MS = 5000;        // group per game for 5s
+const DIGEST_THRESHOLD = 6;          // >6 toasts in 10s → digest
+const DIGEST_WINDOW_MS = 10000;
+const POPUP_TYPES = new Set([
+  "BASES_LOADED",
+  "EXTRA_INNINGS",
+  "POWER_HITTER_AT_BAT"
+]);
+
+function isTierA(a: IncomingAlert) {
+  return a.type === "POWER_HITTER_AT_BAT" && a.gameInfo?.tier === "A";
+}
+
+function shouldToast(a: IncomingAlert) {
+  return a.priority >= 85 || POPUP_TYPES.has(a.type) || isTierA(a);
+}
+
+function entityKey(a: IncomingAlert) {
+  const g = a.gameInfo ?? {};
+  // PA-scoped when possible; else fall back to game + type
+  return `${g.gamePk ?? "-"}:${a.type}:${g.inning ?? "-"}:${g.inningState ?? "-"}:${g.paId ?? "-"}`;
+}
+
+function gameLabel(a: IncomingAlert) {
+  const g = a.gameInfo ?? {};
+  return `${g.awayTeam ?? "Away"} @ ${g.homeTeam ?? "Home"}`;
+}
+
+2) Add a batching hook inside the file
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "@/hooks/use-toast"; // your existing toast
+
+function useAlertBatcher() {
+  const [feed, setFeed] = useState<IncomingAlert[]>([]);
+  const batchesRef = useRef<Map<number, Batch>>(new Map());
+  const toastHistoryRef = useRef<number[]>([]); // timestamps of toasts
+  const visibleRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    const onVis = () => { visibleRef.current = !document.hidden; };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // Call this for every incoming alert (e.g., WebSocket onmessage)
+  function ingest(a: IncomingAlert) {
+    // 1) Merge escalation in place (same entityKey)
+    setFeed(prev => {
+      const idx = prev.findIndex(x => entityKey(x) === entityKey(a));
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = {
+          ...next[idx],
+          // keep highest priority / latest desc / updated tier
+          priority: Math.max(next[idx].priority ?? 0, a.priority ?? 0),
+          description: a.description ?? next[idx].description,
+          gameInfo: { ...next[idx].gameInfo, ...a.gameInfo },
+        };
+        // visual cue: optional property to style animation
+        (next[idx] as any).__escalated = true;
+        return next;
+      }
+      return [a, ...prev].slice(0, 400);
+    });
+
+    // 2) Batch per game for toast decisions
+    const gpk = a.gameInfo?.gamePk;
+    if (!gpk) return;
+
+    const now = Date.now();
+    const batches = batchesRef.current;
+    const existing = batches.get(gpk);
+    if (!existing || now - existing.startedAt > BATCH_WINDOW_MS) {
+      batches.set(gpk, { gamePk: gpk, startedAt: now, items: [a] });
+      setTimeout(() => flushBatch(gpk), BATCH_WINDOW_MS + 10);
+    } else {
+      existing.items.push(a);
+    }
+  }
+
+  function flushBatch(gamePk: number) {
+    const batch = batchesRef.current.get(gamePk);
+    if (!batch) return;
+    batchesRef.current.delete(gamePk);
+
+    // Decide toast vs silent
+    const best = [...batch.items].sort((a,b) => (b.priority||0)-(a.priority||0))[0];
+
+    // Digest guard: if too many toasts recently, summarize instead
+    const now = Date.now();
+    toastHistoryRef.current = toastHistoryRef.current.filter(t => now - t < DIGEST_WINDOW_MS);
+    const wouldToast = shouldToast(best);
+    const tooMany = toastHistoryRef.current.length >= DIGEST_THRESHOLD;
+
+    if (!wouldToast || !visibleRef.current) {
+      // Silent (or tab hidden) → rely on feed; optional badge increment elsewhere
+      return;
+    }
+
+    if (tooMany) {
+      // One digest toast (don’t spam)
+      toastHistoryRef.current.push(now);
+      const total = batch.items.length;
+      toast({
+        title: `Live: ${gameLabel(best)}`,
+        description: `+${total} alerts in the last ${Math.round(DIGEST_WINDOW_MS/1000)}s • Open to review`,
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Normal toast for the best item in this batch
+    toastHistoryRef.current.push(now);
+    const more = batch.items.length - 1;
+    toast({
+      title: best.title || best.type.replace(/_/g, " "),
+      description: more > 0
+        ? `${gameLabel(best)} • +${more} more in this burst`
+        : gameLabel(best),
+      duration: 3500,
+    });
+  }
+
+  return { feed, ingest };
+}
+
+3) Wire the batcher to your WebSocket
+
+In your useEffect where you handle WS messages:
+
+const { feed, ingest } = useAlertBatcher();
+
+useEffect(() => {
+  const ws = new WebSocket(/* your ws url */);
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === "alert") {
+      ingest(msg.data as IncomingAlert);
+    }
+  };
+  return () => ws.close();
+}, []);
+
+
+Render feed instead of your previous array (it already merges escalations):
+
+{feed.map(a => (
+  <AlertCard
+    key={a.id}
+    alert={a}
+    escalated={(a as any).__escalated}
+    onSeen={() => markAlertAsSeen(a.id)}
+  />
+))}
+
+
+In <AlertCard /> add a subtle “escalated” animation:
+
+<div className={cn(
+  "card-base",
+  escalated && "ring-2 ring-fuchsia-400/60 animate-pulse"
+)} />
+
+Optional niceties (tiny effort, big feel)
+
+Sticky digest banner when toasts are suppressed: a small top bar “11 new alerts • 4 games — View” that opens a modal listing the last batch groups.
+
+“Focus mode” toggle: when on, only pop Tier A + Bases Loaded, everything else stays in feed.
+
+Auto-mark-seen via IntersectionObserver: when a card is 80% visible for 2s, mark as seen.
+
+Virtualized list (if you see >200 alerts/night): swap list body to react-virtuoso for smooth scrolling.
