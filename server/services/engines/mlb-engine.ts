@@ -722,7 +722,7 @@ export class MLBEngine extends BaseSportEngine {
           closeGame: true,
           lateInning: true,
           starBatter: false, // Disabled by default - star batter alerts were duplicating
-          powerHitter: false,
+          powerHitter: true, // ✅ Enable Power Hitter alerts by default
           runnersOnBase: true,
           inningChange: false, // Disabled by default
           re24Advanced: true,  // ✅ Enable RE24 hybrid system
