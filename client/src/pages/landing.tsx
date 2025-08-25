@@ -295,7 +295,7 @@ function LivePreview() {
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span className="text-slate-400 text-sm ml-auto">ChirpBot Live</span>
             </div>
-            <div className="space-y-4 min-h-[120px]">
+            <div className="space-y-4 h-[400px] overflow-hidden">
               {visibleAlerts.slice().reverse().map((alertIndex, displayIndex) => (
                 <motion.div
                   key={`${alertIndex}-${displayIndex}`}
