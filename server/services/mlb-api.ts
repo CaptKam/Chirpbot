@@ -297,17 +297,13 @@ export class MLBApiService {
   /**
    * Transform MLB API game data to our internal Game format
    */
-  // V1-style broad live game detection
+  // Critical path: exact live detection as specified 
   private isGameLive(status: any): boolean {
-    const abstractState = status.abstractGameState?.toLowerCase() || '';
-    const detailedState = status.detailedState?.toLowerCase() || '';
-    const statusCode = status.statusCode?.toLowerCase() || '';
+    const abstractState = status.abstractGameState || '';
+    const codedState = status.codedGameState || '';
     
-    return abstractState.includes('live') || 
-           detailedState.includes('in progress') || 
-           detailedState.includes('in play') ||
-           statusCode.includes('i') || // MLB uses 'I' for in progress
-           abstractState.includes('preview') && detailedState.includes('warmup');
+    // Exact match as per critical path requirements
+    return abstractState === 'Live' || codedState === 'I';
   }
 
   private transformMLBGame = (mlbGame: MLBGame): Game => {
