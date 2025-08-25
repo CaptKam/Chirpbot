@@ -184,7 +184,7 @@ class TheSportsDBMLB implements MLBSource {
   priority = 4;
   reliability = 75;
   speedScore = 6;
-  enabled = true;
+  enabled = false; // Disabled due to HTTP 429 rate limiting issues
   failureCount = 0;
   maxRetries = 2;
 

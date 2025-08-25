@@ -50,6 +50,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }, 30000);
 
+  // Ensure cleanup on server shutdown
+  process.on('SIGINT', () => {
+    console.log('🛑 Server shutting down, cleaning up intervals...');
+    clearInterval(heartbeatInterval);
+    process.exit(0);
+  });
+
   // Broadcast function with backpressure handling
   function broadcast(data: any) {
     const payload = JSON.stringify(data);

@@ -189,7 +189,7 @@ export class AdaptivePollingManager {
     const intervalId = this.pollingIntervals.get(gameId);
     if (intervalId) {
       clearInterval(intervalId);
-      this.pollingIntervals.delete(intervalId);
+      this.pollingIntervals.delete(gameId); // Fix: delete gameId, not intervalId
       console.log(`⏹️ Stopped polling for game ${gameId}`);
     }
     
