@@ -88,29 +88,6 @@ const teamNameToAbbr: Record<string, string> = {
 const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
   // ESPN logo URLs by sport
   const espnLogos: Record<string, Record<string, string>> = {
-    NFL: {
-      'NYJ': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
-      'PHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png',
-      'DAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png',
-      'ATL': 'https://a.espncdn.com/i/teamlogos/nfl/500/atl.png',
-      'TEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png',
-      'MIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png',
-      'KC': 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png',
-      'CHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png',
-      'BUF': 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
-      'NE': 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png',
-      'MIA': 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png',
-      'PIT': 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png',
-      'BAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png',
-      'CIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/cin.png',
-      'CLE': 'https://a.espncdn.com/i/teamlogos/nfl/500/cle.png',
-      'HOU': 'https://a.espncdn.com/i/teamlogos/nfl/500/hou.png',
-      'IND': 'https://a.espncdn.com/i/teamlogos/nfl/500/ind.png',
-      'JAX': 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png',
-      'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
-      'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
-      'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
-    },
     MLB: {
       'LAD': 'https://a.espncdn.com/i/teamlogos/mlb/500/lad.png',
       'SF': 'https://a.espncdn.com/i/teamlogos/mlb/500/sf.png',
@@ -143,10 +120,38 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'ATH': 'https://a.espncdn.com/i/teamlogos/mlb/500/oak.png',
       'MIN': 'https://a.espncdn.com/i/teamlogos/mlb/500/min.png',
       'TB': 'https://a.espncdn.com/i/teamlogos/mlb/500/tb.png',
+    },
+    NFL: {
+      'NYJ': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
+      'PHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png',
+      'DAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png',
+      'ATL': 'https://a.espncdn.com/i/teamlogos/nfl/500/atl.png',
+      'TEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png',
+      'MIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png',
+      'KC': 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png',
+      'CHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png',
+      'BUF': 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
+      'NE': 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png',
+      'MIA': 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png',
+      'PIT': 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png',
+      'BAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png',
+      'CIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/cin.png',
+      'CLE': 'https://a.espncdn.com/i/teamlogos/nfl/500/cle.png',
+      'HOU': 'https://a.espncdn.com/i/teamlogos/nfl/500/hou.png',
+      'IND': 'https://a.espncdn.com/i/teamlogos/nfl/500/ind.png',
+      'JAX': 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png',
+      'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
+      'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
+      'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
     }
   };
 
-  // Try to find logo in each sport
+  // If sport is specified, try that sport first
+  if (sport && espnLogos[sport] && espnLogos[sport][teamAbbr]) {
+    return espnLogos[sport][teamAbbr];
+  }
+  
+  // Fallback: try to find logo in any sport (for backwards compatibility)
   for (const [sportKey, logos] of Object.entries(espnLogos)) {
     if (logos[teamAbbr]) {
       return logos[teamAbbr];
@@ -460,8 +465,8 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   // Get abbreviation from prop or lookup from team name
   const teamAbbr = abbreviation || teamNameToAbbr[teamName];
   
-  // Try to get the official team logo URL first
-  const logoUrl = getTeamLogoUrl(teamAbbr);
+  // Try to get the official team logo URL first, prioritizing MLB for sports betting app
+  const logoUrl = getTeamLogoUrl(teamAbbr, 'MLB');
   
   if (logoUrl) {
     // Use official team logo from ESPN
