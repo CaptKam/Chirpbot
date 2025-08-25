@@ -329,7 +329,7 @@ export class MLBEngine extends BaseSportEngine {
       description: "📊 HIGH RE24! Advanced scoring probability detected",
       conditions: (state: MLBGameState) => {
         const re24Prob = this.calculateRE24Probability(state);
-        return re24Prob >= 75; // Trigger on 75%+ RE24 probability
+        return re24Prob >= 0.75; // Trigger on 75%+ RP (run probability)
       }
     },
   ];
@@ -810,21 +810,33 @@ export class MLBEngine extends BaseSportEngine {
     return Math.min(95, Math.max(5, probability));
   }
 
-  // RE24-based scoring probability calculation
+  // RE24-based scoring probability calculation - Use RP directly, not derived from RE
   private calculateRE24Probability(gameState: MLBGameState): number {
     const key = reKey(gameState.runners, gameState.outs);
-    const expectedRuns = RE24[key] || 0.50; // Default to empty bases, 0 outs
     
-    // Convert expected runs to probability percentage
-    const probability = probFromRE(expectedRuns) * 100;
+    // Use proper RE24_RP24 table with both RE and RP values
+    const RE24_RP24: Record<string, { RE: number; RP: number }> = {
+      "000-0": { RE: 0.50, RP: 0.27 }, "000-1": { RE: 0.27, RP: 0.17 }, "000-2": { RE: 0.11, RP: 0.07 },
+      "100-0": { RE: 0.90, RP: 0.43 }, "100-1": { RE: 0.53, RP: 0.28 }, "100-2": { RE: 0.23, RP: 0.14 },
+      "010-0": { RE: 1.16, RP: 0.62 }, "010-1": { RE: 0.69, RP: 0.43 }, "010-2": { RE: 0.32, RP: 0.23 },
+      "001-0": { RE: 1.35, RP: 0.84 }, "001-1": { RE: 0.98, RP: 0.68 }, "001-2": { RE: 0.38, RP: 0.38 },
+      "110-0": { RE: 1.54, RP: 0.69 }, "110-1": { RE: 0.93, RP: 0.54 }, "110-2": { RE: 0.45, RP: 0.23 },
+      "101-0": { RE: 1.68, RP: 0.69 }, "101-1": { RE: 1.08, RP: 0.56 }, "101-2": { RE: 0.47, RP: 0.32 },
+      "011-0": { RE: 1.95, RP: 0.84 }, "011-1": { RE: 1.24, RP: 0.71 }, "011-2": { RE: 0.54, RP: 0.41 },
+      "111-0": { RE: 2.25, RP: 0.85 }, "111-1": { RE: 1.54, RP: 0.66 }, "111-2": { RE: 0.76, RP: 0.41 }
+    };
+    
+    const data = RE24_RP24[key] || { RE: 0.50, RP: 0.27 }; // Default fallback
+    
+    // Use RP (run probability) directly - this is already a decimal (0.0-1.0)
+    let runProbability = data.RP;
     
     // Apply late-inning pressure modifier
-    let modifier = 1.0;
     if (gameState.inning >= 8) {
-      modifier = 1.15; // 15% boost for high-leverage situations
+      runProbability *= 1.15; // 15% boost for high-leverage situations
     }
     
-    return Math.round(clamp(probability * modifier, 5, 98));
+    return Math.min(0.98, Math.max(0.05, runProbability)); // Return as decimal (0.75 = 75%)
   }
 
   // Generate dynamic description based on actual game state
