@@ -165,7 +165,34 @@ export class EnhancedWeatherService {
   }
 
   /**
-   * Calculate precise wind component toward center field
+   * V1-style wind carry factor calculation using stadium centerfield azimuth
+   * Projects wind onto centerfield vector and scales carry only when blowing out
+   */
+  windCarryFactor({
+    windMph, 
+    windDirDeg, 
+    cfAzimuthDeg
+  }: { 
+    windMph: number; 
+    windDirDeg: number; 
+    cfAzimuthDeg: number 
+  }): number {
+    // Calculate angle between wind direction and centerfield line
+    let diff = Math.abs(windDirDeg - cfAzimuthDeg) % 360;
+    if (diff > 180) diff = 360 - diff;                 // Keep in [0..180] range
+    
+    // Project wind onto centerfield direction (+1 = blowing out, -1 = blowing in)
+    const towardCF = Math.cos((diff * Math.PI) / 180);
+    
+    // Only count wind when it helps carry (blowing toward centerfield)
+    const outMph = Math.max(0, windMph * towardCF);
+    
+    // Use V1's scaling: ≈1.8% per mph of helping wind
+    return 1 + 0.018 * outMph;
+  }
+
+  /**
+   * Calculate precise wind component toward center field (legacy compatibility)
    */
   calculateWindComponent(
     windSpeed: number,
@@ -173,18 +200,20 @@ export class EnhancedWeatherService {
     stadiumOrientation: number
   ): { component: number; helping: boolean; crossWind: number } {
     
-    // Convert to radians
-    const windRad = (windDirection * Math.PI) / 180;
-    const stadiumRad = (stadiumOrientation * Math.PI) / 180;
+    // Use proper V1-style wind carry calculation
+    const carryFactor = this.windCarryFactor({
+      windMph: windSpeed,
+      windDirDeg: windDirection,
+      cfAzimuthDeg: stadiumOrientation
+    });
     
-    // Calculate angle difference
-    const angleDiff = windRad - stadiumRad;
+    // Calculate components for legacy compatibility
+    let diff = Math.abs(windDirection - stadiumOrientation) % 360;
+    if (diff > 180) diff = 360 - diff;
+    const towardCF = Math.cos((diff * Math.PI) / 180);
     
-    // Component toward center field (positive = helping)
-    const component = windSpeed * Math.cos(angleDiff);
-    
-    // Cross-wind component (affects ball curve)
-    const crossWind = windSpeed * Math.sin(angleDiff);
+    const component = Math.max(0, windSpeed * towardCF); // Only positive (helping) wind
+    const crossWind = windSpeed * Math.sin((diff * Math.PI) / 180);
     
     return {
       component,
@@ -237,7 +266,7 @@ export class EnhancedWeatherService {
   }
 
   /**
-   * Calculate home run probability boost from weather conditions
+   * Calculate home run probability boost from weather conditions (V1-style)
    */
   calculateHRProbabilityBoost(
     windComponent: number,
@@ -247,14 +276,11 @@ export class EnhancedWeatherService {
     
     let boost = 0;
     
-    // Wind effects
+    // V1-style wind effects: 1.8% boost per mph of helping wind (only positive wind counts)
     if (windComponent > 0) {
-      // Helping wind: 0.1% boost per mph of helping wind
-      boost += windComponent * 0.001;
-    } else {
-      // Hindering wind: 0.05% penalty per mph (less impact)
-      boost += windComponent * 0.0005;
+      boost += windComponent * 0.018; // V1's 1.8% per mph helping wind
     }
+    // Note: No penalty for hindering wind since windComponent is already max(0, ...)
     
     // Air density effects
     boost += (ballFlightMultiplier - 1.0) * 0.02; // 2% boost per 100% air density change
@@ -262,8 +288,8 @@ export class EnhancedWeatherService {
     // Park factor adjustment
     boost *= parkFactor;
     
-    // Cap the boost at reasonable levels
-    return Math.max(-0.015, Math.min(0.025, boost)); // Between -1.5% and +2.5%
+    // Cap the boost at reasonable levels (V1 had higher caps)
+    return Math.max(-0.02, Math.min(0.05, boost)); // Between -2% and +5%
   }
 
   /**

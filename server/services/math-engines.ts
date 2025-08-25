@@ -192,17 +192,17 @@ export class MathEngines {
     stadiumOrientation: number = 225 // Most stadiums face this direction
   ): number {
     
-    // Convert to radians
-    const windRad = (windDirection * Math.PI) / 180;
-    const stadiumRad = (stadiumOrientation * Math.PI) / 180;
+    // V1-style wind calculation: proper angle handling and only positive helping wind
+    let diff = Math.abs(windDirection - stadiumOrientation) % 360;
+    if (diff > 180) diff = 360 - diff;                 // Keep in [0..180] range
     
-    // Calculate angle difference
-    const angleDiff = windRad - stadiumRad;
+    // Project wind onto centerfield direction (+1 = blowing out, -1 = blowing in)
+    const towardCF = Math.cos((diff * Math.PI) / 180);
     
-    // Component toward center field (positive = helping)
-    const component = windSpeed * Math.cos(angleDiff);
+    // Only count wind when it helps carry (blowing toward centerfield)
+    const helpingWind = Math.max(0, windSpeed * towardCF);
     
-    return component;
+    return helpingWind;
   }
 
   /**

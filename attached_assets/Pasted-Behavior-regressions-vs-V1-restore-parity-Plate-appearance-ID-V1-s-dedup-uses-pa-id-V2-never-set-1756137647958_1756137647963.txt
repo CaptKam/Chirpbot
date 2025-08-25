@@ -1,0 +1,129 @@
+Behavior regressions vs V1 (restore parity)
+
+Plate‑appearance ID
+V1’s dedup uses pa_id. V2 never sets it. Grab MLB’s about.atBatIndex or the current play id and pass it through MLBGameState.
+
+“realert_after”
+V1 can re‑alert after N seconds if the situation persists or escalates. V2 removed it. Reintroduce per‑type realertAfterMs.
+
+Power‑hitter model
+You disabled Star/Power‑Hitter alerts in V2, and the math engine (ISO, HR/PA, park, wind) isn’t referenced from the engine. Either re‑enable or remove mentions from UI; right now it’s inconsistent.
+
+Weather source parity
+V1 uses OpenWeather + per‑stadium CF azimuth. V2 has “enhanced weather” but doesn’t actually apply CF azimuth in the boost (Fix #3).
+
+Cross‑validation policy
+V1: reliability‑aware failover. V2 doc says “returns fastest”, but that’s not what you want under partial outages. Use weighted resolution:
+
+Prefer the fastest that matches the current majority value.
+
+If tie/conflict: prefer higher reliability source.
+
+Smaller but real bugs / foot‑guns
+
+uniqueAlerts is referenced but not defined in processAlerts(); define it (dedupe output) before iterating.
+
+DB schema mismatch: you store description but schema also has message. Pick one (I’d drop message) and update Drizzle/SQL to match.
+
+WS auth: your WS endpoint isn’t gated by session/cookie. If you need auth parity with REST, verify the session on upgrade.
+
+Adaptive polling is implemented but not used to actually schedule per‑game ticks.
+
+TheSportsDB priority gap: you list priority 1, 2 (disabled), 4; nothing at 3 (harmless, but suggests drift).
+
+Dedup stats math: dedupEffectiveness = 1 - (dedup.activeAlerts / 100) is meaningless. Track “suppressed alerts / total attempts”.
+
+Drop‑in patches (ready to paste)
+A) Normalize and live‑filter once
+// server/services/multi-source-aggregator.ts
+export function mapStatusToLiveFlag(status: string): boolean {
+  const s = (status ?? "").toLowerCase();
+  return s.includes("in progress") || s.includes("live");
+}
+
+B) Bases + PA aware dedup key
+export function buildDedupKey(type: string, g: MLBGameState) {
+  const bases = (g.runners.first?'1':'0')+(g.runners.second?'1':'0')+(g.runners.third?'1':'0');
+  return [
+    g.gamePk, type, g.inning, g.inningState, g.outs, bases, g.currentBatter?.id ?? '-', g.paId ?? '-'
+  ].join(':');
+}
+
+C) Correct RE24 trigger
+const key = `${Number(g.runners.first)}${Number(g.runners.second)}${Number(g.runners.third)}-${g.outs}`;
+const { RE, RP } = RE24_RP24[key] ?? { RE:0, RP:0 };
+if (RP >= 0.75) queueAlert(/* ... */);
+
+D) Stadium‑aware wind boost (reuse V1 scale)
+const cfAzimuth = stadiumDb[g.venue]?.cfAzimuthDeg ?? 0;
+const carry = windCarryFactor({ windMph: wx.mph, windDirDeg: wx.dirDeg, cfAzimuthDeg: cfAzimuth });
+probability *= carry;
+
+E) WebSocket on same server + constant import
+// server/index.ts
+import http from 'http';
+import express from 'express';
+import { WebSocketServer, WebSocket } from 'ws';
+
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (req, socket, head) => {
+  // TODO: verify session here for auth
+  wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+});
+
+export function broadcastAlert(alert: any) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ type: 'alert', data: alert }));
+    }
+  });
+});
+
+server.listen(process.env.PORT || 3000);
+
+F) Client WS URL & cleanup
+// client/src/hooks/use-websocket.tsx
+useEffect(() => {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const wsUrl = `${proto}://${location.host}/ws`;
+  let ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => setIsConnected(true);
+  ws.onclose = () => { setIsConnected(false); setTimeout(() => (ws = new WebSocket(wsUrl)), 3000); };
+
+  setSocket(ws);
+  return () => { try { ws.close(); } catch {} };
+}, []);
+
+Quick verification checklist (10 minutes)
+
+/health: add lastTickAt, liveGamesSeen, wsClientCount, dedupSuppressedCount.
+
+Log a sample key each time you suppress: {"t":"dedup_suppress","key":"...","type":"RISP"}.
+
+Replay harness: run a captured feed/live inning with RISP → confirm 1 alert per PA, re‑alert after 180s if still RISP.
+
+Wind unit tests: 0° diff → +boost, 180° diff → no boost, 90° diff → ~0.
+
+Model sanity: print RE vs RP used in triggers (ensure RP, not RE).
+
+TL;DR
+
+Fix the undefined liveFeed in monitor() and status filtering.
+
+Make dedup keys as rich as V1 (bases/outs/half/batter/PA) and re‑enable realert_after windows.
+
+Correct wind math by re‑introducing centerfield azimuth and removing the unconditional π shift.
+
+Use RP (probability), not RE, for probability‑based triggers.
+
+Align the AI model (use GPT‑4o‑mini or your chosen default) and stop silent priority inflation.
+
+Put WS on the same HTTP server, import WebSocket, and fix the client URL/cleanup.
+
+Normalize at the edge; don’t mix ESPN/MLB shapes downstream.
+
+If you paste me mlb-engine.ts, alert-deduplication.ts, and enhanced-weather.ts, I’ll apply these patches inline so you can drop them straight into V2.
