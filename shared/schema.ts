@@ -76,6 +76,7 @@ export const alerts = pgTable("alerts", {
         rbi: number;
         obp: number;
         ops: number;
+        slg: number;
       };
     };
     currentPitcher?: {
@@ -89,6 +90,11 @@ export const alerts = pgTable("alerts", {
         wins: number;
         losses: number;
       };
+    };
+    // Add missing count property for alerts UI
+    count?: {
+      balls: number;
+      strikes: number;
     };
   }>().notNull(),
   weatherData: jsonb("weather_data").$type<{

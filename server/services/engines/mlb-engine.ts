@@ -26,13 +26,15 @@ export interface MLBGameState {
   currentBatter?: {
     id: number;
     name: string;
-    battingOrder?: number;  // Made optional to fix TypeScript error
+    battingOrder?: number;
     batSide: string;
     stats: {
       avg: number;
       hr: number;
       rbi: number;
+      obp: number;
       ops: number;
+      slg: number;
     };
   };
   currentPitcher?: {
@@ -157,7 +159,8 @@ export class MLBEngine extends BaseSportEngine {
       outs: gameState.outs,
       runners: gameState.runners,
       currentBatter: gameState.currentBatter,
-      currentPitcher: gameState.currentPitcher
+      currentPitcher: gameState.currentPitcher,
+      count: gameState.count // Add count information for UI display
     };
   }
 
@@ -433,7 +436,9 @@ export class MLBEngine extends BaseSportEngine {
             const avg = battingStats.avg && battingStats.avg !== "" && battingStats.avg !== "0.000" ? parseFloat(battingStats.avg) : 0.275;
             const hr = battingStats.homeRuns && battingStats.homeRuns !== "" ? parseInt(battingStats.homeRuns) : 15;
             const rbi = battingStats.rbi && battingStats.rbi !== "" ? parseInt(battingStats.rbi) : 50;
+            const obp = battingStats.obp && battingStats.obp !== "" && battingStats.obp !== "0.000" ? parseFloat(battingStats.obp) : 0.340;
             const ops = battingStats.ops && battingStats.ops !== "" && battingStats.ops !== "0.000" ? parseFloat(battingStats.ops) : 0.800;
+            const slg = battingStats.slg && battingStats.slg !== "" && battingStats.slg !== "0.000" ? parseFloat(battingStats.slg) : 0.460;
             
             currentBatter = {
               id: currentBatterId,
@@ -444,7 +449,9 @@ export class MLBEngine extends BaseSportEngine {
                 avg: avg,
                 hr: hr,
                 rbi: rbi,
-                ops: ops
+                obp: obp,
+                ops: ops,
+                slg: slg
               }
             };
             console.log(`✅ Processed batter stats - AVG: ${avg}, HR: ${hr}, RBI: ${rbi}, OPS: ${ops}`);
@@ -462,7 +469,9 @@ export class MLBEngine extends BaseSportEngine {
                 avg: 0.275,
                 hr: 15,
                 rbi: 50,
-                ops: 0.800
+                obp: 0.340,
+                ops: 0.800,
+                slg: 0.460
               }
             };
             console.log(`✅ Created fallback batter stats for ${currentBatter.name}`);
@@ -657,7 +666,16 @@ export class MLBEngine extends BaseSportEngine {
       // 🔧 Use multi-source aggregator for fast data
       const { multiSourceAggregator } = await import('../multi-source-aggregator');
       const games = await multiSourceAggregator.getMLBGames(new Date().toISOString().split('T')[0]);
-      const liveGames = games.filter(game => game.status?.toLowerCase().includes('live') || game.status?.toLowerCase().includes('in progress'));
+      // Enhanced live game filtering - MLB uses various statuses for active games
+      const liveGames = games.filter(game => {
+        const status = game.status?.toLowerCase() || '';
+        return status.includes('live') || 
+               status.includes('in progress') ||
+               status.includes('in-progress') ||
+               status === 'active' ||
+               status.includes('playing') ||
+               (status.includes('inning') && !status.includes('final'));
+      });
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 
@@ -666,11 +684,19 @@ export class MLBEngine extends BaseSportEngine {
       for (const game of liveGames) {
         try {
           // Map the game ID from multi-source aggregator to gamePk
-          const gamePk = game.id || game.gamePk;
+          const gamePk = Number(game.id || game.gamePk); // Ensure numeric gamePk
           console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (Status: ${game.status}, ID/PK: ${gamePk})`);
 
-          // Already filtered for live games above, but double-check
-          if (!game.status?.toLowerCase().includes('live') && !game.status?.toLowerCase().includes('in progress')) {
+          // Enhanced status validation - more comprehensive MLB status check
+          const status = game.status?.toLowerCase() || '';
+          const isLiveGame = status.includes('live') || 
+                           status.includes('in progress') ||
+                           status.includes('in-progress') ||
+                           status === 'active' ||
+                           status.includes('playing') ||
+                           (status.includes('inning') && !status.includes('final'));
+          
+          if (!isLiveGame) {
             console.log(`⏭️ Skipping non-live game (${game.status})`);
             continue;
           }
