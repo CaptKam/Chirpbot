@@ -1,0 +1,194 @@
+1) Stadium metadata (CF azimuth + roof)
+
+Create (or extend) a tiny stadium db the weather layer can import:
+
+// server/services/weather/stadiums.ts
+export const STADIUMS: Record<string, { lat: number; lon: number; cfAzimuthDeg: number; roof?: "open"|"closed"|"retractable" }> = {
+  "yankee-stadium": { lat: 40.8296, lon: -73.9262, cfAzimuthDeg: 280, roof: "open" },
+  "minute-maid-park": { lat: 29.7571, lon: -95.3550, cfAzimuthDeg: 25, roof: "retractable" },
+  // …fill out your 30 MLB parks; keep names aligned with your venue keys
+};
+
+
+(If your game state already has venueKey and roof status, you can skip roof here.)
+
+2) Provider client (OpenWeatherMap)
+// server/services/weather/providers/openweather.ts
+import fetch from "node-fetch";
+
+export type OWMWeather = {
+  windMph: number;             // mph
+  windDirToDeg: number | null; // 0–360, direction TOWARD which wind blows
+  temperatureF: number | null;
+  pressureHpa: number | null;
+};
+
+const API = "https://api.openweathermap.org/data/2.5/weather";
+
+export async function fetchOWM(lat: number, lon: number, apiKey: string): Promise<OWMWeather> {
+  const url = `${API}?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial`;
+  const res = await fetch(url, { timeout: 5000 });
+  if (!res.ok) throw new Error(`OWM ${res.status}`);
+  const j = await res.json();
+
+  // OWM wind.deg = direction the wind is COMING FROM (meteorological)
+  // Convert to "to" direction by adding 180°
+  const fromDeg = typeof j?.wind?.deg === "number" ? j.wind.deg : null;
+  const toDeg = fromDeg == null ? null : ((fromDeg + 180) % 360);
+
+  return {
+    windMph: Number(j?.wind?.speed ?? 0), // already mph due to units=imperial
+    windDirToDeg: toDeg,
+    temperatureF: typeof j?.main?.temp === "number" ? j.main.temp : null,
+    pressureHpa: typeof j?.main?.pressure === "number" ? j.main.pressure : null,
+  };
+}
+
+3) Weather aggregator (+CF vector, caching, domes)
+// server/services/enhanced-weather.ts
+import { STADIUMS } from "./weather/stadiums";
+import { fetchOWM } from "./weather/providers/openweather";
+
+export type EnhancedWeather = {
+  windMph: number;
+  windDirToDeg: number | null;  // 0..360 (toward)
+  cfAzimuthDeg: number | null;
+  carryMult: number;            // 1 + 0.018 * outMph
+  outMph: number;               // projected mph toward CF (>=0)
+  temperatureF?: number | null;
+  pressureHpa?: number | null;
+  roof?: "open"|"closed"|"retractable";
+  tag?: string;                 // e.g., "Wind +18%"
+};
+
+const cache = new Map<string, { data: EnhancedWeather; ts: number }>();
+const TTL_MS = 90_000;
+
+function carryMultiplier(cfAzimuthDeg: number | null, windDirToDeg: number | null, windMph: number): { outMph: number; mult: number } {
+  if (!cfAzimuthDeg && cfAzimuthDeg !== 0) return { outMph: 0, mult: 1 };
+  if (windDirToDeg == null || windMph <= 0) return { outMph: 0, mult: 1 };
+  let diff = Math.abs(windDirToDeg - cfAzimuthDeg) % 360;
+  if (diff > 180) diff = 360 - diff;
+  const towardCF = Math.cos((diff * Math.PI) / 180); // +1 out, -1 in
+  const outMph = Math.max(0, windMph * towardCF);
+  const mult = 1 + 0.018 * outMph;                   // match your V1 scale
+  return { outMph, mult };
+}
+
+export async function getEnhancedWeather(venueKey: string): Promise<EnhancedWeather> {
+  const now = Date.now();
+  const cached = cache.get(venueKey);
+  if (cached && now - cached.ts < TTL_MS) return cached.data;
+
+  const stadium = STADIUMS[venueKey];
+  if (!stadium) {
+    const data: EnhancedWeather = { windMph: 0, windDirToDeg: null, cfAzimuthDeg: null, carryMult: 1, outMph: 0 };
+    cache.set(venueKey, { data, ts: now }); return data;
+  }
+
+  // Roof handling: if closed, zero out carry and suppress tag
+  const roof = stadium.roof ?? "open";
+  if (roof === "closed") {
+    const data: EnhancedWeather = { windMph: 0, windDirToDeg: null, cfAzimuthDeg: stadium.cfAzimuthDeg, carryMult: 1, outMph: 0, roof };
+    cache.set(venueKey, { data, ts: now }); return data;
+  }
+
+  // Fetch provider
+  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+  if (!apiKey) {
+    // keep existing conservative behavior if no key (but now explicit)
+    const data: EnhancedWeather = { windMph: 0, windDirToDeg: null, cfAzimuthDeg: stadium.cfAzimuthDeg, carryMult: 1, outMph: 0, roof, tag: undefined };
+    cache.set(venueKey, { data, ts: now }); return data;
+  }
+
+  const owm = await fetchOWM(stadium.lat, stadium.lon, apiKey);
+  const { outMph, mult } = carryMultiplier(stadium.cfAzimuthDeg, owm.windDirToDeg, owm.windMph);
+
+  const data: EnhancedWeather = {
+    windMph: owm.windMph,
+    windDirToDeg: owm.windDirToDeg,
+    cfAzimuthDeg: stadium.cfAzimuthDeg,
+    carryMult: mult,
+    outMph,
+    temperatureF: owm.temperatureF,
+    pressureHpa: owm.pressureHpa,
+    roof,
+    tag: outMph >= 5 ? `Wind +${Math.round((mult - 1) * 100)}%` : undefined
+  };
+
+  cache.set(venueKey, { data, ts: now });
+  return data;
+}
+
+4) Wire into the engine (one function call)
+
+Where you build gameState (or just before power-hitter/RE24 logic), fetch and attach:
+
+// server/services/engines/mlb-engine.ts
+import { getEnhancedWeather } from "../enhanced-weather";
+
+// inside your per-game processing:
+const venueKey = gameState.venueKey; // however you name it
+const wx = await getEnhancedWeather(venueKey);
+
+// feed analytics
+const ctx = {
+  ...ctxBase,
+  weather: {
+    windMph: wx.windMph,
+    windDirDeg: wx.windDirToDeg ?? undefined,
+    cfAzimuthDeg: wx.cfAzimuthDeg ?? undefined,
+    temperature: wx.temperatureF ?? undefined,
+    pressure: wx.pressureHpa ?? undefined,
+  },
+};
+
+// multiply HR probability by wx.carryMult where you already do wind logic
+p *= wx.carryMult;
+
+// add UI tag only if meaningful AND roof isn’t closed
+if (wx.tag && wx.roof !== "closed") alert.game_info.windBoost = wx.carryMult;
+
+5) UI: only show wind when it matters
+
+Keep your new pill hidden unless outMph ≥ 5 and roof !== closed:
+
+{alert.gameInfo?.windBoost && (
+  <Pill className="bg-cyan-500/10 ring-cyan-500/30 text-cyan-300">
+    Wind +{Math.round((alert.gameInfo.windBoost - 1) * 100)}%
+  </Pill>
+)}
+
+6) Rate limits & failures (safe behavior)
+
+Cache per venue for 90s (already in aggregator).
+
+On provider error → carryMult=1 and no wind tag (don’t mislead).
+
+For retractable roofs: if your feed says “closed” tonight, set roof='closed' in runtime and you’ll automatically silence wind.
+
+7) Quick self-test (before first pitch)
+
+Add a temp route:
+
+// server/routes/debug.ts
+app.get("/debug/weather/:venue", async (req,res) => {
+  try {
+    const wx = await getEnhancedWeather(req.params.venue);
+    res.json(wx);
+  } catch (e:any) { res.status(500).json({ error: e.message }); }
+});
+
+
+Hit:
+
+curl -sS http://localhost:3000/debug/weather/yankee-stadium | jq
+
+
+Expect: windMph>0 (if breezy), windDirToDeg!=null, reasonable carryMult (e.g., 1.12 if outMph≈6–7).
+
+That’s it
+
+You now have real wind speed + direction, projected toward CF, per-stadium azimuth, roof awareness, cached, and UI-guarded.
+
+As soon as you add the key, your power-hitter and RE24 copy will reflect true carry, and the Wind pill will only appear when it actually matters.

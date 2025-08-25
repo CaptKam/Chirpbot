@@ -1085,5 +1085,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug route for enhanced weather testing
+  app.get('/api/debug/weather/:venue', async (req, res) => {
+    try {
+      const { getEnhancedWeather } = await import('./services/enhanced-weather');
+      const wx = await getEnhancedWeather(req.params.venue);
+      res.json(wx);
+    } catch (error: any) { 
+      res.status(500).json({ error: error.message }); 
+    }
+  });
+
+  // Test route for all stadiums weather
+  app.get('/api/debug/weather-all', async (req, res) => {
+    try {
+      const { getEnhancedWeather } = await import('./services/enhanced-weather');
+      const { STADIUMS } = await import('./services/weather/stadiums');
+      
+      const results = [];
+      const stadiumNames = Object.keys(STADIUMS).slice(0, 5); // Test first 5 to avoid rate limits
+      
+      for (const stadiumKey of stadiumNames) {
+        try {
+          const wx = await getEnhancedWeather(stadiumKey);
+          results.push({
+            stadium: stadiumKey,
+            weather: wx,
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          results.push({
+            stadium: stadiumKey,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+      
+      res.json({
+        testedStadiums: results.length,
+        totalStadiums: Object.keys(STADIUMS).length,
+        results
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }

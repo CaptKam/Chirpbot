@@ -6,7 +6,7 @@ import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { analyzeHybridRE24, generateHybridAlertDescription, cleanupCache } from './hybrid-re24-ai';
-import { enhancedWeatherService } from '../enhanced-weather';
+import { getEnhancedWeather } from '../enhanced-weather';
 // NEW
 import { estimateHRProbability, classifyTier } from './power-hitter';
 
@@ -542,18 +542,21 @@ export class MLBEngine extends BaseSportEngine {
       let weather = null;
       try {
         if (venue && venue !== 'Unknown Venue') {
-          const weatherData = await enhancedWeatherService.getEnhancedWeatherData(venue);
+          const weatherData = await getEnhancedWeather(venue);
           if (weatherData) {
             weather = {
-              temperature: weatherData.temperature,
-              windSpeed: weatherData.windSpeed,
-              windDirection: String(weatherData.windDirection),
-              humidity: weatherData.humidity,
-              pressure: weatherData.pressure,
-              condition: weatherData.stadium.features.dome ? 'Dome' :
-                        weatherData.stadium.features.retractableRoof ? 'Retractable Roof' :
+              temperature: weatherData.temperatureF || undefined,
+              windSpeed: weatherData.windMph,
+              windDirection: String(weatherData.windDirToDeg || 0),
+              humidity: weatherData.humidity || undefined,
+              pressure: weatherData.pressureHpa || undefined,
+              condition: weatherData.roof === 'closed' ? 'Dome' :
+                        weatherData.roof === 'retractable' ? 'Retractable Roof' :
                         'Outdoor'
             };
+            
+            // Store enhanced weather data for power hitter calculations
+            (gameState as any).enhancedWeather = weatherData;
           }
         }
       } catch (weatherError) {
@@ -670,9 +673,14 @@ export class MLBEngine extends BaseSportEngine {
       tbf: tbfApprox > 50 ? tbfApprox : 400,
     };
 
+    // Get enhanced weather data for precise wind calculations
+    const enhancedWeather = (gameState as any).enhancedWeather;
+    const windMph = enhancedWeather?.outMph || 0; // Use projected wind toward centerfield
+    const weatherMultiplier = enhancedWeather?.carryMult || 1.0; // Use precise carry multiplier
+
     const ctx = {
       parkHrFactor: 1.0,  // if you have park factors, plug them here
-      windMph: undefined, // we don't have direction → keep conservative multiplier
+      windMph: windMph, // Use enhanced weather wind component
       inning: gameState.inning,
       half: gameState.inningState,
       outs: gameState.outs,
@@ -680,7 +688,9 @@ export class MLBEngine extends BaseSportEngine {
       scoreDiffAbs: Math.abs(gameState.homeScore - gameState.awayScore),
     };
 
-    const p = estimateHRProbability(batterStats, pitcherStats, ctx);
+    // Calculate base probability and apply enhanced weather multiplier
+    let p = estimateHRProbability(batterStats, pitcherStats, ctx);
+    p *= weatherMultiplier; // Apply enhanced weather carry multiplier
     const tier = classifyTier(p);
     if (!tier) return [];
 
@@ -690,7 +700,9 @@ export class MLBEngine extends BaseSportEngine {
     if (gameState.inning >= 8 || ctx.scoreDiffAbs <= 1) priority += 2;
     priority = Math.min(priority, 100);
 
-    const description = `💥 POWER HITTER — ${batter.name} at bat • P(HR this PA): ${(p * 100).toFixed(1)}% [${tier}]`;
+    // Add weather info to description if significant
+    const weatherInfo = enhancedWeather?.tag ? ` • ${enhancedWeather.tag}` : '';
+    const description = `💥 POWER HITTER — ${batter.name} at bat • P(HR this PA): ${(p * 100).toFixed(1)}% [${tier}]${weatherInfo}`;
 
     const alert: AlertConfig = {
       type: "POWER_HITTER_AT_BAT",
@@ -734,9 +746,14 @@ export class MLBEngine extends BaseSportEngine {
       tbf: tbfApprox > 50 ? tbfApprox : 400,
     };
     
+    // Get enhanced weather data for precise wind calculations
+    const enhancedWeather = (gameState as any).enhancedWeather;
+    const windMph = enhancedWeather?.outMph || 0;
+    const weatherMultiplier = enhancedWeather?.carryMult || 1.0;
+
     const ctx = {
       parkHrFactor: 1.0,
-      windMph: undefined,
+      windMph: windMph,
       inning: gameState.inning,
       half: gameState.inningState,
       outs: gameState.outs,
@@ -744,7 +761,8 @@ export class MLBEngine extends BaseSportEngine {
       scoreDiffAbs: Math.abs(gameState.homeScore - gameState.awayScore),
     };
     
-    const p = estimateHRProbability(batterStats, pitcherStats, ctx);
+    let p = estimateHRProbability(batterStats, pitcherStats, ctx);
+    p *= weatherMultiplier; // Apply enhanced weather carry multiplier
     const tier = classifyTier(p);
     
     // Only fire for Tier A power hitters in high-leverage situations

@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import { multiSourceAggregator } from '../services/multi-source-aggregator';
 import { alertDeduplication } from '../services/alert-deduplication';
 import { mathEngines } from '../services/math-engines';
-import { enhancedWeatherService } from '../services/enhanced-weather';
+import { getEnhancedWeather } from '../services/enhanced-weather';
 import { adaptivePollingManager } from '../services/adaptive-polling';
 
 export function registerMultiSourceRoutes(app: Express) {
@@ -210,7 +210,8 @@ export function registerMultiSourceRoutes(app: Express) {
   // Weather analysis endpoint for stadium-specific data
   app.get('/api/multi-source/weather-analysis', async (req, res) => {
     try {
-      const stadiums = enhancedWeatherService.getAllStadiums();
+      // TODO: Implement getAllStadiums equivalent for new weather system
+      const stadiums = [];
       const weatherAnalysis = [];
       
       // Sample weather for first 5 stadiums to avoid hitting rate limits
@@ -218,9 +219,10 @@ export function registerMultiSourceRoutes(app: Express) {
       
       for (const stadium of stadiums.slice(0, 5)) {
         try {
-          const weather = await enhancedWeatherService.getEnhancedWeatherData(stadium.name);
+          const weather = await getEnhancedWeather(stadium.name);
           if (weather) {
-            const summary = enhancedWeatherService.getWeatherEffectsSummary(weather);
+            // TODO: Implement getWeatherEffectsSummary equivalent for new weather system
+            const summary = `${weather.windMph}mph wind ${weather.tag || 'neutral conditions'}`;
             weatherAnalysis.push({
               stadium: stadium.name,
               city: stadium.city,
