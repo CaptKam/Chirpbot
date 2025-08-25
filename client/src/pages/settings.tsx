@@ -35,6 +35,7 @@ const ALERT_TYPE_CONFIG = {
     // === PLAYER PERFORMANCE ALERTS ===
     { key: "starBatter", label: "Star Batter Alert", description: ".300+ AVG, 20+ HR, or .900+ OPS hitters", category: "Player Performance" },
     { key: "powerHitter", label: "Power Hitter Alert", description: "Advanced HR probability analysis with platoon advantages, park factors & wind effects", category: "Player Performance" },
+    { key: "powerHitterOnDeck", label: "👀 Power Hitter On Deck", description: "Tier A power bats on deck - Pre-alert for next at-bat", category: "Player Performance" },
     { key: "eliteClutch", label: "Elite Clutch Hitter", description: "High OPS batters in pressure situations", category: "Player Performance" },
     { key: "avgHitter", label: ".300+ Hitter Alert", description: "Premium contact hitters at bat", category: "Player Performance" },
     { key: "rbiMachine", label: "RBI Machine Alert", description: "80+ RBI producers with scoring chances", category: "Player Performance" },

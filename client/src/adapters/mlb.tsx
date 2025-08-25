@@ -20,7 +20,9 @@ const mlb: SportAdapter = {
 
     // Create situational description
     let situation = `${bases} • ${g.outs ?? 0} ${g.outs===1?'out':'outs'}`;
-    if ((a.type || '').toLowerCase().includes('power') || (a.type || '').toLowerCase().includes('hitter')) {
+    if ((a.type || '').toLowerCase().includes('on_deck')) {
+      situation = `👀 Power Bat On Deck • ${bases} • ${g.outs ?? 0} ${g.outs===1?'out':'outs'}`;
+    } else if ((a.type || '').toLowerCase().includes('power') || (a.type || '').toLowerCase().includes('hitter')) {
       situation = `Power Hitter • ${bases} • ${g.outs ?? 0} ${g.outs===1?'out':'outs'}`;
     } else if ((a.type || '').toLowerCase().includes('risp')) {
       situation = `RISP • ${bases} • ${g.outs ?? 0} ${g.outs===1?'out':'outs'}`;
@@ -44,6 +46,7 @@ const mlb: SportAdapter = {
       period,
       edge: { 
         label: (a.type||'').toLowerCase().includes('risp') ? "RP" : 
+               (a.type||'').toLowerCase().includes('on_deck') ? "DECK" :
                (a.type||'').toLowerCase().includes('power') ? "HR%" : 
                "Edge", 
         value: edgeVal 

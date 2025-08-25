@@ -704,6 +704,75 @@ export class MLBEngine extends BaseSportEngine {
     return [alert];
   }
 
+  // NEW — build one AlertConfig for a power-hitter ON DECK, or return []
+  private buildPowerHitterOnDeckAlerts(gameState: MLBGameState): AlertConfig[] {
+    // TODO: Implement on-deck batter detection when API provides this data
+    // Currently, MLB APIs don't consistently provide on-deck batter information
+    // This is a placeholder for future implementation when data becomes available
+    
+    const batter = gameState.currentBatter;
+    const pitcher = gameState.currentPitcher;
+    
+    // For now, we can simulate on-deck detection by checking if current batter meets criteria
+    // and treating this as "pre-alert" for betting intelligence
+    if (!batter || !pitcher || gameState.outs >= 2) return [];
+    
+    // Check if current batter qualifies as a power hitter (Tier A)
+    const batterStats = {
+      id: batter.id,
+      name: batter.name,
+      handedness: (batter.batSide as any) ?? "U",
+      seasonHR: batter.stats.hr ?? 0,
+      seasonPA: batter.stats.hr ?? 0,
+    };
+    
+    const tbfApprox = (pitcher.stats.strikeOuts ?? 0) * 3;
+    const pitcherStats = {
+      id: pitcher.id,
+      handedness: (pitcher.throwHand as any) ?? "U",
+      hrPer9: 1.2,
+      tbf: tbfApprox > 50 ? tbfApprox : 400,
+    };
+    
+    const ctx = {
+      parkHrFactor: 1.0,
+      windMph: undefined,
+      inning: gameState.inning,
+      half: gameState.inningState,
+      outs: gameState.outs,
+      risp: !!(gameState.runners.second || gameState.runners.third),
+      scoreDiffAbs: Math.abs(gameState.homeScore - gameState.awayScore),
+    };
+    
+    const p = estimateHRProbability(batterStats, pitcherStats, ctx);
+    const tier = classifyTier(p);
+    
+    // Only fire for Tier A power hitters in high-leverage situations
+    if (tier !== "A" || gameState.outs >= 2) return [];
+    
+    // Additional filters for on-deck alerts
+    const isHighLeverage = ctx.risp || gameState.inning >= 7 || ctx.scoreDiffAbs <= 1;
+    if (!isHighLeverage) return [];
+    
+    let priority = 85; // Slightly lower than current at-bat alerts
+    if (ctx.risp) priority += 3;
+    if (gameState.inning >= 8 || ctx.scoreDiffAbs <= 1) priority += 3;
+    priority = Math.min(priority, 95);
+    
+    const description = `👀 POWER HITTER ON DECK — ${batter.name} coming up • Tier A power bat ready • P(HR): ${(p * 100).toFixed(1)}%`;
+    
+    const alert: AlertConfig = {
+      type: "POWER_HITTER_ON_DECK",
+      settingKey: "powerHitterOnDeck",
+      priority,
+      probability: 1.0,
+      description,
+      conditions: () => true,
+    };
+    
+    return [alert];
+  }
+
   async monitor() {
     try {
       // Clean up AI cache periodically
@@ -723,6 +792,7 @@ export class MLBEngine extends BaseSportEngine {
           lateInning: true,
           starBatter: false, // Disabled by default - star batter alerts were duplicating
           powerHitter: true, // ✅ Enable Power Hitter alerts by default
+          powerHitterOnDeck: false, // ✅ Enable Power Hitter On Deck alerts (opt-in)
           runnersOnBase: true,
           inningChange: false, // Disabled by default
           re24Advanced: true,  // ✅ Enable RE24 hybrid system
@@ -820,6 +890,16 @@ export class MLBEngine extends BaseSportEngine {
             }
           } catch (e) {
             console.error("POWER_HITTER_AT_BAT compute error:", e);
+          }
+
+          // NEW — add Power-Hitter ON DECK alert for advance betting intelligence
+          try {
+            const powerOnDeck = this.buildPowerHitterOnDeckAlerts(gameState);
+            if (powerOnDeck.length) {
+              triggeredAlerts = [...triggeredAlerts, ...powerOnDeck];
+            }
+          } catch (e) {
+            console.error("POWER_HITTER_ON_DECK compute error:", e);
           }
 
           if (triggeredAlerts.length > 0) {

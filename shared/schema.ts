@@ -123,6 +123,7 @@ export const settings = pgTable("settings", {
     inningChange: boolean;
     homeRunAlert: boolean;
     strikeouts: boolean;
+    powerHitterOnDeck: boolean;
     
     // RE24 System
     useRE24System: boolean;

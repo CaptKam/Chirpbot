@@ -1,0 +1,138 @@
+) Add helper to mlb-engine.ts
+
+Paste this inside your class MLBEngine (anywhere above monitor() is fine):
+
+// NEW — On-Deck Power-Hitter (Tier A) pre-alert
+private buildPowerHitterOnDeckAlerts(gameState: MLBGameState): AlertConfig[] {
+  const onDeck = (gameState as any).onDeckBatter; // your state already allows this
+  const pitcher = gameState.currentPitcher;
+
+  // Need an on-deck batter and current pitcher
+  if (!onDeck || !pitcher) return [];
+
+  // Require at least *some* stats for the on-deck batter
+  const seasonHR = onDeck.stats?.hr ?? 0;
+  const seasonPA = onDeck.stats?.atBats ?? 0; // PA proxy; replace with PA if you have it
+  if (seasonPA === 0) return [];
+
+  // Pitcher season context
+  const ipStr = pitcher.stats?.inningsPitched ?? "0.0";
+  const parts = String(ipStr).split(".");
+  const ip = (parseInt(parts[0] || "0", 10) || 0) + ((parseInt(parts[1] || "0", 10) || 0) / 10);
+  const outs = Math.round(ip * 3);
+  const tbfApprox = outs + (pitcher.stats?.hits ?? 0) + (pitcher.stats?.walks ?? 0);
+
+  const batterStats = {
+    id: onDeck.id,
+    name: onDeck.name,
+    handedness: (onDeck.batSide as any) ?? "U",
+    seasonHR,
+    seasonPA,
+  };
+
+  const pitcherStats = {
+    id: pitcher.id,
+    handedness: (pitcher.throwHand as any) ?? "U",
+    hrPer9: pitcher.stats?.homeRuns && ip > 0 ? (pitcher.stats.homeRuns / ip) * 9 : 1.2,
+    tbf: tbfApprox > 50 ? tbfApprox : 400,
+  };
+
+  // Conservative context (speed-only wind; no CF vector)
+  const ctx = {
+    parkHrFactor: 1.0,  // plug real factor if available
+    windMph: (gameState as any).weather?.windMph, // okay if undefined
+    inning: gameState.inning,
+    half: gameState.inningState,
+    outs: gameState.outs,
+    risp: !!(gameState.runners.second || gameState.runners.third),
+    scoreDiffAbs: Math.abs(gameState.homeScore - gameState.awayScore),
+  };
+
+  const p = estimateHRProbability(batterStats as any, pitcherStats as any, ctx as any);
+
+  // Gate: Tier A only for on-deck (keeps noise low)
+  const isTierA = p >= 0.045;
+  if (!isTierA) return [];
+
+  // Trigger only when leverage or boost is present
+  const windBoost = (ctx.windMph ?? 0) >= 8;
+  const leverage = ctx.risp || gameState.inning >= 7 || windBoost;
+  if (!leverage) return [];
+
+  // Priority baseline and small bumps
+  let priority = 60;
+  if (ctx.risp) priority += 2;
+  if (gameState.inning >= 8 || ctx.scoreDiffAbs <= 1) priority += 2;
+  if ((ctx.windMph ?? 0) >= 10) priority += 2;
+  if (priority > 72) priority = 72;
+
+  const description =
+    `👀 ON DECK — ${onDeck.name} (Tier A). ` +
+    `Next up vs ${pitcher.name}. HR risk elevated.`;
+
+  const alert: AlertConfig = {
+    type: "POWER_HITTER_ON_DECK",
+    settingKey: "powerHitterOnDeck",
+    priority,
+    probability: 1.0,      // deterministic; dedupe/limits handled downstream
+    description,
+    conditions: () => true, // we’ve already gated above
+  };
+
+  return [alert];
+}
+
+
+Now call it where you already aggregate alerts (the same spot you added the at-bat builder):
+
+let triggeredAlerts = await this.checkAlertConditions(gameState);
+
+try {
+  const powerAtBat = this.buildPowerHitterAlerts(gameState);
+  if (powerAtBat.length) triggeredAlerts = [...triggeredAlerts, ...powerAtBat];
+
+  // NEW — On-Deck pre-alert
+  const onDeck = this.buildPowerHitterOnDeckAlerts(gameState);
+  if (onDeck.length) triggeredAlerts = [...triggeredAlerts, ...onDeck];
+} catch (e) {
+  console.error("POWER_HITTER compute error:", e);
+}
+
+if (triggeredAlerts.length > 0) {
+  await this.processAlerts(triggeredAlerts, gameState);
+}
+
+2) (Recommended) Add dedup rules
+
+In your alert-deduplication.ts, extend your rules so on-deck doesn’t re-fire every toast in the same half-inning:
+
+// NEW rules
+DEDUP_RULES.push(
+  {
+    alertType: "POWER_HITTER_ON_DECK",
+    scope: { level: "half-inning", timeWindow: 30000, maxAlerts: 1 },
+    escalationOnly: false,
+    contextFactors: ["batterId", "inning", "isTop"]
+  }
+);
+
+
+If your deduper expects keys via context extraction, make sure it pulls:
+
+batterId → from onDeck.id
+
+inning / isTop (aka half) → from gameState
+
+For simplicity we don’t include bases here (half-inning scope is enough for a pre-alert).
+
+3) Optional: richer copy via AI (only for Tier A)
+
+If your processAlerts already calls AI for priority ≥ 80, leave it as is (this on-deck sits ~60–72). If you want AI phrasing for on-deck Tier A, allow it regardless of priority:
+
+When alert.type === "POWER_HITTER_ON_DECK" and tier === "A", pass to AI enhancer.
+
+Keep priority unchanged (don’t inflate).
+
+Sample 22-word prompt:
+
+VALUE ALERT: Tier A power bat on deck. Consider live Over HR prop next PA. Wind ≥8 mph or RISP boosts HR odds
