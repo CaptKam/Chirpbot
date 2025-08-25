@@ -281,8 +281,6 @@ export default function Alerts() {
                 <SwipeableCard
                   key={alert.id}
                   alertId={alert.id}
-                  onSwipedLeft={() => markAlertAsSeen(alert.id)}
-                  onSwipedRight={() => markAlertAsSeen(alert.id)}
                   className="rounded-xl"
                 >
                   <Card
