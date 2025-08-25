@@ -280,6 +280,7 @@ export default function Alerts() {
               return (
                 <SwipeableCard
                   key={alert.id}
+                  alertId={alert.id}
                   onSwipedLeft={() => markAlertAsSeen(alert.id)}
                   onSwipedRight={() => markAlertAsSeen(alert.id)}
                   className="rounded-xl"
@@ -287,8 +288,9 @@ export default function Alerts() {
                   <Card
                     onClick={() => { if (!alert.seen) markAlertAsSeen(alert.id); }}
                     className={cn(
-                      "relative overflow-hidden bg-card backdrop-blur-sm transition-all duration-300",
+                      "relative overflow-hidden backdrop-blur-sm transition-all duration-300",
                       "ring-1 ring-white/10 hover:ring-white/20",
+                      "dark bg-card text-card-foreground",
                       alert.seen
                         ? "opacity-80"
                         : "ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20"
