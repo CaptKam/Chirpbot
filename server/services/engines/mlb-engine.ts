@@ -7,6 +7,8 @@ import { randomUUID } from 'crypto';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { analyzeHybridRE24, generateHybridAlertDescription, cleanupCache } from './hybrid-re24-ai';
 import { enhancedWeatherService } from '../enhanced-weather';
+// NEW
+import { estimateHRProbability, classifyTier } from './power-hitter';
 
 export interface MLBGameState {
   gameId: string;
@@ -641,6 +643,67 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
+  // NEW — build one AlertConfig for a power-hitter PA, or return []
+  private buildPowerHitterAlerts(gameState: MLBGameState): AlertConfig[] {
+    const batter = gameState.currentBatter;
+    const pitcher = gameState.currentPitcher;
+
+    // Require real batter/pitcher and a live PA context
+    if (!batter || !pitcher || gameState.outs >= 3) return [];
+
+    // Map existing game state to model inputs
+    const batterStats = {
+      id: batter.id,
+      name: batter.name,
+      handedness: (batter.batSide as any) ?? "U",
+      seasonHR: batter.stats.hr ?? 0,
+      seasonPA: batter.stats.hr ?? 0,  // using HR as a proxy when AB not available
+    };
+
+    // Approximate TBF using available stats
+    const tbfApprox = (pitcher.stats.strikeOuts ?? 0) * 3; // rough approximation
+
+    const pitcherStats = {
+      id: pitcher.id,
+      handedness: (pitcher.throwHand as any) ?? "U",
+      hrPer9: 1.2, // default HR/9 when not available
+      tbf: tbfApprox > 50 ? tbfApprox : 400,
+    };
+
+    const ctx = {
+      parkHrFactor: 1.0,  // if you have park factors, plug them here
+      windMph: undefined, // we don't have direction → keep conservative multiplier
+      inning: gameState.inning,
+      half: gameState.inningState,
+      outs: gameState.outs,
+      risp: !!(gameState.runners.second || gameState.runners.third),
+      scoreDiffAbs: Math.abs(gameState.homeScore - gameState.awayScore),
+    };
+
+    const p = estimateHRProbability(batterStats, pitcherStats, ctx);
+    const tier = classifyTier(p);
+    if (!tier) return [];
+
+    // Base priority by tier
+    let priority = tier === "A" ? 90 : tier === "B" ? 80 : 70;
+    if (ctx.risp) priority += 2;
+    if (gameState.inning >= 8 || ctx.scoreDiffAbs <= 1) priority += 2;
+    priority = Math.min(priority, 100);
+
+    const description = `💥 POWER HITTER — ${batter.name} at bat • P(HR this PA): ${(p * 100).toFixed(1)}% [${tier}]`;
+
+    const alert: AlertConfig = {
+      type: "POWER_HITTER_AT_BAT",
+      settingKey: "powerHitter",
+      priority,
+      probability: 1.0,        // deterministic firing; dedupe will guard spam
+      description,
+      conditions: () => true,   // we already checked conditions above
+    };
+
+    return [alert];
+  }
+
   async monitor() {
     try {
       // Clean up AI cache periodically
@@ -747,7 +810,17 @@ export class MLBEngine extends BaseSportEngine {
           if (!gameState) continue;
 
           console.log(`🔍 Processing ${this.alertConfigs.length} alert configs for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
-          const triggeredAlerts = await this.checkAlertConditions(gameState);
+          let triggeredAlerts = await this.checkAlertConditions(gameState);
+
+          // NEW — add data-driven Power-Hitter alert for the current PA
+          try {
+            const power = this.buildPowerHitterAlerts(gameState);
+            if (power.length) {
+              triggeredAlerts = [...triggeredAlerts, ...power];
+            }
+          } catch (e) {
+            console.error("POWER_HITTER_AT_BAT compute error:", e);
+          }
 
           if (triggeredAlerts.length > 0) {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
