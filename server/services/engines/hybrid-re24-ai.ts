@@ -240,8 +240,9 @@ Confidence (75-95): Data quality and certainty level
 FORMAT: "Multiplier: X.X | Insight: [key factor] | Confidence: XX"
 `;
 
+    const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 120,
       temperature: 0.3,

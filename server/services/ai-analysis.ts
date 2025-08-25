@@ -59,10 +59,11 @@ EXAMPLES:
 
 Write ONE betting alert - be specific and actionable!`;
 
+    const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Fast for betting decisions
+      model,
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 60, // Short and actionable
+      max_tokens: 80, // Longer for better quality
       temperature: 0.3, // More focused for betting
     });
 
@@ -72,12 +73,12 @@ Write ONE betting alert - be specific and actionable!`;
       return null;
     }
 
-    // 🎰 Betting alerts get maximum priority boost
+    // Return AI copy separately without inflating priority
     return {
       originalDescription,
-      enhancedDescription,
-      contextualInsight: "🎰 BETTING OPPORTUNITY DETECTED",
-      priority: Math.min(priority + 15, 100) // Maximum priority for betting intelligence
+      enhancedDescription: enhancedDescription ?? null,
+      contextualInsight: "🎰 Betting angle",
+      priority // Keep priority unchanged
     };
 
   } catch (error) {
@@ -121,8 +122,9 @@ Output Format (per game):
 Professional analyst tone with quantified metrics and predictive indicators.
 `;
 
+    const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Advanced model for complex analytics
+      model, // Environment-driven model selection
       messages: [{ role: "user", content: prompt }],
       max_tokens: 300,
       temperature: 0.4, // Balanced for analytical precision
