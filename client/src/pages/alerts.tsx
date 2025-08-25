@@ -287,7 +287,7 @@ export default function Alerts() {
                   <Card
                     onClick={() => { if (!alert.seen) markAlertAsSeen(alert.id); }}
                     className={cn(
-                      "relative overflow-hidden bg-white/5 backdrop-blur-sm transition-all duration-300",
+                      "relative overflow-hidden bg-card backdrop-blur-sm transition-all duration-300",
                       "ring-1 ring-white/10 hover:ring-white/20",
                       alert.seen
                         ? "opacity-80"
