@@ -336,8 +336,10 @@ export async function analyzeHybridRE24(gameState: MLBGameState): Promise<Hybrid
   // Step 6: Calculate smooth priority using logistic function
   const alertPriority = calculateSmoothPriority(finalProbability);
 
-  // Step 7: Enhanced betting intelligence
-  const isHighLeverage = finalProbability >= 0.75 || gameState.inning >= 8;
+  // Step 7: Enhanced betting intelligence (Patch C - Use RP not RE)  
+  const key = `${Number(gameState.runners.first)}${Number(gameState.runners.second)}${Number(gameState.runners.third)}-${gameState.outs}`;
+  const { RE, RP } = RE24_RP24[key] ?? { RE: 0, RP: 0 };
+  const isHighLeverage = RP >= 0.75 || gameState.inning >= 8; // ✅ Correct: use RP (probability) not finalProbability
   const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
   const totalScore = gameState.homeScore + gameState.awayScore;
 

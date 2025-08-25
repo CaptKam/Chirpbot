@@ -73,6 +73,8 @@ export interface MLBGameState {
   };
   // Added for weather integration
   venue?: string;
+  // V1 parity: plate appearance ID for enhanced deduplication
+  paId?: string;
   weather?: {
     temperature?: number;
     windSpeed?: number;
@@ -557,6 +559,27 @@ export class MLBEngine extends BaseSportEngine {
       }
 
 
+      // V1 parity: Extract plate appearance ID for enhanced deduplication
+      let paId: string | undefined;
+      try {
+        // Try to get PA ID from current play data
+        const currentPlay = gameData.liveData?.plays?.currentPlay;
+        if (currentPlay?.about?.atBatIndex !== undefined) {
+          paId = `${gamePk}-${currentPlay.about.atBatIndex}`;
+        } else if (currentPlay?.playEvents && currentPlay.playEvents.length > 0) {
+          // Fallback: use most recent play event index
+          const lastEvent = currentPlay.playEvents[currentPlay.playEvents.length - 1];
+          if (lastEvent?.index !== undefined) {
+            paId = `${gamePk}-${lastEvent.index}`;
+          }
+        }
+        if (paId) {
+          console.log(`✅ Extracted PA ID: ${paId}`);
+        }
+      } catch (paError) {
+        console.log(`⚠️ Could not extract PA ID: ${paError}`);
+      }
+
       const gameState: MLBGameState = {
         gameId,
         gamePk,
@@ -577,7 +600,8 @@ export class MLBEngine extends BaseSportEngine {
           balls: gameData.liveData?.plays?.currentPlay?.count?.balls || 0,
           strikes: gameData.liveData?.plays?.currentPlay?.count?.strikes || 0
         },
-        ballpark: ballparkConditions // Assign extracted ballpark data
+        ballpark: ballparkConditions, // Assign extracted ballpark data
+        paId: paId // V1 parity: plate appearance ID
       };
 
       // Debug current batter info
@@ -675,44 +699,25 @@ export class MLBEngine extends BaseSportEngine {
       
       const games = await multiSourceAggregator.getMLBGames(getMLBDate());
       
-      // V1-style live game filtering using the normalized isLive function with debug logging
-      console.log(`📋 Checking ${games.length} games for live status...`);
-      games.slice(0, 3).forEach(game => {
-        console.log(`📊 Game Sample: ${game.awayTeam?.name || game.awayTeam} @ ${game.homeTeam?.name || game.homeTeam} - Status: "${game.status}"`);
-      });
-      
+      // V1-style live game filtering using the normalized isLive function
       const liveGames = games.filter(game => {
         const status = game.status?.toLowerCase() || '';
-        const live = isLive(status);
-        if (!live && games.length < 5) {
-          // Debug first few games when total count is small
-          console.log(`⏭️ Non-live: ${game.awayTeam?.name || game.awayTeam} @ ${game.homeTeam?.name || game.homeTeam} (Status: "${game.status}")`);
-        }
-        return live;
+        return isLive(status);
       });
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
-
-      console.log(`🔍 Checking ${liveGames.length} live ${this.sport} games...`);
 
       for (const game of liveGames) {
         try {
           // Map the game ID from multi-source aggregator to gamePk
           const gamePk = Number(game.id || game.gamePk); // Ensure numeric gamePk
-          console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (Status: ${game.status}, ID/PK: ${gamePk})`);
 
           // V1-style status validation using the normalized isLive function
           const status = game.status?.toLowerCase() || '';
           const { isLive } = await import('../multi-source-aggregator');
           const isLiveGame = isLive(status);
           
-          if (!isLiveGame) {
-            console.log(`⏭️ Skipping non-live game (${game.status})`);
-            continue;
-          }
-
-          if (!gamePk) {
-            console.log(`⏭️ Skipping game with no game ID`);
+          if (!isLiveGame || !gamePk) {
             continue;
           }
 

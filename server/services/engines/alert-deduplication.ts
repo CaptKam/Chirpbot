@@ -33,6 +33,14 @@ export interface MLBGameState {
   paId?: string; // plate appearance ID if available
 }
 
+// V1-style buildDedupKey function (Patch B)
+export function buildDedupKey(type: string, g: MLBGameState): string {
+  const bases = (g.runners.first?'1':'0')+(g.runners.second?'1':'0')+(g.runners.third?'1':'0');
+  return [
+    g.gamePk, type, g.inning, g.inningState, g.outs, bases, g.currentBatter?.id ?? '-', g.paId ?? '-'
+  ].join(':');
+}
+
 const DEDUP_RULES: DeduplicationRule[] = [
   {
     alertType: 'Runners in Scoring Position',
