@@ -663,18 +663,32 @@ export class MLBEngine extends BaseSportEngine {
         }
       }
 
-      // 🔧 Use multi-source aggregator for fast data
-      const { multiSourceAggregator } = await import('../multi-source-aggregator');
-      const games = await multiSourceAggregator.getMLBGames(new Date().toISOString().split('T')[0]);
-      // Enhanced live game filtering - MLB uses various statuses for active games
+      // 🔧 Use multi-source aggregator for fast data with V1-style date handling
+      const { multiSourceAggregator, isLive } = await import('../multi-source-aggregator');
+      
+      // Use America/New_York timezone for proper MLB date handling (V1-style)
+      const getMLBDate = (): string => {
+        const now = new Date();
+        const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+        return easternTime.toISOString().split('T')[0];
+      };
+      
+      const games = await multiSourceAggregator.getMLBGames(getMLBDate());
+      
+      // V1-style live game filtering using the normalized isLive function with debug logging
+      console.log(`📋 Checking ${games.length} games for live status...`);
+      games.slice(0, 3).forEach(game => {
+        console.log(`📊 Game Sample: ${game.awayTeam?.name || game.awayTeam} @ ${game.homeTeam?.name || game.homeTeam} - Status: "${game.status}"`);
+      });
+      
       const liveGames = games.filter(game => {
         const status = game.status?.toLowerCase() || '';
-        return status.includes('live') || 
-               status.includes('in progress') ||
-               status.includes('in-progress') ||
-               status === 'active' ||
-               status.includes('playing') ||
-               (status.includes('inning') && !status.includes('final'));
+        const live = isLive(status);
+        if (!live && games.length < 5) {
+          // Debug first few games when total count is small
+          console.log(`⏭️ Non-live: ${game.awayTeam?.name || game.awayTeam} @ ${game.homeTeam?.name || game.homeTeam} (Status: "${game.status}")`);
+        }
+        return live;
       });
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
@@ -687,14 +701,10 @@ export class MLBEngine extends BaseSportEngine {
           const gamePk = Number(game.id || game.gamePk); // Ensure numeric gamePk
           console.log(`🎮 Processing game: ${game.awayTeam} @ ${game.homeTeam} (Status: ${game.status}, ID/PK: ${gamePk})`);
 
-          // Enhanced status validation - more comprehensive MLB status check
+          // V1-style status validation using the normalized isLive function
           const status = game.status?.toLowerCase() || '';
-          const isLiveGame = status.includes('live') || 
-                           status.includes('in progress') ||
-                           status.includes('in-progress') ||
-                           status === 'active' ||
-                           status.includes('playing') ||
-                           (status.includes('inning') && !status.includes('final'));
+          const { isLive } = await import('../multi-source-aggregator');
+          const isLiveGame = isLive(status);
           
           if (!isLiveGame) {
             console.log(`⏭️ Skipping non-live game (${game.status})`);

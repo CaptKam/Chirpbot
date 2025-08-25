@@ -112,9 +112,16 @@ export class MLBApiService {
    */
   async getTodaysGames(): Promise<Game[]> {
     try {
-      // Get both today and yesterday in case games are still ongoing from previous day
-      const today = new Date().toISOString().split('T')[0];
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      // Use America/New_York timezone for proper MLB date handling (V1-style)
+      const getMLBDate = (offsetDays = 0): string => {
+        const now = new Date();
+        const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+        easternTime.setDate(easternTime.getDate() + offsetDays);
+        return easternTime.toISOString().split('T')[0];
+      };
+      
+      const today = getMLBDate(0);
+      const yesterday = getMLBDate(-1);
       
       console.log(`Fetching MLB games for today (${today}) and yesterday (${yesterday})`);
       
@@ -147,12 +154,12 @@ export class MLBApiService {
       // Add yesterday's games that are still live
       if (yesterdayData.dates && yesterdayData.dates.length > 0) {
         const yesterdayLiveGames = (yesterdayData.dates[0]?.games || []).filter(game => 
-          game.status.abstractGameState === 'Live'
+          this.isGameLive(game.status)
         );
         allGames.push(...yesterdayLiveGames);
       }
 
-      console.log(`Found ${allGames.length} total MLB games (today: ${todayData.dates?.[0]?.games?.length || 0}, yesterday live: ${yesterdayData.dates?.[0]?.games?.filter(g => g.status.abstractGameState === 'Live').length || 0})`);
+      console.log(`Found ${allGames.length} total MLB games (today: ${todayData.dates?.[0]?.games?.length || 0}, yesterday live: ${yesterdayData.dates?.[0]?.games?.filter(g => this.isGameLive(g.status)).length || 0})`);
 
       return allGames.map(this.transformMLBGame);
     } catch (error) {
@@ -290,8 +297,21 @@ export class MLBApiService {
   /**
    * Transform MLB API game data to our internal Game format
    */
+  // V1-style broad live game detection
+  private isGameLive(status: any): boolean {
+    const abstractState = status.abstractGameState?.toLowerCase() || '';
+    const detailedState = status.detailedState?.toLowerCase() || '';
+    const statusCode = status.statusCode?.toLowerCase() || '';
+    
+    return abstractState.includes('live') || 
+           detailedState.includes('in progress') || 
+           detailedState.includes('in play') ||
+           statusCode.includes('i') || // MLB uses 'I' for in progress
+           abstractState.includes('preview') && detailedState.includes('warmup');
+  }
+
   private transformMLBGame = (mlbGame: MLBGame): Game => {
-    const isLive = mlbGame.status.abstractGameState === 'Live';
+    const isLive = this.isGameLive(mlbGame.status);
     const isCompleted = mlbGame.status.abstractGameState === 'Final';
     
     return {

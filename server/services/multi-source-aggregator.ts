@@ -2,6 +2,27 @@ import { fetchJson } from './http';
 import { sportsDataService } from './sportsdata-api';
 import type { Game } from '@shared/schema';
 
+// V1-style normalized game structure at the edge
+export type NormalizedGame = {
+  gamePk: number;
+  status: string;
+  startTimeUtc: string;
+  homeTeam: string;
+  awayTeam: string;
+  venue?: string;
+  sport: string;
+  // Raw fields for debugging
+  rawStatus?: any;
+};
+
+// V1-style global live detection function
+export function isLive(status: string): boolean {
+  const s = (status || '').toLowerCase();
+  return s.includes('in progress') || s.includes('live') || s.includes('in play') ||
+         s.includes('top ') || s.includes('bot ') || s.includes('middle ') ||
+         s.includes('warmup') || s.includes('delayed');
+}
+
 export interface DataSource {
   name: string;
   priority: number;
@@ -32,7 +53,14 @@ class MLBStatsAPIEnhanced implements MLBSource {
   maxRetries = 3;
 
   async fetchGames(date?: string): Promise<Game[]> {
-    const today = date || new Date().toISOString().split('T')[0];
+    // Use America/New_York timezone like main MLB API (V1-style)
+    const getMLBDate = (): string => {
+      const now = new Date();
+      const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+      return easternTime.toISOString().split('T')[0];
+    };
+    
+    const today = date || getMLBDate();
     const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&hydrate=linescore,team,game(content(media(epg)))`;
     
     const data = await fetchJson(url, {
@@ -68,10 +96,13 @@ class MLBStatsAPIEnhanced implements MLBSource {
     }));
   }
 
+  // V1-style broad status detection
   private mapMLBStatus(status: string): 'scheduled' | 'live' | 'final' {
-    const lowerStatus = status.toLowerCase();
-    if (lowerStatus.includes('final') || lowerStatus.includes('completed')) return 'final';
-    if (lowerStatus.includes('live') || lowerStatus.includes('progress')) return 'live';
+    const s = (status || '').toLowerCase();
+    if (s.includes('final') || s.includes('completed') || s.includes('game over')) return 'final';
+    if (s.includes('live') || s.includes('in progress') || s.includes('in play') || 
+        s.includes('top ') || s.includes('bot ') || s.includes('middle ') || 
+        s.includes('end ')) return 'live';
     return 'scheduled';
   }
 }
@@ -123,10 +154,11 @@ class ESPNMLBSource implements MLBSource {
     }));
   }
 
+  // V1-style broad status detection
   private mapESPNStatus(status: string): 'scheduled' | 'live' | 'final' {
-    const lowerStatus = status.toLowerCase();
-    if (lowerStatus.includes('final')) return 'final';
-    if (lowerStatus.includes('progress') || lowerStatus.includes('live')) return 'live';
+    const s = (status || '').toLowerCase();
+    if (s.includes('final') || s.includes('completed')) return 'final';
+    if (s.includes('live') || s.includes('in progress') || s.includes('in play')) return 'live';
     return 'scheduled';
   }
 }
@@ -195,11 +227,12 @@ class TheSportsDBMLB implements MLBSource {
       }));
   }
 
+  // V1-style broad status detection
   private mapSportsDBStatus(status: string): 'scheduled' | 'live' | 'final' {
     if (!status) return 'scheduled';
-    const lowerStatus = status.toLowerCase();
-    if (lowerStatus.includes('final') || lowerStatus.includes('ft')) return 'final';
-    if (lowerStatus.includes('live') || lowerStatus.includes('progress')) return 'live';
+    const s = status.toLowerCase();
+    if (s.includes('final') || s.includes('ft') || s.includes('completed')) return 'final';
+    if (s.includes('live') || s.includes('progress') || s.includes('in play')) return 'live';
     return 'scheduled';
   }
 }
@@ -266,10 +299,11 @@ class ESPNNFLSource implements NFLSource {
     }));
   }
 
+  // V1-style broad status detection
   private mapESPNStatus(status: string): 'scheduled' | 'live' | 'final' {
-    const lowerStatus = status.toLowerCase();
-    if (lowerStatus.includes('final')) return 'final';
-    if (lowerStatus.includes('progress') || lowerStatus.includes('live')) return 'live';
+    const s = (status || '').toLowerCase();
+    if (s.includes('final') || s.includes('completed')) return 'final';
+    if (s.includes('live') || s.includes('in progress') || s.includes('in play')) return 'live';
     return 'scheduled';
   }
 }
