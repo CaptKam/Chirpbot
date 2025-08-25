@@ -2,13 +2,18 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Zap, TriangleAlert } from "lucide-react";
+import { Flame, Wind, Gauge, Clock3, User, AlertTriangle, Zap, TriangleAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { removeCity } from "@/lib/team-utils";
+import { cn } from "@/lib/utils";
+import { Pill } from "@/components/Pill";
+import { RunnersDiamond } from "@/components/RunnersDiamond";
+import { toVM } from "@/adapters/base";
+import "@/adapters/mlb"; // Import to register the adapter
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
@@ -271,159 +276,102 @@ export default function Alerts() {
         ) : (
           <>
             {filteredAlerts.map((alert) => {
-            return (
-              <SwipeableCard
-                key={alert.id}
-                alertId={alert.id}
-                onTap={() => {
-                  // Mark as seen when tapped (not dragged)
-                  if (!alert.seen) {
-                    markAlertAsSeen(alert.id);
-                  }
-                }}
-                className={`bg-slate-900/80 backdrop-blur-sm rounded-lg hover:bg-slate-900/90 transition-all duration-300 relative mb-3 ${
-                  alert.seen 
-                    ? 'border border-slate-800 opacity-60' 
-                    : 'border border-blue-500/30 shadow-lg'
-                }`}
-                data-testid={`alert-card-${alert.id}`}
-                data-alert-id={alert.id}
-              >
-                {/* OpenAI-Inspired Alert Design */}
-                <div className="p-5">
-                  {/* Intelligent Status Indicator */}
-                  {!alert.seen && (
-                    <div className="absolute top-4 right-4">
-                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
-                    </div>
-                  )}
-                  
-                  {/* AI-Enhanced Content */}
-                  <div className="space-y-4">
-                    {/* Intelligent Headline */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 pr-4">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse"></div>
-                          <span className="text-red-400 text-xs font-medium uppercase tracking-wide">LIVE ALERT</span>
+              const vm = toVM(alert);
+              return (
+                <SwipeableCard
+                  key={alert.id}
+                  onSwipedLeft={() => markAlertAsSeen(alert.id)}
+                  onSwipedRight={() => markAlertAsSeen(alert.id)}
+                  className="rounded-xl"
+                >
+                  <Card
+                    onClick={() => { if (!alert.seen) markAlertAsSeen(alert.id); }}
+                    className={cn(
+                      "relative overflow-hidden bg-white/5 backdrop-blur-sm transition-all duration-300",
+                      "ring-1 ring-white/10 hover:ring-white/20",
+                      alert.seen
+                        ? "opacity-80"
+                        : "ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20"
+                    )}
+                  >
+                    {/* NEW badge */}
+                    {vm.isNew && (
+                      <span className="absolute top-2 right-2 bg-emerald-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full">
+                        NEW
+                      </span>
+                    )}
+
+                    <div className="p-4 space-y-3">
+                      {/* Row 1: Situation + RP + time */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Pill className="bg-emerald-500/10 ring-emerald-500/30 text-emerald-300">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            {vm.situation}
+                          </Pill>
+                          {vm.edge.value && (
+                            <Pill className="bg-blue-500/10 ring-blue-500/30 text-blue-300">
+                              <Gauge className="w-3.5 h-3.5" />
+                              {vm.edge.label} {vm.edge.value}
+                            </Pill>
+                          )}
+                          {vm.priority && (
+                            <Pill className="bg-fuchsia-500/10 ring-fuchsia-500/30 text-fuchsia-300">
+                              <Flame className="w-3.5 h-3.5" />
+                              Priority {vm.priority}
+                            </Pill>
+                          )}
                         </div>
-                        <h2 className="text-white font-semibold text-lg leading-tight mb-1">
-                          <span className="text-emerald-400">{alert.type}</span> • {alert.gameInfo.currentBatter?.name || 'Unknown Batter'} • 
-                          {alert.gameInfo.count ? `${alert.gameInfo.count.balls}-${alert.gameInfo.count.strikes}` : '0-0'} Count
-                        </h2>
-                        <p className="text-slate-300 text-sm leading-relaxed">
-                          {alert.gameInfo.runners?.first || alert.gameInfo.runners?.second || alert.gameInfo.runners?.third ? 
-                            `Runners: ${[
-                              alert.gameInfo.runners?.first && '1st',
-                              alert.gameInfo.runners?.second && '2nd', 
-                              alert.gameInfo.runners?.third && '3rd'
-                            ].filter(Boolean).join(', ')} • ${alert.gameInfo.outs || 0} ${alert.gameInfo.outs === 1 ? 'out' : 'outs'}` :
-                            `Bases empty • ${alert.gameInfo.outs || 0} ${alert.gameInfo.outs === 1 ? 'out' : 'outs'} • ${alert.gameInfo.inningState === 'top' ? 'Top' : 'Bottom'} ${alert.gameInfo.inning || '?'}`
-                          }
-                        </p>
+                        <Pill className="text-slate-300">
+                          <Clock3 className="w-3.5 h-3.5" />
+                          {formatDistanceToNow(new Date(vm.createdAt ?? Date.now()), { addSuffix: true })}
+                        </Pill>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-emerald-400 font-mono text-xl font-bold">
-                          {alert.gameInfo.score?.away || 0}-{alert.gameInfo.score?.home || 0}
-                        </div>
-                        {alert.gameInfo.inning && (
-                          <div className="text-slate-400 text-sm mt-0.5">
-                            {alert.gameInfo.inningState === 'top' ? '▲' : '▼'} {alert.gameInfo.inning}
+
+                      {/* Row 2: Teams/score + inning + runners diamond */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-[15px] font-semibold text-slate-100 truncate">
+                            {vm.scoreline}
                           </div>
+                          <div className="text-xs text-slate-400">
+                            {vm.period}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {vm.widget}
+                          {/* Optional batter chip */}
+                          {vm.actor && (
+                            <Pill className="bg-amber-500/10 ring-amber-500/30 text-amber-300">
+                              <User className="w-3.5 h-3.5" />
+                              {vm.actor}
+                            </Pill>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Row 3: 1-line action copy */}
+                      <div className="text-sm text-slate-200">
+                        {vm.actionLine}
+                      </div>
+
+                      {/* Row 4: Why tags (wind/tier/etc) */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        {vm.tags?.map((tag, index) => (
+                          <Pill key={index} className={tag.includes('Wind') ? "bg-cyan-500/10 ring-cyan-500/30 text-cyan-300" : ""}>
+                            {tag.includes('Wind') && <Wind className="w-3.5 h-3.5" />}
+                            {tag}
+                          </Pill>
+                        ))}
+                        {vm.sport && (
+                          <Pill>{vm.sport}</Pill>
                         )}
                       </div>
                     </div>
-
-                    {/* Context & Intelligence */}
-                    <div className="bg-slate-800/40 rounded-lg p-3 border border-slate-700/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-slate-200 font-medium text-sm">
-                          {removeCity(alert.gameInfo.awayTeam)} @ {removeCity(alert.gameInfo.homeTeam)}
-                        </span>
-                        <div className="flex items-center space-x-3 text-xs">
-                          {alert.gameInfo.outs !== undefined && (
-                            <span className="text-slate-400">
-                              {alert.gameInfo.outs} {alert.gameInfo.outs === 1 ? 'out' : 'outs'}
-                            </span>
-                          )}
-                          <span className="text-slate-500">
-                            {new Date(alert.timestamp).toLocaleTimeString('en-US', { 
-                              hour: 'numeric', 
-                              minute: '2-digit',
-                              hour12: true 
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* AI Insight */}
-                      <div className="text-slate-300 text-xs leading-relaxed">
-                        {alert.gameInfo.outs === 2 ? 
-                          "Critical moment - two outs means maximum pressure on the batter" :
-                          alert.gameInfo.outs === 1 ?
-                          "Moderate pressure situation with one out remaining" :
-                          "Early in the sequence with no outs - prime opportunity"}
-                      </div>
-                    </div>
-
-                    {/* Probability & Player Intelligence */}
-                    <div className="flex items-center justify-between">
-                      {/* Smart Probability */}
-                      {alert.description.includes('(') && (
-                        <div className="bg-gradient-to-r from-emerald-500/20 to-blue-500/20 px-4 py-2 rounded-full border border-emerald-500/30">
-                          <span className="text-emerald-300 text-sm font-semibold">
-                            {alert.description.match(/\(([^)]+)\)/)?.[1]}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Batter Intelligence */}
-                      {alert.gameInfo.currentBatter && (
-                        <div className="text-right">
-                          <div className="text-white font-medium text-sm">
-                            {alert.gameInfo.currentBatter.name}
-                          </div>
-                          <div className="flex items-center justify-end space-x-3 text-xs mt-0.5">
-                            <span className="text-slate-400 font-mono">
-                              .{alert.gameInfo.currentBatter.stats.avg.toFixed(3)}
-                            </span>
-                            <span className="text-slate-500">
-                              {alert.gameInfo.currentBatter.stats.hr} HR
-                            </span>
-                            <span className="text-emerald-400">
-                              {alert.gameInfo.currentBatter.stats.avg >= 0.300 ? 'Elite' : 
-                               alert.gameInfo.currentBatter.stats.avg >= 0.250 ? 'Solid' : 'Struggling'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* AI-Powered Next Action Insight */}
-                    <div className="bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg p-3 border-l-2 border-emerald-400">
-                      <div className="flex items-start space-x-2">
-                        <div className="w-4 h-4 rounded-full bg-emerald-400/20 flex items-center justify-center mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                        </div>
-                        <div>
-                          <div className="text-emerald-300 text-xs font-medium mb-1">AI INSIGHT</div>
-                          <div className="text-slate-300 text-xs leading-relaxed">
-                            {alert.gameInfo.currentBatter ? 
-                              (alert.gameInfo.currentBatter.stats.avg >= 0.300 ? 
-                                "Strong contact hitter at the plate - watch for gap shots" :
-                                alert.gameInfo.currentBatter.stats.hr >= 20 ?
-                                "Power threat - any mistake pitch could leave the yard" :
-                                "Batter struggling recently - pitcher has the advantage") :
-                              "Monitor this developing situation for value opportunities"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </SwipeableCard>
-            );
-          })}
+                  </Card>
+                </SwipeableCard>
+              );
+            })}
           </>
         )}
       </div>
