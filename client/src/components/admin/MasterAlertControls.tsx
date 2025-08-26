@@ -21,7 +21,7 @@ interface MasterAlertControl {
   updatedBy?: string;
 }
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL"] as const;
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "TENNIS"] as const;
 
 export default function MasterAlertControls() {
   const [activeSport, setActiveSport] = useState<string>("MLB");
@@ -29,7 +29,7 @@ export default function MasterAlertControls() {
 
   // Fetch master alert controls
   const { data: controls, isLoading } = useQuery<MasterAlertControl[]>({
-    queryKey: ["/api/settings/master-alert-controls", { sport: activeSport }],
+    queryKey: ["/api/admin/master-alert-controls", { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
       const searchParams = new URLSearchParams(params as Record<string, string>);
@@ -56,7 +56,7 @@ export default function MasterAlertControls() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/master-alert-controls"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/master-alert-controls"] });
       toast({
         title: "Alert Control Updated",
         description: "Master alert control has been updated successfully.",
