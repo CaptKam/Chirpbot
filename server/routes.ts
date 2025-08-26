@@ -1139,5 +1139,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Health and metrics endpoints for fast triage
+  app.get('/api/ops/metrics', (req, res) => {
+    const { mlbEngine } = require('./services/engines/mlb-engine');
+    const metrics = (mlbEngine as any)?._metrics ?? null;
+    res.json({ 
+      engine: metrics, 
+      time: new Date().toISOString(),
+      armed: (mlbEngine as any)?._armed ?? false
+    });
+  });
+
+  app.get('/api/ops/state-sampler', (req, res) => {
+    // For now, just return basic info
+    res.json({ 
+      info: "State sampling not implemented yet",
+      time: new Date().toISOString() 
+    });
+  });
+
   return httpServer;
 }

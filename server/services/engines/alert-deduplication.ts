@@ -155,6 +155,13 @@ export class AlertDeduplicator {
       if (timeSinceLastAlert < rule.scope.timeWindow) {
         if (history.count >= rule.scope.maxAlerts) {
           console.log(`🚫 DEDUP: '${alertType}' blocked - ${history.count}/${rule.scope.maxAlerts} alerts sent in ${timeSinceLastAlert}ms window`);
+          console.log(JSON.stringify({
+            t:"DEDUP_BLOCK",
+            type: alertType,
+            key: dedupKey,
+            reason: "MAX_ALERTS_EXCEEDED",
+            cfg: alertType
+          }));
           return false;
         }
       }

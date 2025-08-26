@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { analyzeHybridRE24, generateHybridAlertDescription, cleanupCache } from './hybrid-re24-ai';
 import { getEnhancedWeather } from '../enhanced-weather';
+import { isLiveStatus } from '../status';
 // NEW
 import { estimateHRProbability, classifyTier } from './power-hitter';
 
@@ -92,6 +93,25 @@ export class MLBEngine extends BaseSportEngine {
   monitoringInterval = 1500; // 1.5 seconds normal polling (optimized from your successful system)
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
+  private _armed = false;
+  private _metrics = {
+    liveGames: 0, statesSeen: 0, attempts: 0, emitted: 0,
+    suppressed: 0, drops: {} as Record<string, number>,
+    aiUsed: 0, telSent: 0
+  };
+
+  constructor() {
+    super();
+    // Metrics heartbeat every minute
+    setInterval(() => {
+      console.log(JSON.stringify({ t:"METRICS", ...this._metrics }));
+    }, 60_000);
+  }
+
+  private drop(reason: string, extra?: any) {
+    this._metrics.drops[reason] = (this._metrics.drops[reason] ?? 0) + 1;
+    console.log(JSON.stringify({ t:"ALERT_DROP", why: reason, ...extra }));
+  }
 
   // 🎯 GAME SITUATIONS ALERTS ONLY - Focus on key game moments
   alertConfigs: AlertConfig[] = [
@@ -850,11 +870,16 @@ export class MLBEngine extends BaseSportEngine {
       
       const games = await multiSourceAggregator.getMLBGames(getMLBDate());
       
-      // V1-style live game filtering using the normalized isLive function
-      const liveGames = games.filter(game => {
-        const status = game.status?.toLowerCase() || '';
-        return isLive(status);
-      });
+      // V1-style live game filtering using the normalized isLiveStatus function
+      const liveGames = games.filter(game => isLiveStatus(game));
+      
+      // Track metrics and ARM engine when first live game detected
+      this._metrics.liveGames = liveGames.length;
+      if (!this._armed && liveGames.length > 0) {
+        this._armed = true;
+        console.log(JSON.stringify({ t:"ENGINE_ARMED", liveGames: liveGames.length }));
+      }
+      
       console.log(`🎯 Found ${liveGames.length} live games`);
       if (liveGames.length === 0) return;
 
@@ -905,6 +930,23 @@ export class MLBEngine extends BaseSportEngine {
 
           if (!gameState) continue;
 
+          // STATE logging after extracting game state
+          this._metrics.statesSeen++;
+          console.log(JSON.stringify({
+            t:"STATE",
+            gamePk: gameState.gamePk,
+            inning: gameState.inning,
+            half: gameState.inningState,
+            outs: gameState.outs,
+            bases: {
+              f: !!gameState.runners?.first,
+              s: !!gameState.runners?.second,
+              t: !!gameState.runners?.third
+            },
+            batter: gameState.currentBatter?.id ?? null,
+            pa: gameState.paId ?? null
+          }));
+
           console.log(`🔍 Processing ${this.alertConfigs.length} alert configs for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
           let triggeredAlerts = await this.checkAlertConditions(gameState);
 
@@ -931,6 +973,20 @@ export class MLBEngine extends BaseSportEngine {
           if (triggeredAlerts.length > 0) {
             console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
             console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
+            
+            // Log each ALERT_ATTEMPT before processing
+            for (const alert of triggeredAlerts) {
+              this._metrics.attempts++;
+              console.log(JSON.stringify({
+                t:"ALERT_ATTEMPT", 
+                type: alert.type, 
+                prio: alert.priority,
+                rp: (alert as any).rp ?? null,
+                pHR: (alert as any).pHR ?? null,
+                tier: (alert as any).tier ?? null
+              }));
+            }
+            
             // Use base engine's processAlerts with single deduplication system
             await this.processAlerts(triggeredAlerts, gameState);
           } else {
@@ -1069,17 +1125,26 @@ export class MLBEngine extends BaseSportEngine {
             chatId: user.telegramChatId,
           };
 
-          const sent = await sendTelegramAlert(telegramConfig, alertData);
-          if (sent) {
-            console.log(`📱 Telegram alert sent to ${user.username || 'User'} for: ${customTitle}`);
-          } else {
-            console.log(`❌ Failed to send Telegram alert to ${user.username || 'User'} for: ${customTitle}`);
+          try {
+            const sent = await sendTelegramAlert(telegramConfig, alertData);
+            if (sent) {
+              console.log(`📱 Telegram alert sent to ${user.username || 'User'} for: ${customTitle}`);
+              console.log(JSON.stringify({ t:"TEL_SEND", ok: true, status: 200 }));
+              this._metrics.telSent++;
+            } else {
+              console.log(`❌ Failed to send Telegram alert to ${user.username || 'User'} for: ${customTitle}`);
+              console.log(JSON.stringify({ t:"TEL_ERR", msg: "Send failed" }));
+            }
+          } catch (e: any) {
+            console.log(`❌ Telegram error for ${user.username || 'User'}: ${e.message}`);
+            console.log(JSON.stringify({ t:"TEL_ERR", msg: e?.message ?? String(e) }));
           }
         }
       }
 
       // Store the alert
       await storage.createAlert(alertData);
+      this._metrics.emitted++;
       console.log(`✅ Alert '${customTitle}' processed and stored.`);
     }
   }
