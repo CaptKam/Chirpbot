@@ -64,9 +64,9 @@ function AlertCategoriesSection({ activeSport, settings, enabledAlertKeys, expan
             </button>
             
             {isExpanded && (
-              <div className="mt-3 space-y-3 animate-in slide-in-from-top-2 duration-200">
+              <div className="mt-3 space-y-3">
                 {categoryAlerts.map((alertConfig) => (
-                  <Card key={`${activeSport}-${alertConfig.key}`} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-200">
+                  <Card key={`${activeSport}-${alertConfig.key}`} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-colors duration-200">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 pr-4">
                         <h4 className="font-bold text-slate-100" data-testid={`alert-type-${alertConfig.key}`}>
