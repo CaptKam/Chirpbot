@@ -184,13 +184,8 @@ export class TennisEngine extends BaseSportEngine {
     // Enhanced AI analysis for high-priority alerts
     if (config.priority >= 85) {
       try {
-        const aiEnhancement = await enhanceHighPriorityAlert(
-          config.type,
-          description,
-          context,
-          'TENNIS'
-        );
-        if (aiEnhancement.enhancedDescription) {
+        const aiEnhancement = await enhanceHighPriorityAlert(JSON.stringify(context));
+        if (aiEnhancement && aiEnhancement.enhancedDescription) {
           description = aiEnhancement.enhancedDescription;
         }
       } catch (error) {
@@ -211,7 +206,22 @@ export class TennisEngine extends BaseSportEngine {
       aiConfidence: null,
       timestamp: new Date(),
       seen: false,
-      context: JSON.stringify(context)
+      context: JSON.stringify(context),
+      gameInfo: {
+        status: 'live',
+        homeTeam: gameState.players.home.name,
+        awayTeam: gameState.players.away.name,
+        quarter: undefined,
+        inning: undefined,
+        period: undefined,
+        inningState: undefined,
+        outs: undefined,
+        balls: undefined,
+        strikes: undefined,
+        runners: undefined,
+        bases: undefined,
+        count: undefined
+      }
     };
 
     await storage.createAlert(alert);
@@ -221,7 +231,7 @@ export class TennisEngine extends BaseSportEngine {
       // Check user's tennis alert settings
       const settings = await storage.getSettingsBySport(userId, 'TENNIS');
       if (settings?.alertTypes[config.settingKey] && settings.telegramEnabled) {
-        await sendTelegramAlert(userId, description);
+        await sendTelegramAlert(description);
       }
     }
 
