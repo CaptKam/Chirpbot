@@ -177,6 +177,7 @@ const ALERT_TYPE_CONFIG = {
     { key: "comeback", label: "Comeback Alert", description: "Player mounting significant comeback", category: "Game Flow" },
     { key: "serve", label: "Serving Performance", description: "Exceptional serving statistics", category: "Player Performance" },
     { key: "rally", label: "Extended Rally", description: "Long rallies and exceptional shots", category: "Special Events" },
+    { key: "aiOpportunity", label: "🤖 AI Tennis Opportunities", description: "AI-powered insights for high-leverage moments before they become obvious", category: "AI Predictions" },
   ],
 };
 
