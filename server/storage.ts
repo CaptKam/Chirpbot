@@ -731,6 +731,7 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     // Initialize master alert controls when the database storage is created
     this.initializeMasterAlertControls().catch(console.error);
+    this.ensureDefaultSettingsForTennis().catch(console.error);
   }
 
   private async initializeMasterAlertControls() {
@@ -816,6 +817,54 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error initializing master alert controls:", error);
     }
+  }
+
+  private async ensureDefaultSettingsForTennis() {
+    const existing = await this.getSettingsBySport('TENNIS');
+    if (existing) return;
+
+    await this.createSettings({
+      sport: 'TENNIS',
+      alertTypes: {
+        // enable the six tennis alert types
+        breakPoint: true,
+        doubleBreakPoint: true,
+        setPoint: true,
+        matchPoint: true,
+        tiebreakStart: true,
+        momentumSurge: true,
+
+        // keep other sports defaulted to false
+        risp: false,
+        homeRun: false,
+        lateInning: false,
+        closeGame: false,
+        runnersOnBase: false,
+        hits: false,
+        scoring: false,
+        inningChange: false,
+        homeRunAlert: false,
+        strikeouts: false,
+        powerHitterOnDeck: false,
+        useRE24System: false,
+        re24Level1: false,
+        re24Level2: false,
+        re24Level3: false,
+        redZone: false,
+        nflCloseGame: false,
+        fourthDown: false,
+        twoMinuteWarning: false,
+        clutchTime: false,
+        nbaCloseGame: false,
+        overtime: false,
+        powerPlay: false,
+        nhlCloseGame: false,
+        emptyNet: false,
+      },
+      telegramEnabled: false,
+      pushNotificationsEnabled: true,
+      aiEnabled: true,
+    });
   }
 
   // User methods
@@ -928,7 +977,26 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
-    return await db.select().from(userMonitoredTeams);
+    const teamRows = await db.select().from(userMonitoredTeams);
+
+    // Pull monitored matches (Tennis) and map to the same minimal shape
+    const matchRowsRaw = await db
+      .select()
+      .from(userMonitoredMatches)
+      .where(eq(userMonitoredMatches.isMonitoring, true));
+
+    const matchRows = matchRowsRaw.map(m => ({
+      id: m.id,
+      userId: m.userId,
+      gameId: m.matchId,         // align name
+      sport: m.sport,            // already 'TENNIS'
+      homeTeamName: '',          // optional, not used by the gating check
+      awayTeamName: '',
+      createdAt: m.createdAt
+    }));
+
+    // Consumers (engine manager) only check .sport, so union is safe
+    return [...teamRows, ...matchRows];
   }
 
   // Alert methods

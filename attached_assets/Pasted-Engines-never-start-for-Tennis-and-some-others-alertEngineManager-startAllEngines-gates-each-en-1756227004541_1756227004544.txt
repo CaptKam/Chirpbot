@@ -1,0 +1,261 @@
+Engines never start for Tennis (and some others)
+
+alertEngineManager.startAllEngines() gates each engine on a call to hasMonitoredGamesForSport().
+
+That calls storage.getAllMonitoredGames().
+
+In your DB storage, getAllMonitoredGames() returns only user_monitored_teams (MLB/NFL/NBA/NHL), and ignores user_monitored_matches (Tennis).
+
+Result: Tennis engine never starts because the manager never “sees” any monitored tennis matches.
+
+No Tennis settings row → Base check silently returns zero alerts
+
+BaseSportEngine.checkAlertConditions() does const settings = await storage.getSettingsBySport(this.sport); if (!settings) return [];
+
+You don’t seed a settings row for TENNIS, so all Tennis alert configs get skipped.
+
+Per-user Tennis settings check uses the wrong signature
+
+In tennis-engine.ts > generateAlert(), you do:
+
+const settings = await storage.getSettingsBySport(userId, 'TENNIS');
+
+
+getSettingsBySport only accepts (sport: string) — passing userId makes it look up a sport literally equal to the user id → always undefined.
+
+No WebSocket broadcast from Tennis alerts
+
+routes.ts wires alertEngineManager.setAlertCallback(...) to broadcast new_alert.
+
+MLB/NFL/NBA engines call the manager’s callback via BaseSportEngine.processAlerts.
+
+Tennis overrides processAlerts and never calls this.onAlert?.(alert) after storage.createAlert(...).
+
+Result: even if alerts are saved, the client won’t see live toasts.
+
+ESPN free tennis feed has no point-by-point
+
+Your tennis-api returns score: { home:'0', away:'0' } for most matches, so true Break/Double Break detection rarely triggers.
+
+The good news: Set Point, Match Point, Tiebreak Start can still trigger from sets/games (you already compute those).
+
+Client filter + adapter gaps
+
+Alerts page has filters for MLB/NFL/NBA/NHL only. Tennis shows under “All”, but users can’t filter to Tennis.
+
+No tennis adapter → you fall back to the generic VM (works, but not optimized for player names).
+
+✅ Targeted fixes (copy/paste patches)
+1) Start engines when Tennis matches are monitored
+
+server/storage.ts — make DatabaseStorage.getAllMonitoredGames() include both teams and matches:
+
+// Replace DatabaseStorage.getAllMonitoredGames with:
+async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
+  const teamRows = await db.select().from(userMonitoredTeams);
+
+  // Pull monitored matches (Tennis) and map to the same minimal shape
+  const matchRowsRaw = await db
+    .select()
+    .from(userMonitoredMatches)
+    .where(eq(userMonitoredMatches.isMonitoring, true));
+
+  const matchRows = matchRowsRaw.map(m => ({
+    id: m.id,
+    userId: m.userId,
+    gameId: m.matchId,         // align name
+    sport: m.sport,            // already 'TENNIS'
+    homeTeamName: '',          // optional, not used by the gating check
+    awayTeamName: '',
+    createdAt: m.createdAt
+  }));
+
+  // Consumers (engine manager) only check .sport, so union is safe
+  return [...teamRows, ...matchRows];
+}
+
+
+Why this matters: alertEngineManager.hasMonitoredGamesForSport('TENNIS') will finally see monitored matches, so the Tennis engine actually starts.
+
+2) Seed default Tennis settings at boot (so alerts aren’t skipped)
+
+server/storage.ts — right after you initialize master controls, seed settings if missing:
+
+// Inside DatabaseStorage constructor, after initializeMasterAlertControls():
+this.ensureDefaultSettingsForTennis().catch(console.error);
+
+// Add this method:
+private async ensureDefaultSettingsForTennis() {
+  const existing = await this.getSettingsBySport('TENNIS');
+  if (existing) return;
+
+  await this.createSettings({
+    sport: 'TENNIS',
+    alertTypes: {
+      // enable the six tennis alert types
+      breakPoint: true,
+      doubleBreakPoint: true,
+      setPoint: true,
+      matchPoint: true,
+      tiebreakStart: true,
+      momentumSurge: true,
+
+      // keep other sports defaulted to false
+      risp: false,
+      homeRun: false,
+      lateInning: false,
+      closeGame: false,
+      runnersOnBase: false,
+      hits: false,
+      scoring: false,
+      inningChange: false,
+      homeRunAlert: false,
+      strikeouts: false,
+      powerHitterOnDeck: false,
+      useRE24System: false,
+      re24Level1: false,
+      re24Level2: false,
+      re24Level3: false,
+      redZone: false,
+      nflCloseGame: false,
+      fourthDown: false,
+      twoMinuteWarning: false,
+      clutchTime: false,
+      nbaCloseGame: false,
+      overtime: false,
+      powerPlay: false,
+      nhlCloseGame: false,
+      emptyNet: false,
+    },
+    telegramEnabled: false,
+    pushNotificationsEnabled: true,
+    aiEnabled: true,
+  });
+}
+
+
+Why this matters: BaseSportEngine.checkAlertConditions() will finally have a non-undefined settings object and Tennis alerts will evaluate and fire.
+
+3) Fix the wrong settings call in Tennis alert delivery
+
+server/services/engines/tennis-engine.ts — inside generateAlert():
+
+// Replace the per-user call (wrong signature):
+// const settings = await storage.getSettingsBySport(userId, 'TENNIS');
+
+// With global sport settings (correct signature):
+const settings = await storage.getSettingsBySport('TENNIS');
+
+
+Optional: if you truly want per-user delivery controls, add a new storage method getUserSettings(userId, sport) and use that. Today your schema’s settings table is global by sport, so the above is consistent.
+
+4) Broadcast Tennis alerts over WebSocket
+
+server/services/engines/tennis-engine.ts — at the end of generateAlert() right after await storage.createAlert(alert);:
+
+// After storing the alert:
+this.onAlert?.({
+  type: 'alert',
+  data: alert
+});
+
+
+Why this matters: your UI’s useWebSocket + useAlertBatcher will finally show live toasts for Tennis the same way MLB does.
+
+5) Make Tennis visible in the UI
+
+client/src/pages/alerts.tsx — add Tennis to filters:
+
+const FILTER_OPTIONS = [
+  { id: "all", label: "All", active: true },
+  { id: "mlb", label: "MLB", active: false },
+  { id: "nfl", label: "NFL", active: false },
+  { id: "nba", label: "NBA", active: false },
+  { id: "nhl", label: "NHL", active: false },
+  { id: "tennis", label: "Tennis", active: false }, // 👈 add this
+];
+
+
+client/src/adapters/tennis.ts — (new file) a minimal adapter so cards read well:
+
+// client/src/adapters/tennis.ts
+import type { AlertVM } from "@/lib/alert-vm";
+import { adapters } from "./base";
+
+adapters.push({
+  sport: "TENNIS",
+  canHandle: (a: any) => a.sport === "TENNIS",
+  toViewModel: (a: any): AlertVM => {
+    const home = a.gameInfo?.homeTeam ?? a.players?.home?.name ?? "Player A";
+    const away = a.gameInfo?.awayTeam ?? a.players?.away?.name ?? "Player B";
+    const setLabel =
+      a.gameInfo?.set ? `Set ${a.gameInfo.set}` :
+      a.currentSet ? `Set ${a.currentSet}` : "";
+
+    return {
+      id: a.id,
+      sport: "TENNIS",
+      title: `${away} @ ${home}`,
+      situation: a.type,                             // e.g., "Set Point" / "Tiebreak Start"
+      scoreline: a.gameInfo?.score
+        ? `${a.gameInfo.score.away}-${a.gameInfo.score.home}`
+        : a.score ? `${a.score.away}-${a.score.home}` : "",
+      period: setLabel,
+      edge: { label: "Confidence", value: `${a.priority ?? 80}` },
+      priority: a.priority ?? 80,
+      actionLine: a.description,
+      tags: ["Tennis"],
+      isNew: !a.seen,
+      createdAt: a.timestamp ?? a.created_at,
+    };
+  },
+});
+
+
+And import it where you import the MLB adapter:
+
+// client/src/pages/alerts.tsx
+import "@/adapters/mlb";
+import "@/adapters/tennis"; // 👈 add this
+
+
+Your page will now render clear Tennis cards and users can filter just Tennis.
+
+6) Accept fewer point-level tennis alerts (for now), but keep the productive ones on
+
+Your tennis-api can’t read live points from ESPN’s free endpoint — that’s expected. With the above fixes you’ll still get:
+
+Set Point (based on games in set)
+
+Match Point (based on sets won + set point)
+
+Tiebreak Start (from isTiebreak bool)
+
+Momentum Surge (your simple heuristic)
+
+Keep Break/Double-Break Point enabled (they’ll fire when a source does provide point score), but expect fewer of them until you wire a point-by-point provider.
+
+🧪 Quick validation checklist (today)
+
+Pick at least one live match in the new Tennis page
+/tennis-matches → toggle Monitoring ON. This writes to user_monitored_matches.
+
+Restart server (so the engine manager re-gates engines)
+It will now find monitored Tennis matches and start the Tennis engine.
+
+Confirm settings row exists
+settings.sport = 'TENNIS' with the six tennis alerts set to true.
+(The seed method above will create it if missing.)
+
+Watch /api/alerts and WS toasts
+You should now see Set Point / Match Point / Tiebreak alerts flowing, plus toast popups.
+
+🧰 Optional niceties (next)
+
+Add storage.getUserSettings(userId, sport) and a per-user override in Tennis if you want user-level Telegram toggles.
+
+In alertEngineManager.hasMonitoredGamesForSport, you can short-circuit Weather to always run if any sport is monitored (you already do), and you could let Tennis run unconditionally during a test day.
+
+Add a lightweight dedup call in tennis-engine.ts (e.g., hash by matchId:type:set:games:serving) to avoid chattiness.
+
+TL;DR

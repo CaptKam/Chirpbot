@@ -14,6 +14,7 @@ import { Pill } from "@/components/Pill";
 import { RunnersDiamond } from "@/components/RunnersDiamond";
 import { toVM } from "@/adapters/base";
 import "@/adapters/mlb"; // Import to register the adapter
+import "@/adapters/tennis"; // Import to register the tennis adapter
 import { useAlertBatcher, type IncomingAlert } from "@/hooks/use-alert-batcher";
 
 const FILTER_OPTIONS = [
@@ -22,6 +23,7 @@ const FILTER_OPTIONS = [
   { id: "nfl", label: "NFL", active: false },
   { id: "nba", label: "NBA", active: false },
   { id: "nhl", label: "NHL", active: false },
+  { id: "tennis", label: "Tennis", active: false },
 ];
 
 export default function Alerts() {

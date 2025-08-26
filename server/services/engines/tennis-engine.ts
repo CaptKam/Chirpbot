@@ -226,10 +226,16 @@ export class TennisEngine extends BaseSportEngine {
 
     await storage.createAlert(alert);
 
+    // Broadcast Tennis alerts over WebSocket
+    this.onAlert?.({
+      type: 'alert',
+      data: alert
+    });
+
     // Send to monitoring users
     for (const userId of userIds) {
-      // Check user's tennis alert settings
-      const settings = await storage.getSettingsBySport(userId, 'TENNIS');
+      // Check global tennis alert settings
+      const settings = await storage.getSettingsBySport('TENNIS');
       if (settings?.alertTypes[config.settingKey] && settings.telegramEnabled) {
         await sendTelegramAlert(description);
       }
