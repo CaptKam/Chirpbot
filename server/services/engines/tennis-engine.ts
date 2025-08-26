@@ -412,19 +412,19 @@ export class TennisEngine extends BaseSportEngine {
       const liveMatches = await this.getLiveMatches();
       console.log(`🎾 Found ${liveMatches.length} live tennis matches`);
       
+      // Load AI settings from database
+      const aiSettings = await storage.getAiSettingsBySport('TENNIS');
+      
       // Process each live match with edge-triggered alerts
       for (const gameState of liveMatches) {
         try {
           await this.processAlerts([], gameState);
           
-          // Try AI opportunity checking (non-blocking)
+          // Try AI opportunity checking (non-blocking) with real database settings
           try {
-            await this.maybeEmitAIOpportunity(gameState, { 
-              bettingOppsEnabled: true, 
-              noviceMode: true,
-              oppMinPriority: 88,
-              oppCooldownMs: 90000
-            });
+            if (aiSettings?.bettingOppsEnabled) {
+              await this.maybeEmitAIOpportunity(gameState, aiSettings);
+            }
           } catch (aiError) {
             console.error(`🤖 AI opportunity error for match ${gameState.matchId}:`, aiError);
           }
