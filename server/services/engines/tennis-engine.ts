@@ -411,19 +411,24 @@ export class TennisEngine extends BaseSportEngine {
       // Get live tennis matches
       const liveMatches = await this.getLiveMatches();
       console.log(`🎾 Found ${liveMatches.length} live tennis matches`);
+      console.log(`🎾 DEBUG: First match structure:`, liveMatches[0] ? JSON.stringify(liveMatches[0], null, 2) : 'No matches');
       
       // Load AI settings from database
       const aiSettings = await storage.getAiSettingsBySport('TENNIS');
       
       // Process each live match with edge-triggered alerts
       for (const gameState of liveMatches) {
+        console.log(`🎾 PROCESSING: Match ${gameState.matchId}, Set ${gameState.currentSet}, Games ${gameState.gamesInSet?.home}-${gameState.gamesInSet?.away}`);
         try {
           await this.processAlerts([], gameState);
           
           // Try AI opportunity checking (non-blocking) with real database settings
           try {
+            console.log(`🤖 AI Check: Match ${gameState.matchId}, enabled: ${aiSettings?.enabled}, betting: ${aiSettings?.bettingOppsEnabled}`);
             if (aiSettings?.bettingOppsEnabled) {
               await this.maybeEmitAIOpportunity(gameState, aiSettings);
+            } else {
+              console.log(`🤖 AI opportunities disabled for tennis`);
             }
           } catch (aiError) {
             console.error(`🤖 AI opportunity error for match ${gameState.matchId}:`, aiError);
@@ -467,8 +472,12 @@ export class TennisEngine extends BaseSportEngine {
   private aiCooldown = new Map<string, number>(); // key = `${matchId}:${set}`
 
   async maybeEmitAIOpportunity(s: TennisGameState, settings: any) {
-    if (!settings?.bettingOppsEnabled) return;
-    if (!settings?.noviceMode) settings.noviceMode = true;
+    console.log(`🤖 AI Entry: Match ${s.matchId}, Set ${s.currentSet}, Games ${s.gamesInSet?.home ?? 0}-${s.gamesInSet?.away ?? 0}, Score ${s.score?.home}-${s.score?.away}`);
+    
+    if (!settings?.bettingOppsEnabled) {
+      console.log(`🤖 AI disabled: bettingOppsEnabled = ${settings?.bettingOppsEnabled}`);
+      return;
+    }
 
     // Per-match cooldown
     const k = `${s.matchId}:${s.currentSet}`;
@@ -476,34 +485,37 @@ export class TennisEngine extends BaseSportEngine {
     const last = this.aiCooldown.get(k) ?? 0;
     if (now - last < (settings.oppCooldownMs ?? 90000)) return;
 
-    // Import the gate logic inline for now
+    // Simplified AI gate - focus on high-leverage situations
     const shouldProbeAI = (s: TennisGameState) => {
-      if (!s.score && !s.isTiebreak) return false;
       const gMax = Math.max(s.gamesInSet?.home ?? 0, s.gamesInSet?.away ?? 0);
-      let L = 0;
-      if (gMax >= 9) L += 2;
-      if ((s.sets?.home === 1 && s.sets?.away === 1)) L += 2;
-      if (s.isTiebreak) L += 3;
       
-      const p = s.score;
-      const sv = s.serving;
-      const opp = (side: "home"|"away") => side === "home" ? "away" : "home";
-      const preBP = (!s.isTiebreak && p && sv && (
-        (p[sv] === "0" && (p[opp(sv)] === "30")) ||
-        (p[sv] === "15" && p[opp(sv)] === "30") ||
-        (p[sv] === "30" && p[opp(sv)] === "30")
-      ));
-      const lateTB = s.isTiebreak && ((s.tbPoints?.home ?? 0) + (s.tbPoints?.away ?? 0)) >= 8;
-      return (L >= 2 && (preBP || lateTB));
+      // High-leverage situations:
+      // 1. Late in set (games 4-4 or higher)
+      // 2. Close games (difference <= 1) 
+      // 3. Tiebreak situations
+      // 4. Set point/match point scenarios
+      
+      const lateInSet = gMax >= 4;
+      const closeGames = Math.abs((s.gamesInSet?.home ?? 0) - (s.gamesInSet?.away ?? 0)) <= 1;
+      const setPointScenario = gMax >= 5;
+      
+      console.log(`🤖 AI Gate Check: gMax=${gMax}, lateInSet=${lateInSet}, closeGames=${closeGames}, setPoint=${setPointScenario}, isTiebreak=${s.isTiebreak}`);
+      
+      return s.isTiebreak || (lateInSet && closeGames) || setPointScenario;
     };
 
-    if (!shouldProbeAI(s)) return;
+    if (!shouldProbeAI(s)) {
+      console.log(`🤖 AI Gate Failed: shouldProbeAI returned false for match ${s.matchId}`);
+      return;
+    }
+    
+    console.log(`🤖 AI Gate Passed: High-leverage situation detected for match ${s.matchId}`);
 
     // Compose dedup key on stable point id so escalations update in place
     const dedupKey = `${s.matchId}:TENNIS_AI_OPPORTUNITY:${stablePointKey(s)}`;
 
     if (!alertDeduplication.shouldAllow("TENNIS_AI_OPPORTUNITY", s.matchId, dedupKey, {
-      escalationOnly: true, timeWindow: 20000, realertAfterMs: settings.oppCooldownMs ?? 90000
+      escalationOnly: true, timeWindow: 20000
     })) return;
 
     // Generate AI insight (simplified for now)
@@ -513,7 +525,7 @@ export class TennisEngine extends BaseSportEngine {
 
     try {
       // Simple fallback for testing
-      const tb = s.isTiebreak ? `TB ${s.tbPoints?.home ?? 0}-${s.tbPoints?.away ?? 0}` : "";
+      const tb = s.isTiebreak ? `TB ${s.score?.home ?? 0}-${s.score?.away ?? 0}` : "";
       text = `AI WATCH: Pressure point likely next\nWhy: Score favors receiver; leverage high ${tb ? "in tiebreak" : "late in set"}`;
       priority = Math.max(priority, 88);
     } catch (e) {
