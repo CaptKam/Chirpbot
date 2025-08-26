@@ -4,7 +4,6 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import helmet from "helmet";
 import cors from "cors";
-import http from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -30,18 +29,6 @@ app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
-
-// Acquire a DB advisory lock so only one monitor engine runs
-async function acquireEngineLock(): Promise<boolean> {
-  const client = await pgPool.connect();
-  try {
-    // Choose app-unique key; stable across deploys
-    const res = await client.query("SELECT pg_try_advisory_lock($1)", [842_240_001]);
-    return res.rows?.[0]?.pg_try_advisory_lock === true;
-  } finally { 
-    client.release(); 
-  }
-}
 
 const PgSession = connectPgSimple(session);
 
@@ -118,45 +105,12 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const PORT = parseInt(process.env.PORT || '5000', 10);
-  
-  // Graceful error handling for port conflicts
-  server.on("error", (err: any) => {
-    if (err.code === "EADDRINUSE") {
-      console.error(JSON.stringify({ t:"FATAL", msg:"Port in use", port: PORT }));
-      process.exit(1); // fail fast so supervisor restarts cleanly
-    } else {
-      console.error(JSON.stringify({ t:"FATAL", msg:String(err) }));
-    }
-  });
-
-  // Acquire engine lock before starting
-  const haveLock = await acquireEngineLock();
-  if (!haveLock) {
-    console.error(JSON.stringify({ t:"FATAL", msg:"Engine lock not acquired; another instance is running"}));
-    // Still serve HTTP so health checks don't flap, but skip engine start:
-    server.listen({
-      port: PORT,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      console.log(JSON.stringify({ t:"HTTP_READY", port: PORT, engine: false }));
-    });
-    return;
-  }
-  
+  const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
-    port: PORT,
+    port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    console.log(JSON.stringify({ t:"HTTP_READY", port: PORT, engine: true }));
-    log(`serving on port ${PORT}`);
+    log(`serving on port ${port}`);
   });
 })();
-
-// Graceful shutdown
-["SIGINT","SIGTERM"].forEach(sig => process.on(sig as NodeJS.Signals, () => {
-  console.log(JSON.stringify({ t:"SHUTDOWN", sig }));
-  process.exit(0);
-}));
