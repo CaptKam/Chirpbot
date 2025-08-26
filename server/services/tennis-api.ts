@@ -263,15 +263,9 @@ class TennisApi {
   private mapESPNStatus(espnStatus: string): 'scheduled' | 'live' | 'final' {
     const status = espnStatus.toLowerCase();
     if (status.includes('in_progress') || status.includes('live') || status.includes('play') || status === 'status_in_progress') return 'live';
-    
-    // TEMPORARY: Treat completed matches as live for testing tennis AI opportunities
-    if (status.includes('final') || status.includes('complete') || status === 'status_final') {
-      console.log('🎾 DEBUG: Converting completed match to live for testing purposes');
-      return 'live';
-    }
-    
+    if (status.includes('final') || status.includes('complete') || status === 'status_final') return 'final';
     if (status.includes('scheduled') || status === 'status_scheduled') return 'scheduled';
-    return 'live'; // Default to live for testing
+    return 'scheduled'; // Default to scheduled for accuracy
   }
 
   private extractCountryFromFlag(flagUrl: string): string {
@@ -392,29 +386,35 @@ class TennisApi {
 
     console.log(`🎾 Found ${liveMatches.length} live, ${completedMatches.length} completed, ${allMatches.length} scheduled tennis matches`);
     
-    // PRIORITIZE REAL MATCHES: Filter out TBD matches and prioritize matches with real names
+    // PRIORITIZE REAL MATCHES: Filter out TBD, Unknown, and invalid matches
     const realMatches = [
-      ...liveMatches.filter(m => m.players.home.name !== 'TBD' && m.players.away.name !== 'TBD'),
-      ...completedMatches.filter(m => m.players.home.name !== 'TBD' && m.players.away.name !== 'TBD'),
-      ...allMatches.filter(m => m.players.home.name !== 'TBD' && m.players.away.name !== 'TBD')
+      ...liveMatches.filter(m => 
+        m.players.home.name !== 'TBD' && 
+        m.players.away.name !== 'TBD' &&
+        m.players.home.name !== 'Unknown Player' &&
+        m.players.away.name !== 'Unknown Player' &&
+        m.players.home.name.length > 3 &&
+        m.players.away.name.length > 3
+      ),
+      ...allMatches.filter(m => 
+        m.players.home.name !== 'TBD' && 
+        m.players.away.name !== 'TBD' &&
+        m.players.home.name !== 'Unknown Player' &&
+        m.players.away.name !== 'Unknown Player' &&
+        m.players.home.name.length > 3 &&
+        m.players.away.name.length > 3
+      )
     ];
     
-    console.log(`🎾 Found ${realMatches.length} real tennis matches with actual player names`);
+    console.log(`🎾 Found ${realMatches.length} valid tennis matches with real player names`);
     
     if (realMatches.length > 0) {
-      return realMatches.slice(0, 5); // Prioritize real matches
+      return realMatches.slice(0, 10); // Return more valid matches
     }
     
-    // Fallback to TBD matches only if no real matches found
-    if (liveMatches.length > 0) {
-      return liveMatches.slice(0, 3);
-    }
-    
-    if (allMatches.length > 0) {
-      return allMatches.slice(0, 3);
-    }
-    
-    return completedMatches.slice(0, 3);
+    // If no real matches, return empty array instead of fallback TBD matches
+    console.log('🎾 No valid tennis matches found - returning empty result');
+    return [];
   }
 
   private parseTennisDataUK(data: any): TennisMatch[] {
