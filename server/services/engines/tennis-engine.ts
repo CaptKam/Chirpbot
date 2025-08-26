@@ -9,6 +9,42 @@ export class TennisEngine extends BaseSportEngine {
   sport = 'TENNIS';
   monitoringInterval = 2000; // 2 seconds for tennis (faster paced than baseball)
 
+  extractGameState(apiData: any): TennisGameState {
+    return apiData; // Tennis API already returns properly formatted TennisGameState
+  }
+
+  getGameSpecificInfo(gameState: TennisGameState): any {
+    return {
+      players: gameState.players,
+      currentSet: gameState.currentSet,
+      score: gameState.score,
+      gamesInSet: gameState.gamesInSet,
+      sets: gameState.sets,
+      serving: gameState.serving,
+      tournament: gameState.tournament,
+      surface: gameState.surface
+    };
+  }
+
+  buildGameContext(gameState: TennisGameState, config: AlertConfig): any {
+    return {
+      matchId: gameState.matchId,
+      players: gameState.players,
+      currentSet: gameState.currentSet,
+      score: gameState.score,
+      gamesInSet: gameState.gamesInSet,
+      sets: gameState.sets,
+      serving: gameState.serving,
+      tournament: gameState.tournament,
+      surface: gameState.surface,
+      isBreakPoint: gameState.isBreakPoint,
+      isSetPoint: gameState.isSetPoint,
+      isMatchPoint: gameState.isMatchPoint,
+      isTiebreak: gameState.isTiebreak,
+      alertType: config.type
+    };
+  }
+
   // Tennis alert configurations
   alertConfigs: AlertConfig[] = [
     {
