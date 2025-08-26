@@ -81,9 +81,81 @@ class TennisApi {
     }
   }
 
+  private convertESPNTennisMatch(competition: any, event: any): TennisMatch | null {
+    const competitors = competition.competitors || [];
+    if (competitors.length < 2) return null;
+
+    // Get both competitors 
+    const homePlayer = competitors.find((c: any) => c.homeAway === 'home') || competitors[0];
+    const awayPlayer = competitors.find((c: any) => c.homeAway === 'away') || competitors[1];
+
+    // Extract real player names from ESPN tennis data
+    const homeName = homePlayer?.athlete?.displayName || homePlayer?.athlete?.fullName || 'Unknown Player';
+    const awayName = awayPlayer?.athlete?.displayName || awayPlayer?.athlete?.fullName || 'Unknown Player';
+
+    console.log(`🎾 Parsing ESPN tennis match: ${homeName} vs ${awayName}`);
+
+    // Extract score data from linescores (sets won)
+    const homeLinescores = homePlayer?.linescores || [];
+    const awayLinescores = awayPlayer?.linescores || [];
+
+    return {
+      matchId: competition.id || `tennis-${Date.now()}`,
+      sport: 'TENNIS' as const,
+      status: this.mapESPNStatus(competition.status?.type?.name || 'final'),
+      players: {
+        home: {
+          id: homePlayer?.athlete?.id || `home-${Date.now()}`,
+          name: homeName,
+          country: homePlayer?.athlete?.flag?.alt || 'UNK',
+          ranking: homePlayer?.curatedRank?.current || undefined
+        },
+        away: {
+          id: awayPlayer?.athlete?.id || `away-${Date.now()}`,
+          name: awayName,
+          country: awayPlayer?.athlete?.flag?.alt || 'UNK',
+          ranking: awayPlayer?.curatedRank?.current || undefined
+        }
+      },
+      currentSet: Math.max(homeLinescores.length, awayLinescores.length, 1),
+      sets: {
+        home: homeLinescores.map((ls: any) => Math.floor(ls.value || 0)),
+        away: awayLinescores.map((ls: any) => Math.floor(ls.value || 0))
+      },
+      gamesInSet: {
+        home: Math.floor(homeLinescores[homeLinescores.length - 1]?.value || 0),
+        away: Math.floor(awayLinescores[awayLinescores.length - 1]?.value || 0)
+      },
+      score: {
+        home: '0',
+        away: '0'
+      },
+      isTiebreak: false,
+      serving: 'home',
+      tournament: event.name || 'Tennis Tournament',
+      surface: this.guessSurface(event.name || ''),
+      startTime: competition.date || event.date || new Date().toISOString(),
+      venue: competition.venue?.fullName || competition.venue?.court || 'Tennis Court'
+    };
+  }
+
   private convertESPNMatch(event: any, forceConvert = false): TennisMatch {
     const competition = event.competitions?.[0] || {};
     const competitors = competition.competitors || [];
+    
+    // Debug: Log the actual ESPN data structure
+    console.log(`🎾 ESPN Event structure:`, {
+      eventId: event.id,
+      eventName: event.name,
+      competitorsCount: competitors.length,
+      competitors: competitors.map((c: any) => ({
+        id: c.id,
+        homeAway: c.homeAway,
+        athleteId: c.athlete?.id,
+        athleteName: c.athlete?.displayName || c.athlete?.fullName || c.athlete?.shortName,
+        teamName: c.team?.displayName
+      }))
+    });
     
     // Extract player data
     const homePlayer = competitors.find((c: any) => c.homeAway === 'home') || competitors[0];
@@ -103,15 +175,15 @@ class TennisApi {
       status: this.mapESPNStatus(event.status?.type?.name || 'unknown'),
       players: {
         home: {
-          id: homePlayer?.id || homePlayer?.athlete?.id || 'unknown',
-          name: homePlayer?.athlete?.displayName || homePlayer?.team?.displayName || 'Player 1',
-          country: homePlayer?.athlete?.flag?.href ? this.extractCountryFromFlag(homePlayer.athlete.flag.href) : 'UNK',
+          id: homePlayer?.athlete?.id || homePlayer?.id || `home-${Date.now()}`,
+          name: homePlayer?.athlete?.displayName || homePlayer?.athlete?.fullName || homePlayer?.athlete?.shortName || 'Unknown Player',
+          country: homePlayer?.athlete?.flag?.alt || (homePlayer?.athlete?.flag?.href ? this.extractCountryFromFlag(homePlayer.athlete.flag.href) : 'UNK'),
           ranking: homePlayer?.curatedRank?.current || undefined
         },
         away: {
-          id: awayPlayer?.id || awayPlayer?.athlete?.id || 'unknown',
-          name: awayPlayer?.athlete?.displayName || awayPlayer?.team?.displayName || 'Player 2',
-          country: awayPlayer?.athlete?.flag?.href ? this.extractCountryFromFlag(awayPlayer.athlete.flag.href) : 'UNK',
+          id: awayPlayer?.athlete?.id || awayPlayer?.id || `away-${Date.now()}`,
+          name: awayPlayer?.athlete?.displayName || awayPlayer?.athlete?.fullName || awayPlayer?.athlete?.shortName || 'Unknown Player', 
+          country: awayPlayer?.athlete?.flag?.alt || (awayPlayer?.athlete?.flag?.href ? this.extractCountryFromFlag(awayPlayer.athlete.flag.href) : 'UNK'),
           ranking: awayPlayer?.curatedRank?.current || undefined
         }
       },
@@ -124,7 +196,7 @@ class TennisApi {
       score: { home: '0', away: '0' }, // ESPN doesn't provide point-by-point in free API
       isTiebreak: false,
       serving: 'home', // Default since ESPN free API doesn't provide this
-      tournament: event.league?.name || competition.venue?.fullName || 'Tennis Tournament',
+      tournament: event.name || event.league?.name || competition.venue?.fullName || 'Tennis Tournament',
       surface: this.guessSurface(event.league?.name || ''),
       startTime: event.date || new Date().toISOString(),
       venue: competition.venue?.fullName || 'Tennis Court'
@@ -182,35 +254,28 @@ class TennisApi {
   private parseESPNData(data: any): TennisMatch[] {
     if (!data.events || !Array.isArray(data.events)) return [];
     
-    // Look for both current live matches and scheduled matches for today
-    const relevantMatches = data.events.filter((event: any) => {
-      const status = event.status?.type?.name?.toLowerCase() || '';
-      const statusDetail = event.status?.detail?.toLowerCase() || '';
-      
-      // Include live matches and scheduled matches
-      return status.includes('play') || 
-             status.includes('progress') || 
-             status.includes('scheduled') ||
-             statusDetail.includes('live') ||
-             statusDetail.includes('progress');
-    });
-
-    console.log(`🎾 Found ${relevantMatches.length} potential tennis matches from ESPN`);
+    const allMatches: TennisMatch[] = [];
     
-    const parsedMatches = relevantMatches
-      .map((event: any) => this.convertESPNMatch(event))
-      .filter((match: any) => match !== null);
-
-    // If no live matches, use some recent completed matches as examples
-    if (parsedMatches.length === 0 && data.events.length > 0) {
-      console.log('🎾 No live matches found, using recent completed matches as examples');
-      return data.events
-        .slice(0, 3) // Take first 3 matches
-        .map((event: any) => this.convertESPNMatch(event, true)) // Force convert even completed matches
-        .filter((match: any) => match !== null);
+    // ESPN tennis data structure: events contain tournaments, tournaments contain competitions (matches)
+    for (const event of data.events) {
+      // For tennis tournaments like US Open, matches are in event.competitions
+      if (event.competitions && Array.isArray(event.competitions)) {
+        for (const competition of event.competitions) {
+          if (competition.competitors && competition.competitors.length >= 2) {
+            // This is an actual tennis match with competitors
+            const match = this.convertESPNTennisMatch(competition, event);
+            if (match) {
+              allMatches.push(match);
+            }
+          }
+        }
+      }
     }
+
+    console.log(`🎾 Found ${allMatches.length} tennis matches from ESPN tournament data`);
     
-    return parsedMatches;
+    // Return up to 3 recent matches as examples
+    return allMatches.slice(0, 3);
   }
 
   private parseTennisDataUK(data: any): TennisMatch[] {
