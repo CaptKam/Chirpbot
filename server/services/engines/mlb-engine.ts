@@ -109,7 +109,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "basesLoaded",
       priority: 95,
       probability: 1.0,
-      description: "🔥 BASES LOADED!",
+      description: "🚨 BASES LOADED",
       conditions: (state: MLBGameState) => state.runners.first && state.runners.second && state.runners.third
     },
     {
@@ -117,7 +117,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "runnersOnBase",
       priority: 60,
       probability: 1.0,
-      description: "🏃‍♂️ RUNNERS ON BASE",
+      description: "⚡ SCORING OPPORTUNITY!",
       conditions: (state: MLBGameState) => state.runners.first || state.runners.second || state.runners.third
     },
     {
@@ -764,19 +764,16 @@ export class MLBEngine extends BaseSportEngine {
     p *= weatherMultiplier; // Apply enhanced weather carry multiplier
     const tier = classifyTier(p);
     
-    // Only fire for Tier A power hitters in high-leverage situations
-    if (tier !== "A" || gameState.outs >= 2) return [];
+    // Only fire for Tier A power hitters (35+ HRs) in any situation - matching ChirpBetaBot logic
+    if (tier !== "A" || batter.stats.hr < 35) return [];
     
-    // Additional filters for on-deck alerts
-    const isHighLeverage = ctx.risp || gameState.inning >= 7 || ctx.scoreDiffAbs <= 1;
-    if (!isHighLeverage) return [];
-    
-    let priority = 85; // Slightly lower than current at-bat alerts
-    if (ctx.risp) priority += 3;
+    let priority = 90; // High priority for elite power hitters
+    if (ctx.risp) priority += 5;
     if (gameState.inning >= 8 || ctx.scoreDiffAbs <= 1) priority += 3;
-    priority = Math.min(priority, 95);
+    priority = Math.min(priority, 100);
     
-    const description = `🚀 AI: Power Hitter — ${batter.name} (${batter.stats.hr} HRs) COMING UP`;
+    // Match ChirpBetaBot format exactly: "Junior Caminero (39 HRs) COMING UP - Elite Slugger (39 HRs)!"
+    const description = `🚀 AI: Power Hitter — High-Confidence!\n${batter.name} (${batter.stats.hr} HRs) COMING UP - Elite Slugger (${batter.stats.hr} HRs)!`;
     
     const alert: AlertConfig = {
       type: "POWER_HITTER_ON_DECK",
@@ -809,7 +806,7 @@ export class MLBEngine extends BaseSportEngine {
           lateInning: true,
           starBatter: false, // Disabled by default - star batter alerts were duplicating
           powerHitter: true, // ✅ Enable Power Hitter alerts by default
-          powerHitterOnDeck: false, // ✅ Enable Power Hitter On Deck alerts (opt-in)
+          powerHitterOnDeck: true, // ✅ Enable Power Hitter On Deck alerts to match ChirpBetaBot
           runnersOnBase: true,
           inningChange: false, // Disabled by default
           re24Advanced: true,  // ✅ Enable RE24 hybrid system
@@ -917,6 +914,16 @@ export class MLBEngine extends BaseSportEngine {
             }
           } catch (e) {
             console.error("POWER_HITTER_ON_DECK compute error:", e);
+          }
+
+          // Debug current game state like ChirpBetaBot
+          if (gameState.runners.first || gameState.runners.second || gameState.runners.third || gameState.currentBatter?.stats.hr >= 35) {
+            console.log(`🔍 POTENTIAL ALERT SITUATION - ${gameState.awayTeam} @ ${gameState.homeTeam}:`);
+            console.log(`   Runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third}, Outs=${gameState.outs}`);
+            if (gameState.currentBatter) {
+              console.log(`   Batter: ${gameState.currentBatter.name} - ${gameState.currentBatter.stats.hr} HRs, ${gameState.currentBatter.stats.avg.toFixed(3)} AVG`);
+            }
+            console.log(`   Settings enabled: RISP=${(await storage.getSettingsBySport(this.sport))?.alertTypes?.risp}, PowerHitter=${(await storage.getSettingsBySport(this.sport))?.alertTypes?.powerHitter}`);
           }
 
           if (triggeredAlerts.length > 0) {
