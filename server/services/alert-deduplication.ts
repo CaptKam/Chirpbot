@@ -111,49 +111,6 @@ export class AlertDeduplication {
       scope: { level: 'plate-appearance', timeWindow: 3000, maxAlerts: 1 },
       escalationOnly: false,
       contextFactors: ['batter', 'inning', 'pitcher']
-    },
-    // Tennis alert deduplication rules
-    {
-      alertType: 'TENNIS_BREAK_POINT',
-      scope: { level: 'plate-appearance', timeWindow: 15000, maxAlerts: 1 },
-      escalationOnly: true,
-      contextFactors: ['matchId', 'stablePointKey']
-    },
-    {
-      alertType: 'TENNIS_DOUBLE_BREAK_POINT',
-      scope: { level: 'plate-appearance', timeWindow: 15000, maxAlerts: 1 },
-      escalationOnly: true,
-      contextFactors: ['matchId', 'stablePointKey']
-    },
-    {
-      alertType: 'TENNIS_SET_POINT',
-      scope: { level: 'plate-appearance', timeWindow: 15000, maxAlerts: 1 },
-      escalationOnly: true,
-      contextFactors: ['matchId', 'stablePointKey']
-    },
-    {
-      alertType: 'TENNIS_MATCH_POINT',
-      scope: { level: 'plate-appearance', timeWindow: 15000, maxAlerts: 1 },
-      escalationOnly: true,
-      contextFactors: ['matchId', 'stablePointKey']
-    },
-    {
-      alertType: 'TENNIS_TIEBREAK_START',
-      scope: { level: 'game', timeWindow: 30000, maxAlerts: 1 },
-      escalationOnly: false,
-      contextFactors: ['matchId', 'set']
-    },
-    {
-      alertType: 'TENNIS_MOMENTUM_SURGE',
-      scope: { level: 'inning', timeWindow: 60000, maxAlerts: 1 },
-      escalationOnly: false,
-      contextFactors: ['matchId', 'set', 'side']
-    },
-    {
-      alertType: 'TENNIS_AI_OPPORTUNITY',
-      scope: { level: 'point', timeWindow: 20000, maxAlerts: 1 },
-      escalationOnly: true,
-      contextFactors: ['matchId', 'set', 'game', 'server', 'stablePointKey']
     }
   ];
 
@@ -379,34 +336,6 @@ export class AlertDeduplication {
     if (cleanedCount > 0) {
       console.log(`🧹 Cleaned up ${cleanedCount} expired alert entries`);
     }
-  }
-
-  /**
-   * Simplified method for edge-triggered alerts (used by Tennis engine)
-   */
-  shouldAllow(
-    alertType: string,
-    gameId: string,
-    dedupKey: string,
-    options: { escalationOnly?: boolean; timeWindow?: number } = {}
-  ): boolean {
-    const rule = this.DEDUP_RULES.find(r => r.alertType === alertType);
-    const timeWindow = options.timeWindow || rule?.scope.timeWindow || 15000;
-    
-    const existing = this.recentAlerts.get(dedupKey);
-    const now = Date.now();
-
-    if (existing && (now - existing.timestamp < timeWindow)) {
-      return false; // Still within dedup window
-    }
-
-    // Update tracking
-    this.recentAlerts.set(dedupKey, {
-      timestamp: now,
-      count: existing ? existing.count + 1 : 1
-    });
-
-    return true;
   }
 
   /**

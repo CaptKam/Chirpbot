@@ -11,7 +11,6 @@ import Alerts from "./pages/alerts";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
-import TennisMatchesPage from "./pages/tennis-matches";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
@@ -100,36 +99,25 @@ function RegularAppContent() {
             return;
           }
           
-          // Smart popup policy: Only show toasts for high-priority alerts
-          const priority = alertData.priority || alertData.aiConfidence || 50;
-          const isHighPriorityType = ['BASES_LOADED', 'EXTRA_INNINGS', 'POWER_HITTER_AT_BAT'].includes(alertData.type);
-          const isHighPriority = priority >= 85 || isHighPriorityType;
+          const gameInfo = alertData.gameInfo || {};
+          const score = gameInfo.score ? `${gameInfo.awayTeam} ${gameInfo.score.away} - ${gameInfo.score.home} ${gameInfo.homeTeam}` : alertData.title;
+          const inningInfo = gameInfo.inning ? `Inning ${gameInfo.inning} ${gameInfo.inningState === 'top' ? '▲' : '▼'}` : '';
           
-          // Only show toast for high priority alerts, everything else goes to feed silently
-          if (isHighPriority) {
-            const gameInfo = alertData.gameInfo || {};
-            const score = gameInfo.score ? 
-              `${gameInfo.awayTeam} ${gameInfo.score.away} - ${gameInfo.score.home} ${gameInfo.homeTeam}` : 
-              alertData.title;
-            const inningInfo = gameInfo.inning ? 
-              `Inning ${gameInfo.inning} ${gameInfo.inningState === 'top' ? '▲' : '▼'}` : '';
-            
-            toast({
-              title: `⚡ ${alertData.type.replace(/_/g, ' ')}`,
-              description: (
-                <div className="space-y-1">
-                  <div className="font-semibold">{alertData.description}</div>
-                  <div className="text-xs opacity-80">{score}</div>
-                  {inningInfo && <div className="text-xs opacity-80">{inningInfo}</div>}
-                </div>
-              ),
-              action: (
-                <ToastAction altText="View Alerts" onClick={() => setLocation('/alerts')}>
-                  View
-                </ToastAction>
-              ),
-            });
-          }
+          toast({
+            title: `⚡ ${alertData.type}`,
+            description: (
+              <div className="space-y-1">
+                <div className="font-semibold">{alertData.description}</div>
+                <div className="text-xs opacity-80">{score}</div>
+                {inningInfo && <div className="text-xs opacity-80">{inningInfo}</div>}
+              </div>
+            ),
+            action: (
+              <ToastAction altText="View Alerts" onClick={() => setLocation('/alerts')}>
+                View
+              </ToastAction>
+            ),
+          });
           break;
         case 'team_monitoring_changed':
           // Handle team monitoring changes if needed

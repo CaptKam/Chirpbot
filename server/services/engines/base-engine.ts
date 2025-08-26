@@ -53,18 +53,9 @@ export abstract class BaseSportEngine implements SportEngine {
     for (const config of this.alertConfigs) {
       console.log(`🔍 Processing alert: ${config.type} (settingKey: ${config.settingKey})`);
       
-      // 🎯 FIRST: Check master alert control (global override)
-      if (config.settingKey) {
-        const masterControl = await storage.getMasterAlertControl(config.settingKey, this.sport);
-        if (masterControl && !masterControl.enabled) {
-          console.log(`🚫 MASTER CONTROL: Alert type '${config.type}' globally disabled - master control blocks all alerts`);
-          continue;
-        }
-      }
-      
-      // SECOND: Check if this alert type is enabled in user settings
+      // Check if this alert type is enabled in settings
       if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
-        console.log(`⏭️ Alert type '${config.type}' skipped - user setting '${config.settingKey}' is disabled`);
+        console.log(`⏭️ Alert type '${config.type}' skipped - setting '${config.settingKey}' is disabled`);
         continue;
       }
 

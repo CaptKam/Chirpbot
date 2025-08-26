@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Flame, Wind, Gauge, Clock3, User, AlertTriangle, Zap, TriangleAlert, TrendingUp } from "lucide-react";
+import { Flame, Wind, Gauge, Clock3, User, AlertTriangle, Zap, TriangleAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,8 +14,6 @@ import { Pill } from "@/components/Pill";
 import { RunnersDiamond } from "@/components/RunnersDiamond";
 import { toVM } from "@/adapters/base";
 import "@/adapters/mlb"; // Import to register the adapter
-import "@/adapters/tennis"; // Import to register the tennis adapter
-import { useAlertBatcher, type IncomingAlert } from "@/hooks/use-alert-batcher";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
@@ -23,7 +21,6 @@ const FILTER_OPTIONS = [
   { id: "nfl", label: "NFL", active: false },
   { id: "nba", label: "NBA", active: false },
   { id: "nhl", label: "NHL", active: false },
-  { id: "tennis", label: "Tennis", active: false },
 ];
 
 export default function Alerts() {
@@ -31,7 +28,6 @@ export default function Alerts() {
   const queryClient = useQueryClient();
   const seenAlertsRef = useRef(new Set<string>());
   const { lastMessage } = useWebSocket();
-  const { feed, ingest } = useAlertBatcher();
 
   const { data: alerts = [], isLoading, error } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
@@ -82,56 +78,39 @@ export default function Alerts() {
     return () => clearTimeout(timer);
   }, []); // Only run once when component mounts
 
-  // Handle real-time alert updates via WebSocket with smart batching
+  // Handle real-time alert updates via WebSocket
   useEffect(() => {
     if (lastMessage && lastMessage.type === 'new_alert') {
       // Check if the data is actually an Alert (has required properties)
       const data = lastMessage.data;
       if (data && 'type' in data && 'sport' in data && 'title' in data && 'id' in data) {
-        const alert = data as unknown as Alert;
-        
-        // Convert to IncomingAlert format for batching
-        const alertData = alert as any; // Type assertion for WebSocket data
-        const incomingAlert: IncomingAlert = {
-          id: alert.id,
-          type: alert.type,
-          priority: alertData.aiConfidence || alertData.priority || 50,
-          title: alert.title,
-          description: alert.description,
-          createdAt: typeof alert.timestamp === 'string' ? alert.timestamp : new Date(alert.timestamp).toISOString(),
-          sport: alert.sport,
-          confidence: alertData.aiConfidence || alertData.priority || undefined,
-          aiContext: alertData.aiContext || undefined,
-          seen: false,
-          userId: undefined,
-          gameInfo: {
-            gamePk: parseInt(alert.id.split('-')[1]) || undefined,
-            homeTeam: alert.gameInfo?.homeTeam,
-            awayTeam: alert.gameInfo?.awayTeam,
-            inning: alert.gameInfo?.inning ? parseInt(alert.gameInfo.inning) : undefined,
-            inningState: alert.gameInfo?.inning?.includes('▼') ? 'bottom' : 'top',
-          }
-        };
-        
-        // Use the alert batcher for smart deduplication and escalation
-        ingest(incomingAlert);
-        
-        // Also update the original query cache for compatibility
+        const newAlert = data as unknown as Alert;
+      
+        // Update the alerts list in the query cache to add the new alert at the beginning
         queryClient.setQueryData<Alert[]>(["/api/alerts"], (oldAlerts) => {
-          const alertWithDefaults = { ...alert, seen: false, sentToTelegram: false };
+          // Add default properties for WebSocket alert data
+          const alertWithDefaults = { ...newAlert, seen: false, sentToTelegram: false };
+          
           if (!oldAlerts) return [alertWithDefaults];
           
-          const exists = oldAlerts.some(a => a.id === alertWithDefaults.id);
+          // Check if alert already exists to prevent duplicates (check by ID and timestamp)
+          const exists = oldAlerts.some(alert => 
+            alert.id === alertWithDefaults.id || 
+            (alert.title === alertWithDefaults.title && 
+             alert.timestamp === alertWithDefaults.timestamp)
+          );
           if (exists) return oldAlerts;
           
+          // Add new alert at the beginning of the list
           return [alertWithDefaults, ...oldAlerts];
         });
       
-        // Refresh queries
+        // Refresh both queries to ensure consistency
+        queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
         queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
       }
     }
-  }, [lastMessage, queryClient, ingest]);
+  }, [lastMessage, queryClient]);
 
 
   const toggleFilter = (filterId: string) => {
@@ -312,23 +291,13 @@ export default function Alerts() {
                       "dark bg-card text-card-foreground",
                       alert.seen
                         ? "opacity-80"
-                        : "ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20",
-                      // Check for escalation indicator
-                      (alert as any).__escalated && "ring-2 ring-fuchsia-400/60 animate-pulse"
+                        : "ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20"
                     )}
                   >
                     {/* NEW badge */}
                     {vm.isNew && (
                       <span className="absolute top-2 right-2 bg-emerald-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full">
                         NEW
-                      </span>
-                    )}
-                    
-                    {/* Escalation badge */}
-                    {(alert as any).__escalated && (
-                      <span className="absolute top-2 right-12 bg-fuchsia-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <TrendingUp className="w-2.5 h-2.5" />
-                        UPDATED
                       </span>
                     )}
 

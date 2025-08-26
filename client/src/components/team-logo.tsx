@@ -1,19 +1,17 @@
 import React from 'react';
-import cn from 'clsx'; // Assuming clsx is available for conditional class merging
 
 interface TeamLogoProps {
   teamName: string;
   abbreviation?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  country?: string; // Added for tennis player country flag
 }
 
 // Team name to abbreviation mapping for when API doesn't provide abbreviations
 const teamNameToAbbr: Record<string, string> = {
   // MLB Teams
   'Los Angeles Dodgers': 'LAD',
-  'San Francisco Giants': 'SF',
+  'San Francisco Giants': 'SF', 
   'New York Yankees': 'NYY',
   'Boston Red Sox': 'BOS',
   'Chicago Cubs': 'CHC',
@@ -43,7 +41,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Oakland Athletics': 'OAK',
   'Minnesota Twins': 'MIN',
   'Tampa Bay Rays': 'TB',
-
+  
   // NFL Teams
   'Kansas City Chiefs': 'KC',
   'Buffalo Bills': 'BUF',
@@ -66,8 +64,8 @@ const teamNameToAbbr: Record<string, string> = {
   'Atlanta Falcons': 'ATL',
   'Chicago Bears': 'CHI',
   'Minnesota Vikings': 'MIN',
-
-  // NBA Teams
+  
+  // NBA Teams  
   'Los Angeles Lakers': 'LAL',
   'Boston Celtics': 'CEL',
   'Golden State Warriors': 'GSW',
@@ -76,7 +74,7 @@ const teamNameToAbbr: Record<string, string> = {
   'New York Knicks': 'NYK',
   'Brooklyn Nets': 'BKN',
   'Philadelphia 76ers': 'PHI',
-
+  
   // NHL Teams
   'Los Angeles Kings': 'LAK',
   'Anaheim Ducks': 'ANA',
@@ -152,36 +150,18 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
   if (sport && espnLogos[sport] && espnLogos[sport][teamAbbr]) {
     return espnLogos[sport][teamAbbr];
   }
-
+  
   // Fallback: try to find logo in any sport (for backwards compatibility)
   for (const [sportKey, logos] of Object.entries(espnLogos)) {
     if (logos[teamAbbr]) {
       return logos[teamAbbr];
     }
   }
-
+  
   return null;
 };
 
-// Placeholder for getTeamLogo function if it's used in the new TeamLogo implementation
-// This needs to be defined elsewhere or adapted if the new logic doesn't rely on it.
-// For now, assuming a simple placeholder that might return null.
-const getTeamLogo = (team: string): string | null => {
-  // This function was likely intended for the older TeamLogo implementation.
-  // We will prioritize getTeamLogoUrl and country flags in the new implementation.
-  // If this is still needed for specific custom logos not covered by ESPN, it should be populated.
-  return null;
-};
-
-// Placeholder for getTeamInitials function if it's used in the new TeamLogo implementation
-// This needs to be defined elsewhere or adapted.
-const getTeamInitials = (team: string): string => {
-  // Simple placeholder: returns first 3 letters of team name in uppercase
-  return team.substring(0, 3).toUpperCase();
-};
-
-
-export function TeamLogo({ teamName, abbreviation, size = 'md', className = '', country }: TeamLogoProps) {
+export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }: TeamLogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -413,7 +393,7 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '', 
       </svg>
     ),
 
-    // NBA Teams
+    // NBA Teams  
     'LAL': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#552583" stroke="#FDB927" strokeWidth="4"/>
@@ -484,52 +464,39 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '', 
 
   // Get abbreviation from prop or lookup from team name
   const teamAbbr = abbreviation || teamNameToAbbr[teamName];
-
+  
   // Try to get the official team logo URL first, prioritizing MLB for sports betting app
   const logoUrl = getTeamLogoUrl(teamAbbr, 'MLB');
-
-  // For tennis players, try to use country flag
-  const countryFlagUrl = country && country !== 'UNK' ?
-    `https://flagcdn.com/32x24/${country.toLowerCase()}.png` : null;
-
-  const displayUrl = logoUrl || countryFlagUrl;
-
-  if (displayUrl) {
-    // Use official team logo from ESPN or country flag
+  
+  if (logoUrl) {
+    // Use official team logo from ESPN
     return (
-      <img
-        src={displayUrl}
-        alt={country ? `${country} flag` : `${teamName} logo`}
-        className={`${sizeClasses[size]} ${className} object-contain rounded-full`}
+      <img 
+        src={logoUrl} 
+        alt={teamName}
+        className={`${sizeClasses[size]} ${className} object-contain`}
         onError={(e) => {
-          console.log(`Failed to load logo or flag for ${teamName} (${country || 'no country'})`);
-          e.currentTarget.style.display = 'none'; // Hide the broken image
-          // Ensure the fallback div is visible if the image fails
-          const fallbackDiv = e.currentTarget.nextElementSibling as HTMLElement | null;
-          if (fallbackDiv && fallbackDiv.classList.contains('hidden')) {
-            fallbackDiv.classList.remove('hidden');
-          }
+          // If image fails to load, hide it and show fallback
+          console.log(`Failed to load logo for ${teamName}`);
+          e.currentTarget.style.display = 'none';
         }}
       />
     );
   }
-
+  
   // Generic fallback logo with better styling
   const defaultLogo = (
     <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
-      <span className="text-white font-black text-xs">{teamAbbr || getTeamInitials(teamName)}</span>
+      <span className="text-white font-black text-xs">{teamAbbr || teamName.slice(0, 3).toUpperCase()}</span>
     </div>
   );
 
-  const selectedLogo = teamAbbr && logoMap[teamAbbr];
-
+  const selectedLogo = logoMap[teamAbbr];
+  
   if (!selectedLogo) {
-    console.log(`No specific logo mapping found for team: ${teamName} (${teamAbbr}), using fallback`);
+    console.log(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
     return defaultLogo;
   }
-
-  // Clone the selected logo to apply size and class props
-  return React.cloneElement(selectedLogo, {
-    className: cn(selectedLogo.props.className, sizeClasses[size], className),
-  });
+  
+  return selectedLogo;
 }

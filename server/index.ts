@@ -81,24 +81,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Validate critical environment variables
-  const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
-  const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-  
-  if (missingEnvVars.length > 0) {
-    console.error('❌ Missing required environment variables:', missingEnvVars);
-    console.error('Please check your .env file and ensure all required variables are set.');
-  }
-  
-  // Log environment status
-  console.log('🔧 Environment Status:');
-  console.log(`   DATABASE_URL: ${process.env.DATABASE_URL ? '✅ Set' : '❌ Missing'}`);
-  console.log(`   SESSION_SECRET: ${process.env.SESSION_SECRET ? '✅ Set' : '❌ Missing'}`);
-  console.log(`   OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? '✅ Set' : '⚠️ Missing (AI features disabled)'}`);
-  console.log(`   TELEGRAM_BOT_TOKEN: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ Set' : '⚠️ Missing (Telegram disabled)'}`);
-  console.log(`   OPENWEATHER_API_KEY: ${process.env.OPENWEATHER_API_KEY ? '✅ Set' : '⚠️ Missing (Weather disabled)'}`);
-  console.log(`   SPORTS_ENABLED: ${process.env.SPORTS_ENABLED || 'MLB,TENNIS (default)'}`);
-
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

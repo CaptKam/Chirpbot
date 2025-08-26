@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, AlertTriangle, Settings, Trophy } from "lucide-react";
+import { Calendar, AlertTriangle, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 export function BottomNavigation() {

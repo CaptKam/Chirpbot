@@ -14,87 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import type { Settings } from "@/types";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "TENNIS"];
-
-// Extract categories component to prevent re-render issues
-function AlertCategoriesSection({ activeSport, settings, enabledAlertKeys, expandedCategories, toggleCategory, handleAlertTypeToggle }: {
-  activeSport: string;
-  settings: any;
-  enabledAlertKeys: { enabledKeys: string[] } | undefined;
-  expandedCategories: Set<string>;
-  toggleCategory: (category: string) => void;
-  handleAlertTypeToggle: (alertType: string, enabled: boolean) => void;
-}) {
-  const allAlertConfigs = ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] || [];
-  const enabledKeys = enabledAlertKeys?.enabledKeys || [];
-  
-  // Filter alert configs to only show those enabled in master controls
-  const alertConfigs = allAlertConfigs.filter(config => 
-    enabledKeys.length === 0 || enabledKeys.includes(config.key) // Show all if no master controls loaded, otherwise filter
-  );
-  
-  const categories = Array.from(new Set(alertConfigs.map(config => config.category || 'General')));
-  
-  return (
-    <>
-      {categories.map(category => {
-        const isExpanded = expandedCategories.has(category);
-        const categoryAlerts = alertConfigs.filter(config => (config.category || 'General') === category);
-        
-        return (
-          <div key={`${activeSport}-${category}`} className="mb-6">
-            <button
-              onClick={() => toggleCategory(category)}
-              className="w-full flex items-center justify-between p-3 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl hover:bg-white/10 transition-all duration-200 group"
-              data-testid={`category-toggle-${category.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              <h3 className="text-md font-bold text-emerald-400 uppercase tracking-wide group-hover:text-emerald-300 transition-colors">
-                {category}
-              </h3>
-              <div className="flex items-center space-x-2">
-                <Badge className="bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-emerald-500/30">
-                  {categoryAlerts.length}
-                </Badge>
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
-                )}
-              </div>
-            </button>
-            
-            {isExpanded && (
-              <div className="mt-3 space-y-3">
-                {categoryAlerts.map((alertConfig) => (
-                  <Card key={`${activeSport}-${alertConfig.key}`} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-colors duration-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 pr-4">
-                        <h4 className="font-bold text-slate-100" data-testid={`alert-type-${alertConfig.key}`}>
-                          {alertConfig.label}
-                        </h4>
-                        <p className="text-sm text-slate-300 mt-1 leading-relaxed">
-                          {alertConfig.description}
-                        </p>
-                      </div>
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Switch
-                          checked={!!(settings.alertTypes as any)[alertConfig.key]}
-                          onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
-                          data-testid={`toggle-${alertConfig.key}`}
-                          className="data-[state=checked]:bg-emerald-500 flex-shrink-0"
-                        />
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </>
-  );
-}
+const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
@@ -168,24 +88,10 @@ const ALERT_TYPE_CONFIG = {
     { key: "nhlCloseGame", label: "NHL Close Game", description: "One-goal games in final period", category: "Game Situations" },
     { key: "emptyNet", label: "Empty Net", description: "Goalie pulled for extra attacker", category: "Special Situations" },
   ],
-  TENNIS: [
-    { key: "breakPoint", label: "Break Point", description: "Opportunity to break opponent's serve", category: "Game Situations" },
-    { key: "setPoint", label: "Set Point", description: "Point to win the set", category: "Game Situations" },
-    { key: "matchPoint", label: "Match Point", description: "Point to win the entire match", category: "Game Situations" },
-    { key: "tiebreak", label: "Tiebreak", description: "Tiebreak games (7-point format)", category: "Game Situations" },
-    { key: "momentum", label: "Momentum Shift", description: "Significant momentum changes", category: "Game Flow" },
-    { key: "comeback", label: "Comeback Alert", description: "Player mounting significant comeback", category: "Game Flow" },
-    { key: "serve", label: "Serving Performance", description: "Exceptional serving statistics", category: "Player Performance" },
-    { key: "rally", label: "Extended Rally", description: "Long rallies and exceptional shots", category: "Special Events" },
-    { key: "aiOpportunity", label: "🤖 AI Tennis Opportunities", description: "AI-powered insights for high-leverage moments before they become obvious", category: "AI Predictions" },
-  ],
 };
 
 export default function Settings() {
-  const [activeSport, setActiveSport] = useState(() => {
-    // Persist sport selection in localStorage
-    return localStorage.getItem("chirpbot-settings-sport") || "MLB";
-  });
+  const [activeSport, setActiveSport] = useState("MLB");
   const [telegramStatus, setTelegramStatus] = useState<boolean | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["Game Situations", "AI Predictions"]));
   const [telegramBotToken, setTelegramBotToken] = useState("");
@@ -433,10 +339,7 @@ export default function Settings() {
           {SPORTS.map((sport) => (
             <button
               key={sport}
-              onClick={() => {
-                setActiveSport(sport);
-                localStorage.setItem("chirpbot-settings-sport", sport);
-              }}
+              onClick={() => setActiveSport(sport)}
               data-testid={`sport-tab-${sport.toLowerCase()}`}
               className={`px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors ${
                 activeSport === sport
@@ -475,14 +378,73 @@ export default function Settings() {
               </h2>
               
               {/* Group alerts by category */}
-              <AlertCategoriesSection 
-                activeSport={activeSport}
-                settings={settings}
-                enabledAlertKeys={enabledAlertKeys}
-                expandedCategories={expandedCategories}
-                toggleCategory={toggleCategory}
-                handleAlertTypeToggle={handleAlertTypeToggle}
-              />
+              {(() => {
+                const allAlertConfigs = ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] || [];
+                const enabledKeys = enabledAlertKeys?.enabledKeys || [];
+                
+                // Filter alert configs to only show those enabled in master controls
+                const alertConfigs = allAlertConfigs.filter(config => 
+                  enabledKeys.length === 0 || enabledKeys.includes(config.key) // Show all if no master controls loaded, otherwise filter
+                );
+                
+                const categories = Array.from(new Set(alertConfigs.map(config => config.category || 'General')));
+                
+                return categories.map(category => {
+                  const isExpanded = expandedCategories.has(category);
+                  const categoryAlerts = alertConfigs.filter(config => (config.category || 'General') === category);
+                  
+                  return (
+                    <div key={category} className="mb-6">
+                      <button
+                        onClick={() => toggleCategory(category)}
+                        className="w-full flex items-center justify-between p-3 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl hover:bg-white/10 transition-all duration-200 group"
+                        data-testid={`category-toggle-${category.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <h3 className="text-md font-bold text-emerald-400 uppercase tracking-wide group-hover:text-emerald-300 transition-colors">
+                          {category}
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <Badge className="bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full text-xs font-medium ring-1 ring-emerald-500/30">
+                            {categoryAlerts.length}
+                          </Badge>
+                          {isExpanded ? (
+                            <ChevronUp className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+                          )}
+                        </div>
+                      </button>
+                      
+                      {isExpanded && (
+                        <div className="mt-3 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                          {categoryAlerts.map((alertConfig) => (
+                            <Card key={alertConfig.key} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1 pr-4">
+                                  <h4 className="font-bold text-slate-100" data-testid={`alert-type-${alertConfig.key}`}>
+                                    {alertConfig.label}
+                                  </h4>
+                                  <p className="text-sm text-slate-300 mt-1 leading-relaxed">
+                                    {alertConfig.description}
+                                  </p>
+                                </div>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <Switch
+                                    checked={!!(settings.alertTypes as any)[alertConfig.key]}
+                                    onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
+                                    data-testid={`toggle-${alertConfig.key}`}
+                                    className="data-[state=checked]:bg-emerald-500 flex-shrink-0"
+                                  />
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             {/* Personal Telegram Configuration */}

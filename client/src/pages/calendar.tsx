@@ -11,7 +11,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { removeCity } from "@/lib/team-utils";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "TENNIS"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
 export default function Calendar() {

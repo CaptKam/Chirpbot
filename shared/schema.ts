@@ -106,7 +106,6 @@ export const alerts = pgTable("alerts", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   sentToTelegram: boolean("sent_to_telegram").notNull().default(false),
   seen: boolean("seen").notNull().default(false),
-  dedupHash: varchar("dedup_hash", { length: 64 }),
 });
 
 export const settings = pgTable("settings", {
@@ -147,15 +146,6 @@ export const settings = pgTable("settings", {
     powerPlay: boolean;
     nhlCloseGame: boolean;
     emptyNet: boolean;
-    
-    // Tennis Alert Types
-    breakPoint: boolean;
-    doubleBreakPoint: boolean;
-    setPoint: boolean;
-    matchPoint: boolean;
-    tiebreakStart: boolean;
-    momentumSurge: boolean;
-    aiOpportunity: boolean;
   }>().notNull(),
   telegramEnabled: boolean("telegram_enabled").notNull().default(false),
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),
@@ -171,29 +161,6 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
   homeTeamName: text("home_team_name").notNull(),
   awayTeamName: text("away_team_name").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-// User monitored matches (for Tennis and other match-based sports)
-export const userMonitoredMatches = pgTable("user_monitored_matches", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  sport: text("sport").notNull().default("TENNIS"),
-  matchId: text("match_id").notNull(),
-  isMonitoring: boolean("is_monitoring").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-}, (table) => ({
-  unique: sql`UNIQUE(${table.userId}, ${table.sport}, ${table.matchId})`,
-}));
-
-// Outbox table for reliable delivery of notifications
-export const outbox = pgTable("outbox", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  kind: text("kind").notNull(), // 'websocket', 'telegram'
-  payloadJson: text("payload_json").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  dispatchedAt: timestamp("dispatched_at"),
-  failureCount: integer("failure_count").notNull().default(0),
-  lastError: text("last_error"),
 });
 
 // Insert schemas
@@ -234,19 +201,7 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
 });
 
-export const insertOutboxSchema = createInsertSchema(outbox).omit({
-  id: true,
-  createdAt: true,
-  dispatchedAt: true,
-  failureCount: true,
-});
-
 export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTeams).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertUserMonitoredMatchSchema = createInsertSchema(userMonitoredMatches).omit({
   id: true,
   createdAt: true,
 });
@@ -266,9 +221,6 @@ export type Settings = typeof settings.$inferSelect;
 
 export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
 export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
-
-export type InsertUserMonitoredMatch = z.infer<typeof insertUserMonitoredMatchSchema>;
-export type UserMonitoredMatch = typeof userMonitoredMatches.$inferSelect;
 
 export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
 export type AiSettings = typeof aiSettings.$inferSelect;
@@ -311,47 +263,6 @@ export interface Game {
   gamePk?: number;
 }
 
-// Tennis-specific types
-export interface TennisMatch {
-  matchId: string;
-  sport: 'TENNIS';
-  players: {
-    home: {
-      id: string;
-      name: string;
-      country?: string;
-      ranking?: number;
-    };
-    away: {
-      id: string;
-      name: string;
-      country?: string;
-      ranking?: number;
-    };
-  };
-  status: 'scheduled' | 'live' | 'final';
-  currentSet: number;
-  sets: {
-    home: number[];
-    away: number[];
-  };
-  gamesInSet: {
-    home: number;
-    away: number;
-  };
-  score: {
-    home: string; // e.g., "40", "15", "30", "ADV", "DEUCE"
-    away: string;
-  };
-  isTiebreak: boolean;
-  serving: 'home' | 'away';
-  tournament?: string;
-  surface?: 'Hard' | 'Clay' | 'Grass' | 'Carpet';
-  startTime: string;
-  venue?: string;
-  isMonitoring?: boolean;
-}
-
 export interface GameDay {
   date: string;
   games: Game[];
@@ -362,7 +273,7 @@ export interface GameDay {
 // AI Settings per sport for fine-tuned control
 export const aiSettings = pgTable("ai_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL, TENNIS
+  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL
   enabled: boolean("enabled").notNull().default(false),
   dryRun: boolean("dry_run").notNull().default(true),
   rateLimitMs: integer("rate_limit_ms").notNull().default(30000),
@@ -375,13 +286,6 @@ export const aiSettings = pgTable("ai_settings", {
   temperature: integer("temperature").notNull().default(70), // 0-100 scale
   updatedBy: varchar("updated_by"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  // Tennis AI opportunity settings
-  bettingOppsEnabled: boolean("betting_opps_enabled").notNull().default(false),
-  oppMinPriority: integer("opp_min_priority").notNull().default(88),
-  oppCooldownMs: integer("opp_cooldown_ms").notNull().default(90000),
-  oppMaxPerSet: integer("opp_max_per_set").notNull().default(3),
-  noviceMode: boolean("novice_mode").notNull().default(true),
-  dailyTokenCap: integer("daily_token_cap").default(200000)
 });
 
 // AI Learning Logs to track all AI interactions

@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, type UserMonitoredMatch, type InsertUserMonitoredMatch, type AiSettings, type InsertAiSettings, type AiLearningLog, type InsertAiLearningLog, type AuditLog, type InsertAuditLog, type MasterAlertControl, type InsertMasterAlertControl, users, userMonitoredTeams, userMonitoredMatches, teams, alerts, settings, aiSettings, aiLearningLogs, auditLogs, masterAlertControls } from "@shared/schema";
+import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, type AiSettings, type InsertAiSettings, type AiLearningLog, type InsertAiLearningLog, type AuditLog, type InsertAuditLog, type MasterAlertControl, type InsertMasterAlertControl, users, userMonitoredTeams, teams, alerts, settings, aiSettings, aiLearningLogs, auditLogs, masterAlertControls } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, sql, desc } from "drizzle-orm";
@@ -29,11 +29,6 @@ export interface IStorage {
   removeUserMonitoredGame(userId: string, gameId: string): Promise<void>;
   clearAllUserMonitoredGames(userId: string): Promise<void>;
   isGameMonitoredByUser(userId: string, gameId: string): Promise<boolean>;
-
-  // User Monitored Matches (Tennis and other match-based sports)
-  getUsersMonitoringMatch(matchId: string, sport: string): Promise<UserMonitoredMatch[]>;
-  setUserMonitoredMatch(userId: string, sport: string, matchId: string, isMonitoring: boolean): Promise<void>;
-  getUserMonitoredMatches(userId: string, sport: string): Promise<UserMonitoredMatch[]>;
 
   // Alerts
   getAllAlerts(): Promise<Alert[]>;
@@ -214,7 +209,7 @@ export class MemStorage implements IStorage {
     });
 
     // Default settings for each sport
-    const sports = ["MLB", "NFL", "NBA", "NHL", "TENNIS"];
+    const sports = ["MLB", "NFL", "NBA", "NHL"];
     sports.forEach(sport => {
       const id = randomUUID();
       this.settings.set(sport, {
@@ -255,14 +250,6 @@ export class MemStorage implements IStorage {
           powerPlay: sport === "NHL",
           nhlCloseGame: sport === "NHL",
           emptyNet: sport === "NHL",
-
-          // Tennis Alert Types
-          breakPoint: sport === "TENNIS",
-          doubleBreakPoint: sport === "TENNIS",
-          setPoint: sport === "TENNIS",
-          matchPoint: sport === "TENNIS",
-          tiebreakStart: sport === "TENNIS",
-          momentumSurge: sport === "TENNIS",
         },
         telegramEnabled: true,
         pushNotificationsEnabled: true,
@@ -461,7 +448,7 @@ export class MemStorage implements IStorage {
         priority: insertAlert.gameInfo.priority as number | undefined,
         scoringProbability: insertAlert.gameInfo.scoringProbability as number | undefined,
         currentPitcher: insertAlert.gameInfo.currentPitcher as { id: number; name: string; throwHand: string; stats: { era: number; whip: number; strikeOuts: number; wins: number; losses: number; }; } | undefined,
-        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; slg: number; }; } | undefined,
+        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; }; } | undefined,
       },
       weatherData: insertAlert.weatherData ? {
         temperature: insertAlert.weatherData.temperature,
@@ -739,7 +726,6 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     // Initialize master alert controls when the database storage is created
     this.initializeMasterAlertControls().catch(console.error);
-    this.ensureDefaultSettingsForTennis().catch(console.error);
   }
 
   private async initializeMasterAlertControls() {
@@ -825,54 +811,6 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error initializing master alert controls:", error);
     }
-  }
-
-  private async ensureDefaultSettingsForTennis() {
-    const existing = await this.getSettingsBySport('TENNIS');
-    if (existing) return;
-
-    await this.createSettings({
-      sport: 'TENNIS',
-      alertTypes: {
-        // enable the six tennis alert types
-        breakPoint: true,
-        doubleBreakPoint: true,
-        setPoint: true,
-        matchPoint: true,
-        tiebreakStart: true,
-        momentumSurge: true,
-
-        // keep other sports defaulted to false
-        risp: false,
-        homeRun: false,
-        lateInning: false,
-        closeGame: false,
-        runnersOnBase: false,
-        hits: false,
-        scoring: false,
-        inningChange: false,
-        homeRunAlert: false,
-        strikeouts: false,
-        powerHitterOnDeck: false,
-        useRE24System: false,
-        re24Level1: false,
-        re24Level2: false,
-        re24Level3: false,
-        redZone: false,
-        nflCloseGame: false,
-        fourthDown: false,
-        twoMinuteWarning: false,
-        clutchTime: false,
-        nbaCloseGame: false,
-        overtime: false,
-        powerPlay: false,
-        nhlCloseGame: false,
-        emptyNet: false,
-      },
-      telegramEnabled: false,
-      pushNotificationsEnabled: true,
-      aiEnabled: true,
-    });
   }
 
   // User methods
@@ -985,26 +923,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
-    const teamRows = await db.select().from(userMonitoredTeams);
-
-    // Pull monitored matches (Tennis) and map to the same minimal shape
-    const matchRowsRaw = await db
-      .select()
-      .from(userMonitoredMatches)
-      .where(eq(userMonitoredMatches.isMonitoring, true));
-
-    const matchRows = matchRowsRaw.map(m => ({
-      id: m.id,
-      userId: m.userId,
-      gameId: m.matchId,         // align name
-      sport: m.sport,            // already 'TENNIS'
-      homeTeamName: '',          // optional, not used by the gating check
-      awayTeamName: '',
-      createdAt: m.createdAt
-    }));
-
-    // Consumers (engine manager) only check .sport, so union is safe
-    return [...teamRows, ...matchRows];
+    return await db.select().from(userMonitoredTeams);
   }
 
   // Alert methods
@@ -1041,7 +960,7 @@ export class DatabaseStorage implements IStorage {
         priority: insertAlert.gameInfo.priority as number | undefined,
         scoringProbability: insertAlert.gameInfo.scoringProbability as number | undefined,
         currentPitcher: insertAlert.gameInfo.currentPitcher as { id: number; name: string; throwHand: string; stats: { era: number; whip: number; strikeOuts: number; wins: number; losses: number; }; } | undefined,
-        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; slg: number; }; } | undefined,
+        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; }; } | undefined,
       },
       weatherData: insertAlert.weatherData ? {
         temperature: insertAlert.weatherData.temperature,
@@ -1050,25 +969,8 @@ export class DatabaseStorage implements IStorage {
         windDirection: insertAlert.weatherData.windDirection as string | undefined,
       } : null,
     };
-    // Use upsert with dedup_hash to prevent duplicate alerts
-    if (alertToInsert.dedupHash) {
-      const [alert] = await db.insert(alerts)
-        .values([alertToInsert])
-        .onConflictDoNothing({ target: alerts.dedupHash })
-        .returning();
-      
-      // If no rows returned, conflict occurred - fetch existing alert
-      if (!alert) {
-        const [existingAlert] = await db.select().from(alerts)
-          .where(eq(alerts.dedupHash, alertToInsert.dedupHash));
-        return existingAlert;
-      }
-      return alert;
-    } else {
-      // Fallback for alerts without dedup_hash
-      const [alert] = await db.insert(alerts).values([alertToInsert]).returning();
-      return alert;
-    }
+    const [alert] = await db.insert(alerts).values([alertToInsert]).returning();
+    return alert;
   }
 
   async markAlertSentToTelegram(id: string): Promise<void> {
@@ -1237,45 +1139,6 @@ export class DatabaseStorage implements IStorage {
       .from(masterAlertControls)
       .where(and(eq(masterAlertControls.sport, sport), eq(masterAlertControls.enabled, true)));
     return controls.map(control => control.alertKey);
-  }
-
-  // Tennis Match Monitoring methods
-  async getUsersMonitoringMatch(matchId: string, sport: string): Promise<UserMonitoredMatch[]> {
-    return await db.select().from(userMonitoredMatches)
-      .where(
-        and(
-          eq(userMonitoredMatches.matchId, matchId),
-          eq(userMonitoredMatches.sport, sport),
-          eq(userMonitoredMatches.isMonitoring, true)
-        )
-      );
-  }
-
-  async setUserMonitoredMatch(userId: string, sport: string, matchId: string, isMonitoring: boolean): Promise<void> {
-    await db.insert(userMonitoredMatches)
-      .values({
-        userId,
-        sport,
-        matchId,
-        isMonitoring
-      })
-      .onConflictDoUpdate({
-        target: [userMonitoredMatches.userId, userMonitoredMatches.sport, userMonitoredMatches.matchId],
-        set: {
-          isMonitoring
-        }
-      });
-  }
-
-  async getUserMonitoredMatches(userId: string, sport: string): Promise<UserMonitoredMatch[]> {
-    return await db.select().from(userMonitoredMatches)
-      .where(
-        and(
-          eq(userMonitoredMatches.userId, userId),
-          eq(userMonitoredMatches.sport, sport),
-          eq(userMonitoredMatches.isMonitoring, true)
-        )
-      );
   }
 }
 

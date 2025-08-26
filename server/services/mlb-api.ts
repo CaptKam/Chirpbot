@@ -1,6 +1,5 @@
 import type { Game } from "@shared/schema";
 import { fetchJson } from './http';
-import { isLiveStatus, getMLBDateET, buildMLBScheduleURL } from './mlb-live-status';
 
 // MLB Stats API Interfaces (official MLB.com API)
 interface MLBGame {

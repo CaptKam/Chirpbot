@@ -353,10 +353,6 @@ class LiveSportsService {
             const nhlGames = await sportsDataService.getNHLGames().catch(() => []);
             games = games.concat(nhlGames);
             break;
-          case 'TENNIS':
-            const tennisGames = await this.getTennisGames().catch(() => []);
-            games = games.concat(tennisGames);
-            break;
           default:
             console.warn(`Unknown sport requested: ${sport}`);
             break;
@@ -375,47 +371,6 @@ class LiveSportsService {
         date: today,
         games: [],
       };
-    }
-  }
-
-  // Tennis games method
-  private async getTennisGames(): Promise<any[]> {
-    try {
-      // Import and use tennis API
-      const { tennisApi } = await import('../services/tennis-api');
-      const matches = await tennisApi.getLiveMatches();
-      
-      // Convert to game format compatible with the rest of the system
-      return matches.map(match => ({
-        id: match.matchId,
-        sport: 'TENNIS',
-        homeTeam: {
-          id: match.players.home.id || match.players.home.name,
-          name: match.players.home.name,
-          abbreviation: match.players.home.name.split(' ').pop() || match.players.home.name.substr(0, 3).toUpperCase(),
-          score: match.sets.home.reduce((a, b) => a + b, 0)
-        },
-        awayTeam: {
-          id: match.players.away.id || match.players.away.name,
-          name: match.players.away.name,
-          abbreviation: match.players.away.name.split(' ').pop() || match.players.away.name.substr(0, 3).toUpperCase(),
-          score: match.sets.away.reduce((a, b) => a + b, 0)
-        },
-        startTime: match.startTime,
-        status: match.status,
-        venue: match.venue || match.tournament,
-        isLive: match.status === 'live',
-        // Tennis-specific fields
-        tournament: match.tournament,
-        surface: match.surface,
-        currentSet: match.currentSet,
-        gamesInSet: match.gamesInSet,
-        serving: match.serving,
-        isTiebreak: match.isTiebreak
-      }));
-    } catch (error) {
-      console.error('Error fetching tennis games:', error);
-      return [];
     }
   }
 }

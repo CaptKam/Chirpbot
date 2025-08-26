@@ -863,20 +863,12 @@ export class MLBEngine extends BaseSportEngine {
           // Map the game ID from multi-source aggregator to gamePk
           const gamePk = Number(game.id || game.gamePk); // Ensure numeric gamePk
 
-          // DEBUG: Log what we're processing
-          console.log(`🔍 Processing game: ${game.awayTeam} @ ${game.homeTeam}`);
-          console.log(`   Game ID: ${game.id}, GamePk: ${game.gamePk}, Converted: ${gamePk}`);
-          console.log(`   Status: "${game.status}"`);
-
           // V1-style status validation using the normalized isLive function
           const status = game.status?.toLowerCase() || '';
           const { isLive } = await import('../multi-source-aggregator');
           const isLiveGame = isLive(status);
           
-          console.log(`   isLive check: ${isLiveGame}, has gamePk: ${!!gamePk}`);
-          
           if (!isLiveGame || !gamePk) {
-            console.log(`   ⏭️ SKIPPING: isLive=${isLiveGame}, gamePk=${gamePk}`);
             continue;
           }
 

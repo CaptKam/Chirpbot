@@ -9,7 +9,6 @@ import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
 import { adminRouter } from "./routes/admin";
 import { registerMultiSourceRoutes } from "./routes/multi-source";
-import { tennisRouter } from "./routes/tennis";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -70,64 +69,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Health check endpoint
-  app.get('/healthz', async (req, res) => {
-    try {
-      res.json({ 
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        engines: {
-          mlb: true,
-          tennis: true
-        },
-        port: 5000,
-        engine: true
-      });
-    } catch (error: any) {
-      res.status(500).json({ status: 'unhealthy', error: error.message });
-    }
-  });
-
-  // Public diagnostics endpoints (no auth required)
-  app.get('/api/tennis/matches', async (req, res) => {
-    try {
-      // Return mock data showing engine is running
-      res.json([
-        {
-          matchId: "161294",
-          sport: "TENNIS", 
-          players: { home: { name: "Lorenzo Musetti" }, away: { name: "Giovanni Mpetshi Perricard" } },
-          status: "live",
-          set: 4,
-          games: { home: 5, away: 4 },
-          score: { home: "0", away: "0" },
-          isTiebreak: false
-        }
-      ]);
-    } catch (error: any) {
-      console.error('Error fetching tennis matches:', error);
-      res.json([]);
-    }
-  });
-
-  app.get('/api/mlb/games', async (req, res) => {
-    try {
-      // Return empty for now - MLB season may not be active
-      res.json([]);
-    } catch (error: any) {
-      console.error('Error fetching MLB games:', error);
-      res.json([]);
-    }
-  });
-
   // Admin routes
   app.use("/api/admin", adminRouter);
 
   // Multi-source data aggregator routes
   registerMultiSourceRoutes(app);
-
-  // Tennis routes
-  app.use("/api/tennis", tennisRouter);
 
   // Games routes
   app.get("/api/games/today", async (req, res) => {
