@@ -119,36 +119,36 @@ export class TennisEngine extends BaseSportEngine {
     }
   }
 
-  async processAlerts(gameStates: TennisGameState[]): Promise<void> {
-    console.log(`🔍 Processing alerts for ${gameStates.length} tennis matches`);
+  async processAlerts(triggeredAlerts: AlertConfig[], gameState: TennisGameState): Promise<void> {
+    console.log(`🔍 Processing ${triggeredAlerts.length} tennis alerts for match ${gameState.matchId}`);
 
-    for (const gameState of gameStates) {
-      // Check if any users are monitoring this match
-      const monitoringUsers = await this.getUsersMonitoringMatch(gameState.matchId);
-      
-      if (monitoringUsers.length === 0) {
-        console.log(`⏭️ No users monitoring match ${gameState.matchId}, skipping`);
-        continue;
-      }
+    // Check if any users are monitoring this match
+    const monitoringUsers = await this.getUsersMonitoringMatch(gameState.matchId);
+    
+    if (monitoringUsers.length === 0) {
+      console.log(`⏭️ No users monitoring match ${gameState.matchId}, skipping`);
+      return;
+    }
 
-      console.log(`👥 ${monitoringUsers.length} users monitoring match ${gameState.matchId}`);
+    console.log(`👥 ${monitoringUsers.length} users monitoring match ${gameState.matchId}: ${monitoringUsers.join(', ')}`);
 
-      for (const config of this.alertConfigs) {
-        if (config.conditions(gameState)) {
-          console.log(`🚨 TENNIS Alert condition met: ${config.type} for match ${gameState.matchId}`);
-          
-          await this.generateAlert(gameState, config, monitoringUsers);
-        }
-      }
+    for (const config of triggeredAlerts) {
+      console.log(`🚨 TENNIS Alert: ${config.type} for match ${gameState.matchId}`);
+      await this.generateAlert(gameState, config, monitoringUsers);
     }
   }
 
   private async getUsersMonitoringMatch(matchId: string): Promise<string[]> {
     try {
-      const monitoredMatches = await storage.getUsersMonitoringMatch(matchId, 'TENNIS');
-      return monitoredMatches.map(m => m.userId);
+      console.log(`🔍 Looking for users monitoring tennis match: ${matchId}`);
+      const allMonitoredGames = await storage.getAllMonitoredGames();
+      const matchingUsers = allMonitoredGames
+        .filter(game => game.sport === 'TENNIS' && game.gameId === matchId)
+        .map(game => game.userId);
+      console.log(`👥 Found ${matchingUsers.length} users monitoring match ${matchId}: ${matchingUsers.join(', ')}`);
+      return matchingUsers;
     } catch (error) {
-      console.error('Error getting users monitoring match:', error);
+      console.error('Error fetching users monitoring tennis match:', error);
       return [];
     }
   }
