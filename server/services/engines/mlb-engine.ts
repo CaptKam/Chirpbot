@@ -101,7 +101,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "risp",
       priority: 85,
       probability: 1.0,
-      description: "🏃‍♂️ RISP Alert! Runner(s) in scoring position!",
+      description: "📍 SCORING CHANCE!",
       conditions: (state: MLBGameState) => state.runners.second || state.runners.third
     },
     {
@@ -109,7 +109,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "basesLoaded",
       priority: 95,
       probability: 1.0,
-      description: "🔥 BASES LOADED! Maximum pressure situation!",
+      description: "🔥 BASES LOADED!",
       conditions: (state: MLBGameState) => state.runners.first && state.runners.second && state.runners.third
     },
     {
@@ -117,7 +117,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "runnersOnBase",
       priority: 60,
       probability: 1.0,
-      description: "🏃‍♂️ RUNNERS ON BASE! Scoring opportunity!",
+      description: "🏃‍♂️ RUNNERS ON BASE",
       conditions: (state: MLBGameState) => state.runners.first || state.runners.second || state.runners.third
     },
     {
@@ -125,7 +125,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "closeGame",
       priority: 90,
       probability: 1.0,
-      description: "⚖️ CLOSE GAME! One-run game in late innings!",
+      description: "⚖️ CLOSE GAME",
       conditions: (state: MLBGameState) => {
         const scoreDiff = Math.abs(state.homeScore - state.awayScore);
         // Only trigger if there are runners on base or high-leverage situation
@@ -138,7 +138,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "lateInning",
       priority: 75,
       probability: 1.0,
-      description: "⏰ LATE INNING PRESSURE! Critical moments ahead!",
+      description: "⏰ LATE INNING PRESSURE",
       conditions: (state: MLBGameState) => {
         // Only trigger in late innings if there are runners or it's a critical situation
         const hasRunners = state.runners.first || state.runners.second || state.runners.third;
@@ -151,7 +151,7 @@ export class MLBEngine extends BaseSportEngine {
       settingKey: "extraInnings",
       priority: 100,
       probability: 1.0,
-      description: "⚾ EXTRA INNINGS! Game extends beyond the 9th!",
+      description: "⚾ EXTRA INNINGS",
       conditions: (state: MLBGameState) => state.inning >= 10
     }
   ];
@@ -700,9 +700,8 @@ export class MLBEngine extends BaseSportEngine {
     if (gameState.inning >= 8 || ctx.scoreDiffAbs <= 1) priority += 2;
     priority = Math.min(priority, 100);
 
-    // Add weather info to description if significant
-    const weatherInfo = enhancedWeather?.tag ? ` • ${enhancedWeather.tag}` : '';
-    const description = `💥 POWER HITTER — ${batter.name} at bat • P(HR this PA): ${(p * 100).toFixed(1)}% [${tier}]${weatherInfo}`;
+    // Simple, clean description like ChirpBetaBot
+    const description = `🚀 AI: Power Hitter — ${batter.name} (${batter.stats.hr} HRs)`;
 
     const alert: AlertConfig = {
       type: "POWER_HITTER_AT_BAT",
@@ -777,7 +776,7 @@ export class MLBEngine extends BaseSportEngine {
     if (gameState.inning >= 8 || ctx.scoreDiffAbs <= 1) priority += 3;
     priority = Math.min(priority, 95);
     
-    const description = `👀 POWER HITTER ON DECK — ${batter.name} coming up • Tier A power bat ready • P(HR): ${(p * 100).toFixed(1)}%`;
+    const description = `🚀 AI: Power Hitter — ${batter.name} (${batter.stats.hr} HRs) COMING UP`;
     
     const alert: AlertConfig = {
       type: "POWER_HITTER_ON_DECK",
@@ -951,6 +950,25 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
+  // Generate situation context like ChirpBetaBot: "Runners 1st & 3rd, 1 OUT (55%)"
+  private generateSituationContext(state: MLBGameState): string {
+    const runnerPositions = [];
+    if (state.runners.first) runnerPositions.push('1st');
+    if (state.runners.second) runnerPositions.push('2nd');
+    if (state.runners.third) runnerPositions.push('3rd');
+    
+    const runnersText = runnerPositions.length > 0 
+      ? `Runners ${runnerPositions.join(' & ')}, ` 
+      : '';
+    
+    const outsText = `${state.outs} OUT${state.outs !== 1 ? 'S' : ''}`;
+    
+    // Calculate scoring probability
+    const scoringProb = Math.round(this.calculateRP24Probability(state) * 100);
+    
+    return `${runnersText}${outsText} (${scoringProb}%)`;
+  }
+
   // Corrected RP24 probability calculation using actual scoring probabilities
   private calculateRP24Probability(state: MLBGameState): number {
     // Use the same RP24 table as in hybrid-re24-ai.ts for consistency
@@ -983,8 +1001,15 @@ export class MLBEngine extends BaseSportEngine {
         continue;
       }
 
+      // Generate situational context like ChirpBetaBot
+      const situationContext = this.generateSituationContext(gameState);
       let customTitle = alert.description;
-      let finalDescription = alert.description;
+      let finalDescription = `${alert.description} ${situationContext}`;
+      
+      // For RISP and scoring alerts, add detailed context
+      if (alert.type === "Runners in Scoring Position" || alert.type === "Bases Loaded") {
+        finalDescription = `${alert.description} ${situationContext}`;
+      }
 
       // Apply AI enhancement for high priority alerts
       if (alert.priority >= 80) {
