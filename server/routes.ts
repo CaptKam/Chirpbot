@@ -1140,14 +1140,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Health and metrics endpoints for fast triage
-  app.get('/api/ops/metrics', (req, res) => {
-    const { mlbEngine } = require('./services/engines/mlb-engine');
-    const metrics = (mlbEngine as any)?._metrics ?? null;
-    res.json({ 
-      engine: metrics, 
-      time: new Date().toISOString(),
-      armed: (mlbEngine as any)?._armed ?? false
-    });
+  app.get('/api/ops/metrics', async (req, res) => {
+    try {
+      const { mlbEngine } = await import('./services/engines/mlb-engine');
+      const metrics = (mlbEngine as any)?._metrics ?? null;
+      res.json({ 
+        engine: metrics, 
+        time: new Date().toISOString(),
+        armed: (mlbEngine as any)?._armed ?? false
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to load engine metrics' });
+    }
   });
 
   app.get('/api/ops/state-sampler', (req, res) => {
