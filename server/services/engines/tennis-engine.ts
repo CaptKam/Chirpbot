@@ -192,6 +192,33 @@ export class TennisEngine extends BaseSportEngine {
     console.log(`✅ Tennis alert generated: ${config.type} for match ${gameState.matchId}`);
   }
 
+  async monitor(): Promise<void> {
+    try {
+      console.log('🎾 Tennis engine monitoring live matches...');
+      
+      // Get live tennis matches
+      const liveMatches = await this.getLiveMatches();
+      console.log(`🎾 Found ${liveMatches.length} live tennis matches`);
+      
+      // Process each live match
+      for (const gameState of liveMatches) {
+        try {
+          // Check for alert conditions
+          const triggeredAlerts = await this.checkAlertConditions(gameState);
+          
+          if (triggeredAlerts.length > 0) {
+            console.log(`🎾 Processing ${triggeredAlerts.length} alerts for match ${gameState.matchId}`);
+            await this.processAlerts(triggeredAlerts, gameState);
+          }
+        } catch (error) {
+          console.error(`🎾 Error processing match ${gameState.matchId}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('🎾 Tennis monitoring error:', error);
+    }
+  }
+
   private detectMomentumShift(state: TennisGameState): boolean {
     // Simple momentum detection - can be enhanced with more sophisticated logic
     const { gamesInSet, score } = state;
