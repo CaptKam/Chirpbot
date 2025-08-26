@@ -69,8 +69,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Admin routes
-  app.use("/api/admin", adminRouter);
+  // Admin routes with error handling
+  app.use("/api/admin", (req, res, next) => {
+    try {
+      adminRouter(req, res, next);
+    } catch (error) {
+      console.error('Admin router error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   // Multi-source data aggregator routes
   registerMultiSourceRoutes(app);

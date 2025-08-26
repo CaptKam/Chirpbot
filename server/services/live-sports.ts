@@ -277,7 +277,7 @@ class LiveSportsService {
       if (!sport) {
         // No sport specified - fetch all sports with fallback support
         console.log('🔄 Fetching all sports with multi-source fallback...');
-        
+
         // MLB with fallback
         let mlbGames: Game[] = [];
         try {
@@ -288,7 +288,7 @@ class LiveSportsService {
           mlbGames = await multiSourceAggregator.getMLBGames(today);
           console.log(`✅ MLB fallback sources: ${mlbGames.length} games`);
         }
-        
+
         // NFL with fallback  
         let nflGames: Game[] = [];
         try {
@@ -305,11 +305,11 @@ class LiveSportsService {
           nflGames = await multiSourceAggregator.getNFLGames(today);
           console.log(`✅ NFL fallback sources: ${nflGames.length} games`);
         }
-        
+
         // NBA/NHL (primary only for now)
         const nbaGames = await sportsDataService.getNBAGames().catch(() => []);
         const nhlGames = await sportsDataService.getNHLGames().catch(() => []);
-        
+
         games = games.concat(mlbGames, nflGames, nbaGames, nhlGames);
       } else {
         // Specific sport requested - fetch only that sport with fallback
@@ -317,13 +317,31 @@ class LiveSportsService {
           case 'MLB':
             try {
               const mlbGames = await mlbApi.getTodaysGames();
-              games = games.concat(mlbGames);
-              console.log(`✅ MLB primary source: ${mlbGames.length} games`);
+              // Filter out non-baseball games (tennis, etc.)
+              const baseballGames = mlbGames.filter(game => {
+                const homeTeam = game.homeTeam?.name || game.teams?.home?.team?.name || '';
+                const awayTeam = game.awayTeam?.name || game.teams?.away?.team?.name || '';
+
+                // Filter out tennis player names (contain parentheses with last names)
+                const isTennis = homeTeam.includes('(') || awayTeam.includes('(');
+                return !isTennis;
+              });
+              games = games.concat(baseballGames);
+              console.log(`✅ MLB primary source: ${baseballGames.length} games`);
             } catch (error) {
               console.log('⚠️ MLB primary failed, using fallback sources...');
               const fallbackGames = await multiSourceAggregator.getMLBGames(today);
-              games = games.concat(fallbackGames);
-              console.log(`✅ MLB fallback sources: ${fallbackGames.length} games`);
+              // Filter out non-baseball games from fallback as well
+              const baseballFallbackGames = fallbackGames.filter(game => {
+                const homeTeam = game.homeTeam?.name || game.teams?.home?.team?.name || '';
+                const awayTeam = game.awayTeam?.name || game.teams?.away?.team?.name || '';
+
+                // Filter out tennis player names (contain parentheses with last names)
+                const isTennis = homeTeam.includes('(') || awayTeam.includes('(');
+                return !isTennis;
+              });
+              games = games.concat(baseballFallbackGames);
+              console.log(`✅ MLB fallback sources: ${baseballFallbackGames.length} games`);
             }
             break;
           case 'NFL':
