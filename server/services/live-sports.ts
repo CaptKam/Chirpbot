@@ -115,8 +115,8 @@ class LiveSportsService {
     const name = status.type.name.toLowerCase();
 
     // More comprehensive final status detection
-    if (status.type.completed || 
-        name.includes('final') || 
+    if (status.type.completed ||
+        name.includes('final') ||
         state === 'post') {
       return 'final';
     }
@@ -289,7 +289,7 @@ class LiveSportsService {
           console.log(`✅ MLB fallback sources: ${mlbGames.length} games`);
         }
 
-        // NFL with fallback  
+        // NFL with fallback
         let nflGames: Game[] = [];
         try {
           nflGames = await sportsDataService.getNFLGames();
@@ -317,13 +317,18 @@ class LiveSportsService {
           case 'MLB':
             try {
               const mlbGames = await mlbApi.getTodaysGames();
-              // Filter out non-baseball games (tennis, etc.)
+              // Enhanced tennis filtering for better data quality
               const baseballGames = mlbGames.filter(game => {
                 const homeTeam = game.homeTeam?.name || game.teams?.home?.team?.name || '';
                 const awayTeam = game.awayTeam?.name || game.teams?.away?.team?.name || '';
 
-                // Filter out tennis player names (contain parentheses with last names)
-                const isTennis = homeTeam.includes('(') || awayTeam.includes('(');
+                // Multiple tennis detection methods
+                const isTennis = homeTeam.includes('(') || awayTeam.includes('(') ||
+                                homeTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
+                                awayTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
+                                (homeTeam.split(' ').length === 2 && awayTeam.split(' ').length === 2 &&
+                                 !homeTeam.includes('Cardinals') && !homeTeam.includes('Yankees'));
+
                 return !isTennis;
               });
               games = games.concat(baseballGames);
@@ -331,13 +336,18 @@ class LiveSportsService {
             } catch (error) {
               console.log('⚠️ MLB primary failed, using fallback sources...');
               const fallbackGames = await multiSourceAggregator.getMLBGames(today);
-              // Filter out non-baseball games from fallback as well
+              // Enhanced tennis filtering for better data quality
               const baseballFallbackGames = fallbackGames.filter(game => {
                 const homeTeam = game.homeTeam?.name || game.teams?.home?.team?.name || '';
                 const awayTeam = game.awayTeam?.name || game.teams?.away?.team?.name || '';
 
-                // Filter out tennis player names (contain parentheses with last names)
-                const isTennis = homeTeam.includes('(') || awayTeam.includes('(');
+                // Multiple tennis detection methods
+                const isTennis = homeTeam.includes('(') || awayTeam.includes('(') ||
+                                homeTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
+                                awayTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
+                                (homeTeam.split(' ').length === 2 && awayTeam.split(' ').length === 2 &&
+                                 !homeTeam.includes('Cardinals') && !homeTeam.includes('Yankees'));
+
                 return !isTennis;
               });
               games = games.concat(baseballFallbackGames);

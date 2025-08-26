@@ -123,10 +123,17 @@ export function useWebSocket() {
           clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;
         }
-        // Trigger onclose logic to attempt reconnection or stop
-        // Note: Some browsers might not fire onclose after onerror, so we might need to handle reconnection here too.
-        // For simplicity and consistency, we rely on onclose for the reconnect logic.
-        // If onerror consistently prevents onclose, this part might need adjustment.
+        // Attempt to reconnect on error as well, similar to onclose logic
+        if (reconnectAttempts < maxReconnectAttempts) {
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Exponential backoff, max 30s
+            reconnectTimeoutRef.current = setTimeout(() => {
+              console.log(`Attempting to reconnect WebSocket after error... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+              setReconnectAttempts(prev => prev + 1);
+              connectWithCleanup();
+            }, delay);
+        } else {
+            console.error('Max WebSocket reconnection attempts reached after error.');
+        }
       };
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
