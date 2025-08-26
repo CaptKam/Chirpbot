@@ -112,7 +112,7 @@ class ESPNMLBSource implements MLBSource {
   priority = 2;
   reliability = 85;
   speedScore = 8;
-  enabled = false; // DISABLED: ESPN IDs don't work with MLB API for detailed game data
+  enabled = true; // ENABLED: Use for basic game listing, not detailed data
   failureCount = 0;
   maxRetries = 3;
 
@@ -132,7 +132,14 @@ class ESPNMLBSource implements MLBSource {
   private processESPNData(data: any): Game[] {
     if (!data?.events) return [];
     
-    return data.events.map((event: any) => ({
+    // Filter out non-MLB sports (tennis, etc.)
+    const mlbEvents = data.events.filter((event: any) => {
+      const sport = event.competitions?.[0]?.type?.name?.toLowerCase() || '';
+      return sport.includes('baseball') || sport.includes('mlb') || 
+             (!sport.includes('tennis') && !sport.includes('soccer'));
+    });
+    
+    return mlbEvents.map((event: any) => ({
       id: `mlb-espn-${event.id}`,
       sport: 'MLB',
       homeTeam: {
@@ -184,17 +191,23 @@ class TheSportsDBMLB implements MLBSource {
   priority = 4;
   reliability = 75;
   speedScore = 6;
-  enabled = false; // Disabled due to HTTP 429 rate limiting issues
+  enabled = true; // Re-enabled with better rate limiting
   failureCount = 0;
-  maxRetries = 2;
+  maxRetries = 1; // Reduced retries for rate limits
 
   async fetchGames(date?: string): Promise<Game[]> {
+    // Add delay to respect rate limits
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     const today = date || new Date().toISOString().split('T')[0];
-    const url = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${today}&l=mlb`;
+    const url = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${today}&l=4424`; // Use league ID instead
     
     const data = await fetchJson(url, {
-      headers: { 'User-Agent': 'ChirpBot-SportsDB/2.0' },
-      timeoutMs: 12000
+      headers: { 
+        'User-Agent': 'ChirpBot-SportsDB/2.0',
+        'Accept': 'application/json'
+      },
+      timeoutMs: 15000
     });
 
     return this.processSportsDBData(data);
