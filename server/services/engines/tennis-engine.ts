@@ -535,35 +535,45 @@ export class TennisEngine extends BaseSportEngine {
       // Determine situation context
       let situation = "";
       let insight = "";
+      let teachingPoint = "";
       
       if (s.isTiebreak) {
         situation = `TIEBREAK ${gameScore}`;
-        insight = "Every point crucial - momentum can shift instantly";
+        insight = "Why This Matters: In tiebreaks, every point carries equal weight regardless of when it occurs";
+        teachingPoint = "🎓 Learning: Tiebreaks are pure mental battles where serving strategy and shot selection become critical. Players often change tactics here, going for higher-percentage shots.";
         priority = 95;
       } else if (Math.max(homeGames, awayGames) >= 5) {
         const leader = homeGames > awayGames ? homePlayer : awayPlayer;
+        const trailer = homeGames > awayGames ? awayPlayer : homePlayer;
         const difference = Math.abs(homeGames - awayGames);
         if (difference === 1) {
-          situation = `SET POINT PRESSURE - ${setScore}`;
-          insight = `${leader} serving for the set - break opportunity critical`;
+          situation = `SERVING FOR THE SET - ${setScore}`;
+          insight = `Why This Matters: ${leader} can close the set on their own serve - the most advantageous position in tennis`;
+          teachingPoint = `🎓 Learning: Serving for a set puts immense pressure on both players. ${leader} must stay aggressive while ${trailer} often becomes more desperate, leading to brilliant rallies.`;
           priority = 92;
         } else if (difference === 0) {
-          situation = `CRUCIAL GAMES - ${setScore}`;
-          insight = "Neck and neck - next service game could decide set";
+          situation = `CRUCIAL EVEN GAMES - ${setScore}`;
+          insight = "Why This Matters: Both players are in the danger zone where one break of serve decides the set";
+          teachingPoint = "🎓 Learning: At 5-5, every service game becomes a mini-final. Players typically become more conservative on second serves and more aggressive on returns.";
           priority = 90;
         }
       } else if (Math.abs(homeGames - awayGames) <= 1 && Math.max(homeGames, awayGames) >= 4) {
-        situation = `HIGH LEVERAGE - ${setScore}`;
-        insight = "Close set building tension - watch for momentum shift";
+        situation = `CLOSE SET DEVELOPMENT - ${setScore}`;
+        insight = "Why This Matters: The set is entering its crucial phase where momentum and mental strength matter most";
+        teachingPoint = "🎓 Learning: These middle-set moments often determine who controls the match rhythm. Watch for subtle strategy changes and body language.";
         priority = 88;
       }
       
-      text = `🎾 ${homePlayer} vs ${awayPlayer}
+      text = `🎾 TENNIS TEACHING MOMENT
+${homePlayer} vs ${awayPlayer}
 Set ${s.currentSet} | ${situation} | Score: ${gameScore}
 ${s.tournament || 'Tennis Match'} | ${s.surface || 'Hard'} Court
 
 ⚡ ${insight}
-${s.serving === 'home' ? homePlayer : awayPlayer} serving`;
+
+${teachingPoint}
+
+🏆 Current Server: ${s.serving === 'home' ? homePlayer : awayPlayer}`;
       
       console.log(`🤖 AI Alert Generated: ${homePlayer} vs ${awayPlayer}, ${situation}`);
     } catch (e) {
@@ -577,7 +587,7 @@ ${s.serving === 'home' ? homePlayer : awayPlayer} serving`;
     const alert = {
       id: crypto.randomUUID(),
       type: "TENNIS_AI_OPPORTUNITY",
-      title: "AI WATCH",
+      title: "🎓 TENNIS LESSON",
       description: text,
       priority,
       sport: "TENNIS",
