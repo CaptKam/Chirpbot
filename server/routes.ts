@@ -9,6 +9,7 @@ import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
 import { adminRouter } from "./routes/admin";
 import { registerMultiSourceRoutes } from "./routes/multi-source";
+import { tennisRouter } from "./routes/tennis";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -74,6 +75,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Multi-source data aggregator routes
   registerMultiSourceRoutes(app);
+
+  // Tennis routes
+  app.use("/api/tennis", tennisRouter);
 
   // Games routes
   app.get("/api/games/today", async (req, res) => {

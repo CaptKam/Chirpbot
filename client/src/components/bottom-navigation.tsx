@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, AlertTriangle, Settings } from "lucide-react";
+import { Calendar, AlertTriangle, Settings, Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 export function BottomNavigation() {
@@ -14,6 +14,7 @@ export function BottomNavigation() {
   const navItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
     { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts" },
+    { path: "/tennis", icon: Trophy, label: "Tennis", testId: "nav-tennis" },
     { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
   ];
 

@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, type AiSettings, type InsertAiSettings, type AiLearningLog, type InsertAiLearningLog, type AuditLog, type InsertAuditLog, type MasterAlertControl, type InsertMasterAlertControl, users, userMonitoredTeams, teams, alerts, settings, aiSettings, aiLearningLogs, auditLogs, masterAlertControls } from "@shared/schema";
+import { type User, type InsertUser, type Team, type InsertTeam, type Alert, type InsertAlert, type Settings, type InsertSettings, type UserMonitoredTeam, type InsertUserMonitoredTeam, type UserMonitoredMatch, type InsertUserMonitoredMatch, type AiSettings, type InsertAiSettings, type AiLearningLog, type InsertAiLearningLog, type AuditLog, type InsertAuditLog, type MasterAlertControl, type InsertMasterAlertControl, users, userMonitoredTeams, userMonitoredMatches, teams, alerts, settings, aiSettings, aiLearningLogs, auditLogs, masterAlertControls } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, sql, desc } from "drizzle-orm";
@@ -29,6 +29,11 @@ export interface IStorage {
   removeUserMonitoredGame(userId: string, gameId: string): Promise<void>;
   clearAllUserMonitoredGames(userId: string): Promise<void>;
   isGameMonitoredByUser(userId: string, gameId: string): Promise<boolean>;
+
+  // User Monitored Matches (Tennis and other match-based sports)
+  getUsersMonitoringMatch(matchId: string, sport: string): Promise<UserMonitoredMatch[]>;
+  setUserMonitoredMatch(userId: string, sport: string, matchId: string, isMonitoring: boolean): Promise<void>;
+  getUserMonitoredMatches(userId: string, sport: string): Promise<UserMonitoredMatch[]>;
 
   // Alerts
   getAllAlerts(): Promise<Alert[]>;
@@ -1139,6 +1144,45 @@ export class DatabaseStorage implements IStorage {
       .from(masterAlertControls)
       .where(and(eq(masterAlertControls.sport, sport), eq(masterAlertControls.enabled, true)));
     return controls.map(control => control.alertKey);
+  }
+
+  // Tennis Match Monitoring methods
+  async getUsersMonitoringMatch(matchId: string, sport: string): Promise<UserMonitoredMatch[]> {
+    return await db.select().from(userMonitoredMatches)
+      .where(
+        and(
+          eq(userMonitoredMatches.matchId, matchId),
+          eq(userMonitoredMatches.sport, sport),
+          eq(userMonitoredMatches.isMonitoring, true)
+        )
+      );
+  }
+
+  async setUserMonitoredMatch(userId: string, sport: string, matchId: string, isMonitoring: boolean): Promise<void> {
+    await db.insert(userMonitoredMatches)
+      .values({
+        userId,
+        sport,
+        matchId,
+        isMonitoring
+      })
+      .onConflictDoUpdate({
+        target: [userMonitoredMatches.userId, userMonitoredMatches.sport, userMonitoredMatches.matchId],
+        set: {
+          isMonitoring
+        }
+      });
+  }
+
+  async getUserMonitoredMatches(userId: string, sport: string): Promise<UserMonitoredMatch[]> {
+    return await db.select().from(userMonitoredMatches)
+      .where(
+        and(
+          eq(userMonitoredMatches.userId, userId),
+          eq(userMonitoredMatches.sport, sport),
+          eq(userMonitoredMatches.isMonitoring, true)
+        )
+      );
   }
 }
 

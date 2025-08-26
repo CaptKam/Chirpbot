@@ -146,6 +146,14 @@ export const settings = pgTable("settings", {
     powerPlay: boolean;
     nhlCloseGame: boolean;
     emptyNet: boolean;
+    
+    // Tennis Alert Types
+    breakPoint: boolean;
+    doubleBreakPoint: boolean;
+    setPoint: boolean;
+    matchPoint: boolean;
+    tiebreakStart: boolean;
+    momentumSurge: boolean;
   }>().notNull(),
   telegramEnabled: boolean("telegram_enabled").notNull().default(false),
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),
@@ -162,6 +170,18 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
   awayTeamName: text("away_team_name").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// User monitored matches (for Tennis and other match-based sports)
+export const userMonitoredMatches = pgTable("user_monitored_matches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sport: text("sport").notNull().default("TENNIS"),
+  matchId: text("match_id").notNull(),
+  isMonitoring: boolean("is_monitoring").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  unique: sql`UNIQUE(${table.userId}, ${table.sport}, ${table.matchId})`,
+}));
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -206,6 +226,11 @@ export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTea
   createdAt: true,
 });
 
+export const insertUserMonitoredMatchSchema = createInsertSchema(userMonitoredMatches).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -221,6 +246,9 @@ export type Settings = typeof settings.$inferSelect;
 
 export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
 export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
+
+export type InsertUserMonitoredMatch = z.infer<typeof insertUserMonitoredMatchSchema>;
+export type UserMonitoredMatch = typeof userMonitoredMatches.$inferSelect;
 
 export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
 export type AiSettings = typeof aiSettings.$inferSelect;
@@ -261,6 +289,47 @@ export interface Game {
   inningState?: string;
   gameState?: string;
   gamePk?: number;
+}
+
+// Tennis-specific types
+export interface TennisMatch {
+  matchId: string;
+  sport: 'TENNIS';
+  players: {
+    home: {
+      id: string;
+      name: string;
+      country?: string;
+      ranking?: number;
+    };
+    away: {
+      id: string;
+      name: string;
+      country?: string;
+      ranking?: number;
+    };
+  };
+  status: 'scheduled' | 'live' | 'final';
+  currentSet: number;
+  sets: {
+    home: number[];
+    away: number[];
+  };
+  gamesInSet: {
+    home: number;
+    away: number;
+  };
+  score: {
+    home: string; // e.g., "40", "15", "30", "ADV", "DEUCE"
+    away: string;
+  };
+  isTiebreak: boolean;
+  serving: 'home' | 'away';
+  tournament?: string;
+  surface?: 'Hard' | 'Clay' | 'Grass' | 'Carpet';
+  startTime: string;
+  venue?: string;
+  isMonitoring?: boolean;
 }
 
 export interface GameDay {

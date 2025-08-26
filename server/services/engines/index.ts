@@ -3,9 +3,17 @@ import { nflEngine } from './nfl-engine';
 import { nbaEngine } from './nba-engine';
 import { nhlEngine } from './nhl-engine';
 import { weatherEngine } from './weather-engine';
+import { TennisEngine } from './tennis-engine';
+import { tennisApi } from '../tennis-api';
 // AI engine has been removed
 import { BaseSportEngine } from './base-engine';
 import { storage } from '../../storage';
+
+// Create tennis engine instance
+const tennisEngine = new TennisEngine({
+  botToken: process.env.TELEGRAM_BOT_TOKEN,
+  chatId: process.env.TELEGRAM_CHAT_ID
+});
 
 export interface AlertEngineManager {
   engines: Map<string, BaseSportEngine>;
@@ -25,6 +33,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     this.addEngine('NFL', nflEngine);
     this.addEngine('NBA', nbaEngine);
     this.addEngine('NHL', nhlEngine);
+    this.addEngine('TENNIS', tennisEngine);
     this.addEngine('WEATHER', weatherEngine);
     // AI engine has been removed
   }
