@@ -1,0 +1,221 @@
+0) Fast GO/NO-GO switches (90 seconds)
+
+Run these and keep the outputs:
+
+# Engines enabled?
+echo "$SPORTS_ENABLED"     # expect: MLB,TENNIS (and others you want)
+
+# Server healthy and single-instance?
+curl -sS http://localhost:3000/healthz | jq
+
+# Live sources returning items?
+curl -sS http://localhost:3000/api/tennis/matches | jq
+curl -sS http://localhost:3000/api/mlb/games | jq
+
+# Recent alerts in DB?
+psql "$DATABASE_URL" -c "select sport,count(*) from alerts where created_at>now()-interval '2 hours' group by sport;"
+
+
+If any of these are blank/zero, jump to the matching section below.
+
+1) Process & engine boot
+
+What you should see in logs on startup
+
+HTTP_READY { port, engine:true }
+
+ENGINE_ARMED { sport:"MLB", liveGames:N } (when first live game appears)
+
+ENGINE_ARMED { sport:"TENNIS", liveGames:N }
+
+Fixes (if you don’t see them):
+
+Use one HTTP server and one advisory lock per sport so engines can’t block each other:
+
+pg_try_advisory_lock(hash('engine:MLB')), hash('engine:TENNIS').
+
+Engines should start regardless of “monitored” selections; do user filtering at delivery time, not engine boot. (Gating engine start on “monitored” often leads to silence.)
+
+2) Source → “Live” detection
+
+Every source must normalize to the same predicate:
+
+export function isLiveStatus(s: any): boolean {
+  const abs = (s?.abstractGameState ?? "").trim();
+  const coded = (s?.codedGameState ?? "").trim();
+  const text = (s?.detailedState ?? s?.status ?? "").toLowerCase();
+  return abs === "Live" || coded === "I" || text === "live" || text.includes("in progress");
+}
+
+
+Smoke check:
+If /api/tennis/matches or /api/mlb/games is empty while events are live → your status mapping is off. Fix normalization in each source before anything else.
+
+3) Normalization invariants (non-negotiable fields)
+
+Your engines must populate these (log once per state change):
+
+Tennis
+{ t:"STATE", sport:"TENNIS", matchId, set: currentSet,
+  games: {home,away}, points: isTiebreak ? tbPoints : points,
+  server: "home"|"away"|null, isTB: isTiebreak, pointToken: "<id or derived>" }
+
+
+points.home/away ∈ { "0","15","30","40","Ad","—" }
+
+pointToken present (or derive a stable key; see §6)
+
+MLB
+{ t:"STATE", sport:"MLB", gamePk, inning, half:"top"|"bottom",
+  outs, bases:{f,s,t}, batter: <id>, pa: <atBatIndex> }
+
+
+If these logs don’t show real values (e.g., points:null or bases all false while situations are live), the mapping is broken—fix extraction first.
+
+4) Settings gates (common silent killer)
+
+Ensure a settings row per sport exists and enables the alert families you expect.
+
+select sport, alert_types from settings where sport in ('MLB','TENNIS');
+
+-- If missing, seed Tennis defaults:
+update settings
+set alert_types = coalesce(alert_types,'{}'::jsonb) ||
+jsonb_build_object(
+  'breakPoint', true, 'doubleBreakPoint', true,
+  'setPoint', true, 'matchPoint', true,
+  'tiebreakStart', true, 'momentumSurge', true,
+  'aiOpportunity', true
+)
+where sport='TENNIS';
+
+
+AI lane: ai_settings row per sport; enabled=true, sensible min_priority and rate_limit_ms. AI must decorate only (never block emission).
+
+5) Alert attempts vs. emits (prove the core is running)
+
+Log these in every engine:
+
+ALERT_ATTEMPT { sport, type, prio, key }
+
+DEDUP_BLOCK { sport, type, key, reason }
+
+ALERT_EMIT { sport, type, id, prio }
+
+METRICS_<SPORT> { live, statesSeen, attempts, emitted, suppressed, drops } (every 60s)
+
+Interpretation:
+
+Attempts = 0 → conditions never true or settings gating too strict.
+
+Attempts ≫ Emitted with many DEDUP_BLOCK → key/window wrong (see §6).
+
+Emitted > 0 but no UI → delivery problem (see §7).
+
+6) Dedup: stop dupes without killing signals
+Tennis: point identity + stage edge
+
+Use a stable point key so repeated polls don’t duplicate:
+
+function stablePointKey(s) {
+  const set = s.currentSet, g = `${s.gamesInSet.home}-${s.gamesInSet.away}`;
+  const tb = s.isTiebreak ? `TB:${s.tbPoints.home}-${s.tbPoints.away}` :
+                             `P:${s.points.home}-${s.points.away}`;
+  const sv = s.server ?? "-";
+  return `S${set}:G${g}:${tb}:SV${sv}`;
+}
+
+
+Emit only on rising edge of the stage (BP → DBP → SP → MP). Keep escalationOnly=true and 15s windows for point-scoped tennis alerts.
+
+DB idempotency (safety net)
+
+Add a unique hash so even races can’t dup:
+
+alter table alerts add column if not exists dedup_hash varchar(64);
+create unique index if not exists ux_alerts_dedup on alerts(dedup_hash);
+
+
+Hash the dedup key before insert and ON CONFLICT DO NOTHING.
+
+7) Delivery: WS, polling, Telegram
+
+WS broadcast: every emitted alert should call your broadcaster. Log WS_SEND { sport, id }.
+
+Client polling vs WS: disable polling when WS connected to avoid double-insert in the feed.
+
+Telegram: log TEL_SEND { ok, status } and never block engine on failures (catch & continue).
+
+8) User scoping (avoid “I see nothing” with “only monitored” on)
+
+If users enable “Only monitored,” make sure they actually have monitored entities:
+
+-- Tennis
+select * from user_monitored_matches where user_id=:uid and sport='TENNIS' and is_monitoring=true;
+
+-- MLB
+select * from user_monitored_teams   where user_id=:uid and sport='MLB'    and is_monitoring=true;
+
+
+Delivery fan-out should check this flag per user; engines should still run globally.
+
+9) UI visibility
+
+Import the sport adapter(s) once on the Alerts page.
+
+Sport filter includes Tennis (and others).
+
+Toast policy: tennis toasts = Match/Set/TB/Double-BP; others feed-only (you keep the data, avoid noise).
+
+10) Ten-minute audit (copy/paste and compare)
+
+Run during live play:
+
+# A) Live matches/games
+curl -sS http://localhost:3000/api/tennis/matches | jq '.[].matchId' | wc -l
+curl -sS http://localhost:3000/api/mlb/games | jq '.[].gamePk' | wc -l
+
+# B) Engine metrics
+grep -E 'METRICS_(TENNIS|MLB)|ENGINE_ARMED|STATE|ALERT_(ATTEMPT|EMIT)|DEDUP_BLOCK' app.log | tail -n 200
+
+# C) DB emits last 30 min
+psql "$DATABASE_URL" -c "select sport,type,count(*) from alerts where created_at>now()-interval '30 minutes' group by sport,type order by 1,2;"
+
+
+Healthy snapshot looks like:
+
+Tennis: attempts ticking, emitted rising slowly, suppressed non-zero.
+
+MLB (when live): same pattern.
+
+DB shows rows per sport.
+
+If something’s off, here’s the “fix by symptom” table
+Symptom	Most likely cause	One-liner fix
+No ENGINE_ARMED ever	Engine didn’t start; port/lock; live mapping	Start engines unconditionally; fix isLiveStatus
+STATE logs stale/null	Bad normalization	Fix extraction; ensure tennis points, MLB bases/outs
+ALERT_ATTEMPT=0	Settings gate / thresholds too high	Seed settings per sport; lower floors briefly
+All DEDUP_BLOCK	Bad key or missing pointToken	Use stablePointKey; 15s window; escalationOnly
+ALERT_EMIT>0 but empty UI	WS/poll double-add or no WS send	Log WS sends; disable polling when WS up
+Users see nothing	“Only monitored” with empty selections	Add monitored matches/teams or disable that flag
+Want me to pinpoint your specific bottleneck?
+
+Share a 1–2 minute log slice containing only these tags during live play:
+
+ENGINE_ARMED
+STATE
+ALERT_ATTEMPT
+DEDUP_BLOCK
+ALERT_EMIT
+METRICS_TENNIS / METRICS_MLB
+
+
+…and the output of:
+
+select sport,type,count(*) 
+from alerts 
+where created_at>now()-interval '30 minutes'
+group by sport,type order by 1,2;
+
+
+With just that, I can tell you exactly which function needs the tweak (and give you the one-line patch).
