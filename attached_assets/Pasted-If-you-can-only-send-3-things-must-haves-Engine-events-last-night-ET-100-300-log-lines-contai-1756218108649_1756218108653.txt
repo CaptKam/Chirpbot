@@ -1,0 +1,112 @@
+If you can only send 3 things (must-haves)
+
+Engine events (last night, ET): 100–300 log lines containing these tags:
+ENGINE_ARMED, STATE, ALERT_ATTEMPT, DEDUP_BLOCK, ALERT_DROP, METRICS.
+If you don’t have filtering, just paste a slice of logs covering first pitch → +30 min.
+
+One raw game snapshot (from your normalizer) for a game that was live:
+A single JSON object showing (as your code produced it):
+gamePk, inning, inningState, outs, runners{first,second,third}, currentBatter{id}, paId.
+If possible, include the source fragments you mapped from (e.g., linescore.offense, linescore.outs, isTopInning, currentInning, plays.currentPlay.about.atBatIndex).
+
+DB reality check (last night, ET): results of these queries:
+
+-- counts by hour
+select date_trunc('hour', created_at) h, count(*) 
+from alerts 
+where created_at between TIMESTAMP '2025-08-25 18:30:00-04' and TIMESTAMP '2025-08-25 23:59:59-04'
+group by 1 order by 1;
+
+-- most recent 20 alerts
+select id, type, priority, created_at 
+from alerts 
+order by created_at desc limit 20;
+
+
+(If the first query returns 0 rows while games were live, the problem is upstream of storage.)
+
+Full diagnostic bundle (ideal)
+A) Engine & dedup logs (paste as raw text or JSON)
+
+First appearance of ENGINE_ARMED (tells us live filter worked).
+
+10–30 STATE lines around a clear RISP moment (we’re checking outs, runners.second/third, paId).
+
+Every ALERT_ATTEMPT line in the same window (shows computed rp, pHR, tier, priority).
+
+Any DEDUP_BLOCK lines (need type, key, reason, rule id).
+
+A METRICS line (1-minute heartbeat) with: liveGames, attempts, emitted, suppressed, drops, wsClients, telSent.
+
+If you don’t have these tags yet, add them exactly as above and share tonight’s first-innings output.
+
+B) One normalized game state + the raw source fields used
+
+Paste JSON like:
+
+{
+  "gamePk": 716842,
+  "inning": 7,
+  "inningState": "top",
+  "outs": 1,
+  "runners": {"first": false, "second": true, "third": true},
+  "currentBatter": {"id": 660271},
+  "paId": 123,
+  "_source": {
+    "linescore.offense": {"first": null, "second": {...}, "third": {...}},
+    "linescore.outs": 1,
+    "linescore.currentInning": 7,
+    "linescore.isTopInning": true,
+    "plays.currentPlay.about.atBatIndex": 123
+  }
+}
+
+
+This proves whether mapping is correct (most common failure).
+
+C) Dedup keys + config (as used at runtime)
+
+The dedup key string for at least one attempted alert (RISP or POWER_HITTER_AT_BAT).
+
+The rule applied (scope, window, escalationOnly).
+If you have a log like:
+{ "t":"DEDUP_BLOCK","type":"RISP","key":"716842:RISP:7:top:1:011:660271:123","reason":"WITHIN_WINDOW","cfg":"RISP_DEFAULT" }
+paste it.
+
+D) Settings snapshots (the actual objects used)
+
+/api/settings/:uid JSON for your operator user (sanitized).
+
+ai_settings row for sport='MLB' (enabled, min_priority, rate_limit_ms, allow_types).
+
+Your performance dashboard JSON: /api/multi-source/performance-dashboard (source reliability, polling stats, dedup stats).
+
+E) Delivery path indicators
+
+WebSocket: connection count at game time (from logs or dashboard), and one example of a WS “alert” message JSON the server tried to send.
+
+Telegram: the last 5 send attempts (log lines with TEL_SEND { ok, status }). If none, say “no sends attempted.”
+
+F) Weather (to rule out mis-scaling)
+
+One EnhancedWeather JSON for a non-dome venue last night:
+{ windMph, windDirToDeg, cfAzimuthDeg, outMph, carryMult, roof }
+(If weather failed, that’s fine—alerts should still fire; we just won’t show wind tags.)
+
+How I’ll triage from your data
+
+No ENGINE_ARMED → bad live status detection (fix in status normalizer).
+
+STATE shows runners but no ALERT_ATTEMPT → condition checks not running or priority floor too high.
+
+Many ALERT_ATTEMPT but mostly DEDUP_BLOCK with paId:"-" → paId/runners mapping broken; dedup over-suppressed.
+
+emitted>0 in METRICS but no UI/Telegram → delivery (WS/Telegram) issue only.
+
+DB rows exist but AI logs show errors → AI is failing but must be non-blocking (we’ll ensure it decorates only).
+
+Quick tip while you gather
+
+When you capture logs, try to bracket a clear leverage moment (e.g., bases loaded or extra innings start). That gives us a definite ground truth: if your STATE shows bases=011 and outs=1, at least one RISP attempt should appear immediately. If it doesn’t, we know exactly which function to open first.
+
+Send whichever of the above you can get fastest, and I’ll pinpoint the fix.
