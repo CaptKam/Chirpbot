@@ -485,23 +485,24 @@ export class TennisEngine extends BaseSportEngine {
     const last = this.aiCooldown.get(k) ?? 0;
     if (now - last < (settings.oppCooldownMs ?? 90000)) return;
 
-    // Simplified AI gate - focus on high-leverage situations
+    // Enhanced AI gate - focus on high-leverage situations
     const shouldProbeAI = (s: TennisGameState) => {
-      const gMax = Math.max(s.gamesInSet?.home ?? 0, s.gamesInSet?.away ?? 0);
+      const homeGames = s.gamesInSet?.home ?? 0;
+      const awayGames = s.gamesInSet?.away ?? 0;
+      const gMax = Math.max(homeGames, awayGames);
+      const gDiff = Math.abs(homeGames - awayGames);
       
-      // High-leverage situations:
-      // 1. Late in set (games 4-4 or higher)
-      // 2. Close games (difference <= 1) 
-      // 3. Tiebreak situations
-      // 4. Set point/match point scenarios
+      // High-leverage scenarios:
+      const lateInSet = gMax >= 4;                    // 4-4, 5-4, etc.
+      const closeGames = gDiff <= 1;                  // Within 1 game
+      const setPointScenario = gMax >= 5;             // 5-4, 6-5, etc.
+      const criticalMoment = (gMax >= 4 && gDiff <= 2); // 4-2, 5-3, etc.
       
-      const lateInSet = gMax >= 4;
-      const closeGames = Math.abs((s.gamesInSet?.home ?? 0) - (s.gamesInSet?.away ?? 0)) <= 1;
-      const setPointScenario = gMax >= 5;
+      const shouldTrigger = s.isTiebreak || setPointScenario || (lateInSet && closeGames) || criticalMoment;
       
-      console.log(`🤖 AI Gate Check: gMax=${gMax}, lateInSet=${lateInSet}, closeGames=${closeGames}, setPoint=${setPointScenario}, isTiebreak=${s.isTiebreak}`);
+      console.log(`🤖 AI Gate Check: ${homeGames}-${awayGames}, gMax=${gMax}, diff=${gDiff}, late=${lateInSet}, close=${closeGames}, setPoint=${setPointScenario}, critical=${criticalMoment}, tiebreak=${s.isTiebreak} → ${shouldTrigger}`);
       
-      return s.isTiebreak || (lateInSet && closeGames) || setPointScenario;
+      return shouldTrigger;
     };
 
     if (!shouldProbeAI(s)) {
@@ -518,16 +519,53 @@ export class TennisEngine extends BaseSportEngine {
       escalationOnly: true, timeWindow: 20000
     })) return;
 
-    // Generate AI insight (simplified for now)
+    // Generate rich AI insight with match details
     let text = "";
     let priority = settings.oppMinPriority ?? 88;
-    let confidence = 0.65;
+    let confidence = 0.75;
 
     try {
-      // Simple fallback for testing
-      const tb = s.isTiebreak ? `TB ${s.score?.home ?? 0}-${s.score?.away ?? 0}` : "";
-      text = `AI WATCH: Pressure point likely next\nWhy: Score favors receiver; leverage high ${tb ? "in tiebreak" : "late in set"}`;
-      priority = Math.max(priority, 88);
+      const homePlayer = s.players?.home?.name || 'Player 1';
+      const awayPlayer = s.players?.away?.name || 'Player 2';
+      const homeGames = s.gamesInSet?.home ?? 0;
+      const awayGames = s.gamesInSet?.away ?? 0;
+      const gameScore = `${s.score?.home || '0'}-${s.score?.away || '0'}`;
+      const setScore = `${homeGames}-${awayGames}`;
+      
+      // Determine situation context
+      let situation = "";
+      let insight = "";
+      
+      if (s.isTiebreak) {
+        situation = `TIEBREAK ${gameScore}`;
+        insight = "Every point crucial - momentum can shift instantly";
+        priority = 95;
+      } else if (Math.max(homeGames, awayGames) >= 5) {
+        const leader = homeGames > awayGames ? homePlayer : awayPlayer;
+        const difference = Math.abs(homeGames - awayGames);
+        if (difference === 1) {
+          situation = `SET POINT PRESSURE - ${setScore}`;
+          insight = `${leader} serving for the set - break opportunity critical`;
+          priority = 92;
+        } else if (difference === 0) {
+          situation = `CRUCIAL GAMES - ${setScore}`;
+          insight = "Neck and neck - next service game could decide set";
+          priority = 90;
+        }
+      } else if (Math.abs(homeGames - awayGames) <= 1 && Math.max(homeGames, awayGames) >= 4) {
+        situation = `HIGH LEVERAGE - ${setScore}`;
+        insight = "Close set building tension - watch for momentum shift";
+        priority = 88;
+      }
+      
+      text = `🎾 ${homePlayer} vs ${awayPlayer}
+Set ${s.currentSet} | ${situation} | Score: ${gameScore}
+${s.tournament || 'Tennis Match'} | ${s.surface || 'Hard'} Court
+
+⚡ ${insight}
+${s.serving === 'home' ? homePlayer : awayPlayer} serving`;
+      
+      console.log(`🤖 AI Alert Generated: ${homePlayer} vs ${awayPlayer}, ${situation}`);
     } catch (e) {
       console.error('AI tennis opportunity error:', e);
       return;
