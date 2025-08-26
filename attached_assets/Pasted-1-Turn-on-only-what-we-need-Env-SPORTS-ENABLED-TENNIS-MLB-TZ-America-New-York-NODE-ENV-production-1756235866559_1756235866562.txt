@@ -1,0 +1,162 @@
+1) Turn on only what we need
+
+Env
+
+SPORTS_ENABLED=TENNIS,MLB
+TZ=America/New_York
+NODE_ENV=production
+
+
+Start engines unconditionally (don’t gate startup on “monitored” selections). Keep per-sport advisory locks if you use them.
+
+2) Fix MLB “today” & “live” detection (the usual culprit)
+A) Date (use Eastern, not server local/UTC)
+
+In your MLB source (e.g. MLBStatsAPIEnhanced.fetchGames), force ET:
+
+import { DateTime } from "luxon";
+
+const et = DateTime.now().setZone("America/New_York");
+const dateParam = et.toFormat("yyyy-LL-dd");
+
+// Example StatsAPI schedule (hydrate what you already use)
+const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${dateParam}&hydrate=linescore,game(content(all)),metadata,seriesStatus,seriesSummary,team,team.league,team.division,venue,gameInfo,flags,liveLookin,review`;
+
+B) Live state (treat all “in-progress” variants as live)
+
+Create/confirm a single helper used everywhere:
+
+export function isLiveStatus(s: any) {
+  const abs   = (s?.status?.abstractGameState ?? s?.abstractGameState ?? "").trim();
+  const coded = (s?.status?.codedGameState ?? s?.codedGameState ?? "").trim();
+  const text  = (s?.status?.detailedState ?? s?.detailedState ?? "").toLowerCase();
+  return abs === "Live" || coded === "I" || text === "in progress" || text === "live";
+}
+
+
+Use this before polling play-by-play.
+
+3) Make sure both sports emit via the same safety harness
+
+Every alert must go through your single emitter (idempotent insert + WS broadcast). If you haven’t added it yet, keep this contract:
+
+Compute dedup_key per alert.
+
+Tennis: matchId:type:stablePointKey
+
+MLB (plate-appearance scope): gamePk:type:inning:half:outs:bases:batterId:paId
+
+Create dedup_hash = sha1(sport + ":" + dedup_key).
+
+UPSERT on dedup_hash (ON CONFLICT DO NOTHING).
+
+Broadcast over WS after DB insert succeeds.
+
+This prevents dupes across BOTH sports and keeps delivery logic identical.
+
+4) Minimal alert sets for tonight
+Tennis (toast)
+
+MATCH_POINT (98)
+
+SET_POINT (93)
+
+TIEBREAK_START (80)
+
+DOUBLE_BREAK_POINT (≥88 only)
+
+Feed-only: BREAK_POINT, MOMENTUM_SURGE.
+
+AI Opportunities (optional, “pre-moment”)
+
+Admin: enabled=true, betting_opps_enabled=true, opp_min_priority=90, opp_cooldown_ms=120000.
+
+Triggers only at late-set 30–30/deuce or TB ≥5–5.
+
+MLB (toast)
+
+Bases Loaded
+
+RISP (2nd/3rd, <2 outs)
+
+Close Game (≤1 run) + Late Innings (8th+)
+
+Power Hitter (at-bat & on-deck) with your existing tiers
+
+Feed-only: generic “runners on”, “hit”, etc.
+
+5) Confirm settings from DB (no hardcoded fallbacks)
+
+Run these (adjust table/column names only if yours differ):
+
+-- AI settings (Tennis)
+update ai_settings
+set enabled = true,
+    betting_opps_enabled = true,
+    opp_min_priority = 90,
+    opp_cooldown_ms = 120000,
+    novice_mode = true
+where sport = 'TENNIS';
+
+-- Tennis base toggles
+update settings
+set alert_types = coalesce(alert_types,'{}'::jsonb) ||
+jsonb_build_object(
+  'matchPoint', true, 'setPoint', true, 'tiebreakStart', true,
+  'doubleBreakPoint', true, 'breakPoint', true, 'momentumSurge', true,
+  'aiOpportunity', true
+)
+where sport='TENNIS';
+
+-- MLB critical toggles
+update settings
+set alert_types = coalesce(alert_types,'{}'::jsonb) ||
+jsonb_build_object(
+  'basesLoaded', true, 'risp', true,
+  'closeGame', true, 'lateInning', true,
+  'powerHitter', true, 'powerHitterOnDeck', true
+)
+where sport='MLB';
+
+6) Three pre-game checks (run ~15 minutes before first MLB first pitch)
+# A) Engines healthy
+curl -sS http://localhost:5000/healthz | jq
+
+# B) Feeds returning items
+curl -sS http://localhost:5000/api/tennis/matches | jq | head
+curl -sS http://localhost:5000/api/mlb/games | jq | head   # should show today's schedule in ET
+
+# C) Recent alerts count (confirm DB column name; you said "timestamp")
+psql "$DATABASE_URL" -c \
+"select sport,count(*) from alerts where \"timestamp\">now()-interval '30 minutes' group by sport;"
+
+
+If MLB array is empty right before first pitch, your date or timezone is wrong—fix Step 2A first.
+
+7) During games: what to watch
+
+Logs (tail):
+
+STATE (TENNIS|MLB)
+ALERT_ATTEMPT (both sports)
+DEDUP_DB / ALERT_EMIT
+METRICS_TENNIS / METRICS_MLB (every 60s)
+
+
+Healthy pattern
+
+Attempts tick steadily; Emitted < Attempts; some DEDUP_DB lines.
+
+For MLB after first pitch: state changes (outs/bases/inning) appear; RISP/BasesLoaded attempts follow.
+
+8) If something is silent, fix only that stage
+Symptom	Likely cause	Fix
+MLB /games empty	Wrong date/timezone	Force ET date (Step 2A)
+No MLB attempts	isLiveStatus mapping	Use helper in Step 2B across engine
+Attempts ≫ Emitted	Dedup key/window too strict	Include plate appearance id (MLB) / stablePointKey (Tennis); 15s window, escalationOnly for point-scoped
+Emitted > 0, no UI	WS not broadcasting / client double-poll	Ensure broadcast after DB insert; pause polling when WS up
+9) Expected alerts tonight
+
+Tennis (steady all day): AI WATCH + TIEBREAK_START + late-set SET/MATCH POINTS.
+
+MLB (evening): RISP spurts in middle innings, Bases Loaded clusters, Close Game + Late Innings after ~8th, Power Hitter when top bats are due.
