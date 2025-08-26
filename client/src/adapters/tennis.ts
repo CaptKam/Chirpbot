@@ -15,13 +15,13 @@ adapters.push({
     return {
       id: a.id,
       sport: "TENNIS",
-      title: `${away} @ ${home}`,
-      situation: a.type,                             // e.g., "Set Point" / "Tiebreak Start"
+      title: `${away} vs ${home}`,
+      situation: a.type ?? "Tennis Alert",             // e.g., "Set Point" / "Tiebreak Start"
       scoreline: a.gameInfo?.score
         ? `${a.gameInfo.score.away}-${a.gameInfo.score.home}`
         : a.score ? `${a.score.away}-${a.score.home}` : "",
       period: setLabel,
-      edge: { label: "Confidence", value: `${a.priority ?? 80}` },
+      edge: { label: "Priority", value: `${a.priority ?? 80}` },
       priority: a.priority ?? 80,
       actionLine: a.description,
       tags: ["Tennis"],

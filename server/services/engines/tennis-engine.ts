@@ -184,7 +184,20 @@ export class TennisEngine extends BaseSportEngine {
     // Enhanced AI analysis for high-priority alerts
     if (config.priority >= 85) {
       try {
-        const aiEnhancement = await enhanceHighPriorityAlert(JSON.stringify(context));
+        // Convert tennis context to format AI expects
+        const aiContext = {
+          homeTeam: gameState.players.home.name,
+          awayTeam: gameState.players.away.name,
+          score: { home: 0, away: 0 }, // Tennis uses different scoring
+          inning: undefined,
+          outs: undefined
+        };
+        const aiEnhancement = await enhanceHighPriorityAlert(
+          config.type,
+          aiContext,
+          description,
+          config.priority
+        );
         if (aiEnhancement && aiEnhancement.enhancedDescription) {
           description = aiEnhancement.enhancedDescription;
         }
