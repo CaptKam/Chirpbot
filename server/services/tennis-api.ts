@@ -216,9 +216,10 @@ class TennisApi {
 
   private mapESPNStatus(espnStatus: string): 'scheduled' | 'live' | 'final' {
     const status = espnStatus.toLowerCase();
-    if (status.includes('live') || status.includes('play')) return 'live';
-    if (status.includes('final') || status.includes('complete')) return 'final';
-    return 'scheduled';
+    if (status.includes('in_progress') || status.includes('live') || status.includes('play') || status === 'status_in_progress') return 'live';
+    if (status.includes('final') || status.includes('complete') || status === 'status_final') return 'final';
+    if (status.includes('scheduled') || status === 'status_scheduled') return 'scheduled';
+    return 'final'; // Default to final for unknown statuses
   }
 
   private extractCountryFromFlag(flagUrl: string): string {
@@ -255,6 +256,8 @@ class TennisApi {
     if (!data.events || !Array.isArray(data.events)) return [];
     
     const allMatches: TennisMatch[] = [];
+    const liveMatches: TennisMatch[] = [];
+    const completedMatches: TennisMatch[] = [];
     
     // ESPN tennis data structure: events contain tournaments, tournaments contain groupings -> competitions
     for (const event of data.events) {
@@ -267,7 +270,13 @@ class TennisApi {
                 // This is an actual tennis match with competitors
                 const match = this.convertESPNTennisMatch(competition, event);
                 if (match) {
-                  allMatches.push(match);
+                  if (match.status === 'live') {
+                    liveMatches.push(match);
+                  } else if (match.status === 'final') {
+                    completedMatches.push(match);
+                  } else {
+                    allMatches.push(match);
+                  }
                 }
               }
             }
@@ -281,17 +290,32 @@ class TennisApi {
           if (competition.competitors && competition.competitors.length >= 2) {
             const match = this.convertESPNTennisMatch(competition, event);
             if (match) {
-              allMatches.push(match);
+              if (match.status === 'live') {
+                liveMatches.push(match);
+              } else if (match.status === 'final') {
+                completedMatches.push(match);
+              } else {
+                allMatches.push(match);
+              }
             }
           }
         }
       }
     }
 
-    console.log(`🎾 Found ${allMatches.length} tennis matches from ESPN tournament data`);
+    console.log(`🎾 Found ${liveMatches.length} live, ${completedMatches.length} completed, ${allMatches.length} scheduled tennis matches`);
     
-    // Return up to 3 recent matches as examples
-    return allMatches.slice(0, 3);
+    // Prioritize live matches, then scheduled, then completed as examples
+    if (liveMatches.length > 0) {
+      return liveMatches.slice(0, 5); // Show up to 5 live matches
+    }
+    
+    if (allMatches.length > 0) {
+      return allMatches.slice(0, 3); // Show upcoming scheduled matches
+    }
+    
+    // Only show completed as fallback examples
+    return completedMatches.slice(0, 3);
   }
 
   private parseTennisDataUK(data: any): TennisMatch[] {
