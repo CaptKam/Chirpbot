@@ -256,13 +256,29 @@ class TennisApi {
     
     const allMatches: TennisMatch[] = [];
     
-    // ESPN tennis data structure: events contain tournaments, tournaments contain competitions (matches)
+    // ESPN tennis data structure: events contain tournaments, tournaments contain groupings -> competitions
     for (const event of data.events) {
-      // For tennis tournaments like US Open, matches are in event.competitions
+      // Tennis tournaments have groupings (Men's Singles, Women's Singles, etc.)
+      if (event.groupings && Array.isArray(event.groupings)) {
+        for (const grouping of event.groupings) {
+          if (grouping.competitions && Array.isArray(grouping.competitions)) {
+            for (const competition of grouping.competitions) {
+              if (competition.competitors && competition.competitors.length >= 2) {
+                // This is an actual tennis match with competitors
+                const match = this.convertESPNTennisMatch(competition, event);
+                if (match) {
+                  allMatches.push(match);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Also check direct competitions (older format)
       if (event.competitions && Array.isArray(event.competitions)) {
         for (const competition of event.competitions) {
           if (competition.competitors && competition.competitors.length >= 2) {
-            // This is an actual tennis match with competitors
             const match = this.convertESPNTennisMatch(competition, event);
             if (match) {
               allMatches.push(match);
