@@ -4,10 +4,114 @@ import { tennisApi, TennisGameState } from '../tennis-api';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
+import { alertDeduplication } from '../alert-deduplication';
+import crypto from 'crypto';
+
+// --- Types for Tennis edge-triggered system ---
+type Side = "home" | "away";
+
+// A stable identity for *this* point, whether or not the feed provides a sequence id
+function stablePointKey(s: any) {
+  const set = s.currentSet ?? 0;
+  const gH = s.gamesInSet?.home ?? 0;
+  const gA = s.gamesInSet?.away ?? 0;
+  const pH = s.score?.home ?? "-";
+  const pA = s.score?.away ?? "-";
+  const tbH = s.tbPoints?.home ?? 0;
+  const tbA = s.tbPoints?.away ?? 0;
+  const sv = s.serving ?? "-";
+  const tb = s.isTiebreak ? `TB:${tbH}-${tbA}` : `P:${pH}-${pA}`;
+  return `S${set}:G${gH}-${gA}:${tb}:SV${sv}`;
+}
+
+// Severity ladder for a single point (rises only): BP (1) → DBP (2) → SP (3) → MP (4)
+function computeStage(s: any): 0|1|2|3|4 {
+  // Match point?
+  const mp = isSetOrMatchPoint(s);
+  if (mp?.kind === "match") return 4;
+  if (mp?.kind === "set") return 3;
+
+  // Break points (tiebreak has no BP concept)
+  if (!s.isTiebreak && s.score) {
+    const server: Side | null = s.serving ?? null;
+    if (server) {
+      const rec: Side = server === "home" ? "away" : "home";
+      const sp = s.score[server];
+      const rp = s.score[rec];
+      const doubleBP = (rp === "40" && (sp === "0" || sp === "15"));
+      const singleBP = (rp === "40" && sp === "30") || rp === "Ad" || rp === "ADV";
+      if (doubleBP) return 2;
+      if (singleBP) return 1;
+    }
+  }
+  return 0;
+}
+
+// Set/Match point detector
+function isSetOrMatchPoint(s: any): null | { kind: "set"|"match", side: Side } {
+  // Tiebreak path
+  if (s.isTiebreak) {
+    const tbH = s.tbPoints?.home ?? 0;
+    const tbA = s.tbPoints?.away ?? 0;
+    const lead = tbH - tbA;
+    const hPointAway = tbH >= 6 && lead >= 1;
+    const aPointAway = tbA >= 6 && -lead >= 1;
+    if (hPointAway || aPointAway) {
+      const side: Side = hPointAway ? "home" : "away";
+      const setsWon = s.sets?.[side] ?? 0;
+      const target = 2; // best-of-3 default
+      return { kind: (setsWon === target - 1) ? "match" : "set", side };
+    }
+    return null;
+  }
+  
+  // Non-tiebreak path (game point that clinches set/match)
+  for (const side of ["home","away"] as Side[]) {
+    if (!s.score) continue;
+    const me = s.score[side];
+    const op = s.score[side === "home" ? "away" : "home"];
+    const atGP = (me === "40" && (op === "0" || op === "15" || op === "30")) || me === "Ad" || me === "ADV";
+    if (!atGP) continue;
+    
+    const myGames = s.gamesInSet?.[side] ?? 0;
+    const opGames = s.gamesInSet?.[side === "home" ? "away" : "home"] ?? 0;
+    const next = myGames + 1;
+    const winsSet = next >= 6 && (next - opGames) >= 2;
+    if (!winsSet) continue;
+    
+    const setsWon = s.sets?.[side] ?? 0;
+    const target = 2;
+    return { kind: (setsWon === target - 1) ? "match" : "set", side };
+  }
+  return null;
+}
+
+// Format points for display
+function formatPoints(s: any): string {
+  if (s.isTiebreak) {
+    return `${s.tbPoints?.home ?? 0}-${s.tbPoints?.away ?? 0}`;
+  }
+  return `${s.score?.home ?? '0'}-${s.score?.away ?? '0'}`;
+}
+
+// Hash key generator
+function hashKey(s: string): string {
+  return crypto.createHash("sha1").update(s).digest("hex");
+}
 
 export class TennisEngine extends BaseSportEngine {
   sport = 'TENNIS';
   monitoringInterval = 2000; // 2 seconds for tennis (faster paced than baseball)
+  
+  // Stage tracking for edge-triggered alerts
+  private lastStage = new Map<string, number>(); // key = matchId + stablePointKey
+  
+  // Metrics for monitoring
+  private metrics = {
+    attempts: 0,
+    suppressed: 0,
+    generated: 0
+  };
 
   extractGameState(apiData: any): TennisGameState {
     return apiData; // Tennis API already returns properly formatted TennisGameState
@@ -45,57 +149,8 @@ export class TennisEngine extends BaseSportEngine {
     };
   }
 
-  // Tennis alert configurations
-  alertConfigs: AlertConfig[] = [
-    {
-      type: "Break Point",
-      settingKey: "breakPoint",
-      priority: 85,
-      probability: 1.0,
-      description: "🎾 BREAK POINT! Non-serving player one point from winning the game!",
-      conditions: (state: TennisGameState) => state.isBreakPoint
-    },
-    {
-      type: "Double Break Point",
-      settingKey: "doubleBreakPoint", 
-      priority: 90,
-      probability: 1.0,
-      description: "🔥 DOUBLE BREAK POINT! Multiple break point opportunities!",
-      conditions: (state: TennisGameState) => state.isDoubleBreakPoint
-    },
-    {
-      type: "Set Point",
-      settingKey: "setPoint",
-      priority: 95,
-      probability: 1.0,
-      description: "🏆 SET POINT! One game away from winning the set!",
-      conditions: (state: TennisGameState) => state.isSetPoint
-    },
-    {
-      type: "Match Point", 
-      settingKey: "matchPoint",
-      priority: 100,
-      probability: 1.0,
-      description: "🚨 MATCH POINT! One point away from victory!",
-      conditions: (state: TennisGameState) => state.isMatchPoint
-    },
-    {
-      type: "Tiebreak Start",
-      settingKey: "tiebreakStart",
-      priority: 80,
-      probability: 1.0,
-      description: "⚡ TIEBREAK! Set decided by first to 7 points!",
-      conditions: (state: TennisGameState) => state.isTiebreak
-    },
-    {
-      type: "Momentum Surge",
-      settingKey: "momentumSurge",
-      priority: 75,
-      probability: 1.0,
-      description: "📈 MOMENTUM SHIFT! Key moment in the match!",
-      conditions: (state: TennisGameState) => this.detectMomentumShift(state)
-    }
-  ];
+  // No longer needed - using edge-triggered system instead
+  alertConfigs: AlertConfig[] = [];
 
   async getLiveMatches(): Promise<TennisGameState[]> {
     try {
@@ -119,22 +174,87 @@ export class TennisEngine extends BaseSportEngine {
     }
   }
 
-  async processAlerts(triggeredAlerts: AlertConfig[], gameState: TennisGameState): Promise<void> {
-    console.log(`🔍 Processing ${triggeredAlerts.length} tennis alerts for match ${gameState.matchId}`);
-
-    // Check if any users are monitoring this match
-    const monitoringUsers = await this.getUsersMonitoringMatch(gameState.matchId);
+  async processAlerts(gameState: TennisGameState): Promise<void> {
+    const alerts: any[] = [];
     
-    if (monitoringUsers.length === 0) {
-      console.log(`⏭️ No users monitoring match ${gameState.matchId}, skipping`);
-      return;
+    // Edge-triggered alert generation
+    const pKey = `${gameState.matchId}:${stablePointKey(gameState)}`;
+    const stage = computeStage(gameState);
+    const prev = this.lastStage.get(pKey) ?? 0;
+    
+    // Log point progression for debugging
+    if (prev !== stage) {
+      console.log(JSON.stringify({ t:"STAGE", key: stablePointKey(gameState), prev, stage, matchId: gameState.matchId }));
     }
 
-    console.log(`👥 ${monitoringUsers.length} users monitoring match ${gameState.matchId}: ${monitoringUsers.join(', ')}`);
+    // Only act on rising edge
+    if (stage > prev) {
+      this.lastStage.set(pKey, stage);
 
-    for (const config of triggeredAlerts) {
-      console.log(`🚨 TENNIS Alert: ${config.type} for match ${gameState.matchId}`);
-      await this.generateAlert(gameState, config, monitoringUsers);
+      // Map stage to type/priority/title
+      const map = {
+        1: { type: "TENNIS_BREAK_POINT", prio: 80, title: "Break Point" },
+        2: { type: "TENNIS_DOUBLE_BREAK_POINT", prio: 92, title: "Double Break Point" },
+        3: { type: "TENNIS_SET_POINT", prio: 93, title: "Set Point" },
+        4: { type: "TENNIS_MATCH_POINT", prio: 98, title: "Match Point" },
+      } as const;
+
+      const def = (map as any)[stage];
+      if (def) {
+        // Leverage bump for single BP only (kept feed-only unless late)
+        let prio = def.prio;
+        if (stage === 1) { // single BP
+          const late = Math.max(gameState.gamesInSet.home, gameState.gamesInSet.away) >= 9
+                    || (gameState.sets.home === 1 && gameState.sets.away === 1);
+          prio = late ? 88 : 80;
+        }
+
+        // Dedup key tied to stable point (so repeated ticks do nothing)
+        const dedupKey = `${gameState.matchId}:${def.type}:${stablePointKey(gameState)}`;
+        this.metrics.attempts++;
+        console.log(JSON.stringify({ t:"ALERT_ATTEMPT", sport:"TENNIS", type: def.type, key: dedupKey, prio }));
+
+        if (!alertDeduplication.shouldAllow(def.type, gameState.matchId, dedupKey, { escalationOnly: true, timeWindow: 15000 })) {
+          this.metrics.suppressed++;
+        } else {
+          alerts.push(this.makeAlert(def.type, def.title, prio,
+            `${def.title} • ${formatPoints(gameState)} (${gameState.serving === "home" ? "Serve" : gameState.serving === "away" ? "Return" : "—"})`,
+            gameState));
+        }
+      }
+    }
+
+    // Tiebreak Start is also edge-triggered
+    const tbKey = `${gameState.matchId}:TB_START:S${gameState.currentSet}`;
+    if (gameState.isTiebreak && !this.lastStage.has(tbKey)) {
+      this.lastStage.set(tbKey, 1);
+      const k = `${gameState.matchId}:TENNIS_TIEBREAK_START:S${gameState.currentSet}`;
+      this.metrics.attempts++;
+      if (alertDeduplication.shouldAllow("TENNIS_TIEBREAK_START", gameState.matchId, k, { timeWindow: 30000 })) {
+        alerts.push(this.makeAlert("TENNIS_TIEBREAK_START", "Tiebreak Start", 80,
+          `Tiebreak in Set ${gameState.currentSet} — ${formatPoints(gameState)}`, gameState));
+      } else {
+        this.metrics.suppressed++;
+      }
+    }
+
+    // Process generated alerts
+    if (alerts.length > 0) {
+      console.log(`🎾 Processing ${alerts.length} alerts for match ${gameState.matchId}`);
+      
+      // Check if any users are monitoring this match
+      const monitoringUsers = await this.getUsersMonitoringMatch(gameState.matchId);
+      
+      if (monitoringUsers.length === 0) {
+        console.log(`⏭️ No users monitoring match ${gameState.matchId}, skipping`);
+        return;
+      }
+
+      console.log(`👥 ${monitoringUsers.length} users monitoring match ${gameState.matchId}: ${monitoringUsers.join(', ')}`);
+
+      for (const alert of alerts) {
+        await this.generateAlert(alert, monitoringUsers);
+      }
     }
   }
 
@@ -153,11 +273,15 @@ export class TennisEngine extends BaseSportEngine {
     }
   }
 
+  private makeAlert(type: string, title: string, priority: number, description: string, gameState: TennisGameState): any {
+    return { type, title, priority, description, gameState };
+  }
+
   private async generateAlert(
-    gameState: TennisGameState, 
-    config: AlertConfig,
+    alert: { type: string, title: string, priority: number, description: string, gameState: TennisGameState },
     userIds: string[]
   ): Promise<void> {
+    const { type, title, priority, description, gameState } = alert;
     const alertId = randomUUID();
     
     // Create rich alert context
@@ -172,17 +296,17 @@ export class TennisEngine extends BaseSportEngine {
       }
     };
 
-    let description = config.description;
+    let enhancedDescription = description;
     
     // Enhance description with context
-    description = `${description}\n\n${gameState.players.home.name} vs ${gameState.players.away.name}\nSet ${gameState.currentSet}: ${gameState.gamesInSet.home}-${gameState.gamesInSet.away}\nScore: ${gameState.score.home} - ${gameState.score.away}`;
+    enhancedDescription = `${enhancedDescription}\n\n${gameState.players.home.name} vs ${gameState.players.away.name}\nSet ${gameState.currentSet}: ${gameState.gamesInSet.home}-${gameState.gamesInSet.away}\nScore: ${gameState.score.home} - ${gameState.score.away}`;
     
     if (gameState.tournament) {
-      description += `\n📍 ${gameState.tournament}`;
+      enhancedDescription += `\n📍 ${gameState.tournament}`;
     }
 
     // Enhanced AI analysis for high-priority alerts
-    if (config.priority >= 85) {
+    if (priority >= 85) {
       try {
         // Convert tennis context to format AI expects
         const aiContext = {
@@ -196,33 +320,37 @@ export class TennisEngine extends BaseSportEngine {
           outs: undefined
         };
         const aiEnhancement = await enhanceHighPriorityAlert(
-          config.type,
+          type,
           aiContext,
-          description,
-          config.priority
+          enhancedDescription,
+          priority
         );
         if (aiEnhancement && aiEnhancement.enhancedDescription) {
-          description = aiEnhancement.enhancedDescription;
+          enhancedDescription = aiEnhancement.enhancedDescription;
         }
       } catch (error) {
-        console.error('AI enhancement failed:', error);
+        console.error('🤖 Advanced AI Enhancement failed:', error);
       }
     }
 
-    // Store alert
-    const alert = {
+    // Generate dedup hash for upsert
+    const dedupKey = `${gameState.matchId}:${type}:${stablePointKey(gameState)}`;
+    const dedupHash = hashKey(dedupKey);
+
+    // Store alert with dedup protection
+    const alertData = {
       id: alertId,
-      type: config.type,
-      title: `🎾 ${config.type}`,
-      description,
+      type,
+      title: `🎾 ${title}`,
+      description: enhancedDescription,
       sport: 'TENNIS' as const,
-      priority: config.priority,
+      priority,
       gameId: gameState.matchId,
-      probability: config.probability,
+      probability: 1.0,
       aiConfidence: null,
       timestamp: new Date(),
       seen: false,
-      context: JSON.stringify(context),
+      dedupHash,
       gameInfo: {
         status: 'live',
         homeTeam: gameState.players.home.name,
@@ -249,24 +377,26 @@ export class TennisEngine extends BaseSportEngine {
       }
     };
 
-    await storage.createAlert(alert);
+    const createdAlert = await storage.createAlert(alertData);
+    this.metrics.generated++;
 
     // Broadcast Tennis alerts over WebSocket
     this.onAlert?.({
       type: 'alert',
-      data: alert
+      data: createdAlert
     });
 
-    // Send to monitoring users
+    // Send to monitoring users  
     for (const userId of userIds) {
       // Check global tennis alert settings
       const settings = await storage.getSettingsBySport('TENNIS');
-      if (settings?.alertTypes[config.settingKey] && settings.telegramEnabled) {
-        await sendTelegramAlert(description);
+      const settingKey = this.getSettingKeyFromType(type);
+      if (settings?.alertTypes[settingKey] && settings.telegramEnabled) {
+        await sendTelegramAlert(enhancedDescription);
       }
     }
 
-    console.log(`✅ Tennis alert generated: ${config.type} for match ${gameState.matchId}`);
+    console.log(`✅ Tennis alert generated: ${type} for match ${gameState.matchId}`);
   }
 
   async monitor(): Promise<void> {
@@ -277,16 +407,10 @@ export class TennisEngine extends BaseSportEngine {
       const liveMatches = await this.getLiveMatches();
       console.log(`🎾 Found ${liveMatches.length} live tennis matches`);
       
-      // Process each live match
+      // Process each live match with edge-triggered alerts
       for (const gameState of liveMatches) {
         try {
-          // Check for alert conditions
-          const triggeredAlerts = await this.checkAlertConditions(gameState);
-          
-          if (triggeredAlerts.length > 0) {
-            console.log(`🎾 Processing ${triggeredAlerts.length} alerts for match ${gameState.matchId}`);
-            await this.processAlerts(triggeredAlerts, gameState);
-          }
+          await this.processAlerts(gameState);
         } catch (error) {
           console.error(`🎾 Error processing match ${gameState.matchId}:`, error);
         }
@@ -294,6 +418,18 @@ export class TennisEngine extends BaseSportEngine {
     } catch (error) {
       console.error('🎾 Tennis monitoring error:', error);
     }
+  }
+
+  private getSettingKeyFromType(type: string): string {
+    const typeMap: Record<string, string> = {
+      'TENNIS_BREAK_POINT': 'breakPoint',
+      'TENNIS_DOUBLE_BREAK_POINT': 'doubleBreakPoint', 
+      'TENNIS_SET_POINT': 'setPoint',
+      'TENNIS_MATCH_POINT': 'matchPoint',
+      'TENNIS_TIEBREAK_START': 'tiebreakStart',
+      'TENNIS_MOMENTUM_SURGE': 'momentumSurge'
+    };
+    return typeMap[type] || 'unknown';
   }
 
   private detectMomentumShift(state: TennisGameState): boolean {

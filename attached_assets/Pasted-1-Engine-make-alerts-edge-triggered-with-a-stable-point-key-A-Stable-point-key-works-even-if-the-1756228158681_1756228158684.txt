@@ -1,0 +1,245 @@
+1) Engine: make alerts edge-triggered with a stable point key
+A) Stable point key (works even if the feed lacks a sequence id)
+
+server/services/engines/tennis-engine.ts – add:
+
+// --- Add at top of file ---
+type Side = "home" | "away";
+
+// A stable identity for *this* point, whether or not the feed provides a seq id
+function stablePointKey(s: any) {
+  const set = s.currentSet ?? 0;
+  const gH = s.gamesInSet?.home ?? 0, gA = s.gamesInSet?.away ?? 0;
+  const pH = s.points?.home ?? "-", pA = s.points?.away ?? "-";
+  const tbH = s.tbPoints?.home ?? 0, tbA = s.tbPoints?.away ?? 0;
+  const sv = s.server ?? "-";
+  const tb = s.isTiebreak ? `TB:${tbH}-${tbA}` : `P:${pH}-${pA}`;
+  return `S${set}:G${gH}-${gA}:${tb}:SV${sv}`;
+}
+
+// Severity ladder for a single point (rises only): BP (1) → DBP (2) → SP (3) → MP (4)
+function computeStage(s: any): 0|1|2|3|4 {
+  // Match point?
+  const mp = isSetOrMatchPoint(s);
+  if (mp?.kind === "match") return 4;
+  if (mp?.kind === "set") return 3;
+
+  // Break points (tiebreak has no BP concept)
+  if (!s.isTiebreak && s.points) {
+    const server: Side | null = s.server ?? null;
+    if (server) {
+      const rec: Side = server === "home" ? "away" : "home";
+      const sp = s.points[server], rp = s.points[rec];
+      const doubleBP = (rp === "40" && (sp === "0" || sp === "15"));
+      const singleBP = (rp === "40" && sp === "30") || rp === "Ad";
+      if (doubleBP) return 2;
+      if (singleBP) return 1;
+    }
+  }
+  return 0;
+}
+
+// Set/Match point detector (existing logic or your own)
+function isSetOrMatchPoint(s: any): null | { kind: "set"|"match", side: Side } {
+  // Tiebreak path
+  if (s.isTiebreak) {
+    const tbH = s.tbPoints?.home ?? 0, tbA = s.tbPoints?.away ?? 0;
+    const lead = tbH - tbA;
+    const hPointAway = tbH >= 6 && lead >= 1;
+    const aPointAway = tbA >= 6 && -lead >= 1;
+    if (hPointAway || aPointAway) {
+      const side: Side = hPointAway ? "home" : "away";
+      const setsWon = s.setsWon?.[side] ?? 0;
+      const target = 2; // best-of-3 default
+      return { kind: (setsWon === target - 1) ? "match" : "set", side };
+    }
+    return null;
+  }
+  // Non-tiebreak path (game point that clinches set/match)
+  for (const side of ["home","away"] as Side[]) {
+    if (!s.points) continue;
+    const me = s.points[side], op = s.points[side === "home" ? "away" : "home"];
+    const atGP = (me === "40" && (op === "0" || op === "15" || op === "30")) || me === "Ad";
+    if (!atGP) continue;
+    const myGames = s.gamesInSet?.[side] ?? 0, opGames = s.gamesInSet?.[side === "home" ? "away" : "home"] ?? 0;
+    const next = myGames + 1;
+    const winsSet = next >= 6 && (next - opGames) >= 2;
+    if (!winsSet) continue;
+    const setsWon = s.setsWon?.[side] ?? 0;
+    const target = 2;
+    return { kind: (setsWon === target - 1) ? "match" : "set", side };
+  }
+  return null;
+}
+
+B) Stage-edge gate (emit once per point; escalate in place)
+
+Add state to the engine class:
+
+// inside class TennisEngine
+private lastStage = new Map<string, number>(); // key = matchId + stablePointKey
+
+
+Use it when building alerts:
+
+// right before creating any BP/SP/MP alert for match s:
+const pKey = `${s.matchId}:${stablePointKey(s)}`;
+const stage = computeStage(s); // 0..4
+const prev = this.lastStage.get(pKey) ?? 0;
+
+// only act on rising edge
+if (stage > prev) {
+  this.lastStage.set(pKey, stage);
+
+  // map stage to type/priority/title, then emit ONE alert (or escalate)
+  const map = {
+    1: { type: "TENNIS_BREAK_POINT",           prio: 80, title: "Break Point" },
+    2: { type: "TENNIS_DOUBLE_BREAK_POINT",    prio: 92, title: "Double Break Point" },
+    3: { type: "TENNIS_SET_POINT",             prio: 93, title: "Set Point" },
+    4: { type: "TENNIS_MATCH_POINT",           prio: 98, title: "Match Point" },
+  } as const;
+
+  const def = (map as any)[stage];
+  if (def) {
+    // leverage bump for single BP only (kept feed-only unless late)
+    let prio = def.prio;
+    if (stage === 1) { // single BP
+      const late = Math.max(s.gamesInSet.home, s.gamesInSet.away) >= 9
+                || (s.setsWon.home === 1 && s.setsWon.away === 1);
+      prio = late ? 88 : 80;
+    }
+
+    // dedup key tied to stable point (so repeated ticks do nothing)
+    const dedupKey = `${s.matchId}:${def.type}:${stablePointKey(s)}`;
+    this.metrics.attempts++;
+    console.log(JSON.stringify({ t:"ALERT_ATTEMPT", sport:"TENNIS", type: def.type, key: dedupKey, prio }));
+
+    if (!alertDeduplication.shouldAllow(def.type, s.matchId, dedupKey, { escalationOnly: true, timeWindow: 15000 })) {
+      this.metrics.suppressed++;
+    } else {
+      out.push(makeAlert(def.type, def.title, prio,
+        `${def.title} • ${formatPoints(s)} (${s.server === "home" ? "Serve" : s.server === "away" ? "Return" : "—"})`,
+        ctx));
+    }
+  }
+}
+
+
+Why this works:
+
+We fire once when a point enters BP/DBP/SP/MP.
+
+If it escalates (BP→DBP→SP→MP) we update the same point key (one card escalates) — no spam.
+
+Repeated source polls with the same score/point don’t re-emit.
+
+C) Tiebreak Start is also edge-triggered
+const tbKey = `${s.matchId}:TB_START:S${s.currentSet}`;
+if (s.isTiebreak && !this.lastStage.has(tbKey)) {
+  this.lastStage.set(tbKey, 1);
+  const k = `${s.matchId}:TENNIS_TIEBREAK_START:S${s.currentSet}`;
+  this.metrics.attempts++;
+  if (alertDeduplication.shouldAllow("TENNIS_TIEBREAK_START", s.matchId, k, { timeWindow: 30000 })) {
+    out.push(makeAlert("TENNIS_TIEBREAK_START", "Tiebreak Start", 80,
+      `Tiebreak in Set ${s.currentSet} — ${formatPoints(s)}`, ctx));
+  } else {
+    this.metrics.suppressed++;
+  }
+}
+
+2) Server dedup: widen windows + escalationOnly
+
+Make sure the tennis rules look like this (the key doesn’t need paId now — it uses stablePointKey):
+
+// alert-deduplication.ts
+DEDUP_RULES.push(
+  { alertType: "TENNIS_BREAK_POINT",
+    scope: { level: "point", timeWindow: 15000, maxAlerts: 1 },
+    escalationOnly: true, contextFactors: ["matchId","stablePointKey"] },
+
+  { alertType: "TENNIS_DOUBLE_BREAK_POINT",
+    scope: { level: "point", timeWindow: 15000, maxAlerts: 1 },
+    escalationOnly: true, contextFactors: ["matchId","stablePointKey"] },
+
+  { alertType: "TENNIS_SET_POINT",
+    scope: { level: "point", timeWindow: 15000, maxAlerts: 1 },
+    escalationOnly: true, contextFactors: ["matchId","stablePointKey"] },
+
+  { alertType: "TENNIS_MATCH_POINT",
+    scope: { level: "point", timeWindow: 15000, maxAlerts: 1 },
+    escalationOnly: true, contextFactors: ["matchId","stablePointKey"] },
+
+  { alertType: "TENNIS_TIEBREAK_START",
+    scope: { level: "game", timeWindow: 30000, maxAlerts: 1 },
+    escalationOnly: false, contextFactors: ["matchId","set"] },
+
+  { alertType: "TENNIS_MOMENTUM_SURGE",
+    scope: { level: "set", timeWindow: 60000, maxAlerts: 1, realertAfterMs: 240000 },
+    escalationOnly: false, contextFactors: ["matchId","set","side"] },
+);
+
+
+Note: your shouldAllow() just needs to take the dedupKey we already compute; the contextFactors comment is for your own reference.
+
+3) DB idempotency: prevent dup rows even under race
+
+Give each alert a deterministic dedup hash and upsert.
+
+A) Migration
+alter table alerts add column if not exists dedup_hash varchar(64);
+create unique index if not exists ux_alerts_dedup on alerts(dedup_hash);
+
+B) Compute & upsert
+import crypto from "node:crypto";
+function hashKey(s: string) { return crypto.createHash("sha1").update(s).digest("hex"); }
+
+// When creating the alert:
+const dedupKey = `${s.matchId}:${type}:${stablePointKey(s)}`;
+const alert = {
+  id: crypto.randomUUID(),
+  sport: "TENNIS",
+  type, title, priority, description,
+  game_info: ctx,
+  created_at: new Date().toISOString(),
+  dedup_hash: hashKey(dedupKey)
+};
+
+// In storage.createAlert():
+await db.query(`
+  insert into alerts (id, sport, type, title, description, priority, game_info, created_at, dedup_hash)
+  values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+  on conflict (dedup_hash) do nothing
+`, [alert.id, alert.sport, alert.type, alert.title, alert.description, alert.priority, alert.game_info, alert.created_at, alert.dedup_hash]);
+
+
+Now even if two ticks try to emit the same logical moment, the second insert is ignored safely.
+
+4) Client: avoid double-adding (WS + polling)
+
+If the UI both polls /api/alerts and listens to WS, it can show dup cards.
+
+In your alerts page hook:
+
+const { socket, isConnected } = useWebSocket();
+
+// Only poll when WS is not connected
+const { data } = useQuery({
+  queryKey: ["alerts"],
+  queryFn: fetchAlerts,
+  refetchInterval: isConnected ? false : 15000,
+});
+
+// Ingest WS alerts; ensure you ignore if the id already exists
+function ingest(wsAlert) {
+  setFeed(prev => prev.some(x => x.id === wsAlert.id) ? prev : [wsAlert, ...prev]);
+}
+
+5) Two quick diagnostics (turn on briefly)
+// Log when the point identity changes (should correlate with real ball-by-ball)
+console.log(JSON.stringify({ t:"POINT_KEY", sport:"TENNIS", matchId: s.matchId, key: stablePointKey(s) }));
+
+// Log the stage ladder (rising only)
+console.log(JSON.stringify({ t:"STAGE", key: stablePointKey(s), prev, stage }));
+
+
+If you still see repeats with the same POINT_KEY and no STAGE rise → the source is replaying the same point. The DB upsert will already block duplicates; the engine edge gate prevents re-emission.

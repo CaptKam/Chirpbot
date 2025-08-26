@@ -214,7 +214,7 @@ export class MemStorage implements IStorage {
     });
 
     // Default settings for each sport
-    const sports = ["MLB", "NFL", "NBA", "NHL"];
+    const sports = ["MLB", "NFL", "NBA", "NHL", "TENNIS"];
     sports.forEach(sport => {
       const id = randomUUID();
       this.settings.set(sport, {
@@ -255,6 +255,14 @@ export class MemStorage implements IStorage {
           powerPlay: sport === "NHL",
           nhlCloseGame: sport === "NHL",
           emptyNet: sport === "NHL",
+
+          // Tennis Alert Types
+          breakPoint: sport === "TENNIS",
+          doubleBreakPoint: sport === "TENNIS",
+          setPoint: sport === "TENNIS",
+          matchPoint: sport === "TENNIS",
+          tiebreakStart: sport === "TENNIS",
+          momentumSurge: sport === "TENNIS",
         },
         telegramEnabled: true,
         pushNotificationsEnabled: true,
@@ -453,7 +461,7 @@ export class MemStorage implements IStorage {
         priority: insertAlert.gameInfo.priority as number | undefined,
         scoringProbability: insertAlert.gameInfo.scoringProbability as number | undefined,
         currentPitcher: insertAlert.gameInfo.currentPitcher as { id: number; name: string; throwHand: string; stats: { era: number; whip: number; strikeOuts: number; wins: number; losses: number; }; } | undefined,
-        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; }; } | undefined,
+        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; slg: number; }; } | undefined,
       },
       weatherData: insertAlert.weatherData ? {
         temperature: insertAlert.weatherData.temperature,
@@ -1033,7 +1041,7 @@ export class DatabaseStorage implements IStorage {
         priority: insertAlert.gameInfo.priority as number | undefined,
         scoringProbability: insertAlert.gameInfo.scoringProbability as number | undefined,
         currentPitcher: insertAlert.gameInfo.currentPitcher as { id: number; name: string; throwHand: string; stats: { era: number; whip: number; strikeOuts: number; wins: number; losses: number; }; } | undefined,
-        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; }; } | undefined,
+        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; slg: number; }; } | undefined,
       },
       weatherData: insertAlert.weatherData ? {
         temperature: insertAlert.weatherData.temperature,
@@ -1042,8 +1050,25 @@ export class DatabaseStorage implements IStorage {
         windDirection: insertAlert.weatherData.windDirection as string | undefined,
       } : null,
     };
-    const [alert] = await db.insert(alerts).values([alertToInsert]).returning();
-    return alert;
+    // Use upsert with dedup_hash to prevent duplicate alerts
+    if (alertToInsert.dedupHash) {
+      const [alert] = await db.insert(alerts)
+        .values([alertToInsert])
+        .onConflictDoNothing({ target: alerts.dedupHash })
+        .returning();
+      
+      // If no rows returned, conflict occurred - fetch existing alert
+      if (!alert) {
+        const [existingAlert] = await db.select().from(alerts)
+          .where(eq(alerts.dedupHash, alertToInsert.dedupHash));
+        return existingAlert;
+      }
+      return alert;
+    } else {
+      // Fallback for alerts without dedup_hash
+      const [alert] = await db.insert(alerts).values([alertToInsert]).returning();
+      return alert;
+    }
   }
 
   async markAlertSentToTelegram(id: string): Promise<void> {

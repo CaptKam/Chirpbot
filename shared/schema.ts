@@ -106,6 +106,7 @@ export const alerts = pgTable("alerts", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   sentToTelegram: boolean("sent_to_telegram").notNull().default(false),
   seen: boolean("seen").notNull().default(false),
+  dedupHash: varchar("dedup_hash", { length: 64 }),
 });
 
 export const settings = pgTable("settings", {
