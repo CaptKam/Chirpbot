@@ -1,0 +1,112 @@
+1) Turn the firehose into a spotlight (no code redeploy needed)
+
+Raise Tennis toast floor (keep feed rich; only pop the big ones):
+
+-- Toast only high-leverage Tennis
+update ai_settings
+set min_priority = 90, rate_limit_ms = 15000
+where sport = 'TENNIS';
+
+
+Client toast rule (if you haven’t already):
+
+Toast: MATCH_POINT, SET_POINT, TIEBREAK_START, DOUBLE_BREAK_POINT (prio≥88)
+
+Feed-only: BREAK_POINT, MOMENTUM_SURGE
+
+2) Kill duplicates at the source (engine-side)
+
+Make sure these are in place (they stop 90% of dupes):
+
+Stable point identity
+stablePointKey = S{set}:G{h–a}:{P h–a | TB h–a}:SV{server}
+
+Stage edge only
+Emit once per point on rising stage: BP (1) → DBP (2) → SP (3) → MP (4)
+(Escalate card in place; don’t spawn new rows.)
+
+Dedup windows
+BP/DBP/SP/MP: 15s, escalationOnly=true
+TIEBREAK_START: 30s
+SURGE: 60s, realertAfter=240s
+
+DB idempotency (safety net)
+
+alter table alerts add column if not exists dedup_hash varchar(64);
+create unique index if not exists ux_alerts_dedup on alerts(dedup_hash);
+
+
+(Compute dedup_hash = sha1(matchId:type:stablePointKey) when inserting.)
+
+3) AI “opportunity” lane: valuable but throttled
+
+Keep betting_opps_enabled=true, but set:
+
+opp_min_priority=90
+
+opp_cooldown_ms=120000 (2 min)
+
+opp_max_per_set=3 (soft cap in code)
+
+Dedup on the same stablePointKey so it escalates, not spams.
+
+Never block base alerts if AI errors; decorate only.
+
+4) Verify we’re not double-adding in the client
+
+WS wins; polling pauses when WS is connected.
+
+Ignore WS items whose id already exists in feed.
+
+5) Quick reality checks (run these now)
+
+Volume by type (last 2h):
+
+select type, count(*) 
+from alerts 
+where sport='TENNIS' and "timestamp">now()-interval '2 hours'
+group by type order by 2 desc;
+
+
+You want: MP/SP/TB a small fraction of total; BP/SURGE largest (feed-only).
+
+Per-match “talkers” (find runaway matches):
+
+select game_info->>'matchId' as match, type, count(*)
+from alerts
+where sport='TENNIS' and "timestamp">now()-interval '2 hours'
+group by 1,2 order by 3 desc limit 20;
+
+
+If a single match dominates, enable the per-match soft cap (e.g., 8 alerts / 5 min) on emit.
+
+Dedup effectiveness (if you log it):
+
+METRICS_TENNIS: look for attempts, emitted, suppressed.
+
+Healthy: suppressed is non-zero and emitted/attempts is well under 50%.
+
+6) Guardrails to keep on
+
+User setting “Only monitored matches”: ON by default for Tennis so users aren’t flooded.
+(Make sure they’ve toggled at least one match.)
+
+Admin “Tennis Focus Mode”: one click to enforce the toast policy above system-wide.
+
+60s heartbeat per sport (METRICS_TENNIS, METRICS_MLB) so you can see drift fast.
+
+7) If anything still “feels off”, the tell-tale signals
+
+Attempts = 0 ➜ settings gate or live mapping (fix status/points).
+
+All DEDUP_BLOCK with same key ➜ key/window too strict; confirm stablePointKey changes when the score changes.
+
+Emitted > 0 but no UI ➜ WS broadcast missing or client double-polling.
+
+8) Suggested steady-state targets
+
+Toasts: ≤ 6–10 Tennis toasts per hour platform-wide (more during TBs).
+
+Feed: rich (hundreds OK), but dedup ensures each logical moment appears once.
+
+AI opps: ~1–3 per set per match, never back-to-back within 2 min.
