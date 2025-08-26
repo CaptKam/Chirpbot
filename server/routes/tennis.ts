@@ -47,7 +47,7 @@ tennisRouter.get("/matches", requireAuth, async (req, res) => {
 });
 
 // Toggle monitoring for a match
-tennisRouter.post("/toggle_monitoring", requireAuth, async (req, res) => {
+tennisRouter.post("/toggle-monitoring", requireAuth, async (req, res) => {
   try {
     const { matchId, enable } = req.body;
     

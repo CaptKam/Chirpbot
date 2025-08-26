@@ -14,7 +14,6 @@ export function BottomNavigation() {
   const navItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
     { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts" },
-    { path: "/tennis", icon: Trophy, label: "Tennis", testId: "nav-tennis" },
     { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
   ];
 

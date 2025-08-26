@@ -21,10 +21,7 @@ export default function TennisMatchesPage() {
 
   const toggleMonitoringMutation = useMutation({
     mutationFn: async ({ matchId, enable }: { matchId: string; enable: boolean }) => {
-      return apiRequest("/api/tennis/toggle_monitoring", {
-        method: "POST",
-        body: { matchId, enable },
-      });
+      return apiRequest("POST", "/api/tennis/toggle-monitoring", { matchId, enable });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tennis", "matches"] });

@@ -149,7 +149,6 @@ function RegularAppContent() {
         <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={Alerts} />
-        <Route path="/tennis" component={() => <ProtectedRoute component={TennisMatchesPage} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route component={NotFound} />
       </Switch>

@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import type { Settings } from "@/types";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "TENNIS"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
@@ -87,6 +87,16 @@ const ALERT_TYPE_CONFIG = {
     { key: "powerPlay", label: "Power Play", description: "Man advantage situations", category: "Special Situations" },
     { key: "nhlCloseGame", label: "NHL Close Game", description: "One-goal games in final period", category: "Game Situations" },
     { key: "emptyNet", label: "Empty Net", description: "Goalie pulled for extra attacker", category: "Special Situations" },
+  ],
+  TENNIS: [
+    { key: "breakPoint", label: "Break Point", description: "Opportunity to break opponent's serve", category: "Game Situations" },
+    { key: "setPoint", label: "Set Point", description: "Point to win the set", category: "Game Situations" },
+    { key: "matchPoint", label: "Match Point", description: "Point to win the entire match", category: "Game Situations" },
+    { key: "tiebreak", label: "Tiebreak", description: "Tiebreak games (7-point format)", category: "Game Situations" },
+    { key: "momentum", label: "Momentum Shift", description: "Significant momentum changes", category: "Game Flow" },
+    { key: "comeback", label: "Comeback Alert", description: "Player mounting significant comeback", category: "Game Flow" },
+    { key: "serve", label: "Serving Performance", description: "Exceptional serving statistics", category: "Player Performance" },
+    { key: "rally", label: "Extended Rally", description: "Long rallies and exceptional shots", category: "Special Events" },
   ],
 };
 
