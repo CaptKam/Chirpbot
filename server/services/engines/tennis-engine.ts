@@ -130,7 +130,7 @@ export class TennisEngine extends BaseSportEngine {
     };
   }
 
-  buildGameContext(gameState: TennisGameState, config: AlertConfig): any {
+  buildGameContext(gameState: TennisGameState): any {
     return {
       matchId: gameState.matchId,
       players: gameState.players,
@@ -144,8 +144,7 @@ export class TennisEngine extends BaseSportEngine {
       isBreakPoint: gameState.isBreakPoint,
       isSetPoint: gameState.isSetPoint,
       isMatchPoint: gameState.isMatchPoint,
-      isTiebreak: gameState.isTiebreak,
-      alertType: config.type
+      isTiebreak: gameState.isTiebreak
     };
   }
 
@@ -174,7 +173,12 @@ export class TennisEngine extends BaseSportEngine {
     }
   }
 
-  async processAlerts(gameState: TennisGameState): Promise<void> {
+  async processAlerts(triggeredAlerts: any[], gameState: TennisGameState): Promise<void> {
+    // Debug: Log what we're processing
+    console.log(`🎾 DEBUG: Processing match ${gameState.matchId} - ${gameState.players?.home?.name || 'Unknown'} vs ${gameState.players?.away?.name || 'Unknown'}`);
+    console.log(`🎾 DEBUG: Score: ${gameState.score?.home || '?'}-${gameState.score?.away || '?'}, Set: ${gameState.currentSet || '?'}, Games: ${gameState.gamesInSet?.home || '?'}-${gameState.gamesInSet?.away || '?'}`);
+    console.log(`🎾 DEBUG: Serving: ${gameState.serving || 'Unknown'}, Tiebreak: ${gameState.isTiebreak || false}`);
+    
     const alerts: any[] = [];
     
     // Edge-triggered alert generation
@@ -183,6 +187,7 @@ export class TennisEngine extends BaseSportEngine {
     const prev = this.lastStage.get(pKey) ?? 0;
     
     // Log point progression for debugging
+    console.log(`🎾 DEBUG: Stage calculation - prev: ${prev}, current: ${stage}, stableKey: ${stablePointKey(gameState)}`);
     if (prev !== stage) {
       console.log(JSON.stringify({ t:"STAGE", key: stablePointKey(gameState), prev, stage, matchId: gameState.matchId }));
     }
@@ -204,8 +209,8 @@ export class TennisEngine extends BaseSportEngine {
         // Leverage bump for single BP only (kept feed-only unless late)
         let prio = def.prio;
         if (stage === 1) { // single BP
-          const late = Math.max(gameState.gamesInSet.home, gameState.gamesInSet.away) >= 9
-                    || (gameState.sets.home === 1 && gameState.sets.away === 1);
+          const late = Math.max(gameState.gamesInSet?.home || 0, gameState.gamesInSet?.away || 0) >= 9
+                    || (gameState.sets?.home === 1 && gameState.sets?.away === 1);
           prio = late ? 88 : 80;
         }
 
@@ -410,7 +415,7 @@ export class TennisEngine extends BaseSportEngine {
       // Process each live match with edge-triggered alerts
       for (const gameState of liveMatches) {
         try {
-          await this.processAlerts(gameState);
+          await this.processAlerts([], gameState);
         } catch (error) {
           console.error(`🎾 Error processing match ${gameState.matchId}:`, error);
         }
