@@ -186,10 +186,13 @@ export class TennisEngine extends BaseSportEngine {
       try {
         // Convert tennis context to format AI expects
         const aiContext = {
-          homeTeam: gameState.players.home.name,
-          awayTeam: gameState.players.away.name,
-          score: { home: 0, away: 0 }, // Tennis uses different scoring
-          inning: undefined,
+          homeTeam: gameState.players?.home?.name || 'Player 1',
+          awayTeam: gameState.players?.away?.name || 'Player 2',
+          score: { 
+            home: gameState.gamesInSet?.home || 0, 
+            away: gameState.gamesInSet?.away || 0 
+          },
+          inning: `Set ${gameState.currentSet || 1}`,
           outs: undefined
         };
         const aiEnhancement = await enhanceHighPriorityAlert(
@@ -233,7 +236,16 @@ export class TennisEngine extends BaseSportEngine {
         strikes: undefined,
         runners: undefined,
         bases: undefined,
-        count: undefined
+        count: undefined,
+        score: {
+          home: gameState.gamesInSet?.home || 0,
+          away: gameState.gamesInSet?.away || 0
+        },
+        set: gameState.currentSet,
+        gameScore: {
+          home: gameState.score?.home || '0',
+          away: gameState.score?.away || '0'
+        }
       }
     };
 
