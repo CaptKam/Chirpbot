@@ -148,6 +148,12 @@ export class AlertDeduplication {
       scope: { level: 'inning', timeWindow: 60000, maxAlerts: 1 },
       escalationOnly: false,
       contextFactors: ['matchId', 'set', 'side']
+    },
+    {
+      alertType: 'TENNIS_AI_OPPORTUNITY',
+      scope: { level: 'point', timeWindow: 20000, maxAlerts: 1 },
+      escalationOnly: true,
+      contextFactors: ['matchId', 'set', 'game', 'server', 'stablePointKey']
     }
   ];
 

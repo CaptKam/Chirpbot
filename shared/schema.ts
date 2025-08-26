@@ -155,6 +155,7 @@ export const settings = pgTable("settings", {
     matchPoint: boolean;
     tiebreakStart: boolean;
     momentumSurge: boolean;
+    aiOpportunity: boolean;
   }>().notNull(),
   telegramEnabled: boolean("telegram_enabled").notNull().default(false),
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),
@@ -343,7 +344,7 @@ export interface GameDay {
 // AI Settings per sport for fine-tuned control
 export const aiSettings = pgTable("ai_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL
+  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL, TENNIS
   enabled: boolean("enabled").notNull().default(false),
   dryRun: boolean("dry_run").notNull().default(true),
   rateLimitMs: integer("rate_limit_ms").notNull().default(30000),
@@ -356,6 +357,13 @@ export const aiSettings = pgTable("ai_settings", {
   temperature: integer("temperature").notNull().default(70), // 0-100 scale
   updatedBy: varchar("updated_by"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  // Tennis AI opportunity settings
+  bettingOppsEnabled: boolean("betting_opps_enabled").notNull().default(false),
+  oppMinPriority: integer("opp_min_priority").notNull().default(88),
+  oppCooldownMs: integer("opp_cooldown_ms").notNull().default(90000),
+  oppMaxPerSet: integer("opp_max_per_set").notNull().default(3),
+  noviceMode: boolean("novice_mode").notNull().default(true),
+  dailyTokenCap: integer("daily_token_cap").default(200000)
 });
 
 // AI Learning Logs to track all AI interactions

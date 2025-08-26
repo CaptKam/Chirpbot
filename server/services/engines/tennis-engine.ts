@@ -416,6 +416,18 @@ export class TennisEngine extends BaseSportEngine {
       for (const gameState of liveMatches) {
         try {
           await this.processAlerts([], gameState);
+          
+          // Try AI opportunity checking (non-blocking)
+          try {
+            await this.maybeEmitAIOpportunity(gameState, { 
+              bettingOppsEnabled: true, 
+              noviceMode: true,
+              oppMinPriority: 88,
+              oppCooldownMs: 90000
+            });
+          } catch (aiError) {
+            console.error(`🤖 AI opportunity error for match ${gameState.matchId}:`, aiError);
+          }
         } catch (error) {
           console.error(`🎾 Error processing match ${gameState.matchId}:`, error);
         }
@@ -432,7 +444,8 @@ export class TennisEngine extends BaseSportEngine {
       'TENNIS_SET_POINT': 'setPoint',
       'TENNIS_MATCH_POINT': 'matchPoint',
       'TENNIS_TIEBREAK_START': 'tiebreakStart',
-      'TENNIS_MOMENTUM_SURGE': 'momentumSurge'
+      'TENNIS_MOMENTUM_SURGE': 'momentumSurge',
+      'TENNIS_AI_OPPORTUNITY': 'aiOpportunity'
     };
     return typeMap[type] || 'unknown';
   }
@@ -448,5 +461,95 @@ export class TennisEngine extends BaseSportEngine {
                             score.home === 'DEUCE';
     
     return isCloseSet && isImportantPoint;
+  }
+
+  // AI cooldown tracking
+  private aiCooldown = new Map<string, number>(); // key = `${matchId}:${set}`
+
+  async maybeEmitAIOpportunity(s: TennisGameState, settings: any) {
+    if (!settings?.bettingOppsEnabled) return;
+    if (!settings?.noviceMode) settings.noviceMode = true;
+
+    // Per-match cooldown
+    const k = `${s.matchId}:${s.currentSet}`;
+    const now = Date.now();
+    const last = this.aiCooldown.get(k) ?? 0;
+    if (now - last < (settings.oppCooldownMs ?? 90000)) return;
+
+    // Import the gate logic inline for now
+    const shouldProbeAI = (s: TennisGameState) => {
+      if (!s.score && !s.isTiebreak) return false;
+      const gMax = Math.max(s.gamesInSet?.home ?? 0, s.gamesInSet?.away ?? 0);
+      let L = 0;
+      if (gMax >= 9) L += 2;
+      if ((s.sets?.home === 1 && s.sets?.away === 1)) L += 2;
+      if (s.isTiebreak) L += 3;
+      
+      const p = s.score;
+      const sv = s.serving;
+      const opp = (side: "home"|"away") => side === "home" ? "away" : "home";
+      const preBP = (!s.isTiebreak && p && sv && (
+        (p[sv] === "0" && (p[opp(sv)] === "30")) ||
+        (p[sv] === "15" && p[opp(sv)] === "30") ||
+        (p[sv] === "30" && p[opp(sv)] === "30")
+      ));
+      const lateTB = s.isTiebreak && ((s.tbPoints?.home ?? 0) + (s.tbPoints?.away ?? 0)) >= 8;
+      return (L >= 2 && (preBP || lateTB));
+    };
+
+    if (!shouldProbeAI(s)) return;
+
+    // Compose dedup key on stable point id so escalations update in place
+    const dedupKey = `${s.matchId}:TENNIS_AI_OPPORTUNITY:${stablePointKey(s)}`;
+
+    if (!alertDeduplication.shouldAllow("TENNIS_AI_OPPORTUNITY", s.matchId, dedupKey, {
+      escalationOnly: true, timeWindow: 20000, realertAfterMs: settings.oppCooldownMs ?? 90000
+    })) return;
+
+    // Generate AI insight (simplified for now)
+    let text = "";
+    let priority = settings.oppMinPriority ?? 88;
+    let confidence = 0.65;
+
+    try {
+      // Simple fallback for testing
+      const tb = s.isTiebreak ? `TB ${s.tbPoints?.home ?? 0}-${s.tbPoints?.away ?? 0}` : "";
+      text = `AI WATCH: Pressure point likely next\nWhy: Score favors receiver; leverage high ${tb ? "in tiebreak" : "late in set"}`;
+      priority = Math.max(priority, 88);
+    } catch (e) {
+      console.error('AI tennis opportunity error:', e);
+      return;
+    }
+
+    // Respect priority floor
+    if (priority < (settings.oppMinPriority ?? 88)) return;
+
+    const alert = {
+      id: crypto.randomUUID(),
+      type: "TENNIS_AI_OPPORTUNITY",
+      title: "AI WATCH",
+      description: text,
+      priority,
+      sport: "TENNIS",
+      gameInfo: {
+        matchId: s.matchId,
+        set: s.currentSet,
+        games: s.gamesInSet,
+        points: s.isTiebreak ? s.tbPoints : s.score,
+        isTiebreak: s.isTiebreak,
+        server: s.serving
+      },
+      createdAt: new Date().toISOString(),
+      sentToTelegram: false,
+      seen: false,
+      dedupHash: dedupKey
+    };
+
+    await storage.createAlert(alert);
+    this.onAlert?.({ type: "alert", data: alert });   // WS broadcast
+    try { await sendTelegramAlert(this.telegramCfg, alert); } catch {}
+
+    this.aiCooldown.set(k, now);
+    console.log(`🤖 AI Tennis Opportunity: ${text.split('\n')[0]} for ${s.players?.home?.name} vs ${s.players?.away?.name}`);
   }
 }
