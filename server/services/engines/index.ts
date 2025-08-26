@@ -52,13 +52,22 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     // Stop all running engines first
     this.stopAllEngines();
     
-    // Enable only MLB engine for Game Situations
-    const hasMonitoredGames = await this.hasMonitoredGamesForSport('MLB');
-    if (hasMonitoredGames) {
+    // Start MLB engine if there are monitored games
+    const hasMonitoredMLBGames = await this.hasMonitoredGamesForSport('MLB');
+    if (hasMonitoredMLBGames) {
       console.log('🔧 Starting MLB engine for Game Situations alerts');
       this.startEngine('MLB', this.engines.get('MLB')!);
     } else {
       console.log('⏸️ No monitored MLB games found');
+    }
+    
+    // Start Tennis engine if there are monitored games
+    const hasMonitoredTennisGames = await this.hasMonitoredGamesForSport('TENNIS');
+    if (hasMonitoredTennisGames) {
+      console.log('🎾 Starting Tennis engine for live match alerts');
+      this.startEngine('TENNIS', this.engines.get('TENNIS')!);
+    } else {
+      console.log('⏸️ No monitored Tennis matches found');
     }
     
     console.log('✅ Game Situations alert system ready');
