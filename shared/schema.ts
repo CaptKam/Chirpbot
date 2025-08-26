@@ -185,6 +185,17 @@ export const userMonitoredMatches = pgTable("user_monitored_matches", {
   unique: sql`UNIQUE(${table.userId}, ${table.sport}, ${table.matchId})`,
 }));
 
+// Outbox table for reliable delivery of notifications
+export const outbox = pgTable("outbox", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  kind: text("kind").notNull(), // 'websocket', 'telegram'
+  payloadJson: text("payload_json").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  dispatchedAt: timestamp("dispatched_at"),
+  failureCount: integer("failure_count").notNull().default(0),
+  lastError: text("last_error"),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -221,6 +232,13 @@ export const insertAlertSchema = createInsertSchema(alerts).omit({
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
+});
+
+export const insertOutboxSchema = createInsertSchema(outbox).omit({
+  id: true,
+  createdAt: true,
+  dispatchedAt: true,
+  failureCount: true,
 });
 
 export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTeams).omit({

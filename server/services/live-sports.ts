@@ -354,12 +354,7 @@ class LiveSportsService {
             games = games.concat(nhlGames);
             break;
           case 'TENNIS':
-            console.log('🎾 Calendar requested TENNIS games...');
-            const tennisGames = await this.getTennisGames().catch((error) => {
-              console.error('🎾 Error in getTennisGames:', error);
-              return [];
-            });
-            console.log(`🎾 Calendar returning ${tennisGames.length} tennis games`);
+            const tennisGames = await this.getTennisGames().catch(() => []);
             games = games.concat(tennisGames);
             break;
           default:
@@ -386,11 +381,9 @@ class LiveSportsService {
   // Tennis games method
   private async getTennisGames(): Promise<any[]> {
     try {
-      console.log('🎾 getTennisGames: Starting tennis fetch for calendar...');
       // Import and use tennis API
       const { tennisApi } = await import('../services/tennis-api');
       const matches = await tennisApi.getLiveMatches();
-      console.log(`🎾 getTennisGames: Raw tennis matches: ${matches.length}`);
       
       // Convert to game format compatible with the rest of the system
       return matches.map(match => ({

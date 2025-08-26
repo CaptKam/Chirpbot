@@ -8,6 +8,7 @@ import { tennisApi } from '../tennis-api';
 // AI engine has been removed
 import { BaseSportEngine } from './base-engine';
 import { storage } from '../../storage';
+import { outboxWorker } from '../outbox-worker';
 
 // Create tennis engine instance
 const tennisEngine = new TennisEngine({
@@ -51,6 +52,10 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     
     // Stop all running engines first
     this.stopAllEngines();
+    
+    // Start the outbox worker for reliable delivery
+    console.log('📬 Starting AlertEmitter outbox worker...');
+    outboxWorker.start();
     
     // Start MLB engine if there are monitored games
     const hasMonitoredMLBGames = await this.hasMonitoredGamesForSport('MLB');

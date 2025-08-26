@@ -5,6 +5,7 @@ import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { alertDeduplication } from '../alert-deduplication';
+import { alertEmitter } from '../alert-emitter';
 import crypto from 'crypto';
 
 // --- Types for Tennis edge-triggered system ---
@@ -605,9 +606,16 @@ ${teachingPoint}
       dedupHash: dedupKey
     };
 
-    await storage.createAlert(alert);
-    this.onAlert?.({ type: "alert", data: alert });   // WS broadcast
-    try { await sendTelegramAlert(this.telegramCfg, alert); } catch {}
+    // Use AlertEmitter for reliable delivery pipeline
+    try {
+      await alertEmitter.emit(alert);
+      console.log(`📧 Tennis alert routed through AlertEmitter: ${alert.type}`);
+    } catch (error) {
+      console.error('❌ Failed to emit tennis alert through AlertEmitter:', error);
+      // Fallback to direct storage if AlertEmitter fails
+      await storage.createAlert(alert);
+      this.onAlert?.({ type: "alert", data: alert });
+    }
 
     this.aiCooldown.set(k, now);
     console.log(`🤖 AI Tennis Opportunity: ${text.split('\n')[0]} for ${s.players?.home?.name} vs ${s.players?.away?.name}`);
