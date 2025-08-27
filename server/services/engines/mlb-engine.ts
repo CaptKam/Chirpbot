@@ -114,11 +114,11 @@ export class MLBEngine extends BaseSportEngine {
     },
     {
       type: "Runners on Base",
-      settingKey: "runnersOnBase",
+      settingKey: "runnersOnBase", 
       priority: 60,
       probability: 1.0,
       description: "⚡ SCORING OPPORTUNITY!",
-      conditions: (state: MLBGameState) => state.runners.first || state.runners.second || state.runners.third
+      conditions: (state: MLBGameState) => state.runners.first && !state.runners.second && !state.runners.third
     },
     {
       type: "Close Game Alert",
