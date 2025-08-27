@@ -54,21 +54,37 @@ class MLBStatsAPIEnhanced implements MLBSource {
 
   async fetchGames(date?: string): Promise<Game[]> {
     // Use America/New_York timezone like main MLB API (V1-style)
-    const getMLBDate = (): string => {
+    const getMLBDate = (offsetDays = 0): string => {
       const now = new Date();
       const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+      easternTime.setDate(easternTime.getDate() + offsetDays);
       return easternTime.toISOString().split('T')[0];
     };
     
-    const today = date || getMLBDate();
-    const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&hydrate=linescore,team,game(content(media(epg)))`;
+    const today = date || getMLBDate(0);
+    const yesterday = getMLBDate(-1);
     
-    const data = await fetchJson(url, {
-      headers: { 'User-Agent': 'ChirpBot-Enhanced/2.0' },
-      timeoutMs: 8000
-    });
+    // Fetch both today's and yesterday's games to catch late-night West Coast games
+    const [todayData, yesterdayData] = await Promise.all([
+      fetchJson(
+        `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&hydrate=linescore,team,game(content(media(epg)))`,
+        { headers: { 'User-Agent': 'ChirpBot-Enhanced/2.0' }, timeoutMs: 8000 }
+      ),
+      fetchJson(
+        `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${yesterday}&hydrate=linescore,team,game(content(media(epg)))`,
+        { headers: { 'User-Agent': 'ChirpBot-Enhanced/2.0' }, timeoutMs: 8000 }
+      )
+    ]);
 
-    return this.processMLBData(data);
+    // Combine games from both days
+    const todayGames = this.processMLBData(todayData);
+    const yesterdayGames = this.processMLBData(yesterdayData);
+    
+    // Filter yesterday's games to only include live ones
+    const liveYesterdayGames = yesterdayGames.filter(game => game.status === 'live');
+    
+    // Return all of today's games plus any live games from yesterday
+    return [...todayGames, ...liveYesterdayGames];
   }
 
   private processMLBData(data: any): Game[] {
@@ -118,15 +134,34 @@ class ESPNMLBSource implements MLBSource {
 
   async fetchGames(date?: string): Promise<Game[]> {
     const today = date || new Date().toISOString().split('T')[0];
-    const formattedDate = today.replace(/-/g, '');
-    const url = `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${formattedDate}`;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
     
-    const data = await fetchJson(url, {
-      headers: { 'User-Agent': 'ChirpBot-ESPN/2.0' },
-      timeoutMs: 10000
-    });
-
-    return this.processESPNData(data);
+    const todayFormatted = today.replace(/-/g, '');
+    const yesterdayFormatted = yesterdayStr.replace(/-/g, '');
+    
+    // Fetch both today's and yesterday's games
+    const [todayData, yesterdayData] = await Promise.all([
+      fetchJson(
+        `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${todayFormatted}`,
+        { headers: { 'User-Agent': 'ChirpBot-ESPN/2.0' }, timeoutMs: 10000 }
+      ),
+      fetchJson(
+        `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${yesterdayFormatted}`,
+        { headers: { 'User-Agent': 'ChirpBot-ESPN/2.0' }, timeoutMs: 10000 }
+      )
+    ]);
+    
+    // Process both days
+    const todayGames = this.processESPNData(todayData);
+    const yesterdayGames = this.processESPNData(yesterdayData);
+    
+    // Filter yesterday's games to only include live ones
+    const liveYesterdayGames = yesterdayGames.filter(game => game.status === 'live');
+    
+    // Return all of today's games plus any live games from yesterday
+    return [...todayGames, ...liveYesterdayGames];
   }
 
   private processESPNData(data: any): Game[] {
