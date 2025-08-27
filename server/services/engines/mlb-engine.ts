@@ -1040,9 +1040,9 @@ export class MLBEngine implements SportEngine {
     };
 
     // Calculate base probability and apply enhanced weather multiplier
-    let p = estimateHRProbability(batterStats, pitcherStats, ctx);
+    let p = this.estimateHRProbability(batterStats, pitcherStats, ctx);
     p *= weatherMultiplier; // Apply enhanced weather carry multiplier
-    const tier = classifyTier(p);
+    const tier = this.classifyTier(p);
     if (!tier) return [];
 
     // Base priority by tier
@@ -1111,9 +1111,9 @@ export class MLBEngine implements SportEngine {
       scoreDiffAbs: Math.abs(gameState.homeScore - gameState.awayScore),
     };
     
-    let p = estimateHRProbability(batterStats, pitcherStats, ctx);
+    let p = this.estimateHRProbability(batterStats, pitcherStats, ctx);
     p *= weatherMultiplier; // Apply enhanced weather carry multiplier
-    const tier = classifyTier(p);
+    const tier = this.classifyTier(p);
     
     // Only fire for Tier A power hitters (35+ HRs) in any situation - matching ChirpBetaBot logic
     if (tier !== "A" || batter.stats.hr < 35) return [];
