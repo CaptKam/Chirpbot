@@ -75,18 +75,40 @@ export async function calculateRE24Level3(gameState: MLBGameState): Promise<RE24
   };
 }
 
-// Determine which level to use based on settings
+// Minimum probability thresholds for each RE24 level
+const MIN_PROB = { 1: 0.30, 2: 0.50, 3: 0.70 };
+
+// Determine which level to use based on settings and probability gating
 export async function getActiveRE24Level(gameState: MLBGameState, settings: any): Promise<RE24LevelResult | null> {
   const alertTypes = settings?.alertTypes || {};
   
-  if (alertTypes.re24Level3) {
-    return await calculateRE24Level3(gameState);
-  } else if (alertTypes.re24Level2) {
-    return await calculateRE24Level2(gameState);
-  } else if (alertTypes.re24Level1) {
-    return await calculateRE24Level1(gameState);
-  } else if (alertTypes.useRE24System) {
-    return await calculateRE24Level1(gameState); // Default to Level 1
+  // Skip if no RE24 systems are enabled
+  if (!alertTypes.re24Level3 && !alertTypes.re24Level2 && !alertTypes.re24Level1 && !alertTypes.useRE24System) {
+    return null;
+  }
+  
+  // Compute hybrid analysis once for efficiency
+  const hybrid = await analyzeHybridRE24(gameState);
+  
+  // Skip RE24 alerts if probability is low and it's not high leverage
+  if (hybrid.finalProbability < MIN_PROB[1] && !hybrid.isHighLeverage) {
+    return null;
+  }
+  
+  // Check thresholds from highest to lowest level
+  if (alertTypes.re24Level3 && hybrid.finalProbability >= MIN_PROB[3]) {
+    const lvl3 = await calculateRE24Level3(gameState);
+    return { ...lvl3, probability: hybrid.finalProbability };
+  }
+  
+  if (alertTypes.re24Level2 && hybrid.finalProbability >= MIN_PROB[2]) {
+    const lvl2 = await calculateRE24Level2(gameState);
+    return { ...lvl2, probability: hybrid.finalProbability };
+  }
+  
+  if ((alertTypes.re24Level1 || alertTypes.useRE24System) && hybrid.finalProbability >= MIN_PROB[1]) {
+    const lvl1 = await calculateRE24Level1(gameState);
+    return { ...lvl1, probability: hybrid.finalProbability };
   }
   
   return null;

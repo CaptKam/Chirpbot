@@ -93,6 +93,10 @@ export class MLBEngine extends BaseSportEngine {
   monitoringInterval = 1500; // 1.5 seconds normal polling (optimized from your successful system)
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
+  
+  // RE24 alert debouncing cache: gameId -> { re24Key, timestamp }
+  private re24AlertCache = new Map<string, { re24Key: string; timestamp: number }>();
+  private RE24_DEBOUNCE_MS = 60000; // 1 minute cooldown
 
   // 🎯 GAME SITUATIONS ALERTS ONLY - Focus on key game moments
   alertConfigs: AlertConfig[] = [
@@ -915,18 +919,38 @@ export class MLBEngine extends BaseSportEngine {
           const settings = await storage.getSettingsBySport(this.sport);
           const alertTypes = settings?.alertTypes || {};
 
-          // NEW — Add RE24 Level analysis if enabled
+          // NEW — Add RE24 Level analysis if enabled with debouncing
           const re24Analysis = await getActiveRE24Level(gameState, settings);
           if (re24Analysis) {
-            const re24Alert: AlertConfig = {
-              type: `RE24_LEVEL_${re24Analysis.level}`,
-              settingKey: `re24Level${re24Analysis.level}`,
-              priority: re24Analysis.priority,
-              probability: 1.0,
-              description: re24Analysis.analysis,
-              conditions: () => true
-            };
-            triggeredAlerts = [...triggeredAlerts, re24Alert];
+            // Check debouncing cache
+            const currentRe24Key = `${gameState.runners.first ? 1 : 0}${gameState.runners.second ? 1 : 0}${gameState.runners.third ? 1 : 0}-${gameState.outs}`;
+            const cached = this.re24AlertCache.get(gameState.gameId);
+            const now = Date.now();
+            
+            // Allow alert if: no cache, different base-out state, or cooldown expired
+            const shouldAllow = !cached || 
+                               cached.re24Key !== currentRe24Key || 
+                               (now - cached.timestamp) > this.RE24_DEBOUNCE_MS;
+            
+            if (shouldAllow) {
+              const re24Alert: AlertConfig = {
+                type: `RE24_LEVEL_${re24Analysis.level}`,
+                settingKey: `re24Level${re24Analysis.level}`,
+                priority: re24Analysis.priority,
+                probability: re24Analysis.probability || 1.0, // Use actual probability
+                description: re24Analysis.analysis,
+                conditions: () => true
+              };
+              triggeredAlerts = [...triggeredAlerts, re24Alert];
+              
+              // Update cache
+              this.re24AlertCache.set(gameState.gameId, {
+                re24Key: currentRe24Key,
+                timestamp: now
+              });
+            } else {
+              console.log(`🔄 RE24 alert debounced for ${gameState.gameId} (same state: ${currentRe24Key})`);
+            }
           }
 
           // NEW — add data-driven Power-Hitter alert for the current PA (only if enabled)

@@ -124,10 +124,10 @@ function clamp(x: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, x)); 
 }
 
-// Smooth priority mapping using logistic function
-function calculateSmoothPriority(probability: number, k: number = 8, m: number = 0.7): number {
+// Smooth priority mapping using logistic function - tuned to reduce spam
+function calculateSmoothPriority(probability: number, k: number = 6, m: number = 0.8): number {
   // Logistic function: priority = 100 / (1 + exp(-k*(prob - m)))
-  // k controls steepness, m controls midpoint
+  // k=6 (reduced steepness), m=0.8 (higher midpoint) to reduce priority for middling probabilities
   const logistic = 100 / (1 + Math.exp(-k * (probability - m)));
   return Math.round(clamp(logistic, 30, 100));
 }
@@ -168,22 +168,22 @@ function calculateBaseRE24RP24(gameState: MLBGameState): {
 function calculateLeverageFactor(gameState: MLBGameState): number {
   let leverage = 1.0;
 
-  // Late-inning pressure (inning 8+)
+  // Late-inning pressure (inning 8+) - reduced from 1.15 to 1.05
   if (gameState.inning >= 8) {
-    leverage *= 1.15;
-  }
-
-  // Close game pressure (≤2 run difference)
-  const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-  if (scoreDiff <= 1) {
-    leverage *= 1.10;
-  } else if (scoreDiff <= 2) {
     leverage *= 1.05;
   }
 
-  // High-leverage base-out states (runners in scoring position with <2 outs)
+  // Close game pressure (≤2 run difference) - reduced from 1.10/1.05 to 1.03/1.02
+  const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+  if (scoreDiff <= 1) {
+    leverage *= 1.03;
+  } else if (scoreDiff <= 2) {
+    leverage *= 1.02;
+  }
+
+  // High-leverage base-out states (runners in scoring position with <2 outs) - reduced from 1.08 to 1.03
   if ((gameState.runners.second || gameState.runners.third) && gameState.outs < 2) {
-    leverage *= 1.08;
+    leverage *= 1.03;
   }
 
   return leverage;
