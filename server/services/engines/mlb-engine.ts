@@ -914,11 +914,8 @@ export class MLBEngine extends BaseSportEngine {
           const settings = await storage.getSettingsBySport(this.sport);
           const alertTypes = settings?.alertTypes || {};
 
-          console.log(`🔧 Power Hitter Setting Check: powerHitter=${alertTypes.powerHitter}, powerHitterOnDeck=${alertTypes.powerHitterOnDeck}`);
-
           // NEW — add data-driven Power-Hitter alert for the current PA (only if enabled)
           if (alertTypes.powerHitter) {
-            console.log(`✅ Power Hitter alerts ENABLED - building alerts`);
             try {
               const power = this.buildPowerHitterAlerts(gameState);
               if (power.length) {
@@ -927,8 +924,6 @@ export class MLBEngine extends BaseSportEngine {
             } catch (e) {
               console.error("POWER_HITTER_AT_BAT compute error:", e);
             }
-          } else {
-            console.log(`🚫 Power Hitter alerts DISABLED - skipping`);
           }
 
           // NEW — add Power-Hitter ON DECK alert for advance betting intelligence (only if enabled)
