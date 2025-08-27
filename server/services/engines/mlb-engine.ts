@@ -1,15 +1,72 @@
-import { BaseSportEngine, AlertConfig } from './base-engine';
 import { getWeatherData } from '../weather';
 import { storage } from '../../storage';
 import { mlbApi } from '../mlb-api';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
-import { enhanceHighPriorityAlert } from '../ai-analysis';
+import { enhanceHighPriorityAlert, generateAdvancedPredictions } from '../ai-analysis';
 import { analyzeHybridRE24, generateHybridAlertDescription, cleanupCache } from './hybrid-re24-ai';
 import { getEnhancedWeather } from '../enhanced-weather';
-// NEW
-import { estimateHRProbability, classifyTier } from './power-hitter';
 import { getActiveRE24Level } from './re24-levels';
+import { alertDeduplicator, type MLBGameState as DeduplicationMLBGameState } from './alert-deduplication';
+
+// === CONSOLIDATED INTERFACES AND TYPES ===
+
+// Base engine interfaces
+export interface AlertConfig {
+  type: string;
+  settingKey?: string;
+  priority: number;
+  probability: number;
+  description: string;
+  conditions?: (gameState: any) => boolean | Promise<boolean>;
+  isPrediction?: boolean;
+  predictionEvents?: string[];
+  minimumPredictionProbability?: number;
+}
+
+export interface SportEngine {
+  sport: string;
+  alertConfigs: AlertConfig[];
+  monitoringInterval: number;
+  extractGameState(apiData: any): any;
+  checkAlertConditions(gameState: any): Promise<AlertConfig[]>;
+  processAlerts(alerts: AlertConfig[], gameState: any): Promise<void>;
+}
+
+// Power hitter types
+export type Hand = "L" | "R" | "S" | "U";
+
+export type BatterStats = {
+  id: number;
+  name: string;
+  handedness: Hand;
+  seasonHR?: number;
+  seasonPA?: number;
+  ISO?: number;
+  SLG?: number;
+  recentHR?: number;
+  recentPA?: number;
+};
+
+export type PitcherStats = {
+  id: number;
+  handedness: Hand;
+  hrPer9?: number;
+  tbf?: number;
+  hrPerPA?: number;
+};
+
+export type Context = {
+  parkHrFactor?: number;
+  windMph?: number;
+  inning: number;
+  half: "top" | "bottom";
+  outs: number;
+  risp: boolean;
+  scoreDiffAbs: number;
+};
+
+export type PowerTier = "A" | "B" | "C" | null;
 
 export interface MLBGameState {
   gameId: string;
@@ -88,7 +145,16 @@ export interface MLBGameState {
   };
 }
 
-export class MLBEngine extends BaseSportEngine {
+export class MLBEngine implements SportEngine {
+  // Base engine properties
+  onAlert?: (alert: any) => void;
+  protected lastAlertStates = new Map<string, {hash: string, ts: number}>();
+  private MAX_KEYS = 5000;
+  private MAX_AGE_MS = 30 * 60 * 1000;
+  private lastFireAt = new Map<string, number>();
+  private MIN_REFIRE_MS = 700;
+
+  // MLB specific properties
   sport = 'MLB';
   monitoringInterval = 1500; // 1.5 seconds normal polling (optimized from your successful system)
   private apiFailureCount = 0;
@@ -160,6 +226,312 @@ export class MLBEngine extends BaseSportEngine {
       conditions: (state: MLBGameState) => state.inning >= 10
     }
   ];
+
+  // === CONSOLIDATED POWER HITTER FUNCTIONS ===
+  
+  private P0 = 0.036; // league HR/PA baseline
+
+  private clamp(x: number, lo: number, hi: number) {
+    return Math.max(lo, Math.min(hi, x));
+  }
+
+  private shrink(observed: number, n: number, prior = this.P0, strength = 100) {
+    return (n * observed + strength * prior) / (n + strength);
+  }
+
+  private parkMult(parkHrFactor?: number) {
+    return this.clamp(parkHrFactor ?? 1.0, 0.80, 1.25);
+  }
+
+  private platoonMult(bh: Hand, ph: Hand) {
+    const adv = (bh === "R" && ph === "L") || (bh === "L" && ph === "R") || bh === "S";
+    return adv ? 1.10 : 0.92;
+  }
+
+  private pitcherMult(p: PitcherStats) {
+    const hrpa = p.hrPerPA ?? ((p.hrPer9 ?? 1.2) / 27);
+    const tbf = p.tbf ?? 400;
+    const stab = this.shrink(hrpa, tbf, this.P0, 200);
+    return this.clamp(stab / this.P0, 0.85, 1.25);
+  }
+
+  private windMultFromSpeedOnly(mph?: number) {
+    if (!mph || mph < 6) return 1;
+    const bump = Math.min(0.12, (mph - 5) * 0.01);
+    return 1 + bump;
+  }
+
+  public estimateHRProbability(batter: BatterStats, pitcher: PitcherStats, ctx: Context) {
+    const seasonPA = Math.max(1, batter.seasonPA ?? 0);
+    const seasonHRPA = (batter.seasonHR ?? 0) / seasonPA;
+
+    const recentPA = Math.max(1, batter.recentPA ?? 0);
+    const recentHRPA = (batter.recentHR ?? 0) / recentPA;
+
+    const bSeason = this.shrink(seasonHRPA, seasonPA, this.P0, 400);
+    const bRecent = this.shrink(recentHRPA, batter.recentPA ?? 0, this.P0, 100);
+    const batterProp = 0.6 * bSeason + 0.4 * bRecent;
+
+    const mult =
+      this.platoonMult(batter.handedness, pitcher.handedness) *
+      this.parkMult(ctx.parkHrFactor) *
+      this.pitcherMult(pitcher) *
+      this.windMultFromSpeedOnly(ctx.windMph);
+
+    return this.clamp(batterProp * mult, 0.005, 0.50);
+  }
+
+  public classifyTier(p: number): PowerTier {
+    if (p >= 0.045) return "A";
+    if (p >= 0.030) return "B";
+    if (p >= 0.018) return "C";
+    return null;
+  }
+
+  // === CONSOLIDATED BASE ENGINE METHODS ===
+
+  async checkAlertConditions(gameState: any): Promise<AlertConfig[]> {
+    const settings = await storage.getSettingsBySport(this.sport);
+    if (!settings) return [];
+
+    const triggeredAlerts: AlertConfig[] = [];
+    console.log(`🔧 Base engine processing ${this.alertConfigs.length} total alerts`);
+    
+    for (const config of this.alertConfigs) {
+      console.log(`🔍 Processing alert: ${config.type} (settingKey: ${config.settingKey})`);
+      
+      // Check if this alert type is enabled in settings
+      if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
+        console.log(`⏭️ Alert type '${config.type}' skipped - setting '${config.settingKey}' is disabled`);
+        continue;
+      }
+
+      if (!config.conditions) continue;
+
+      try {
+        // Handle both sync and async conditions properly
+        const conditionResult = config.conditions(gameState);
+        const shouldTrigger = conditionResult instanceof Promise ? await conditionResult : conditionResult;
+        
+        if (shouldTrigger) {
+          triggeredAlerts.push(config);
+        }
+      } catch (error) {
+        console.error(`Error checking condition for ${config.type}:`, error);
+      }
+    }
+
+    console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.awayTeam} vs ${gameState.homeTeam}`);
+    if (triggeredAlerts.length > 0) {
+      console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
+    }
+
+    // 🎯 ANTI-SPAM: Filter overlapping alerts to prevent spam
+    const filteredAlerts = this.filterOverlappingAlerts(triggeredAlerts);
+    if (filteredAlerts.length !== triggeredAlerts.length) {
+      console.log(`🔧 After overlap filtering: ${filteredAlerts.length} alerts (removed ${triggeredAlerts.length - filteredAlerts.length} overlapping)`);
+    }
+
+    return filteredAlerts;
+  }
+
+  protected filterOverlappingAlerts(alerts: AlertConfig[]): AlertConfig[] {
+    if (alerts.length <= 1) return alerts;
+
+    // 🎯 ULTRA ANTI-SPAM: Return only the highest priority alert
+    const sortedByPriority = alerts.sort((a, b) => b.priority - a.priority);
+    const topAlert = sortedByPriority[0];
+    
+    console.log(`🎯 ULTRA FILTER: Keeping only TOP priority alert: ${topAlert.type} (Priority: ${topAlert.priority})`);
+    if (sortedByPriority.length > 1) {
+      console.log(`⏭️ Suppressed ${sortedByPriority.length - 1} lower priority alerts: ${sortedByPriority.slice(1).map(a => a.type).join(', ')}`);
+    }
+
+    return [topAlert];
+  }
+
+  protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
+    // 🎯 ENHANCED DEDUPLICATION: Use rich contextual factors and realert functionality
+    try {
+      // Convert gameState to MLBGameState format for deduplication
+      const mlbGameState: DeduplicationMLBGameState = {
+        gamePk: parseInt(gameState.gameId || gameId),
+        inning: gameState.inning || 1,
+        inningState: gameState.inningState === 'top' ? 'top' : 'bottom',
+        outs: gameState.outs || 0,
+        runners: {
+          first: gameState.runners?.first || false,
+          second: gameState.runners?.second || false,
+          third: gameState.runners?.third || false
+        },
+        currentBatter: gameState.currentBatter ? {
+          id: gameState.currentBatter.id || 0
+        } : undefined,
+        currentPitcher: gameState.currentPitcher ? {
+          id: gameState.currentPitcher.id || 0
+        } : undefined,
+        paId: gameState.paId // plate appearance ID if available
+      };
+
+      const shouldTrigger = alertDeduplicator.shouldTriggerAlert(alertType, mlbGameState);
+      
+      if (!shouldTrigger) {
+        const debugInfo = alertDeduplicator.getDebugInfo(alertType, mlbGameState);
+        console.log(`🚫 ENHANCED DEDUP: Alert '${alertType}' blocked`, debugInfo);
+      } else {
+        console.log(`✅ ENHANCED DEDUP: Alert '${alertType}' allowed with rich context`);
+      }
+      
+      return shouldTrigger;
+    } catch (error) {
+      console.error('Error in enhanced deduplication:', error);
+      // Fallback to simple logic if there's an issue
+      const globalKey = alertType;
+      const now = Date.now();
+      const cooldownMs = 30000;
+
+      const lastGlobalFire = this.lastFireAt.get(globalKey);
+      if (lastGlobalFire && (now - lastGlobalFire) < cooldownMs) {
+        return false;
+      }
+
+      this.lastFireAt.set(globalKey, now);
+      return true;
+    }
+  }
+
+  async processAlerts(triggeredAlerts: AlertConfig[], gameState: any): Promise<void> {
+    // 🎯 ULTIMATE ANTI-SPAM: Only ONE alert per game per polling cycle
+    if (triggeredAlerts.length === 0) return;
+    
+    // Get the highest priority alert only
+    const sortedAlerts = triggeredAlerts.sort((a, b) => b.priority - a.priority);
+    const alert = sortedAlerts[0];
+    
+    console.log(`🎯 Processing ONLY ONE alert per game: ${alert.type} (Priority: ${alert.priority})`);
+    if (sortedAlerts.length > 1) {
+      console.log(`⏭️ Suppressing ${sortedAlerts.length - 1} other alerts: ${sortedAlerts.slice(1).map(a => a.type).join(', ')}`);
+    }
+    
+    if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
+      console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
+      return;
+    }
+
+    try {
+      // Get weather data using city name instead of team name  
+      let cityName = gameState.homeTeam;
+      const teamCityMap: Record<string, string> = {
+        'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
+        'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
+        'Athletics': 'Oakland', 'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
+        'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
+        'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
+        'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
+        'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
+        'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
+        'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
+        'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
+        'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
+        'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
+        'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
+        'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
+        'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
+      };
+      
+      if (teamCityMap[gameState.homeTeam]) {
+        cityName = teamCityMap[gameState.homeTeam];
+      }
+      
+      const weatherData = await getWeatherData(cityName);
+
+      // 🤖 AI ENHANCEMENT: For high-priority alerts (80+), use AI to enhance descriptions
+      let finalDescription = alert.description;
+      let finalPriority = alert.priority;
+      
+      // 🎰 FORCE BETTING INTELLIGENCE FOR ALL ALERTS 
+      if (alert.priority >= 50) {
+        const settings = await storage.getSettingsBySport(this.sport);
+        console.log(`🎰 BETTING INTEL: Priority ${alert.priority}, AI Enabled: ${(settings as any)?.aiEnabled}, Type: ${alert.type}`);
+        if (settings && (settings as any).aiEnabled) {
+          try {
+            const gameContext = this.buildGameContext(gameState);
+            const enhanced = await enhanceHighPriorityAlert(
+              alert.type,
+              gameContext,
+              alert.description,
+              alert.priority
+            );
+            
+            if (enhanced) {
+              finalDescription = enhanced.enhancedDescription;
+              finalPriority = enhanced.priority;
+              
+              // 🚀 GENERATE ADVANCED PREDICTIONS
+              const predictions = await generateAdvancedPredictions(gameContext, alert.type);
+              if (predictions) {
+                finalDescription += ` | 📊 Analytics: WP±${predictions.winProbabilityShift}% | Leverage: ${predictions.leverageIndex} | Clutch: ${predictions.clutchRating}% | ${predictions.predictedOutcome}`;
+                console.log(`🧠 Advanced AI Prediction: ${predictions.predictedOutcome}`);
+              }
+              
+              console.log(`🤖 AI Enhanced: ${alert.type} - "${enhanced.enhancedDescription}"`);
+            }
+          } catch (error) {
+            console.log(`🤖 AI enhancement failed for ${alert.type}:`, error instanceof Error ? error.message : 'Unknown error');
+          }
+        } else {
+          console.log(`🤖 AI enhancement skipped - AI disabled in settings`);
+        }
+      }
+
+      const alertData = {
+        type: alert.type,
+        sport: this.sport,
+        title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
+        description: finalDescription,
+        gameInfo: {
+          score: {
+            away: gameState.awayScore,
+            home: gameState.homeScore
+          },
+          status: 'Live',
+          awayTeam: gameState.awayTeam,
+          homeTeam: gameState.homeTeam,
+          ...this.getGameSpecificInfo(gameState)
+        },
+        weatherData,
+        sentToTelegram: false,
+        priority: finalPriority, // Use AI-enhanced priority if available
+        probability: alert.probability
+      };
+
+      const settings = await storage.getSettingsBySport(this.sport);
+      const createdAlert = await storage.createAlert(alertData);
+
+      // Send to Telegram for high-priority alerts (using enhanced priority)
+      if (finalPriority >= 75 && settings?.telegramEnabled) {
+        const telegramConfig = {
+          botToken: process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_TOKEN || "default_key",
+          chatId: process.env.TELEGRAM_CHAT_ID || process.env.CHAT_ID || "default_key",
+        };
+        const sent = await sendTelegramAlert(telegramConfig, createdAlert);
+        if (sent) {
+          await storage.markAlertSentToTelegram(createdAlert.id);
+        }
+      }
+
+      console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${finalPriority}${finalPriority !== alert.priority ? ` - AI Enhanced from ${alert.priority}` : ''})`);
+
+      // INSTANT BROADCAST: Send alert immediately via WebSocket
+      if (this.onAlert) {
+        this.onAlert(createdAlert);
+        console.log(`📡 Alert broadcast immediately via WebSocket`);
+      }
+
+    } catch (error) {
+      console.error(`Error processing ${this.sport} alert:`, error);
+    }
+  }
 
   protected getGameSpecificInfo(gameState: any): any {
     return {
