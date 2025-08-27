@@ -296,34 +296,14 @@ export class MLBEngine extends BaseSportEngine {
           });
         }
         
-        // Fallback: Check recent plays for runner movements
-        if (!situation && liveData.plays?.allPlays) {
-          const recentPlays = liveData.plays.allPlays.slice(-5); // Check last 5 plays
-          recentPlays.forEach((play: any) => {
-            if (play.runners && play.runners.length > 0) {
-              console.log(`🔍 Found runners in recent play:`, play.runners);
-              play.runners.forEach((runner: any) => {
-                if (runner.movement?.end === '1B' && !runner.movement?.isOut) runners.first = true;
-                if (runner.movement?.end === '2B' && !runner.movement?.isOut) runners.second = true;
-                if (runner.movement?.end === '3B' && !runner.movement?.isOut) runners.third = true;
-              });
-            }
-          });
-        }
+        // REMOVED: This fallback was incorrectly using PAST plays to set CURRENT runners
+        // Historical runner movements (including scored runners) should not affect current game state
         
         // REMOVED: This fallback was incorrectly interpreting offensive lineup as base runners
         // The linescore.offense data shows batting order positions, NOT base runners
         
-        // Emergency fallback: Manual runner detection from play descriptions
-        if (!situation && currentPlay?.result?.description) {
-          const desc = currentPlay.result.description.toLowerCase();
-          if (desc.includes('runner') || desc.includes('on base')) {
-            console.log(`🔍 Detecting runners from play description: "${currentPlay.result.description}"`);
-            if (desc.includes('first') || desc.includes('1st')) runners.first = true;
-            if (desc.includes('second') || desc.includes('2nd')) runners.second = true;
-            if (desc.includes('third') || desc.includes('3rd')) runners.third = true;
-          }
-        }
+        // REMOVED: Manual text parsing creates false positives
+        // Only use authoritative MLB API data sources
         
         // Debug: Log final runner state for troubleshooting
         if (runners.first || runners.second || runners.third) {
