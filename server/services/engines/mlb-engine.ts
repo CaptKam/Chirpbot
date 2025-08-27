@@ -9,6 +9,7 @@ import { analyzeHybridRE24, generateHybridAlertDescription, cleanupCache } from 
 import { getEnhancedWeather } from '../enhanced-weather';
 // NEW
 import { estimateHRProbability, classifyTier } from './power-hitter';
+import { getActiveRE24Level } from './re24-levels';
 
 export interface MLBGameState {
   gameId: string;
@@ -913,6 +914,20 @@ export class MLBEngine extends BaseSportEngine {
           // Get current settings to check if power hitter alerts are enabled
           const settings = await storage.getSettingsBySport(this.sport);
           const alertTypes = settings?.alertTypes || {};
+
+          // NEW — Add RE24 Level analysis if enabled
+          const re24Analysis = await getActiveRE24Level(gameState, settings);
+          if (re24Analysis) {
+            const re24Alert: AlertConfig = {
+              type: `RE24_LEVEL_${re24Analysis.level}`,
+              settingKey: `re24Level${re24Analysis.level}`,
+              priority: re24Analysis.priority,
+              probability: 1.0,
+              description: re24Analysis.analysis,
+              conditions: () => true
+            };
+            triggeredAlerts = [...triggeredAlerts, re24Alert];
+          }
 
           // NEW — add data-driven Power-Hitter alert for the current PA (only if enabled)
           if (alertTypes.powerHitter) {
