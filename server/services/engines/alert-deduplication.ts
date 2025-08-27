@@ -54,7 +54,7 @@ const DEDUP_RULES: DeduplicationRule[] = [
   },
   {
     alertType: 'Runners on Base',
-    scope: { level: 'half-inning', timeWindow: 45000, maxAlerts: 3, realertAfterMs: 120000 },
+    scope: { level: 'half-inning', timeWindow: 45000, maxAlerts: 1, realertAfterMs: 120000 },
     contextFactors: ['basesHash', 'outs', 'batterId', 'inning', 'isTop']
   },
   {
