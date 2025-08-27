@@ -311,14 +311,8 @@ export class MLBEngine extends BaseSportEngine {
           });
         }
         
-        // Fallback: Check linescore offense data
-        if (!situation && liveData.linescore?.offense) {
-          const offense = liveData.linescore.offense;
-          console.log(`🔍 Checking linescore offense:`, offense);
-          if (offense.first) runners.first = true;
-          if (offense.second) runners.second = true;
-          if (offense.third) runners.third = true;
-        }
+        // REMOVED: This fallback was incorrectly interpreting offensive lineup as base runners
+        // The linescore.offense data shows batting order positions, NOT base runners
         
         // Emergency fallback: Manual runner detection from play descriptions
         if (!situation && currentPlay?.result?.description) {
