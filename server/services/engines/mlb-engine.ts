@@ -910,24 +910,32 @@ export class MLBEngine extends BaseSportEngine {
           let triggeredAlerts = await this.checkAlertConditions(gameState);
           console.log(`⚡ Found ${triggeredAlerts.length} triggered alerts: ${triggeredAlerts.map(a => a.type).join(', ')}`);
 
-          // NEW — add data-driven Power-Hitter alert for the current PA
-          try {
-            const power = this.buildPowerHitterAlerts(gameState);
-            if (power.length) {
-              triggeredAlerts = [...triggeredAlerts, ...power];
+          // Get current settings to check if power hitter alerts are enabled
+          const settings = await storage.getSettingsBySport(this.sport);
+          const alertTypes = settings?.alertTypes || {};
+
+          // NEW — add data-driven Power-Hitter alert for the current PA (only if enabled)
+          if (alertTypes.powerHitter) {
+            try {
+              const power = this.buildPowerHitterAlerts(gameState);
+              if (power.length) {
+                triggeredAlerts = [...triggeredAlerts, ...power];
+              }
+            } catch (e) {
+              console.error("POWER_HITTER_AT_BAT compute error:", e);
             }
-          } catch (e) {
-            console.error("POWER_HITTER_AT_BAT compute error:", e);
           }
 
-          // NEW — add Power-Hitter ON DECK alert for advance betting intelligence
-          try {
-            const powerOnDeck = this.buildPowerHitterOnDeckAlerts(gameState);
-            if (powerOnDeck.length) {
-              triggeredAlerts = [...triggeredAlerts, ...powerOnDeck];
+          // NEW — add Power-Hitter ON DECK alert for advance betting intelligence (only if enabled)
+          if (alertTypes.powerHitterOnDeck) {
+            try {
+              const powerOnDeck = this.buildPowerHitterOnDeckAlerts(gameState);
+              if (powerOnDeck.length) {
+                triggeredAlerts = [...triggeredAlerts, ...powerOnDeck];
+              }
+            } catch (e) {
+              console.error("POWER_HITTER_ON_DECK compute error:", e);
             }
-          } catch (e) {
-            console.error("POWER_HITTER_ON_DECK compute error:", e);
           }
 
           // Debug current game state like ChirpBetaBot
