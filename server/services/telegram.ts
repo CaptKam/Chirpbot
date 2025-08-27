@@ -116,6 +116,9 @@ export async function sendTelegramAlert(
       // Handle rate limiting
       if (fetchError.message?.includes('429')) {
         console.warn('Telegram rate limit hit, dropping alert');
+      } else if (fetchError.message?.includes('404')) {
+        // Invalid bot token - disable future attempts
+        console.warn('⚠️ Invalid Telegram bot token detected. Please update TELEGRAM_BOT_TOKEN in environment settings.');
       } else {
         console.error('Telegram send error:', fetchError.message);
       }

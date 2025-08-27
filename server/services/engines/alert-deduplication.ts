@@ -76,6 +76,42 @@ const DEDUP_RULES: DeduplicationRule[] = [
     alertType: 'Hybrid RE24+AI',
     scope: { level: 'plate-appearance', timeWindow: 15000, maxAlerts: 1 },
     contextFactors: ['batterId', 'pitcherId', 'paId', 'inning', 'isTop', 'outs']
+  },
+  // Player Performance Alerts
+  {
+    alertType: 'POWER_HITTER_AT_BAT',
+    scope: { level: 'plate-appearance', timeWindow: 30000, maxAlerts: 1, realertAfterMs: 120000 },
+    contextFactors: ['batterId', 'paId', 'inning', 'isTop']
+  },
+  {
+    alertType: 'Power Hitter On Deck',
+    scope: { level: 'plate-appearance', timeWindow: 60000, maxAlerts: 1, realertAfterMs: 180000 },
+    contextFactors: ['batterId', 'inning', 'isTop']
+  },
+  {
+    alertType: 'Star Batter Alert',
+    scope: { level: 'plate-appearance', timeWindow: 30000, maxAlerts: 1, realertAfterMs: 90000 },
+    contextFactors: ['batterId', 'paId', 'inning', 'isTop']
+  },
+  {
+    alertType: 'Elite Clutch Hitter',
+    scope: { level: 'plate-appearance', timeWindow: 45000, maxAlerts: 1, realertAfterMs: 150000 },
+    contextFactors: ['batterId', 'paId', 'inning', 'isTop', 'basesHash']
+  },
+  {
+    alertType: 'Strikeout',
+    scope: { level: 'plate-appearance', timeWindow: 5000, maxAlerts: 1 },
+    contextFactors: ['batterId', 'pitcherId', 'paId']
+  },
+  {
+    alertType: 'Home Run',
+    scope: { level: 'game', timeWindow: 10000, maxAlerts: 1 },
+    contextFactors: ['batterId', 'inning']
+  },
+  {
+    alertType: 'Scoring Play',
+    scope: { level: 'half-inning', timeWindow: 30000, maxAlerts: 3, realertAfterMs: 60000 },
+    contextFactors: ['inning', 'isTop', 'outs']
   }
 ];
 

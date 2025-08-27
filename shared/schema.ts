@@ -112,18 +112,29 @@ export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   sport: text("sport").notNull(),
   alertTypes: jsonb("alert_types").$type<{
-    // MLB Alert Types
+    // MLB Alert Types - Game Situations
     risp: boolean;
-    homeRun: boolean;
-    lateInning: boolean;
-    closeGame: boolean;
+    basesLoaded: boolean;      // FIXED: Was missing
     runnersOnBase: boolean;
+    closeGame: boolean;
+    lateInning: boolean;        // FIXED: Kept as singular to match engine
+    extraInnings: boolean;      // FIXED: Was missing
+    
+    // MLB Alert Types - Scoring Events
+    homeRun: boolean;
+    homeRunAlert: boolean;
     hits: boolean;
     scoring: boolean;
     inningChange: boolean;
-    homeRunAlert: boolean;
+    
+    // MLB Alert Types - Player Performance  
     strikeouts: boolean;
+    powerHitter: boolean;       // FIXED: Was missing
     powerHitterOnDeck: boolean;
+    starBatter: boolean;        // FIXED: Was missing
+    eliteClutch: boolean;       // FIXED: Was missing
+    avgHitter: boolean;         // FIXED: Was missing
+    rbiMachine: boolean;        // FIXED: Was missing
     
     // RE24 System
     useRE24System: boolean;

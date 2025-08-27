@@ -6,6 +6,7 @@ import helmet from "helmet";
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { seedDatabase } from "./seed-database";
 
 const { Pool } = pg;
 
@@ -81,6 +82,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize database with required seed data
+  try {
+    await seedDatabase();
+    console.log('✅ Database initialization complete');
+  } catch (err) {
+    console.error('⚠️ Database seeding failed (may already be seeded):', err);
+    // Continue anyway - the database might already be seeded
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
