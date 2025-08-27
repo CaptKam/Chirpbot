@@ -857,7 +857,17 @@ export class MLBEngine extends BaseSportEngine {
       for (const game of liveGames) {
         try {
           // Map the game ID from multi-source aggregator to gamePk
-          const gamePk = Number(game.id || game.gamePk); // Ensure numeric gamePk
+          console.log(`🎯 Processing live game: ${game.id} (${game.awayTeam?.name || game.awayTeam} @ ${game.homeTeam?.name || game.homeTeam})`);
+          
+          // Extract gamePk from game ID (format: mlb-776574)
+          let gamePk: number;
+          if (typeof game.id === 'string' && game.id.startsWith('mlb-')) {
+            gamePk = parseInt(game.id.replace('mlb-', ''));
+          } else {
+            gamePk = Number(game.id || game.gamePk);
+          }
+          
+          console.log(`🔍 Extracted gamePk: ${gamePk} from game.id: ${game.id}`);
 
           // V1-style status validation using the normalized isLive function
           const status = game.status?.toLowerCase() || '';
@@ -894,7 +904,11 @@ export class MLBEngine extends BaseSportEngine {
           if (!gameState) continue;
 
           console.log(`🔍 Processing ${this.alertConfigs.length} alert configs for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
+          console.log(`📊 Game State: Inning ${gameState.inning} (${gameState.inningState}), Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}, Outs: ${gameState.outs}`);
+          console.log(`🏃 Runners: 1st=${gameState.runners?.first}, 2nd=${gameState.runners?.second}, 3rd=${gameState.runners?.third}`);
+          
           let triggeredAlerts = await this.checkAlertConditions(gameState);
+          console.log(`⚡ Found ${triggeredAlerts.length} triggered alerts: ${triggeredAlerts.map(a => a.type).join(', ')}`);
 
           // NEW — add data-driven Power-Hitter alert for the current PA
           try {
