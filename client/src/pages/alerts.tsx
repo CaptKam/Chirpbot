@@ -345,7 +345,14 @@ export default function Alerts() {
                             </Pill>
                           )}
                           {vm.priority && (
-                            <Pill className="bg-rose-500/15 ring-rose-400/40 text-rose-200">
+                            <Pill className={(() => {
+                              const priority = vm.priority;
+                              if (priority >= 95) return "bg-red-500/20 ring-red-400/50 text-red-200"; // Critical
+                              if (priority >= 90) return "bg-orange-500/20 ring-orange-400/50 text-orange-200"; // Very High
+                              if (priority >= 85) return "bg-amber-500/20 ring-amber-400/50 text-amber-200"; // High
+                              if (priority >= 80) return "bg-yellow-500/20 ring-yellow-400/50 text-yellow-200"; // Medium-High
+                              return "bg-rose-500/15 ring-rose-400/40 text-rose-200"; // Medium
+                            })()}>
                               <Flame className="w-3.5 h-3.5" />
                               Priority {vm.priority}
                             </Pill>
