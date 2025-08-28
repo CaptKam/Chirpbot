@@ -346,9 +346,6 @@ export default function Alerts() {
                           <div className="text-[15px] font-semibold text-slate-100 truncate">
                             {vm.scoreline}
                           </div>
-                          <div className="text-xs text-slate-400">
-                            {vm.period}
-                          </div>
                         </div>
                         <div className="flex items-center gap-3">
                           {vm.widget}
