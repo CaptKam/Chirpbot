@@ -732,25 +732,83 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
         
         const homeTeam = gameData.homeTeam?.name || 'Unknown Home';
         const awayTeam = gameData.awayTeam?.name || 'Unknown Away';
+        const gamePk = parseInt(gameData.id?.replace('mlb-', '') || '0');
         
         console.log(`✅ V3 Extracted teams: ${awayTeam} @ ${homeTeam}`);
+        console.log(`🔍 V3 Game status check: gamePk=${gamePk}, status="${gameData.status}", isLive=${gameData.isLive}`);
+        
+        // 🚀 ENHANCED: Fetch live data for accurate runner positions
+        let runners = { first: false, second: false, third: false };
+        let outs = 0;
+        let inning = gameData.inning || 1;
+        let inningState = (gameData.inningState as 'top' | 'bottom') || 'top';
+        let currentBatter = undefined;
+        let count = { balls: 0, strikes: 0 };
+        
+        try {
+          if (gamePk && gameData.status === 'live') {
+            console.log(`🔍 V3 Fetching live data for game ${gamePk}...`);
+            const liveResponse = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`);
+            console.log(`📡 V3 API Response status: ${liveResponse.status} ${liveResponse.statusText}`);
+            
+            if (liveResponse.ok) {
+              const liveData = await liveResponse.json();
+              console.log(`📊 V3 Got live data, has liveData: ${!!liveData.liveData}, has situation: ${!!liveData.liveData?.situation}`);
+              
+              // Extract real runner positions from live data
+              const situation = liveData.liveData?.situation;
+              if (situation) {
+                console.log(`🔍 V3 Situation exists - parsing runners...`);
+                runners.first = situation.isRunnerOnFirst || false;
+                runners.second = situation.isRunnerOnSecond || false;
+                runners.third = situation.isRunnerOnThird || false;
+                console.log(`🏃 V3 Live runners detected: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
+              } else {
+                console.log(`⚠️ V3 No situation data found - game might be between plays`);
+              }
+              
+              // Extract current game situation
+              const about = liveData.liveData?.plays?.currentPlay?.about;
+              if (about) {
+                outs = about.outs || 0;
+                inning = about.inning || 1;
+                inningState = about.isTopInning ? 'top' : 'bottom';
+                count.balls = about.balls || 0;
+                count.strikes = about.strikes || 0;
+                console.log(`⚾ V3 Game state: Inning ${inning} ${inningState}, ${outs} outs`);
+              }
+              
+              // Extract current batter info
+              const batter = liveData.liveData?.plays?.currentPlay?.matchup?.batter;
+              if (batter) {
+                console.log(`🏏 V3 Current batter: ${batter.fullName}`);
+              }
+            } else {
+              console.log(`❌ V3 API request failed: ${liveResponse.status} ${liveResponse.statusText}`);
+            }
+          } else {
+            console.log(`⏭️ V3 Skipping live data fetch - gamePk: ${gamePk}, status: ${gameData.status}`);
+          }
+        } catch (error) {
+          console.log(`💥 V3 Exception fetching live data for game ${gamePk}:`, error.message);
+        }
         
         return {
           gameId: gameData.id || '',
-          gamePk: parseInt(gameData.id?.replace('mlb-', '') || '0'),
+          gamePk,
           homeTeam,
           awayTeam, 
           homeScore: gameData.homeTeam?.score || 0,
           awayScore: gameData.awayTeam?.score || 0,
-          inning: gameData.inning || 1,
-          inningState: (gameData.inningState as 'top' | 'bottom') || 'top',
-          outs: 0, // Default
-          runners: { first: false, second: false, third: false }, // Default - will get from detailed API
+          inning,
+          inningState,
+          outs,
+          runners,
           venue: gameData.venue || 'Unknown Venue',
           ballpark: { name: gameData.venue || 'Unknown', factor: 1.0 },
-          currentBatter: undefined,
+          currentBatter,
           currentPitcher: undefined,
-          count: { balls: 0, strikes: 0 },
+          count,
           recentPlay: undefined,
           weather: undefined
         };
