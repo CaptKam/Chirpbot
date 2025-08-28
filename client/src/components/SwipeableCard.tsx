@@ -260,20 +260,31 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       
                       // Generate betting recommendation based on sport and situation
                       if (sport === 'MLB') {
+                        // Get current scores to make intelligent recommendations
+                        const homeScore = alertData.homeScore || 0;
+                        const awayScore = alertData.awayScore || 0;
+                        const totalScore = homeScore + awayScore;
+                        const higherTeamScore = Math.max(homeScore, awayScore);
+                        
                         if (reasons.some(r => r.includes('scoring position')) && reasons.some(r => r.includes('power hitter'))) {
-                          return "Bet Over 8.5 runs - High scoring situation with RISP + power hitter";
+                          const overLine = Math.max(totalScore + 2.5, 8.5);
+                          return `Bet Over ${overLine} runs - High scoring situation with RISP + power hitter`;
                         } else if (reasons.some(r => r.includes('bases loaded'))) {
-                          return "Bet Over 7.5 runs - Bases loaded situation favors scoring";  
+                          const overLine = Math.max(totalScore + 1.5, 7.5);
+                          return `Bet Over ${overLine} runs - Bases loaded situation favors scoring`;  
                         } else if (reasons.some(r => r.includes('wind')) && reasons.some(r => r.includes('out'))) {
-                          return "Bet Over 8.0 runs - Favorable wind conditions for offense";
+                          const overLine = Math.max(totalScore + 2, 8.0);
+                          return `Bet Over ${overLine} runs - Favorable wind conditions for offense`;
                         } else if (reasons.some(r => r.includes('Close Game'))) {
                           return "Live bet team moneyline - Close game with momentum shift";
                         } else if (reasons.some(r => r.includes('late-inning'))) {
                           return "Live bet next inning Over 0.5 runs - Clutch situation";
                         } else if (tier >= 3 && probability > 0.75) {
-                          return "Bet team total Over 4.5 - High probability scoring opportunity";
+                          const teamTotalLine = Math.max(higherTeamScore + 1.5, 4.5);
+                          return `Bet team total Over ${teamTotalLine} - High probability scoring opportunity`;
                         } else {
-                          return "Bet Over 7.5 runs - Favorable offensive situation";
+                          const overLine = Math.max(totalScore + 1.5, 7.5);
+                          return `Bet Over ${overLine} runs - Favorable offensive situation`;
                         }
                       } else if (sport === 'NBA') {
                         if (reasons.some(r => r.includes('Clutch'))) {
