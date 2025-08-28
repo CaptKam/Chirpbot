@@ -8,6 +8,7 @@ import { analyzeHybridRE24, generateHybridAlertDescription, cleanupCache } from 
 import { getEnhancedWeather } from '../enhanced-weather';
 import { getActiveRE24Level } from './re24-levels';
 import { alertDeduplicator, type MLBGameState as DeduplicationMLBGameState } from './alert-deduplication';
+import { FourLevelAlertSystem, type GameState, type AlertTier } from './four-level-alert-system';
 
 // === CONSOLIDATED INTERFACES AND TYPES ===
 
@@ -159,6 +160,107 @@ export class MLBEngine implements SportEngine {
   monitoringInterval = 1500; // 1.5 seconds normal polling (optimized from your successful system)
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
+  
+  // 🚀 NEW: 4-Level Alert System Integration
+  private fourLevelSystem = new FourLevelAlertSystem();
+
+  // 🚀 Convert MLBGameState to 4-Level System GameState
+  private convertToFourLevelGameState(mlbState: MLBGameState): GameState {
+    return {
+      gameId: mlbState.gameId,
+      sport: 'MLB',
+      status: 'Live',
+      homeTeam: mlbState.homeTeam,
+      awayTeam: mlbState.awayTeam,
+      homeScore: mlbState.homeScore,
+      awayScore: mlbState.awayScore,
+      clock: {
+        inning: mlbState.inning,
+        outs: mlbState.outs
+      },
+      bases: {
+        on1B: mlbState.runners.first,
+        on2B: mlbState.runners.second,
+        on3B: mlbState.runners.third
+      },
+      currentBatter: mlbState.currentBatter ? {
+        id: mlbState.currentBatter.id,
+        name: mlbState.currentBatter.name,
+        seasonHR: mlbState.currentBatter.stats.hr,
+        stats: mlbState.currentBatter.stats
+      } : undefined,
+      currentPitcher: mlbState.currentPitcher ? {
+        id: mlbState.currentPitcher.id,
+        name: mlbState.currentPitcher.name,
+        stats: mlbState.currentPitcher.stats
+      } : undefined,
+      venue: mlbState.venue,
+      weather: mlbState.weather
+    };
+  }
+
+  // 🚀 Enhanced Alert Processing with 4-Level System
+  async processEnhancedAlerts(gameState: MLBGameState): Promise<void> {
+    try {
+      console.log(`🔍 Evaluating 4-level alert system for ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+      
+      const fourLevelGameState = this.convertToFourLevelGameState(gameState);
+      const alertTier = await this.fourLevelSystem.maybeEvaluateGameAndAlert(fourLevelGameState);
+      
+      if (alertTier) {
+        console.log(`✨ 4-Level Alert Generated: ${alertTier.description}`);
+        
+        const alertData = {
+          id: randomUUID(),
+          title: `Tier ${alertTier.tier} Alert`,
+          type: `4-Level Alert (Tier ${alertTier.tier})`,
+          description: alertTier.description,
+          sport: this.sport,
+          team: gameState.homeTeam,
+          opponent: gameState.awayTeam,
+          message: alertTier.description,
+          probability: alertTier.priority / 100,
+          priority: alertTier.priority,
+          createdAt: new Date(),
+          isRead: false,
+          gameInfo: {
+            gameId: gameState.gameId,
+            gamePk: gameState.gamePk,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            status: 'live',
+            inning: gameState.inning,
+            inningState: gameState.inningState,
+            outs: gameState.outs,
+            runners: gameState.runners,
+            fourLevelAnalysis: {
+              tier: alertTier.tier,
+              levels: alertTier.levels,
+              deduplicationKey: alertTier.metadata.deduplicationKey
+            }
+          }
+        };
+
+        const usersWithTelegram = await storage.getUsersWithTelegramEnabled();
+        for (const user of usersWithTelegram) {
+          if (user.telegramBotToken && user.telegramChatId) {
+            const sent = await sendTelegramAlert({
+              botToken: user.telegramBotToken,
+              chatId: user.telegramChatId,
+            }, alertData);
+            if (sent) {
+              console.log(`📱 4-Level Alert sent: ${alertTier.description}`);
+            }
+          }
+        }
+
+        await storage.createAlert(alertData);
+        console.log(`✅ 4-Level Alert stored: Tier ${alertTier.tier}`);
+      }
+    } catch (error) {
+      console.error('Error in 4-Level Alert System:', error);
+    }
+  }
   
   // RE24 alert debouncing cache: gameId -> { re24Key, timestamp }
   private re24AlertCache = new Map<string, { re24Key: string; timestamp: number }>();

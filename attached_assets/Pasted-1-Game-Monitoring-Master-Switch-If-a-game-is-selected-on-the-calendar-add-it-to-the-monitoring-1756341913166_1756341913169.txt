@@ -1,0 +1,112 @@
+1. Game Monitoring (Master Switch)
+
+If a game is selected on the calendar → add it to the monitoring list.
+
+If status = Scheduled → no engines run; only track status changes.
+
+If status = Live → start the sport‑specific engines.
+
+If status = Final → stop monitoring and archive any logs.
+
+2. Alert Levels (L1→L4)
+
+Each level checks progressively more sophisticated factors. Alerts are tiered based on how many levels are triggered.
+
+🟢 Level 1 (Fail‑Safe)
+
+IF the game is Live → run the hard‑coded sport logic (one engine per sport).
+
+Examples (MLB):
+
+IF runners on 2nd & 3rd with 0 outs → mark as high‑probability scoring.
+
+IF bases loaded with ≤1 out → mark as very high‑probability scoring.
+
+IF tie game in the 9th inning or later → mark as a high‑leverage situation.
+
+Action: Check whether Level 2 and Level 3 also trigger:
+
+IF L1 = Yes, L2 = No, L3 = No → emit Alert 1 (baseline alert).
+
+IF L1 = Yes, exactly one of L2 or L3 = Yes → emit Alert 2.
+
+IF L1 = Yes, L2 = Yes and L3 = Yes → emit Alert 3 (highest priority).
+
+🟡 Level 2 (Player / Historical)
+
+Checks trends like “power hitter on deck” or a hot streak (for NBA, NFL, etc.).
+
+Example (MLB): IF a batter or on‑deck hitter has ≥ 20 HR in the season and there are runners in scoring position → Level 2 triggers.
+
+🔵 Level 3 (Weather / Environment)
+
+Incorporates wind, temperature, humidity, and other conditions.
+
+Example (MLB): IF wind ≥ 10 mph blowing out → boosting HR odds; high temps also trigger.
+
+🟣 Level 4 (AI Synthesis)
+
+Uses OpenAI to synthesize all data (scores, baserunners, weather, historical trends).
+
+Can upgrade or create alerts on its own if Level 1 fails but the AI sees a strong scoring chance.
+
+3. Duplicate & Cool‑Down Protection
+
+Deduplication key: Combine sport, game ID, inning/period, outs/time remaining, base runners, and batter ID.
+
+IF an alert with the same key was sent recently → do not resend until a cool‑down expires (e.g. 60–120 seconds).
+
+4. TypeScript‑Style Pseudocode
+// Main runner
+function maybeEvaluateGameAndAlert(game: GameState): Alert | null {
+  if (game.status === 'Scheduled' || game.status === 'Final') return null;
+  if (game.status !== 'Live') return null;  // fail-safe
+
+  const levels = evaluateLevels(game);  // run L1, L2, L3, L4
+  const tier = decideTier(levels);
+
+  // No alert if L1 is false and AI did not elevate
+  if (!tier) return null;
+
+  const alert = buildAlert(game, levels, tier);
+  if (isDuplicateOrCoolingDown(alert)) return null;
+
+  persistAlertForCooldown(alert);
+  sendAlert(alert);
+  return alert;
+}
+
+// Level checks
+function evaluateLevels(game: GameState): LevelResults {
+  const L1 = runLevel1HardCoded(game);        // e.g., RISP, bases loaded, clutch time
+  const L2 = runLevel2PlayerHistory(game);    // e.g., hot hitters, hot shooters
+  const L3 = runLevel3Weather(game);          // e.g., wind boost, heat boost
+  const L4 = runLevel4AISynthesis(game, { L1, L2, L3 });  // optional AI step
+  return { L1, L2, L3, L4 };
+}
+
+// Tier decision logic
+function decideTier(levels: LevelResults): 1 | 2 | 3 | 4 | null {
+  if (levels.L1.yes && !levels.L2.yes && !levels.L3.yes) return 1;     // Only Level1
+  if (levels.L1.yes && (levels.L2.yes !== levels.L3.yes)) return 2;    // Level1 + one of L2 or L3
+  if (levels.L1.yes && levels.L2.yes && levels.L3.yes) return 3;       // All L1–L3
+  if (!levels.L1.yes && levels.L4?.upgradeTierTo === 4) return 4;      // AI‑only path
+  return null;
+}
+
+// MLB Level1 example
+function mlbL1(state: GameState): LevelCheck {
+  if (state.bases?.on2B && state.bases?.on3B && (state.clock?.outs ?? 0) === 0) {
+    return { yes: true, reason: 'Runners on 2nd & 3rd, 0 outs', priorityHint: 90 };
+  }
+  if (state.bases?.on1B && state.bases?.on2B && state.bases?.on3B && (state.clock?.outs ?? 0) <= 1) {
+    return { yes: true, reason: 'Bases loaded ≤1 out', priorityHint: 95 };
+  }
+  if ((state.clock?.inning ?? 1) >= 9 && state.score && state.score.home === state.score.away) {
+    return { yes: true, reason: 'Tie game in 9th+', priorityHint: 90 };
+  }
+  return { yes: false };
+}
+
+
+This structure builds on your draft, adds explicit checks for each stage (game status, alert levels), and ensures deduplication and cool‑down are enforced. Let me know if you need the other sport‑specific logic filled in, or if you’d like to integrate this into a full codebase.
