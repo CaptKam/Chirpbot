@@ -103,7 +103,12 @@ export class MLBEngineV3 extends BaseSportEngine {
    */
   async monitor(): Promise<void> {
     console.log('🚀 ChirpBot V3 - Processing with 4 Laws & Betbook Engine');
-    await this.processLiveGamesOnly();
+    try {
+      await this.processLiveGamesOnly();
+    } catch (error) {
+      console.error('❌ V3 Error in monitor():', error);
+      console.error('❌ V3 Stack:', error.stack);
+    }
   }
 
   extractGameState(apiData: any): any {
@@ -116,6 +121,7 @@ export class MLBEngineV3 extends BaseSportEngine {
    */
   async processLiveGamesOnly(): Promise<void> {
     try {
+      console.log('🔍 V3 Starting processLiveGamesOnly...');
       const games = await mlbApi.getTodaysGames();
       console.log(`🔍 V3 Debug - Got ${games.length} games from API`);
       
@@ -156,7 +162,8 @@ export class MLBEngineV3 extends BaseSportEngine {
         }
       }
     } catch (error) {
-      console.error('Error in V3 live game processing:', error);
+      console.error('❌ V3 Error in processLiveGamesOnly:', error);
+      console.error('❌ V3 Stack:', error.stack);
     }
   }
 
