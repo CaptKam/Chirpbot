@@ -1540,6 +1540,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
           id: randomUUID(),
           sport: 'MLB',
           type: `V3-L${highestTier}`,
+          title: `Tier ${highestTier} Alert: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
           description: `🎯 V3 Tier ${highestTier}: ${alertTier.reason}`,
           priority: 50 + (highestTier * 25) + Math.round(alertTier.probability),
           timestamp: new Date(),

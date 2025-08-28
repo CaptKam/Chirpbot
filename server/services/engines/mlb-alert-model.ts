@@ -221,17 +221,35 @@ export function calculateMLBSeverity(gameState: MLBGameState): SeverityResult {
 /**
  * Helper functions for each alert level
  */
-export function mlbL1WithProb(gameState: MLBGameState): SeverityResult {
+export function mlbL1WithProb(gameState: MLBGameState): SeverityResult & { shouldAlert: boolean; reason: string } {
   const result = calculateMLBSeverity(gameState);
-  return result.severity === 'Low' ? result : { ...result, severity: 'None', priority: 50 };
+  const threshold = 0.65; // L1: 65% threshold
+  const shouldAlert = result.probability >= threshold;
+  return {
+    ...result,
+    shouldAlert,
+    reason: shouldAlert ? `L1 TRIGGERED: ${(result.probability * 100).toFixed(1)}% ≥ 65% threshold` : `L1 Pass: ${(result.probability * 100).toFixed(1)}% < 65% threshold`
+  };
 }
 
-export function mlbL2WithProb(gameState: MLBGameState): SeverityResult {
+export function mlbL2WithProb(gameState: MLBGameState): SeverityResult & { shouldAlert: boolean; reason: string } {
   const result = calculateMLBSeverity(gameState);
-  return result.severity === 'Medium' ? result : { ...result, severity: 'None', priority: 50 };
+  const threshold = 0.70; // L2: 70% threshold
+  const shouldAlert = result.probability >= threshold;
+  return {
+    ...result,
+    shouldAlert,
+    reason: shouldAlert ? `L2 TRIGGERED: ${(result.probability * 100).toFixed(1)}% ≥ 70% threshold` : `L2 Pass: ${(result.probability * 100).toFixed(1)}% < 70% threshold`
+  };
 }
 
-export function mlbL3WithProb(gameState: MLBGameState): SeverityResult {
+export function mlbL3WithProb(gameState: MLBGameState): SeverityResult & { shouldAlert: boolean; reason: string } {
   const result = calculateMLBSeverity(gameState);
-  return result.severity === 'High' ? result : { ...result, severity: 'None', priority: 50 };
+  const threshold = 0.80; // L3: 80% threshold
+  const shouldAlert = result.probability >= threshold;
+  return {
+    ...result,
+    shouldAlert,
+    reason: shouldAlert ? `L3 TRIGGERED: ${(result.probability * 100).toFixed(1)}% ≥ 80% threshold` : `L3 Pass: ${(result.probability * 100).toFixed(1)}% < 80% threshold`
+  };
 }
