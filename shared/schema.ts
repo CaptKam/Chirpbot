@@ -143,6 +143,10 @@ export const settings = pgTable("settings", {
     re24Level2: boolean;
     re24Level3: boolean;
     
+    // Advanced Analytics
+    mlbAIEnabled: boolean;
+    mlbV3Engine: boolean;
+    
     // NFL Alert Types  
     redZone: boolean;
     nflCloseGame: boolean;

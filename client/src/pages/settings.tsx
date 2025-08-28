@@ -71,6 +71,7 @@ const ALERT_TYPE_CONFIG = {
     // === ADVANCED ANALYTICS ===
     { key: "re24Advanced", label: "RE24 Advanced Analytics", description: "MLB Run Expectancy 24 (RE24) mathematical analysis system", category: "Advanced Analytics" },
     { key: "mlbAIEnabled", label: "🧠 AI Analysis Engine", description: "Advanced AI context analysis for all alerts", category: "Advanced Analytics" },
+    { key: "mlbV3Engine", label: "⚡ V3 Alert Engine", description: "Next-generation 4-tier alert system with advanced deduplication", category: "Advanced Analytics" },
   ],
   NFL: [
     { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line", category: "Scoring Opportunities" },
