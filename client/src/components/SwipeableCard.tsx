@@ -371,7 +371,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       {/* Main Card */}
       <motion.div
         drag="x"
-        dragConstraints={{ left: -450, right: 140 }}
+        dragConstraints={{ left: -300, right: 140 }}
         dragElastic={0.1}
         dragMomentum={false}
         onDragStart={handleDragStart}
