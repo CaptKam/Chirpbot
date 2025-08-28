@@ -99,19 +99,39 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
-    // Try to open the app first
-    const link = document.createElement('a');
-    link.href = sportsbook.appUrl;
-    link.click();
+    // Try to open the app first, with better fallback handling
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    // Fallback to app store after a short delay
-    setTimeout(() => {
-      window.open(sportsbook.storeUrl, '_blank');
-    }, 1000);
+    if (isMobile) {
+      // On mobile, try deep link first
+      const startTime = Date.now();
+      const link = document.createElement('a');
+      link.href = sportsbook.appUrl;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Check if app opened, fallback to store if not
+      setTimeout(() => {
+        if (Date.now() - startTime < 1500) {
+          window.open(sportsbook.storeUrl, '_blank');
+        }
+      }, 1000);
+    } else {
+      // On desktop, go directly to web version
+      const webUrls = {
+        'Bet365': 'https://www.bet365.com',
+        'DraftKings': 'https://sportsbook.draftkings.com',
+        'Fanatics': 'https://sportsbook.fanaticsbetting.com',
+        'FanDuel': 'https://sportsbook.fanduel.com'
+      };
+      window.open(webUrls[sportsbook.name as keyof typeof webUrls] || sportsbook.storeUrl, '_blank');
+    }
 
     toast({
       title: `Opening ${sportsbook.name}`,
-      description: `Redirecting to ${sportsbook.name} sportsbook...`,
+      description: `Launching ${sportsbook.name} sportsbook...`,
     });
   };
 
@@ -343,46 +363,58 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             )}
 
             {/* Quick Sportsbook Access */}
-            <div className="flex space-x-2">
-              {sportsbooks.slice(0, 3).map((sportsbook) => (
-                <Button
-                  key={sportsbook.name}
-                  onClick={() => {
-                    handleSportsbookClick(sportsbook);
-                    setDragX(0);
-                  }}
-                  className="h-8 w-8 p-0 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm ring-1 ring-white/20 transition-all"
-                  data-testid={`ai-sportsbook-${sportsbook.name.toLowerCase()}`}
-                >
-                  <img 
-                    src={sportsbook.logo} 
-                    alt={sportsbook.name}
-                    className="w-5 h-5 rounded object-cover"
-                  />
-                </Button>
-              ))}
+            <div className="space-y-2">
+              <h4 className="text-xs text-blue-200 font-medium tracking-wide uppercase">Quick Bet</h4>
+              <div className="flex space-x-2">
+                {sportsbooks.slice(0, 3).map((sportsbook) => (
+                  <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
+                    <Button
+                      onClick={() => {
+                        handleSportsbookClick(sportsbook);
+                        setDragX(0);
+                      }}
+                      className="h-10 w-10 p-1 rounded-lg bg-white/90 hover:bg-white hover:scale-105 shadow-lg ring-2 ring-white/20 transition-all duration-200"
+                      style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
+                      data-testid={`ai-sportsbook-${sportsbook.name.toLowerCase()}`}
+                    >
+                      <img 
+                        src={sportsbook.logo} 
+                        alt={sportsbook.name}
+                        className="w-full h-full rounded object-contain"
+                      />
+                    </Button>
+                    <span className="text-xs text-white/80 font-medium">{sportsbook.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
           // Fallback to original sportsbook buttons when no AI data
-          <div className="h-full flex items-center justify-end pr-4 space-x-2">
-            {sportsbooks.map((sportsbook) => (
-              <Button
-                key={sportsbook.name}
-                onClick={() => {
-                  handleSportsbookClick(sportsbook);
-                  setDragX(0);
-                }}
-                className="h-12 w-12 p-0 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm ring-1 ring-white/20 transition-all"
-                data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
-              >
-                <img 
-                  src={sportsbook.logo} 
-                  alt={sportsbook.name}
-                  className="w-8 h-8 rounded object-cover"
-                />
-              </Button>
-            ))}
+          <div className="h-full flex flex-col items-center justify-center p-4 space-y-3">
+            <h4 className="text-sm text-white/90 font-semibold tracking-wide">Sports Betting</h4>
+            <div className="grid grid-cols-2 gap-3">
+              {sportsbooks.map((sportsbook) => (
+                <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
+                  <Button
+                    onClick={() => {
+                      handleSportsbookClick(sportsbook);
+                      setDragX(0);
+                    }}
+                    className="h-12 w-12 p-1.5 rounded-xl bg-white/90 hover:bg-white hover:scale-105 shadow-xl ring-2 ring-white/30 transition-all duration-200"
+                    style={{ backgroundColor: `${sportsbook.color}20`, borderColor: `${sportsbook.color}40` }}
+                    data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
+                  >
+                    <img 
+                      src={sportsbook.logo} 
+                      alt={sportsbook.name}
+                      className="w-full h-full rounded-lg object-contain"
+                    />
+                  </Button>
+                  <span className="text-xs text-white/90 font-medium text-center">{sportsbook.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
