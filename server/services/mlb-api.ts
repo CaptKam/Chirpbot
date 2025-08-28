@@ -312,6 +312,10 @@ export class MLBApiService {
     
     console.log(`🔍 Transforming MLB game: ${mlbGame.teams.away.team.name} @ ${mlbGame.teams.home.team.name} - Status: ${mlbGame.status.abstractGameState}`);
     
+    // Extract base runner and outs data from linescore
+    const linescore = mlbGame.linescore;
+    const offense = linescore?.offense;
+    
     return {
       id: `mlb-${mlbGame.gamePk}`,
       sport: 'MLB',
@@ -332,8 +336,15 @@ export class MLBApiService {
         score: mlbGame.teams.away.score || 0
       },
       venue: mlbGame.venue.name,
-      inning: mlbGame.linescore?.currentInning,
-      inningState: mlbGame.linescore?.inningState,
+      inning: linescore?.currentInning || 1,
+      inningState: linescore?.inningState || 'Top',
+      // CRITICAL: Add base runner and outs data
+      outs: linescore?.outs || 0,
+      runners: {
+        first: Boolean(offense?.first),
+        second: Boolean(offense?.second), 
+        third: Boolean(offense?.third)
+      },
       // Additional MLB-specific data
       gameState: mlbGame.status.abstractGameState,
       gamePk: mlbGame.gamePk

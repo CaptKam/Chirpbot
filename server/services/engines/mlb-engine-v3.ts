@@ -181,7 +181,15 @@ export class MLBEngineV3 {
         weather: game.weather
       };
 
+      // Enhanced logging to show base runner details
+      const runnerSummary = [
+        v3GameState.runners.first ? "1st" : "",
+        v3GameState.runners.second ? "2nd" : "",
+        v3GameState.runners.third ? "3rd" : ""
+      ].filter(Boolean).join(", ") || "Bases empty";
+      
       console.log(`✅ V3 Extracted game state: ${v3GameState.awayTeam} @ ${v3GameState.homeTeam} (${v3GameState.inning} ${v3GameState.inningState})`);
+      console.log(`   🏃‍♂️ Runners: ${runnerSummary}, Outs: ${v3GameState.outs}`);
       return v3GameState;
     } catch (error) {
       console.error('Error extracting V3 game state:', error);
