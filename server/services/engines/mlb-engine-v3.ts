@@ -16,6 +16,7 @@ import { getWeatherData } from '../weather';
 import { calculateMLBSeverity, mlbL1WithProb, mlbL2WithProb, mlbL3WithProb, type MLBGameState as MLBScoringGameState } from './mlb-alert-model';
 import { shouldNotifyUser, type UserSettings } from './user-settings';
 import { getBetbookData, shouldShowBetbook, type AlertContext } from './betbook-engine';
+import { BaseSportEngine } from './base-engine';
 
 // === V3 INTERFACES ===
 
@@ -83,7 +84,10 @@ export interface DeduplicationContext {
   paId?: string;
 }
 
-export class MLBEngineV3 {
+export class MLBEngineV3 extends BaseSportEngine {
+  sport = 'MLB';
+  alertConfigs = []; // V3 uses tier system instead of individual alert configs
+  monitoringInterval = 30000; // 30 seconds
   private deduplicationCache = new Map<string, { timestamp: number; tier: number }>();
   private readonly COOLDOWN_MS = {
     1: 60000,   // L1: 1 minute
@@ -92,7 +96,19 @@ export class MLBEngineV3 {
     4: 180000   // L4: 3 minutes
   };
   
-  onAlert?: (alert: any) => void;
+  // onAlert inherited from BaseSportEngine
+
+  /**
+   * V3 Compatible monitor() method - calls the main V3 processing
+   */
+  async monitor(): Promise<void> {
+    console.log('🚀 ChirpBot V3 - Processing with 4 Laws & Betbook Engine');
+    await this.processLiveGamesOnly();
+  }
+
+  extractGameState(apiData: any): any {
+    return this.extractGameStateV3(apiData);
+  }
 
   /**
    * V3 Law #1: Game Status Gating
@@ -115,7 +131,7 @@ export class MLBEngineV3 {
       console.log(`🎯 Game Status Gating: Processing ${liveGames.length}/${games.length} live games`);
 
       for (const game of liveGames) {
-        const gameState = this.extractGameState(game);
+        const gameState = this.extractGameStateV3(game);
         if (gameState) {
           await this.evaluateFourTierSystem(gameState);
         }
@@ -134,7 +150,7 @@ export class MLBEngineV3 {
     return 'Scheduled';
   }
 
-  private extractGameState(game: any): MLBGameStateV3 | null {
+  private extractGameStateV3(game: any): MLBGameStateV3 | null {
     try {
       const liveData = game.liveData?.linescore;
       const gameData = game.gameData;
