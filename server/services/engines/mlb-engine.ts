@@ -1455,11 +1455,11 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
       console.log(`🔍 V3 Checking user alert preferences...`);
       const alertTypes = settings.alertTypes as any;
       
-      // Map tiers to user settings 
-      const l1Enabled = alertTypes?.risp || alertTypes?.basesLoaded || alertTypes?.closeGame;
-      const l2Enabled = alertTypes?.powerHitter || alertTypes?.starBatter || alertTypes?.eliteClutch;
-      const l3Enabled = alertTypes?.lateInning || alertTypes?.extraInnings || alertTypes?.re24Level3;
-      const l4Enabled = alertTypes?.aiEnabled;
+      // Map tiers to user settings - check both legacy and V3 specific toggles
+      const l1Enabled = alertTypes?.v3Level1 || alertTypes?.risp || alertTypes?.basesLoaded || alertTypes?.closeGame;
+      const l2Enabled = alertTypes?.v3Level2 || alertTypes?.powerHitter || alertTypes?.starBatter || alertTypes?.eliteClutch;
+      const l3Enabled = alertTypes?.v3Level3 || alertTypes?.lateInning || alertTypes?.extraInnings || alertTypes?.re24Level3;
+      const l4Enabled = alertTypes?.v3Level4 || alertTypes?.v3FourLawSystem || alertTypes?.aiEnabled;
 
       console.log(`🎛️ V3 User Settings: L1=${l1Enabled} L2=${l2Enabled} L3=${l3Enabled} L4=${l4Enabled}`);
       

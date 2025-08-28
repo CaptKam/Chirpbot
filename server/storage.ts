@@ -134,6 +134,13 @@ export class MemStorage implements IStorage {
       { alertKey: "re24Level2", title: "RE24 Level 2", description: "Intermediate player analytics with contextual AI", category: "AI Predictions" },
       { alertKey: "re24Level3", title: "RE24 Level 3", description: "Elite sabermetrics with advanced AI predictions", category: "AI Predictions" },
 
+      // V3 4-Law Alert System
+      { alertKey: "v3FourLawSystem", title: "V3 4-Law Alert Engine", description: "Master alert system enforcing the 4 mandatory laws for spam prevention", category: "V3 Alert System" },
+      { alertKey: "v3Level1", title: "V3 Level 1: Hard Fail-Safes", description: "Probability-gated situational alerts (30%+ confidence)", category: "V3 Alert System" },
+      { alertKey: "v3Level2", title: "V3 Level 2: Player Analytics", description: "Historical matchup analysis (50%+ confidence)", category: "V3 Alert System" },
+      { alertKey: "v3Level3", title: "V3 Level 3: Math Models", description: "Weather + mathematical modeling (70%+ confidence)", category: "V3 Alert System" },
+      { alertKey: "v3Level4", title: "V3 Level 4: AI + Betbook", description: "AI synthesis with betting intelligence integration", category: "V3 Alert System" },
+
       // Game Flow
       { alertKey: "inningChange", title: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },
     ];
@@ -242,6 +249,13 @@ export class MemStorage implements IStorage {
           re24Level1: sport === "MLB",
           re24Level2: sport === "MLB",
           re24Level3: sport === "MLB",
+
+          // V3 4-Law Alert System (enabled by default for MLB)
+          v3FourLawSystem: sport === "MLB",
+          v3Level1: sport === "MLB",
+          v3Level2: sport === "MLB", 
+          v3Level3: sport === "MLB",
+          v3Level4: sport === "MLB",
 
           // NFL Alert Types  
           redZone: sport === "NFL",

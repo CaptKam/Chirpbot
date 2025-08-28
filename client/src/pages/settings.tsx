@@ -50,6 +50,13 @@ const ALERT_TYPE_CONFIG = {
     { key: "re24Level1", label: "📊 RE24 Level 1", description: "Basic situational analysis with AI enhancement", category: "AI Predictions" },
     { key: "re24Level2", label: "📈 RE24 Level 2", description: "Intermediate player analytics with contextual AI", category: "AI Predictions" },
     { key: "re24Level3", label: "🎯 RE24 Level 3", description: "Elite sabermetrics with advanced AI predictions", category: "AI Predictions" },
+    
+    // === V3 4-LAW ALERT SYSTEM ===
+    { key: "v3FourLawSystem", label: "⚖️ V3 4-Law Alert Engine", description: "Master alert system enforcing the 4 mandatory laws for spam prevention", category: "V3 Alert System" },
+    { key: "v3Level1", label: "🔒 V3 Level 1: Hard Fail-Safes", description: "Probability-gated situational alerts (30%+ confidence)", category: "V3 Alert System" },
+    { key: "v3Level2", label: "📈 V3 Level 2: Player Analytics", description: "Historical matchup analysis (50%+ confidence)", category: "V3 Alert System" },
+    { key: "v3Level3", label: "🧮 V3 Level 3: Math Models", description: "Weather + mathematical modeling (70%+ confidence)", category: "V3 Alert System" },
+    { key: "v3Level4", label: "🤖 V3 Level 4: AI + Betbook", description: "AI synthesis with betting intelligence integration", category: "V3 Alert System" },
     { key: "Clutch Hit Prediction", label: "⚡ Clutch Performance", description: "AI-powered clutch hitting opportunity detection", category: "AI Predictions" },
     { key: "Hot Streak Prediction", label: "🔥 Hot Streak Alert", description: "Player momentum and hot streak identification", category: "AI Predictions" },
     { key: "Double Play Prediction", label: "⚾ Double Play Risk", description: "Situation analysis for potential double plays", category: "AI Predictions" },
