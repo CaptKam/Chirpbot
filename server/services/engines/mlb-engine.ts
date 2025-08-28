@@ -760,14 +760,24 @@ export class MLBEngine implements SportEngine {
           console.log(`🔍 Runner data from situation: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
         }
         
-        // Fallback: Check current play for runner data
+        // Fallback: Check current play for runner data - FIXED LOGIC
         if (!situation && currentPlay?.runners) {
           console.log(`🔍 Checking currentPlay.runners:`, currentPlay.runners);
+          
+          // Reset runners first
+          runners = { first: false, second: false, third: false };
+          
           currentPlay.runners.forEach((runner: any) => {
-            if (runner.movement?.start === '1B') runners.first = true;
-            if (runner.movement?.start === '2B') runners.second = true;
-            if (runner.movement?.start === '3B') runners.third = true;
+            // Only count runners who are NOT out and have a current position
+            if (!runner.movement?.isOut) {
+              const currentBase = runner.movement?.end || runner.movement?.start;
+              if (currentBase === '1B') runners.first = true;
+              if (currentBase === '2B') runners.second = true; 
+              if (currentBase === '3B') runners.third = true;
+            }
           });
+          
+          console.log(`🔧 CORRECTED Runner positions: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
         }
         
         // REMOVED: This fallback was incorrectly using PAST plays to set CURRENT runners
