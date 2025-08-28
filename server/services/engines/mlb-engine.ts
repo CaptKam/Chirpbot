@@ -730,19 +730,24 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
       if (gameData.homeTeam && gameData.awayTeam && !gameData.competitions && !gameData.liveData && !gameData.gameData) {
         console.log('🔍 V3 Format detected - Converting to MLBGameState...');
         
+        const homeTeam = gameData.homeTeam?.name || 'Unknown Home';
+        const awayTeam = gameData.awayTeam?.name || 'Unknown Away';
+        
+        console.log(`✅ V3 Extracted teams: ${awayTeam} @ ${homeTeam}`);
+        
         return {
           gameId: gameData.id || '',
           gamePk: parseInt(gameData.id?.replace('mlb-', '') || '0'),
-          homeTeam: gameData.homeTeam?.name || 'Unknown Home',
-          awayTeam: gameData.awayTeam?.name || 'Unknown Away', 
+          homeTeam,
+          awayTeam, 
           homeScore: gameData.homeTeam?.score || 0,
           awayScore: gameData.awayTeam?.score || 0,
-          inning: 1, // Default - will get from detailed API later
-          inningState: 'top' as 'top' | 'bottom',
+          inning: gameData.inning || 1,
+          inningState: (gameData.inningState as 'top' | 'bottom') || 'top',
           outs: 0, // Default
           runners: { first: false, second: false, third: false }, // Default - will get from detailed API
-          venue: 'Unknown Venue',
-          ballpark: { name: 'Unknown', factor: 1.0 }
+          venue: gameData.venue || 'Unknown Venue',
+          ballpark: { name: gameData.venue || 'Unknown', factor: 1.0 }
         };
       }
 
@@ -1402,9 +1407,9 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
     try {
       console.log(`📊 V3 Evaluating 4-Tier System...`);
       
-      // V3 Safety Check - Ensure gameState has required properties
+      // V3 Safety Check - Only fix missing runners, preserve team names
       if (!gameState || !gameState.runners) {
-        console.log(`⚠️ V3 Invalid game state - creating default state`);
+        console.log(`🔧 V3 Adding missing runners property (teams: ${gameState?.awayTeam || 'Unknown'} @ ${gameState?.homeTeam || 'Unknown'})`);
         gameState = {
           ...gameState,
           runners: { first: false, second: false, third: false },
