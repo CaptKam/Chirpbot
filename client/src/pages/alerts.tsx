@@ -334,18 +334,18 @@ export default function Alerts() {
                       {/* Row 1: Situation + RP + time */}
                       <div className="flex items-start justify-between">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <Pill className="bg-emerald-500/10 ring-emerald-500/30 text-emerald-300">
+                          <Pill className="bg-orange-500/15 ring-orange-400/40 text-orange-200">
                             <AlertTriangle className="w-3.5 h-3.5" />
                             {vm.situation}
                           </Pill>
                           {vm.edge.value && (
-                            <Pill className="bg-blue-500/10 ring-blue-500/30 text-blue-300">
+                            <Pill className="bg-indigo-500/15 ring-indigo-400/40 text-indigo-200">
                               <Gauge className="w-3.5 h-3.5" />
                               {vm.edge.label} {vm.edge.value}
                             </Pill>
                           )}
                           {vm.priority && (
-                            <Pill className="bg-fuchsia-500/10 ring-fuchsia-500/30 text-fuchsia-300">
+                            <Pill className="bg-rose-500/15 ring-rose-400/40 text-rose-200">
                               <Flame className="w-3.5 h-3.5" />
                               Priority {vm.priority}
                             </Pill>
@@ -353,7 +353,7 @@ export default function Alerts() {
                         </div>
                         {/* Alert timestamp - compact display */}
                         {vm.createdAt && (
-                          <Pill className="bg-slate-500/10 ring-slate-500/30 text-slate-300 shrink-0 text-xs px-2 py-1">
+                          <Pill className="bg-zinc-600/20 ring-zinc-500/30 text-zinc-300 shrink-0 text-xs px-2 py-1">
                             <Clock3 className="w-3 h-3" />
                             {(() => {
                               const now = Date.now();
@@ -383,7 +383,7 @@ export default function Alerts() {
                           {vm.widget}
                           {/* Optional batter chip */}
                           {vm.actor && (
-                            <Pill className="bg-amber-500/10 ring-amber-500/30 text-amber-300">
+                            <Pill className="bg-violet-500/15 ring-violet-400/40 text-violet-200">
                               <User className="w-3.5 h-3.5" />
                               {vm.actor}
                             </Pill>
@@ -399,7 +399,7 @@ export default function Alerts() {
                       {/* Row 4: Why tags (wind/tier/etc) */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-1">
                         {vm.tags?.map((tag, index) => (
-                          <Pill key={index} className={tag.includes('Wind') ? "bg-cyan-500/10 ring-cyan-500/30 text-cyan-300" : ""}>
+                          <Pill key={index} className={tag.includes('Wind') ? "bg-teal-500/15 ring-teal-400/40 text-teal-200" : "bg-neutral-500/15 ring-neutral-400/30 text-neutral-300"}>
                             {tag.includes('Wind') && <Wind className="w-3.5 h-3.5" />}
                             {tag}
                           </Pill>
