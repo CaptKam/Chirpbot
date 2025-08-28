@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, PanInfo } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calculator, Activity } from 'lucide-react';
+import { Trash2, ExternalLink, Download } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -13,41 +13,11 @@ import draftkingsLogo from '@assets/draftkings.png';
 import fanaticsLogo from '@assets/fanatics.png';
 import fanduelLogo from '@assets/fanduel.png';
 
-interface BetbookData {
-  odds: {
-    home: number;
-    away: number;
-    total: number;
-  };
-  aiAdvice: string;
-  sportsbookLinks: Array<{
-    name: string;
-    url: string;
-  }>;
-}
-
 interface SwipeableCardProps {
   children: React.ReactNode;
   alertId: string;
   className?: string;
   onTap?: () => void;
-  alertData?: {
-    sport?: string;
-    homeTeam?: string;
-    awayTeam?: string;
-    homeScore?: number;
-    awayScore?: number;
-    probability?: number;
-    priority?: number;
-    betbookData?: BetbookData;
-    gameInfo?: {
-      v3Analysis?: {
-        tier: number;
-        probability: number;
-        reasons: string[];
-      };
-    };
-  };
   [key: string]: any;
 }
 
@@ -90,7 +60,7 @@ const sportsbooks: Sportsbook[] = [
   }
 ];
 
-export function SwipeableCard({ children, alertId, className, onTap, alertData, ...props }: SwipeableCardProps) {
+export function SwipeableCard({ children, alertId, className, onTap, ...props }: SwipeableCardProps) {
   const [dragX, setDragX] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -197,158 +167,27 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   return (
     <div className="relative overflow-hidden rounded-xl">
-      {/* AI Betting Insights Panel (Left Swipe) - Only show when swiped left */}
-      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent backdrop-blur-sm transition-opacity duration-300 ${
+      {/* Sportsbook Menu (Left Swipe) - Only show when swiped left */}
+      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-emerald-500/20 to-transparent backdrop-blur-sm flex items-center justify-end pr-4 space-x-2 transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
-        {alertData?.betbookData || alertData?.gameInfo?.v3Analysis ? (
-          <div className="h-full flex flex-col justify-center p-4 space-y-3">
-            {/* AI Insights Header */}
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <Brain className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-sm">AI Betting Insights</h3>
-                <p className="text-blue-200 text-xs">ChirpBot v3 Analysis</p>
-              </div>
-            </div>
-
-            {/* Betting Recommendations Based on Game Situation */}
-            {alertData.gameInfo?.v3Analysis && (
-              <div className="space-y-2">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Target className="w-4 h-4 text-green-400" />
-                    <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
-                  </div>
-                  <p className="text-white text-sm font-medium">
-                    {(() => {
-                      const reasons = alertData.gameInfo.v3Analysis.reasons;
-                      const tier = alertData.gameInfo.v3Analysis.tier;
-                      const probability = alertData.gameInfo.v3Analysis.probability;
-                      
-                      // Generate betting recommendation based on situation
-                      if (reasons.some(r => r.includes('scoring position')) && reasons.some(r => r.includes('power hitter'))) {
-                        return "Bet Over 8.5 runs - High scoring situation with RISP + power hitter";
-                      } else if (reasons.some(r => r.includes('bases loaded'))) {
-                        return "Bet Over 7.5 runs - Bases loaded situation favors scoring";
-                      } else if (reasons.some(r => r.includes('wind')) && reasons.some(r => r.includes('out'))) {
-                        return "Bet Over 8.0 runs - Favorable wind conditions for offense";
-                      } else if (tier >= 3 && probability > 0.75) {
-                        return "Bet team total Over 4.5 - High probability scoring opportunity";
-                      } else if (reasons.some(r => r.includes('late-inning'))) {
-                        return "Live bet next inning Over 0.5 runs - Clutch situation";
-                      } else {
-                        return "Consider live betting opportunities - Game situation developing";
-                      }
-                    })()}
-                  </p>
-                </div>
-                
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Calculator className="w-4 h-4 text-yellow-400" />
-                    <span className="text-xs text-yellow-200 font-semibold">Value Insight</span>
-                  </div>
-                  <p className="text-white text-xs leading-relaxed">
-                    {(() => {
-                      const probability = alertData.gameInfo.v3Analysis.probability;
-                      if (probability > 0.8) {
-                        return "Strong value detected - Consider increased stake size for this high-confidence opportunity.";
-                      } else if (probability > 0.7) {
-                        return "Moderate value - Standard betting size recommended for this solid opportunity.";
-                      } else {
-                        return "Monitor closely - Wait for better value or consider smaller stake.";
-                      }
-                    })()}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Live Odds Display */}
-            {alertData?.betbookData?.odds && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <TrendingUp className="w-4 h-4 text-green-400" />
-                  <span className="text-xs text-green-200 font-semibold">Live Odds</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="text-center">
-                    <div className="text-slate-300">{alertData.homeTeam?.split(' ').pop()}</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.home > 0 ? '+' : ''}{alertData.betbookData.odds.home}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-slate-300">O/U</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.total}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-slate-300">{alertData.awayTeam?.split(' ').pop()}</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.away > 0 ? '+' : ''}{alertData.betbookData.odds.away}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* AI Advice */}
-            {alertData?.betbookData?.aiAdvice && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Target className="w-4 h-4 text-purple-400" />
-                  <span className="text-xs text-purple-200 font-semibold">AI Recommendation</span>
-                </div>
-                <p className="text-white text-xs leading-relaxed">
-                  {alertData.betbookData.aiAdvice.length > 100 
-                    ? alertData.betbookData.aiAdvice.substring(0, 100) + '...' 
-                    : alertData.betbookData.aiAdvice}
-                </p>
-              </div>
-            )}
-
-            {/* Quick Sportsbook Access */}
-            <div className="flex space-x-2">
-              {sportsbooks.slice(0, 3).map((sportsbook) => (
-                <Button
-                  key={sportsbook.name}
-                  onClick={() => {
-                    handleSportsbookClick(sportsbook);
-                    setDragX(0);
-                  }}
-                  className="h-8 w-8 p-0 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm ring-1 ring-white/20 transition-all"
-                  data-testid={`ai-sportsbook-${sportsbook.name.toLowerCase()}`}
-                >
-                  <img 
-                    src={sportsbook.logo} 
-                    alt={sportsbook.name}
-                    className="w-5 h-5 rounded object-cover"
-                  />
-                </Button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          // Fallback to original sportsbook buttons when no AI data
-          <div className="h-full flex items-center justify-end pr-4 space-x-2">
-            {sportsbooks.map((sportsbook) => (
-              <Button
-                key={sportsbook.name}
-                onClick={() => {
-                  handleSportsbookClick(sportsbook);
-                  setDragX(0);
-                }}
-                className="h-12 w-12 p-0 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm ring-1 ring-white/20 transition-all"
-                data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
-              >
-                <img 
-                  src={sportsbook.logo} 
-                  alt={sportsbook.name}
-                  className="w-8 h-8 rounded object-cover"
-                />
-              </Button>
-            ))}
-          </div>
-        )}
+        {sportsbooks.map((sportsbook) => (
+          <Button
+            key={sportsbook.name}
+            onClick={() => {
+              handleSportsbookClick(sportsbook);
+              setDragX(0); // Return to center after click
+            }}
+            className="h-12 w-12 p-0 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm ring-1 ring-white/20 transition-all"
+            data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
+          >
+            <img 
+              src={sportsbook.logo} 
+              alt={sportsbook.name}
+              className="w-8 h-8 rounded object-cover"
+            />
+          </Button>
+        ))}
       </div>
 
       {/* Delete Menu (Right Swipe) - Only show when swiped right */}

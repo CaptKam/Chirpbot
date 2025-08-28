@@ -1,4 +1,4 @@
-import { MLBEngine } from './mlb-engine';
+import { mlbEngine } from './mlb-engine';
 import { nflEngine } from './nfl-engine';
 import { nbaEngine } from './nba-engine';
 import { nhlEngine } from './nhl-engine';
@@ -21,7 +21,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   constructor() {
     // Register all engines
-    this.addEngine('MLB', new MLBEngine());
+    this.addEngine('MLB', mlbEngine);
     this.addEngine('NFL', nflEngine);
     this.addEngine('NBA', nbaEngine);
     this.addEngine('NHL', nhlEngine);
@@ -38,7 +38,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   async startAllEngines(): Promise<void> {
-    console.log('🚀 Starting ChirpBot V3 Alert System with 4 Laws + Betbook Engine...');
+    console.log('🎯 Starting Game Situations alerts system...');
     
     // Stop all running engines first
     this.stopAllEngines();
@@ -46,13 +46,13 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     // Enable only MLB engine for Game Situations
     const hasMonitoredGames = await this.hasMonitoredGamesForSport('MLB');
     if (hasMonitoredGames) {
-      console.log('🎯 Starting MLB V3 Engine - 4-Tier System + Betting Engine');
+      console.log('🔧 Starting MLB engine for Game Situations alerts');
       this.startEngine('MLB', this.engines.get('MLB')!);
     } else {
       console.log('⏸️ No monitored MLB games found');
     }
     
-    console.log('✅ ChirpBot V3 System Ready - 4 Laws Active with Betbook Integration');
+    console.log('✅ Game Situations alert system ready');
   }
   
   private startEngine(sport: string, engine: BaseSportEngine): void {
@@ -161,5 +161,5 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 export const alertEngineManager = new AlertEngineManagerImpl();
 
 // Export individual engines for direct access if needed
-export { MLBEngine, nflEngine, nbaEngine, nhlEngine, weatherEngine };
+export { mlbEngine, nflEngine, nbaEngine, nhlEngine, weatherEngine };
 export { BaseSportEngine } from './base-engine';

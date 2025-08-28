@@ -322,10 +322,12 @@ class LiveSportsService {
                 const homeTeam = game.homeTeam?.name || game.teams?.home?.team?.name || '';
                 const awayTeam = game.awayTeam?.name || game.teams?.away?.team?.name || '';
 
-                // Only filter out obvious tennis patterns (individual players)
+                // Multiple tennis detection methods
                 const isTennis = homeTeam.includes('(') || awayTeam.includes('(') ||
                                 homeTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
-                                awayTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/);
+                                awayTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
+                                (homeTeam.split(' ').length === 2 && awayTeam.split(' ').length === 2 &&
+                                 !homeTeam.includes('Cardinals') && !homeTeam.includes('Yankees'));
 
                 return !isTennis;
               });
@@ -339,10 +341,12 @@ class LiveSportsService {
                 const homeTeam = game.homeTeam?.name || game.teams?.home?.team?.name || '';
                 const awayTeam = game.awayTeam?.name || game.teams?.away?.team?.name || '';
 
-                // Only filter out obvious tennis patterns (individual players)
+                // Multiple tennis detection methods
                 const isTennis = homeTeam.includes('(') || awayTeam.includes('(') ||
                                 homeTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
-                                awayTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/);
+                                awayTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
+                                (homeTeam.split(' ').length === 2 && awayTeam.split(' ').length === 2 &&
+                                 !homeTeam.includes('Cardinals') && !homeTeam.includes('Yankees'));
 
                 return !isTennis;
               });
