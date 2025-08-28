@@ -1496,12 +1496,13 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
       console.error('🚨 V3 Tier evaluation error:', error);
       console.error('🚨 V3 Error stack:', error.stack);
       
-      // Fallback to old system if V3 fails
-      console.log(`🔄 V3 Falling back to old alert system...`);
-      const legacyAlerts = await this.checkAlertConditions(gameState);
-      if (legacyAlerts.length > 0) {
-        await this.processAlerts(legacyAlerts, gameState);
-      }
+      // V3 system failed - log error but don't fallback to old system
+      console.log(`❌ V3 system encountered error - alerts paused for this cycle`);
+      // DISABLED: Old fallback system to prevent dual processing
+      // const legacyAlerts = await this.checkAlertConditions(gameState);
+      // if (legacyAlerts.length > 0) {
+      //   await this.processAlerts(legacyAlerts, gameState);
+      // }
     }
   }
 
@@ -1634,8 +1635,12 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
           console.log(`📊 Game State: Inning ${gameState.inning} (${gameState.inningState}), Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}, Outs: ${gameState.outs}`);
           console.log(`🏃 Runners: 1st=${gameState.runners?.first}, 2nd=${gameState.runners?.second}, 3rd=${gameState.runners?.third}`);
 
-          let triggeredAlerts = await this.checkAlertConditions(gameState);
-          console.log(`⚡ Found ${triggeredAlerts.length} triggered alerts: ${triggeredAlerts.map(a => a.type).join(', ')}`);
+          // DISABLED OLD SYSTEM - Using V3 4-Tier System instead
+          // let triggeredAlerts = await this.checkAlertConditions(gameState);
+          // console.log(`⚡ Found ${triggeredAlerts.length} triggered alerts: ${triggeredAlerts.map(a => a.type).join(', ')}`);
+          
+          console.log(`🚫 OLD SYSTEM DISABLED - V3 4-Tier System is primary`);
+          let triggeredAlerts = [];
 
           // Get current settings to check if power hitter alerts are enabled
           const settings = await storage.getSettingsBySport(this.sport);
