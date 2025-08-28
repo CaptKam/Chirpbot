@@ -165,7 +165,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       startAutoReturnTimer();
     } else if (info.offset.x < -threshold || velocity < -500) {
       // Swiped left - show sportsbooks
-      setDragX(-280);
+      setDragX(-360);
       startAutoReturnTimer();
     } else {
       setDragX(0);
@@ -407,7 +407,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       {/* Main Card */}
       <motion.div
         drag="x"
-        dragConstraints={{ left: -300, right: 140 }}
+        dragConstraints={{ left: -400, right: 140 }}
         dragElastic={0.1}
         dragMomentum={false}
         onDragStart={handleDragStart}
