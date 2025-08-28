@@ -141,8 +141,8 @@ export class MLBEngineV3 extends BaseSportEngine {
         const isLive = game.isLive === true;
         
         // Get team names from the correct Game interface properties
-        const awayTeam = game.awayTeam || 'Unknown Away';
-        const homeTeam = game.homeTeam || 'Unknown Home';
+        const awayTeam = game.awayTeam?.name || game.awayTeam || 'Unknown Away';
+        const homeTeam = game.homeTeam?.name || game.homeTeam || 'Unknown Home';
         
         if (!isLive) {
           console.log(`⏭️ V3 Skipping ${awayTeam} @ ${homeTeam} - Status: ${status}`);
@@ -156,9 +156,16 @@ export class MLBEngineV3 extends BaseSportEngine {
       console.log(`🎯 Game Status Gating: Processing ${liveGames.length}/${games.length} live games`);
 
       for (const game of liveGames) {
+        const awayTeam = game.awayTeam?.name || 'Unknown Away';
+        const homeTeam = game.homeTeam?.name || 'Unknown Home';
+        console.log(`🎯 V3 Processing: ${awayTeam} @ ${homeTeam}`);
+        
         const gameState = this.extractGameStateV3(game);
         if (gameState) {
+          console.log(`🔬 V3 Starting 4-Tier Evaluation for ${awayTeam} @ ${homeTeam}`);
           await this.evaluateFourTierSystem(gameState);
+        } else {
+          console.log(`❌ V3 Failed to extract game state for ${awayTeam} @ ${homeTeam}`);
         }
       }
     } catch (error) {
