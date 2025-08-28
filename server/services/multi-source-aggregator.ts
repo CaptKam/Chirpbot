@@ -60,10 +60,10 @@ class MLBStatsAPIEnhanced implements MLBSource {
       easternTime.setDate(easternTime.getDate() + offsetDays);
       return easternTime.toISOString().split('T')[0];
     };
-    
+
     const today = date || getMLBDate(0);
     const yesterday = getMLBDate(-1);
-    
+
     // Fetch both today's and yesterday's games to catch late-night West Coast games
     const [todayData, yesterdayData] = await Promise.all([
       fetchJson(
@@ -79,17 +79,17 @@ class MLBStatsAPIEnhanced implements MLBSource {
     // Combine games from both days
     const todayGames = this.processMLBData(todayData);
     const yesterdayGames = this.processMLBData(yesterdayData);
-    
+
     // Filter yesterday's games to only include live ones
     const liveYesterdayGames = yesterdayGames.filter(game => game.status === 'live');
-    
+
     // Return all of today's games plus any live games from yesterday
     return [...todayGames, ...liveYesterdayGames];
   }
 
   private processMLBData(data: any): Game[] {
     if (!data?.dates?.[0]?.games) return [];
-    
+
     return data.dates[0].games.map((game: any) => ({
       id: `mlb-${game.gamePk}`,
       sport: 'MLB',
@@ -100,7 +100,7 @@ class MLBStatsAPIEnhanced implements MLBSource {
         score: game.teams.home.score || 0,
       },
       awayTeam: {
-        id: game.teams.away.team.id.toString(), 
+        id: game.teams.away.team.id.toString(),
         name: game.teams.away.team.name,
         abbreviation: game.teams.away.team.abbreviation,
         score: game.teams.away.score || 0,
@@ -116,8 +116,8 @@ class MLBStatsAPIEnhanced implements MLBSource {
   private mapMLBStatus(status: string): 'scheduled' | 'live' | 'final' {
     const s = (status || '').toLowerCase();
     if (s.includes('final') || s.includes('completed') || s.includes('game over')) return 'final';
-    if (s.includes('live') || s.includes('in progress') || s.includes('in play') || 
-        s.includes('top ') || s.includes('bot ') || s.includes('middle ') || 
+    if (s.includes('live') || s.includes('in progress') || s.includes('in play') ||
+        s.includes('top ') || s.includes('bot ') || s.includes('middle ') ||
         s.includes('end ')) return 'live';
     return 'scheduled';
   }
@@ -137,10 +137,10 @@ class ESPNMLBSource implements MLBSource {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
+
     const todayFormatted = today.replace(/-/g, '');
     const yesterdayFormatted = yesterdayStr.replace(/-/g, '');
-    
+
     // Fetch both today's and yesterday's games
     const [todayData, yesterdayData] = await Promise.all([
       fetchJson(
@@ -152,36 +152,36 @@ class ESPNMLBSource implements MLBSource {
         { headers: { 'User-Agent': 'ChirpBot-ESPN/2.0' }, timeoutMs: 10000 }
       )
     ]);
-    
+
     // Process both days
     const todayGames = this.processESPNData(todayData);
     const yesterdayGames = this.processESPNData(yesterdayData);
-    
+
     // Filter yesterday's games to only include live ones
     const liveYesterdayGames = yesterdayGames.filter(game => game.status === 'live');
-    
+
     // Return all of today's games plus any live games from yesterday
     return [...todayGames, ...liveYesterdayGames];
   }
 
   private processESPNData(data: any): Game[] {
     if (!data?.events) return [];
-    
+
     // Filter out non-MLB sports and tennis players (contain parentheses with last names)
     const mlbEvents = data.events.filter((event: any) => {
       const sport = event.competitions?.[0]?.type?.name?.toLowerCase() || '';
       const homeTeam = event.competitions?.[0]?.competitors?.[0]?.team?.displayName || '';
       const awayTeam = event.competitions?.[0]?.competitors?.[1]?.team?.displayName || '';
-      
+
       // Filter out tennis players (contain parentheses with surnames)
-      const isTennis = homeTeam.includes('(') || awayTeam.includes('(') || 
+      const isTennis = homeTeam.includes('(') || awayTeam.includes('(') ||
                       sport.includes('tennis') || sport.includes('wta') || sport.includes('atp');
-      
+
       const isBaseball = sport.includes('baseball') || sport.includes('mlb');
-      
+
       return isBaseball && !isTennis;
     });
-    
+
     return mlbEvents.map((event: any) => ({
       id: `mlb-espn-${event.id}`,
       sport: 'MLB',
@@ -242,12 +242,12 @@ class TheSportsDBMLB implements MLBSource {
     // Progressive delay based on failure count to avoid rate limits
     const delay = Math.min(1000 + (this.failureCount * 2000), 10000);
     await new Promise(resolve => setTimeout(resolve, delay));
-    
+
     const today = date || new Date().toISOString().split('T')[0];
     const url = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${today}&l=4424`; // MLB league ID
-    
+
     const data = await fetchJson(url, {
-      headers: { 
+      headers: {
         'User-Agent': 'ChirpBot-SportsDB/2.0',
         'Accept': 'application/json'
       },
@@ -259,17 +259,17 @@ class TheSportsDBMLB implements MLBSource {
 
   private processSportsDBData(data: any): Game[] {
     if (!data?.events) return [];
-    
+
     return data.events
       .filter((event: any) => {
         // Filter for baseball only and exclude tennis players
         const isBaseball = event.strSport === 'Baseball' || event.strLeague?.includes('MLB');
         const homeTeam = event.strHomeTeam || '';
         const awayTeam = event.strAwayTeam || '';
-        
+
         // Filter out tennis players (contain parentheses with surnames)
         const isTennis = homeTeam.includes('(') || awayTeam.includes('(');
-        
+
         return isBaseball && !isTennis;
       })
       .map((event: any) => ({
@@ -304,7 +304,7 @@ class TheSportsDBMLB implements MLBSource {
   }
 }
 
-// NFL Sources with SportsData.io primary and ESPN fallback  
+// NFL Sources with SportsData.io primary and ESPN fallback
 class SportsDataNFLSource implements NFLSource {
   name = 'SportsData.io-NFL';
   priority = 1;
@@ -332,7 +332,7 @@ class ESPNNFLSource implements NFLSource {
     const today = date || new Date().toISOString().split('T')[0];
     const formattedDate = today.replace(/-/g, '');
     const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${formattedDate}`;
-    
+
     const data = await fetchJson(url, {
       headers: { 'User-Agent': 'ChirpBot-ESPN-NFL/2.0' },
       timeoutMs: 10000
@@ -343,7 +343,7 @@ class ESPNNFLSource implements NFLSource {
 
   private processESPNNFLData(data: any): Game[] {
     if (!data?.events) return [];
-    
+
     return data.events.map((event: any) => ({
       id: `nfl-espn-${event.id}`,
       sport: 'NFL',
@@ -389,16 +389,85 @@ export class MultiSourceAggregator {
   ];
 
   async getMLBGames(date?: string): Promise<Game[]> {
-    return this.fetchWithFallback(this.mlbSources, date);
+    console.log(`🔍 Multi-source aggregator fetching MLB games for ${date || 'today'}`);
+
+    const results = await Promise.allSettled([
+      this.getMLBFromAPI(date),
+      this.getMLBFromESPN(date)
+    ]);
+
+    let allGames: Game[] = [];
+
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const source = i === 0 ? 'MLB API' : 'ESPN';
+
+      if (result.status === 'fulfilled') {
+        console.log(`✅ ${source}: Found ${result.value.length} games`);
+        if (result.value.length > 0) {
+          // Log first game from each source for debugging
+          const firstGame = result.value[0];
+          console.log(`   Sample game: ${firstGame.awayTeam?.name || firstGame.awayTeam} @ ${firstGame.homeTeam?.name || firstGame.homeTeam} (${firstGame.status})`);
+        }
+        allGames = allGames.concat(result.value);
+      } else {
+        console.log(`❌ ${source} failed:`, result.reason?.message || 'Unknown error');
+      }
+    }
+
+    // Deduplicate games based on team matchups
+    const uniqueGames = this.deduplicateGames(allGames);
+    console.log(`🎯 Multi-source aggregator: ${uniqueGames.length} unique games from ${results.length} sources`);
+
+    // Log all unique games for debugging
+    uniqueGames.forEach(game => {
+      console.log(`   Game: ${game.awayTeam?.name || game.awayTeam} @ ${game.homeTeam?.name || game.homeTeam} - Status: ${game.status}`);
+    });
+
+    return uniqueGames;
   }
 
   async getNFLGames(date?: string): Promise<Game[]> {
     return this.fetchWithFallback(this.nflSources, date);
   }
 
+  // Helper function to abstract fetching from multiple sources
+  private async getMLBFromAPI(date?: string): Promise<Game[]> {
+    try {
+      const source = new MLBStatsAPIEnhanced();
+      return await source.fetchGames(date);
+    } catch (error) {
+      console.error("Error fetching from MLBStatsAPIEnhanced:", error);
+      return [];
+    }
+  }
+
+  private async getMLBFromESPN(date?: string): Promise<Game[]> {
+    try {
+      const source = new ESPNMLBSource();
+      return await source.fetchGames(date);
+    } catch (error) {
+      console.error("Error fetching from ESPNMLBSource:", error);
+      return [];
+    }
+  }
+
+  // Deduplicate games based on a simple heuristic (awayTeam vs homeTeam)
+  private deduplicateGames(games: Game[]): Game[] {
+    const gameMap = new Map<string, Game>();
+    games.forEach(game => {
+      const key = `${game.awayTeam.name}-${game.homeTeam.name}`;
+      // If a game already exists, keep the one with more up-to-date info (e.g., score, status)
+      if (!gameMap.has(key) || (game.status !== 'scheduled' && gameMap.get(key)!.status === 'scheduled')) {
+        gameMap.set(key, game);
+      }
+    });
+    return Array.from(gameMap.values());
+  }
+
   // Advanced parallel fetching with speed optimization and cross-validation
   private async fetchWithParallelOptimization<T extends DataSource & { fetchGames: (date?: string) => Promise<Game[]> }>(
-    sources: T[], 
+    sources: T[],
     date?: string
   ): Promise<Game[]> {
     const enabledSources = sources.filter(source => {
@@ -427,10 +496,10 @@ export class MultiSourceAggregator {
       try {
         const games = await source.fetchGames(date);
         const responseTime = Date.now() - startTime;
-        
+
         // Reset failure count on success
         source.failureCount = 0;
-        
+
         return {
           source,
           games,
@@ -442,7 +511,7 @@ export class MultiSourceAggregator {
         const responseTime = Date.now() - startTime;
         source.failureCount++;
         source.lastFailure = new Date();
-        
+
         return {
           source,
           games: [] as Game[],
@@ -455,7 +524,7 @@ export class MultiSourceAggregator {
 
     // Wait for all sources to complete
     const results = await Promise.all(sourcePromises);
-    
+
     // Filter successful results and sort by response time
     const successfulResults = results
       .filter(result => result.success && result.games.length > 0)
@@ -485,7 +554,7 @@ export class MultiSourceAggregator {
   // Cross-validation logic to ensure data accuracy across sources
   private crossValidateGameData(results: Array<{source: any, games: Game[], responseTime: number}>): Game[] {
     console.log(`🔍 Cross-validating data from ${results.length} sources...`);
-    
+
     const allGames = results.flatMap(result => result.games);
     const gameMap = new Map<string, Game[]>();
 
@@ -499,7 +568,7 @@ export class MultiSourceAggregator {
     });
 
     const validatedGames: Game[] = [];
-    
+
     gameMap.forEach((gameVersions, key) => {
       if (gameVersions.length >= 2) {
         // Multiple sources agree - high confidence
@@ -545,7 +614,7 @@ export class MultiSourceAggregator {
 
   // Legacy fallback method for backwards compatibility
   private async fetchWithFallback<T extends DataSource & { fetchGames: (date?: string) => Promise<Game[]> }>(
-    sources: T[], 
+    sources: T[],
     date?: string
   ): Promise<Game[]> {
     return this.fetchWithParallelOptimization(sources, date);

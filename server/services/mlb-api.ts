@@ -310,6 +310,8 @@ export class MLBApiService {
     const isLive = this.isGameLive(mlbGame.status);
     const isCompleted = mlbGame.status.abstractGameState === 'Final';
     
+    console.log(`🔍 Transforming MLB game: ${mlbGame.teams.away.team.name} @ ${mlbGame.teams.home.team.name} - Status: ${mlbGame.status.abstractGameState}`);
+    
     return {
       id: `mlb-${mlbGame.gamePk}`,
       sport: 'MLB',

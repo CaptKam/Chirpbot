@@ -1379,11 +1379,11 @@ export class MLBEngine implements SportEngine {
 
           if (!hasRunners && !isPowerHitter) {
             console.log(`⏭️ SKIPPING: Empty bases, no power hitter - no alerts needed (${gameState.awayTeam} @ ${gameState.homeTeam})`);
-            return; // Early exit, skip all alert processing
+            continue; // Continue to next game instead of returning
           }
 
           console.log(`🔍 Processing ${this.alertConfigs.length} alert configs for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
-          console.log(`📊 Game State: Inning ${gameState.inning} (${gameState.inningState}), Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}, Outs: ${gameState.outs}`);
+          console.log(`📊 Game State: Inning ${gameState.inning} (${gameState.inningState}), Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}, Outs: ${gameState.outs}`);
           console.log(`🏃 Runners: 1st=${gameState.runners?.first}, 2nd=${gameState.runners?.second}, 3rd=${gameState.runners?.third}`);
 
           let triggeredAlerts = await this.checkAlertConditions(gameState);
