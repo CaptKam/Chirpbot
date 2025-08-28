@@ -117,23 +117,26 @@ export class MLBEngineV3 extends BaseSportEngine {
   async processLiveGamesOnly(): Promise<void> {
     try {
       const games = await mlbApi.getTodaysGames();
-      console.log(`🔍 V3 Debug - First game structure:`, JSON.stringify(games[0], null, 2).substring(0, 500) + '...');
+      console.log(`🔍 V3 Debug - Got ${games.length} games from API`);
+      
+      if (games.length > 0) {
+        console.log(`🔍 V3 Debug - First game:`, {
+          id: games[0].id,
+          homeTeam: games[0].homeTeam,
+          awayTeam: games[0].awayTeam,  
+          status: games[0].status,
+          isLive: games[0].isLive
+        });
+      }
       
       const liveGames = games.filter((game: any) => {
-        const status = this.normalizeGameStatus(game);
-        const isLive = status === 'Live';
+        // Use the Game interface properties correctly
+        const status = game.status || 'Unknown';
+        const isLive = game.isLive === true;
         
-        // Multiple extraction attempts for team names
-        const awayTeam = game.teams?.away?.team?.name || 
-                        game.gameData?.teams?.away?.name || 
-                        game.away_team?.name ||
-                        game.awayTeam || 
-                        'Unknown Away';
-        const homeTeam = game.teams?.home?.team?.name || 
-                        game.gameData?.teams?.home?.name || 
-                        game.home_team?.name ||
-                        game.homeTeam || 
-                        'Unknown Home';
+        // Get team names from the correct Game interface properties
+        const awayTeam = game.awayTeam || 'Unknown Away';
+        const homeTeam = game.homeTeam || 'Unknown Home';
         
         if (!isLive) {
           console.log(`⏭️ V3 Skipping ${awayTeam} @ ${homeTeam} - Status: ${status}`);
