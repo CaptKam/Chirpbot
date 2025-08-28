@@ -121,8 +121,14 @@ export class MLBEngineV3 extends BaseSportEngine {
         const status = this.normalizeGameStatus(game);
         const isLive = status === 'Live';
         
+        // Extract team names properly
+        const awayTeam = game.teams?.away?.team?.name || game.gameData?.teams?.away?.name || 'Unknown';
+        const homeTeam = game.teams?.home?.team?.name || game.gameData?.teams?.home?.name || 'Unknown';
+        
         if (!isLive) {
-          console.log(`⏭️ Skipping ${game.teams?.away?.team?.name} @ ${game.teams?.home?.team?.name} - Status: ${status}`);
+          console.log(`⏭️ V3 Skipping ${awayTeam} @ ${homeTeam} - Status: ${status}`);
+        } else {
+          console.log(`🚀 V3 Processing LIVE GAME: ${awayTeam} @ ${homeTeam}`);
         }
         
         return isLive;
