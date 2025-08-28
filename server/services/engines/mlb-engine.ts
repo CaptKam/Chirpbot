@@ -1535,6 +1535,16 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
         
         console.log(`🚨 V3 4-TIER ALERT TRIGGERED! Tier ${highestTier}: ${alertTier.reason} (${alertTier.probability}% confidence)`);
         
+        // Generate deduplication key to prevent spam
+        const dedupKey = `V3:${gameState.gameId}:${gameState.inning}:${gameState.inningState}:${gameState.outs}:${gameState.runners.first ? '1' : '0'}${gameState.runners.second ? '1' : '0'}${gameState.runners.third ? '1' : '0'}:${gameState.currentBatter?.id || 'unknown'}:L${highestTier}`;
+        const lastAlert = this.deduplicationCache.get(dedupKey);
+        const cooldownMs = 60000 * highestTier; // L1=60s, L2=120s, L3=180s
+        
+        if (lastAlert && (Date.now() - lastAlert.timestamp) < cooldownMs) {
+          console.log(`⏰ V3 Alert in cooldown: ${dedupKey} (${Math.round((cooldownMs - (Date.now() - lastAlert.timestamp)) / 1000)}s remaining)`);
+          return; // Skip creating duplicate alert
+        }
+        
         // Create and store V3 alert
         const v3Alert = {
           id: randomUUID(),
@@ -1562,7 +1572,11 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
         };
         
         await storage.createAlert(v3Alert);
-        console.log(`✅ V3 4-Tier Alert stored: L${highestTier} with ${alertTier.probability}% confidence`);
+        
+        // Add to cooldown cache
+        this.deduplicationCache.set(dedupKey, { timestamp: Date.now(), tier: highestTier });
+        
+        console.log(`✅ V3 4-Tier Alert stored: L${highestTier} with ${alertTier.probability}% confidence (dedupKey: ${dedupKey})`);
         
         // Broadcast via WebSocket if callback available  
         if (this.onAlert) {
