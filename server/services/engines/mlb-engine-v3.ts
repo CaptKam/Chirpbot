@@ -160,12 +160,17 @@ export class MLBEngineV3 extends BaseSportEngine {
         const homeTeam = game.homeTeam?.name || 'Unknown Home';
         console.log(`🎯 V3 Processing: ${awayTeam} @ ${homeTeam}`);
         
-        const gameState = this.extractGameStateV3(game);
-        if (gameState) {
-          console.log(`🔬 V3 Starting 4-Tier Evaluation for ${awayTeam} @ ${homeTeam}`);
-          await this.evaluateFourTierSystem(gameState);
-        } else {
-          console.log(`❌ V3 Failed to extract game state for ${awayTeam} @ ${homeTeam}`);
+        try {
+          const gameState = this.extractGameStateV3(game);
+          if (gameState) {
+            console.log(`🔬 V3 Starting 4-Tier Evaluation for ${awayTeam} @ ${homeTeam}`);
+            console.log(`   Base Runners: 1B=${gameState.runners?.first || 'Empty'} 2B=${gameState.runners?.second || 'Empty'} 3B=${gameState.runners?.third || 'Empty'}`);
+            await this.evaluateFourTierSystem(gameState);
+          } else {
+            console.log(`❌ V3 Failed to extract game state for ${awayTeam} @ ${homeTeam}`);
+          }
+        } catch (error) {
+          console.error(`❌ V3 Error processing ${awayTeam} @ ${homeTeam}:`, error);
         }
       }
     } catch (error) {
