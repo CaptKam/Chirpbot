@@ -949,6 +949,7 @@ export class DatabaseStorage implements IStorage {
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
     const alertToInsert = {
       ...insertAlert,
+      priority: insertAlert.priority || insertAlert.gameInfo?.priority || 70, // Save to main priority column
       gameInfo: {
         ...insertAlert.gameInfo,
         quarter: insertAlert.gameInfo.quarter as string | undefined,

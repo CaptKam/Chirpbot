@@ -43,6 +43,7 @@ export const alerts = pgTable("alerts", {
   sport: text("sport").notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
+  priority: integer("priority").default(70), // Alert priority (70-100)
   gameInfo: jsonb("game_info").$type<{
     homeTeam: string;
     awayTeam: string;
