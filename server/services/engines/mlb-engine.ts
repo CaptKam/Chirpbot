@@ -1370,6 +1370,15 @@ export class MLBEngine implements SportEngine {
           console.log(`📊 Game State: Inning ${gameState.inning} (${gameState.inningState}), Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}, Outs: ${gameState.outs}`);
           console.log(`🏃 Runners: 1st=${gameState.runners?.first}, 2nd=${gameState.runners?.second}, 3rd=${gameState.runners?.third}`);
           
+          // 🚀 NEW RULE SET: Early exit for empty bases (unless power hitter situation)
+          const hasRunners = gameState.runners.first || gameState.runners.second || gameState.runners.third;
+          const isPowerHitter = gameState.currentBatter?.stats.hr >= 25; // Lowered threshold for alerts
+          
+          if (!hasRunners && !isPowerHitter) {
+            console.log(`⏭️ SKIPPING: Empty bases, no power hitter - no alerts needed`);
+            return; // Early exit, skip all alert processing
+          }
+          
           let triggeredAlerts = await this.checkAlertConditions(gameState);
           console.log(`⚡ Found ${triggeredAlerts.length} triggered alerts: ${triggeredAlerts.map(a => a.type).join(', ')}`);
 
