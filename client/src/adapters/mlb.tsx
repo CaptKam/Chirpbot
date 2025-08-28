@@ -55,7 +55,7 @@ const mlb: SportAdapter = {
       tags,
       isNew: !a.seen,
       createdAt: a.createdAt || a.created_at,
-      widget: <RunnersDiamond r={g.runners ?? {}} />,
+      widget: null,
       actor: g.currentBatter?.name || g.currentPitcher?.name
     };
   }
