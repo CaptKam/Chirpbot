@@ -100,18 +100,18 @@ export class MemStorage implements IStorage {
   private initializeMasterAlertControls() {
     // MLB Master Alert Controls
     const mlbAlerts = [
-      // Game Situations
-      { alertKey: "risp", title: "RISP Alert", description: "Runners in scoring position", category: "Game Situations" },
-      { alertKey: "closeGame", title: "Close Game Alert", description: "1-run games in late innings", category: "Game Situations" },
-      { alertKey: "lateInning", title: "Late Inning Alert", description: "8th+ inning crucial moments", category: "Game Situations" },
-      { alertKey: "runnersOnBase", title: "Runners On Base", description: "Any base runner situations", category: "Game Situations" },
-      
+      // Game Situations (Law #1 Compliant)
+      { alertKey: "risp", title: "Runners In Scoring Position", description: "High probability scoring situations with runners on 2nd/3rd base", category: "Game Situations" },
+      { alertKey: "closeGame", title: "Close Game Alert", description: "Nail-biting 1-2 run games in crucial late innings", category: "Game Situations" },
+      { alertKey: "lateInning", title: "Late Inning Alert", description: "High-pressure 8th+ inning situations", category: "Game Situations" },
+      { alertKey: "runnersOnBase", title: "Runners on Base (RISP Only)", description: "Scoring position runners only (2nd/3rd base) - Law #1 compliant", category: "Game Situations" },
+
       // Scoring Events
       { alertKey: "homeRun", title: "Home Run Situations", description: "High home run probability moments", category: "Scoring Events" },
       { alertKey: "homeRunAlert", title: "Home Run Alerts", description: "Actual home run notifications", category: "Scoring Events" },
       { alertKey: "hits", title: "Hit Alerts", description: "Base hit notifications", category: "Scoring Events" },
       { alertKey: "scoring", title: "Scoring Plays", description: "RBI and run-scoring events", category: "Scoring Events" },
-      
+
       // Player Performance
       { alertKey: "strikeouts", title: "Strikeout Alerts", description: "Pitcher strikeout notifications", category: "Player Performance" },
       { alertKey: "powerHitter", title: "Power Hitter Alert", description: "Advanced HR probability analysis with platoon advantages, park factors & wind effects", category: "Player Performance" },
@@ -122,13 +122,13 @@ export class MemStorage implements IStorage {
       { alertKey: "rbiMachine", title: "RBI Machine Alert", description: "80+ RBI producers with scoring chances", category: "Player Performance" },
       { alertKey: "basesLoaded", title: "Bases Loaded", description: "Maximum scoring opportunity - all bases occupied", category: "Game Situations" },
       { alertKey: "extraInnings", title: "Extra Innings", description: "Game extends beyond 9th inning", category: "Game Situations" },
-      
+
       // RE24+AI Hybrid System
       { alertKey: "useRE24System", title: "RE24+AI Hybrid System", description: "Advanced Run Expectancy analytics enhanced with AI predictions", category: "AI Predictions" },
       { alertKey: "re24Level1", title: "RE24 Level 1", description: "Basic situational analysis with AI enhancement", category: "AI Predictions" },
       { alertKey: "re24Level2", title: "RE24 Level 2", description: "Intermediate player analytics with contextual AI", category: "AI Predictions" },
       { alertKey: "re24Level3", title: "RE24 Level 3", description: "Elite sabermetrics with advanced AI predictions", category: "AI Predictions" },
-      
+
       // Game Flow
       { alertKey: "inningChange", title: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },
     ];
@@ -231,7 +231,7 @@ export class MemStorage implements IStorage {
           homeRunAlert: sport === "MLB",
           strikeouts: false,
           powerHitterOnDeck: false,
-          
+
           // RE24 System
           useRE24System: sport === "MLB",
           re24Level1: sport === "MLB",
@@ -380,7 +380,7 @@ export class MemStorage implements IStorage {
   async getUserMonitoredGamesBySport(userId: string, sport: string): Promise<UserMonitoredTeam[]> {
     return []; // Mock implementation  
   }
-  
+
   async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
     return []; // Mock implementation - no monitored games in memory storage
   }
@@ -741,28 +741,28 @@ export class DatabaseStorage implements IStorage {
 
       // MLB Master Alert Controls
       const mlbAlerts = [
-        // Game Situations
-        { alertKey: "risp", title: "RISP Alert", description: "Runners in scoring position", category: "Game Situations" },
-        { alertKey: "closeGame", title: "Close Game Alert", description: "1-run games in late innings", category: "Game Situations" },
-        { alertKey: "lateInning", title: "Late Inning Alert", description: "8th+ inning crucial moments", category: "Game Situations" },
-        { alertKey: "runnersOnBase", title: "Runners On Base", description: "Any base runner situations", category: "Game Situations" },
-        
+        // Game Situations (Law #1 Compliant)
+        { alertKey: "risp", title: "Runners In Scoring Position", description: "High probability scoring situations with runners on 2nd/3rd base", category: "Game Situations" },
+        { alertKey: "closeGame", title: "Close Game Alert", description: "Nail-biting 1-2 run games in crucial late innings", category: "Game Situations" },
+        { alertKey: "lateInning", title: "Late Inning Alert", description: "High-pressure 8th+ inning situations", category: "Game Situations" },
+        { alertKey: "runnersOnBase", title: "Runners on Base (RISP Only)", description: "Scoring position runners only (2nd/3rd base) - Law #1 compliant", category: "Game Situations" },
+
         // Scoring Events
         { alertKey: "homeRun", title: "Home Run Situations", description: "High home run probability moments", category: "Scoring Events" },
         { alertKey: "homeRunAlert", title: "Home Run Alerts", description: "Actual home run notifications", category: "Scoring Events" },
         { alertKey: "hits", title: "Hit Alerts", description: "Base hit notifications", category: "Scoring Events" },
         { alertKey: "scoring", title: "Scoring Plays", description: "RBI and run-scoring events", category: "Scoring Events" },
-        
+
         // Player Performance
         { alertKey: "strikeouts", title: "Strikeout Alerts", description: "Pitcher strikeout notifications", category: "Player Performance" },
         { alertKey: "powerHitterOnDeck", title: "Power Hitter On Deck", description: "Tier A power bats on deck - Pre-alert for next at-bat", category: "Player Performance" },
-        
+
         // RE24+AI Hybrid System
         { alertKey: "useRE24System", title: "RE24+AI Hybrid System", description: "Advanced Run Expectancy analytics enhanced with AI predictions", category: "AI Predictions" },
         { alertKey: "re24Level1", title: "RE24 Level 1", description: "Basic situational analysis with AI enhancement", category: "AI Predictions" },
         { alertKey: "re24Level2", title: "RE24 Level 2", description: "Intermediate player analytics with contextual AI", category: "AI Predictions" },
         { alertKey: "re24Level3", title: "RE24 Level 3", description: "Elite sabermetrics with advanced AI predictions", category: "AI Predictions" },
-        
+
         // Game Flow
         { alertKey: "inningChange", title: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },
       ];
@@ -924,7 +924,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.gameId, gameId)));
     return !!result;
   }
-  
+
   async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
     return await db.select().from(userMonitoredTeams);
   }
