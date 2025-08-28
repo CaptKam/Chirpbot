@@ -77,6 +77,11 @@ export interface IStorage {
   createMasterAlertControl(control: InsertMasterAlertControl): Promise<MasterAlertControl>;
   updateMasterAlertControl(alertKey: string, sport: string, updates: Partial<MasterAlertControl>): Promise<MasterAlertControl | undefined>;
   getEnabledAlertKeysBySport(sport: string): Promise<string[]>;
+
+  // ChirpBot V3 Extensions
+  getUsers(): Promise<User[]>;
+  getSettingsByUserId(userId: string): Promise<Settings | undefined>;
+  getUserWithTelegramSettings(userId: string): Promise<User | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -722,6 +727,24 @@ export class MemStorage implements IStorage {
       .filter(control => control.sport === sport && control.enabled)
       .map(control => control.alertKey);
   }
+
+  // ChirpBot V3 Extensions Implementation
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async getSettingsByUserId(userId: string): Promise<Settings | undefined> {
+    // For MemStorage, we don't have per-user settings, return global MLB settings
+    return this.getSettingsBySport('MLB');
+  }
+
+  async getUserWithTelegramSettings(userId: string): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user && user.telegramBotToken && user.telegramChatId) {
+      return user;
+    }
+    return undefined;
+  }
 }
 
 // Database Storage Implementation
@@ -1143,6 +1166,24 @@ export class DatabaseStorage implements IStorage {
       .from(masterAlertControls)
       .where(and(eq(masterAlertControls.sport, sport), eq(masterAlertControls.enabled, true)));
     return controls.map(control => control.alertKey);
+  }
+
+  // ChirpBot V3 Extensions Implementation
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getSettingsByUserId(userId: string): Promise<Settings | undefined> {
+    // For now, return global MLB settings - can be extended to per-user settings later
+    return this.getSettingsBySport('MLB');
+  }
+
+  async getUserWithTelegramSettings(userId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (user && user.telegramBotToken && user.telegramChatId) {
+      return user;
+    }
+    return undefined;
   }
 }
 
