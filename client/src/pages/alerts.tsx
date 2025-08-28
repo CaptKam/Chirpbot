@@ -298,6 +298,19 @@ export default function Alerts() {
                   key={alert.id}
                   alertId={alert.id}
                   className="rounded-xl"
+                  alertData={{
+                    sport: alert.sport,
+                    homeTeam: alert.gameInfo?.homeTeam,
+                    awayTeam: alert.gameInfo?.awayTeam,
+                    homeScore: (alert.gameInfo as any)?.homeScore,
+                    awayScore: (alert.gameInfo as any)?.awayScore,
+                    probability: (alert as any).probability,
+                    priority: alert.priority || undefined,
+                    betbookData: (alert as any).betbookData,
+                    gameInfo: {
+                      v3Analysis: (alert.gameInfo as any)?.v3Analysis
+                    }
+                  }}
                 >
                   <Card
                     onClick={() => { if (!alert.seen) markAlertAsSeen(alert.id); }}
