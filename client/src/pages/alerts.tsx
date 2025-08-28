@@ -32,7 +32,7 @@ export default function Alerts() {
 
   const { data: alerts = [], isLoading, error } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
-    refetchInterval: 10000, // Refetch every 10 seconds for more responsive updates
+    refetchInterval: 2000, // Refetch every 2 seconds for smooth real-time feel
   });
 
   // Update timestamps every 30 seconds to keep "X minutes ago" text fresh
@@ -115,7 +115,12 @@ export default function Alerts() {
           return [alertWithDefaults, ...oldAlerts];
         });
       
-        // Refresh both queries to ensure consistency
+        // Instantly update the unseen count as well
+        queryClient.setQueryData<{ count: number }>(['/api/alerts/unseen/count'], (oldCount) => {
+          return { count: (oldCount?.count || 0) + 1 };
+        });
+        
+        // Refresh both queries to ensure consistency (but the UI already updated instantly)
         queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
         queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
       }

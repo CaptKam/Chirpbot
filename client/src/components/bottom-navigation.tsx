@@ -8,7 +8,7 @@ export function BottomNavigation() {
   // Get unseen alerts count
   const { data: unseenCount } = useQuery<{ count: number }>({
     queryKey: ['/api/alerts/unseen/count'],
-    refetchInterval: 5000, // Check every 5 seconds
+    refetchInterval: 2000, // Check every 2 seconds for smooth responsiveness
   });
 
   const navItems = [
