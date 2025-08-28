@@ -1382,10 +1382,32 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
         console.log(`🎯 V3 Processing: ${awayTeam} @ ${homeTeam}`);
         
         try {
-          const gameState = this.extractGameState(game);
+          // Extract gamePk to get live feed data with base runners
+          let gamePk: number;
+          if (typeof game.id === 'string' && game.id.startsWith('mlb-')) {
+            gamePk = parseInt(game.id.replace('mlb-', ''));
+          } else {
+            gamePk = Number(game.id || game.gamePk);
+          }
+
+          if (!gamePk) {
+            console.log(`❌ V3 No valid gamePk for ${awayTeam} @ ${homeTeam}`);
+            continue;
+          }
+
+          // Get live feed data with base runners (like V2 system)
+          console.log(`🔍 V3 Fetching live feed for game ${gamePk} to get base runners`);
+          const liveFeed = await mlbApi.getLiveFeed(gamePk);
+          
+          if (!liveFeed) {
+            console.log(`⚠️ V3 No live feed data available for game ${gamePk}`);
+            continue;
+          }
+
+          const gameState = await this.extractGameState(liveFeed);
           if (gameState) {
             console.log(`🔬 V3 Starting 4-Tier Evaluation for ${awayTeam} @ ${homeTeam}`);
-            console.log(`   Base Runners: 1B=${gameState.runners?.first || 'Empty'} 2B=${gameState.runners?.second || 'Empty'} 3B=${gameState.runners?.third || 'Empty'}`);
+            console.log(`   Base Runners: 1B=${gameState.runners?.first ? 'Occupied' : 'Empty'} 2B=${gameState.runners?.second ? 'Occupied' : 'Empty'} 3B=${gameState.runners?.third ? 'Occupied' : 'Empty'}`);
             await this.evaluateV3TierSystem(gameState);
           } else {
             console.log(`❌ V3 Failed to extract game state for ${awayTeam} @ ${homeTeam}`);
@@ -1421,6 +1443,29 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
           inningState: gameState?.inningState || 'top',
           outs: gameState?.outs || 0
         };
+      }
+
+      // V3 Settings Check - Check user alert preferences before evaluation
+      const settings = await storage.getSettingsBySport(this.sport);
+      if (!settings) {
+        console.log(`⏭️ V3 No settings found - skipping 4-tier evaluation`);
+        return;
+      }
+
+      console.log(`🔍 V3 Checking user alert preferences...`);
+      const alertTypes = settings.alertTypes as any;
+      
+      // Map tiers to user settings 
+      const l1Enabled = alertTypes?.risp || alertTypes?.basesLoaded || alertTypes?.closeGame;
+      const l2Enabled = alertTypes?.powerHitter || alertTypes?.starBatter || alertTypes?.eliteClutch;
+      const l3Enabled = alertTypes?.lateInning || alertTypes?.extraInnings || alertTypes?.re24Level3;
+      const l4Enabled = alertTypes?.aiEnabled;
+
+      console.log(`🎛️ V3 User Settings: L1=${l1Enabled} L2=${l2Enabled} L3=${l3Enabled} L4=${l4Enabled}`);
+      
+      if (!l1Enabled && !l2Enabled && !l3Enabled && !l4Enabled) {
+        console.log(`⏭️ V3 All relevant alert types disabled - skipping evaluation`);
+        return;
       }
       
       // === V3 PROPER 4-TIER SYSTEM ===
