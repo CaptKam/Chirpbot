@@ -54,7 +54,7 @@ const mlb: SportAdapter = {
       actionLine: a.description || "LIVE BET: High-leverage moment detected.",
       tags,
       isNew: !a.seen,
-      createdAt: a.createdAt || a.created_at,
+      createdAt: a.timestamp || a.createdAt || a.created_at,
       widget: null,
       actor: g.currentBatter?.name || g.currentPitcher?.name
     };
