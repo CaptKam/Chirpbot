@@ -1441,8 +1441,12 @@ export class MLBEngine implements SportEngine {
             // Use base engine's processAlerts with single deduplication system
             await this.processAlerts(triggeredAlerts, gameState);
           } else {
+            console.log(`⚡ Found 0 triggered alerts: `);
             console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`);
           }
+
+          // 🚀 NEW: Run 4-Level Alert System for enhanced analysis
+          await this.processEnhancedAlerts(gameState);
 
         } catch (gameError) {
           this.apiFailureCount++;
