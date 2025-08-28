@@ -128,7 +128,7 @@ class ESPNMLBSource implements MLBSource {
   priority = 2;
   reliability = 85;
   speedScore = 8;
-  enabled = true; // ENABLED: Use for basic game listing with tennis filtering
+  enabled = true; // ENABLED: Use for basic game listing
   failureCount = 0;
   maxRetries = 3;
 
@@ -167,19 +167,10 @@ class ESPNMLBSource implements MLBSource {
   private processESPNData(data: any): Game[] {
     if (!data?.events) return [];
 
-    // Filter out non-MLB sports and tennis players (contain parentheses with last names)
+    // Filter for MLB/baseball sports only
     const mlbEvents = data.events.filter((event: any) => {
       const sport = event.competitions?.[0]?.type?.name?.toLowerCase() || '';
-      const homeTeam = event.competitions?.[0]?.competitors?.[0]?.team?.displayName || '';
-      const awayTeam = event.competitions?.[0]?.competitors?.[1]?.team?.displayName || '';
-
-      // Filter out tennis players (contain parentheses with surnames)
-      const isTennis = homeTeam.includes('(') || awayTeam.includes('(') ||
-                      sport.includes('tennis') || sport.includes('wta') || sport.includes('atp');
-
-      const isBaseball = sport.includes('baseball') || sport.includes('mlb');
-
-      return isBaseball && !isTennis;
+      return sport.includes('baseball') || sport.includes('mlb');
     });
 
     return mlbEvents.map((event: any) => ({
@@ -262,15 +253,8 @@ class TheSportsDBMLB implements MLBSource {
 
     return data.events
       .filter((event: any) => {
-        // Filter for baseball only and exclude tennis players
-        const isBaseball = event.strSport === 'Baseball' || event.strLeague?.includes('MLB');
-        const homeTeam = event.strHomeTeam || '';
-        const awayTeam = event.strAwayTeam || '';
-
-        // Filter out tennis players (contain parentheses with surnames)
-        const isTennis = homeTeam.includes('(') || awayTeam.includes('(');
-
-        return isBaseball && !isTennis;
+        // Filter for baseball only
+        return event.strSport === 'Baseball' || event.strLeague?.includes('MLB');
       })
       .map((event: any) => ({
         id: `mlb-sportsdb-${event.idEvent}`,

@@ -317,37 +317,13 @@ class LiveSportsService {
           case 'MLB':
             try {
               const mlbGames = await mlbApi.getTodaysGames();
-              // Enhanced tennis filtering for better data quality
-              const baseballGames = mlbGames.filter(game => {
-                const homeTeam = game.homeTeam?.name || game.teams?.home?.team?.name || '';
-                const awayTeam = game.awayTeam?.name || game.teams?.away?.team?.name || '';
-
-                // Only filter obvious tennis patterns - be very conservative
-                const isTennis = homeTeam.includes('(') || awayTeam.includes('(') ||
-                                homeTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
-                                awayTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/);
-
-                return !isTennis;
-              });
-              games = games.concat(baseballGames);
-              console.log(`✅ MLB primary source: ${baseballGames.length} games`);
+              games = games.concat(mlbGames);
+              console.log(`✅ MLB primary source: ${mlbGames.length} games`);
             } catch (error) {
               console.log('⚠️ MLB primary failed, using fallback sources...');
               const fallbackGames = await multiSourceAggregator.getMLBGames(today);
-              // Enhanced tennis filtering for better data quality
-              const baseballFallbackGames = fallbackGames.filter(game => {
-                const homeTeam = game.homeTeam?.name || game.teams?.home?.team?.name || '';
-                const awayTeam = game.awayTeam?.name || game.teams?.away?.team?.name || '';
-
-                // Only filter obvious tennis patterns - be very conservative
-                const isTennis = homeTeam.includes('(') || awayTeam.includes('(') ||
-                                homeTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/) ||
-                                awayTeam.match(/\b[A-Z][a-z]+ \([A-Z][a-z]+\)/);
-
-                return !isTennis;
-              });
-              games = games.concat(baseballFallbackGames);
-              console.log(`✅ MLB fallback sources: ${baseballFallbackGames.length} games`);
+              games = games.concat(fallbackGames);
+              console.log(`✅ MLB fallback sources: ${fallbackGames.length} games`);
             }
             break;
           case 'NFL':
