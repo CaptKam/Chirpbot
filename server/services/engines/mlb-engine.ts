@@ -685,6 +685,7 @@ export class MLBEngine implements SportEngine {
       let runners: { first: boolean; second: boolean; third: boolean } = { first: false, second: false, third: false };
       let currentBatter, currentPitcher, recentPlay, venue;
       let ballparkConditions: any = {}; // Default empty object
+      let count: any = { balls: 0, strikes: 0 }; // Initialize count variable at function scope
 
       // ESPN format detection
       if (gameData.competitions && gameData.competitions[0]) {
@@ -709,6 +710,12 @@ export class MLBEngine implements SportEngine {
           inning = situation.inning || 1;
           inningState = situation.inningHalf === 'top' ? 'top' : 'bottom';
           outs = situation.outs || 0;
+
+          // Extract count from ESPN situation
+          count = {
+            balls: situation.balls || 0,
+            strikes: situation.strikes || 0
+          };
 
           // Base runners
           if (situation.onFirst) runners.first = true;
