@@ -1,5 +1,5 @@
 
-import { MLBGameStateV3 } from './mlb-engine-v3';
+import { MLBGameState } from './mlb-engine';
 import { analyzeHybridRE24, HybridRE24Result } from './hybrid-re24-ai';
 
 export interface RE24LevelResult {
@@ -11,7 +11,7 @@ export interface RE24LevelResult {
 }
 
 // 📊 RE24 Level 1 - Basic situational analysis with AI enhancement
-export async function calculateRE24Level1(gameState: MLBGameStateV3): Promise<RE24LevelResult> {
+export async function calculateRE24Level1(gameState: MLBGameState): Promise<RE24LevelResult> {
   const hybrid = await analyzeHybridRE24(gameState);
   
   const runners = [];
@@ -32,7 +32,7 @@ export async function calculateRE24Level1(gameState: MLBGameStateV3): Promise<RE
 }
 
 // 📈 RE24 Level 2 - Intermediate player analytics with contextual AI  
-export async function calculateRE24Level2(gameState: MLBGameStateV3): Promise<RE24LevelResult> {
+export async function calculateRE24Level2(gameState: MLBGameState): Promise<RE24LevelResult> {
   const hybrid = await analyzeHybridRE24(gameState);
   const batter = gameState.currentBatter;
   

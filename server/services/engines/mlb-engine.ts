@@ -1,3 +1,4 @@
+// === CONSOLIDATED MLB ENGINE WITH V3 4-TIER SYSTEM ===
 import { getWeatherData } from '../weather';
 import { storage } from '../../storage';
 import { mlbApi } from '../mlb-api';
@@ -9,6 +10,10 @@ import { getEnhancedWeather } from '../enhanced-weather';
 import { getActiveRE24Level } from './re24-levels';
 import { alertDeduplicator, type MLBGameState as DeduplicationMLBGameState } from './alert-deduplication';
 import { FourLevelAlertSystem, type GameState, type AlertTier } from './four-level-alert-system';
+import { calculateMLBSeverity, mlbL1WithProb, mlbL2WithProb, mlbL3WithProb, type MLBGameState as MLBScoringGameState } from './mlb-alert-model';
+import { shouldNotifyUser, type UserSettings } from './user-settings';
+import { getBetbookData, shouldShowBetbook, type AlertContext } from './betbook-engine';
+import { BaseSportEngine } from './base-engine';
 
 // === CONSOLIDATED INTERFACES AND TYPES ===
 
@@ -146,9 +151,45 @@ export interface MLBGameState {
   };
 }
 
-export class MLBEngine implements SportEngine {
-  // Base engine properties
-  onAlert?: (alert: any) => void;
+// === V3 ADDITIONAL INTERFACES ===
+export interface AlertTierResult {
+  tier: 1 | 2 | 3 | 4;
+  priority: number;
+  description: string;
+  reasons: string[];
+  probability: number;
+  deduplicationKey: string;
+  metadata: {
+    l1: boolean;
+    l2: boolean;
+    l3: boolean;
+    l4: boolean;
+    aiConfident: boolean;
+    severity: string;
+  };
+}
+
+export interface DeduplicationContext {
+  gamePk: number;
+  alertType: string;
+  inning: number;
+  inningState: string;
+  outs: number;
+  basesHash: string;
+  batterId?: number;
+  pitcherId?: number;
+  paId?: string;
+}
+
+export class MLBEngine extends BaseSportEngine implements SportEngine {
+  // V3 Enhanced properties
+  private deduplicationCache = new Map<string, { timestamp: number; tier: number }>();
+  private readonly COOLDOWN_MS = {
+    1: 60000,   // L1: 1 minute
+    2: 90000,   // L2: 1.5 minutes  
+    3: 120000,  // L3: 2 minutes
+    4: 180000   // L4: 3 minutes
+  };
   protected lastAlertStates = new Map<string, {hash: string, ts: number}>();
   private MAX_KEYS = 5000;
   private MAX_AGE_MS = 30 * 60 * 1000;
@@ -1258,14 +1299,105 @@ export class MLBEngine implements SportEngine {
     return [alert];
   }
 
-  async monitor() {
+  // === V3 UNIFIED MONITOR METHOD ===
+  async monitor(): Promise<void> {
+    console.log('🚀 ChirpBot V3 - Processing with 4 Laws & Betbook Engine');
+    try {
+      await this.processLiveGamesOnly();
+    } catch (error: any) {
+      console.error('❌ V3 Error in monitor():', error);
+      console.error('❌ V3 Stack:', error.stack);
+    }
+  }
+
+  /**
+   * V3 Law #1: Game Status Gating - Only process live games
+   */
+  async processLiveGamesOnly(): Promise<void> {
+    try {
+      console.log('🔍 V3 Starting processLiveGamesOnly...');
+      const games = await mlbApi.getTodaysGames();
+      console.log(`🔍 V3 Debug - Got ${games.length} games from API`);
+      
+      if (games.length > 0) {
+        console.log(`🔍 V3 Debug - First game:`, {
+          id: games[0].id,
+          homeTeam: games[0].homeTeam,
+          awayTeam: games[0].awayTeam,  
+          status: games[0].status,
+          isLive: games[0].isLive
+        });
+      }
+      
+      const liveGames = games.filter((game: any) => {
+        const status = game.status || 'Unknown';
+        const isLive = game.isLive === true;
+        const awayTeam = game.awayTeam?.name || 'Unknown Away';
+        const homeTeam = game.homeTeam?.name || 'Unknown Home';
+        
+        if (!isLive) {
+          console.log(`⏭️ V3 Skipping ${awayTeam} @ ${homeTeam} - Status: ${status}`);
+        } else {
+          console.log(`🚀 V3 Processing LIVE GAME: ${awayTeam} @ ${homeTeam}`);
+        }
+        
+        return isLive;
+      });
+
+      console.log(`🎯 Game Status Gating: Processing ${liveGames.length}/${games.length} live games`);
+
+      for (const game of liveGames) {
+        const awayTeam = game.awayTeam?.name || 'Unknown Away';
+        const homeTeam = game.homeTeam?.name || 'Unknown Home';
+        console.log(`🎯 V3 Processing: ${awayTeam} @ ${homeTeam}`);
+        
+        try {
+          const gameState = this.extractGameState(game);
+          if (gameState) {
+            console.log(`🔬 V3 Starting 4-Tier Evaluation for ${awayTeam} @ ${homeTeam}`);
+            console.log(`   Base Runners: 1B=${gameState.runners?.first || 'Empty'} 2B=${gameState.runners?.second || 'Empty'} 3B=${gameState.runners?.third || 'Empty'}`);
+            await this.evaluateV3TierSystem(gameState);
+          } else {
+            console.log(`❌ V3 Failed to extract game state for ${awayTeam} @ ${homeTeam}`);
+          }
+        } catch (error) {
+          console.error(`❌ V3 Error processing ${awayTeam} @ ${homeTeam}:`, error);
+        }
+      }
+    } catch (error: any) {
+      console.error('❌ V3 Error in processLiveGamesOnly:', error);
+      console.error('❌ V3 Stack:', error.stack);
+    }
+  }
+
+  /**
+   * V3 4-Tier Evaluation (simplified)
+   */
+  async evaluateV3TierSystem(gameState: MLBGameState): Promise<void> {
+    try {
+      console.log(`📊 V3 Evaluating 4-Tier System...`);
+      // Use existing alert system with V3 enhancements
+      const alerts = await this.checkAlertConditions(gameState);
+      if (alerts.length > 0) {
+        console.log(`🔥 V3 Generated ${alerts.length} alerts`);
+        await this.processAlerts(alerts, gameState);
+      } else {
+        console.log(`🔇 V3 No alerts triggered`);
+      }
+    } catch (error) {
+      console.error('V3 Tier evaluation error:', error);
+    }
+  }
+
+  // Continue with existing functionality...
+  async monitorV2Legacy() {
     try {
       // Clean up AI cache periodically
       if (Math.random() < 0.1) { // 10% chance each cycle
         cleanupCache();
       }
 
-      // Real-time alerts are always active (no demo mode)
+      // Real-time alerts are always active (no demo mode)  
       const settings = await storage.getSettingsBySport(this.sport);
       console.log(`📊 MLB Settings - Monitoring: ${settings ? 'Enabled' : 'Disabled'}`);
 
