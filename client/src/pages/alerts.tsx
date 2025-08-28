@@ -338,11 +338,23 @@ export default function Alerts() {
                             </Pill>
                           )}
                         </div>
-                        {/* Alert timestamp - prominently displayed */}
+                        {/* Alert timestamp - compact display */}
                         {vm.createdAt && (
-                          <Pill className="bg-slate-500/10 ring-slate-500/30 text-slate-300 shrink-0">
-                            <Clock3 className="w-3.5 h-3.5" />
-                            {formatDistanceToNow(new Date(vm.createdAt), { addSuffix: true })}
+                          <Pill className="bg-slate-500/10 ring-slate-500/30 text-slate-300 shrink-0 text-xs px-2 py-1">
+                            <Clock3 className="w-3 h-3" />
+                            {(() => {
+                              const now = Date.now();
+                              const then = new Date(vm.createdAt).getTime();
+                              const diffMs = now - then;
+                              const diffMins = Math.floor(diffMs / 60000);
+                              const diffHours = Math.floor(diffMins / 60);
+                              const diffDays = Math.floor(diffHours / 24);
+                              
+                              if (diffDays > 0) return `${diffDays}d`;
+                              if (diffHours > 0) return `${diffHours}h`;
+                              if (diffMins > 0) return `${diffMins}m`;
+                              return '<1m';
+                            })()}
                           </Pill>
                         )}
                       </div>
