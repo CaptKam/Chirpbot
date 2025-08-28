@@ -408,6 +408,34 @@ export default function Alerts() {
                           <Pill>{vm.sport}</Pill>
                         )}
                       </div>
+
+                      {/* V3 Analysis Details - Show tier, probability, and reasons */}
+                      {(alert.gameInfo as any)?.v3Analysis && (
+                        <div className="bg-blue-500/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-blue-500/20 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                <span className="text-white font-bold text-xs">{(alert.gameInfo as any).v3Analysis.tier}</span>
+                              </div>
+                              <span className="text-blue-200 font-semibold text-sm">Tier {(alert.gameInfo as any).v3Analysis.tier} Alert</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Zap className="w-4 h-4 text-emerald-400" />
+                              <span className="text-emerald-400 font-mono text-sm">
+                                {Math.round((alert.gameInfo as any).v3Analysis.probability * 100)}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            {(alert.gameInfo as any).v3Analysis.reasons.slice(0, 3).map((reason: string, idx: number) => (
+                              <div key={idx} className="text-xs text-slate-200 flex items-start space-x-2">
+                                <span className="text-blue-400 mt-0.5">•</span>
+                                <span>{reason}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Alert Footer - Game Situation Bar */}

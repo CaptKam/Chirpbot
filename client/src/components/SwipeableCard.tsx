@@ -214,21 +214,56 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
             </div>
 
-            {/* V3 Tier Analysis */}
+            {/* Betting Recommendations Based on Game Situation */}
             {alertData.gameInfo?.v3Analysis && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-blue-200">Tier {alertData.gameInfo.v3Analysis.tier} Alert</span>
-                  <div className="flex items-center space-x-1">
-                    <Activity className="w-3 h-3 text-emerald-400" />
-                    <span className="text-xs text-emerald-400 font-mono">
-                      {Math.round(alertData.gameInfo.v3Analysis.probability * 100)}%
-                    </span>
+              <div className="space-y-2">
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Target className="w-4 h-4 text-green-400" />
+                    <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
                   </div>
+                  <p className="text-white text-sm font-medium">
+                    {(() => {
+                      const reasons = alertData.gameInfo.v3Analysis.reasons;
+                      const tier = alertData.gameInfo.v3Analysis.tier;
+                      const probability = alertData.gameInfo.v3Analysis.probability;
+                      
+                      // Generate betting recommendation based on situation
+                      if (reasons.some(r => r.includes('scoring position')) && reasons.some(r => r.includes('power hitter'))) {
+                        return "Bet Over 8.5 runs - High scoring situation with RISP + power hitter";
+                      } else if (reasons.some(r => r.includes('bases loaded'))) {
+                        return "Bet Over 7.5 runs - Bases loaded situation favors scoring";
+                      } else if (reasons.some(r => r.includes('wind')) && reasons.some(r => r.includes('out'))) {
+                        return "Bet Over 8.0 runs - Favorable wind conditions for offense";
+                      } else if (tier >= 3 && probability > 0.75) {
+                        return "Bet team total Over 4.5 - High probability scoring opportunity";
+                      } else if (reasons.some(r => r.includes('late-inning'))) {
+                        return "Live bet next inning Over 0.5 runs - Clutch situation";
+                      } else {
+                        return "Consider live betting opportunities - Game situation developing";
+                      }
+                    })()}
+                  </p>
                 </div>
-                <p className="text-white text-xs leading-relaxed">
-                  {alertData.gameInfo.v3Analysis.reasons.slice(0, 2).join('. ')}.
-                </p>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Calculator className="w-4 h-4 text-yellow-400" />
+                    <span className="text-xs text-yellow-200 font-semibold">Value Insight</span>
+                  </div>
+                  <p className="text-white text-xs leading-relaxed">
+                    {(() => {
+                      const probability = alertData.gameInfo.v3Analysis.probability;
+                      if (probability > 0.8) {
+                        return "Strong value detected - Consider increased stake size for this high-confidence opportunity.";
+                      } else if (probability > 0.7) {
+                        return "Moderate value - Standard betting size recommended for this solid opportunity.";
+                      } else {
+                        return "Monitor closely - Wait for better value or consider smaller stake.";
+                      }
+                    })()}
+                  </p>
+                </div>
               </div>
             )}
 
