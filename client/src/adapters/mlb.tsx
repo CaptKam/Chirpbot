@@ -1,6 +1,5 @@
 import { adapters, SportAdapter } from "./base";
 import type { AlertVM } from "@/lib/alert-vm";
-import { RunnersDiamond } from "@/components/RunnersDiamond";
 
 const mlb: SportAdapter = {
   sport: "MLB",

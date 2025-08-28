@@ -11,7 +11,7 @@ import { SwipeableCard } from "@/components/SwipeableCard";
 import { removeCity } from "@/lib/team-utils";
 import { cn } from "@/lib/utils";
 import { Pill } from "@/components/Pill";
-import { RunnersDiamond } from "@/components/RunnersDiamond";
+
 import { toVM } from "@/adapters/base";
 import AlertFooter from "@/components/AlertFooter";
 import "@/adapters/mlb"; // Import to register the adapter
