@@ -4,13 +4,12 @@
 import { getWeatherData } from '../weather';
 import { getEnhancedWeather } from '../enhanced-weather';
 import { generateAdvancedPredictions } from '../ai-analysis';
-import { 
+const { 
   mlbL1WithProb, 
   mlbL2WithProb, 
   mlbL3WithProb, 
-  calcMLBScoringAlert,
-  type GameStateMLB 
-} from './mlbAlertModel';
+  calcMLBScoringAlert
+} = require('./mlbAlertModel.js');
 
 export interface GameState {
   gameId: string;
@@ -464,7 +463,7 @@ export class FourLevelAlertSystem {
   }
 
   // Convert GameState to MLBGameState for mathematical model
-  private convertToMLBGameState(game: GameState): GameStateMLB | null {
+  private convertToMLBGameState(game: GameState): any | null {
     if (game.sport !== 'MLB' || !game.clock?.inning || game.clock.outs === undefined) {
       return null;
     }
