@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Flame, Wind, Gauge, Clock3, User, AlertTriangle, Zap, TriangleAlert } from "lucide-react";
+import { Flame, Wind, Gauge, Clock3, User, AlertTriangle, Zap, TriangleAlert, Trophy } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -350,6 +350,12 @@ export default function Alerts() {
                               Priority {vm.priority}
                             </Pill>
                           )}
+                          {vm.sport && (
+                            <Pill className="bg-emerald-500/15 ring-emerald-400/40 text-emerald-200">
+                              <Trophy className="w-3.5 h-3.5" />
+                              {vm.sport}
+                            </Pill>
+                          )}
                         </div>
                         {/* Alert timestamp - compact display */}
                         {vm.createdAt && (
@@ -404,9 +410,6 @@ export default function Alerts() {
                             {tag}
                           </Pill>
                         ))}
-                        {vm.sport && (
-                          <Pill>{vm.sport}</Pill>
-                        )}
                       </div>
 
                       {/* Tier Analysis Details - Show for all high-priority alerts */}
