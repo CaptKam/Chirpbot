@@ -4,6 +4,8 @@
 import { getWeatherData } from '../weather';
 import { getEnhancedWeather } from '../enhanced-weather';
 import { generateAdvancedPredictions } from '../ai-analysis';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 const { 
   mlbL1WithProb, 
   mlbL2WithProb, 

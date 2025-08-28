@@ -159,8 +159,8 @@ function mlbL3WithProb(gs) {
 
 // Export functions for CommonJS consumers.
 module.exports = {
-  calcMLBScoringAlert,
-  mlbL1WithProb,
-  mlbL2WithProb,
-  mlbL3WithProb
+  calcMLBScoringAlert: calcMLBScoringAlert,
+  mlbL1WithProb: mlbL1WithProb,
+  mlbL2WithProb: mlbL2WithProb,
+  mlbL3WithProb: mlbL3WithProb
 };
