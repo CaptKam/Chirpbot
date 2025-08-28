@@ -475,19 +475,11 @@ export class MultiSourceAggregator {
       return [];
     }
 
-    // Use fastest 2-3 sources for cross-validation if available
-    const topSources = successfulResults.slice(0, 3);
-    console.log(`🏆 Using top ${topSources.length} fastest sources for cross-validation`);
-
-    // If we have multiple sources, cross-validate the data
-    if (topSources.length > 1) {
-      return this.crossValidateGameData(topSources);
-    } else {
-      // Single source - return the fastest
-      const fastest = topSources[0];
-      console.log(`⚡ Using single fastest source: ${fastest.source.name} (${fastest.responseTime}ms)`);
-      return fastest.games;
-    }
+    // For alert systems, use only the fastest single source to prevent conflicts
+    const fastest = successfulResults[0];
+    console.log(`⚡ Using single fastest source: ${fastest.source.name} (${fastest.responseTime}ms)`);
+    console.log(`📊 Skipping cross-validation to prevent alert conflicts`);
+    return fastest.games;
   }
 
   // Cross-validation logic to ensure data accuracy across sources
