@@ -719,7 +719,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
     }
   }
 
-  private async extractGameState(gameData: any): Promise<MLBGameState | null> {
+  async extractGameState(gameData: any): Promise<MLBGameState | null> {
     try {
       // === V3 FORMAT HANDLER FIRST ===
       // Debug what format we're getting
@@ -1717,7 +1717,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
 
           // 🚀 NEW RULE SET: Early exit for empty bases (unless power hitter situation)
           const hasRunners = gameState.runners.first || gameState.runners.second || gameState.runners.third;
-          const isPowerHitter = gameState.currentBatter?.stats.hr >= 25; // Lowered threshold for alerts
+          const isPowerHitter = gameState.currentBatter?.stats?.hr >= 25; // Lowered threshold for alerts
 
           if (!hasRunners && !isPowerHitter) {
             console.log(`⏭️ SKIPPING: Empty bases, no power hitter - no alerts needed (${gameState.awayTeam} @ ${gameState.homeTeam})`);
@@ -1733,47 +1733,13 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
           // console.log(`⚡ Found ${triggeredAlerts.length} triggered alerts: ${triggeredAlerts.map(a => a.type).join(', ')}`);
           
           console.log(`🚫 OLD SYSTEM DISABLED - V3 4-Tier System is primary`);
-          let triggeredAlerts = [];
+          let triggeredAlerts: any[] = [];
 
           // Get current settings to check if power hitter alerts are enabled
           const settings = await storage.getSettingsBySport(this.sport);
           const alertTypes = settings?.alertTypes || {};
 
-          // ❌ DISABLED: Old RE24 Level analysis (replaced by V3)
-          // const re24Analysis = await getActiveRE24Level(gameState, settings);
-          if (false) {
-            // Check debouncing cache
-            const currentRe24Key = `${gameState.runners.first ? 1 : 0}${gameState.runners.second ? 1 : 0}${gameState.runners.third ? 1 : 0}-${gameState.outs}`;
-            const cached = this.re24AlertCache.get(gameState.gameId);
-            const now = Date.now();
-
-            // Allow alert if: no cache, different base-out state, or cooldown expired
-            const shouldAllow = !cached ||
-                               cached.re24Key !== currentRe24Key ||
-                               (now - cached.timestamp) > this.RE24_DEBOUNCE_MS;
-
-            if (false && shouldAllow) {
-              // DISABLED: Legacy RE24 alerts - replaced by V3 4-tier system
-              // V3 4-tier system handles all alerting with proper thresholds (65%, 70%, 80%)
-              const re24Alert: AlertConfig = {
-                type: `RE24_LEVEL_${re24Analysis.level}`,
-                settingKey: `re24Level${re24Analysis.level}`,
-                priority: re24Analysis.priority,
-                probability: re24Analysis.probability || 1.0, // Use actual probability
-                description: re24Analysis.analysis,
-                conditions: () => true
-              };
-              triggeredAlerts = [...triggeredAlerts, re24Alert];
-
-              // Update cache
-              this.re24AlertCache.set(gameState.gameId, {
-                re24Key: currentRe24Key,
-                timestamp: now
-              });
-            } else {
-              console.log(`🔄 RE24 alert debounced for ${gameState.gameId} (same state: ${currentRe24Key})`);
-            }
-          }
+          // ❌ DISABLED: Old RE24 Level system completely removed for V3 cleanup
 
           // DISABLED: Legacy power hitter alerts - replaced by V3 4-tier system
           // V3 4-tier system handles all alerting with proper thresholds (65%, 70%, 80%)
