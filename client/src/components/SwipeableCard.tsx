@@ -87,6 +87,13 @@ const sportsbooks: Sportsbook[] = [
     appUrl: 'fanduel://',
     storeUrl: 'https://apps.apple.com/app/fanduel-sportsbook-casino/id1273132976',
     color: '#0D7EFF'
+  },
+  {
+    name: 'BetMGM',
+    logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjRkZEODAwIi8+PHRleHQgeD0iMjAiIHk9IjI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMDAwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTJweCIgZm9udC13ZWlnaHQ9ImJvbGQiPk1HTTwvdGV4dD48L3N2Zz4=',
+    appUrl: 'betmgm://',
+    storeUrl: 'https://apps.apple.com/app/betmgm-sportsbook/id1439016742',
+    color: '#FFD800'
   }
 ];
 
@@ -124,7 +131,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         'Bet365': 'https://www.bet365.com',
         'DraftKings': 'https://sportsbook.draftkings.com',
         'Fanatics': 'https://sportsbook.fanaticsbetting.com',
-        'FanDuel': 'https://sportsbook.fanduel.com'
+        'FanDuel': 'https://sportsbook.fanduel.com',
+        'BetMGM': 'https://sports.betmgm.com'
       };
       window.open(webUrls[sportsbook.name as keyof typeof webUrls] || sportsbook.storeUrl, '_blank');
     }
@@ -366,7 +374,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             <div className="space-y-2">
               <h4 className="text-xs text-blue-200 font-medium tracking-wide uppercase">Quick Bet</h4>
               <div className="flex space-x-2">
-                {sportsbooks.slice(0, 3).map((sportsbook) => (
+                {sportsbooks.slice(0, 4).map((sportsbook) => (
                   <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
                     <Button
                       onClick={() => {
