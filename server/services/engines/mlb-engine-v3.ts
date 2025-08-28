@@ -100,29 +100,29 @@ export class MLBEngineV3 {
    */
   async processLiveGamesOnly(): Promise<void> {
     try {
-      // Use the MLB API directly like the old engine
-      const { mlbApi } = await import('../mlb-api');
-      const games = await mlbApi.getTodaysGames();
+      // Use the multi-source service that correctly transforms games
+      const liveSportsService = await import('../live-sports');
+      const todaysData = await liveSportsService.liveSportsService.getTodaysGames();
+      const allGames = todaysData.games || [];
       
-      console.log(`🎯 V3 Engine Processing ${games.length} total games`);
+      console.log(`🎯 V3 Engine Processing ${allGames.length} total games`);
       
-      const liveGames = games.filter((game: any) => {
-        const isLive = game.status?.abstractGameState === 'Live' || 
-                      game.status?.detailedState === 'In Progress';
+      const liveGames = allGames.filter((game: any) => {
+        const isLive = game.status?.toLowerCase() === 'live';
         
         if (!isLive) {
-          console.log(`⏭️ V3 Skipping ${game.teams?.away?.team?.name || 'Unknown'} @ ${game.teams?.home?.team?.name || 'Unknown'} - Status: ${game.status?.abstractGameState || 'Unknown'}`);
+          console.log(`⏭️ V3 Skipping ${game.awayTeam?.name || 'Unknown'} @ ${game.homeTeam?.name || 'Unknown'} - Status: ${game.status || 'Unknown'}`);
         } else {
-          console.log(`🎯 V3 Processing live game: ${game.teams?.away?.team?.name || 'Unknown'} @ ${game.teams?.home?.team?.name || 'Unknown'}`);
+          console.log(`🎯 V3 Processing live game: ${game.awayTeam?.name || 'Unknown'} @ ${game.homeTeam?.name || 'Unknown'}`);
         }
         
         return isLive;
       });
 
-      console.log(`🎯 V3 Game Status Gating: Processing ${liveGames.length}/${games.length} live games`);
+      console.log(`🎯 V3 Game Status Gating: Processing ${liveGames.length}/${allGames.length} live games`);
 
       for (const game of liveGames) {
-        const gameState = await this.extractGameStateFromMlbApi(game);
+        const gameState = await this.extractGameStateFromTransformedGame(game);
         if (gameState) {
           await this.evaluateFourTierSystem(gameState);
         }
@@ -141,52 +141,44 @@ export class MLBEngineV3 {
     return 'Scheduled';
   }
 
-  private async extractGameStateFromMlbApi(game: any): Promise<MLBGameStateV3 | null> {
+  private async extractGameStateFromTransformedGame(game: any): Promise<MLBGameStateV3 | null> {
     try {
-      console.log(`🔍 V3 Extracting game state for ${game.gamePk}`);
+      console.log(`🔍 V3 Extracting game state for ${game.id}`);
       
-      // Use the same extraction logic as the old engine
-      const { mlbEngine } = await import('./mlb-engine');
-      const gameState = await mlbEngine.extractGameState(game);
-      
-      if (!gameState) {
-        console.log(`❌ V3 Failed to extract game state for ${game.gamePk}`);
-        return null;
-      }
-
-      // Convert to V3 format
+      // Game is already transformed by multi-source service
+      // Convert to V3 format directly
       const v3GameState: MLBGameStateV3 = {
-        gameId: gameState.gameId,
-        gamePk: gameState.gamePk || 0,
+        gameId: game.id,
+        gamePk: parseInt(game.id.split('-')[1]) || 0,
         status: 'Live',
-        homeTeam: gameState.homeTeam,
-        awayTeam: gameState.awayTeam,
-        homeScore: gameState.homeScore,
-        awayScore: gameState.awayScore,
-        inning: gameState.inning,
-        inningState: gameState.inningState,
-        outs: gameState.outs,
-        runners: gameState.runners,
-        currentBatter: gameState.currentBatter ? {
-          id: gameState.currentBatter.id || 0,
-          name: gameState.currentBatter.name,
+        homeTeam: game.homeTeam?.name || 'Unknown',
+        awayTeam: game.awayTeam?.name || 'Unknown',
+        homeScore: game.homeScore || 0,
+        awayScore: game.awayScore || 0,
+        inning: game.inning || 1,
+        inningState: game.inningState || 'Top',
+        outs: game.outs || 0,
+        runners: game.runners || { first: false, second: false, third: false },
+        currentBatter: game.currentBatter ? {
+          id: game.currentBatter.id || 0,
+          name: game.currentBatter.name || 'Unknown',
           stats: {
-            hr: gameState.currentBatter.stats?.hr || 0,
-            avg: gameState.currentBatter.stats?.avg || 0.250,
-            ops: gameState.currentBatter.stats?.ops || 0.750
+            hr: game.currentBatter.stats?.hr || 0,
+            avg: game.currentBatter.stats?.avg || 0.250,
+            ops: game.currentBatter.stats?.ops || 0.750
           }
         } : undefined,
-        currentPitcher: gameState.currentPitcher ? {
-          id: gameState.currentPitcher.id || 0,
-          name: gameState.currentPitcher.name,
+        currentPitcher: game.currentPitcher ? {
+          id: game.currentPitcher.id || 0,
+          name: game.currentPitcher.name || 'Unknown',
           stats: {
-            era: gameState.currentPitcher.stats?.era || 4.00,
-            whip: gameState.currentPitcher.stats?.whip || 1.30
+            era: game.currentPitcher.stats?.era || 4.00,
+            whip: game.currentPitcher.stats?.whip || 1.30
           }
         } : undefined,
-        ballpark: gameState.ballpark?.name || gameState.venue,
-        venue: gameState.venue,
-        weather: gameState.weather
+        ballpark: game.ballpark?.name || game.venue,
+        venue: game.venue,
+        weather: game.weather
       };
 
       console.log(`✅ V3 Extracted game state: ${v3GameState.awayTeam} @ ${v3GameState.homeTeam} (${v3GameState.inning} ${v3GameState.inningState})`);
