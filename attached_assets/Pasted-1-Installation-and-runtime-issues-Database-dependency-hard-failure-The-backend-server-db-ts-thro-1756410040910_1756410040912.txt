@@ -1,0 +1,66 @@
+1 Installation and runtime issues
+
+Database dependency hard‑failure: The backend (server/db.ts) throws an error if the DATABASE_URL environment variable is not set. This makes the server unusable in development without a Postgres connection. There is an in‑memory storage class (MemStorage) defined in server/storage.ts, but it is never used: the module always exports DatabaseStorage via export const storage = new DatabaseStorage()
+screenshot
+. In its current form you cannot run the server locally without provisioning a Neon database.
+
+Missing fallbacks for secrets: The Express session middleware sets the session secret to an empty string when NODE_ENV is production and SESSION_SECRET is undefined
+screenshot
+. Express warns against using an empty secret, and it weakens the session signature.
+
+Environment variable sprawl: There are multiple names for the same concept. For example, the code references TELEGRAM_TOKEN, TELEGRAM_BOT_TOKEN, CHAT_ID and TELEGRAM_CHAT_ID. This duplication complicates configuration and can lead to situations where some variables are set but the code reads from a different one.
+
+Client/server role mismatch: The authentication endpoints (/api/auth/me, /api/auth/login, /api/auth/signup) return only id, username, email, firstName, lastName and authMethod in the response. They do not include the user’s role. However, the React hook useAuth expects a role property to determine isAdmin, isManager and isAnalyst flags. Because of this mismatch, useAuth will always consider the user a standard user, even if the account has a higher role. The admin views therefore never show for authenticated administrators.
+
+Unsupported dependencies: The project depends on many packages not present in the root node_modules (e.g. drizzle-orm, wouter, @tanstack/react-query, vite, etc.). Installing these packages requires an internet connection which may not be available in restricted environments. Without a way to install these dependencies the app cannot be built or run.
+
+2 Frontend issues
+
+Broken WebSocket hook: The custom hook in client/src/hooks/use‑websocket.tsx references queryClient and an Alert type without importing them. The code comments mention that these should be imported, but the actual imports are missing. At runtime this will throw a ReferenceError when a WebSocket message is processed, breaking the alert feed.
+
+Global error handling vs. user feedback: client/src/main.tsx installs handlers for unhandled rejections and uncaught errors. These handlers log to the console but never surface feedback to users. When API calls fail due to configuration issues (e.g. missing database), the UI will silently ignore errors or redirect to / without telling the user what went wrong.
+
+Role‑based access control in the client: The ProtectedRoute component checks isAdmin but never calls a backend endpoint to verify the session for admin pages. It simply uses the data returned by useAuth (which lacks the role field) and thus cannot enforce role‑based restrictions correctly.
+
+3 Backend issues
+
+Missing error boundaries: The registerRoutes function attaches numerous asynchronous route handlers. While the file wraps some handlers in try/catch, several asynchronous callbacks are not awaited in broadcast and WebSocket handlers, which can lead to unhandled promise rejections.
+
+Vite and Express coupling: In development mode setupVite is called after route registration. In production serveStatic serves the React build. If NODE_ENV is misconfigured the static client may not be served, giving a blank page. The server should provide a clear error when NODE_ENV is unset or invalid.
+
+Unimplemented features: The OAuth endpoints for Google and Apple return 501 (not implemented) messages. On the client there are references to OAuth routes but no UI to handle those flows. That leaves users confused when they attempt to use OAuth.
+
+Telegram integration confusion: Both the global settings and per‑user settings support Telegram tokens and chat IDs. The server tests the connection using process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN and process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID. Meanwhile storage.getUserWithTelegramSettings looks at the per‑user fields. Without clear precedence rules it’s unclear which credentials are used when.
+
+Engine start logic: When the server starts it always instantiates alertEngineManager, which immediately starts the MLB engine if there are monitored games. The check hasMonitoredGamesForSport('MLB') calls storage.getAllMonitoredGames(); if the database is unreachable this throws and prints an error, but the server proceeds to start. Because the engines run on intervals without proper cancellation on shutdown, they can leave orphaned timers.
+
+4 Missing features or documentation gaps
+
+No seed data fallback: The seed script seed-database.ts relies on Drizzle and a Neon database. Without a database the in‑memory storage is never populated with teams beyond a handful of defaults in MemStorage. There is no .env.example file in the package to illustrate required variables.
+
+No tests included: The README mentions comprehensive unit tests and integration tests, but there are no test files in the provided source. Having tests would help identify regression issues like the missing role property or the broken WebSocket hook.
+
+Lack of deployment sanity checks: The deployment guide instructs running npm run build and npm start, but does not explain how to configure environment variables for a local development environment. There is no fallback for local development, so new developers cannot easily try the app.
+
+5 Recommendations
+
+Provide a local development mode: Modify server/storage.ts to select MemStorage when DATABASE_URL is missing. This will allow the server to run with an in‑memory store and make development and demoing easier. For example:
+
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();
+
+
+Return user roles from authentication endpoints: Include the role field in the responses from /api/auth/me, /api/auth/login and /api/auth/signup so that the frontend can correctly determine administrative privileges. Alternatively adjust useAuth to read the role from a property that is returned by the API.
+
+Fix the WebSocket hook: Import queryClient from client/src/lib/queryClient.ts and the Alert type from the shared schema in use‑websocket.tsx. This will prevent ReferenceError: queryClient is not defined when processing incoming messages.
+
+Consolidate environment variables: Choose a single naming convention for Telegram tokens/IDs and update both server code and deployment documentation accordingly. Provide an example .env file to clarify required settings.
+
+Secure session defaults: Provide a secure random default for SESSION_SECRET in development, and throw an explicit error when it’s missing in production. Never use an empty string as a secret.
+
+Add validation and error feedback to the UI: The frontend should surface server errors through toast notifications or dedicated error pages instead of silently logging to the console. This will improve user experience when API calls fail.
+
+Supply tests and continuous integration: Including the promised unit and integration tests would help detect bugs like the missing imports and role mismatch early. A CI pipeline can verify that both client and server build and start successfully.
+
+Document local setup: Extend the deployment guide with instructions for running the app locally (e.g. setting up a .env with dummy values, using MemStorage, and starting the client and server). This will lower the barrier for contributors and reviewers.
+
+By addressing these issues the application will be significantly more robust and easier to run and review. The core concept—a multi‑tiered, probability‑based sports alert engine with a modern web interface—is innovative, but the current implementation suffers from broken dependencies and missing glue code. Fixing the configuration and client/server integration points should be the top priority before adding new features.
