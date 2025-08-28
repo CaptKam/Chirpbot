@@ -755,16 +755,29 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
               const liveData = await liveResponse.json();
               console.log(`📊 V3 Got live data, has liveData: ${!!liveData.liveData}, has situation: ${!!liveData.liveData?.situation}`);
               
-              // Extract real runner positions from live data
-              const situation = liveData.liveData?.situation;
-              if (situation) {
-                console.log(`🔍 V3 Situation exists - parsing runners...`);
-                runners.first = situation.isRunnerOnFirst || false;
-                runners.second = situation.isRunnerOnSecond || false;
-                runners.third = situation.isRunnerOnThird || false;
-                console.log(`🏃 V3 Live runners detected: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
+              // Extract real runner positions from live data (v1.1 API structure)
+              const offense = liveData.liveData?.linescore?.offense;
+              if (offense) {
+                // In v1.1 API, runners are stored as player objects in offense
+                runners.first = !!offense.first;
+                runners.second = !!offense.second;
+                runners.third = !!offense.third;
+                
+                if (runners.first || runners.second || runners.third) {
+                  console.log(`🏃 V3 RUNNERS DETECTED: 1st=${runners.first} (${offense.first?.fullName || 'Empty'}), 2nd=${runners.second} (${offense.second?.fullName || 'Empty'}), 3rd=${runners.third} (${offense.third?.fullName || 'Empty'})`);
+                } else {
+                  console.log(`⚾ V3 Bases empty`);
+                }
               } else {
-                console.log(`⚠️ V3 No situation data found - game might be between plays`);
+                console.log(`⚠️ V3 No offense data found - checking for situation field as fallback...`);
+                // Fallback to situation field if it exists (might be in different API versions)
+                const situation = liveData.liveData?.situation;
+                if (situation) {
+                  runners.first = situation.isRunnerOnFirst || false;
+                  runners.second = situation.isRunnerOnSecond || false;
+                  runners.third = situation.isRunnerOnThird || false;
+                  console.log(`🏃 V3 Runners from situation: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
+                }
               }
               
               // Extract current game situation
