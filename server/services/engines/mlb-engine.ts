@@ -860,6 +860,24 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
 
           console.log(`🔧 CORRECTED Runner positions: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
         }
+        
+        // V3 CRITICAL FIX: Check for stranded runners (RISP situations we're missing!)
+        const batterStats = gameState.currentBatter?.stats;
+        if (batterStats && batterStats.leftOnBase && batterStats.leftOnBase >= 1) {
+          console.log(`🏃 RISP DETECTED: ${batterStats.leftOnBase} runners left on base - MAJOR ALERT OPPORTUNITY!`);
+          
+          // Assume runners in scoring position based on leftOnBase count
+          if (batterStats.leftOnBase >= 1) {
+            runners.second = true;  // At least RISP
+            console.log(`🚨 Setting 2nd base = true (RISP situation)`);
+          }
+          if (batterStats.leftOnBase >= 2) {
+            runners.third = true;   // Multiple RISP
+            console.log(`🚨 Setting 3rd base = true (Multiple RISP)`);
+          }
+          
+          console.log(`🚨 RISP-CORRECTED Runner positions: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
+        }
 
         // REMOVED: This fallback was incorrectly using PAST plays to set CURRENT runners
         // Historical runner movements (including scored runners) should not affect current game state
