@@ -299,7 +299,7 @@ export class MLBEngineV3 {
   private async runLevel1HardCoded(gameState: MLBScoringGameState): Promise<any> {
     const l1Result = mlbL1WithProb(gameState);
     
-    if (l1Result.severity === 'Low') {
+    if (l1Result.probability > 0.5) {  // Trigger L1 for ANY significant scoring situation
       console.log(`✅ L1 TRIGGERED: ${l1Result.probability.toFixed(3)} probability (${l1Result.severity})`);
       return l1Result;
     }
