@@ -1,7 +1,6 @@
 import { db } from './db';
 import { masterAlertControls, settings, users, aiSettings } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 
 export async function seedDatabase() {
@@ -61,8 +60,6 @@ export async function seedDatabase() {
     if (existing.length === 0) {
       await db.insert(masterAlertControls).values({
         ...control,
-        id: randomUUID(),
-        updatedAt: new Date(),
       });
       console.log(`✅ Created master control: ${control.sport} - ${control.alertKey}`);
     }
@@ -72,17 +69,13 @@ export async function seedDatabase() {
   const existingUsers = await db.select().from(users).limit(1);
   if (existingUsers.length === 0) {
     const hashedPassword = await bcrypt.hash('demo123', 10);
-    const demoUserId = randomUUID();
     
     await db.insert(users).values({
-      id: demoUserId,
       username: 'demo',
       email: 'demo@chirpbot.ai',
       password: hashedPassword,
       authMethod: 'local',
       role: 'user',
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
     
     console.log('✅ Created demo user (username: demo, password: demo123)');
@@ -128,7 +121,6 @@ export async function seedDatabase() {
     };
     
     await db.insert(settings).values({
-      id: randomUUID(),
       sport: 'ALL',
       alertTypes: defaultAlertTypes,
       telegramEnabled: false,
@@ -148,7 +140,6 @@ export async function seedDatabase() {
     
     if (existing.length === 0) {
       await db.insert(aiSettings).values({
-        id: randomUUID(),
         sport,
         enabled: false,
         dryRun: true,
@@ -160,8 +151,6 @@ export async function seedDatabase() {
         model: 'gpt-4o-mini',
         maxTokens: 500,
         temperature: 70,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       });
       console.log(`✅ Created AI settings for ${sport}`);
     }
