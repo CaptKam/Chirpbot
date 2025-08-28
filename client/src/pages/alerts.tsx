@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Pill } from "@/components/Pill";
 import { RunnersDiamond } from "@/components/RunnersDiamond";
 import { toVM } from "@/adapters/base";
+import AlertFooter from "@/components/AlertFooter";
 import "@/adapters/mlb"; // Import to register the adapter
 
 const FILTER_OPTIONS = [
@@ -383,6 +384,22 @@ export default function Alerts() {
                         )}
                       </div>
                     </div>
+                    
+                    {/* Alert Footer - Game Situation Bar */}
+                    {alert.gameInfo?.inning && alert.gameInfo?.inningState && (
+                      <AlertFooter
+                        half={alert.gameInfo.inningState === 'top' ? 'Top' : 'Bottom'}
+                        inning={parseInt(alert.gameInfo.inning)}
+                        bases={{
+                          first: alert.gameInfo.runners?.first || false,
+                          second: alert.gameInfo.runners?.second || false,
+                          third: alert.gameInfo.runners?.third || false,
+                        }}
+                        balls={alert.gameInfo.balls || 0}
+                        strikes={alert.gameInfo.strikes || 0}
+                        outs={alert.gameInfo.outs || 0}
+                      />
+                    )}
                   </Card>
                 </SwipeableCard>
               );
