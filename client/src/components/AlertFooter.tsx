@@ -1,4 +1,7 @@
 import React from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { Clock3 } from 'lucide-react';
+import { Pill } from './Pill';
 
 export interface AlertFooterProps {
   half: 'Top' | 'Bottom';
@@ -12,6 +15,7 @@ export interface AlertFooterProps {
   balls?: number;   // 0..4 (optional)
   strikes?: number; // 0..3 (optional)
   outs: number;    // 0..3
+  createdAt?: string; // timestamp for the timer
 }
 
 // Reusable indicator for B/S/O lights
@@ -55,6 +59,7 @@ const AlertFooter: React.FC<AlertFooterProps> = ({
   balls,
   strikes,
   outs,
+  createdAt,
 }) => {
   // In order: first, second, third, home (home is optional).
   const baseOrder: (keyof typeof bases)[] = ['first', 'second', 'third', 'home'];
@@ -100,6 +105,12 @@ const AlertFooter: React.FC<AlertFooterProps> = ({
         <Indicator label="B" count={balls} max={4} />
         <Indicator label="S" count={strikes} max={3} />
         <Indicator label="O" count={outs} max={3} />
+        {createdAt && (
+          <Pill className="text-slate-300 ml-2">
+            <Clock3 className="w-3.5 h-3.5" />
+            {formatDistanceToNow(new Date(createdAt), { addSuffix: true, includeSeconds: true })}
+          </Pill>
+        )}
       </div>
     </div>
   );

@@ -338,10 +338,6 @@ export default function Alerts() {
                             </Pill>
                           )}
                         </div>
-                        <Pill className="text-slate-300">
-                          <Clock3 className="w-3.5 h-3.5" />
-                          {formatDistanceToNow(new Date(vm.createdAt ?? currentTime), { addSuffix: true, includeSeconds: false })}
-                        </Pill>
                       </div>
 
                       {/* Row 2: Teams/score + inning + runners diamond */}
@@ -398,6 +394,7 @@ export default function Alerts() {
                         balls={alert.gameInfo.balls}
                         strikes={alert.gameInfo.strikes}
                         outs={alert.gameInfo.outs || 0}
+                        createdAt={vm.createdAt}
                       />
                     )}
                   </Card>
