@@ -107,19 +107,28 @@ export class MLBEngineV3 {
       
       console.log(`🎯 V3 Engine Processing ${allGames.length} total games`);
       
+      // Get monitored games to filter only user-selected games
+      const monitoredGames = await storage.getAllMonitoredGames();
+      const monitoredGameIds = new Set(monitoredGames.map(mg => mg.gameId));
+      
       const liveGames = allGames.filter((game: any) => {
         const isLive = game.status?.toLowerCase() === 'live';
         
         if (!isLive) {
           console.log(`⏭️ V3 Skipping ${game.awayTeam?.name || 'Unknown'} @ ${game.homeTeam?.name || 'Unknown'} - Status: ${game.status || 'Unknown'}`);
-        } else {
-          console.log(`🎯 V3 Processing live game: ${game.awayTeam?.name || 'Unknown'} @ ${game.homeTeam?.name || 'Unknown'}`);
+          return false;
         }
         
-        return isLive;
+        if (!monitoredGameIds.has(game.id)) {
+          console.log(`⏭️ V3 Skipping ${game.awayTeam?.name || 'Unknown'} @ ${game.homeTeam?.name || 'Unknown'} - Not monitored by users`);
+          return false;
+        }
+        
+        console.log(`🎯 V3 Processing monitored live game: ${game.awayTeam?.name || 'Unknown'} @ ${game.homeTeam?.name || 'Unknown'}`);
+        return true;
       });
 
-      console.log(`🎯 V3 Game Status Gating: Processing ${liveGames.length}/${allGames.length} live games`);
+      console.log(`🎯 V3 Game Status Gating: Processing ${liveGames.length}/${allGames.length} live games (${monitoredGameIds.size} monitored)`);
 
       for (const game of liveGames) {
         const gameState = await this.extractGameStateFromTransformedGame(game);
