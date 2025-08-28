@@ -1,6 +1,7 @@
 
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
+import { aiHealthMonitor } from '../ai-health-monitor';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -203,12 +204,21 @@ async function getAIContextMultiplier(gameState: MLBGameState, baseProbability: 
     return cached.result;
   }
 
+  // Check if AI should be used (respects health monitoring and user settings)
+  if (!aiHealthMonitor.shouldUseAI(true)) {
+    return { multiplier: 1.0, insight: "Using mathematical baseline (AI unavailable)", confidence: 75 };
+  }
+
+  const startTime = Date.now();
+  let success = false;
+
   try {
     // Only call AI for high-leverage situations (save API costs)
     const isHighLeverage = baseProbability >= 0.60 || gameState.inning >= 8 || 
       Math.abs(gameState.homeScore - gameState.awayScore) <= 2;
 
     if (!isHighLeverage) {
+      success = true; // Count skipped calls as successful
       return { multiplier: 1.0, insight: "Standard situation", confidence: 85 };
     }
 
@@ -267,11 +277,16 @@ FORMAT: "Multiplier: X.X | Insight: [key factor] | Confidence: XX"
     // Cache the result
     aiCache.set(cacheKey, { result, timestamp: Date.now() });
 
+    success = true;
     return result;
 
   } catch (error) {
     console.error('AI context analysis failed:', error);
     return { multiplier: 1.0, insight: "Using mathematical baseline", confidence: 75 };
+  } finally {
+    // Record API call metrics for health monitoring
+    const latency = Date.now() - startTime;
+    aiHealthMonitor.recordAPICall(success, latency);
   }
 }
 
