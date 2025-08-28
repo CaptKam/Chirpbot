@@ -25,6 +25,7 @@ const FILTER_OPTIONS = [
 
 export default function Alerts() {
   const [activeFilters, setActiveFilters] = useState(["all"]);
+  const [currentTime, setCurrentTime] = useState(Date.now());
   const queryClient = useQueryClient();
   const seenAlertsRef = useRef(new Set<string>());
   const { lastMessage } = useWebSocket();
@@ -33,6 +34,15 @@ export default function Alerts() {
     queryKey: ["/api/alerts"],
     refetchInterval: 10000, // Refetch every 10 seconds for more responsive updates
   });
+
+  // Update timestamps every 30 seconds to keep "X minutes ago" text fresh
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 30000); // Update every 30 seconds
+
+    return () => clearInterval(timer);
+  }, []);
 
 
   const markAsSeenMutation = useMutation({
@@ -324,7 +334,7 @@ export default function Alerts() {
                         </div>
                         <Pill className="text-slate-300">
                           <Clock3 className="w-3.5 h-3.5" />
-                          {formatDistanceToNow(new Date(vm.createdAt ?? Date.now()), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(vm.createdAt ?? currentTime), { addSuffix: true, includeSeconds: false })}
                         </Pill>
                       </div>
 
