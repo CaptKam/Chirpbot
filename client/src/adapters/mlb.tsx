@@ -41,7 +41,7 @@ const mlb: SportAdapter = {
       sport: "MLB",
       title: (a.type || '').replace(/_/g,' ').replace(/([A-Z])/g, ' $1').trim(),
       situation,
-      scoreline: `${g.awayTeam || 'Away'} ${g.score?.away ?? 0} — ${g.homeTeam || 'Home'} ${g.score?.home ?? 0}`,
+      scoreline: `${g.awayTeam || 'Away'} ${g.awayScore ?? 0} — ${g.homeTeam || 'Home'} ${g.homeScore ?? 0}`,
       period,
       edge: { 
         label: (a.type||'').toLowerCase().includes('risp') ? "RP" : 
