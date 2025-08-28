@@ -65,18 +65,35 @@ const AlertFooter: React.FC<AlertFooterProps> = ({
         <span className="text-base font-semibold whitespace-nowrap">
           {half} of {inning}
         </span>
-        {/* Base diamonds */}
-        <div className="flex space-x-1">
-          {baseOrder.map((base) =>
-            bases[base] !== undefined ? (
-              <div
-                key={base}
-                className={`w-3 h-3 transform rotate-45 border border-gray-500 ${
-                  bases[base] ? 'bg-green-500' : 'bg-gray-700'
-                }`}
-              ></div>
-            ) : null
-          )}
+        {/* Baseball Field Diamond */}
+        <div className="relative w-8 h-8 ml-2">
+          {/* Second Base (top) */}
+          <div
+            className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 border border-gray-500 ${
+              bases.second ? 'bg-green-500' : 'bg-gray-700'
+            }`}
+          ></div>
+          
+          {/* Third Base (left) */}
+          <div
+            className={`absolute top-1/2 left-0 transform -translate-y-1/2 w-2 h-2 rotate-45 border border-gray-500 ${
+              bases.third ? 'bg-green-500' : 'bg-gray-700'
+            }`}
+          ></div>
+          
+          {/* First Base (right) */}
+          <div
+            className={`absolute top-1/2 right-0 transform -translate-y-1/2 w-2 h-2 rotate-45 border border-gray-500 ${
+              bases.first ? 'bg-green-500' : 'bg-gray-700'
+            }`}
+          ></div>
+          
+          {/* Home Plate (bottom) */}
+          <div
+            className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 border border-gray-500 ${
+              bases.home ? 'bg-green-500' : 'bg-gray-700'
+            }`}
+          ></div>
         </div>
       </div>
       <div className="flex items-center space-x-4">
