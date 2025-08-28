@@ -681,6 +681,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role,
+        authMethod: user.authMethod,
         message: "Account created successfully" 
       });
     } catch (error) {
@@ -708,6 +710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role,
         authMethod: user.authMethod
       });
     } catch (error) {
@@ -772,6 +775,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role,
+        authMethod: user.authMethod,
         message: "Login successful" 
       });
     } catch (error) {

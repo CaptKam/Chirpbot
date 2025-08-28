@@ -26,21 +26,33 @@ app.use(cors({
 app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 
-// PostgreSQL session store for persistent sessions
-const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-const PgSession = connectPgSimple(session);
-
-// Session middleware with PostgreSQL store
-app.use(session({
-  store: new PgSession({
+// Session store setup - PostgreSQL in production, MemoryStore in development
+let sessionStore;
+if (process.env.DATABASE_URL) {
+  const pgPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+  const PgSession = connectPgSimple(session);
+  sessionStore = new PgSession({
     pool: pgPool,
     tableName: 'session',
     createTableIfMissing: true
-  }),
-  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'chirpbot-dev-secret-key-12345'),
+  });
+} else {
+  // Use default MemoryStore for development when DATABASE_URL is not available
+  sessionStore = undefined;
+  console.log('⚠️  Using in-memory sessions (not suitable for production)');
+}
+
+// Session middleware with conditional store
+app.use(session({
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SESSION_SECRET is required in production environment');
+    }
+    return 'chirpbot-dev-secret-key-12345';
+  })(),
   resave: false,
   saveUninitialized: false,
   cookie: {
