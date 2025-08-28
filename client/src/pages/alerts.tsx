@@ -305,8 +305,8 @@ export default function Alerts() {
                       "ring-1 ring-white/10 hover:ring-white/20",
                       "dark bg-card text-card-foreground",
                       alert.seen
-                        ? "opacity-80"
-                        : "ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20"
+                        ? "ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20"
+                        : "opacity-80"
                     )}
                   >
                     {/* NEW badge */}
