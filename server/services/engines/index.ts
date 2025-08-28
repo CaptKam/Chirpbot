@@ -1,10 +1,42 @@
 import { mlbEngine } from './mlb-engine';
+import { MLBEngineV3 } from './mlb-engine-v3';
 import { nflEngine } from './nfl-engine';
 import { nbaEngine } from './nba-engine';
 import { nhlEngine } from './nhl-engine';
 import { weatherEngine } from './weather-engine';
 // AI engine has been removed
 import { BaseSportEngine } from './base-engine';
+
+// V3 Engine Wrapper to make it compatible with the existing system
+class MLBEngineV3Wrapper extends BaseSportEngine {
+  sport = 'MLB';
+  alertConfigs: any[] = [];
+  monitoringInterval = 1500;
+  private v3Engine = new MLBEngineV3();
+
+  constructor() {
+    super();
+    // Pass the alert callback to the v3 engine
+    this.v3Engine.onAlert = (alert: any) => {
+      if (this.onAlert) {
+        this.onAlert(alert);
+      }
+    };
+  }
+
+  async monitor(): Promise<void> {
+    try {
+      await this.v3Engine.processLiveGamesOnly();
+    } catch (error) {
+      console.error('Error in V3 engine monitoring:', error);
+    }
+  }
+
+  async extractGameState(apiData: any): any {
+    // This method is required by BaseSportEngine but not used in v3
+    return apiData;
+  }
+}
 import { storage } from '../../storage';
 
 export interface AlertEngineManager {
@@ -20,8 +52,9 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   private intervalIds = new Map<string, NodeJS.Timeout>();
 
   constructor() {
-    // Register all engines
-    this.addEngine('MLB', mlbEngine);
+    // Register all engines - using v3 MLB engine for enhanced tier analysis
+    const mlbEngineV3Wrapper = new MLBEngineV3Wrapper();
+    this.addEngine('MLB', mlbEngineV3Wrapper);
     this.addEngine('NFL', nflEngine);
     this.addEngine('NBA', nbaEngine);
     this.addEngine('NHL', nhlEngine);
