@@ -719,7 +719,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
     }
   }
 
-  async extractGameState(gameData: any): Promise<MLBGameState | null> {
+  private async extractGameState(gameData: any): Promise<MLBGameState | null> {
     try {
       // === V3 FORMAT HANDLER FIRST ===
       // Debug what format we're getting
@@ -747,7 +747,12 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
           outs: 0, // Default
           runners: { first: false, second: false, third: false }, // Default - will get from detailed API
           venue: gameData.venue || 'Unknown Venue',
-          ballpark: { name: gameData.venue || 'Unknown', factor: 1.0 }
+          ballpark: { name: gameData.venue || 'Unknown', factor: 1.0 },
+          currentBatter: undefined,
+          currentPitcher: undefined,
+          count: { balls: 0, strikes: 0 },
+          recentPlay: undefined,
+          weather: undefined
         };
       }
 
@@ -1382,7 +1387,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
         console.log(`🎯 V3 Processing: ${awayTeam} @ ${homeTeam}`);
         
         try {
-          const gameState = this.extractGameState(game);
+          const gameState = await this.extractGameState(game);
           if (gameState) {
             console.log(`🔬 V3 Starting 4-Tier Evaluation for ${awayTeam} @ ${homeTeam}`);
             console.log(`   Base Runners: 1B=${gameState.runners?.first || 'Empty'} 2B=${gameState.runners?.second || 'Empty'} 3B=${gameState.runners?.third || 'Empty'}`);
@@ -1406,6 +1411,8 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
   async evaluateV3TierSystem(gameState: MLBGameState): Promise<void> {
     try {
       console.log(`📊 V3 Evaluating 4-Tier System...`);
+      // DEBUG: Verify data pipeline is working
+      console.log(`✅ V3 Data Pipeline: ${gameState?.awayTeam} @ ${gameState?.homeTeam} (Runners: ${!!gameState?.runners})`);
       
       // V3 Safety Check - Only fix missing runners, preserve team names
       if (!gameState || !gameState.runners) {
