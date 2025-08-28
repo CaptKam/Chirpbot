@@ -395,8 +395,8 @@ export default function Alerts() {
                           second: alert.gameInfo.runners?.second || false,
                           third: alert.gameInfo.runners?.third || false,
                         }}
-                        balls={alert.gameInfo.balls || 0}
-                        strikes={alert.gameInfo.strikes || 0}
+                        balls={alert.gameInfo.balls}
+                        strikes={alert.gameInfo.strikes}
                         outs={alert.gameInfo.outs || 0}
                       />
                     )}

@@ -9,29 +9,36 @@ export interface AlertFooterProps {
     third: boolean;
     home?: boolean;   // optional, if you want to show home plate too
   };
-  balls: number;   // 0..4
-  strikes: number; // 0..3
+  balls?: number;   // 0..4 (optional)
+  strikes?: number; // 0..3 (optional)
   outs: number;    // 0..3
 }
 
 // Reusable indicator for B/S/O lights
-const Indicator: React.FC<{ label: string; count: number; max: number }> = ({
+const Indicator: React.FC<{ label: string; count?: number; max: number }> = ({
   label,
   count,
   max,
-}) => (
-  <div className="flex items-center space-x-1">
-    <span className="text-sm font-medium mr-1">{label}</span>
-    {Array.from({ length: max }).map((_, i) => (
-      <span
-        key={i}
-        className={`w-2 h-2 rounded-full ${
-          i < count ? 'bg-green-400' : 'bg-gray-500'
-        }`}
-      ></span>
-    ))}
-  </div>
-);
+}) => {
+  // If count is undefined/null, don't render the indicator
+  if (count === undefined || count === null) {
+    return null;
+  }
+  
+  return (
+    <div className="flex items-center space-x-1">
+      <span className="text-sm font-medium mr-1">{label}</span>
+      {Array.from({ length: max }).map((_, i) => (
+        <span
+          key={i}
+          className={`w-2 h-2 rounded-full ${
+            i < count ? 'bg-green-400' : 'bg-gray-500'
+          }`}
+        ></span>
+      ))}
+    </div>
+  );
+};
 
 /**
  * AlertFooter
