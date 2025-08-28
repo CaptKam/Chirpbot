@@ -316,7 +316,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
       priority: 85,
       probability: 1.0,
       description: "📍 SCORING CHANCE!",
-      conditions: (state: MLBGameState) => state.runners.second || state.runners.third
+      conditions: (state: MLBGameState) => state.runners?.second || state.runners?.third
     },
     {
       type: "Bases Loaded",
@@ -324,7 +324,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
       priority: 95,
       probability: 1.0,
       description: "🚨 BASES LOADED",
-      conditions: (state: MLBGameState) => state.runners.first && state.runners.second && state.runners.third
+      conditions: (state: MLBGameState) => state.runners?.first && state.runners?.second && state.runners?.third
     },
     {
       type: "Runners on Base",
@@ -332,7 +332,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
       priority: 60,
       probability: 1.0,
       description: "⚡ SCORING OPPORTUNITY!",
-      conditions: (state: MLBGameState) => state.runners.first && !state.runners.second && !state.runners.third // Law #1: Removed non-RISP runner alert
+      conditions: (state: MLBGameState) => state.runners?.first && !state.runners?.second && !state.runners?.third // Law #1: Removed non-RISP runner alert
     },
     {
       type: "Close Game Alert",
@@ -343,7 +343,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
       conditions: (state: MLBGameState) => {
         const scoreDiff = Math.abs(state.homeScore - state.awayScore);
         // Only trigger if there are runners on base or high-leverage situation
-        const hasRunners = state.runners.first || state.runners.second || state.runners.third;
+        const hasRunners = state.runners?.first || state.runners?.second || state.runners?.third;
         return scoreDiff <= 1 && state.inning >= 7 && (hasRunners || state.outs === 2);
       }
     },
@@ -355,7 +355,7 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
       description: "⏰ LATE INNING PRESSURE",
       conditions: (state: MLBGameState) => {
         // Law #3: Only trigger in late innings with leverage (runners + close game)
-          const hasRunnersInScoringPosition = state.runners.second || state.runners.third;
+          const hasRunnersInScoringPosition = state.runners?.second || state.runners?.third;
           const isCloseGame = Math.abs(state.homeScore - state.awayScore) <= 2;
           return state.inning >= 8 && hasRunnersInScoringPosition && isCloseGame;
       }
@@ -721,6 +721,31 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
 
   async extractGameState(gameData: any): Promise<MLBGameState | null> {
     try {
+      // === V3 FORMAT HANDLER FIRST ===
+      // Debug what format we're getting
+      console.log('🔍 extractGameState - Received data keys:', Object.keys(gameData || {}));
+      console.log('🔍 extractGameState - Sample data:', JSON.stringify(gameData, null, 2).substring(0, 300));
+      
+      // Handle V3 Game format directly from getTodaysGames()  
+      if (gameData.homeTeam && gameData.awayTeam && !gameData.competitions && !gameData.liveData && !gameData.gameData) {
+        console.log('🔍 V3 Format detected - Converting to MLBGameState...');
+        
+        return {
+          gameId: gameData.id || '',
+          gamePk: parseInt(gameData.id?.replace('mlb-', '') || '0'),
+          homeTeam: gameData.homeTeam?.name || 'Unknown Home',
+          awayTeam: gameData.awayTeam?.name || 'Unknown Away', 
+          homeScore: gameData.homeTeam?.score || 0,
+          awayScore: gameData.awayTeam?.score || 0,
+          inning: 1, // Default - will get from detailed API later
+          inningState: 'top' as 'top' | 'bottom',
+          outs: 0, // Default
+          runners: { first: false, second: false, third: false }, // Default - will get from detailed API
+          venue: 'Unknown Venue',
+          ballpark: { name: 'Unknown', factor: 1.0 }
+        };
+      }
+
       // Handle different data source formats
       let gameId, gamePk, homeTeam, awayTeam, inning, inningState, homeScore, awayScore, outs;
       let runners: { first: boolean; second: boolean; third: boolean } = { first: false, second: false, third: false };
@@ -1376,6 +1401,23 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
   async evaluateV3TierSystem(gameState: MLBGameState): Promise<void> {
     try {
       console.log(`📊 V3 Evaluating 4-Tier System...`);
+      
+      // V3 Safety Check - Ensure gameState has required properties
+      if (!gameState || !gameState.runners) {
+        console.log(`⚠️ V3 Invalid game state - creating default state`);
+        gameState = {
+          ...gameState,
+          runners: { first: false, second: false, third: false },
+          homeTeam: gameState?.homeTeam || 'Unknown Home',
+          awayTeam: gameState?.awayTeam || 'Unknown Away',
+          homeScore: gameState?.homeScore || 0,
+          awayScore: gameState?.awayScore || 0,
+          inning: gameState?.inning || 1,
+          inningState: gameState?.inningState || 'top',
+          outs: gameState?.outs || 0
+        };
+      }
+      
       // Use existing alert system with V3 enhancements
       const alerts = await this.checkAlertConditions(gameState);
       if (alerts.length > 0) {
