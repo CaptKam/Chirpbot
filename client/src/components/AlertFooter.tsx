@@ -105,12 +105,6 @@ const AlertFooter: React.FC<AlertFooterProps> = ({
         <Indicator label="B" count={balls} max={4} />
         <Indicator label="S" count={strikes} max={3} />
         <Indicator label="O" count={outs} max={3} />
-        {createdAt && (
-          <Pill className="text-slate-300 ml-2">
-            <Clock3 className="w-3.5 h-3.5" />
-            {formatDistanceToNow(new Date(createdAt), { addSuffix: true, includeSeconds: true })}
-          </Pill>
-        )}
       </div>
     </div>
   );
