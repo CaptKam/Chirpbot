@@ -32,6 +32,7 @@ export interface Alert {
   } | null;
   timestamp: string;
   sentToTelegram: boolean;
+  seen: boolean;
 }
 
 export interface Settings {
