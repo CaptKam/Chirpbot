@@ -338,6 +338,13 @@ export default function Alerts() {
                             </Pill>
                           )}
                         </div>
+                        {/* Alert timestamp - prominently displayed */}
+                        {vm.createdAt && (
+                          <Pill className="bg-slate-500/10 ring-slate-500/30 text-slate-300 shrink-0">
+                            <Clock3 className="w-3.5 h-3.5" />
+                            {formatDistanceToNow(new Date(vm.createdAt), { addSuffix: true })}
+                          </Pill>
+                        )}
                       </div>
 
                       {/* Row 2: Teams/score + inning + runners diamond */}
