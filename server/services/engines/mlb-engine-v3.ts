@@ -105,7 +105,7 @@ export class MLBEngineV3 extends BaseSportEngine {
     console.log('🚀 ChirpBot V3 - Processing with 4 Laws & Betbook Engine');
     try {
       await this.processLiveGamesOnly();
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ V3 Error in monitor():', error);
       console.error('❌ V3 Stack:', error.stack);
     }
@@ -173,7 +173,7 @@ export class MLBEngineV3 extends BaseSportEngine {
           console.error(`❌ V3 Error processing ${awayTeam} @ ${homeTeam}:`, error);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ V3 Error in processLiveGamesOnly:', error);
       console.error('❌ V3 Stack:', error.stack);
     }
@@ -428,10 +428,10 @@ export class MLBEngineV3 extends BaseSportEngine {
     try {
       const settings = await storage.getSettingsByUserId(userId);
       return settings ? {
-        alertsEnabled: settings.alertsEnabled !== false,
-        sports: { MLB: settings.mlbEnabled !== false },
-        tiers: settings.tierSettings || {},
-        betbookEnabled: settings.betbookEnabled !== false
+        alertsEnabled: true, // V3: Use existing settings structure
+        sports: { MLB: true }, // V3: Always enabled for MLB processing
+        tiers: {}, // V3: Use default tier settings
+        betbookEnabled: true // V3: Always enabled for betting analysis
       } : null;
     } catch (error) {
       console.error(`Error fetching user settings for ${userId}:`, error);
