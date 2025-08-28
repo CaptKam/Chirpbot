@@ -224,39 +224,24 @@ export class MemStorage implements IStorage {
         id,
         sport,
         alertTypes: {
-          // MLB Alert Types - Game Situations
+          // MLB Alert Types
           risp: sport === "MLB",
-          basesLoaded: sport === "MLB",
-          runnersOnBase: sport === "MLB",
-          closeGame: sport === "MLB",
-          lateInning: sport === "MLB",
-          extraInnings: sport === "MLB",
-          
-          // MLB Alert Types - Scoring Events
           homeRun: sport === "MLB",
-          homeRunAlert: sport === "MLB",
+          lateInning: sport === "MLB",
+          closeGame: sport === "MLB",
+          runnersOnBase: sport === "MLB",
           hits: sport === "MLB",
           scoring: sport === "MLB",
           inningChange: false,
-          
-          // MLB Alert Types - Player Performance  
+          homeRunAlert: sport === "MLB",
           strikeouts: false,
-          powerHitter: sport === "MLB",
           powerHitterOnDeck: false,
-          starBatter: sport === "MLB",
-          eliteClutch: sport === "MLB",
-          avgHitter: false,
-          rbiMachine: sport === "MLB",
 
           // RE24 System
           useRE24System: sport === "MLB",
           re24Level1: sport === "MLB",
           re24Level2: sport === "MLB",
           re24Level3: sport === "MLB",
-
-          // Advanced Analytics
-          mlbAIEnabled: sport === "MLB",
-          mlbV3Engine: sport === "MLB",
 
           // NFL Alert Types  
           redZone: sport === "NFL",

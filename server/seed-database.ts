@@ -112,9 +112,6 @@ export async function seedDatabase() {
       re24Level1: false,
       re24Level2: false,
       re24Level3: false,
-      // Advanced Analytics
-      mlbAIEnabled: true,
-      mlbV3Engine: true,
       // NFL
       redZone: true,
       nflCloseGame: true,
