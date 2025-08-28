@@ -1,73 +1,14 @@
+import { BaseSportEngine, AlertConfig } from './base-engine';
 import { getWeatherData } from '../weather';
 import { storage } from '../../storage';
 import { mlbApi } from '../mlb-api';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
-import { enhanceHighPriorityAlert, generateAdvancedPredictions } from '../ai-analysis';
+import { enhanceHighPriorityAlert } from '../ai-analysis';
 import { analyzeHybridRE24, generateHybridAlertDescription, cleanupCache } from './hybrid-re24-ai';
 import { getEnhancedWeather } from '../enhanced-weather';
-import { getActiveRE24Level } from './re24-levels';
-import { alertDeduplicator, type MLBGameState as DeduplicationMLBGameState } from './alert-deduplication';
-import { FourLevelAlertSystem, type GameState, type AlertTier } from './four-level-alert-system';
-
-// === CONSOLIDATED INTERFACES AND TYPES ===
-
-// Base engine interfaces
-export interface AlertConfig {
-  type: string;
-  settingKey?: string;
-  priority: number;
-  probability: number;
-  description: string;
-  conditions?: (gameState: any) => boolean | Promise<boolean>;
-  isPrediction?: boolean;
-  predictionEvents?: string[];
-  minimumPredictionProbability?: number;
-}
-
-export interface SportEngine {
-  sport: string;
-  alertConfigs: AlertConfig[];
-  monitoringInterval: number;
-  extractGameState(apiData: any): any;
-  checkAlertConditions(gameState: any): Promise<AlertConfig[]>;
-  processAlerts(alerts: AlertConfig[], gameState: any): Promise<void>;
-}
-
-// Power hitter types
-export type Hand = "L" | "R" | "S" | "U";
-
-export type BatterStats = {
-  id: number;
-  name: string;
-  handedness: Hand;
-  seasonHR?: number;
-  seasonPA?: number;
-  ISO?: number;
-  SLG?: number;
-  recentHR?: number;
-  recentPA?: number;
-};
-
-export type PitcherStats = {
-  id: number;
-  handedness: Hand;
-  hrPer9?: number;
-  tbf?: number;
-  hrPerPA?: number;
-};
-
-export type Context = {
-  parkHrFactor?: number;
-  windMph?: number;
-  inning: number;
-  half: "top" | "bottom";
-  outs: number;
-  risp: boolean;
-  scoreDiffAbs: number;
-};
-
-export type PowerTier = "A" | "B" | "C" | null;
+// NEW
+import { estimateHRProbability, classifyTier } from './power-hitter';
 
 export interface MLBGameState {
   gameId: string;
@@ -146,125 +87,11 @@ export interface MLBGameState {
   };
 }
 
-export class MLBEngine implements SportEngine {
-  // Base engine properties
-  onAlert?: (alert: any) => void;
-  protected lastAlertStates = new Map<string, {hash: string, ts: number}>();
-  private MAX_KEYS = 5000;
-  private MAX_AGE_MS = 30 * 60 * 1000;
-  private lastFireAt = new Map<string, number>();
-  private MIN_REFIRE_MS = 700;
-
-  // MLB specific properties
+export class MLBEngine extends BaseSportEngine {
   sport = 'MLB';
   monitoringInterval = 1500; // 1.5 seconds normal polling (optimized from your successful system)
   private apiFailureCount = 0;
   private lastApiError: Date | null = null;
-  
-  // 🚀 NEW: 4-Level Alert System Integration
-  private fourLevelSystem = new FourLevelAlertSystem();
-
-  // 🚀 Convert MLBGameState to 4-Level System GameState
-  private convertToFourLevelGameState(mlbState: MLBGameState): GameState {
-    return {
-      gameId: mlbState.gameId,
-      sport: 'MLB',
-      status: 'Live',
-      homeTeam: mlbState.homeTeam,
-      awayTeam: mlbState.awayTeam,
-      homeScore: mlbState.homeScore,
-      awayScore: mlbState.awayScore,
-      clock: {
-        inning: mlbState.inning,
-        outs: mlbState.outs
-      },
-      bases: {
-        on1B: mlbState.runners.first,
-        on2B: mlbState.runners.second,
-        on3B: mlbState.runners.third
-      },
-      currentBatter: mlbState.currentBatter ? {
-        id: mlbState.currentBatter.id,
-        name: mlbState.currentBatter.name,
-        seasonHR: mlbState.currentBatter.stats.hr,
-        stats: mlbState.currentBatter.stats
-      } : undefined,
-      currentPitcher: mlbState.currentPitcher ? {
-        id: mlbState.currentPitcher.id,
-        name: mlbState.currentPitcher.name,
-        stats: mlbState.currentPitcher.stats
-      } : undefined,
-      venue: mlbState.venue,
-      weather: mlbState.weather
-    };
-  }
-
-  // 🚀 Enhanced Alert Processing with 4-Level System
-  async processEnhancedAlerts(gameState: MLBGameState): Promise<void> {
-    try {
-      console.log(`🔍 Evaluating 4-level alert system for ${gameState.awayTeam} @ ${gameState.homeTeam}`);
-      
-      const fourLevelGameState = this.convertToFourLevelGameState(gameState);
-      const alertTier = await this.fourLevelSystem.maybeEvaluateGameAndAlert(fourLevelGameState);
-      
-      if (alertTier) {
-        console.log(`✨ 4-Level Alert Generated: ${alertTier.description}`);
-        
-        const alertData = {
-          id: randomUUID(),
-          title: `Tier ${alertTier.tier} Alert`,
-          type: `4-Level Alert (Tier ${alertTier.tier})`,
-          description: alertTier.description,
-          sport: this.sport,
-          team: gameState.homeTeam,
-          opponent: gameState.awayTeam,
-          message: alertTier.description,
-          probability: alertTier.priority / 100,
-          priority: alertTier.priority,
-          createdAt: new Date(),
-          isRead: false,
-          gameInfo: {
-            gameId: gameState.gameId,
-            gamePk: gameState.gamePk,
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            status: 'live',
-            inning: gameState.inning,
-            inningState: gameState.inningState,
-            outs: gameState.outs,
-            runners: gameState.runners,
-            fourLevelAnalysis: {
-              tier: alertTier.tier,
-              levels: alertTier.levels,
-              deduplicationKey: alertTier.metadata.deduplicationKey
-            }
-          }
-        };
-
-        const usersWithTelegram = await storage.getUsersWithTelegramEnabled();
-        for (const user of usersWithTelegram) {
-          if (user.telegramBotToken && user.telegramChatId) {
-            const sent = await sendTelegramAlert({
-              botToken: user.telegramBotToken,
-              chatId: user.telegramChatId,
-            }, alertData);
-            if (sent) {
-              console.log(`📱 4-Level Alert sent: ${alertTier.description}`);
-            }
-          }
-        }
-
-        await storage.createAlert(alertData);
-        console.log(`✅ 4-Level Alert stored: Tier ${alertTier.tier}`);
-      }
-    } catch (error) {
-      console.error('Error in 4-Level Alert System:', error);
-    }
-  }
-  
-  // RE24 alert debouncing cache: gameId -> { re24Key, timestamp }
-  private re24AlertCache = new Map<string, { re24Key: string; timestamp: number }>();
-  private RE24_DEBOUNCE_MS = 60000; // 1 minute cooldown
 
   // 🎯 GAME SITUATIONS ALERTS ONLY - Focus on key game moments
   alertConfigs: AlertConfig[] = [
@@ -287,11 +114,11 @@ export class MLBEngine implements SportEngine {
     },
     {
       type: "Runners on Base",
-      settingKey: "runnersOnBase", 
+      settingKey: "runnersOnBase",
       priority: 60,
       probability: 1.0,
       description: "⚡ SCORING OPPORTUNITY!",
-      conditions: (state: MLBGameState) => state.runners.first && !state.runners.second && !state.runners.third
+      conditions: (state: MLBGameState) => state.runners.first || state.runners.second || state.runners.third
     },
     {
       type: "Close Game Alert",
@@ -329,312 +156,6 @@ export class MLBEngine implements SportEngine {
     }
   ];
 
-  // === CONSOLIDATED POWER HITTER FUNCTIONS ===
-  
-  private P0 = 0.036; // league HR/PA baseline
-
-  private clamp(x: number, lo: number, hi: number) {
-    return Math.max(lo, Math.min(hi, x));
-  }
-
-  private shrink(observed: number, n: number, prior = this.P0, strength = 100) {
-    return (n * observed + strength * prior) / (n + strength);
-  }
-
-  private parkMult(parkHrFactor?: number) {
-    return this.clamp(parkHrFactor ?? 1.0, 0.80, 1.25);
-  }
-
-  private platoonMult(bh: Hand, ph: Hand) {
-    const adv = (bh === "R" && ph === "L") || (bh === "L" && ph === "R") || bh === "S";
-    return adv ? 1.10 : 0.92;
-  }
-
-  private pitcherMult(p: PitcherStats) {
-    const hrpa = p.hrPerPA ?? ((p.hrPer9 ?? 1.2) / 27);
-    const tbf = p.tbf ?? 400;
-    const stab = this.shrink(hrpa, tbf, this.P0, 200);
-    return this.clamp(stab / this.P0, 0.85, 1.25);
-  }
-
-  private windMultFromSpeedOnly(mph?: number) {
-    if (!mph || mph < 6) return 1;
-    const bump = Math.min(0.12, (mph - 5) * 0.01);
-    return 1 + bump;
-  }
-
-  public estimateHRProbability(batter: BatterStats, pitcher: PitcherStats, ctx: Context) {
-    const seasonPA = Math.max(1, batter.seasonPA ?? 0);
-    const seasonHRPA = (batter.seasonHR ?? 0) / seasonPA;
-
-    const recentPA = Math.max(1, batter.recentPA ?? 0);
-    const recentHRPA = (batter.recentHR ?? 0) / recentPA;
-
-    const bSeason = this.shrink(seasonHRPA, seasonPA, this.P0, 400);
-    const bRecent = this.shrink(recentHRPA, batter.recentPA ?? 0, this.P0, 100);
-    const batterProp = 0.6 * bSeason + 0.4 * bRecent;
-
-    const mult =
-      this.platoonMult(batter.handedness, pitcher.handedness) *
-      this.parkMult(ctx.parkHrFactor) *
-      this.pitcherMult(pitcher) *
-      this.windMultFromSpeedOnly(ctx.windMph);
-
-    return this.clamp(batterProp * mult, 0.005, 0.50);
-  }
-
-  public classifyTier(p: number): PowerTier {
-    if (p >= 0.045) return "A";
-    if (p >= 0.030) return "B";
-    if (p >= 0.018) return "C";
-    return null;
-  }
-
-  // === CONSOLIDATED BASE ENGINE METHODS ===
-
-  async checkAlertConditions(gameState: any): Promise<AlertConfig[]> {
-    const settings = await storage.getSettingsBySport(this.sport);
-    if (!settings) return [];
-
-    const triggeredAlerts: AlertConfig[] = [];
-    console.log(`🔧 Base engine processing ${this.alertConfigs.length} total alerts`);
-    
-    for (const config of this.alertConfigs) {
-      console.log(`🔍 Processing alert: ${config.type} (settingKey: ${config.settingKey})`);
-      
-      // Check if this alert type is enabled in settings
-      if (config.settingKey && !(settings.alertTypes as any)[config.settingKey]) {
-        console.log(`⏭️ Alert type '${config.type}' skipped - setting '${config.settingKey}' is disabled`);
-        continue;
-      }
-
-      if (!config.conditions) continue;
-
-      try {
-        // Handle both sync and async conditions properly
-        const conditionResult = config.conditions(gameState);
-        const shouldTrigger = conditionResult instanceof Promise ? await conditionResult : conditionResult;
-        
-        if (shouldTrigger) {
-          triggeredAlerts.push(config);
-        }
-      } catch (error) {
-        console.error(`Error checking condition for ${config.type}:`, error);
-      }
-    }
-
-    console.log(`⚡ Found ${triggeredAlerts.length} alerts for ${gameState.awayTeam} vs ${gameState.homeTeam}`);
-    if (triggeredAlerts.length > 0) {
-      console.log(`   Alert types triggered: ${triggeredAlerts.map(a => a.type).join(', ')}`);
-    }
-
-    // 🎯 ANTI-SPAM: Filter overlapping alerts to prevent spam
-    const filteredAlerts = this.filterOverlappingAlerts(triggeredAlerts);
-    if (filteredAlerts.length !== triggeredAlerts.length) {
-      console.log(`🔧 After overlap filtering: ${filteredAlerts.length} alerts (removed ${triggeredAlerts.length - filteredAlerts.length} overlapping)`);
-    }
-
-    return filteredAlerts;
-  }
-
-  protected filterOverlappingAlerts(alerts: AlertConfig[]): AlertConfig[] {
-    if (alerts.length <= 1) return alerts;
-
-    // 🎯 ULTRA ANTI-SPAM: Return only the highest priority alert
-    const sortedByPriority = alerts.sort((a, b) => b.priority - a.priority);
-    const topAlert = sortedByPriority[0];
-    
-    console.log(`🎯 ULTRA FILTER: Keeping only TOP priority alert: ${topAlert.type} (Priority: ${topAlert.priority})`);
-    if (sortedByPriority.length > 1) {
-      console.log(`⏭️ Suppressed ${sortedByPriority.length - 1} lower priority alerts: ${sortedByPriority.slice(1).map(a => a.type).join(', ')}`);
-    }
-
-    return [topAlert];
-  }
-
-  protected shouldTriggerAlert(alertType: string, gameId: string, gameState: any): boolean {
-    // 🎯 ENHANCED DEDUPLICATION: Use rich contextual factors and realert functionality
-    try {
-      // Convert gameState to MLBGameState format for deduplication
-      const mlbGameState: DeduplicationMLBGameState = {
-        gamePk: parseInt(gameState.gameId || gameId),
-        inning: gameState.inning || 1,
-        inningState: gameState.inningState === 'top' ? 'top' : 'bottom',
-        outs: gameState.outs || 0,
-        runners: {
-          first: gameState.runners?.first || false,
-          second: gameState.runners?.second || false,
-          third: gameState.runners?.third || false
-        },
-        currentBatter: gameState.currentBatter ? {
-          id: gameState.currentBatter.id || 0
-        } : undefined,
-        currentPitcher: gameState.currentPitcher ? {
-          id: gameState.currentPitcher.id || 0
-        } : undefined,
-        paId: gameState.paId // plate appearance ID if available
-      };
-
-      const shouldTrigger = alertDeduplicator.shouldTriggerAlert(alertType, mlbGameState);
-      
-      if (!shouldTrigger) {
-        const debugInfo = alertDeduplicator.getDebugInfo(alertType, mlbGameState);
-        console.log(`🚫 ENHANCED DEDUP: Alert '${alertType}' blocked`, debugInfo);
-      } else {
-        console.log(`✅ ENHANCED DEDUP: Alert '${alertType}' allowed with rich context`);
-      }
-      
-      return shouldTrigger;
-    } catch (error) {
-      console.error('Error in enhanced deduplication:', error);
-      // Fallback to simple logic if there's an issue
-      const globalKey = alertType;
-      const now = Date.now();
-      const cooldownMs = 30000;
-
-      const lastGlobalFire = this.lastFireAt.get(globalKey);
-      if (lastGlobalFire && (now - lastGlobalFire) < cooldownMs) {
-        return false;
-      }
-
-      this.lastFireAt.set(globalKey, now);
-      return true;
-    }
-  }
-
-  async processAlerts(triggeredAlerts: AlertConfig[], gameState: any): Promise<void> {
-    // 🎯 ULTIMATE ANTI-SPAM: Only ONE alert per game per polling cycle
-    if (triggeredAlerts.length === 0) return;
-    
-    // Get the highest priority alert only
-    const sortedAlerts = triggeredAlerts.sort((a, b) => b.priority - a.priority);
-    const alert = sortedAlerts[0];
-    
-    console.log(`🎯 Processing ONLY ONE alert per game: ${alert.type} (Priority: ${alert.priority})`);
-    if (sortedAlerts.length > 1) {
-      console.log(`⏭️ Suppressing ${sortedAlerts.length - 1} other alerts: ${sortedAlerts.slice(1).map(a => a.type).join(', ')}`);
-    }
-    
-    if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
-      console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
-      return;
-    }
-
-    try {
-      // Get weather data using city name instead of team name  
-      let cityName = gameState.homeTeam;
-      const teamCityMap: Record<string, string> = {
-        'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
-        'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
-        'Athletics': 'Oakland', 'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
-        'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
-        'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
-        'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
-        'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
-        'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
-        'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
-        'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
-        'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
-        'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
-        'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
-        'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
-        'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
-      };
-      
-      if (teamCityMap[gameState.homeTeam]) {
-        cityName = teamCityMap[gameState.homeTeam];
-      }
-      
-      const weatherData = await getWeatherData(cityName);
-
-      // 🤖 AI ENHANCEMENT: For high-priority alerts (80+), use AI to enhance descriptions
-      let finalDescription = alert.description;
-      let finalPriority = alert.priority;
-      
-      // 🎰 FORCE BETTING INTELLIGENCE FOR ALL ALERTS 
-      if (alert.priority >= 50) {
-        const settings = await storage.getSettingsBySport(this.sport);
-        console.log(`🎰 BETTING INTEL: Priority ${alert.priority}, AI Enabled: ${(settings as any)?.aiEnabled}, Type: ${alert.type}`);
-        if (settings && (settings as any).aiEnabled) {
-          try {
-            const gameContext = this.buildGameContext(gameState);
-            const enhanced = await enhanceHighPriorityAlert(
-              alert.type,
-              gameContext,
-              alert.description,
-              alert.priority
-            );
-            
-            if (enhanced) {
-              finalDescription = enhanced.enhancedDescription;
-              finalPriority = enhanced.priority;
-              
-              // 🚀 GENERATE ADVANCED PREDICTIONS
-              const predictions = await generateAdvancedPredictions(gameContext, alert.type);
-              if (predictions) {
-                finalDescription += ` | 📊 Analytics: WP±${predictions.winProbabilityShift}% | Leverage: ${predictions.leverageIndex} | Clutch: ${predictions.clutchRating}% | ${predictions.predictedOutcome}`;
-                console.log(`🧠 Advanced AI Prediction: ${predictions.predictedOutcome}`);
-              }
-              
-              console.log(`🤖 AI Enhanced: ${alert.type} - "${enhanced.enhancedDescription}"`);
-            }
-          } catch (error) {
-            console.log(`🤖 AI enhancement failed for ${alert.type}:`, error instanceof Error ? error.message : 'Unknown error');
-          }
-        } else {
-          console.log(`🤖 AI enhancement skipped - AI disabled in settings`);
-        }
-      }
-
-      const alertData = {
-        type: alert.type,
-        sport: this.sport,
-        title: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
-        description: finalDescription,
-        gameInfo: {
-          score: {
-            away: gameState.awayScore,
-            home: gameState.homeScore
-          },
-          status: 'Live',
-          awayTeam: gameState.awayTeam,
-          homeTeam: gameState.homeTeam,
-          ...this.getGameSpecificInfo(gameState)
-        },
-        weatherData,
-        sentToTelegram: false,
-        priority: finalPriority, // Use AI-enhanced priority if available
-        probability: alert.probability
-      };
-
-      const settings = await storage.getSettingsBySport(this.sport);
-      const createdAlert = await storage.createAlert(alertData);
-
-      // Send to Telegram for high-priority alerts (using enhanced priority)
-      if (finalPriority >= 75 && settings?.telegramEnabled) {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_TOKEN || "default_key",
-          chatId: process.env.TELEGRAM_CHAT_ID || process.env.CHAT_ID || "default_key",
-        };
-        const sent = await sendTelegramAlert(telegramConfig, createdAlert);
-        if (sent) {
-          await storage.markAlertSentToTelegram(createdAlert.id);
-        }
-      }
-
-      console.log(`✅ ${this.sport} Alert created: ${alert.type} (Priority: ${finalPriority}${finalPriority !== alert.priority ? ` - AI Enhanced from ${alert.priority}` : ''})`);
-
-      // INSTANT BROADCAST: Send alert immediately via WebSocket
-      if (this.onAlert) {
-        this.onAlert(createdAlert);
-        console.log(`📡 Alert broadcast immediately via WebSocket`);
-      }
-
-    } catch (error) {
-      console.error(`Error processing ${this.sport} alert:`, error);
-    }
-  }
-
   protected getGameSpecificInfo(gameState: any): any {
     return {
       inning: gameState.inning,
@@ -643,10 +164,7 @@ export class MLBEngine implements SportEngine {
       runners: gameState.runners,
       currentBatter: gameState.currentBatter,
       currentPitcher: gameState.currentPitcher,
-      count: gameState.count, // Add count information for UI display
-      score: { home: gameState.homeScore, away: gameState.awayScore }, // Add scores for database
-      balls: gameState.count?.balls || 0, // Add explicit balls for backward compatibility
-      strikes: gameState.count?.strikes || 0 // Add explicit strikes for backward compatibility
+      count: gameState.count // Add count information for UI display
     };
   }
 
@@ -685,7 +203,6 @@ export class MLBEngine implements SportEngine {
       let runners: { first: boolean; second: boolean; third: boolean } = { first: false, second: false, third: false };
       let currentBatter, currentPitcher, recentPlay, venue;
       let ballparkConditions: any = {}; // Default empty object
-      let count: any = { balls: 0, strikes: 0 }; // Initialize count variable at function scope
 
       // ESPN format detection
       if (gameData.competitions && gameData.competitions[0]) {
@@ -710,12 +227,6 @@ export class MLBEngine implements SportEngine {
           inning = situation.inning || 1;
           inningState = situation.inningHalf === 'top' ? 'top' : 'bottom';
           outs = situation.outs || 0;
-
-          // Extract count from ESPN situation
-          count = {
-            balls: situation.balls || 0,
-            strikes: situation.strikes || 0
-          };
 
           // Base runners
           if (situation.onFirst) runners.first = true;
@@ -770,34 +281,50 @@ export class MLBEngine implements SportEngine {
           console.log(`🔍 Runner data from situation: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
         }
         
-        // Fallback: Check current play for runner data - FIXED LOGIC
+        // Fallback: Check current play for runner data
         if (!situation && currentPlay?.runners) {
           console.log(`🔍 Checking currentPlay.runners:`, currentPlay.runners);
-          
-          // Reset runners first
-          runners = { first: false, second: false, third: false };
-          
           currentPlay.runners.forEach((runner: any) => {
-            // Only count runners who are NOT out and have a current position
-            if (!runner.movement?.isOut) {
-              const currentBase = runner.movement?.end || runner.movement?.start;
-              if (currentBase === '1B') runners.first = true;
-              if (currentBase === '2B') runners.second = true; 
-              if (currentBase === '3B') runners.third = true;
-            }
+            if (runner.movement?.start === '1B') runners.first = true;
+            if (runner.movement?.start === '2B') runners.second = true;
+            if (runner.movement?.start === '3B') runners.third = true;
           });
-          
-          console.log(`🔧 CORRECTED Runner positions: 1st=${runners.first}, 2nd=${runners.second}, 3rd=${runners.third}`);
         }
         
-        // REMOVED: This fallback was incorrectly using PAST plays to set CURRENT runners
-        // Historical runner movements (including scored runners) should not affect current game state
+        // Fallback: Check recent plays for runner movements
+        if (!situation && liveData.plays?.allPlays) {
+          const recentPlays = liveData.plays.allPlays.slice(-5); // Check last 5 plays
+          recentPlays.forEach((play: any) => {
+            if (play.runners && play.runners.length > 0) {
+              console.log(`🔍 Found runners in recent play:`, play.runners);
+              play.runners.forEach((runner: any) => {
+                if (runner.movement?.end === '1B' && !runner.movement?.isOut) runners.first = true;
+                if (runner.movement?.end === '2B' && !runner.movement?.isOut) runners.second = true;
+                if (runner.movement?.end === '3B' && !runner.movement?.isOut) runners.third = true;
+              });
+            }
+          });
+        }
         
-        // REMOVED: This fallback was incorrectly interpreting offensive lineup as base runners
-        // The linescore.offense data shows batting order positions, NOT base runners
+        // Fallback: Check linescore offense data
+        if (!situation && liveData.linescore?.offense) {
+          const offense = liveData.linescore.offense;
+          console.log(`🔍 Checking linescore offense:`, offense);
+          if (offense.first) runners.first = true;
+          if (offense.second) runners.second = true;
+          if (offense.third) runners.third = true;
+        }
         
-        // REMOVED: Manual text parsing creates false positives
-        // Only use authoritative MLB API data sources
+        // Emergency fallback: Manual runner detection from play descriptions
+        if (!situation && currentPlay?.result?.description) {
+          const desc = currentPlay.result.description.toLowerCase();
+          if (desc.includes('runner') || desc.includes('on base')) {
+            console.log(`🔍 Detecting runners from play description: "${currentPlay.result.description}"`);
+            if (desc.includes('first') || desc.includes('1st')) runners.first = true;
+            if (desc.includes('second') || desc.includes('2nd')) runners.second = true;
+            if (desc.includes('third') || desc.includes('3rd')) runners.third = true;
+          }
+        }
         
         // Debug: Log final runner state for troubleshooting
         if (runners.first || runners.second || runners.third) {
@@ -1074,7 +601,10 @@ export class MLBEngine implements SportEngine {
         currentBatter,
         currentPitcher,
         recentPlay,
-        count: count, // Use the correctly extracted count variable
+        count: {
+          balls: gameData.liveData?.plays?.currentPlay?.count?.balls || 0,
+          strikes: gameData.liveData?.plays?.currentPlay?.count?.strikes || 0
+        },
         ballpark: ballparkConditions, // Assign extracted ballpark data
         paId: paId // V1 parity: plate appearance ID
       };
@@ -1159,9 +689,9 @@ export class MLBEngine implements SportEngine {
     };
 
     // Calculate base probability and apply enhanced weather multiplier
-    let p = this.estimateHRProbability(batterStats, pitcherStats, ctx);
+    let p = estimateHRProbability(batterStats, pitcherStats, ctx);
     p *= weatherMultiplier; // Apply enhanced weather carry multiplier
-    const tier = this.classifyTier(p);
+    const tier = classifyTier(p);
     if (!tier) return [];
 
     // Base priority by tier
@@ -1230,9 +760,9 @@ export class MLBEngine implements SportEngine {
       scoreDiffAbs: Math.abs(gameState.homeScore - gameState.awayScore),
     };
     
-    let p = this.estimateHRProbability(batterStats, pitcherStats, ctx);
+    let p = estimateHRProbability(batterStats, pitcherStats, ctx);
     p *= weatherMultiplier; // Apply enhanced weather carry multiplier
-    const tier = this.classifyTier(p);
+    const tier = classifyTier(p);
     
     // Only fire for Tier A power hitters (35+ HRs) in any situation - matching ChirpBetaBot logic
     if (tier !== "A" || batter.stats.hr < 35) return [];
@@ -1373,15 +903,6 @@ export class MLBEngine implements SportEngine {
 
           if (!gameState) continue;
 
-          // 🚀 NEW RULE SET: Early exit for empty bases (unless power hitter situation)
-          const hasRunners = gameState.runners.first || gameState.runners.second || gameState.runners.third;
-          const isPowerHitter = gameState.currentBatter?.stats.hr >= 25; // Lowered threshold for alerts
-          
-          if (!hasRunners && !isPowerHitter) {
-            console.log(`⏭️ SKIPPING: Empty bases, no power hitter - no alerts needed (${gameState.awayTeam} @ ${gameState.homeTeam})`);
-            return; // Early exit, skip all alert processing
-          }
-
           console.log(`🔍 Processing ${this.alertConfigs.length} alert configs for ${gameState.homeTeam} vs ${gameState.awayTeam}`);
           console.log(`📊 Game State: Inning ${gameState.inning} (${gameState.inningState}), Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}, Outs: ${gameState.outs}`);
           console.log(`🏃 Runners: 1st=${gameState.runners?.first}, 2nd=${gameState.runners?.second}, 3rd=${gameState.runners?.third}`);
@@ -1389,66 +910,24 @@ export class MLBEngine implements SportEngine {
           let triggeredAlerts = await this.checkAlertConditions(gameState);
           console.log(`⚡ Found ${triggeredAlerts.length} triggered alerts: ${triggeredAlerts.map(a => a.type).join(', ')}`);
 
-          // Get current settings to check if power hitter alerts are enabled
-          const settings = await storage.getSettingsBySport(this.sport);
-          const alertTypes = settings?.alertTypes || {};
-
-          // NEW — Add RE24 Level analysis if enabled with debouncing
-          const re24Analysis = await getActiveRE24Level(gameState, settings);
-          if (re24Analysis) {
-            // Check debouncing cache
-            const currentRe24Key = `${gameState.runners.first ? 1 : 0}${gameState.runners.second ? 1 : 0}${gameState.runners.third ? 1 : 0}-${gameState.outs}`;
-            const cached = this.re24AlertCache.get(gameState.gameId);
-            const now = Date.now();
-            
-            // Allow alert if: no cache, different base-out state, or cooldown expired
-            const shouldAllow = !cached || 
-                               cached.re24Key !== currentRe24Key || 
-                               (now - cached.timestamp) > this.RE24_DEBOUNCE_MS;
-            
-            if (shouldAllow) {
-              const re24Alert: AlertConfig = {
-                type: `RE24_LEVEL_${re24Analysis.level}`,
-                settingKey: `re24Level${re24Analysis.level}`,
-                priority: re24Analysis.priority,
-                probability: re24Analysis.probability || 1.0, // Use actual probability
-                description: re24Analysis.analysis,
-                conditions: () => true
-              };
-              triggeredAlerts = [...triggeredAlerts, re24Alert];
-              
-              // Update cache
-              this.re24AlertCache.set(gameState.gameId, {
-                re24Key: currentRe24Key,
-                timestamp: now
-              });
-            } else {
-              console.log(`🔄 RE24 alert debounced for ${gameState.gameId} (same state: ${currentRe24Key})`);
+          // NEW — add data-driven Power-Hitter alert for the current PA
+          try {
+            const power = this.buildPowerHitterAlerts(gameState);
+            if (power.length) {
+              triggeredAlerts = [...triggeredAlerts, ...power];
             }
+          } catch (e) {
+            console.error("POWER_HITTER_AT_BAT compute error:", e);
           }
 
-          // NEW — add data-driven Power-Hitter alert for the current PA (only if enabled)
-          if (alertTypes.powerHitter) {
-            try {
-              const power = this.buildPowerHitterAlerts(gameState);
-              if (power.length) {
-                triggeredAlerts = [...triggeredAlerts, ...power];
-              }
-            } catch (e) {
-              console.error("POWER_HITTER_AT_BAT compute error:", e);
+          // NEW — add Power-Hitter ON DECK alert for advance betting intelligence
+          try {
+            const powerOnDeck = this.buildPowerHitterOnDeckAlerts(gameState);
+            if (powerOnDeck.length) {
+              triggeredAlerts = [...triggeredAlerts, ...powerOnDeck];
             }
-          }
-
-          // NEW — add Power-Hitter ON DECK alert for advance betting intelligence (only if enabled)
-          if (alertTypes.powerHitterOnDeck) {
-            try {
-              const powerOnDeck = this.buildPowerHitterOnDeckAlerts(gameState);
-              if (powerOnDeck.length) {
-                triggeredAlerts = [...triggeredAlerts, ...powerOnDeck];
-              }
-            } catch (e) {
-              console.error("POWER_HITTER_ON_DECK compute error:", e);
-            }
+          } catch (e) {
+            console.error("POWER_HITTER_ON_DECK compute error:", e);
           }
 
           // Debug current game state like ChirpBetaBot
@@ -1467,12 +946,8 @@ export class MLBEngine implements SportEngine {
             // Use base engine's processAlerts with single deduplication system
             await this.processAlerts(triggeredAlerts, gameState);
           } else {
-            console.log(`⚡ Found 0 triggered alerts: `);
             console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`);
           }
-
-          // 🚀 NEW: Run 4-Level Alert System for enhanced analysis
-          await this.processEnhancedAlerts(gameState);
 
         } catch (gameError) {
           this.apiFailureCount++;
@@ -1535,6 +1010,117 @@ export class MLBEngine implements SportEngine {
     return data.RP; // Return actual probability of scoring ≥1 run, not derived from expected runs
   }
 
+  async processAlerts(triggeredAlerts: AlertConfig[], gameState: MLBGameState): Promise<void> {
+    // Remove duplicates by alert type to prevent processing the same alert multiple times
+    const uniqueAlerts = triggeredAlerts.filter((alert, index, self) => 
+      index === self.findIndex(a => a.type === alert.type)
+    );
+    for (const alert of uniqueAlerts) {
+      // 🔥 CRITICAL: Check deduplication BEFORE processing
+      if (!this.shouldTriggerAlert(alert.type, gameState.gameId, gameState)) {
+        console.log(`⏭️ Alert '${alert.type}' skipped due to deduplication`);
+        continue;
+      }
+
+      // Generate situational context like ChirpBetaBot
+      const situationContext = this.generateSituationContext(gameState);
+      let customTitle = alert.description;
+      let finalDescription = `${alert.description} ${situationContext}`;
+      
+      // For RISP and scoring alerts, add detailed context
+      if (alert.type === "Runners in Scoring Position" || alert.type === "Bases Loaded") {
+        finalDescription = `${alert.description} ${situationContext}`;
+      }
+
+      // Apply AI enhancement for high priority alerts
+      if (alert.priority >= 80) {
+        try {
+          const { enhanceHighPriorityAlert } = await import('../ai-analysis');
+          const gameContext = this.buildGameContext(gameState);
+          const enhanced = await enhanceHighPriorityAlert(alert.type, gameContext, alert.description, alert.priority);
+          if (enhanced) {
+            finalDescription = enhanced.enhancedDescription;
+          }
+        } catch (error) {
+          console.error('AI enhancement failed:', error);
+        }
+      }
+
+      const alertData = {
+        id: randomUUID(),
+        title: customTitle,
+        type: alert.type,
+        description: finalDescription,
+        sport: this.sport,
+        team: gameState.homeTeam,
+        opponent: gameState.awayTeam,
+        message: finalDescription,
+        probability: alert.probability,
+        priority: alert.priority,
+        createdAt: new Date(),
+        isRead: false,
+        gameInfo: {
+          gameId: gameState.gameId,
+          gamePk: gameState.gamePk,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          status: 'live',
+          inning: gameState.inning,
+          inningState: gameState.inningState,
+          outs: gameState.outs,
+          runners: gameState.runners,
+          currentBatter: gameState.currentBatter ? {
+            id: gameState.currentBatter.id,
+            name: gameState.currentBatter.name,
+            battingOrder: gameState.currentBatter.battingOrder,
+            batSide: gameState.currentBatter.batSide,
+            stats: {
+              avg: gameState.currentBatter.stats.avg,
+              hr: gameState.currentBatter.stats.hr,
+              rbi: gameState.currentBatter.stats.rbi,
+              ops: gameState.currentBatter.stats.ops
+            }
+          } : undefined,
+          currentPitcher: gameState.currentPitcher ? {
+            id: gameState.currentPitcher.id,
+            name: gameState.currentPitcher.name,
+            throwHand: gameState.currentPitcher.throwHand,
+            stats: {
+              era: gameState.currentPitcher.stats.era,
+              whip: gameState.currentPitcher.stats.whip,
+              strikeOuts: gameState.currentPitcher.stats.strikeOuts,
+              wins: gameState.currentPitcher.stats.wins,
+              losses: gameState.currentPitcher.stats.losses
+            }
+          } : undefined,
+          // NEW: Hybrid RE24+AI Analysis Data
+          hybridAnalysis: await this.getHybridAnalysis(gameState).catch(() => null)
+        }
+      };
+
+      // Send to Telegram for users who have it enabled
+      const usersWithTelegram = await storage.getUsersWithTelegramEnabled();
+      for (const user of usersWithTelegram) {
+        if (user.telegramBotToken && user.telegramChatId) {
+          const telegramConfig = {
+            botToken: user.telegramBotToken,
+            chatId: user.telegramChatId,
+          };
+
+          const sent = await sendTelegramAlert(telegramConfig, alertData);
+          if (sent) {
+            console.log(`📱 Telegram alert sent to ${user.username || 'User'} for: ${customTitle}`);
+          } else {
+            console.log(`❌ Failed to send Telegram alert to ${user.username || 'User'} for: ${customTitle}`);
+          }
+        }
+      }
+
+      // Store the alert
+      await storage.createAlert(alertData);
+      console.log(`✅ Alert '${customTitle}' processed and stored.`);
+    }
+  }
 }
 
 // Export instance for use in other parts of the application

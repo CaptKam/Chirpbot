@@ -117,9 +117,6 @@ export class MemStorage implements IStorage {
       { alertKey: "powerHitter", title: "Power Hitter Alert", description: "Advanced HR probability analysis with platoon advantages, park factors & wind effects", category: "Player Performance" },
       { alertKey: "powerHitterOnDeck", title: "Power Hitter On Deck", description: "Tier A power bats on deck - Pre-alert for next at-bat", category: "Player Performance" },
       { alertKey: "starBatter", title: "Star Batter Alert", description: ".300+ AVG, 20+ HR, or .900+ OPS hitters", category: "Player Performance" },
-      { alertKey: "eliteClutch", title: "Elite Clutch Hitter", description: "High OPS batters in pressure situations", category: "Player Performance" },
-      { alertKey: "avgHitter", title: ".300+ Hitter Alert", description: "Premium contact hitters at bat", category: "Player Performance" },
-      { alertKey: "rbiMachine", title: "RBI Machine Alert", description: "80+ RBI producers with scoring chances", category: "Player Performance" },
       { alertKey: "basesLoaded", title: "Bases Loaded", description: "Maximum scoring opportunity - all bases occupied", category: "Game Situations" },
       { alertKey: "extraInnings", title: "Extra Innings", description: "Game extends beyond 9th inning", category: "Game Situations" },
       
@@ -949,7 +946,6 @@ export class DatabaseStorage implements IStorage {
   async createAlert(insertAlert: InsertAlert): Promise<Alert> {
     const alertToInsert = {
       ...insertAlert,
-      priority: insertAlert.priority || insertAlert.gameInfo?.priority || 70, // Save to main priority column
       gameInfo: {
         ...insertAlert.gameInfo,
         quarter: insertAlert.gameInfo.quarter as string | undefined,

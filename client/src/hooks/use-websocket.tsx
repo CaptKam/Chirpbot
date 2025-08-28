@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import type { Alert } from '@shared/schema';
+import type { WebSocketMessage } from '@/types';
 
-interface WebSocketMessage {
-  type: 'new_alert' | 'team_monitoring_changed' | 'settings_changed';
-  data: Alert | any;
-}
+// Assuming Alert type and queryClient are defined elsewhere and imported appropriately.
+// For the purpose of this example, we'll assume their existence.
+// Example placeholder types and objects:
+// type Alert = { id: string; type: string; sport: string; title: string; timestamp: number; seen: boolean; sentToTelegram: boolean };
+// const queryClient = {
+//   setQueryData: (key: string[], data: any) => {},
+//   invalidateQueries: (options: { queryKey: string[] }) => Promise.resolve(),
+// };
 
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
@@ -14,7 +17,6 @@ export function useWebSocket() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const maxReconnectAttempts = 5; // Set a limit for reconnection attempts
-  const queryClient = useQueryClient();
 
   const connectWithCleanup = useCallback(() => {
     // Prevent further connections if max attempts are reached
@@ -144,7 +146,7 @@ export function useWebSocket() {
         connectWithCleanup();
       }, delay);
     }
-  }, [reconnectAttempts, queryClient]); // Depend on reconnectAttempts and queryClient to manage retry logic
+  }, [reconnectAttempts]); // Depend on reconnectAttempts to manage retry logic
 
   useEffect(() => {
     connectWithCleanup();

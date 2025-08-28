@@ -1,5 +1,6 @@
 import { adapters, SportAdapter } from "./base";
 import type { AlertVM } from "@/lib/alert-vm";
+import { RunnersDiamond } from "@/components/RunnersDiamond";
 
 const mlb: SportAdapter = {
   sport: "MLB",
@@ -55,7 +56,7 @@ const mlb: SportAdapter = {
       tags,
       isNew: !a.seen,
       createdAt: a.createdAt || a.created_at,
-      widget: null,
+      widget: <RunnersDiamond r={g.runners ?? {}} />,
       actor: g.currentBatter?.name || g.currentPitcher?.name
     };
   }

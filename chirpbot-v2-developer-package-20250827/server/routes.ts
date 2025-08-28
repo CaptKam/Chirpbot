@@ -9,7 +9,6 @@ import { sportsService, type SportsEvent } from "./services/sports";
 import { liveSportsService } from "./services/live-sports";
 import { adminRouter } from "./routes/admin";
 import { registerMultiSourceRoutes } from "./routes/multi-source";
-import { aiHealthMonitor } from "./services/ai-health-monitor";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -82,57 +81,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Multi-source data aggregator routes
   registerMultiSourceRoutes(app);
-
-  // AI Health Monitor endpoints
-  app.get("/healthz", (req, res) => {
-    try {
-      const livenessStatus = aiHealthMonitor.getLivenessStatus();
-      res.status(livenessStatus.status === 'OK' ? 200 : 503).json(livenessStatus);
-    } catch (error) {
-      res.status(500).json({ status: 'ERROR', message: 'Health check failed', timestamp: Date.now() });
-    }
-  });
-
-  app.get("/readyz", (req, res) => {
-    try {
-      const readinessStatus = aiHealthMonitor.getReadinessStatus();
-      res.status(readinessStatus.ready ? 200 : 503).json(readinessStatus);
-    } catch (error) {
-      res.status(500).json({ status: 'ERROR', ready: false, message: 'Readiness check failed', timestamp: Date.now() });
-    }
-  });
-
-  // AI Health Monitor metrics endpoint (protected internal endpoint)
-  app.get("/api/ai/health/metrics", (req, res) => {
-    try {
-      // Basic security check - only allow internal access
-      const userAgent = req.headers['user-agent'] || '';
-      const isInternalRequest = req.ip === '127.0.0.1' || req.ip === '::1' || 
-                               userAgent.includes('monitoring') || 
-                               req.headers['x-internal-request'] === 'true';
-
-      if (!isInternalRequest && process.env.NODE_ENV === 'production') {
-        return res.status(403).json({ message: 'Forbidden - Internal endpoint only' });
-      }
-
-      const metrics = aiHealthMonitor.getDetailedMetrics();
-      const history = aiHealthMonitor.getHealthHistory();
-      
-      res.json({
-        metrics,
-        recentHistory: history.slice(-10), // Last 10 health checks
-        summary: {
-          successRate: history.length > 0 ? 
-            (history.filter(h => h.success).length / history.length * 100).toFixed(1) + '%' : 
-            'N/A',
-          averageLatency: metrics.averageLatency.toFixed(0) + 'ms',
-          uptime: Math.round(metrics.uptime / 1000 / 60) + ' minutes'
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch AI health metrics' });
-    }
-  });
 
   // Games routes
   app.get("/api/games/today", async (req, res) => {
