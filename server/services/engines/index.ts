@@ -1,4 +1,4 @@
-import { MLBEngineUnified } from './mlb-engine-unified';
+import { MLBEngineV3 } from './mlb-engine-v3';
 import { nflEngine } from './nfl-engine';
 import { nbaEngine } from './nba-engine';
 import { nhlEngine } from './nhl-engine';
@@ -21,7 +21,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   constructor() {
     // Register all engines
-    this.addEngine('MLB', new MLBEngineUnified());
+    this.addEngine('MLB', new MLBEngineV3());
     this.addEngine('NFL', nflEngine);
     this.addEngine('NBA', nbaEngine);
     this.addEngine('NHL', nhlEngine);
@@ -161,5 +161,5 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 export const alertEngineManager = new AlertEngineManagerImpl();
 
 // Export individual engines for direct access if needed
-export { MLBEngineUnified, nflEngine, nbaEngine, nhlEngine, weatherEngine };
+export { MLBEngineV3, nflEngine, nbaEngine, nhlEngine, weatherEngine };
 export { BaseSportEngine } from './base-engine';
