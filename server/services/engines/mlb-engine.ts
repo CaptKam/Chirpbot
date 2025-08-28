@@ -1738,7 +1738,9 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
                                cached.re24Key !== currentRe24Key ||
                                (now - cached.timestamp) > this.RE24_DEBOUNCE_MS;
 
-            if (shouldAllow) {
+            if (false && shouldAllow) {
+              // DISABLED: Legacy RE24 alerts - replaced by V3 4-tier system
+              // V3 4-tier system handles all alerting with proper thresholds (65%, 70%, 80%)
               const re24Alert: AlertConfig = {
                 type: `RE24_LEVEL_${re24Analysis.level}`,
                 settingKey: `re24Level${re24Analysis.level}`,
@@ -1759,8 +1761,9 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
             }
           }
 
-          // NEW — add data-driven Power-Hitter alert for the current PA (only if enabled)
-          if (alertTypes.powerHitter) {
+          // DISABLED: Legacy power hitter alerts - replaced by V3 4-tier system
+          // V3 4-tier system handles all alerting with proper thresholds (65%, 70%, 80%)
+          if (false && alertTypes.powerHitter) {
             try {
               const power = this.buildPowerHitterAlerts(gameState);
               if (power.length) {
