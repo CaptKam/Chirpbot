@@ -643,7 +643,10 @@ export class MLBEngine implements SportEngine {
       runners: gameState.runners,
       currentBatter: gameState.currentBatter,
       currentPitcher: gameState.currentPitcher,
-      count: gameState.count // Add count information for UI display
+      count: gameState.count, // Add count information for UI display
+      score: { home: gameState.homeScore, away: gameState.awayScore }, // Add scores for database
+      balls: gameState.count?.balls || 0, // Add explicit balls for backward compatibility
+      strikes: gameState.count?.strikes || 0 // Add explicit strikes for backward compatibility
     };
   }
 
@@ -1064,10 +1067,7 @@ export class MLBEngine implements SportEngine {
         currentBatter,
         currentPitcher,
         recentPlay,
-        count: {
-          balls: gameData.liveData?.plays?.currentPlay?.count?.balls || 0,
-          strikes: gameData.liveData?.plays?.currentPlay?.count?.strikes || 0
-        },
+        count: count, // Use the correctly extracted count variable
         ballpark: ballparkConditions, // Assign extracted ballpark data
         paId: paId // V1 parity: plate appearance ID
       };
