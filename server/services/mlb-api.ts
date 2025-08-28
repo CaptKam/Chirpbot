@@ -310,11 +310,6 @@ export class MLBApiService {
     const isLive = this.isGameLive(mlbGame.status);
     const isCompleted = mlbGame.status.abstractGameState === 'Final';
     
-    // Debug logging for game status detection
-    console.log(`🔍 Game ${mlbGame.gamePk}: ${mlbGame.teams.away.team.name} @ ${mlbGame.teams.home.team.name}`);
-    console.log(`   Status: abstractGameState="${mlbGame.status.abstractGameState}", detailedState="${mlbGame.status.detailedState}", statusCode="${mlbGame.status.statusCode}"`);
-    console.log(`   isLive: ${isLive}, isCompleted: ${isCompleted}`);
-    
     return {
       id: `mlb-${mlbGame.gamePk}`,
       sport: 'MLB',
