@@ -58,8 +58,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     process.exit(0);
   });
 
+  // Transform alert from database format to frontend format
+  function transformAlertForFrontend(alert: any) {
+    if (!alert) return alert;
+    
+    return {
+      ...alert,
+      gameInfo: alert.game_info, // Transform snake_case to camelCase
+      weatherData: alert.weather_data,
+      sentToTelegram: alert.sent_to_telegram,
+      // Remove the snake_case fields to avoid confusion
+      game_info: undefined,
+      weather_data: undefined,
+      sent_to_telegram: undefined
+    };
+  }
+
   // Broadcast function with backpressure handling
   function broadcast(data: any) {
+    // Transform alert data if this is a new_alert message
+    if (data.type === 'new_alert' && data.data) {
+      data = {
+        ...data,
+        data: transformAlertForFrontend(data.data)
+      };
+    }
+    
     const payload = JSON.stringify(data);
     clients.forEach((client: any) => {
       if (client.readyState === WebSocket.OPEN && client.bufferedAmount < 1_000_000) {
