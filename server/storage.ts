@@ -802,6 +802,13 @@ export class DatabaseStorage implements IStorage {
 
         // Game Flow
         { alertKey: "inningChange", title: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },
+
+        // V3 4-LAW ALERT SYSTEM
+        { alertKey: "v3FourLawSystem", title: "⚖️ V3 4-Law Alert Engine", description: "Master alert system enforcing the 4 mandatory laws for spam prevention", category: "V3 Alert System" },
+        { alertKey: "v3Level1", title: "🔒 V3 Level 1: Hard Fail-Safes", description: "Probability-gated situational alerts (30%+ confidence)", category: "V3 Alert System" },
+        { alertKey: "v3Level2", title: "📈 V3 Level 2: Player Analytics", description: "Historical matchup analysis (50%+ confidence)", category: "V3 Alert System" },
+        { alertKey: "v3Level3", title: "🧮 V3 Level 3: Math Models", description: "Weather + mathematical modeling (70%+ confidence)", category: "V3 Alert System" },
+        { alertKey: "v3Level4", title: "🤖 V3 Level 4: AI + Betbook", description: "AI synthesis with betting intelligence integration", category: "V3 Alert System" },
       ];
 
       // NFL Master Alert Controls
