@@ -1739,9 +1739,9 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
           const settings = await storage.getSettingsBySport(this.sport);
           const alertTypes = settings?.alertTypes || {};
 
-          // NEW — Add RE24 Level analysis if enabled with debouncing
-          const re24Analysis = await getActiveRE24Level(gameState, settings);
-          if (re24Analysis) {
+          // ❌ DISABLED: Old RE24 Level analysis (replaced by V3)
+          // const re24Analysis = await getActiveRE24Level(gameState, settings);
+          if (false) {
             // Check debouncing cache
             const currentRe24Key = `${gameState.runners.first ? 1 : 0}${gameState.runners.second ? 1 : 0}${gameState.runners.third ? 1 : 0}-${gameState.outs}`;
             const cached = this.re24AlertCache.get(gameState.gameId);
@@ -1820,8 +1820,8 @@ export class MLBEngine extends BaseSportEngine implements SportEngine {
             console.log(`   No alerts triggered (runners: 1st=${gameState.runners.first}, 2nd=${gameState.runners.second}, 3rd=${gameState.runners.third})`);
           }
 
-          // 🚀 NEW: Run 4-Level Alert System for enhanced analysis
-          await this.processEnhancedAlerts(gameState);
+          // ❌ DISABLED: Old 4-Level Alert System (replaced by V3)
+          // await this.processEnhancedAlerts(gameState);
 
         } catch (gameError) {
           this.apiFailureCount++;
