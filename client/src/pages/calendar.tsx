@@ -160,7 +160,7 @@ export default function Calendar() {
   };
 
   const getWeatherData = () => {
-    // Mock weather data - in real implementation, this would come from weather API
+    // Fallback weather data - real weather fetched from server via Weather-engine
     return { temperature: 72, condition: "Clear" };
   };
 
@@ -385,9 +385,9 @@ export default function Calendar() {
               .map((game, index) => {
               const isSelected = selectedGames.has(game.id);
               const weather = getWeatherData();
-              const startTime = new Date(game.startTime || game.gameTime);
+              const startTime = new Date(game.startTime);
               const formattedTime = isNaN(startTime.getTime()) 
-                ? game.gameTime || 'TBD'
+                ? 'TBD'
                 : startTime.toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit' 

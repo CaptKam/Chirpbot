@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
-// Removed getWeatherData import - weather service deleted
+import { getWeatherData, getEnhancedWeather } from "./services/engines/Weather-engine";
 // Removed mock sportsService - using real data only
 // Removed liveSportsService - using direct API calls
 // Removed registerMultiSourceRoutes import - file deleted
@@ -1361,23 +1361,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Debug route for enhanced weather testing - service removed
+  // Debug route for enhanced weather testing
   app.get('/api/debug/weather/:venue', async (req, res) => {
     try {
-      res.json({ message: 'Weather service removed', venue: req.params.venue });
+      const weather = await getEnhancedWeather(req.params.venue);
+      res.json({ venue: req.params.venue, weather });
     } catch (error: any) { 
       res.status(500).json({ error: error.message }); 
     }
   });
 
-  // Test route for all stadiums weather - service removed
+  // Test route for all stadiums weather
   app.get('/api/debug/weather-all', async (req, res) => {
     try {
+      const stadiumList = ["yankee-stadium", "fenway-park", "wrigley-field", "coors-field"];
+      const results = await Promise.allSettled(
+        stadiumList.map(async (stadium) => {
+          const weather = await getEnhancedWeather(stadium);
+          return { stadium, weather };
+        })
+      );
+      
+      const successful = results.filter(r => r.status === 'fulfilled').length;
       res.json({
-        message: 'Weather service removed',
-        testedStadiums: 0,
-        totalStadiums: 0,
-        results: []
+        message: 'Weather engine operational',
+        testedStadiums: successful,
+        totalStadiums: stadiumList.length,
+        results: results.map(r => r.status === 'fulfilled' ? r.value : { error: r.reason?.message })
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
