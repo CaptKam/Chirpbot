@@ -413,7 +413,7 @@ Provide a brief betting recommendation (max 100 chars) focusing on live betting 
   async processLiveGamesOnly(): Promise<void> {
     try {
       const liveGames = await this.getLiveGames();
-      console.log(`🎯 Simplified Engine Processing ${liveGames.length} live games`);
+      console.log(`🎯 MLB Engine Processing ${liveGames.length} live games`);
       
       for (const game of liveGames) {
         const gameState = await this.buildGameState(game);
@@ -422,8 +422,54 @@ Provide a brief betting recommendation (max 100 chars) focusing on live betting 
         }
       }
     } catch (error) {
-      console.error('❌ Monitoring error:', error);
+      console.error('❌ MLB monitoring error:', error);
     }
+  }
+
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      const game = await this.getSpecificGame(gameId);
+      if (!game) {
+        console.log(`Game ${gameId} not found or not live`);
+        return;
+      }
+
+      const gameState = await this.buildGameState(game);
+      if (gameState) {
+        await this.checkGameSituations(gameState);
+      }
+    } catch (error) {
+      console.error(`❌ Error processing MLB game ${gameId}:`, error);
+    }
+  }
+
+  private async getSpecificGame(gameId: string): Promise<any | null> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const games = await this.getTodaysGames(today);
+      
+      const game = games.find(g => g.gameId === gameId || g.gamePk.toString() === gameId);
+      
+      if (!game) return null;
+      
+      // Only return if game is live
+      if (this.isGameLive(game.status)) {
+        return game;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Error getting specific MLB game ${gameId}:`, error);
+      return null;
+    }
+  }
+
+  private isGameLive(status: string): boolean {
+    return (
+      status.includes('Progress') || 
+      status.includes('Live') ||
+      status.toLowerCase().includes('inning')
+    );
   }
 
   async startMonitoring(): Promise<void> {

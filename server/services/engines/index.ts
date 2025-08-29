@@ -1,76 +1,240 @@
-import { MLBEngine } from './mlb-engine';
 
-// V3 Engine runs independently for optimal performance
 import { storage } from '../../storage';
 
 export interface AlertEngineManager {
   startAllEngines(): Promise<void>;
   stopAllEngines(): void;
+  handleGameStateChange(gameId: string, sport: string, newStatus: string): Promise<void>;
 }
 
 class AlertEngineManagerImpl implements AlertEngineManager {
   private intervalIds = new Map<string, NodeJS.Timeout>();
+  private activeEngines = new Map<string, any>();
   private onAlert?: (alert: any) => void;
 
   constructor() {
-    // All engines disabled - V3 MLB engine runs independently for superior performance
-    // Other sport engines disabled to prevent interference with V3 AI system
-    // AI engine has been removed
+    console.log('🎯 Dynamic Sport Engine Manager initialized');
   }
 
-
   async startAllEngines(): Promise<void> {
-    console.log('🎯 Starting Game Situations alerts system...');
+    console.log('🎯 Starting Dynamic Sport Engine System...');
     
     // Stop all running engines first
     this.stopAllEngines();
     
-    // Start V3 MLB engine with proper monitoring loop
-    console.log('🔧 Starting MLB V3 engine with AI enhancement...');
-    await this.startV3Engine();
+    // Start monitoring for game state changes
+    await this.startGameStateMonitoring();
     
-    console.log('✅ Game Situations alert system ready');
+    console.log('✅ Dynamic Sport Engine System ready');
   }
 
-  private async startV3Engine(): Promise<void> {
+  private async startGameStateMonitoring(): Promise<void> {
+    // Monitor all sports for live games every 30 seconds
+    const intervalId = setInterval(async () => {
+      try {
+        await this.checkAllSportsForLiveGames();
+      } catch (error) {
+        console.error('🚨 Game state monitoring error:', error);
+      }
+    }, 30000); // 30 seconds - check game states
+
+    this.intervalIds.set('GAME_STATE_MONITOR', intervalId);
+    console.log('✅ Game state monitoring started with 30-second interval');
+  }
+
+  private async checkAllSportsForLiveGames(): Promise<void> {
+    const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'CFL', 'NCAAF'];
+    
+    for (const sport of sports) {
+      try {
+        const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
+        if (!hasMonitoredGames) continue;
+
+        const games = await this.getTodaysGamesForSport(sport);
+        
+        for (const game of games) {
+          const isMonitored = await this.isGameMonitored(game.gameId);
+          if (!isMonitored) continue;
+
+          await this.handleGameStateChange(game.gameId, sport, game.status);
+        }
+      } catch (error) {
+        console.error(`❌ Error checking ${sport} games:`, error);
+      }
+    }
+  }
+
+  async handleGameStateChange(gameId: string, sport: string, newStatus: string): Promise<void> {
+    const isLive = this.isGameLive(newStatus);
+    const isFinal = this.isGameFinal(newStatus);
+    const engineKey = `${sport}_${gameId}`;
+
+    if (isLive && !this.activeEngines.has(engineKey)) {
+      // Game went live - start engine for this specific game
+      console.log(`🔴 Game ${gameId} is now LIVE - starting ${sport} engine`);
+      await this.startEngineForGame(sport, gameId);
+    } else if (isFinal && this.activeEngines.has(engineKey)) {
+      // Game finished - stop engine and remove from monitoring
+      console.log(`🏁 Game ${gameId} is FINAL - stopping ${sport} engine`);
+      await this.stopEngineForGame(sport, gameId);
+      await this.removeGameFromMonitoring(gameId);
+    }
+  }
+
+  private async startEngineForGame(sport: string, gameId: string): Promise<void> {
     try {
-      const { MLBEngine } = await import('./mlb-engine');
-      const v3Engine = new MLBEngine();
+      const engine = await this.createEngineForSport(sport);
+      if (!engine) return;
+
+      const engineKey = `${sport}_${gameId}`;
       
-      // Set up alert callback for V3 engine
-      v3Engine.onAlert = (alert: any) => {
+      // Set up alert callback
+      engine.onAlert = (alert: any) => {
         if (this.onAlert) {
           this.onAlert(alert);
         }
       };
 
-      // Start V3 monitoring with 15-second interval for optimal performance
+      // Start monitoring this specific game
       const intervalId = setInterval(async () => {
         try {
-          await v3Engine.processLiveGamesOnly();
+          await engine.processSpecificGame(gameId);
         } catch (error) {
-          console.error('🚨 V3 Engine monitoring error:', error);
+          console.error(`🚨 ${sport} engine error for game ${gameId}:`, error);
         }
-      }, 15000); // 15 seconds - optimal for live game monitoring
+      }, 15000); // 15 seconds for live game monitoring
 
-      this.intervalIds.set('MLB_V3', intervalId);
-      console.log('✅ MLB V3 engine started with 15-second monitoring interval');
+      this.intervalIds.set(engineKey, intervalId);
+      this.activeEngines.set(engineKey, engine);
       
+      console.log(`✅ ${sport} engine started for game ${gameId}`);
     } catch (error) {
-      console.error('❌ Failed to start V3 engine:', error);
+      console.error(`❌ Failed to start ${sport} engine for game ${gameId}:`, error);
     }
   }
-  // V3 system manages its own engine starting
-  
+
+  private async stopEngineForGame(sport: string, gameId: string): Promise<void> {
+    const engineKey = `${sport}_${gameId}`;
+    
+    const intervalId = this.intervalIds.get(engineKey);
+    if (intervalId) {
+      clearInterval(intervalId);
+      this.intervalIds.delete(engineKey);
+    }
+    
+    this.activeEngines.delete(engineKey);
+    console.log(`⏹️ ${sport} engine stopped for game ${gameId}`);
+  }
+
+  private async createEngineForSport(sport: string): Promise<any> {
+    try {
+      switch (sport) {
+        case 'MLB':
+          const { MLBEngine } = await import('./mlb-engine');
+          return new MLBEngine();
+        case 'NFL':
+          const { NFLEngine } = await import('./nfl-engine');
+          return new NFLEngine();
+        case 'NBA':
+          const { NBAEngine } = await import('./nba-engine');
+          return new NBAEngine();
+        case 'NHL':
+          const { NHLEngine } = await import('./nhl-engine');
+          return new NHLEngine();
+        case 'CFL':
+          const { cflEngine } = await import('./cfl-engine');
+          return cflEngine;
+        case 'NCAAF':
+          const { NCAAEngine } = await import('./ncaa-engine');
+          return new NCAAEngine();
+        default:
+          console.warn(`No engine available for sport: ${sport}`);
+          return null;
+      }
+    } catch (error) {
+      console.error(`Error creating ${sport} engine:`, error);
+      return null;
+    }
+  }
+
+  private async getTodaysGamesForSport(sport: string): Promise<any[]> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+      switch (sport) {
+        case 'MLB':
+          const { MLBEngine } = await import('./mlb-engine');
+          const mlbEngine = new MLBEngine();
+          return await mlbEngine.getTodaysGames(today);
+        case 'NFL':
+          const { NFLEngine } = await import('./nfl-engine');
+          const nflEngine = new NFLEngine();
+          return await nflEngine.getTodaysGames(today);
+        case 'NBA':
+          const { NBAEngine } = await import('./nba-engine');
+          const nbaEngine = new NBAEngine();
+          return await nbaEngine.getTodaysGames(today);
+        case 'NHL':
+          const { NHLEngine } = await import('./nhl-engine');
+          const nhlEngine = new NHLEngine();
+          return await nhlEngine.getTodaysGames(today);
+        case 'CFL':
+          const { cflEngine } = await import('./cfl-engine');
+          return await cflEngine.getTodaysGames(today);
+        case 'NCAAF':
+          const { NCAAEngine } = await import('./ncaa-engine');
+          const ncaaEngine = new NCAAEngine();
+          return await ncaaEngine.getTodaysGames(today);
+        default:
+          return [];
+      }
+    } catch (error) {
+      console.error(`Error getting ${sport} games:`, error);
+      return [];
+    }
+  }
+
+  private isGameLive(status: string): boolean {
+    return (
+      status.includes('Progress') || 
+      status.includes('Live') ||
+      status.toLowerCase().includes('inning') ||
+      status.toLowerCase().includes('quarter') ||
+      status.toLowerCase().includes('period') ||
+      status.toLowerCase().includes('half')
+    );
+  }
+
+  private isGameFinal(status: string): boolean {
+    return (
+      status.includes('Final') ||
+      status.includes('Completed') ||
+      status.toLowerCase().includes('final')
+    );
+  }
+
+  private async isGameMonitored(gameId: string): Promise<boolean> {
+    try {
+      const monitoredGames = await storage.getAllMonitoredGames();
+      return monitoredGames.some(game => game.gameId === gameId);
+    } catch (error) {
+      console.error('Error checking if game is monitored:', error);
+      return false;
+    }
+  }
+
+  private async removeGameFromMonitoring(gameId: string): Promise<void> {
+    try {
+      await storage.removeGameFromAllUsers(gameId);
+      console.log(`🗑️ Game ${gameId} removed from monitoring (game finished)`);
+    } catch (error) {
+      console.error(`Error removing game ${gameId} from monitoring:`, error);
+    }
+  }
+
   private async hasMonitoredGamesForSport(sport: string): Promise<boolean> {
     try {
       const allMonitoredGames = await this.getAllMonitoredGames();
-      
-      // For weather engine, check if there are ANY monitored games (weather applies to all sports)
-      if (sport === 'WEATHER') {
-        return allMonitoredGames.length > 0;
-      }
-      
       return allMonitoredGames.some(game => game.sport === sport);
     } catch (error) {
       console.error(`Error checking monitored games for ${sport}:`, error);
@@ -80,46 +244,28 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   
   private async getAllMonitoredGames(): Promise<any[]> {
     try {
-      // Get all monitored games across all users
-      // This is a simplified approach - in a real system you might want to cache this
       return await storage.getAllMonitoredGames();
     } catch (error) {
       console.error('Error fetching all monitored games:', error);
       return [];
     }
   }
-  
-  // V3 system manages its own monitoring - this method is no longer needed
-  
-  private stopEngine(sport: string): void {
-    const intervalId = this.intervalIds.get(sport);
-    if (intervalId) {
-      clearInterval(intervalId);
-      this.intervalIds.delete(sport);
-      console.log(`⏹️ ${sport} engine stopped`);
-    }
-  }
-
-  // V3 system handles its own monitoring
 
   stopAllEngines(): void {
     console.log('🛑 Stopping all sport alert engines...');
 
-    for (const [sport, intervalId] of Array.from(this.intervalIds.entries())) {
+    for (const [key, intervalId] of Array.from(this.intervalIds.entries())) {
       clearInterval(intervalId);
-      console.log(`✅ ${sport} engine stopped`);
+      console.log(`✅ ${key} engine stopped`);
     }
 
     this.intervalIds.clear();
+    this.activeEngines.clear();
   }
 
-  // Set alert callback for V3 system
   setAlertCallback(callback: (alert: any) => void): void {
     this.onAlert = callback;
-    // V3 system handles its own callback management
   }
 }
 
 export const alertEngineManager = new AlertEngineManagerImpl();
-
-// V3 system - only MLBEngine is used

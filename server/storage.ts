@@ -29,6 +29,7 @@ export interface IStorage {
   removeUserMonitoredGame(userId: string, gameId: string): Promise<void>;
   clearAllUserMonitoredGames(userId: string): Promise<void>;
   isGameMonitoredByUser(userId: string, gameId: string): Promise<boolean>;
+  removeGameFromAllUsers(gameId: string): Promise<void>;
 
   // Alerts
   getAllAlerts(): Promise<Alert[]>;
@@ -408,6 +409,10 @@ export class MemStorage implements IStorage {
     return false; // Mock implementation
   }
 
+  async removeGameFromAllUsers(gameId: string): Promise<void> {
+    // Mock implementation - do nothing
+  }
+
   // Alert methods
   async getAllAlerts(): Promise<Alert[]> {
     return Array.from(this.alerts.values()).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -723,24 +728,24 @@ export class MemStorage implements IStorage {
     const enabledKeys = Array.from(this.masterAlertControls.values())
       .filter(control => control.sport === sport && control.enabled)
       .map(control => control.alertKey);
-    
+
     // If no master controls exist for CFL, return all alert keys as enabled
     if (sport === 'CFL' && enabledKeys.length === 0) {
       return ['redZone', 'closeGame', 'overtime', 'finalMinutes', 'touchdownAlert', 'fieldGoalRange'];
     }
-    
+
     // If no master controls exist for MLB, return all alert keys as enabled to match frontend config
     if (sport === 'MLB' && enabledKeys.length === 0) {
       return ['risp', 'basesLoaded', 'runnersOnBase', 'closeGame', 'lateInning', 'extraInnings', 
               'homeRun', 'homeRunAlert', 'hits', 'scoring', 'starBatter', 'powerHitter', 
               'powerHitterOnDeck', 'strikeouts', 'inningChange', 'mlbAIEnabled'];
     }
-    
+
     // If no master controls exist for NCAAF, return all alert keys as enabled
     if (sport === 'NCAAF' && enabledKeys.length === 0) {
       return ['redZone', 'closeGame', 'overtime', 'finalMinutes', 'touchdownAlert', 'upsetAlert'];
     }
-    
+
     return enabledKeys;
   }
 
@@ -961,7 +966,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
-    return await db.select().from(userMonitoredTeams);
+    const result = await this.db.select().from(userMonitoredGames);
+    return result;
+  }
+
+  async removeGameFromAllUsers(gameId: string): Promise<void> {
+    await this.db.delete(userMonitoredGames).where(eq(userMonitoredGames.gameId, gameId));
   }
 
   // Alert methods
