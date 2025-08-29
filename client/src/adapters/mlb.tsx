@@ -42,9 +42,9 @@ const mlb: SportAdapter = {
       title: (a.type || '').replace(/_/g,' ').replace(/([A-Z])/g, ' $1').trim(),
       situation,
       scoreline: (() => {
-        // Handle missing score data with demo scores for now
-        const awayScore = g.score?.away ?? (g.awayTeam === 'New York Yankees' ? 4 : 0);
-        const homeScore = g.score?.home ?? (g.homeTeam === 'Boston Red Sox' ? 2 : 0);
+        // V3 engine provides scores as homeScore/awayScore directly
+        const awayScore = g.awayScore ?? g.score?.away ?? 0;
+        const homeScore = g.homeScore ?? g.score?.home ?? 0;
         return `${g.awayTeam || 'Away'} ${awayScore} — ${g.homeTeam || 'Home'} ${homeScore}`;
       })(),
       period,
