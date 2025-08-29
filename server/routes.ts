@@ -250,16 +250,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Add v3Analysis for high-priority alerts if not present
         const priority = alert.priority || 50;
         if (priority >= 80 && (!alert.gameInfo || !(alert.gameInfo as any).v3Analysis)) {
-          const tier = priority >= 95 ? 4 : priority >= 90 ? 3 : priority >= 85 ? 2 : 1;
           const probability = Math.min(0.95, 0.60 + (priority - 80) * 0.02);
           
           const v3Analysis = {
-            tier,
             probability,
             reasons: [
               `High-priority ${alert.sport} situation detected`,
               `Advanced analytics indicate ${Math.round(probability * 100)}% confidence`,
-              `Tier ${tier} alert level with enhanced context`,
+              "Alert level with enhanced context",
               `Real-time data processing confirms opportunity`,
               "Environmental and situational factors analyzed"
             ]
@@ -268,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const betbookData = {
             recommendation: `VALUE ALERT: ${alert.sport} live betting opportunity`,
             confidence: `${Math.round(probability * 100)}% AI confidence rating`,
-            odds: tier >= 3 ? "+115" : "+105",
+            odds: priority >= 90 ? "+115" : "+105",
             reasoning: `V3 analysis confirms premium betting value for this situation`
           };
           
