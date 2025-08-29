@@ -87,12 +87,12 @@ export class MLBEngine {
         timeoutMs: 8000
       });
 
-      if (!data?.dates?.[0]?.games) {
+      if (!data || !(data as any).dates?.[0]?.games) {
         console.log(`📅 No games found for ${targetDate}`);
         return [];
       }
 
-      return data.dates[0].games.map((game: any) => ({
+      return (data as any).dates[0].games.map((game: any) => ({
         gamePk: game.gamePk,
         gameId: game.gamePk.toString(),
         homeTeam: game.teams.home.team.name,
@@ -136,13 +136,13 @@ export class MLBEngine {
   private isScoringSituation(gameState: MLBGameStateV3): boolean {
     // Simple scoring situation logic
     return (
-      gameState.runners.second || gameState.runners.third || // RISP
-      (gameState.runners.first && gameState.runners.second && gameState.runners.third) || // Bases loaded
+      !!gameState.runners.second || !!gameState.runners.third || // RISP
+      (!!gameState.runners.first && !!gameState.runners.second && !!gameState.runners.third) || // Bases loaded
       (gameState.inning >= 7 && Math.abs(gameState.homeScore - gameState.awayScore) <= 1) // Late close game
     );
   }
 
-  private async generateScoringAlert(gameState: MLBGameState): Promise<SimpleAlert | null> {
+  private async generateScoringAlert(gameState: MLBGameStateV3): Promise<SimpleAlert | null> {
     try {
       const runners = [];
       if (gameState.runners.first) runners.push('1st');
@@ -267,7 +267,7 @@ export class MLBEngine {
       this.recordAlertEmission(alert);
 
       const description = await this.generateAIEnhancedAlert(alert, gameState);
-      const betbookData = this.generateSimpleBetbook(alert, gameState);
+      const betbookData = await this.generateSimpleBetbook(alert, gameState);
 
       const alertRecord = await storage.createAlert({
         id: randomUUID(),
@@ -347,11 +347,11 @@ Generate a concise, engaging alert description (max 120 chars) that captures the
     }
   }
 
-  private generateSimpleBetbook(alert: SimpleAlert, gameState: MLBGameStateV3): any {
+  private async generateSimpleBetbook(alert: SimpleAlert, gameState: MLBGameStateV3): Promise<any> {
     try {
-      const { getBetbookData } = require('./betbook-engine');
+      const { getBetbookData } = await import('./betbook-engine');
       
-      return getBetbookData({
+      return await getBetbookData({
         sport: 'MLB',
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -367,7 +367,9 @@ Generate a concise, engaging alert description (max 120 chars) that captures the
       return {
         odds: { home: -110, away: +100, total: 8.5 },
         aiAdvice: 'Betting data temporarily unavailable. Please check your sportsbook for current odds. Always gamble responsibly.',
-        sportsbookLinks: []
+        sportsbookLinks: [],
+        bettingInsights: [],
+        confidence: 60
       };
     }
   }
