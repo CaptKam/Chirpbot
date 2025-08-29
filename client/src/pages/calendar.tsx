@@ -4,11 +4,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut, Sparkles } from "lucide-react";
+import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { removeCity } from "@/lib/team-utils";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
@@ -17,9 +18,11 @@ const TEST_USER_ID = "test-user-123"; // Fallback user ID
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const { data: gamesData, isLoading } = useQuery<GameDay>({
-    queryKey: ["/api/games/today", { sport: activeSport }],
+    queryKey: ["/api/games/today", { sport: activeSport, date: format(selectedDate, 'yyyy-MM-dd') }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
       const searchParams = new URLSearchParams(params as Record<string, string>);
@@ -207,9 +210,19 @@ export default function Calendar() {
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-black uppercase tracking-wider text-slate-100">
-              Today's Games
-            </h2>
+            <div className="flex items-center space-x-3">
+              <h2 className="text-lg font-black uppercase tracking-wider text-slate-100">
+                {isSameDay(selectedDate, new Date()) ? "Today's Games" : format(selectedDate, 'MMMM d, yyyy')}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDatePicker(!showDatePicker)}
+                className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+              >
+                <CalendarIcon className="w-4 h-4" />
+              </Button>
+            </div>
             <div className="flex items-center space-x-4 mt-1">
               <span className="text-sm font-semibold text-emerald-400">
                 {games.filter(g => g.status === 'live').length} Live
@@ -226,6 +239,94 @@ export default function Calendar() {
             {selectedCount}/{games.length} Selected
           </span>
         </div>
+
+        {/* Date Picker */}
+        {showDatePicker && (
+          <Card className="mb-4 bg-white/5 backdrop-blur-sm border-white/10">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedDate(subDays(selectedDate, 1))}
+                  className="text-slate-300 hover:text-slate-100"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <h3 className="text-lg font-semibold text-slate-100">
+                  {format(selectedDate, 'MMMM yyyy')}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                  className="text-slate-300 hover:text-slate-100"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              {/* Week View */}
+              <div className="grid grid-cols-7 gap-1">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div key={day} className="text-center text-xs font-semibold text-slate-400 py-2">
+                    {day}
+                  </div>
+                ))}
+                
+                {eachDayOfInterval({
+                  start: startOfWeek(selectedDate),
+                  end: endOfWeek(selectedDate)
+                }).map(date => (
+                  <Button
+                    key={date.toISOString()}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedDate(date);
+                      setShowDatePicker(false);
+                    }}
+                    className={`h-10 text-sm ${
+                      isSameDay(date, selectedDate)
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : isSameDay(date, new Date())
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'text-slate-300 hover:text-slate-100 hover:bg-white/5'
+                    }`}
+                  >
+                    {format(date, 'd')}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Quick Navigation */}
+              <div className="flex space-x-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedDate(new Date());
+                    setShowDatePicker(false);
+                  }}
+                  className="text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedDate(addDays(new Date(), 1));
+                    setShowDatePicker(false);
+                  }}
+                  className="text-blue-400 border-blue-500/30 hover:bg-blue-500/10"
+                >
+                  Tomorrow
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {isLoading ? (
           <div className="space-y-3">

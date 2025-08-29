@@ -134,16 +134,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Games routes
+  // Games routes - Connected to MLB Engine
   app.get("/api/games/today", async (req, res) => {
     try {
-      const sport = req.query.sport as string;
-      const today = new Date().toISOString().split('T')[0];
-      const games: any[] = []; // Service removed - no games available
-      res.json({ date: today, games });
+      const sport = req.query.sport as string || 'MLB';
+      const dateParam = req.query.date as string;
+      const targetDate = dateParam || new Date().toISOString().split('T')[0];
+      
+      let games: any[] = [];
+      
+      if (sport === 'MLB') {
+        // Use our integrated MLB API
+        const { MLBEngine } = await import('./services/engines/mlb-engine');
+        const mlbEngine = new MLBEngine();
+        games = await mlbEngine.getTodaysGames(targetDate);
+        
+        // Transform to match our Game interface
+        games = games.map(game => ({
+          id: game.gameId,
+          homeTeam: {
+            name: game.homeTeam,
+            logo: `/logos/${game.homeTeam.toLowerCase().replace(/\s+/g, '-')}.png`,
+            score: game.homeScore
+          },
+          awayTeam: {
+            name: game.awayTeam,
+            logo: `/logos/${game.awayTeam.toLowerCase().replace(/\s+/g, '-')}.png`,
+            score: game.awayScore
+          },
+          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
+                  game.status.includes('Final') ? 'final' : 'scheduled',
+          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          venue: game.venue,
+          inning: game.inning,
+          inningState: game.inningState,
+          weather: {
+            temperature: 72,
+            condition: 'Clear'
+          }
+        }));
+      }
+      // Add support for other sports later (NFL, NBA, NHL)
+      
+      res.json({ date: targetDate, games, sport });
     } catch (error) {
       console.error('Error fetching games:', error);
-      res.status(500).json({ message: "Failed to fetch today's games" });
+      res.status(500).json({ message: "Failed to fetch games" });
     }
   });
 
