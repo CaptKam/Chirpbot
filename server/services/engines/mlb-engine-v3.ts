@@ -367,11 +367,14 @@ export class MLBEngineV3 {
    */
   private async processAlertWithUserSettings(alertTier: AlertTierResult, gameState: MLBGameStateV3): Promise<void> {
     try {
-      // V3 Law #4: Advanced Deduplication
+      // V3 Law #4: Advanced Deduplication - CHECK AND RECORD IMMEDIATELY
       if (!this.shouldEmitAlert(alertTier)) {
         console.log(`🚫 DEDUP: Alert suppressed - ${alertTier.deduplicationKey}`);
         return;
       }
+
+      // Record alert for deduplication IMMEDIATELY to prevent duplicates
+      this.recordAlertEmission(alertTier);
 
       // Get all users and check their settings
       const users = await storage.getUsers();
@@ -386,9 +389,6 @@ export class MLBEngineV3 {
           console.log(`⏭️ Alert blocked by user settings for ${user.username}`);
         }
       }
-
-      // Record alert for deduplication
-      this.recordAlertEmission(alertTier);
 
     } catch (error) {
       console.error('Error processing alert with user settings:', error);
