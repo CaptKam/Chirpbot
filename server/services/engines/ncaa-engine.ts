@@ -46,9 +46,14 @@ export class NCAAEngine {
       const footballGames = await this.getCollegeFootballGames();
       console.log(`🏈 NCAAF: Found ${footballGames.length} games for today`);
       
-      // Log game details for debugging
+      // Log game details for debugging and check for military academies
       footballGames.forEach(game => {
-        console.log(`🏈 Game: ${game.awayTeam} @ ${game.homeTeam} - Status: ${game.status} - Date: ${game.gameDate}`);
+        const isMilitaryGame = /army|navy|air force|coast guard|military/i.test(`${game.awayTeam} ${game.homeTeam}`);
+        if (isMilitaryGame) {
+          console.log(`⚔️ MILITARY ACADEMY GAME: ${game.awayTeam} @ ${game.homeTeam} - Status: ${game.status} - Date: ${game.gameDate}`);
+        } else {
+          console.log(`🏈 Game: ${game.awayTeam} @ ${game.homeTeam} - Status: ${game.status} - Date: ${game.gameDate}`);
+        }
       });
       
       return footballGames;
@@ -75,20 +80,29 @@ export class NCAAEngine {
         return [];
       }
 
-      return data.events.map((game: any) => ({
-        id: `cfb-${game.id}`,
-        gameId: `cfb-${game.id}`,
-        homeTeam: game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.displayName || '',
-        awayTeam: game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.displayName || '',
-        homeScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.score || '0'),
-        awayScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.score || '0'),
-        status: game.status.type.name,
-        gameDate: game.date, // ESPN returns ISO date string
-        sport: 'NCAAF',
-        subSport: 'Football',
-        startTime: game.date, // Add startTime for calendar compatibility
-        espnData: game // Store full ESPN data for detailed parsing
-      }));
+      return data.events.map((game: any) => {
+        const homeTeam = game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.displayName || 
+                        game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.name || 
+                        game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.shortDisplayName || '';
+        const awayTeam = game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.displayName || 
+                        game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.name || 
+                        game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.shortDisplayName || '';
+        
+        return {
+          id: `cfb-${game.id}`,
+          gameId: `cfb-${game.id}`,
+          homeTeam,
+          awayTeam,
+          homeScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.score || '0'),
+          awayScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.score || '0'),
+          status: game.status.type.name,
+          gameDate: game.date, // ESPN returns ISO date string
+          sport: 'NCAAF',
+          subSport: 'Football',
+          startTime: game.date, // Add startTime for calendar compatibility
+          espnData: game // Store full ESPN data for detailed parsing
+        };
+      });
     } catch (error) {
       console.error('❌ ESPN College Football API Error:', error);
       return [];
