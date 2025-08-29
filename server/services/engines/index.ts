@@ -1,4 +1,4 @@
-import { MLBEngineV3 } from './mlb-engine';
+import { MLBEngine } from './mlb-engine';
 
 // V3 Engine runs independently for optimal performance
 import { storage } from '../../storage';
@@ -34,8 +34,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   private async startV3Engine(): Promise<void> {
     try {
-      const { MLBEngineV3 } = await import('./mlb-engine');
-      const v3Engine = new MLBEngineV3();
+      const { MLBEngine } = await import('./mlb-engine');
+      const v3Engine = new MLBEngine();
       
       // Set up alert callback for V3 engine
       v3Engine.onAlert = (alert: any) => {
@@ -122,4 +122,4 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
 export const alertEngineManager = new AlertEngineManagerImpl();
 
-// V3 system - only MLBEngineV3 is used
+// V3 system - only MLBEngine is used

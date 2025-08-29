@@ -174,7 +174,7 @@ export interface DeduplicationContext {
   paId?: string;
 }
 
-export class MLBEngineV3 {
+export class MLBEngine {
   // Smart Deduplication with AI-Enhanced Alerts
   private deduplicationCache = new Map<string, { timestamp: number; tier: number }>();
   private readonly MLB_API_BASE = 'https://statsapi.mlb.com/api/v1';
@@ -182,7 +182,7 @@ export class MLBEngineV3 {
   onAlert?: (alert: any) => void;
 
   constructor() {
-    console.log('🔧 MLBEngineV3 initialized with AI-Enhanced Alert System & Integrated Player Detection');
+    console.log('🔧 MLBEngine initialized with AI-Enhanced Alert System & Integrated Player Detection');
   }
 
   // === INTEGRATED MLB API METHODS ===
