@@ -105,7 +105,10 @@ const ALERT_TYPE_CONFIG = {
 };
 
 export default function Settings() {
-  const [activeSport, setActiveSport] = useState("MLB");
+  const [activeSport, setActiveSport] = useState(() => {
+    // Persist active sport selection in localStorage
+    return localStorage.getItem('settings-active-sport') || "MLB";
+  });
   const [telegramStatus, setTelegramStatus] = useState<boolean | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["Game Situations", "AI Predictions"]));
   const [telegramBotToken, setTelegramBotToken] = useState("");
@@ -355,7 +358,10 @@ export default function Settings() {
           {SPORTS.map((sport) => (
             <button
               key={sport}
-              onClick={() => setActiveSport(sport)}
+              onClick={() => {
+                setActiveSport(sport);
+                localStorage.setItem('settings-active-sport', sport);
+              }}
               data-testid={`sport-tab-${sport.toLowerCase()}`}
               className={`px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors ${
                 activeSport === sport
