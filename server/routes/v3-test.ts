@@ -4,9 +4,8 @@
 
 import { Router } from 'express';
 import { MLBEngineV3 } from '../services/engines/mlb-engine-v3';
-import { calculateMLBSeverity } from '../services/engines/mlb-alert-model';
-import { shouldNotifyUser } from '../services/engines/user-settings';
-import { getBetbookData, shouldShowBetbook } from '../services/engines/betbook-engine';
+// Legacy imports removed - V3 system uses integrated calculations
+// Removed: mlb-alert-model, user-settings, betbook-engine
 import { storage } from '../storage';
 
 const router = Router();

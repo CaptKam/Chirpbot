@@ -13,9 +13,8 @@ import { mlbApi } from '../mlb-api';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { getWeatherData } from '../weather';
-import { calculateMLBSeverity, mlbL1WithProb, mlbL2WithProb, mlbL3WithProb, type MLBGameState as MLBScoringGameState } from './mlb-alert-model';
-import { shouldNotifyUser, type UserSettings } from './user-settings';
-import { getBetbookData, shouldShowBetbook, type AlertContext } from './betbook-engine';
+// V3 system uses integrated 4-tier alert calculations instead of legacy models
+// Legacy imports removed: mlb-alert-model, user-settings, betbook-engine
 import { AlertDeduper } from '../alert-deduper';
 
 // === V3 INTERFACES ===
