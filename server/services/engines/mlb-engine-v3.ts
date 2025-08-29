@@ -16,6 +16,7 @@ import { getWeatherData } from '../weather';
 import { calculateMLBSeverity, mlbL1WithProb, mlbL2WithProb, mlbL3WithProb, type MLBGameState as MLBScoringGameState } from './mlb-alert-model';
 import { shouldNotifyUser, type UserSettings } from './user-settings';
 import { getBetbookData, shouldShowBetbook, type AlertContext } from './betbook-engine';
+import { AlertDeduper } from '../alert-deduper';
 
 // === V3 INTERFACES ===
 
@@ -84,15 +85,23 @@ export interface DeduplicationContext {
 }
 
 export class MLBEngineV3 {
-  private deduplicationCache = new Map<string, { timestamp: number; tier: number }>();
-  private readonly COOLDOWN_MS = {
-    1: 15000,   // L1: 15 seconds (was 60s) 
-    2: 30000,   // L2: 30 seconds (was 90s)
-    3: 45000,   // L3: 45 seconds (was 120s)
-    4: 60000    // L4: 60 seconds (was 180s)
-  };
+  // Enhanced Deduplication System (from proven Python platform)
+  private alertDeduper: AlertDeduper;
+  private cleanupCounter = 0;
   
   onAlert?: (alert: any) => void;
+
+  constructor() {
+    // Initialize enhanced deduplication with token bucket rate limiting
+    this.alertDeduper = new AlertDeduper(
+      undefined, // Use default configuration from working Python system
+      15, // Default dedup window
+      true, // Enable token buckets for per-game rate limiting
+      8, // 8 tokens per game (burst protection)
+      15 // 15 second refill rate
+    );
+    console.log('🔧 MLBEngineV3 initialized with enhanced deduplication system');
+  }
 
   /**
    * V3 Law #1: Game Status Gating
@@ -127,6 +136,9 @@ export class MLBEngineV3 {
           await this.evaluateFourTierSystem(gameState);
         }
       }
+      
+      // Enhanced deduplication cleanup
+      this.performPeriodicCleanup();
     } catch (error) {
       console.error('Error in V3 live game processing:', error);
     }
@@ -367,14 +379,10 @@ export class MLBEngineV3 {
    */
   private async processAlertWithUserSettings(alertTier: AlertTierResult, gameState: MLBGameStateV3): Promise<void> {
     try {
-      // V3 Law #4: Advanced Deduplication - CHECK AND RECORD IMMEDIATELY
-      if (!this.shouldEmitAlert(alertTier)) {
-        console.log(`🚫 DEDUP: Alert suppressed - ${alertTier.deduplicationKey}`);
+      // V3 Law #4: Enhanced AlertDeduper System
+      if (!this.shouldEmitAlert(alertTier, gameState)) {
         return;
       }
-
-      // Record alert for deduplication IMMEDIATELY to prevent duplicates
-      this.recordAlertEmission(alertTier);
 
       // FIXED: Create ONE alert record, not one per user
       const weatherData = await this.getWeatherForGame(gameState);
@@ -477,46 +485,46 @@ export class MLBEngineV3 {
     return `${gameState.gamePk}:${alertType}:${gameState.inning}:${gameState.inningState}:${basesHash}`;
   }
 
-  private shouldEmitAlert(alertTier: AlertTierResult): boolean {
-    const now = Date.now();
-    const cached = this.deduplicationCache.get(alertTier.deduplicationKey);
+  private shouldEmitAlert(alertTier: AlertTierResult, gameState: MLBGameStateV3): boolean {
+    // Convert V3 alert to AlertDeduper format
+    const alertData = {
+      alert_type: `L${alertTier.tier}`,
+      game_id: gameState.gameId,
+      gamePk: gameState.gamePk,
+      inning: gameState.inning,
+      inning_top: gameState.inningState === 'top',
+      outs: gameState.outs,
+      runners: [
+        ...(gameState.runners.first ? ['1B'] : []),
+        ...(gameState.runners.second ? ['2B'] : []),
+        ...(gameState.runners.third ? ['3B'] : []),
+      ],
+      batter_id: gameState.currentBatter?.id,
+      pitcher_id: gameState.currentPitcher?.id,
+      at_bat_index: 1, // Simplified, could be enhanced later
+      play_index: 1,
+      priority: alertTier.priority,
+      tier: alertTier.tier
+    };
+
+    const isAllowed = this.alertDeduper.shouldAllow(alertData);
     
-    // Smart deduplication: reasonable cooldowns
-    if (cached) {
-      const cooldown = this.COOLDOWN_MS[alertTier.tier] || 30000;
-      const timeSinceLastAlert = now - cached.timestamp;
-      
-      if (timeSinceLastAlert < cooldown) {
-        console.log(`🔄 DEDUP: Waiting ${Math.round((cooldown - timeSinceLastAlert)/1000)}s for ${alertTier.tier} alert`);
-        return false;
-      }
-      
-      // Allow higher tier to supersede lower tier
-      if (alertTier.tier <= cached.tier && timeSinceLastAlert < 60000) {
-        console.log(`🔄 DEDUP: Lower/same tier suppressed for 60s`);
-        return false;
-      }
+    if (!isAllowed) {
+      console.log(`🚫 Enhanced DEDUP: Alert suppressed - ${alertTier.deduplicationKey}`);
+    } else {
+      console.log(`✅ Enhanced DEDUP: Allowing Tier ${alertTier.tier} alert`);
     }
     
-    console.log(`✅ DEDUP: Allowing Tier ${alertTier.tier} alert`);
-    return true;
+    return isAllowed;
   }
 
-  private recordAlertEmission(alertTier: AlertTierResult): void {
-    this.deduplicationCache.set(alertTier.deduplicationKey, {
-      timestamp: Date.now(),
-      tier: alertTier.tier
-    });
-    
-    // Cleanup old entries to prevent memory leaks
-    if (this.deduplicationCache.size > 10000) {
-      const now = Date.now();
-      const entries = Array.from(this.deduplicationCache.entries());
-      for (const [key, value] of entries) {
-        if (now - value.timestamp > 3600000) { // 1 hour
-          this.deduplicationCache.delete(key);
-        }
-      }
+  private performPeriodicCleanup(): void {
+    // Enhanced AlertDeduper handles its own memory management
+    // but we can trigger manual cleanup if needed
+    this.cleanupCounter++;
+    if (this.cleanupCounter % 100 === 0) {
+      this.alertDeduper.cleanup();
+      console.log('🧹 Enhanced deduplication cleanup performed');
     }
   }
 
