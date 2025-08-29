@@ -74,7 +74,7 @@ export class NCAAEngine {
     try {
       if (!ncaafAlertModel) {
         // Use dynamic import for CommonJS module
-        ncaafAlertModel = require('./NCAAFAlertModel.cjs');
+        ncaafAlertModel = await import('./NCAAFAlertModel.cjs');
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
@@ -542,10 +542,12 @@ export class NCAAEngine {
       }
 
       // Stage 2: OpenAI Analysis - Generate contextual description
-      const aiDescription = await this.openAiEngine.generateAlert({
+      const aiDescription = await this.openAiEngine.generateSportsAlert({
         sport: 'NCAAF',
         situation: alertResult.reasons.join(', '),
-        context: `${gameState.awayTeam} @ ${gameState.homeTeam}, Q${gameState.quarter}, ${gameState.score.away}-${gameState.score.home}`,
+        gameContext: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
+        quarter: gameState.quarter.toString(),
+        score: `${gameState.score.away}-${gameState.score.home}`,
         priority: alertResult.priority
       });
 

@@ -92,6 +92,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint for NCAAF engine import debugging
+  app.get('/api/test-ncaaf-engine', async (req, res) => {
+    try {
+      console.log('🧪 Testing NCAAF engine import...');
+      const { NCAAEngine } = await import('./services/engines/ncaaf-engine');
+      console.log('✅ NCAAF engine import successful');
+      console.log('🔍 NCAAEngine type:', typeof NCAAEngine);
+      
+      const engine = new NCAAEngine();
+      console.log('✅ NCAAF engine instance created successfully');
+      
+      res.json({ 
+        success: true, 
+        type: typeof NCAAEngine,
+        instance: !!engine,
+        message: 'NCAAF engine import and instantiation successful'
+      });
+    } catch (error) {
+      console.error('❌ NCAAF engine test failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  });
+
+  // Test endpoint to manually trigger NCAAF engine start for Army game
+  app.post('/api/test-start-ncaaf-engine', async (req, res) => {
+    try {
+      console.log('🧪 Testing NCAAF engine start for Army game...');
+      const { AlertEngineManager } = await import('./services/engines');
+      await AlertEngineManager.handleGameStateChange('cfb-401762432', 'NCAAF', 'live');
+      console.log('✅ NCAAF engine start triggered');
+      
+      res.json({ 
+        success: true,
+        message: 'NCAAF engine start triggered for Army game'
+      });
+    } catch (error) {
+      console.error('❌ NCAAF engine start test failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  });
+
   // AI Health Monitor metrics endpoint (protected internal endpoint)
   app.get("/api/ai/health/metrics", (req, res) => {
     try {

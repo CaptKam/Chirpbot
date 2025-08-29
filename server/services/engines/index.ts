@@ -50,6 +50,20 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
         if (!hasMonitoredGames) continue;
 
+        // Temporary fix for NCAAF: Skip getTodaysGamesForSport and directly process monitored games
+        if (sport === 'NCAAF') {
+          console.log('🏈 NCAAF: Using direct monitoring bypass...');
+          const monitoredGames = await storage.getAllMonitoredGames();
+          const ncaafGames = monitoredGames.filter(game => game.sport === 'NCAAF');
+          
+          for (const game of ncaafGames) {
+            // For monitored NCAAF games, assume they are live and start engines
+            console.log(`🏈 NCAAF: Processing monitored game ${game.gameId}`);
+            await this.handleGameStateChange(game.gameId, sport, 'live');
+          }
+          continue;
+        }
+
         const games = await this.getTodaysGamesForSport(sport);
         
         for (const game of games) {
@@ -183,8 +197,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           return await cflEngine.getTodaysGames(today);
         case 'NCAAF':
           const { NCAAEngine } = await import('./ncaaf-engine');
-          const ncaaEngine = new NCAAEngine();
-          return await ncaaEngine.getTodaysGames(today);
+          const ncaafEngine = new NCAAEngine();
+          return await ncaafEngine.getTodaysGames(today);
         default:
           return [];
       }
