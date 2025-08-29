@@ -463,19 +463,39 @@ export default function Alerts() {
                                   </div>
                                 ));
                               }
-                              // Generate reasons based on alert type and game situation
-                              const reasons = [];
-                              if (alert.type.includes('Close Game')) reasons.push('Close game situation detected');
-                              if (alert.type.includes('RISP')) reasons.push('Runners in scoring position');
-                              if (alert.type.includes('Power Hitter')) reasons.push('Power hitter at the plate');
-                              if (alert.type.includes('Late Inning')) reasons.push('Late-inning high-leverage situation');
-                              if (alert.type.includes('Clutch')) reasons.push('Clutch time pressure situation');
-                              if (alert.type.includes('Power Play')) reasons.push('Man advantage opportunity');
-                              if (alert.type.includes('Empty Net')) reasons.push('Goalie pulled for extra attacker');
-                              if (alert.type.includes('Overtime')) reasons.push('Overtime period active');
-                              if (alert.gameInfo?.inning && typeof alert.gameInfo.inning === 'number' && alert.gameInfo.inning >= 7) reasons.push('Late-game situation');
-                              if (alert.gameInfo?.inning && typeof alert.gameInfo.inning === 'string' && parseInt(alert.gameInfo.inning) >= 7) reasons.push('Late-game situation');
-                              if (reasons.length === 0) reasons.push('High-priority game situation');
+                              // Generate unique reasons based on alert type and game situation
+                              const reasonSet = new Set();
+                              
+                              // Alert type based reasons
+                              if (alert.type.includes('Close Game')) reasonSet.add('Close game situation detected');
+                              if (alert.type.includes('RISP')) reasonSet.add('Runners in scoring position');
+                              if (alert.type.includes('Power Hitter')) reasonSet.add('Power hitter at the plate');
+                              if (alert.type.includes('Clutch')) reasonSet.add('Clutch time pressure situation');
+                              if (alert.type.includes('Power Play')) reasonSet.add('Man advantage opportunity');
+                              if (alert.type.includes('Empty Net')) reasonSet.add('Goalie pulled for extra attacker');
+                              if (alert.type.includes('Overtime')) reasonSet.add('Overtime period active');
+                              
+                              // Late inning situations (avoid duplicates)
+                              const inningNum = alert.gameInfo?.inning ? 
+                                (typeof alert.gameInfo.inning === 'number' ? alert.gameInfo.inning : parseInt(alert.gameInfo.inning)) : 0;
+                              
+                              if (alert.type.includes('Late Inning') || inningNum >= 7) {
+                                reasonSet.add('Late-inning high-leverage situation');
+                              }
+                              
+                              // Game situation analysis
+                              if (alert.gameInfo?.runners?.first || alert.gameInfo?.runners?.second || alert.gameInfo?.runners?.third) {
+                                reasonSet.add('Baserunners create scoring opportunity');
+                              }
+                              
+                              // Priority-based fallback
+                              if (reasonSet.size === 0) {
+                                if (alert.priority >= 90) reasonSet.add('Critical game moment detected');
+                                else if (alert.priority >= 85) reasonSet.add('High-leverage situation');
+                                else reasonSet.add('Scoring opportunity identified');
+                              }
+                              
+                              const reasons = Array.from(reasonSet);
                               
                               return reasons.slice(0, 3).map((reason: string, idx: number) => (
                                 <div key={idx} className="text-sm text-slate-200 flex items-start space-x-3">
