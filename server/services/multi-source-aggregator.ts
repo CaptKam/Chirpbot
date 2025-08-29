@@ -375,40 +375,31 @@ export class MultiSourceAggregator {
   async getMLBGames(date?: string): Promise<Game[]> {
     console.log(`🔍 Multi-source aggregator fetching MLB games for ${date || 'today'}`);
 
-    const results = await Promise.allSettled([
-      this.getMLBFromAPI(date),
-      this.getMLBFromESPN(date)
-    ]);
+    // Use ONLY official MLB.com API - ESPN API has stale/incorrect data
+    try {
+      const mlbGames = await this.getMLBFromAPI(date);
+      console.log(`✅ MLB primary source: ${mlbGames.length} games`);
+      
+      // Log all games for debugging
+      mlbGames.forEach(game => {
+        console.log(`   Game: ${game.awayTeam?.name || game.awayTeam} @ ${game.homeTeam?.name || game.homeTeam} - Status: ${game.status}`);
+      });
 
-    let allGames: Game[] = [];
-
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const source = i === 0 ? 'MLB API' : 'ESPN';
-
-      if (result.status === 'fulfilled') {
-        console.log(`✅ ${source}: Found ${result.value.length} games`);
-        if (result.value.length > 0) {
-          // Log first game from each source for debugging
-          const firstGame = result.value[0];
-          console.log(`   Sample game: ${firstGame.awayTeam?.name || firstGame.awayTeam} @ ${firstGame.homeTeam?.name || firstGame.homeTeam} (${firstGame.status})`);
-        }
-        allGames = allGames.concat(result.value);
-      } else {
-        console.log(`❌ ${source} failed:`, result.reason?.message || 'Unknown error');
+      return mlbGames;
+    } catch (error) {
+      console.error(`❌ MLB primary source failed:`, error);
+      
+      // Only fallback to ESPN if MLB API completely fails
+      console.log(`🔄 Falling back to ESPN API...`);
+      try {
+        const espnGames = await this.getMLBFromESPN(date);
+        console.log(`⚠️ ESPN fallback: ${espnGames.length} games (may have stale data)`);
+        return espnGames;
+      } catch (espnError) {
+        console.error(`❌ ESPN fallback also failed:`, espnError);
+        return [];
       }
     }
-
-    // Deduplicate games based on team matchups
-    const uniqueGames = this.deduplicateGames(allGames);
-    console.log(`🎯 Multi-source aggregator: ${uniqueGames.length} unique games from ${results.length} sources`);
-
-    // Log all unique games for debugging
-    uniqueGames.forEach(game => {
-      console.log(`   Game: ${game.awayTeam?.name || game.awayTeam} @ ${game.homeTeam?.name || game.homeTeam} - Status: ${game.status}`);
-    });
-
-    return uniqueGames;
   }
 
   async getNFLGames(date?: string): Promise<Game[]> {
