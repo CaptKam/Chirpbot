@@ -159,7 +159,9 @@ export default function Settings() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      // Invalidate specific sport settings instead of all settings
+      queryClient.invalidateQueries({ queryKey: ["/api/settings", { sport: activeSport }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/enabled-alert-keys", activeSport] });
       toast({
         title: "Settings Updated",
         description: "Your settings have been saved successfully.",
