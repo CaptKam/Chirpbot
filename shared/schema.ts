@@ -137,11 +137,7 @@ export const settings = pgTable("settings", {
     avgHitter: boolean;         // FIXED: Was missing
     rbiMachine: boolean;        // FIXED: Was missing
     
-    // RE24 System
-    useRE24System: boolean;
-    re24Level1: boolean;
-    re24Level2: boolean;
-    re24Level3: boolean;
+    // RE24 System removed
     
     // NFL Alert Types  
     redZone: boolean;

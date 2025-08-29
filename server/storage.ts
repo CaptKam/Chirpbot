@@ -128,11 +128,7 @@ export class MemStorage implements IStorage {
       { alertKey: "basesLoaded", title: "Bases Loaded", description: "Maximum scoring opportunity - all bases occupied", category: "Game Situations" },
       { alertKey: "extraInnings", title: "Extra Innings", description: "Game extends beyond 9th inning", category: "Game Situations" },
 
-      // RE24+AI Hybrid System
-      { alertKey: "useRE24System", title: "RE24+AI Hybrid System", description: "Advanced Run Expectancy analytics enhanced with AI predictions", category: "AI Predictions" },
-      { alertKey: "re24Level1", title: "RE24 Level 1", description: "Basic situational analysis with AI enhancement", category: "AI Predictions" },
-      { alertKey: "re24Level2", title: "RE24 Level 2", description: "Intermediate player analytics with contextual AI", category: "AI Predictions" },
-      { alertKey: "re24Level3", title: "RE24 Level 3", description: "Elite sabermetrics with advanced AI predictions", category: "AI Predictions" },
+      // RE24 System removed
 
       // Game Flow
       { alertKey: "inningChange", title: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },
@@ -237,11 +233,7 @@ export class MemStorage implements IStorage {
           strikeouts: false,
           powerHitterOnDeck: false,
 
-          // RE24 System
-          useRE24System: sport === "MLB",
-          re24Level1: sport === "MLB",
-          re24Level2: sport === "MLB",
-          re24Level3: sport === "MLB",
+          // RE24 System removed
 
           // NFL Alert Types  
           redZone: sport === "NFL",
@@ -780,11 +772,7 @@ export class DatabaseStorage implements IStorage {
         { alertKey: "strikeouts", title: "Strikeout Alerts", description: "Pitcher strikeout notifications", category: "Player Performance" },
         { alertKey: "powerHitterOnDeck", title: "Power Hitter On Deck", description: "Tier A power bats on deck - Pre-alert for next at-bat", category: "Player Performance" },
 
-        // RE24+AI Hybrid System
-        { alertKey: "useRE24System", title: "RE24+AI Hybrid System", description: "Advanced Run Expectancy analytics enhanced with AI predictions", category: "AI Predictions" },
-        { alertKey: "re24Level1", title: "RE24 Level 1", description: "Basic situational analysis with AI enhancement", category: "AI Predictions" },
-        { alertKey: "re24Level2", title: "RE24 Level 2", description: "Intermediate player analytics with contextual AI", category: "AI Predictions" },
-        { alertKey: "re24Level3", title: "RE24 Level 3", description: "Elite sabermetrics with advanced AI predictions", category: "AI Predictions" },
+        // RE24 System removed
 
         // Game Flow
         { alertKey: "inningChange", title: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },

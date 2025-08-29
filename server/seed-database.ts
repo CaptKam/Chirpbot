@@ -28,10 +28,7 @@ export async function seedDatabase() {
     { sport: 'MLB', alertKey: 'eliteClutch', displayName: 'Elite Clutch Hitter', description: 'High OPS batters in pressure situations', category: 'Player Performance', enabled: true },
     { sport: 'MLB', alertKey: 'avgHitter', displayName: '.300+ Hitter Alert', description: 'Premium contact hitters at bat', category: 'Player Performance', enabled: true },
     { sport: 'MLB', alertKey: 'rbiMachine', displayName: 'RBI Machine Alert', description: '80+ RBI producers with scoring chances', category: 'Player Performance', enabled: true },
-    { sport: 'MLB', alertKey: 'useRE24System', displayName: 'RE24+AI Hybrid System', description: 'Advanced Run Expectancy analytics enhanced with AI predictions', category: 'AI Predictions', enabled: false },
-    { sport: 'MLB', alertKey: 're24Level1', displayName: 'RE24 Level 1', description: 'Basic situational analysis with AI enhancement', category: 'AI Predictions', enabled: false },
-    { sport: 'MLB', alertKey: 're24Level2', displayName: 'RE24 Level 2', description: 'Intermediate player analytics with contextual AI', category: 'AI Predictions', enabled: false },
-    { sport: 'MLB', alertKey: 're24Level3', displayName: 'RE24 Level 3', description: 'Elite sabermetrics with advanced AI predictions', category: 'AI Predictions', enabled: false },
+    // RE24 System removed
     
     // NFL Alert Controls
     { sport: 'NFL', alertKey: 'redZone', displayName: 'Red Zone Alert', description: 'Team driving inside the 20-yard line', category: 'Scoring Opportunities', enabled: true },
@@ -108,10 +105,7 @@ export async function seedDatabase() {
       eliteClutch: true,
       avgHitter: false,
       rbiMachine: true,
-      useRE24System: false,
-      re24Level1: false,
-      re24Level2: false,
-      re24Level3: false,
+      // RE24 System removed
       // NFL
       redZone: true,
       nflCloseGame: true,

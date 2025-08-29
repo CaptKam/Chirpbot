@@ -1089,7 +1089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             reasons: [
               "Bases loaded, 2 outs - maximum leverage situation",
               "9th inning pressure with elite hitter at bat",
-              "RE24 model: 2.25 expected runs in this situation",
+              "Statistical model: 2.25 expected runs in this situation",
               "Historical data: 78% scoring probability with current matchup",
               "Environmental factors favor offensive breakthrough"
             ]
