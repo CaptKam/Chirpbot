@@ -128,14 +128,14 @@ export class MLBApiService {
       // Fetch both today's and yesterday's games to catch any ongoing games
       const [todayData, yesterdayData] = await Promise.all([
         fetchJson<MLBScheduleResponse>(
-          `${this.BASE_URL}/schedule?sportId=1&date=${today}&hydrate=linescore,team`,
+          `${this.BASE_URL}/schedule?sportId=1&date=${today}&hydrate=linescore,team,person`,
           {
             headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
             timeoutMs: 8000
           }
         ),
         fetchJson<MLBScheduleResponse>(
-          `${this.BASE_URL}/schedule?sportId=1&date=${yesterday}&hydrate=linescore,team`,
+          `${this.BASE_URL}/schedule?sportId=1&date=${yesterday}&hydrate=linescore,team,person`,
           {
             headers: { 'User-Agent': 'ChirpBot/2.0', 'Accept': 'application/json' },
             timeoutMs: 8000
@@ -314,7 +314,8 @@ export class MLBApiService {
     
     // Extract base runner and outs data from linescore
     const linescore = mlbGame.linescore;
-    const offense = linescore?.offense;
+    // Use type assertion to access extended linescore data
+    const linescoreExtended = linescore as any;
     
     return {
       id: `mlb-${mlbGame.gamePk}`,
@@ -339,11 +340,11 @@ export class MLBApiService {
       inning: linescore?.currentInning || 1,
       inningState: linescore?.inningState || 'Top',
       // CRITICAL: Add base runner and outs data
-      outs: linescore?.outs || 0,
+      outs: linescoreExtended?.outs || 0,
       runners: {
-        first: Boolean(offense?.first),
-        second: Boolean(offense?.second), 
-        third: Boolean(offense?.third)
+        first: Boolean(linescoreExtended?.offense?.first),
+        second: Boolean(linescoreExtended?.offense?.second), 
+        third: Boolean(linescoreExtended?.offense?.third)
       },
       // Additional MLB-specific data
       gameState: mlbGame.status.abstractGameState,
