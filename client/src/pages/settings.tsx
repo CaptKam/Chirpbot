@@ -94,12 +94,13 @@ const ALERT_TYPE_CONFIG = {
     { key: "fieldGoalRange", label: "Field Goal Range", description: "Team within field goal range", category: "Scoring Opportunities" },
   ],
   NCAAF: [
-    { key: "redZone", label: "Red Zone Situations", description: "College football teams inside the 20-yard line", category: "Scoring Opportunities" },
-    { key: "closeGame", label: "Close Game", description: "Tight college football games in final quarter", category: "Game Situations" },
-    { key: "overtime", label: "Overtime", description: "College football overtime periods", category: "Special Events" },
-    { key: "finalMinutes", label: "Final Minutes", description: "Crucial final minutes of college football games", category: "Game Situations" },
-    { key: "touchdownAlert", label: "Touchdown Alerts", description: "College football touchdown notifications", category: "Scoring Events" },
-    { key: "upsetAlert", label: "Upset Alert", description: "Underdog teams leading favorites in college football", category: "Special Events" },
+    { key: "ncaafRedZone", label: "Red Zone Situations", description: "High-probability scoring opportunities inside the 20-yard line", category: "Scoring Opportunities" },
+    { key: "ncaafFourthDown", label: "4th Down Conversions", description: "Critical fourth down attempts and decisions", category: "Critical Plays" },
+    { key: "ncaafTwoMinuteWarning", label: "Two-Minute Drill", description: "Game-deciding final drives under 2 minutes", category: "Game Situations" },
+    { key: "ncaafCloseGame", label: "Close Game", description: "One-score games in the 4th quarter or overtime", category: "Game Situations" },
+    { key: "ncaafOvertime", label: "Overtime", description: "College football overtime periods and scenarios", category: "Special Events" },
+    { key: "ncaafGoalLineStand", label: "Goal Line Stand", description: "Defensive stands within 5 yards of the goal line", category: "Defensive Highlights" },
+    { key: "ncaafBigPlayPotential", label: "Big Play Potential", description: "3rd & long situations requiring explosive plays", category: "Critical Plays" },
   ],
 };
 

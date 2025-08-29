@@ -3,21 +3,37 @@ import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { fetchJson } from '../http';
 
+// Import OpenAI and Betbook engines for alert processing
+import { OpenAiEngine } from './OpenAiEngine';
+import { getBetbookData } from './betbook-engine';
+
+// Import NCAAF Alert Model (CommonJS module)
+let ncaafAlertModel: any = null;
+
 interface NCAAGameState {
   gameId: string;
   period: number;
-  timeRemaining: string;
+  quarter: number | string;
+  timeRemaining: number; // seconds remaining
   homeScore: number;
   awayScore: number;
   homeTeam: string;
   awayTeam: string;
   sport: string; // 'football'
   conference: string;
-  redZone: boolean;
-  overtime: boolean;
-  finalMinutes: boolean;
   down?: number;
-  yardsToGo?: number;
+  distance?: number;
+  yardsToGoal?: number;
+  offense?: string;
+  defense?: string;
+  score: { home: number; away: number };
+  weather?: {
+    windMph?: number;
+    precipitation?: boolean;
+    dome?: boolean;
+  };
+  momentumFactor?: number;
+  topAdvantage?: number;
 }
 
 interface SimpleNCAAAlert {
@@ -35,8 +51,26 @@ export class NCAAEngine {
   
   onAlert?: (alert: any) => void;
 
+  // OpenAI engine instance for alert description generation
+  private readonly openAiEngine: OpenAiEngine;
+
   constructor() {
     console.log('🏈 NCAAF Engine initialized with ESPN API integration (College Football)');
+    // Initialize OpenAI engine for generating AI alert descriptions
+    this.openAiEngine = new OpenAiEngine();
+    // Load the NCAAF Alert Model
+    this.loadNCAAFAlertModel();
+  }
+
+  private async loadNCAAFAlertModel() {
+    try {
+      if (!ncaafAlertModel) {
+        // Use dynamic import for CommonJS module
+        ncaafAlertModel = await import('./NCAAFAlertModel.cjs');
+      }
+    } catch (error) {
+      console.error('Failed to load NCAAF Alert Model:', error);
+    }
   }
 
   // === ESPN API INTEGRATION ===
@@ -466,5 +500,141 @@ export class NCAAEngine {
 
   async stop(): Promise<void> {
     console.log('🛑 NCAAF Engine stopped');
+  }
+
+  // === NCAAF ALERT GENERATION ===
+
+  async checkGameSituations(gameState: NCAAGameState): Promise<void> {
+    try {
+      // Ensure NCAAF Alert Model is loaded
+      await this.loadNCAAFAlertModel();
+      if (!ncaafAlertModel) {
+        console.error('NCAAF Alert Model not available, skipping situation check');
+        return;
+      }
+
+      // Stage 1: L1 Trigger - Use the NCAAF alert model to determine if an alert should fire
+      const alertResult = ncaafAlertModel.checkNCAAFAlerts(gameState);
+      
+      if (!alertResult.shouldAlert) {
+        return; // No alert conditions met
+      }
+
+      // Get user settings to check if this alert type is enabled
+      const userSettings = await this.getUserNCAAFSettings();
+      if (!this.isAlertTypeEnabled(alertResult.alertType, userSettings)) {
+        console.log(`🔕 NCAAF Alert disabled in user settings: ${alertResult.alertType}`);
+        return;
+      }
+
+      // Check deduplication
+      if (this.isDuplicate(alertResult, gameState)) {
+        return;
+      }
+
+      // Stage 2: OpenAI Analysis - Generate contextual description
+      const aiDescription = await this.openAiEngine.generateSportsAlert({
+        sport: 'NCAAF',
+        situation: alertResult.reasons.join(', '),
+        gameContext: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
+        quarter: gameState.quarter.toString(),
+        score: `${gameState.score.away}-${gameState.score.home}`,
+        priority: alertResult.priority
+      });
+
+      // Stage 3: Betbook Analysis - Generate betting insights
+      const betbookData = await getBetbookData({
+        sport: 'NCAAF',
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        situation: alertResult.alertType,
+        probability: alertResult.probability
+      });
+
+      // Stage 4: Delivery - Create and store the alert
+      const finalAlert = {
+        id: randomUUID(),
+        type: alertResult.alertType,
+        priority: alertResult.priority,
+        title: aiDescription?.title || `NCAAF ${alertResult.alertType}`,
+        message: aiDescription?.description || alertResult.reasons.join(', '),
+        gameData: {
+          sport: 'NCAAF',
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          score: gameState.score,
+          quarter: gameState.quarter,
+          situation: alertResult.alertType
+        },
+        probability: alertResult.probability,
+        confidence: aiDescription?.confidence || 0.75,
+        betbookData: betbookData || undefined,
+        timestamp: new Date(),
+        sentToTelegram: false,
+        seen: false
+      };
+
+      // Store alert in database
+      await storage.createAlert(finalAlert);
+      
+      // Send to Telegram if enabled
+      await this.sendTelegramIfEnabled(finalAlert);
+      
+      // Call onAlert callback if set
+      if (this.onAlert) {
+        this.onAlert(finalAlert);
+      }
+
+      console.log(`🏈 NCAAF Alert Generated: ${alertResult.alertType} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+
+    } catch (error) {
+      console.error('Error in NCAAF checkGameSituations:', error);
+    }
+  }
+
+  private async getUserNCAAFSettings(): Promise<any> {
+    try {
+      const settings = await storage.getSettingsBySport('NCAAF');
+      return settings?.[0]?.alertTypes || {};
+    } catch (error) {
+      console.error('Error fetching NCAAF user settings:', error);
+      return {};
+    }
+  }
+
+  private isAlertTypeEnabled(alertType: string, userSettings: any): boolean {
+    // Map alert types to user setting keys
+    const settingKey = alertType; // Direct mapping since we use the same keys
+    return userSettings[settingKey] === true;
+  }
+
+  private isDuplicate(alertResult: any, gameState: NCAAGameState): boolean {
+    const deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${gameState.down || 0}`;
+    const now = Date.now();
+    const existing = this.deduplicationCache.get(deduplicationKey);
+    
+    if (existing && (now - existing.timestamp) < 60000) { // 1 minute cooldown
+      return true;
+    }
+    
+    this.deduplicationCache.set(deduplicationKey, {
+      timestamp: now,
+      priority: alertResult.priority
+    });
+    
+    return false;
+  }
+
+  private async sendTelegramIfEnabled(alert: any): Promise<void> {
+    try {
+      // Check if Telegram is enabled globally
+      const settings = await this.getUserNCAAFSettings();
+      if (settings?.telegramEnabled) {
+        await sendTelegramAlert(alert);
+      }
+    } catch (error) {
+      console.error('Error sending Telegram alert:', error);
+    }
   }
 }

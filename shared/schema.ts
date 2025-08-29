@@ -154,6 +154,15 @@ export const settings = pgTable("settings", {
     powerPlay: boolean;
     nhlCloseGame: boolean;
     emptyNet: boolean;
+    
+    // NCAAF (College Football) Alert Types
+    ncaafRedZone: boolean;
+    ncaafFourthDown: boolean;
+    ncaafTwoMinuteWarning: boolean;
+    ncaafCloseGame: boolean;
+    ncaafOvertime: boolean;
+    ncaafGoalLineStand: boolean;
+    ncaafBigPlayPotential: boolean;
   }>().notNull(),
   telegramEnabled: boolean("telegram_enabled").notNull().default(false),
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),
