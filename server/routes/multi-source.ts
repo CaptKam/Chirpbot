@@ -2,7 +2,7 @@ import type { Express } from 'express';
 // Removed multi-source-aggregator import - using direct API calls
 import { alertDeduper } from '../services/alert-deduper';
 import { mathEngines } from '../services/math-engines';
-import { getEnhancedWeather } from '../services/enhanced-weather';
+// Removed getEnhancedWeather - weather service deleted
 import { adaptivePollingManager } from '../services/adaptive-polling';
 
 export function registerMultiSourceRoutes(app: Express) {
@@ -219,7 +219,7 @@ export function registerMultiSourceRoutes(app: Express) {
       
       for (const stadium of stadiums.slice(0, 5)) {
         try {
-          const weather = await getEnhancedWeather(stadium.name);
+          const weather = null; // Weather service removed
           if (weather) {
             // TODO: Implement getWeatherEffectsSummary equivalent for new weather system
             const summary = `${weather.windMph}mph wind ${weather.tag || 'neutral conditions'}`;

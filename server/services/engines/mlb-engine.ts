@@ -12,7 +12,7 @@ import { storage } from '../../storage';
 // V3 system uses direct API calls instead of mlb-api wrapper
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
-import { getWeatherData } from '../weather';
+// Removed getWeatherData import - weather service deleted
 // V3 system uses integrated 4-tier alert calculations instead of legacy models
 // Legacy imports removed: mlb-api, enhanced-mlb-feed (now integrated), mlb-alert-model, user-settings, betbook-engine
 import { AlertDeduper } from '../alert-deduper';
@@ -840,7 +840,7 @@ Return ONLY the insight text:`;
   private async getWeatherForGame(gameState: MLBGameStateV3): Promise<any> {
     try {
       const cityName = this.getCityForTeam(gameState.homeTeam);
-      return await getWeatherData(cityName);
+      return null; // Weather service removed
     } catch (error) {
       console.error('Error getting weather data:', error);
       return null;

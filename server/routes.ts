@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
-import { getWeatherData } from "./services/weather";
+// Removed getWeatherData import - weather service deleted
 // Removed mock sportsService - using real data only
 // Removed liveSportsService - using direct API calls
 import { adminRouter } from "./routes/admin";
@@ -289,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         
         const cityName = teamCityMap[validatedData.gameInfo.homeTeam] || validatedData.gameInfo.homeTeam;
-        weatherData = await getWeatherData(cityName);
+        weatherData = null; // Weather service removed
       }
 
       const settings = await storage.getSettingsBySport(validatedData.sport);
@@ -880,7 +880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test weather data specifically
   app.get("/api/test/weather", async (req, res) => {
     try {
-      const { getWeatherData } = await import("./services/weather");
+      // Weather service removed - using mock data
       
       console.log('🌤️ === WEATHER API DEBUG TEST STARTING ===');
       
@@ -901,7 +901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const city of testCities) {
         console.log(`\n🌤️ Testing weather for: ${city}`);
         try {
-          const weatherData = await getWeatherData(city);
+          const weatherData = null; // Weather service removed
           console.log(`✅ Success for ${city}:`, weatherData);
           weatherResults.push({
             city,
@@ -928,7 +928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const team of problemTeams) {
         console.log(`🏟️ Testing: ${team}`);
         try {
-          const weatherData = await getWeatherData(team);
+          const weatherData = null; // Weather service removed
           console.log(`✅ Team success for ${team}:`, weatherData);
           teamResults.push({
             team,
@@ -1025,7 +1025,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Test Weather API
       try {
-        const weatherData = await import("./services/weather").then(m => m.getWeatherData("New York"));
+        const weatherData = null; // Weather service removed
         feedStatus.feeds.weather = { 
           status: weatherData ? 'success' : 'failed', 
           data: weatherData, 
@@ -1167,7 +1167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           
           const cityName = teamCityMap[alertData.gameInfo.homeTeam] || alertData.gameInfo.homeTeam;
-          const weatherData = await getWeatherData(cityName);
+          const weatherData = null; // Weather service removed
           
           const alert = await storage.createAlert({
             ...alertData,
@@ -1196,47 +1196,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Debug route for enhanced weather testing
+  // Debug route for enhanced weather testing - service removed
   app.get('/api/debug/weather/:venue', async (req, res) => {
     try {
-      const { getEnhancedWeather } = await import('./services/enhanced-weather');
-      const wx = await getEnhancedWeather(req.params.venue);
-      res.json(wx);
+      res.json({ message: 'Weather service removed', venue: req.params.venue });
     } catch (error: any) { 
       res.status(500).json({ error: error.message }); 
     }
   });
 
-  // Test route for all stadiums weather
+  // Test route for all stadiums weather - service removed
   app.get('/api/debug/weather-all', async (req, res) => {
     try {
-      const { getEnhancedWeather } = await import('./services/enhanced-weather');
-      const { STADIUMS } = await import('./services/weather/stadiums');
-      
-      const results = [];
-      const stadiumNames = Object.keys(STADIUMS).slice(0, 5); // Test first 5 to avoid rate limits
-      
-      for (const stadiumKey of stadiumNames) {
-        try {
-          const wx = await getEnhancedWeather(stadiumKey);
-          results.push({
-            stadium: stadiumKey,
-            weather: wx,
-            timestamp: new Date().toISOString()
-          });
-        } catch (error) {
-          results.push({
-            stadium: stadiumKey,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-      
       res.json({
-        testedStadiums: results.length,
-        totalStadiums: Object.keys(STADIUMS).length,
-        results
+        message: 'Weather service removed',
+        testedStadiums: 0,
+        totalStadiums: 0,
+        results: []
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

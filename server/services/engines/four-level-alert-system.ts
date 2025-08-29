@@ -1,8 +1,7 @@
 // 4-Level Alert System Implementation
 // Based on: Game Monitoring Master Switch + Tiered Alert Levels
 
-import { getWeatherData } from '../weather';
-import { getEnhancedWeather } from '../enhanced-weather';
+// Removed weather imports - weather services deleted
 import { generateAdvancedPredictions } from '../ai-analysis';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
@@ -270,7 +269,7 @@ export class FourLevelAlertSystem {
           console.log(`⚠️ Math model L3 failed, using traditional logic:`, error);
         }
 
-        const weather = await getEnhancedWeather(game.venue);
+        const weather = null; // Weather service removed
         
         if (weather) {
           // Wind helping home runs (simplified - no direction check due to type issues)
