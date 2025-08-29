@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import type { Settings } from "@/types";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAA"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
@@ -93,13 +93,13 @@ const ALERT_TYPE_CONFIG = {
     { key: "touchdownAlert", label: "Touchdown Alerts", description: "Scoring play notifications", category: "Scoring Events" },
     { key: "fieldGoalRange", label: "Field Goal Range", description: "Team within field goal range", category: "Scoring Opportunities" },
   ],
-  NCAA: [
+  NCAAF: [
     { key: "redZone", label: "Red Zone Situations", description: "College football teams inside the 20-yard line", category: "Scoring Opportunities" },
-    { key: "closeGame", label: "Close Game", description: "Tight games in final minutes", category: "Game Situations" },
-    { key: "overtime", label: "Overtime", description: "College football & basketball overtime", category: "Special Events" },
-    { key: "finalMinutes", label: "Final Minutes", description: "Crucial final minutes of games", category: "Game Situations" },
-    { key: "clutchTime", label: "Clutch Time", description: "Basketball games in final 5 minutes", category: "Game Situations" },
-    { key: "upsetAlert", label: "Upset Alert", description: "Underdog teams leading favorites", category: "Special Events" },
+    { key: "closeGame", label: "Close Game", description: "Tight college football games in final quarter", category: "Game Situations" },
+    { key: "overtime", label: "Overtime", description: "College football overtime periods", category: "Special Events" },
+    { key: "finalMinutes", label: "Final Minutes", description: "Crucial final minutes of college football games", category: "Game Situations" },
+    { key: "touchdownAlert", label: "Touchdown Alerts", description: "College football touchdown notifications", category: "Scoring Events" },
+    { key: "upsetAlert", label: "Upset Alert", description: "Underdog teams leading favorites in college football", category: "Special Events" },
   ],
 };
 

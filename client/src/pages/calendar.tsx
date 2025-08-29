@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { removeCity } from "@/lib/team-utils";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAA"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
 export default function Calendar() {

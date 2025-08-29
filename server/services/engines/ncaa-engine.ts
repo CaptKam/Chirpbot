@@ -11,14 +11,13 @@ interface NCAAGameState {
   awayScore: number;
   homeTeam: string;
   awayTeam: string;
-  sport: string; // 'football' or 'basketball'
+  sport: string; // 'football'
   conference: string;
   redZone: boolean;
   overtime: boolean;
   finalMinutes: boolean;
-  clutchTime: boolean;
-  down?: number; // Football only
-  yardsToGo?: number; // Football only
+  down?: number;
+  yardsToGo?: number;
 }
 
 interface SimpleNCAAAlert {
@@ -32,27 +31,22 @@ interface SimpleNCAAAlert {
 
 export class NCAAEngine {
   private readonly ESPN_FOOTBALL_API = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football';
-  private readonly ESPN_BASKETBALL_API = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball';
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
   
   onAlert?: (alert: any) => void;
 
   constructor() {
-    console.log('🏈🏀 NCAAEngine initialized with ESPN API integration (Football & Basketball)');
+    console.log('🏈 NCAAF Engine initialized with ESPN API integration (College Football)');
   }
 
   // === ESPN API INTEGRATION ===
 
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      const [footballGames, basketballGames] = await Promise.all([
-        this.getCollegeFootballGames(),
-        this.getCollegeBasketballGames()
-      ]);
-
-      return [...footballGames, ...basketballGames];
+      const footballGames = await this.getCollegeFootballGames();
+      return footballGames;
     } catch (error) {
-      console.error('❌ ESPN NCAA API Error:', error);
+      console.error('❌ ESPN NCAAF API Error:', error);
       return [];
     }
   }
@@ -83,7 +77,7 @@ export class NCAAEngine {
         awayScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.score || '0'),
         status: game.status.type.name,
         gameDate: game.date, // ESPN returns ISO date string
-        sport: 'NCAA',
+        sport: 'NCAAF',
         subSport: 'Football',
         startTime: game.date, // Add startTime for calendar compatibility
         espnData: game // Store full ESPN data for detailed parsing
@@ -94,42 +88,6 @@ export class NCAAEngine {
     }
   }
 
-  private async getCollegeBasketballGames(): Promise<any[]> {
-    try {
-      const url = `${this.ESPN_BASKETBALL_API}/scoreboard`;
-      
-      const data: any = await fetchJson(url, {
-        headers: {
-          'User-Agent': 'ChirpBot/2.0',
-          'Accept': 'application/json'
-        },
-        timeoutMs: 8000
-      });
-
-      if (!data?.events || !Array.isArray(data.events)) {
-        console.log('📅 No NCAA Basketball games found');
-        return [];
-      }
-
-      return data.events.map((game: any) => ({
-        id: `cbb-${game.id}`,
-        gameId: `cbb-${game.id}`,
-        homeTeam: game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.displayName || '',
-        awayTeam: game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.displayName || '',
-        homeScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.score || '0'),
-        awayScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.score || '0'),
-        status: game.status.type.name,
-        gameDate: game.date, // ESPN returns ISO date string
-        sport: 'NCAA',
-        subSport: 'Basketball',
-        startTime: game.date, // Add startTime for calendar compatibility
-        espnData: game // Store full ESPN data for detailed parsing
-      }));
-    } catch (error) {
-      console.error('❌ ESPN College Basketball API Error:', error);
-      return [];
-    }
-  }
 
   // === ALERT GENERATION ===
 
@@ -142,7 +100,7 @@ export class NCAAEngine {
         game.status === 'STATUS_OVERTIME'
       );
 
-      console.log(`🎯 NCAA Engine Processing ${liveGames.length} live games`);
+      console.log(`🎯 NCAAF Engine Processing ${liveGames.length} live college football games`);
 
       for (const game of liveGames) {
         await this.processGameForAlerts(game);
@@ -150,7 +108,7 @@ export class NCAAEngine {
 
       this.cleanupOldDedupEntries();
     } catch (error) {
-      console.error('❌ NCAA Alert Processing Error:', error);
+      console.error('❌ NCAAF Alert Processing Error:', error);
     }
   }
 
@@ -189,10 +147,6 @@ export class NCAAEngine {
         timeRemaining = status.displayClock;
       }
 
-      // Determine sport type and specific conditions
-      const isFootball = game.subSport === 'Football';
-      const isBasketball = game.subSport === 'Basketball';
-
       return {
         gameId: game.gameId,
         period,
@@ -201,17 +155,16 @@ export class NCAAEngine {
         awayScore: game.awayScore,
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
-        sport: isFootball ? 'football' : 'basketball',
+        sport: 'football',
         conference: competition.conference?.name || 'Unknown',
-        redZone: isFootball && this.isRedZone(espnData),
-        overtime: period > (isFootball ? 4 : 2),
-        finalMinutes: this.isFinalMinutes(timeRemaining, period, isFootball),
-        clutchTime: isBasketball && this.isClutchTime(timeRemaining, period, game.homeScore, game.awayScore),
-        down: isFootball ? this.getDown(espnData) : undefined,
-        yardsToGo: isFootball ? this.getYardsToGo(espnData) : undefined
+        redZone: this.isRedZone(espnData),
+        overtime: period > 4,
+        finalMinutes: this.isFinalMinutes(timeRemaining, period),
+        down: this.getDown(espnData),
+        yardsToGo: this.getYardsToGo(espnData)
       };
     } catch (error) {
-      console.error('❌ Error parsing NCAA game state:', error);
+      console.error('❌ Error parsing NCAAF game state:', error);
       return null;
     }
   }
@@ -230,11 +183,10 @@ export class NCAAEngine {
     }
   }
 
-  private isFinalMinutes(timeRemaining: string, period: number, isFootball: boolean): boolean {
+  private isFinalMinutes(timeRemaining: string, period: number): boolean {
     if (!timeRemaining) return false;
     
-    const maxPeriod = isFootball ? 4 : 2;
-    if (period < maxPeriod) return false;
+    if (period < 4) return false; // Must be 4th quarter or later
     
     try {
       const [minutes] = timeRemaining.split(':').map(Number);
@@ -244,19 +196,6 @@ export class NCAAEngine {
     }
   }
 
-  private isClutchTime(timeRemaining: string, period: number, homeScore: number, awayScore: number): boolean {
-    if (period < 2) return false; // Must be 2nd half
-    
-    const scoreDiff = Math.abs(homeScore - awayScore);
-    if (scoreDiff > 5) return false; // Must be close game
-    
-    try {
-      const [minutes] = timeRemaining.split(':').map(Number);
-      return minutes <= 5; // Final 5 minutes
-    } catch {
-      return false;
-    }
-  }
 
   private getDown(espnData: any): number {
     try {
@@ -277,8 +216,8 @@ export class NCAAEngine {
   private generateAlertsForGame(gameState: NCAAGameState): SimpleNCAAAlert[] {
     const alerts: SimpleNCAAAlert[] = [];
 
-    // Red Zone Alert (Football)
-    if (gameState.sport === 'football' && gameState.redZone) {
+    // Red Zone Alert
+    if (gameState.redZone) {
       alerts.push({
         type: 'redZone',
         priority: 85,
@@ -314,15 +253,16 @@ export class NCAAEngine {
       });
     }
 
-    // Clutch Time Alert (Basketball)
-    if (gameState.sport === 'basketball' && gameState.clutchTime) {
+    // Touchdown Alert (check for scoring plays)
+    const isScoring = this.checkForTouchdown(gameState);
+    if (isScoring) {
       alerts.push({
-        type: 'clutchTime',
-        priority: 88,
-        description: `Clutch time! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
-        reasons: ['Close game in final minutes'],
-        probability: 80,
-        deduplicationKey: `${gameState.gameId}:clutchTime:${gameState.period}`
+        type: 'touchdownAlert',
+        priority: 92,
+        description: `TOUCHDOWN! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
+        reasons: ['Touchdown scored'],
+        probability: 100,
+        deduplicationKey: `${gameState.gameId}:touchdown:${gameState.period}:${gameState.homeScore + gameState.awayScore}`
       });
     }
 
@@ -367,10 +307,10 @@ export class NCAAEngine {
       const alertData = {
         id: randomUUID(),
         type: alert.type,
-        title: `NCAA ${gameState.sport.toUpperCase()} Alert`,
+        title: `NCAAF Alert`,
         description: alert.description,
         priority: alert.priority,
-        sport: 'NCAA',
+        sport: 'NCAAF',
         gameInfo: {
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
@@ -400,10 +340,17 @@ export class NCAAEngine {
         this.onAlert(alertData);
       }
 
-      console.log(`📢 NCAA Alert Sent: ${alert.type} - ${alert.description}`);
+      console.log(`📢 NCAAF Alert Sent: ${alert.type} - ${alert.description}`);
     } catch (error) {
-      console.error('❌ Error sending NCAA alert:', error);
+      console.error('❌ Error sending NCAAF alert:', error);
     }
+  }
+
+  private checkForTouchdown(gameState: NCAAGameState): boolean {
+    // Simple touchdown detection - would need more sophisticated logic with game state tracking
+    // For now, just detect high-scoring situations that might indicate recent touchdowns
+    const totalScore = gameState.homeScore + gameState.awayScore;
+    return totalScore % 6 === 0 && totalScore > 0; // Basic touchdown detection
   }
 
   private cleanupOldDedupEntries(): void {
@@ -420,10 +367,10 @@ export class NCAAEngine {
   // === PUBLIC METHODS ===
 
   async start(): Promise<void> {
-    console.log('🚀 NCAA Engine started');
+    console.log('🚀 NCAAF Engine started');
   }
 
   async stop(): Promise<void> {
-    console.log('🛑 NCAA Engine stopped');
+    console.log('🛑 NCAAF Engine stopped');
   }
 }

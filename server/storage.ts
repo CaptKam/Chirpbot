@@ -736,9 +736,9 @@ export class MemStorage implements IStorage {
               'powerHitterOnDeck', 'strikeouts', 'inningChange', 'mlbAIEnabled'];
     }
     
-    // If no master controls exist for NCAA, return all alert keys as enabled
-    if (sport === 'NCAA' && enabledKeys.length === 0) {
-      return ['redZone', 'closeGame', 'overtime', 'finalMinutes', 'clutchTime', 'upsetAlert'];
+    // If no master controls exist for NCAAF, return all alert keys as enabled
+    if (sport === 'NCAAF' && enabledKeys.length === 0) {
+      return ['redZone', 'closeGame', 'overtime', 'finalMinutes', 'touchdownAlert', 'upsetAlert'];
     }
     
     return enabledKeys;

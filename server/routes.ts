@@ -274,8 +274,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sport: 'CFL',
           gameData: game
         }));
-      } else if (sport === 'NCAA') {
-        // Use ESPN NCAA API integration (Football & Basketball)
+      } else if (sport === 'NCAAF') {
+        // Use ESPN NCAAF API integration (College Football Only)
         const { NCAAEngine } = await import('./services/engines/ncaa-engine');
         const ncaaEngine = new NCAAEngine();
         games = await ncaaEngine.getTodaysGames(targetDate);
@@ -299,8 +299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             minute: '2-digit',
             hour12: true
           }),
-          sport: 'NCAA',
-          subSport: game.subSport, // 'Football' or 'Basketball'
+          sport: 'NCAAF',
+          subSport: game.subSport,
           gameData: game
         }));
       }
