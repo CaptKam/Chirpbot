@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       } else if (sport === 'NCAAF') {
         // Use ESPN NCAAF API integration (College Football Only)
-        const { NCAAEngine } = await import('./services/engines/ncaa-engine');
+        const { NCAAEngine } = await import('./services/engines/ncaaf-engine');
         const ncaaEngine = new NCAAEngine();
         games = await ncaaEngine.getTodaysGames(targetDate);
         

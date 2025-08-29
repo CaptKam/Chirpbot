@@ -145,7 +145,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return cflEngine;
         case 'NCAAF':
-          const { NCAAEngine } = await import('./ncaa-engine');
+          const { NCAAEngine } = await import('./ncaaf-engine');
           return new NCAAEngine();
         default:
           console.warn(`No engine available for sport: ${sport}`);
@@ -182,7 +182,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return await cflEngine.getTodaysGames(today);
         case 'NCAAF':
-          const { NCAAEngine } = await import('./ncaa-engine');
+          const { NCAAEngine } = await import('./ncaaf-engine');
           const ncaaEngine = new NCAAEngine();
           return await ncaaEngine.getTodaysGames(today);
         default:
