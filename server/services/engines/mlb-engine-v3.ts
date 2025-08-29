@@ -86,10 +86,10 @@ export interface DeduplicationContext {
 export class MLBEngineV3 {
   private deduplicationCache = new Map<string, { timestamp: number; tier: number }>();
   private readonly COOLDOWN_MS = {
-    1: 60000,   // L1: 1 minute
-    2: 90000,   // L2: 1.5 minutes  
-    3: 120000,  // L3: 2 minutes
-    4: 180000   // L4: 3 minutes
+    1: 15000,   // L1: 15 seconds (was 60s) 
+    2: 30000,   // L2: 30 seconds (was 90s)
+    3: 45000,   // L3: 45 seconds (was 120s)
+    4: 60000    // L4: 60 seconds (was 180s)
   };
   
   onAlert?: (alert: any) => void;
@@ -472,38 +472,14 @@ export class MLBEngineV3 {
    */
   private generateDeduplicationKey(gameState: MLBGameStateV3, alertType: string): string {
     const basesHash = `${gameState.runners.first ? 1 : 0}${gameState.runners.second ? 1 : 0}${gameState.runners.third ? 1 : 0}`;
-    const batterId = gameState.currentBatter?.id || 0;
-    const pitcherId = gameState.currentPitcher?.id || 0;
     
-    return `${gameState.gamePk}:${alertType}:${gameState.inning}:${gameState.inningState}:${gameState.outs}:${basesHash}:${batterId}:${pitcherId}`;
+    // SIMPLIFIED: Only use game, inning, and bases - remove batter/pitcher specificity
+    return `${gameState.gamePk}:${alertType}:${gameState.inning}:${gameState.inningState}:${basesHash}`;
   }
 
   private shouldEmitAlert(alertTier: AlertTierResult): boolean {
-    const now = Date.now();
-    const cached = this.deduplicationCache.get(alertTier.deduplicationKey);
-    
-    // For L1 alerts, allow more frequent alerts (less aggressive deduplication)
-    if (alertTier.tier === 1) {
-      if (cached && (now - cached.timestamp) < 30000) { // Only 30s cooldown for L1
-        return false;
-      }
-      return true;
-    }
-    
-    if (cached) {
-      const cooldown = this.COOLDOWN_MS[alertTier.tier] || 60000;
-      const timeSinceLastAlert = now - cached.timestamp;
-      
-      if (timeSinceLastAlert < cooldown) {
-        return false;
-      }
-      
-      // V3 Law #5: Supersession - Higher tier supersedes lower tier
-      if (alertTier.tier <= cached.tier) {
-        return false;
-      }
-    }
-    
+    // TEMPORARILY DISABLE DEDUPLICATION - LET ALL ALERTS THROUGH
+    console.log(`✅ DEDUP DISABLED: Allowing ${alertTier.tier} alert`);
     return true;
   }
 
