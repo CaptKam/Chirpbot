@@ -91,15 +91,34 @@ export class NCAAEngine {
                         game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.name || 
                         game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.shortDisplayName || '';
         
-        // Enhanced status detection - if period > 0 or clock exists, game is live
+        // Enhanced status detection - check multiple indicators for live games
         const espnStatus = game.status.type.name;
         const period = game.status.period || 0;
         const clock = game.status.displayClock;
+        const gameTime = new Date(game.date);
+        const now = new Date();
+        const gameStarted = now.getTime() > gameTime.getTime();
         
-        // Determine actual game status based on period and clock
+        // Determine actual game status based on multiple factors
         let actualStatus = espnStatus;
-        if (period > 0 || (clock && clock !== "0:00")) {
+        
+        // If ESPN already shows it as live/in-progress, use that
+        if (espnStatus.includes('IN_PROGRESS') || espnStatus.includes('LIVE') || 
+            espnStatus.includes('HALFTIME') || espnStatus.includes('OVERTIME')) {
           actualStatus = 'STATUS_IN_PROGRESS';
+        }
+        // If period > 0 or clock shows active time, definitely live
+        else if (period > 0 || (clock && clock !== "0:00" && clock !== "00:00")) {
+          actualStatus = 'STATUS_IN_PROGRESS';
+          console.log(`🏈 ENHANCED DETECTION: ${game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.displayName} @ ${game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.displayName} - Period: ${period}, Clock: ${clock}`);
+        }
+        // If game time has passed and no explicit final status, it might be live
+        else if (gameStarted && !espnStatus.includes('FINAL') && !espnStatus.includes('POSTPONED') && !espnStatus.includes('CANCELED')) {
+          const minutesSinceStart = Math.floor((now.getTime() - gameTime.getTime()) / (1000 * 60));
+          if (minutesSinceStart >= 0 && minutesSinceStart <= 240) { // Within 4 hours of start time
+            actualStatus = 'STATUS_IN_PROGRESS';
+            console.log(`🕐 LIVE BY TIME: ${game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.displayName} @ ${game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.displayName} - ${minutesSinceStart} minutes since start (ESPN slow to update)`);
+          }
         }
         
         return {

@@ -291,8 +291,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: game.awayTeam,
             score: game.awayScore
           },
-          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
-                  game.status.includes('Final') ? 'final' : 'scheduled',
+          status: game.status.includes('IN_PROGRESS') || game.status.includes('PROGRESS') || game.status.includes('Progress') || game.status.includes('Live') || game.status.includes('LIVE') ? 'live' : 
+                  game.status.includes('Final') || game.status.includes('FINAL') ? 'final' : 'scheduled',
           startTime: game.gameDate, // Use ISO date string from ESPN
           gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
             hour: 'numeric',
