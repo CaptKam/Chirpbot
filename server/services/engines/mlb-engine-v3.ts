@@ -399,10 +399,10 @@ export class MLBEngineV3 {
     try {
       const settings = await storage.getSettingsByUserId(userId);
       return settings ? {
-        alertsEnabled: settings.alertsEnabled !== false,
-        sports: { MLB: settings.mlbEnabled !== false },
-        tiers: settings.tierSettings || {},
-        betbookEnabled: settings.betbookEnabled !== false
+        alertsEnabled: settings.telegramEnabled !== false,
+        sports: { MLB: settings.sport === 'MLB' },
+        tiers: {}, // Default empty tiers
+        betbookEnabled: true // Default enabled
       } : null;
     } catch (error) {
       console.error(`Error fetching user settings for ${userId}:`, error);
@@ -489,8 +489,16 @@ export class MLBEngineV3 {
     const now = Date.now();
     const cached = this.deduplicationCache.get(alertTier.deduplicationKey);
     
+    // For L1 alerts, allow more frequent alerts (less aggressive deduplication)
+    if (alertTier.tier === 1) {
+      if (cached && (now - cached.timestamp) < 30000) { // Only 30s cooldown for L1
+        return false;
+      }
+      return true;
+    }
+    
     if (cached) {
-      const cooldown = this.COOLDOWN_MS[alertTier.tier];
+      const cooldown = this.COOLDOWN_MS[alertTier.tier] || 60000;
       const timeSinceLastAlert = now - cached.timestamp;
       
       if (timeSinceLastAlert < cooldown) {
