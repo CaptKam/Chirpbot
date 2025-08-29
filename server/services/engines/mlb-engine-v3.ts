@@ -246,10 +246,8 @@ export class MLBEngineV3 {
    */
   async processLiveGamesOnly(): Promise<void> {
     try {
-      // Use the multi-source service that correctly transforms games - MLB ONLY
-      const liveSportsService = await import('../live-sports');
-      const todaysData = await liveSportsService.liveSportsService.getTodaysGames('MLB');
-      const allGames = todaysData.games || [];
+      // Direct MLB API integration - services removed
+      const allGames: any[] = []; // TODO: Replace with direct MLB API calls
       
       console.log(`🎯 V3 Engine Processing ${allGames.length} total games`);
       

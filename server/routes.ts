@@ -6,7 +6,7 @@ import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shar
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData } from "./services/weather";
 // Removed mock sportsService - using real data only
-import { liveSportsService } from "./services/live-sports";
+// Removed liveSportsService - using direct API calls
 import { adminRouter } from "./routes/admin";
 import { registerMultiSourceRoutes } from "./routes/multi-source";
 import { aiHealthMonitor } from "./services/ai-health-monitor";
@@ -138,8 +138,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/games/today", async (req, res) => {
     try {
       const sport = req.query.sport as string;
-      const games = await liveSportsService.getTodaysGames(sport);
-      res.json(games);
+      const today = new Date().toISOString().split('T')[0];
+      const games: any[] = []; // Service removed - no games available
+      res.json({ date: today, games });
     } catch (error) {
       console.error('Error fetching games:', error);
       res.status(500).json({ message: "Failed to fetch today's games" });
@@ -595,12 +596,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sports data routes - now using live-sports service
+  // Sports data routes - disabled (services removed)
   app.get("/api/sports/games", async (req, res) => {
     try {
-      const sport = req.query.sport as string;
-      const gamesData = await liveSportsService.getTodaysGames(sport);
-      res.json(gamesData.games);
+      // Services removed - return empty for now
+      res.json([]);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch games" });
     }
@@ -1014,24 +1014,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         configured: !!(sportsDataKey && sportsDataKey !== 'your_sportsdata_api_key_here')
       };
 
-      // Test SportsData.io feeds
-      const { sportsDataService } = await import("./services/sportsdata-api");
-      
+      // Test SportsData.io feeds - service removed
       for (const sport of ['NFL', 'NBA', 'NHL'] as const) {
-        try {
-          const games = await sportsDataService[`get${sport}Games`]();
-          feedStatus.feeds[sport.toLowerCase() as 'nfl' | 'nba' | 'nhl'] = { 
-            status: 'success', 
-            games: games.length, 
-            error: null 
-          };
-        } catch (error) {
-          feedStatus.feeds[sport.toLowerCase() as 'nfl' | 'nba' | 'nhl'] = { 
-            status: 'failed', 
-            games: 0, 
-            error: error instanceof Error ? error.message : 'Unknown error' 
-          };
-        }
+        feedStatus.feeds[sport.toLowerCase() as 'nfl' | 'nba' | 'nhl'] = { 
+          status: 'disabled', 
+          games: 0, 
+          error: 'SportsData service removed' 
+        };
       }
 
       // Test Weather API

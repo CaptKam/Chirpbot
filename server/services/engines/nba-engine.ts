@@ -1,6 +1,6 @@
 import { BaseSportEngine, AlertConfig } from './base-engine';
 import { storage } from '../../storage';
-import { sportsDataService } from '../sportsdata-api';
+// Removed sportsDataService - service deleted
 
 interface NBAGameState {
   gameId: string;
@@ -29,8 +29,8 @@ export class NBAEngine extends BaseSportEngine {
       
       console.log(`🏀 Checking ${this.sport} games for alerts...`);
       
-      // Fetch live NBA games from SportsData.io
-      const games = await sportsDataService.getNBAGames();
+      // SportsData service removed - no live games available
+      const games: any[] = [];
       const liveGames = games.filter(game => game.status === 'live');
       
       if (liveGames.length === 0) {
