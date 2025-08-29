@@ -234,8 +234,13 @@ export class NCAAEngine {
   private async processGameForAlerts(game: any): Promise<void> {
     try {
       const gameState = this.parseGameState(game);
-      if (!gameState) return;
+      if (!gameState) {
+        console.log(`🏈 NCAAF: No game state parsed for ${game.gameId}, generating basic alert...`);
+        await this.generateBasicLiveAlert(game.gameId);
+        return;
+      }
 
+      console.log(`🏈 NCAAF: Processing game state for ${gameState.gameId} - Quarter: ${gameState.quarter}, Score: ${gameState.score?.home || 0}-${gameState.score?.away || 0}`);
       const alerts = this.generateAlertsForGame(gameState);
       
       for (const alert of alerts) {
@@ -487,17 +492,81 @@ export class NCAAEngine {
   // Add method for specific game processing (needed by engine manager)
   async processSpecificGame(gameId: string): Promise<void> {
     try {
+      console.log(`🏈 NCAAF: Processing specific game ${gameId} for alerts...`);
+      
+      // Try to get game data and generate basic alerts
       const games = await this.getTodaysGames();
       const targetGame = games.find(game => game.gameId === gameId);
       
       if (!targetGame) {
-        console.log(`🏈 NCAAF: Game ${gameId} not found in today's games`);
+        console.log(`🏈 NCAAF: Game ${gameId} not found, generating basic live game alert`);
+        await this.generateBasicLiveAlert(gameId);
         return;
       }
 
+      console.log(`🏈 NCAAF: Found game data for ${gameId}, processing alerts...`);
       await this.processGameForAlerts(targetGame);
     } catch (error) {
       console.error(`❌ NCAAF: Error processing specific game ${gameId}:`, error);
+      // Fallback: try to generate a basic alert anyway
+      await this.generateBasicLiveAlert(gameId);
+    }
+  }
+
+  // Generate a basic "Game Live" alert when detailed data isn't available
+  private async generateBasicLiveAlert(gameId: string): Promise<void> {
+    try {
+      console.log(`🏈 NCAAF: Generating basic live alert for game ${gameId}`);
+      
+      // Get monitored games to find team names
+      const monitoredGames = await storage.getAllMonitoredGames();
+      const gameInfo = monitoredGames.find(g => g.gameId === gameId);
+      
+      if (!gameInfo) {
+        console.log(`🏈 NCAAF: No monitored game info found for ${gameId}`);
+        return;
+      }
+
+      // Check if user has any NCAAF alerts enabled
+      const userSettings = await this.getUserNCAAFSettings();
+      if (!userSettings?.alertTypes?.ncaafCloseGame && !userSettings?.alertTypes?.ncaafRedZone) {
+        console.log(`🔕 NCAAF: All NCAAF alerts disabled in user settings`);
+        return;
+      }
+      
+      console.log(`✅ NCAAF: User has alerts enabled, generating live game alert...`);
+
+      // Create basic live game alert
+      const alert = {
+        id: randomUUID(),
+        type: 'ncaafGameLive',
+        priority: 70,
+        title: `🏈 COLLEGE FOOTBALL LIVE`,
+        message: `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} is now live!`,
+        gameData: {
+          sport: 'NCAAF',
+          gameId: gameId,
+          homeTeam: gameInfo.homeTeamName || 'Home Team',
+          awayTeam: gameInfo.awayTeamName || 'Away Team',
+          situation: 'Game Live'
+        },
+        probability: 0.8,
+        confidence: 0.75,
+        timestamp: new Date().toISOString(),
+        userId: 'system',
+        seen: false
+      };
+
+      // Store and broadcast the alert
+      await storage.addAlert(alert);
+      console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`);
+      
+      if (this.onAlert) {
+        this.onAlert(alert);
+      }
+      
+    } catch (error) {
+      console.error('❌ NCAAF: Error generating basic live alert:', error);
     }
   }
 
@@ -541,12 +610,12 @@ export class NCAAEngine {
         return;
       }
 
-      // Stage 2: OpenAI Analysis - Generate contextual description
+      // Stage 2: OpenAI Analysis - Generate contextual description  
       const aiDescription = await this.openAiEngine.generateSportsAlert({
         sport: 'NCAAF',
         situation: alertResult.reasons.join(', '),
         gameContext: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
-        quarter: gameState.quarter.toString(),
+        quarter: gameState.quarter?.toString() || '1',
         score: `${gameState.score.away}-${gameState.score.home}`,
         priority: alertResult.priority
       });

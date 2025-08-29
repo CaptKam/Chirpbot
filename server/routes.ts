@@ -141,6 +141,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint to force generate a NCAAF alert
+  app.post('/api/test-force-ncaaf-alert', async (req, res) => {
+    try {
+      console.log('🧪 Force generating NCAAF alert...');
+      const { NCAAEngine } = await import('./services/engines/ncaaf-engine');
+      const engine = new NCAAEngine();
+      
+      // Force generate basic live alert
+      await engine.processSpecificGame('cfb-401762432');
+      console.log('✅ NCAAF alert generation completed');
+      
+      res.json({ 
+        success: true,
+        message: 'NCAAF alert force generation completed'
+      });
+    } catch (error) {
+      console.error('❌ NCAAF alert generation test failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  });
+
+  // Test endpoint to create a simple NCAAF alert directly
+  app.post('/api/test-create-simple-ncaaf-alert', async (req, res) => {
+    try {
+      console.log('🧪 Creating simple NCAAF alert directly...');
+      const { randomUUID } = await import('crypto');
+      
+      // Create a simple test alert with correct structure
+      const testAlert = {
+        type: 'ncaafGameLive',
+        priority: 70,
+        title: '🏈 COLLEGE FOOTBALL TEST ALERT',
+        message: 'Army Black Knights vs Tarleton State Texans - TEST ALERT',
+        gameInfo: {
+          homeTeam: 'Army Black Knights',
+          awayTeam: 'Tarleton State Texans',
+          status: 'live',
+          quarter: '1',
+          score: { home: 0, away: 0 }
+        },
+        probability: 0.8,
+        confidence: 0.75,
+        userId: 'system',
+        seen: false
+      };
+
+      // Store the alert directly
+      await storage.createAlert(testAlert);
+      console.log('✅ Simple NCAAF test alert created and stored');
+      
+      res.json({ 
+        success: true,
+        message: 'Simple NCAAF test alert created successfully',
+        alertId: testAlert.id
+      });
+    } catch (error) {
+      console.error('❌ Simple NCAAF alert creation failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  });
+
   // AI Health Monitor metrics endpoint (protected internal endpoint)
   app.get("/api/ai/health/metrics", (req, res) => {
     try {
