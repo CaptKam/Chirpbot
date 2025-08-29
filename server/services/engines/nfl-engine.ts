@@ -1,6 +1,7 @@
-import { BaseSportEngine, AlertConfig } from './base-engine';
 import { storage } from '../../storage';
-// Removed multi-source-aggregator import - using direct API calls
+import { sendTelegramAlert } from '../telegram';
+import { randomUUID } from 'crypto';
+import { fetchJson } from '../http';
 
 interface NFLGameState {
   gameId: string;
@@ -18,120 +19,242 @@ interface NFLGameState {
   twoMinuteWarning: boolean;
 }
 
-export class NFLEngine extends BaseSportEngine {
-  sport = 'NFL';
-  monitoringInterval = 1000; // 1 second for lightning-fast betting alerts
-  
-  async monitor() {
-    try {
-      // Real-time alerts are always active (no demo mode)
+interface SimpleNFLAlert {
+  priority: number;
+  description: string;
+  reasons: string[];
+  probability: number;
+  deduplicationKey: string;
+  type: string;
+}
 
-      const settings = await storage.getSettingsBySport(this.sport);
-      if (!settings) {
-        return;
+export class NFLEngine {
+  private readonly ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
+  private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
+  
+  onAlert?: (alert: any) => void;
+
+  constructor() {
+    console.log('🏈 NFLEngine initialized with ESPN API integration');
+  }
+
+  // === ESPN API INTEGRATION ===
+
+  async getTodaysGames(date?: string): Promise<any[]> {
+    try {
+      const url = `${this.ESPN_API_BASE}/scoreboard`;
+      
+      const data: any = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      if (!data?.events || !Array.isArray(data.events)) {
+        console.log('📅 No NFL games found');
+        return [];
       }
-      
-      console.log(`⚡ Checking ${this.sport} games for alerts...`);
-      
-      // Fetch live NFL games from all available sources (SportsData.io, ESPN)
-      const games: any[] = []; // Removed multi-source-aggregator
-      const liveGames = games.filter(game => game.status === 'live');
-      
-      if (liveGames.length === 0) {
-        return;
-      }
-      
-      console.log(`🏈 Found ${liveGames.length} live NFL games to monitor`);
-      
-      // Process each live game for alerts
-      for (const game of liveGames) {
-        const gameState: NFLGameState = {
-          gameId: game.id,
-          quarter: 1, // Default to 1 since SportsData doesn't provide detailed quarter info
-          timeRemaining: "15:00", // SportsData doesn't provide detailed time
-          possession: "",
-          down: 1,
-          yardsToGo: 10,
-          yardLine: "50",
-          homeScore: game.homeTeam.score || 0,
-          awayScore: game.awayTeam.score || 0,
-          homeTeam: game.homeTeam.name,
-          awayTeam: game.awayTeam.name,
-          redZone: false,
-          twoMinuteWarning: false
-        };
-        
-        const triggeredAlerts = await this.checkAlertConditions(gameState);
-        if (triggeredAlerts.length > 0) {
-          await this.processAlerts(triggeredAlerts, gameState);
-        }
-      }
-      
+
+      return (data.events as any[]).map((game: any) => ({
+        id: game.id,
+        gameId: game.id,
+        homeTeam: game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.displayName || '',
+        awayTeam: game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.displayName || '',
+        homeScore: game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.score || 0,
+        awayScore: game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.score || 0,
+        status: game.status.type.name,
+        gameDate: game.date,
+        sport: 'NFL',
+        espnData: game // Store full ESPN data for detailed parsing
+      }));
     } catch (error) {
-      console.error(`${this.sport} monitoring error:`, error);
+      console.error('❌ ESPN NFL API Error:', error);
+      return [];
     }
   }
-  
-  alertConfigs: AlertConfig[] = [
-    {
-      type: "NFL Close Game",
-      settingKey: "nflCloseGame",
-      priority: 80,
-      probability: 0.8,
-      description: "🏈 ONE SCORE GAME! High-pressure moment",
-      conditions: (state: NFLGameState) => 
-        Math.abs(state.homeScore - state.awayScore) <= 7 && state.quarter >= 3
-    },
-    {
-      type: "Red Zone Situations",
-      settingKey: "redZone",
-      priority: 85,
-      probability: 0.9,
-      description: "🚨 RED ZONE ALERT! Touchdown territory",
-      conditions: (state: NFLGameState) => 
-        state.redZone && state.quarter >= 2
-    },
-    {
-      type: "Two Minute Warning",
-      settingKey: "twoMinuteWarning",
-      priority: 90,
-      probability: 1.0,
-      description: "⏰ TWO MINUTE WARNING! Crunch time",
-      conditions: (state: NFLGameState) => 
-        state.twoMinuteWarning && Math.abs(state.homeScore - state.awayScore) <= 10
-    },
-    {
-      type: "Fourth Down",
-      settingKey: "fourthDown",
-      priority: 95,
-      probability: 0.9,
-      description: "🎯 4TH DOWN! Go for it or punt?",
-      conditions: (state: NFLGameState) => 
-        state.down === 4 && state.quarter >= 3 && state.yardsToGo <= 3
+
+  async processLiveGamesOnly(): Promise<void> {
+    try {
+      const games = await this.getTodaysGames();
+      const liveGames = games.filter(game => 
+        game.status === 'STATUS_IN_PROGRESS' || 
+        game.status.toLowerCase().includes('period') ||
+        game.status.toLowerCase().includes('quarter')
+      );
+      
+      console.log(`🏈 NFL Engine Processing ${liveGames.length} live games`);
+      
+      for (const game of liveGames) {
+        const gameState = this.extractGameState(game.espnData);
+        if (gameState) {
+          await this.checkGameSituations(gameState);
+        }
+      }
+    } catch (error) {
+      console.error('❌ NFL monitoring error:', error);
     }
-  ];
+  }
+
+  async checkGameSituations(gameState: NFLGameState): Promise<void> {
+    try {
+      const alerts: SimpleNFLAlert[] = [];
+
+      // Close game alerts
+      if (Math.abs(gameState.homeScore - gameState.awayScore) <= 7 && gameState.quarter >= 3) {
+        alerts.push({
+          priority: 85,
+          description: `🏈 ONE SCORE GAME! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
+          reasons: ['One score difference', `Quarter ${gameState.quarter}`, 'High leverage situation'],
+          probability: 0.85,
+          deduplicationKey: this.generateDeduplicationKey(gameState, 'CLOSE_GAME'),
+          type: 'close_game'
+        });
+      }
+
+      // Red zone alerts
+      if (gameState.redZone && gameState.quarter >= 2) {
+        alerts.push({
+          priority: 90,
+          description: `🚨 RED ZONE ALERT! ${gameState.possession} in scoring position`,
+          reasons: ['Red zone possession', 'High scoring probability', `${gameState.down} down and ${gameState.yardsToGo}`],
+          probability: 0.9,
+          deduplicationKey: this.generateDeduplicationKey(gameState, 'RED_ZONE'),
+          type: 'red_zone'
+        });
+      }
+
+      // Fourth down situations
+      if (gameState.down === 4 && gameState.quarter >= 3 && gameState.yardsToGo <= 3) {
+        alerts.push({
+          priority: 95,
+          description: `🎯 4TH DOWN! ${gameState.possession} ${gameState.yardsToGo} yards to go`,
+          reasons: ['4th down decision', 'Short distance', 'Critical game moment'],
+          probability: 0.9,
+          deduplicationKey: this.generateDeduplicationKey(gameState, 'FOURTH_DOWN'),
+          type: 'fourth_down'
+        });
+      }
+
+      // Two minute warning
+      if (gameState.twoMinuteWarning && Math.abs(gameState.homeScore - gameState.awayScore) <= 10) {
+        alerts.push({
+          priority: 100,
+          description: `⏰ TWO MINUTE WARNING! Crunch time in close game`,
+          reasons: ['Two minute warning', 'Close score', 'Game on the line'],
+          probability: 1.0,
+          deduplicationKey: this.generateDeduplicationKey(gameState, 'TWO_MINUTE'),
+          type: 'two_minute_warning'
+        });
+      }
+
+      // Process all generated alerts
+      for (const alert of alerts) {
+        if (this.shouldEmitAlert(alert)) {
+          await this.processAlert(alert, gameState);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error checking NFL game situations:', error);
+    }
+  }
+  private generateDeduplicationKey(gameState: NFLGameState, alertType: string): string {
+    return `${gameState.gameId}:${alertType}:${gameState.quarter}:${gameState.down}:${gameState.possession}`;
+  }
+
+  private shouldEmitAlert(alert: SimpleNFLAlert): boolean {
+    const now = Date.now();
+    const cached = this.deduplicationCache.get(alert.deduplicationKey);
+    
+    if (cached && (now - cached.timestamp) < 120000) { // 2 minute cooldown for NFL
+      return false;
+    }
+    
+    return true;
+  }
+
+  private recordAlertEmission(alert: SimpleNFLAlert): void {
+    this.deduplicationCache.set(alert.deduplicationKey, {
+      timestamp: Date.now(),
+      priority: alert.priority
+    });
+    
+    // Cleanup old entries
+    if (this.deduplicationCache.size > 1000) {
+      const now = Date.now();
+      const entries = Array.from(this.deduplicationCache.entries());
+      for (const [key, value] of entries) {
+        if (now - value.timestamp > 3600000) { // 1 hour cleanup
+          this.deduplicationCache.delete(key);
+        }
+      }
+    }
+  }
+
+  private async processAlert(alert: SimpleNFLAlert, gameState: NFLGameState): Promise<void> {
+    try {
+      this.recordAlertEmission(alert);
+
+      const alertRecord = await storage.createAlert({
+        title: `NFL ${alert.type.replace('_', ' ').toUpperCase()}`,
+        description: alert.description,
+        sport: 'NFL',
+        type: alert.type,
+        priority: alert.priority,
+        gameInfo: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          score: {
+            home: gameState.homeScore,
+            away: gameState.awayScore
+          },
+          quarter: gameState.quarter.toString(),
+          status: 'live'
+        } as any
+      });
+
+      // Broadcast to WebSocket clients
+      if (this.onAlert) {
+        this.onAlert({
+          type: 'new_alert',
+          alert: alertRecord
+        });
+      }
+
+      console.log(`✅ NFL Alert generated: ${alert.description}`);
+    } catch (error) {
+      console.error('❌ Error processing NFL alert:', error);
+    }
+  }
   
   extractGameState(espnData: any): NFLGameState | null {
     try {
       const competition = espnData.competitions?.[0];
       if (!competition) return null;
       
-      const situation = competition.situation;
-      const status = competition.status;
+      const situation = competition.situation || {};
+      const status = competition.status || {};
+      const homeTeam = competition.competitors?.find((c: any) => c.homeAway === 'home');
+      const awayTeam = competition.competitors?.find((c: any) => c.homeAway === 'away');
+      
+      const possessionTeam = situation.possession ? 
+        homeTeam?.id === situation.possession ? homeTeam.team.displayName : awayTeam?.team.displayName 
+        : "";
       
       return {
         gameId: `nfl-${espnData.id}`,
         quarter: status.period || 1,
         timeRemaining: status.displayClock || "15:00",
-        possession: situation?.possession || "",
-        down: situation?.down || 1,
-        yardsToGo: situation?.distance || 10,
-        yardLine: situation?.yardLine?.toString() || "50",
-        homeScore: competition.competitors.find((c: any) => c.homeAway === 'home')?.score || 0,
-        awayScore: competition.competitors.find((c: any) => c.homeAway === 'away')?.score || 0,
-        homeTeam: competition.competitors.find((c: any) => c.homeAway === 'home')?.team.displayName || "",
-        awayTeam: competition.competitors.find((c: any) => c.homeAway === 'away')?.team.displayName || "",
-        redZone: (situation?.yardLine || 100) <= 20,
+        possession: possessionTeam || "",
+        down: situation.down || 1,
+        yardsToGo: situation.distance || 10,
+        yardLine: situation.yardLine?.toString() || "50",
+        homeScore: parseInt(homeTeam?.score) || 0,
+        awayScore: parseInt(awayTeam?.score) || 0,
+        homeTeam: homeTeam?.team.displayName || "",
+        awayTeam: awayTeam?.team.displayName || "",
+        redZone: (situation.yardLine || 100) <= 20,
         twoMinuteWarning: status.displayClock === "2:00" && status.period >= 2
       };
     } catch (error) {
@@ -139,32 +262,15 @@ export class NFLEngine extends BaseSportEngine {
       return null;
     }
   }
-  
-  protected getGameSpecificInfo(gameState: NFLGameState) {
-    return {
-      quarter: gameState.quarter.toString(),
-      timeRemaining: gameState.timeRemaining,
-      down: gameState.down,
-      yardsToGo: gameState.yardsToGo,
-      possession: gameState.possession,
-      redZone: gameState.redZone
-    };
-  }
 
-  protected buildGameContext(gameState: NFLGameState): any {
-    return {
-      sport: this.sport,
-      quarter: gameState.quarter,
-      down: gameState.down,
-      yardsToGo: gameState.yardsToGo,
-      homeScore: gameState.homeScore,
-      awayScore: gameState.awayScore,
-      scoreDifference: gameState.homeScore - gameState.awayScore,
-      timeRemaining: gameState.timeRemaining,
-      homeTeam: gameState.homeTeam,
-      awayTeam: gameState.awayTeam,
-      gameState: 'Live'
-    };
+  // === MONITORING METHODS ===
+
+  async startMonitoring(): Promise<void> {
+    console.log('🏈 Starting NFL monitoring with ESPN API...');
+    
+    setInterval(async () => {
+      await this.processLiveGamesOnly();
+    }, 30000); // 30 second interval for NFL
   }
 }
 
