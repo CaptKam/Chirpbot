@@ -8,7 +8,7 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 // Removed mock sportsService - using real data only
 // Removed liveSportsService - using direct API calls
 import { adminRouter } from "./routes/admin";
-import { registerMultiSourceRoutes } from "./routes/multi-source";
+// Removed registerMultiSourceRoutes import - file deleted
 import { aiHealthMonitor } from "./services/ai-health-monitor";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -81,7 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Multi-source data aggregator routes
-  registerMultiSourceRoutes(app);
+  // Removed registerMultiSourceRoutes call - routes deleted
 
   // AI Health Monitor endpoints
   app.get("/healthz", (req, res) => {
