@@ -218,8 +218,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sport: 'NFL',
           gameData: game
         }));
+      } else if (sport === 'NHL') {
+        // Use ESPN NHL API integration
+        const { nhlEngine } = await import('./services/engines/nhl-engine');
+        games = await nhlEngine.getTodaysGames(targetDate);
+        
+        // Transform to match our Game interface
+        games = games.map(game => ({
+          id: game.gameId,
+          homeTeam: {
+            name: game.homeTeam,
+            score: game.homeScore
+          },
+          awayTeam: {
+            name: game.awayTeam,
+            score: game.awayScore
+          },
+          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
+                  game.status.includes('Final') ? 'final' : 'scheduled',
+          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          sport: 'NHL',
+          gameData: game
+        }));
       }
-      // NHL ESPN integration ready for implementation
+      // All major sports now connected to ESPN API
       
       res.json({ date: targetDate, games, sport });
     } catch (error) {
