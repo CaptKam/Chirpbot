@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import type { Settings } from "@/types";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL"];
 
 const ALERT_TYPE_CONFIG = {
   MLB: [
@@ -84,6 +84,14 @@ const ALERT_TYPE_CONFIG = {
     { key: "powerPlay", label: "Power Play", description: "Man advantage situations", category: "Special Situations" },
     { key: "nhlCloseGame", label: "NHL Close Game", description: "One-goal games in final period", category: "Game Situations" },
     { key: "emptyNet", label: "Empty Net", description: "Goalie pulled for extra attacker", category: "Special Situations" },
+  ],
+  CFL: [
+    { key: "redZone", label: "Red Zone Situations", description: "Team driving inside the 20-yard line", category: "Scoring Opportunities" },
+    { key: "closeGame", label: "Close Game", description: "Within 3 points in 4th quarter", category: "Game Situations" },
+    { key: "overtime", label: "Overtime", description: "Sudden death overtime periods", category: "Special Events" },
+    { key: "finalMinutes", label: "Final Minutes", description: "Last 2 minutes of 4th quarter", category: "Game Situations" },
+    { key: "touchdownAlert", label: "Touchdown Alerts", description: "Scoring play notifications", category: "Scoring Events" },
+    { key: "fieldGoalRange", label: "Field Goal Range", description: "Team within field goal range", category: "Scoring Opportunities" },
   ],
 };
 
