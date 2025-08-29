@@ -42,6 +42,37 @@ const teamNameToAbbr: Record<string, string> = {
   'Minnesota Twins': 'MIN',
   'Tampa Bay Rays': 'TB',
   
+  // Common shortened names that MLB API might return
+  'Dodgers': 'LAD',
+  'Giants': 'SF',
+  'Yankees': 'NYY',
+  'Red Sox': 'BOS',
+  'Cubs': 'CHC',
+  'Brewers': 'MIL',
+  'Tigers': 'DET',
+  'Astros': 'HOU',
+  'Pirates': 'PIT',
+  'Blue Jays': 'TOR',
+  'Marlins': 'MIA',
+  'Cardinals': 'STL',
+  'Phillies': 'PHI',
+  'Mariners': 'SEA',
+  'Orioles': 'BAL',
+  'Braves': 'ATL',
+  'White Sox': 'CWS',
+  'Royals': 'KC',
+  'Rangers': 'TEX',
+  'Rockies': 'COL',
+  'Angels': 'LAA',
+  'Reds': 'CIN',
+  'Diamondbacks': 'AZ',
+  'Guardians': 'CLE',
+  'Padres': 'SD',
+  'Mets': 'NYM',
+  'Nationals': 'WSH',
+  'Twins': 'MIN',
+  'Rays': 'TB',
+  
   // NFL Teams
   'Kansas City Chiefs': 'KC',
   'Buffalo Bills': 'BUF',
@@ -463,7 +494,23 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   };
 
   // Get abbreviation from prop or lookup from team name
-  const teamAbbr = abbreviation || teamNameToAbbr[teamName];
+  let teamAbbr = abbreviation;
+  
+  if (!teamAbbr && teamName) {
+    // First try direct match
+    teamAbbr = teamNameToAbbr[teamName];
+    
+    // If no direct match, try partial matching
+    if (!teamAbbr) {
+      const partialMatch = Object.keys(teamNameToAbbr).find(fullName => 
+        fullName.toLowerCase().includes(teamName.toLowerCase()) ||
+        teamName.toLowerCase().includes(fullName.split(' ').pop()?.toLowerCase() || '')
+      );
+      if (partialMatch) {
+        teamAbbr = teamNameToAbbr[partialMatch];
+      }
+    }
+  }
   
   // Try to get the official team logo URL first, prioritizing MLB for sports betting app
   const logoUrl = getTeamLogoUrl(teamAbbr, 'MLB');

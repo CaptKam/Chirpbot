@@ -154,12 +154,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: game.gameId,
           homeTeam: {
             name: game.homeTeam,
-            logo: `/logos/${game.homeTeam.toLowerCase().replace(/\s+/g, '-')}.png`,
             score: game.homeScore
           },
           awayTeam: {
             name: game.awayTeam,
-            logo: `/logos/${game.awayTeam.toLowerCase().replace(/\s+/g, '-')}.png`,
             score: game.awayScore
           },
           status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
