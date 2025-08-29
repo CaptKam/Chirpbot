@@ -91,6 +91,17 @@ export class NCAAEngine {
                         game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.name || 
                         game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.shortDisplayName || '';
         
+        // Enhanced status detection - if period > 0 or clock exists, game is live
+        const espnStatus = game.status.type.name;
+        const period = game.status.period || 0;
+        const clock = game.status.displayClock;
+        
+        // Determine actual game status based on period and clock
+        let actualStatus = espnStatus;
+        if (period > 0 || (clock && clock !== "0:00")) {
+          actualStatus = 'STATUS_IN_PROGRESS';
+        }
+        
         return {
           id: `cfb-${game.id}`,
           gameId: `cfb-${game.id}`,
@@ -98,12 +109,14 @@ export class NCAAEngine {
           awayTeam,
           homeScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.score || '0'),
           awayScore: parseInt(game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.score || '0'),
-          status: game.status.type.name,
+          status: actualStatus,
           gameDate: game.date, // ESPN returns ISO date string
           sport: 'NCAAF',
           subSport: 'Football',
           startTime: game.date, // Add startTime for calendar compatibility
-          espnData: game // Store full ESPN data for detailed parsing
+          espnData: game, // Store full ESPN data for detailed parsing
+          period: period,
+          clock: clock
         };
       });
     } catch (error) {
