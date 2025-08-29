@@ -1,10 +1,7 @@
 // mlbAlertModel.js
 //
-// A JavaScript port of mlbAlertModel.ts so that environments that do
-// not support TypeScript natively (e.g. Replit without ts-node) can
-// consume the scoring probability model directly.  The logic is
-// identical to the TypeScript version, but type annotations have been
-// stripped and it uses CommonJS exports.
+// Simplified MLB scoring probability model without tier system.
+// Removed L1/L2/L3/L4 tier logic and mandatory alert engine laws.
 
 // Baseline probability of at least one run scoring in the remainder of
 // the inning for each base/out state.  Keys are outs (0–2) and the
@@ -102,9 +99,10 @@ function applyModifiers(gs, p, reasons) {
 
 /**
  * Compute the scoring probability and classify it into severity bands.
+ * Simplified version without tier system.
  *
  * @param {Object} gs Game state.  See README for fields.
- * @returns {Object} { p_base, p_adj, severity, priority, reason }.
+ * @returns {Object} { p_base, p_adj, severity, priority, reasons }.
  */
 function calcMLBScoringAlert(gs) {
   const mask = basesMask(gs.bases);
@@ -114,6 +112,8 @@ function calcMLBScoringAlert(gs) {
   const p_adj = applyModifiers(gs, p_base, reasons);
   let severity = 'NONE';
   let priority = 60;
+  
+  // Simplified severity bands
   if (p_adj >= 0.80) {
     severity = 'HIGH';
     priority = 95;
@@ -124,43 +124,34 @@ function calcMLBScoringAlert(gs) {
     severity = 'LOW';
     priority = 75;
   }
-  return { p_base, p_adj, severity, priority, reason: reasons };
+  
+  return { 
+    p_base, 
+    p_adj, 
+    severity, 
+    priority, 
+    reasons,
+    probability: p_adj,
+    shouldAlert: severity !== 'NONE'
+  };
 }
 
-// L1 check: any probability above 0.65 counts.  Returns { yes, reason, priorityHint }.
-function mlbL1WithProb(gs) {
-  const r = calcMLBScoringAlert(gs);
-  if (r.severity === 'LOW' || r.severity === 'MED' || r.severity === 'HIGH') {
-    const msg = `Scoring prob ${(r.p_adj * 100).toFixed(0)}% (${r.severity})`;
-    return { yes: true, reason: msg, priorityHint: r.priority };
-  }
-  return { yes: false };
+/**
+ * Simple check for scoring situations - replaces tier system
+ */
+function checkScoringProbability(gs) {
+  const result = calcMLBScoringAlert(gs);
+  return {
+    shouldAlert: result.shouldAlert,
+    reasons: result.reasons,
+    priority: result.priority,
+    probability: result.probability,
+    severity: result.severity
+  };
 }
 
-// L2 check: medium or high probability only.
-function mlbL2WithProb(gs) {
-  const r = calcMLBScoringAlert(gs);
-  if (r.severity === 'MED' || r.severity === 'HIGH') {
-    const msg = `Scoring prob ${(r.p_adj * 100).toFixed(0)}% (${r.severity})`;
-    return { yes: true, reason: msg, priorityHint: r.priority };
-  }
-  return { yes: false };
-}
-
-// L3 check: high probability only.
-function mlbL3WithProb(gs) {
-  const r = calcMLBScoringAlert(gs);
-  if (r.severity === 'HIGH') {
-    const msg = `Scoring prob ${(r.p_adj * 100).toFixed(0)}% (${r.severity})`;
-    return { yes: true, reason: msg, priorityHint: r.priority };
-  }
-  return { yes: false };
-}
-
-// Export functions for CommonJS consumers.
+// Export simplified functions without tier system
 module.exports = {
-  calcMLBScoringAlert: calcMLBScoringAlert,
-  mlbL1WithProb: mlbL1WithProb,
-  mlbL2WithProb: mlbL2WithProb,
-  mlbL3WithProb: mlbL3WithProb
+  calcMLBScoringAlert,
+  checkScoringProbability
 };

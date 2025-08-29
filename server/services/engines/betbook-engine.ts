@@ -20,7 +20,6 @@ export interface BetbookData {
 export interface AlertContext {
   sport: string;
   gameId: string;
-  tier: number;
   homeTeam: string;
   awayTeam: string;
   homeScore: number;
@@ -28,6 +27,7 @@ export interface AlertContext {
   inning?: number;
   period?: string;
   probability?: number;
+  priority?: number;
 }
 
 /**
@@ -50,8 +50,8 @@ export function getBetbookData(alertContext: AlertContext): BetbookData {
   
   if (alertContext.probability && alertContext.probability > 0.75) {
     aiAdvice = `High scoring probability (${Math.round(alertContext.probability * 100)}%) detected. Consider live betting opportunities, but always do your own research.`;
-  } else if (alertContext.tier >= 3) {
-    aiAdvice = `Tier ${alertContext.tier} alert indicates significant game momentum. Monitor live lines for value opportunities.`;
+  } else if (alertContext.priority && alertContext.priority >= 90) {
+    aiAdvice = `High priority alert indicates significant game momentum. Monitor live lines for value opportunities.`;
   } else if (alertContext.sport === 'MLB' && alertContext.inning && alertContext.inning >= 7) {
     aiAdvice = 'Late inning action can create volatile betting lines. Consider in-game wagering with caution.';
   }

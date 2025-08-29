@@ -267,13 +267,13 @@ export class MLBEngine {
       this.recordAlertEmission(alert);
 
       const description = await this.generateAIEnhancedAlert(alert, gameState);
-      const betbookData = await this.generateAIEnhancedBetbook(alert, gameState);
+      const betbookData = this.generateSimpleBetbook(alert, gameState);
 
       const alertRecord = await storage.createAlert({
         id: randomUUID(),
         title: `${gameState.sport} Alert`,
         description,
-        sport: gameState.sport,
+        sport: 'MLB',
         gameId: gameState.gameId,
         type: 'scoring_situation',
         priority: alert.priority,
@@ -347,63 +347,27 @@ Generate a concise, engaging alert description (max 120 chars) that captures the
     }
   }
 
-  private async generateAIEnhancedBetbook(alert: SimpleAlert, gameState: MLBGameStateV3): Promise<any> {
+  private generateSimpleBetbook(alert: SimpleAlert, gameState: MLBGameStateV3): any {
     try {
-      const openai = await import('openai');
-      const client = new openai.OpenAI();
-
-      const prompt = `
-You are a professional sports betting analyst. Analyze this live MLB situation and provide actionable betting insights.
-
-GAME SITUATION:
-- Teams: ${gameState.awayTeam} @ ${gameState.homeTeam}
-- Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}
-- Inning: ${gameState.inning}${this.getOrdinalSuffix(gameState.inning)} ${gameState.inningState}
-- Scoring Probability: ${Math.round(alert.probability * 100)}%
-
-Provide a brief betting recommendation (max 100 chars) focusing on live betting opportunities.
-`;
-
-      const completion = await client.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 40,
-        temperature: 0.6
+      const { getBetbookData } = require('./betbook-engine');
+      
+      return getBetbookData({
+        sport: 'MLB',
+        gameId: gameState.gameId,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        homeScore: gameState.homeScore,
+        awayScore: gameState.awayScore,
+        inning: gameState.inning,
+        probability: alert.probability,
+        priority: alert.priority
       });
-
-      const aiAdvice = completion.choices[0]?.message?.content?.trim();
-      
-      if (aiAdvice && aiAdvice.length > 10) {
-        return {
-          odds: {
-            home: -110,
-            away: +100,
-            total: 8.5,
-          },
-          aiAdvice: aiAdvice + ' Always gamble responsibly.',
-          sportsbookLinks: [
-            { name: 'FanDuel', url: 'https://www.fanduel.com/' },
-            { name: 'DraftKings', url: 'https://www.draftkings.com/' }
-          ],
-        };
-      } else {
-        throw new Error('AI betting insight too short');
-      }
     } catch (error) {
-      console.error('AI Betting enhancement failed, using fallback:', error);
-      const baseInsight = `High ${Math.round(alert.probability * 100)}% scoring probability with ${gameState.outs} outs could shift live run lines.`;
-      
+      console.error('❌ Betbook generation error:', error);
       return {
-        odds: {
-          home: -110,
-          away: +100,
-          total: 8.5,
-        },
-        aiAdvice: baseInsight + ' Always gamble responsibly.',
-        sportsbookLinks: [
-          { name: 'FanDuel', url: 'https://www.fanduel.com/' },
-          { name: 'DraftKings', url: 'https://www.draftkings.com/' }
-        ],
+        odds: { home: -110, away: +100, total: 8.5 },
+        aiAdvice: 'Betting data temporarily unavailable. Please check your sportsbook for current odds. Always gamble responsibly.',
+        sportsbookLinks: []
       };
     }
   }
