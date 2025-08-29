@@ -720,9 +720,16 @@ export class MemStorage implements IStorage {
   }
 
   async getEnabledAlertKeysBySport(sport: string): Promise<string[]> {
-    return Array.from(this.masterAlertControls.values())
+    const enabledKeys = Array.from(this.masterAlertControls.values())
       .filter(control => control.sport === sport && control.enabled)
       .map(control => control.alertKey);
+    
+    // If no master controls exist for CFL, return all alert keys as enabled
+    if (sport === 'CFL' && enabledKeys.length === 0) {
+      return ['redZone', 'closeGame', 'overtime', 'finalMinutes', 'touchdownAlert', 'fieldGoalRange'];
+    }
+    
+    return enabledKeys;
   }
 
   // ChirpBot V3 Extensions Implementation
