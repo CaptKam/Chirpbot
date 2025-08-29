@@ -16,10 +16,9 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import AdminApp from "./AdminApp";
 
-function ProtectedRoute({ component: Component, requireAdmin = false }: { component: React.ComponentType; requireAdmin?: boolean }) {
-  const { isAuthenticated, isLoading, isAdmin } = useAuth();
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -34,17 +33,6 @@ function ProtectedRoute({ component: Component, requireAdmin = false }: { compon
 
   if (!isAuthenticated) {
     return <Redirect to="/" />;
-  }
-
-  if (requireAdmin && !isAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
-        <div className="text-center p-8 bg-red-900/20 rounded-lg border border-red-500/30">
-          <h2 className="text-xl font-bold text-red-400 mb-2">Access Denied</h2>
-          <p className="text-slate-300">Admin privileges required to access this page.</p>
-        </div>
-      </div>
-    );
   }
 
   return <Component />;
@@ -150,15 +138,6 @@ function AppContent() {
 }
 
 function App() {
-  // Check for admin routes at the very top level - completely separate app
-  const isAdminRoute = window.location.pathname === '/admin-login' || 
-                       window.location.pathname === '/admin/login' || 
-                       window.location.pathname === '/admin';
-  
-  if (isAdminRoute) {
-    return <AdminApp />;
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

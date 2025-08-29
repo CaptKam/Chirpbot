@@ -7,7 +7,6 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 // Removed getWeatherData import - weather service deleted
 // Removed mock sportsService - using real data only
 // Removed liveSportsService - using direct API calls
-import { adminRouter } from "./routes/admin";
 // Removed registerMultiSourceRoutes import - file deleted
 import { aiHealthMonitor } from "./services/ai-health-monitor";
 
@@ -70,15 +69,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Admin routes with error handling
-  app.use("/api/admin", (req, res, next) => {
-    try {
-      adminRouter(req, res, next);
-    } catch (error) {
-      console.error('Admin router error:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
 
   // Multi-source data aggregator routes
   // Removed registerMultiSourceRoutes call - routes deleted

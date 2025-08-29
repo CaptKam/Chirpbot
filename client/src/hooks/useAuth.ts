@@ -29,9 +29,6 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
-    isManager: user?.role === 'manager' || user?.role === 'admin',
-    isAnalyst: user?.role === 'analyst' || user?.role === 'manager' || user?.role === 'admin',
     error,
   };
 }
