@@ -165,8 +165,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
             condition: 'Clear'
           }
         }));
+      } else if (sport === 'NBA') {
+        // Use ESPN NBA API integration
+        const { nbaEngine } = await import('./services/engines/nba-engine');
+        games = await nbaEngine.getTodaysGames(targetDate);
+        
+        // Transform to match our Game interface  
+        games = games.map(game => ({
+          id: game.gameId,
+          homeTeam: {
+            name: game.homeTeam,
+            score: game.homeScore
+          },
+          awayTeam: {
+            name: game.awayTeam,
+            score: game.awayScore
+          },
+          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
+                  game.status.includes('Final') ? 'final' : 'scheduled',
+          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          sport: 'NBA',
+          // Include original ESPN data for debugging
+          gameData: game
+        }));
       }
-      // Add support for other sports later (NFL, NBA, NHL)
+      // NFL and NHL ESPN integration available
       
       res.json({ date: targetDate, games, sport });
     } catch (error) {

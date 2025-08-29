@@ -1,6 +1,7 @@
-import { BaseSportEngine, AlertConfig } from './base-engine';
 import { storage } from '../../storage';
-// Removed sportsDataService - service deleted
+import { sendTelegramAlert } from '../telegram';
+import { randomUUID } from 'crypto';
+import { fetchJson } from '../http';
 
 interface NBAGameState {
   gameId: string;
@@ -14,104 +15,200 @@ interface NBAGameState {
   overtime: boolean;
 }
 
-export class NBAEngine extends BaseSportEngine {
-  sport = 'NBA';
-  monitoringInterval = 3000; // 3 seconds for fast NBA monitoring
-  
-  async monitor() {
-    try {
-      // Real-time alerts are always active (no demo mode)
+interface SimpleNBAAlert {
+  priority: number;
+  description: string;
+  reasons: string[];
+  probability: number;
+  deduplicationKey: string;
+  type: string;
+}
 
-      const settings = await storage.getSettingsBySport(this.sport);
-      if (!settings) {
-        return;
+export class NBAEngine {
+  private readonly ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
+  private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
+  
+  onAlert?: (alert: any) => void;
+
+  constructor() {
+    console.log('🏀 NBAEngine initialized with ESPN API integration');
+  }
+
+  // === ESPN API INTEGRATION ===
+
+  async getTodaysGames(date?: string): Promise<any[]> {
+    try {
+      const url = `${this.ESPN_API_BASE}/scoreboard`;
+      
+      const data: any = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      if (!data?.events || !Array.isArray(data.events)) {
+        console.log('📅 No NBA games found');
+        return [];
       }
-      
-      console.log(`🏀 Checking ${this.sport} games for alerts...`);
-      
-      // SportsData service removed - no live games available
-      const games: any[] = [];
-      const liveGames = games.filter(game => game.status === 'live');
-      
-      if (liveGames.length === 0) {
-        return;
-      }
-      
-      console.log(`🏀 Found ${liveGames.length} live NBA games to monitor`);
-      
-      // Process each live game for alerts
-      for (const game of liveGames) {
-        const gameState: NBAGameState = {
-          gameId: game.id,
-          period: 1, // Default to 1 since SportsData doesn't provide detailed period info
-          timeRemaining: "12:00", // SportsData doesn't provide detailed time
-          homeScore: game.homeTeam.score || 0,
-          awayScore: game.awayTeam.score || 0,
-          homeTeam: game.homeTeam.name,
-          awayTeam: game.awayTeam.name,
-          clutchTime: false, // Would need more detailed data to determine
-          overtime: false // Would need more detailed data to determine
-        };
-        
-        const triggeredAlerts = await this.checkAlertConditions(gameState);
-        if (triggeredAlerts.length > 0) {
-          await this.processAlerts(triggeredAlerts, gameState);
-        }
-      }
-      
+
+      return data.events.map((game: any) => ({
+        id: game.id,
+        gameId: game.id,
+        homeTeam: game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.team.displayName || '',
+        awayTeam: game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.team.displayName || '',
+        homeScore: game.competitions[0].competitors.find((c: any) => c.homeAway === 'home')?.score || 0,
+        awayScore: game.competitions[0].competitors.find((c: any) => c.homeAway === 'away')?.score || 0,
+        status: game.status.type.name,
+        gameDate: game.date,
+        sport: 'NBA',
+        espnData: game // Store full ESPN data for detailed parsing
+      }));
     } catch (error) {
-      console.error(`${this.sport} monitoring error:`, error);
+      console.error('❌ ESPN NBA API Error:', error);
+      return [];
     }
   }
-  
-  alertConfigs: AlertConfig[] = [
-    {
-      type: "Clutch Time",
-      settingKey: "clutchTime",
-      priority: 90,
-      probability: 0.9,
-      description: "🏀 CLUTCH TIME! Under 5 minutes in close game",
-      conditions: (state: NBAGameState) => 
-        state.clutchTime && Math.abs(state.homeScore - state.awayScore) <= 5
-    },
-    {
-      type: "Overtime",
-      settingKey: "overtime",
-      priority: 95,
-      probability: 1.0,
-      description: "⚡ OVERTIME! Extra basketball action",
-      conditions: (state: NBAGameState) => 
-        state.overtime
-    },
-    {
-      type: "NBA Close Game",
-      settingKey: "nbaCloseGame",
-      priority: 80,
-      probability: 0.8,
-      description: "🔥 TIGHT CONTEST! Anyone's game",
-      conditions: (state: NBAGameState) => 
-        Math.abs(state.homeScore - state.awayScore) <= 3 && state.period >= 2
-    },
-    // AI Prediction-based alerts
-    {
-      type: "Buzzer Beater Prediction",
-      priority: 95,
-      probability: 1.0,
-      description: "🚨 BUZZER BEATER POTENTIAL - Final seconds magic!",
-      isPrediction: true,
-      predictionEvents: ["Buzzer Beater", "Game Winner"],
-      minimumPredictionProbability: 70
-    },
-    {
-      type: "Three Point Opportunity",
-      priority: 80,
-      probability: 1.0,
-      description: "🎯 HIGH THREE-POINT PROBABILITY - Shooter ready!",
-      isPrediction: true,
-      predictionEvents: ["Three Pointer"],
-      minimumPredictionProbability: 75
+
+  async processLiveGamesOnly(): Promise<void> {
+    try {
+      const games = await this.getTodaysGames();
+      const liveGames = games.filter(game => 
+        game.status === 'STATUS_IN_PROGRESS' || 
+        game.status.toLowerCase().includes('period') ||
+        game.status.toLowerCase().includes('quarter')
+      );
+      
+      console.log(`🏀 NBA Engine Processing ${liveGames.length} live games`);
+      
+      for (const game of liveGames) {
+        const gameState = this.extractGameState(game.espnData);
+        if (gameState) {
+          await this.checkGameSituations(gameState);
+        }
+      }
+    } catch (error) {
+      console.error('❌ NBA monitoring error:', error);
     }
-  ];
+  }
+
+  async checkGameSituations(gameState: NBAGameState): Promise<void> {
+    try {
+      const alerts: SimpleNBAAlert[] = [];
+
+      // Clutch time alerts (under 5 minutes in close game)
+      if (gameState.clutchTime && Math.abs(gameState.homeScore - gameState.awayScore) <= 5) {
+        alerts.push({
+          priority: 90,
+          description: `🏀 CLUTCH TIME! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
+          reasons: ['Under 5 minutes remaining', 'Close game (≤5 point spread)', 'High leverage situation'],
+          probability: 0.9,
+          deduplicationKey: this.generateDeduplicationKey(gameState, 'CLUTCH_TIME'),
+          type: 'clutch_time'
+        });
+      }
+
+      // Overtime alerts
+      if (gameState.overtime) {
+        alerts.push({
+          priority: 95,
+          description: `⚡ OVERTIME! ${gameState.awayTeam} vs ${gameState.homeTeam} going to extra time`,
+          reasons: ['Overtime period', 'Extended game action', 'Betting implications'],
+          probability: 1.0,
+          deduplicationKey: this.generateDeduplicationKey(gameState, 'OVERTIME'),
+          type: 'overtime'
+        });
+      }
+
+      // Close game alerts
+      if (Math.abs(gameState.homeScore - gameState.awayScore) <= 3 && gameState.period >= 2) {
+        alerts.push({
+          priority: 85,
+          description: `🔥 TIGHT CONTEST! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
+          reasons: ['3-point game or less', `${gameState.period}${this.getOrdinalSuffix(gameState.period)} period`, 'Anyone can win'],
+          probability: 0.85,
+          deduplicationKey: this.generateDeduplicationKey(gameState, 'CLOSE_GAME'),
+          type: 'close_game'
+        });
+      }
+
+      // Process all generated alerts
+      for (const alert of alerts) {
+        if (this.shouldEmitAlert(alert)) {
+          await this.processAlert(alert, gameState);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error checking NBA game situations:', error);
+    }
+  }
+
+  // === HELPER METHODS ===
+
+  private generateDeduplicationKey(gameState: NBAGameState, alertType: string): string {
+    return `${gameState.gameId}:${alertType}:${gameState.period}:${Math.floor(this.parseTimeRemaining(gameState.timeRemaining) / 300)}`;
+  }
+
+  private shouldEmitAlert(alert: SimpleNBAAlert): boolean {
+    const now = Date.now();
+    const existing = this.deduplicationCache.get(alert.deduplicationKey);
+    
+    if (existing && now - existing.timestamp < 120000) { // 2-minute cooldown
+      return false;
+    }
+    
+    this.deduplicationCache.set(alert.deduplicationKey, {
+      timestamp: now,
+      priority: alert.priority
+    });
+    
+    return true;
+  }
+
+  private async processAlert(alert: SimpleNBAAlert, gameState: NBAGameState): Promise<void> {
+    try {
+      const alertRecord = await storage.createAlert({
+        title: `NBA ${alert.type.replace('_', ' ').toUpperCase()}`,
+        description: alert.description,
+        sport: 'NBA',
+        type: alert.type,
+        priority: alert.priority,
+        gameInfo: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          score: {
+            home: gameState.homeScore,
+            away: gameState.awayScore
+          },
+          period: gameState.period.toString(),
+          status: 'live'
+        } as any
+      });
+
+      // Broadcast to WebSocket clients
+      if (this.onAlert) {
+        this.onAlert({
+          type: 'alert',
+          data: alertRecord
+        });
+      }
+
+      console.log(`🏀 NBA Alert Generated: ${alert.description}`);
+    } catch (error) {
+      console.error('❌ Error processing NBA alert:', error);
+    }
+  }
+
+  private getOrdinalSuffix(num: number): string {
+    const j = num % 10;
+    const k = num % 100;
+    if (j == 1 && k != 11) return 'st';
+    if (j == 2 && k != 12) return 'nd';
+    if (j == 3 && k != 13) return 'rd';
+    return 'th';
+  }
+  
   
   extractGameState(espnData: any): NBAGameState | null {
     try {
@@ -124,11 +221,11 @@ export class NBAEngine extends BaseSportEngine {
         gameId: `nba-${espnData.id}`,
         period: status.period || 1,
         timeRemaining: status.displayClock || "12:00",
-        homeScore: competition.competitors.find((c: any) => c.homeAway === 'home')?.score || 0,
-        awayScore: competition.competitors.find((c: any) => c.homeAway === 'away')?.score || 0,
+        homeScore: parseInt(competition.competitors.find((c: any) => c.homeAway === 'home')?.score || '0'),
+        awayScore: parseInt(competition.competitors.find((c: any) => c.homeAway === 'away')?.score || '0'),
         homeTeam: competition.competitors.find((c: any) => c.homeAway === 'home')?.team.displayName || "",
         awayTeam: competition.competitors.find((c: any) => c.homeAway === 'away')?.team.displayName || "",
-        clutchTime: status.period === 4 && this.parseTimeRemaining(status.displayClock) <= 300, // 5 minutes
+        clutchTime: status.period === 4 && this.parseTimeRemaining(status.displayClock || "0:00") <= 300, // 5 minutes
         overtime: status.period > 4
       };
     } catch (error) {
@@ -138,34 +235,15 @@ export class NBAEngine extends BaseSportEngine {
   }
   
   private parseTimeRemaining(timeString: string): number {
-    const parts = timeString.split(':');
-    if (parts.length === 2) {
-      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    try {
+      const parts = timeString.split(':');
+      if (parts.length === 2) {
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      }
+      return 0;
+    } catch {
+      return 0;
     }
-    return 0;
-  }
-  
-  protected getGameSpecificInfo(gameState: NBAGameState) {
-    return {
-      period: gameState.period.toString(),
-      timeRemaining: gameState.timeRemaining,
-      clutchTime: gameState.clutchTime,
-      overtime: gameState.overtime
-    };
-  }
-
-  protected buildGameContext(gameState: NBAGameState): any {
-    return {
-      sport: this.sport,
-      period: gameState.period,
-      homeScore: gameState.homeScore,
-      awayScore: gameState.awayScore,
-      scoreDifference: gameState.homeScore - gameState.awayScore,
-      timeRemaining: gameState.timeRemaining,
-      homeTeam: gameState.homeTeam,
-      awayTeam: gameState.awayTeam,
-      gameState: 'Live'
-    };
   }
 }
 
