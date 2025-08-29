@@ -966,12 +966,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
-    const result = await this.db.select().from(userMonitoredGames);
+    const result = await db.select().from(userMonitoredTeams);
     return result;
   }
 
   async removeGameFromAllUsers(gameId: string): Promise<void> {
-    await this.db.delete(userMonitoredGames).where(eq(userMonitoredGames.gameId, gameId));
+    await db.delete(userMonitoredTeams).where(eq(userMonitoredTeams.gameId, gameId));
   }
 
   // Alert methods
