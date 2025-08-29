@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { WebSocketMessage } from '@/types';
-
-// Assuming Alert type and queryClient are defined elsewhere and imported appropriately.
-// For the purpose of this example, we'll assume their existence.
-// Example placeholder types and objects:
-// type Alert = { id: string; type: string; sport: string; title: string; timestamp: number; seen: boolean; sentToTelegram: boolean };
-// const queryClient = {
-//   setQueryData: (key: string[], data: any) => {},
-//   invalidateQueries: (options: { queryKey: string[] }) => Promise.resolve(),
-// };
+import type { WebSocketMessage, Alert } from '@/types';
+import { queryClient } from '@/lib/queryClient';
 
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);

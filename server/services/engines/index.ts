@@ -1,4 +1,3 @@
-import { mlbEngine } from './mlb-engine';
 import { MLBEngineV3 } from './mlb-engine-v3';
 import { nflEngine } from './nfl-engine';
 import { nbaEngine } from './nba-engine';
@@ -193,6 +192,6 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
 export const alertEngineManager = new AlertEngineManagerImpl();
 
-// Export individual engines for direct access if needed
-export { mlbEngine, nflEngine, nbaEngine, nhlEngine, weatherEngine };
+// Export individual engines for direct access if needed  
+export { nflEngine, nbaEngine, nhlEngine, weatherEngine };
 export { BaseSportEngine } from './base-engine';
