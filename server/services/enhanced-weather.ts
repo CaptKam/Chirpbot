@@ -149,5 +149,4 @@ export async function getEnhancedWeather(venueName: string): Promise<EnhancedWea
   }
 }
 
-// Export for backward compatibility
-export { EnhancedWeatherService } from "./enhanced-weather-legacy";
+// Enhanced weather functionality complete - legacy file removed

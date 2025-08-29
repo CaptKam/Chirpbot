@@ -14,10 +14,29 @@ import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { getWeatherData } from '../weather';
 // V3 system uses integrated 4-tier alert calculations instead of legacy models
-// Legacy imports removed: mlb-alert-model, user-settings, betbook-engine
+// Legacy imports removed: mlb-api, enhanced-mlb-feed (now integrated), mlb-alert-model, user-settings, betbook-engine
 import { AlertDeduper } from '../alert-deduper';
+import { fetchJson } from '../http';
 
 // === V3 INTERFACES ===
+
+export interface BaseRunner {
+  id: number;
+  name: string;
+  position: string;
+  stats?: {
+    avg?: number;
+    obp?: number;
+    slg?: number;
+    hr?: number;
+  };
+}
+
+export interface EnhancedRunners {
+  first: { occupied: boolean; player: BaseRunner | null };
+  second: { occupied: boolean; player: BaseRunner | null };
+  third: { occupied: boolean; player: BaseRunner | null };
+}
 
 export interface MLBGameStateV3 {
   gameId: string;
@@ -30,20 +49,18 @@ export interface MLBGameStateV3 {
   inning: number;
   inningState: 'top' | 'bottom';
   outs: number;
-  runners: {
-    first: boolean;
-    second: boolean;
-    third: boolean;
-  };
+  runners: EnhancedRunners;
   currentBatter?: {
     id: number;
     name: string;
-    stats: { hr: number; avg: number; ops: number };
+    position: string;
+    stats: { hr: number; avg: number; ops: number; obp?: number; slg?: number };
   };
   currentPitcher?: {
     id: number;
     name: string;
-    stats: { era: number; whip: number };
+    position: string;
+    stats: { era: number; whip: number; strikeOuts?: number; wins?: number; losses?: number };
   };
   ballpark?: string;
   weather?: {
@@ -52,6 +69,8 @@ export interface MLBGameStateV3 {
     temperature?: number;
   };
   venue?: string;
+  balls?: number;
+  strikes?: number;
 }
 
 export interface AlertTierResult {
@@ -92,11 +111,133 @@ export class MLBEngineV3 {
     3: 45000,   // L3: 45 seconds
     4: 60000    // L4: 60 seconds
   };
+  private readonly MLB_API_BASE = 'https://statsapi.mlb.com/api/v1';
   
   onAlert?: (alert: any) => void;
 
   constructor() {
-    console.log('🔧 MLBEngineV3 initialized with AI-Enhanced Alert System');
+    console.log('🔧 MLBEngineV3 initialized with AI-Enhanced Alert System & Integrated Player Detection');
+  }
+
+  /**
+   * Integrated Enhanced MLB Feed - Gets detailed player information
+   * Replaces the separate enhanced-mlb-feed service
+   */
+  private async getEnhancedGameData(gamePk: number): Promise<{
+    runners: EnhancedRunners;
+    currentBatter?: any;
+    currentPitcher?: any;
+    outs: number;
+    balls: number;
+    strikes: number;
+  } | null> {
+    try {
+      const url = `${this.MLB_API_BASE}/game/${gamePk}/feed/live`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      if (!data?.liveData?.linescore) {
+        console.log(`⚠️ No linescore data available for game ${gamePk}`);
+        return null;
+      }
+
+      const linescore = data.liveData.linescore;
+      const offense = linescore.offense || {};
+      const defense = linescore.defense || {};
+
+      // Extract detailed base runner information
+      const runners: EnhancedRunners = {
+        first: this.extractRunnerInfo(offense.first),
+        second: this.extractRunnerInfo(offense.second),
+        third: this.extractRunnerInfo(offense.third)
+      };
+
+      // Extract current batter/pitcher information
+      const currentBatter = this.extractPlayerInfo(offense.batter);
+      const currentPitcher = this.extractPlayerInfo(defense.pitcher);
+
+      return {
+        runners,
+        currentBatter,
+        currentPitcher,
+        outs: linescore.outs || 0,
+        balls: linescore.balls || 0,
+        strikes: linescore.strikes || 0
+      };
+
+    } catch (error) {
+      console.error(`Error fetching enhanced game state for ${gamePk}:`, error);
+      return null;
+    }
+  }
+
+  private extractRunnerInfo(runnerData: any): { occupied: boolean; player: BaseRunner | null } {
+    if (!runnerData || !runnerData.id) {
+      return { occupied: false, player: null };
+    }
+
+    return {
+      occupied: true,
+      player: {
+        id: runnerData.id,
+        name: runnerData.fullName || `Player #${runnerData.id}`,
+        position: runnerData.primaryPosition?.code || '',
+        stats: {
+          avg: runnerData.stats?.batting?.avg || undefined,
+          obp: runnerData.stats?.batting?.obp || undefined,
+          slg: runnerData.stats?.batting?.slg || undefined
+        }
+      }
+    };
+  }
+
+  private extractPlayerInfo(playerData: any): any {
+    if (!playerData || !playerData.id) {
+      return null;
+    }
+
+    return {
+      id: playerData.id,
+      name: playerData.fullName || `Player #${playerData.id}`,
+      position: playerData.primaryPosition?.code || '',
+      stats: {
+        avg: playerData.stats?.batting?.avg || playerData.stats?.pitching?.era || undefined,
+        hr: playerData.stats?.batting?.homeRuns || 0,
+        ops: playerData.stats?.batting?.ops || 0.750
+      }
+    };
+  }
+
+  private convertBasicRunners(basicRunners: any): EnhancedRunners {
+    return {
+      first: { occupied: !!basicRunners?.first, player: null },
+      second: { occupied: !!basicRunners?.second, player: null },
+      third: { occupied: !!basicRunners?.third, player: null }
+    };
+  }
+
+  private formatEnhancedRunners(runners: EnhancedRunners): string {
+    const occupied = [];
+    if (runners.first.occupied) {
+      const name = runners.first.player?.name || 'Runner';
+      occupied.push(`1st: ${name}`);
+    }
+    if (runners.second.occupied) {
+      const name = runners.second.player?.name || 'Runner';
+      occupied.push(`2nd: ${name}`);
+    }
+    if (runners.third.occupied) {
+      const name = runners.third.player?.name || 'Runner';
+      occupied.push(`3rd: ${name}`);
+    }
+    
+    return occupied.length > 0 ? occupied.join(', ') : 'Bases empty';
   }
 
   /**
@@ -150,51 +291,59 @@ export class MLBEngineV3 {
     try {
       console.log(`🔍 V3 Extracting game state for ${game.id}`);
       
-      // Game is already transformed by multi-source service
-      // Convert to V3 format directly
+      const gamePk = parseInt(game.id.split('-')[1]) || 0;
+      
+      // Get enhanced player data from MLB API
+      const enhancedData = await this.getEnhancedGameData(gamePk);
+      
+      // Convert basic game data to V3 format with enhanced player info
       const v3GameState: MLBGameStateV3 = {
         gameId: game.id,
-        gamePk: parseInt(game.id.split('-')[1]) || 0,
+        gamePk,
         status: 'Live',
         homeTeam: game.homeTeam?.name || 'Unknown',
         awayTeam: game.awayTeam?.name || 'Unknown',
         homeScore: game.homeTeam?.score || 0,
         awayScore: game.awayTeam?.score || 0,
         inning: game.inning || 1,
-        inningState: game.inningState || 'Top',
-        outs: game.outs || 0,
-        runners: game.runners || { first: false, second: false, third: false },
-        currentBatter: game.currentBatter ? {
+        inningState: (game.inningState || 'Top').toLowerCase() as 'top' | 'bottom',
+        outs: game.outs || enhancedData?.outs || 0,
+        balls: game.balls || enhancedData?.balls || 0,
+        strikes: game.strikes || enhancedData?.strikes || 0,
+        runners: enhancedData?.runners || this.convertBasicRunners(game.runners),
+        currentBatter: enhancedData?.currentBatter || (game.currentBatter ? {
           id: game.currentBatter.id || 0,
           name: game.currentBatter.name || 'Unknown',
+          position: game.currentBatter.position || '',
           stats: {
             hr: game.currentBatter.stats?.hr || 0,
             avg: game.currentBatter.stats?.avg || 0.250,
             ops: game.currentBatter.stats?.ops || 0.750
           }
-        } : undefined,
-        currentPitcher: game.currentPitcher ? {
+        } : undefined),
+        currentPitcher: enhancedData?.currentPitcher || (game.currentPitcher ? {
           id: game.currentPitcher.id || 0,
           name: game.currentPitcher.name || 'Unknown',
+          position: game.currentPitcher.position || 'P',
           stats: {
             era: game.currentPitcher.stats?.era || 4.00,
             whip: game.currentPitcher.stats?.whip || 1.30
           }
-        } : undefined,
+        } : undefined),
         ballpark: game.ballpark?.name || game.venue,
         venue: game.venue,
         weather: game.weather
       };
 
-      // Enhanced logging to show base runner details
-      const runnerSummary = [
-        v3GameState.runners.first ? "1st" : "",
-        v3GameState.runners.second ? "2nd" : "",
-        v3GameState.runners.third ? "3rd" : ""
-      ].filter(Boolean).join(", ") || "Bases empty";
+      // Enhanced logging to show base runner details with player names
+      const runnerSummary = this.formatEnhancedRunners(v3GameState.runners);
       
       console.log(`✅ V3 Extracted game state: ${v3GameState.awayTeam} @ ${v3GameState.homeTeam} (${v3GameState.inning} ${v3GameState.inningState})`);
       console.log(`   🏃‍♂️ Runners: ${runnerSummary}, Outs: ${v3GameState.outs}`);
+      if (v3GameState.currentBatter) {
+        console.log(`   🥎 Batter: ${v3GameState.currentBatter.name} (${v3GameState.currentBatter.stats?.avg?.toFixed(3) || 'N/A'} AVG)`);
+      }
+      
       return v3GameState;
     } catch (error) {
       console.error('Error extracting V3 game state:', error);
