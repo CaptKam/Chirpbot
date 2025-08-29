@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData } from "./services/weather";
-import { sportsService, type SportsEvent } from "./services/sports";
+// Removed mock sportsService - using real data only
 import { liveSportsService } from "./services/live-sports";
 import { adminRouter } from "./routes/admin";
 import { registerMultiSourceRoutes } from "./routes/multi-source";
@@ -595,12 +595,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sports data routes
+  // Sports data routes - now using live-sports service
   app.get("/api/sports/games", async (req, res) => {
     try {
       const sport = req.query.sport as string;
-      const games = await sportsService.getLiveGames(sport);
-      res.json(games);
+      const gamesData = await liveSportsService.getTodaysGames(sport);
+      res.json(gamesData.games);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch games" });
     }
