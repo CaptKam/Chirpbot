@@ -13,9 +13,19 @@ const mlb: SportAdapter = {
       g?.runners?.first ? "On Base" : "Bases Empty";
 
     const period = `${(g.inningState||'').toLowerCase().startsWith('top')?'Top':'Bot'} ${g.inning ?? ''}`.trim();
-    const edgeVal = a.gameInfo?.scoringProbability != null
-      ? `${Math.round(((a.gameInfo.scoringProbability > 1 ? a.gameInfo.scoringProbability/100 : a.gameInfo.scoringProbability) * 100))}%`
-      : a.probability != null ? `${Math.round((a.probability>1?a.probability/100:a.probability)*100)}%` : '';
+    const edgeVal = (() => {
+      let prob = 0;
+      if (a.gameInfo?.scoringProbability != null) {
+        prob = a.gameInfo.scoringProbability;
+      } else if (a.probability != null) {
+        prob = a.probability;
+      } else {
+        return '';
+      }
+      // Normalize probability to 0-1 range
+      if (prob > 1) prob = prob / 100;
+      return `${Math.round(prob * 100)}%`;
+    })();
 
     // Create situational description
     let situation = `${bases} • ${g.outs ?? 0} ${g.outs===1?'out':'outs'}`;
@@ -39,7 +49,7 @@ const mlb: SportAdapter = {
     return {
       id: a.id,
       sport: "MLB",
-      title: (a.type || '').replace(/_/g,' ').replace(/([A-Z])/g, ' $1').trim(),
+      title: (a.type || 'Game Alert').replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim(),
       situation,
       scoreline: (() => {
         // V3 engine provides scores as homeScore/awayScore directly

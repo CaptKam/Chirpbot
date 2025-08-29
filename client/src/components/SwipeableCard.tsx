@@ -252,66 +252,21 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                   <p className="text-white text-sm font-medium">
                     {(() => {
-                      // Get analysis data or generate from alert info
-                      const reasons = alertData.gameInfo?.v3Analysis?.reasons || [];
-                      const tier = alertData.gameInfo?.v3Analysis?.tier || Math.ceil((alertData.priority || 70) / 25);
-                      const probability = alertData.gameInfo?.v3Analysis?.probability || (alertData.priority >= 95 ? 0.85 : alertData.priority >= 90 ? 0.80 : alertData.priority >= 85 ? 0.75 : 0.70);
                       const sport = alertData.sport || 'MLB';
+                      const tier = alertData.gameInfo?.v3Analysis?.tier || Math.ceil((alertData.priority || 70) / 25);
+                      const homeScore = alertData.homeScore || 0;
+                      const awayScore = alertData.awayScore || 0;
+                      const totalScore = homeScore + awayScore;
                       
-                      // Generate betting recommendation based on sport and situation
                       if (sport === 'MLB') {
-                        // Get current scores to make intelligent recommendations
-                        const homeScore = alertData.homeScore || 0;
-                        const awayScore = alertData.awayScore || 0;
-                        const totalScore = homeScore + awayScore;
-                        const higherTeamScore = Math.max(homeScore, awayScore);
-                        
-                        if (reasons.some(r => r.includes('scoring position')) && reasons.some(r => r.includes('power hitter'))) {
-                          const overLine = Math.max(totalScore + 2.5, 8.5);
-                          return `Bet Over ${overLine} runs - High scoring situation with RISP + power hitter`;
-                        } else if (reasons.some(r => r.includes('bases loaded'))) {
-                          const overLine = Math.max(totalScore + 1.5, 7.5);
-                          return `Bet Over ${overLine} runs - Bases loaded situation favors scoring`;  
-                        } else if (reasons.some(r => r.includes('wind')) && reasons.some(r => r.includes('out'))) {
-                          const overLine = Math.max(totalScore + 2, 8.0);
-                          return `Bet Over ${overLine} runs - Favorable wind conditions for offense`;
-                        } else if (reasons.some(r => r.includes('Close Game'))) {
-                          return "Live bet team moneyline - Close game with momentum shift";
-                        } else if (reasons.some(r => r.includes('late-inning'))) {
-                          return "Live bet next inning Over 0.5 runs - Clutch situation";
-                        } else if (tier >= 3 && probability > 0.75) {
-                          const teamTotalLine = Math.max(higherTeamScore + 1.5, 4.5);
-                          return `Bet team total Over ${teamTotalLine} - High probability scoring opportunity`;
+                        const overLine = Math.max(totalScore + 1.5, 7.5);
+                        if (tier >= 3) {
+                          return `Bet Over ${overLine} runs - High-tier scoring opportunity`;
                         } else {
-                          const overLine = Math.max(totalScore + 1.5, 7.5);
-                          return `Bet Over ${overLine} runs - Favorable offensive situation`;
-                        }
-                      } else if (sport === 'NBA') {
-                        if (reasons.some(r => r.includes('Clutch'))) {
-                          return "Bet Over team total - High-scoring clutch situation";
-                        } else if (reasons.some(r => r.includes('Overtime'))) {
-                          return "Bet Over game total - Overtime adds scoring opportunity";
-                        } else {
-                          return "Live bet player props - High-energy situation";
-                        }
-                      } else if (sport === 'NHL') {
-                        if (reasons.some(r => r.includes('Power Play'))) {
-                          return "Bet Over 0.5 goals next period - Power play advantage";
-                        } else if (reasons.some(r => r.includes('Empty Net'))) {
-                          return "Bet Over game total - Empty net creates scoring chances";
-                        } else {
-                          return "Live bet puck line - Game momentum shifting";
-                        }
-                      } else if (sport === 'NFL') {
-                        if (reasons.some(r => r.includes('Red Zone'))) {
-                          return "Bet touchdown scorer - Red zone opportunity";
-                        } else if (reasons.some(r => r.includes('Fourth Down'))) {
-                          return "Live bet conversion success - High-leverage play";
-                        } else {
-                          return "Bet Over team total - Offensive momentum building";
+                          return `Bet Over ${overLine} runs - Live betting situation`;
                         }
                       } else {
-                        return "Consider live betting opportunities - High-value situation";
+                        return "Live bet recommended - High-value situation detected";
                       }
                     })()}
                   </p>
@@ -324,17 +279,16 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                   <p className="text-white text-xs leading-relaxed">
                     {(() => {
-                      const probability = alertData.gameInfo?.v3Analysis?.probability || (alertData.priority >= 95 ? 0.85 : alertData.priority >= 90 ? 0.80 : alertData.priority >= 85 ? 0.75 : 0.70);
                       const priority = alertData.priority || 70;
                       
-                      if (probability > 0.8 || priority >= 95) {
-                        return "Strong value detected - Consider increased stake size for this high-confidence opportunity.";
-                      } else if (probability > 0.7 || priority >= 85) {
-                        return "Moderate value - Standard betting size recommended for this solid opportunity.";
+                      if (priority >= 95) {
+                        return "Strong value detected - Consider increased stake size.";
+                      } else if (priority >= 85) {
+                        return "Moderate value - Standard betting size recommended.";
                       } else if (priority >= 80) {
-                        return "Good value - Consider standard betting size for this opportunity.";
+                        return "Good value - Consider standard betting size.";
                       } else {
-                        return "Monitor closely - Wait for better value or consider smaller stake.";
+                        return "Monitor closely - Wait for better value opportunities.";
                       }
                     })()}
                   </p>
