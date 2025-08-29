@@ -15,7 +15,7 @@ import { randomUUID } from 'crypto';
 // Removed getWeatherData import - weather service deleted
 // V3 system uses integrated 4-tier alert calculations instead of legacy models
 // Legacy imports removed: mlb-api, enhanced-mlb-feed (now integrated), mlb-alert-model, user-settings, betbook-engine
-import { AlertDeduper } from '../alert-deduper';
+// Removed AlertDeduper import - deduplication system deleted
 import { fetchJson } from '../http';
 
 // === V3 INTERFACES ===

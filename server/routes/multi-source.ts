@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 // Removed multi-source-aggregator import - using direct API calls
-import { alertDeduper } from '../services/alert-deduper';
+// Removed alertDeduper import - deduplication system deleted
 import { mathEngines } from '../services/math-engines';
 // Removed getEnhancedWeather - weather service deleted
 import { adaptivePollingManager } from '../services/adaptive-polling';
