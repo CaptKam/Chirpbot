@@ -44,17 +44,17 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         }
       };
 
-      // Start V3 monitoring with 4-minute interval for status checking
+      // Start V3 monitoring with 15-second interval for optimal performance
       const intervalId = setInterval(async () => {
         try {
           await v3Engine.processLiveGamesOnly();
         } catch (error) {
           console.error('🚨 V3 Engine monitoring error:', error);
         }
-      }, 240000); // 4 minutes - status check interval
+      }, 15000); // 15 seconds - optimal for live game monitoring
 
       this.intervalIds.set('MLB_V3', intervalId);
-      console.log('✅ MLB V3 engine started with 4-minute monitoring interval');
+      console.log('✅ MLB V3 engine started with 15-second monitoring interval');
       
     } catch (error) {
       console.error('❌ Failed to start V3 engine:', error);
