@@ -152,6 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
                   game.status.includes('Final') ? 'final' : 'scheduled',
+          startTime: game.gameDate, // Use ISO date string from MLB API
           gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
@@ -183,13 +184,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
                   game.status.includes('Final') ? 'final' : 'scheduled',
+          startTime: game.gameDate, // Use ISO date string from ESPN
           gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true
           }),
           sport: 'NBA',
-          // Include original ESPN data for debugging
           gameData: game
         }));
       } else if (sport === 'NFL') {
@@ -210,6 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
                   game.status.includes('Final') ? 'final' : 'scheduled',
+          startTime: game.gameDate, // Use ISO date string from ESPN
           gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
@@ -236,6 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
                   game.status.includes('Final') ? 'final' : 'scheduled',
+          startTime: game.gameDate, // Use ISO date string from ESPN
           gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',

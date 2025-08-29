@@ -385,11 +385,13 @@ export default function Calendar() {
               .map((game, index) => {
               const isSelected = selectedGames.has(game.id);
               const weather = getWeatherData();
-              const startTime = new Date(game.startTime);
-              const formattedTime = startTime.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit' 
-              });
+              const startTime = new Date(game.startTime || game.gameTime);
+              const formattedTime = isNaN(startTime.getTime()) 
+                ? game.gameTime || 'TBD'
+                : startTime.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit' 
+                  });
 
               return (
                 <div key={game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-game-${index}`} className="relative">
