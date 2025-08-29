@@ -376,52 +376,12 @@ export class MLBEngineV3 {
       // Record alert for deduplication IMMEDIATELY to prevent duplicates
       this.recordAlertEmission(alertTier);
 
-      // Get all users and check their settings
-      const users = await storage.getUsers();
-      
-      for (const user of users) {
-        const userSettings = await this.getUserSettings(user.id);
-        
-        if (shouldNotifyUser(userSettings, 'MLB', alertTier.tier)) {
-          await this.emitAlertToUser(user.id, alertTier, gameState, userSettings);
-          console.log(`✅ Alert emitted to user ${user.username} - Tier ${alertTier.tier}`);
-        } else {
-          console.log(`⏭️ Alert blocked by user settings for ${user.username}`);
-        }
-      }
-
-    } catch (error) {
-      console.error('Error processing alert with user settings:', error);
-    }
-  }
-
-  private async getUserSettings(userId: string): Promise<UserSettings | null> {
-    try {
-      const settings = await storage.getSettingsByUserId(userId);
-      return settings ? {
-        alertsEnabled: settings.telegramEnabled !== false,
-        sports: { MLB: settings.sport === 'MLB' },
-        tiers: {}, // Default empty tiers
-        betbookEnabled: true // Default enabled
-      } : null;
-    } catch (error) {
-      console.error(`Error fetching user settings for ${userId}:`, error);
-      return null;
-    }
-  }
-
-  private async emitAlertToUser(
-    userId: string, 
-    alertTier: AlertTierResult, 
-    gameState: MLBGameStateV3,
-    userSettings: UserSettings | null
-  ): Promise<void> {
-    try {
+      // FIXED: Create ONE alert record, not one per user
       const weatherData = await this.getWeatherForGame(gameState);
       
       const alertData = {
         id: randomUUID(),
-        userId,
+        userId: null, // Global alert, not user-specific
         title: `Tier ${alertTier.tier}: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
         type: `MLB Tier ${alertTier.tier} Alert`,
         description: alertTier.description,
@@ -452,27 +412,60 @@ export class MLBEngineV3 {
           }
         },
         weatherData,
-        // V3 Betbook Integration
-        betbookData: userSettings?.betbookEnabled ? this.generateBetbookData(alertTier, gameState) : null
+        betbookData: null // Will be added per user if needed
       };
 
-      // Store alert
-      await storage.createAlert(alertData);
+      // Create ONE alert record in database
+      const createdAlert = await storage.createAlert(alertData);
+      console.log(`✅ Alert created in database - Tier ${alertTier.tier}`);
 
-      // Send Telegram if configured and high priority
-      if (alertTier.priority >= 85) {
-        await this.sendTelegramIfConfigured(userId, alertData);
+      // Get all users and send notifications (not database records)
+      const users = await storage.getUsers();
+      let notifiedUsers = 0;
+      
+      for (const user of users) {
+        const userSettings = await this.getUserSettings(user.id);
+        
+        if (shouldNotifyUser(userSettings, 'MLB', alertTier.tier)) {
+          // Send Telegram if configured and high priority
+          if (alertTier.priority >= 85) {
+            await this.sendTelegramIfConfigured(user.id, createdAlert);
+          }
+          
+          notifiedUsers++;
+          console.log(`📬 Notification sent to user ${user.username} - Tier ${alertTier.tier}`);
+        } else {
+          console.log(`⏭️ Alert blocked by user settings for ${user.username}`);
+        }
       }
 
-      // WebSocket broadcast
+      console.log(`✅ Alert processed: 1 database record, ${notifiedUsers} notifications sent`);
+
+      // WebSocket broadcast (single alert to all connected clients)
       if (this.onAlert) {
-        this.onAlert(alertData);
+        this.onAlert(createdAlert);
       }
 
     } catch (error) {
-      console.error('Error emitting alert to user:', error);
+      console.error('Error processing alert with user settings:', error);
     }
   }
+
+  private async getUserSettings(userId: string): Promise<UserSettings | null> {
+    try {
+      const settings = await storage.getSettingsByUserId(userId);
+      return settings ? {
+        alertsEnabled: settings.telegramEnabled !== false,
+        sports: { MLB: settings.sport === 'MLB' },
+        tiers: {}, // Default empty tiers
+        betbookEnabled: true // Default enabled
+      } : null;
+    } catch (error) {
+      console.error(`Error fetching user settings for ${userId}:`, error);
+      return null;
+    }
+  }
+
 
   /**
    * V3 Law #4: Context-Aware Deduplication
