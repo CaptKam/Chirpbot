@@ -478,8 +478,27 @@ export class MLBEngineV3 {
   }
 
   private shouldEmitAlert(alertTier: AlertTierResult): boolean {
-    // TEMPORARILY DISABLE DEDUPLICATION - LET ALL ALERTS THROUGH
-    console.log(`✅ DEDUP DISABLED: Allowing ${alertTier.tier} alert`);
+    const now = Date.now();
+    const cached = this.deduplicationCache.get(alertTier.deduplicationKey);
+    
+    // Smart deduplication: reasonable cooldowns
+    if (cached) {
+      const cooldown = this.COOLDOWN_MS[alertTier.tier] || 30000;
+      const timeSinceLastAlert = now - cached.timestamp;
+      
+      if (timeSinceLastAlert < cooldown) {
+        console.log(`🔄 DEDUP: Waiting ${Math.round((cooldown - timeSinceLastAlert)/1000)}s for ${alertTier.tier} alert`);
+        return false;
+      }
+      
+      // Allow higher tier to supersede lower tier
+      if (alertTier.tier <= cached.tier && timeSinceLastAlert < 60000) {
+        console.log(`🔄 DEDUP: Lower/same tier suppressed for 60s`);
+        return false;
+      }
+    }
+    
+    console.log(`✅ DEDUP: Allowing Tier ${alertTier.tier} alert`);
     return true;
   }
 
