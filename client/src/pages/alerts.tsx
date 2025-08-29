@@ -421,21 +421,23 @@ export default function Alerts() {
 
                       {/* Tier Analysis Details - Show for all high-priority alerts */}
                       {((alert.gameInfo as any)?.v3Analysis || (alert.priority && alert.priority >= 80)) && (
-                        <div className="bg-blue-500/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-blue-500/20 space-y-2">
+                        <div className="bg-blue-500/10 backdrop-blur-sm rounded-lg p-4 ring-1 ring-blue-500/20 space-y-3 mt-3">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                <span className="text-white font-bold text-xs">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">
                                   {(alert.gameInfo as any)?.v3Analysis?.tier || Math.ceil((alert.priority || 70) / 25)}
                                 </span>
                               </div>
-                              <span className="text-blue-200 font-semibold text-sm">
-                                Tier {(alert.gameInfo as any)?.v3Analysis?.tier || Math.ceil((alert.priority || 70) / 25)} Alert
-                              </span>
+                              <div>
+                                <span className="text-blue-200 font-semibold text-base">
+                                  Tier {(alert.gameInfo as any)?.v3Analysis?.tier || Math.ceil((alert.priority || 70) / 25)} Alert
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-1">
+                            <div className="flex items-center space-x-2 bg-emerald-500/10 px-3 py-1 rounded-full">
                               <Zap className="w-4 h-4 text-emerald-400" />
-                              <span className="text-emerald-400 font-mono text-sm">
+                              <span className="text-emerald-400 font-mono text-base font-semibold">
                                 {(() => {
                                   if ((alert.gameInfo as any)?.v3Analysis?.probability) {
                                     return Math.round((alert.gameInfo as any).v3Analysis.probability * 100);
@@ -451,13 +453,13 @@ export default function Alerts() {
                               </span>
                             </div>
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-2">
                             {(() => {
                               if ((alert.gameInfo as any)?.v3Analysis?.reasons) {
                                 return (alert.gameInfo as any).v3Analysis.reasons.slice(0, 3).map((reason: string, idx: number) => (
-                                  <div key={idx} className="text-xs text-slate-200 flex items-start space-x-2">
-                                    <span className="text-blue-400 mt-0.5">•</span>
-                                    <span>{reason}</span>
+                                  <div key={idx} className="text-sm text-slate-200 flex items-start space-x-3">
+                                    <span className="text-blue-400 font-bold mt-0.5">•</span>
+                                    <span className="leading-relaxed">{reason}</span>
                                   </div>
                                 ));
                               }
@@ -476,9 +478,9 @@ export default function Alerts() {
                               if (reasons.length === 0) reasons.push('High-priority game situation');
                               
                               return reasons.slice(0, 3).map((reason: string, idx: number) => (
-                                <div key={idx} className="text-xs text-slate-200 flex items-start space-x-2">
-                                  <span className="text-blue-400 mt-0.5">•</span>
-                                  <span>{reason}</span>
+                                <div key={idx} className="text-sm text-slate-200 flex items-start space-x-3">
+                                  <span className="text-blue-400 font-bold mt-0.5">•</span>
+                                  <span className="leading-relaxed">{reason}</span>
                                 </div>
                               ));
                             })()}
