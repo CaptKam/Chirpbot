@@ -241,6 +241,14 @@ export class NCAAEngine {
       }
 
       console.log(`🏈 NCAAF: Processing game state for ${gameState.gameId} - Quarter: ${gameState.quarter}, Score: ${gameState.score?.home || 0}-${gameState.score?.away || 0}`);
+      
+      // If no detailed game data, generate basic live alert
+      if (!gameState.quarter || gameState.quarter === 'undefined' || gameState.quarter === undefined) {
+        console.log(`🏈 NCAAF: No detailed quarter data for ${gameState.gameId} (quarter: ${gameState.quarter}), generating basic live alert...`);
+        await this.generateBasicLiveAlert(gameState.gameId);
+        return;
+      }
+      
       const alerts = this.generateAlertsForGame(gameState);
       
       for (const alert of alerts) {
@@ -527,12 +535,18 @@ export class NCAAEngine {
         return;
       }
 
-      // Check if user has any NCAAF alerts enabled
+      // Check if user has any NCAAF alerts enabled - basic live alerts should always proceed if any alert type is enabled
       const userSettings = await this.getUserNCAAFSettings();
-      if (!userSettings?.alertTypes?.ncaafCloseGame && !userSettings?.alertTypes?.ncaafRedZone) {
+      console.log(`🔍 NCAAF: Debug - userSettings:`, JSON.stringify(userSettings, null, 2));
+      const alertTypes = userSettings?.alertTypes || {};
+      console.log(`🔍 NCAAF: Debug - alertTypes:`, JSON.stringify(alertTypes, null, 2));
+      const hasAnyEnabled = Object.values(alertTypes).some((enabled: any) => enabled === true);
+      console.log(`🔍 NCAAF: Debug - hasAnyEnabled:`, hasAnyEnabled);
+      if (!hasAnyEnabled) {
         console.log(`🔕 NCAAF: All NCAAF alerts disabled in user settings`);
         return;
       }
+      console.log(`✅ NCAAF: User settings allow alerts, proceeding...`);
       
       console.log(`✅ NCAAF: User has alerts enabled, generating live game alert...`);
 
@@ -540,25 +554,29 @@ export class NCAAEngine {
       const alert = {
         id: randomUUID(),
         type: 'ncaafGameLive',
+        sport: 'NCAAF',
         priority: 70,
         title: `🏈 COLLEGE FOOTBALL LIVE`,
         message: `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} is now live!`,
-        gameData: {
+        description: `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} is now live!`,
+        gameInfo: {
           sport: 'NCAAF',
           gameId: gameId,
           homeTeam: gameInfo.homeTeamName || 'Home Team',
           awayTeam: gameInfo.awayTeamName || 'Away Team',
-          situation: 'Game Live'
+          situation: 'Game Live',
+          quarter: 'Live',
+          score: { home: 0, away: 0 }
         },
         probability: 0.8,
         confidence: 0.75,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(),
         userId: 'system',
         seen: false
       };
 
       // Store and broadcast the alert
-      await storage.addAlert(alert);
+      await storage.createAlert(alert);
       console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`);
       
       if (this.onAlert) {
@@ -695,8 +713,10 @@ export class NCAAEngine {
 
   private async getUserNCAAFSettings(): Promise<any> {
     try {
-      const settings = await storage.getSettingsBySport('NCAAF');
-      return settings?.[0]?.alertTypes || {};
+      const allSettings = await storage.getAllSettings();
+      const ncaafSettings = allSettings.find(s => s.sport === 'NCAAF');
+      console.log(`🔍 NCAAF: Found settings:`, JSON.stringify(ncaafSettings, null, 2));
+      return ncaafSettings || {};
     } catch (error) {
       console.error('Error fetching NCAAF user settings:', error);
       return {};
