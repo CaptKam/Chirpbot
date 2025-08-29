@@ -1,4 +1,4 @@
-// mlb-engine-v3.ts
+// mlb-engine.ts
 //
 // ChirpBot v3 compliant MLB engine implementing mandatory alert engine laws:
 // - Game status gating (only live games)

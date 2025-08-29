@@ -3,7 +3,7 @@
 // API endpoints for testing ChirpBot v3 functionality
 
 import { Router } from 'express';
-import { MLBEngineV3 } from '../services/engines/mlb-engine-v3';
+import { MLBEngineV3 } from '../services/engines/mlb-engine';
 // Legacy imports removed - V3 system uses integrated calculations
 // Removed: mlb-alert-model, user-settings, betbook-engine
 import { storage } from '../storage';

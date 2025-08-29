@@ -1,4 +1,4 @@
-import { MLBEngineV3 } from './mlb-engine-v3';
+import { MLBEngineV3 } from './mlb-engine';
 
 // V3 Engine runs independently for optimal performance
 import { storage } from '../../storage';
@@ -34,7 +34,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   private async startV3Engine(): Promise<void> {
     try {
-      const { MLBEngineV3 } = await import('./mlb-engine-v3');
+      const { MLBEngineV3 } = await import('./mlb-engine');
       const v3Engine = new MLBEngineV3();
       
       // Set up alert callback for V3 engine
