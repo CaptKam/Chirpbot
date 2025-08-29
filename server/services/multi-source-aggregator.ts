@@ -128,7 +128,7 @@ class ESPNMLBSource implements MLBSource {
   priority = 2;
   reliability = 85;
   speedScore = 8;
-  enabled = true; // ENABLED: Use for basic game listing
+  enabled = false; // DISABLED: MLB V3 engine uses only official MLB API
   failureCount = 0;
   maxRetries = 3;
 
@@ -225,7 +225,7 @@ class TheSportsDBMLB implements MLBSource {
   priority = 4;
   reliability = 75;
   speedScore = 6;
-  enabled = true; // Re-enabled with improved rate limiting and error handling
+  enabled = false; // DISABLED: MLB V3 engine uses only official MLB API
   failureCount = 0;
   maxRetries = 2; // Allow 2 retries with backoff
 
