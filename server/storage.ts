@@ -729,6 +729,13 @@ export class MemStorage implements IStorage {
       return ['redZone', 'closeGame', 'overtime', 'finalMinutes', 'touchdownAlert', 'fieldGoalRange'];
     }
     
+    // If no master controls exist for MLB, return all alert keys as enabled to match frontend config
+    if (sport === 'MLB' && enabledKeys.length === 0) {
+      return ['risp', 'basesLoaded', 'runnersOnBase', 'closeGame', 'lateInning', 'extraInnings', 
+              'homeRun', 'homeRunAlert', 'hits', 'scoring', 'starBatter', 'powerHitter', 
+              'powerHitterOnDeck', 'strikeouts', 'inningChange', 'mlbAIEnabled'];
+    }
+    
     return enabledKeys;
   }
 
