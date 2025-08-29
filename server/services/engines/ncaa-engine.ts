@@ -44,6 +44,13 @@ export class NCAAEngine {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
       const footballGames = await this.getCollegeFootballGames();
+      console.log(`🏈 NCAAF: Found ${footballGames.length} games for today`);
+      
+      // Log game details for debugging
+      footballGames.forEach(game => {
+        console.log(`🏈 Game: ${game.awayTeam} @ ${game.homeTeam} - Status: ${game.status} - Date: ${game.gameDate}`);
+      });
+      
       return footballGames;
     } catch (error) {
       console.error('❌ ESPN NCAAF API Error:', error);
@@ -97,8 +104,29 @@ export class NCAAEngine {
       const liveGames = games.filter(game => 
         game.status === 'STATUS_IN_PROGRESS' || 
         game.status === 'STATUS_HALFTIME' ||
-        game.status === 'STATUS_OVERTIME'
+        game.status === 'STATUS_OVERTIME' ||
+        game.status === 'STATUS_FIRST_HALF' ||
+        game.status === 'STATUS_SECOND_HALF' ||
+        game.status.includes('QUARTER') ||
+        game.status.includes('PERIOD')
       );
+
+      // Also log games that are about to start or in pre-game
+      const upcomingGames = games.filter(game => 
+        game.status === 'STATUS_SCHEDULED' || 
+        game.status === 'STATUS_PREGAME' ||
+        game.status.includes('PREGAME')
+      );
+
+      if (upcomingGames.length > 0) {
+        console.log(`🏈 NCAAF: ${upcomingGames.length} upcoming games:`);
+        upcomingGames.forEach(game => {
+          const gameTime = new Date(game.gameDate);
+          const now = new Date();
+          const timeUntilGame = Math.round((gameTime.getTime() - now.getTime()) / (1000 * 60));
+          console.log(`🏈 ${game.awayTeam} @ ${game.homeTeam} - ${timeUntilGame} minutes until kickoff`);
+        });
+      }
 
       console.log(`🎯 NCAAF Engine Processing ${liveGames.length} live college football games`);
 
@@ -361,6 +389,23 @@ export class NCAAEngine {
       if (now - entry.timestamp > maxAge) {
         this.deduplicationCache.delete(key);
       }
+    }
+  }
+
+  // Add method for specific game processing (needed by engine manager)
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      const games = await this.getTodaysGames();
+      const targetGame = games.find(game => game.gameId === gameId);
+      
+      if (!targetGame) {
+        console.log(`🏈 NCAAF: Game ${gameId} not found in today's games`);
+        return;
+      }
+
+      await this.processGameForAlerts(targetGame);
+    } catch (error) {
+      console.error(`❌ NCAAF: Error processing specific game ${gameId}:`, error);
     }
   }
 
