@@ -10,6 +10,14 @@ import { getBetbookData } from './betbook-engine';
 // Import NCAAF Alert Model (CommonJS module)
 let ncaafAlertModel: any = null;
 
+// Type declaration for NCAAFAlertModel
+declare module './NCAAFAlertModel.cjs' {
+  export function checkNCAAFAlerts(gameState: any): any;
+  export function ncaafL1Alert(gameState: any): any;
+  export function ncaafL2Alert(gameState: any): any;
+  export function ncaafL3Alert(gameState: any): any;
+}
+
 interface NCAAGameState {
   gameId: string;
   period: number;
@@ -66,7 +74,7 @@ export class NCAAEngine {
     try {
       if (!ncaafAlertModel) {
         // Use dynamic import for CommonJS module
-        ncaafAlertModel = await import('./NCAAFAlertModel.cjs');
+        ncaafAlertModel = require('./NCAAFAlertModel.cjs');
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
@@ -328,7 +336,7 @@ export class NCAAEngine {
     const alerts: SimpleNCAAAlert[] = [];
 
     // Red Zone Alert
-    if (gameState.redZone) {
+    if (gameState.fieldPosition && gameState.fieldPosition <= 20) {
       alerts.push({
         type: 'redZone',
         priority: 85,
@@ -341,7 +349,8 @@ export class NCAAEngine {
 
     // Close Game Alert
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    if (scoreDiff <= 3 && gameState.finalMinutes) {
+    const isFinalMinutes = this.isFinalMinutes(gameState.timeRemaining, gameState.period);
+    if (scoreDiff <= 3 && isFinalMinutes) {
       alerts.push({
         type: 'closeGame',
         priority: 90,
@@ -353,7 +362,7 @@ export class NCAAEngine {
     }
 
     // Overtime Alert
-    if (gameState.overtime) {
+    if (gameState.period > 4) {
       alerts.push({
         type: 'overtime',
         priority: 95,
@@ -533,12 +542,10 @@ export class NCAAEngine {
       }
 
       // Stage 2: OpenAI Analysis - Generate contextual description
-      const aiDescription = await this.openAiEngine.generateSportsAlert({
+      const aiDescription = await this.openAiEngine.generateAlert({
         sport: 'NCAAF',
         situation: alertResult.reasons.join(', '),
-        gameContext: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
-        quarter: gameState.quarter.toString(),
-        score: `${gameState.score.away}-${gameState.score.home}`,
+        context: `${gameState.awayTeam} @ ${gameState.homeTeam}, Q${gameState.quarter}, ${gameState.score.away}-${gameState.score.home}`,
         priority: alertResult.priority
       });
 
@@ -575,11 +582,33 @@ export class NCAAEngine {
         seen: false
       };
 
-      // Store alert in database
-      await storage.createAlert(finalAlert);
+      // Store alert in database  
+      await storage.createAlert({
+        ...finalAlert,
+        sport: 'NCAAF',
+        description: finalAlert.message,
+        gameInfo: {
+          status: 'live',
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          score: gameState.score,
+          quarter: gameState.quarter
+        }
+      });
       
       // Send to Telegram if enabled
-      await this.sendTelegramIfEnabled(finalAlert);
+      await this.sendTelegramIfEnabled({
+        ...finalAlert,
+        sport: 'NCAAF',
+        description: finalAlert.message,
+        gameInfo: {
+          status: 'live',
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          score: gameState.score,
+          quarter: gameState.quarter
+        }
+      });
       
       // Call onAlert callback if set
       if (this.onAlert) {
