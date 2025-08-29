@@ -297,13 +297,17 @@ export class MLBEngineV3 {
    * Always runs when game is live, searches for pre-defined high-probability scoring conditions
    */
   private async runLevel1HardCoded(gameState: MLBScoringGameState): Promise<any> {
-    const l1Result = mlbL1WithProb(gameState);
+    const result = calculateMLBSeverity(gameState);
     
-    if (l1Result.probability > 0.5) {  // Trigger L1 for ANY significant scoring situation
-      console.log(`✅ L1 TRIGGERED: ${l1Result.probability.toFixed(3)} probability (${l1Result.severity})`);
-      return l1Result;
+    console.log(`🔍 L1 Debug: Prob=${result.probability.toFixed(3)}, Severity=${result.severity}, Runners=${JSON.stringify(gameState.runners)}, Outs=${gameState.outs}`);
+    
+    // L1 triggers for ANY meaningful scoring situation (Low, Medium, OR High severity)
+    if (result.severity === 'Low' || result.severity === 'Medium' || result.severity === 'High') {
+      console.log(`✅ L1 TRIGGERED: ${result.probability.toFixed(3)} probability (${result.severity})`);
+      return result;
     }
     
+    console.log(`❌ L1 NOT TRIGGERED: ${result.severity} severity does not qualify`);
     return null;
   }
 

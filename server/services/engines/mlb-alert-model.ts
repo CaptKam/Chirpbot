@@ -193,17 +193,17 @@ export function calculateMLBSeverity(gameState: MLBGameState): SeverityResult {
     modifiers.ballpark = ballparkMod.modifier;
   }
   
-  // Determine severity band
+  // Determine severity band (Fixed thresholds for realistic baseball situations)
   let severity: 'Low' | 'Medium' | 'High' | 'None' = 'None';
   let priority = 50;
   
-  if (finalProb >= 0.80) {
+  if (finalProb >= 0.70) {
     severity = 'High';
     priority = 95;
-  } else if (finalProb >= 0.70) {
+  } else if (finalProb >= 0.50) {
     severity = 'Medium';
     priority = 85;
-  } else if (finalProb >= 0.65) {
+  } else if (finalProb >= 0.35) {
     severity = 'Low';
     priority = 75;
   }
