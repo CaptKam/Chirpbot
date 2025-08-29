@@ -1,0 +1,105 @@
+Here’s a step‑by‑step way to implement the “one alert per situation until it changes” requirement and purge stale records when the game ends:
+
+Compute a context key for each alert. For MLB this might be \${sport}:${gameId}:${inning}:${half}:${outs}:${basesMask}:${batterId}``. Use similarly scoped keys for other sports (period & clock slice for basketball/football, etc.). This key uniquely identifies the current scoring context.
+
+Check the dedup engine before emitting. Before you send an alert, call shouldEmitNewAlert(contextKey, tier, cooldownMs) from supersession.js. Choose a cooldownMs based on the alert tier (e.g. 60 s for Level 1, 90 s for Level 2, 120 s for Level 3). If it returns false, do not emit the alert because an equivalent one has already been delivered recently.
+
+Record the alert after sending. Immediately after emitting an alert, call recordAlert(contextKey, tier). This stores the highest tier seen for that context and a timestamp. Subsequent alerts with the same key will be suppressed until the cooldown expires or a higher tier is triggered.
+
+Clear dedup entries when a game finishes. To avoid stale cooldowns carrying over into double‑headers or subsequent games with the same ID, call clearGameContext(sport, gameId) from supersession.js when the game’s status transitions to Final. This helper removes all deduplication entries for that game. We added this function and documented it in the changelog; you can review the updated file here: supersession.js
+
+Wrap your notification logic. Here’s what the integration might look like in your alert coordinator:
+
+const { shouldEmitNewAlert, recordAlert, clearGameContext } = require('./supersession');
+const { shouldNotifyUser } = require('./userSettings');
+
+function processAlert(gameState, alert, userSettings) {
+  const key = `${gameState.sport}:${gameState.gameId}:${gameState.clock.inning}:${gameState.clock.half}:${gameState.clock.outs}:${basesMask(gameState.bases)}:${gameState.batter?.id || ''}`;
+  const tier = alert.tier;
+  const cooldownMs = tier === 3 ? 120000 : tier === 2 ? 90000 : 60000;
+
+  // Respect user preferences and deduplication
+  if (shouldNotifyUser(userSettings, gameState.sport, tier) &&
+      shouldEmitNewAlert(key, tier, cooldownMs)) {
+    emitAlert(alert);         // your existing send/emit logic
+    recordAlert(key, tier);
+  }
+}
+
+// Call this when a game ends
+function onGameFinal(gameState) {
+  clearGameContext(gameState.sport, gameState.gameId);
+}
+
+
+This pattern is the same approach used in established incident‑management tools: BigPanda drops identical events and merges updates into existing alerts
+docs.bigpanda.io
+, and Opsgenie enforces that only one open alert with a given alias exists at any time
+support.atlassian.com
+. By using a context key, checking the cooldown, and clearing entries on game completion, you’ll eliminate duplicate notifications while still upgrading alerts when the situation becomes more critical.
+
+You can view the updated changelog entry documenting this new clearGameContext helper here:
+[2025‑08‑28] - Mandatory alert-engine laws for ChirpBot v3
+Added
+
+Game status gating – The alert engine now strictly respects the game’s lifecycle.
+
+Only games marked Live are actively monitored.
+
+Scheduled games are ignored until they go live.
+
+Final games are archived and removed from monitoring.
+
+Multi‑level alert model – Introduced a four‑tier alert structure to surface high‑leverage game situations while preventing spam:
+
+Level 1 – Fail‑safe hard logic: Always runs when a game is live. Searches for pre‑defined high‑probability scoring conditions (e.g. RISP, bases loaded, clutch time). Ensures alerts continue even if higher‑level modules fail.
+
+Level 2 – Player & historical triggers: Activates when player stats or trends amplify scoring odds (e.g. power hitter on deck with runners on base).
+
+Level 3 – Weather & environmental factors: Triggers when wind, temperature or other conditions materially affect scoring (e.g. wind blowing out ≥ 10 mph).
+
+Level 4 – AI synthesis: A final layer that synthesizes all data (scores, player trends, weather) to generate natural‑language alerts. Can produce alerts even when Level 1 is false, provided the AI is very confident.
+
+Tier decision rules – Alert tier is determined by explicit IF chains:
+
+If L1 = yes, L2 = no, L3 = no → emit Alert 1.
+
+If L1 = yes and exactly one of L2 or L3 = yes → emit Alert 2.
+
+If L1 = yes, L2 = yes, and L3 = yes → emit Alert 3.
+
+If L1 = no, but the AI is highly confident → emit Alert 4 (AI‑only path).
+
+Deduplication & cooldown – Added context‑aware keys (sport, game ID, inning/period, outs/time, runners, batter) to avoid duplicate alerts. Each alert level defines a cool‑down window to prevent repeated messages about the same state.
+
+Supersession cleanup API – A new clearGameContext(sport, gameId) helper was added to supersession.js. This function removes all deduplication entries associated with a finished game, preventing stale cooldowns from carrying over into subsequent games with the same identifier (e.g. double‑headers). Call this helper whenever a game transitions to Final.
+
+Supersession of alert levels – When multiple alert levels could trigger for the same game context, only the highest‑level alert is emitted. Lower‑level alerts are suppressed if a higher‑level trigger is satisfied either in the same evaluation or shortly thereafter. For example, if both L1 and L2 are true, the system sends Alert 2 and does not send Alert 1. If an L2 condition arises after an L1 alert has already been emitted for the same situation, the L2 alert supersedes the earlier L1 alert; only the L2 alert is delivered.
+
+User settings override – The alert engine now honours per-user preferences. Before emitting any alert, the system checks the user’s notification settings. A global toggle can disable all alerts, and users can enable/disable specific tiers (Level 1–4) or sports. Alerts are only sent if the user’s settings allow them. This ensures that if a user has alerts turned on in the settings panel, those alerts will still be delivered regardless of the new four‑rule law system; conversely, if they are disabled, no alerts are sent.
+
+Notes
+
+These rules are mandatory and form the baseline for ChirpBot v3’s alert engine.
+Developers must ensure that all sport‑specific engines adhere to these gating and tiering rules.
+Implementations should hook into these levels via clearly defined functions (runLevel1HardCoded, runLevel2PlayerHistory, runLevel3Weather, runLevel4AISynthesis) and respect the master status switch before any alert logic runs.
+
+Added
+
+Betbook engine (experimental) – Introduced an optional module named the Betbook engine. The core four‑tier alert system continues to surface only game‑related situations; it never delivers gambling or wagering advice. When a user performs a secondary action on an alert (such as swiping the alert card to the left), the Betbook engine may be invoked to present supplemental sports betting context, AI‑generated insights, and links to partner sportsbooks. The engine is disabled by default unless the user enables it via the new betbookEnabled setting. Developers can integrate the Betbook engine by calling getBetbookData(alertContext) from the UI layer; the function returns odds (stubbed in this demo), a generic AI advisory statement reminding users to conduct their own research, and example sportsbook URLs. To maintain compliance, do not embed betting content directly in the primary alert payload, and ensure user preferences are respected when showing Betbook data.
+
+College football support – Added a college football (NCAA) engine with fail‑safe, player/historical and weather logic. The new module (cfbEngine.js) exposes cfbL1, cfbL2 and cfbL3 functions for Level 1–3 alerts. Level 1 triggers when the ball is in the red zone (inside the 20‑yard line) or during a two‑minute drill in a one‑score game, reflecting the increased likelihood of scoring near the goal line
+en.wikipedia.org
+. Level 2 surfaces high‑powered offenses or hot quarterbacks based on team/player ratings. Level 3 flags adverse weather conditions (e.g. winds ≥ 15 mph or precipitation) that may impact scoring, and it automatically skips dome games. Developers can wire these functions into the engine coordinator via the sport code 'CFB' or similar. User notification preferences for college football are respected via isSportEnabled() in userSettings.js.
+
+Added
+
+MLB scoring probability model – Introduced a math‑driven module (mlbAlertModel.ts) that estimates the probability of at least one run scoring in the remainder of an inning across all 24 base/out states. This model applies context modifiers (leverage, power hitters, pitcher risk, weather and park factors) and classifies the adjusted probability into Low, Medium, or High severity bands. Developers can wire the associated helper functions (mlbL1WithProb, mlbL2WithProb, mlbL3WithProb) into their existing sport logic engines to align the Layered Alert levels (L1–L3) with estimated scoring odds: Low (≥ 65%), Medium (≥ 70%), High (≥ 80%).
+
+Low (≥ 65% and < 70%) → qualifies the situation for Level 1; recommended priority hint ~75.
+
+Medium (≥ 70% and < 80%) → qualifies for Level 2; recommended priority hint ~85.
+
+High (≥ 80%) → qualifies for Level 3; recommended priority hint ~95.
+
+The model returns an explanatory reason array that lists each context adjustment applied. These reasons should be appended to the alert’s justification block for auditability
