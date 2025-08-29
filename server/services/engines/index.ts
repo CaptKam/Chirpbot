@@ -20,14 +20,11 @@ export interface AlertEngineManager {
 class AlertEngineManagerImpl implements AlertEngineManager {
   engines = new Map<string, BaseSportEngine>();
   private intervalIds = new Map<string, NodeJS.Timeout>();
+  private onAlert?: (alert: any) => void;
 
   constructor() {
-    // Register engines - V3 MLB engine runs independently, no wrapper needed
-    this.addEngine('NFL', nflEngine);
-    this.addEngine('NBA', nbaEngine);
-    this.addEngine('NHL', nhlEngine);
-    this.addEngine('WEATHER', weatherEngine);
-    // MLB V3 engine runs independently for enhanced performance
+    // All engines disabled - V3 MLB engine runs independently for superior performance
+    // Other sport engines disabled to prevent interference with V3 AI system
     // AI engine has been removed
   }
 
@@ -45,10 +42,40 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     // Stop all running engines first
     this.stopAllEngines();
     
-    // MLB V3 engine runs independently with superior performance
-    console.log('✅ MLB V3 engine running independently with AI enhancement');
+    // Start V3 MLB engine with proper monitoring loop
+    console.log('🔧 Starting MLB V3 engine with AI enhancement...');
+    await this.startV3Engine();
     
     console.log('✅ Game Situations alert system ready');
+  }
+
+  private async startV3Engine(): Promise<void> {
+    try {
+      const { MLBEngineV3 } = await import('./mlb-engine-v3');
+      const v3Engine = new MLBEngineV3();
+      
+      // Set up alert callback for V3 engine
+      v3Engine.onAlert = (alert: any) => {
+        if (this.onAlert) {
+          this.onAlert(alert);
+        }
+      };
+
+      // Start V3 monitoring with 15-second interval for optimal performance
+      const intervalId = setInterval(async () => {
+        try {
+          await v3Engine.processLiveGamesOnly();
+        } catch (error) {
+          console.error('🚨 V3 Engine monitoring error:', error);
+        }
+      }, 15000); // 15 seconds - optimal for live game monitoring
+
+      this.intervalIds.set('MLB_V3', intervalId);
+      console.log('✅ MLB V3 engine started with 15-second monitoring interval');
+      
+    } catch (error) {
+      console.error('❌ Failed to start V3 engine:', error);
+    }
   }
   
   private startEngine(sport: string, engine: BaseSportEngine): void {
@@ -148,6 +175,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   // Set alert callback for all engines
   setAlertCallback(callback: (alert: any) => void): void {
+    this.onAlert = callback;
     for (const engine of Array.from(this.engines.values())) {
       engine.onAlert = callback;
     }
