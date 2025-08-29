@@ -213,7 +213,7 @@ export class MemStorage implements IStorage {
     });
 
     // Default settings for each sport
-    const sports = ["MLB", "NFL", "NBA", "NHL"];
+    const sports = ["MLB", "NFL", "NBA", "NHL", "CFL"];
     sports.forEach(sport => {
       const id = randomUUID();
       this.settings.set(sport, {
@@ -250,6 +250,11 @@ export class MemStorage implements IStorage {
           powerPlay: sport === "NHL",
           nhlCloseGame: sport === "NHL",
           emptyNet: sport === "NHL",
+
+          // CFL Alert Types
+          touchdownAlert: sport === "CFL",
+          fieldGoalRange: sport === "CFL",
+          finalMinutes: sport === "CFL",
         },
         telegramEnabled: true,
         pushNotificationsEnabled: true,
