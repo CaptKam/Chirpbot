@@ -247,8 +247,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sport: 'NHL',
           gameData: game
         }));
+      } else if (sport === 'CFL') {
+        // Use ESPN CFL API integration
+        const { cflEngine } = await import('./services/engines/cfl-engine');
+        games = await cflEngine.getTodaysGames(targetDate);
+        
+        // Transform to match our Game interface
+        games = games.map(game => ({
+          id: game.gameId,
+          homeTeam: {
+            name: game.homeTeam,
+            score: game.homeScore
+          },
+          awayTeam: {
+            name: game.awayTeam,
+            score: game.awayScore
+          },
+          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
+                  game.status.includes('Final') ? 'final' : 'scheduled',
+          startTime: game.gameDate, // Use ISO date string from ESPN
+          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          sport: 'CFL',
+          gameData: game
+        }));
       }
-      // All major sports now connected to ESPN API
+      // All major sports now connected to APIs
       
       res.json({ date: targetDate, games, sport });
     } catch (error) {
