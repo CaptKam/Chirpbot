@@ -43,8 +43,9 @@ export class NCAAEngine {
 
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      const footballGames = await this.getCollegeFootballGames();
-      console.log(`🏈 NCAAF: Found ${footballGames.length} games for today`);
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      const footballGames = await this.getCollegeFootballGames(targetDate);
+      console.log(`🏈 NCAAF: Found ${footballGames.length} games for ${targetDate}`);
       
       // Log game details for debugging and check for military academies
       footballGames.forEach(game => {
@@ -63,9 +64,11 @@ export class NCAAEngine {
     }
   }
 
-  private async getCollegeFootballGames(): Promise<any[]> {
+  private async getCollegeFootballGames(date?: string): Promise<any[]> {
     try {
-      const url = `${this.ESPN_FOOTBALL_API}/scoreboard`;
+      // Format date for ESPN API (YYYYMMDD)
+      const todayESPN = date ? date.replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const url = `${this.ESPN_FOOTBALL_API}/scoreboard?dates=${todayESPN}`;
       
       const data: any = await fetchJson(url, {
         headers: {
