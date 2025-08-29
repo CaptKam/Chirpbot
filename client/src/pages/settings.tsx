@@ -45,11 +45,8 @@ const ALERT_TYPE_CONFIG = {
     { key: "Home Run Prediction", label: "🚀 HR Probability Model", description: "Mathematical home run prediction using logistic regression + weather physics", category: "AI Predictions" },
     { key: "Walk-off Prediction", label: "🎯 Walk-off Situation", description: "Game-ending opportunity prediction with context analysis", category: "AI Predictions" },
     
-    // === HYBRID RE24+AI SYSTEM ===
-    { key: "useRE24System", label: "🧠 RE24+AI Hybrid System", description: "Advanced Run Expectancy analytics enhanced with AI predictions", category: "AI Predictions" },
-    { key: "re24Level1", label: "📊 RE24 Level 1", description: "Basic situational analysis with AI enhancement", category: "AI Predictions" },
-    { key: "re24Level2", label: "📈 RE24 Level 2", description: "Intermediate player analytics with contextual AI", category: "AI Predictions" },
-    { key: "re24Level3", label: "🎯 RE24 Level 3", description: "Elite sabermetrics with advanced AI predictions", category: "AI Predictions" },
+    // === AI PREDICTIONS SYSTEM ===
+    // RE24 System removed
     { key: "Clutch Hit Prediction", label: "⚡ Clutch Performance", description: "AI-powered clutch hitting opportunity detection", category: "AI Predictions" },
     { key: "Hot Streak Prediction", label: "🔥 Hot Streak Alert", description: "Player momentum and hot streak identification", category: "AI Predictions" },
     { key: "Double Play Prediction", label: "⚾ Double Play Risk", description: "Situation analysis for potential double plays", category: "AI Predictions" },
@@ -69,7 +66,7 @@ const ALERT_TYPE_CONFIG = {
     { key: "inningChange", label: "Inning Changes", description: "New inning momentum shifts", category: "Game Flow" },
     
     // === ADVANCED ANALYTICS ===
-    { key: "re24Advanced", label: "RE24 Advanced Analytics", description: "MLB Run Expectancy 24 (RE24) mathematical analysis system", category: "Advanced Analytics" },
+    // RE24 Advanced Analytics removed
     { key: "mlbAIEnabled", label: "🧠 AI Analysis Engine", description: "Advanced AI context analysis for all alerts", category: "Advanced Analytics" },
   ],
   NFL: [
