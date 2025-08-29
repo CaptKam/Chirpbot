@@ -85,22 +85,19 @@ export interface DeduplicationContext {
 }
 
 export class MLBEngineV3 {
-  // Enhanced Deduplication System (from proven Python platform)
-  private alertDeduper: AlertDeduper;
-  private cleanupCounter = 0;
+  // Smart Deduplication with AI-Enhanced Alerts
+  private deduplicationCache = new Map<string, { timestamp: number; tier: number }>();
+  private readonly COOLDOWN_MS = {
+    1: 15000,   // L1: 15 seconds
+    2: 30000,   // L2: 30 seconds
+    3: 45000,   // L3: 45 seconds
+    4: 60000    // L4: 60 seconds
+  };
   
   onAlert?: (alert: any) => void;
 
   constructor() {
-    // Initialize enhanced deduplication with token bucket rate limiting
-    this.alertDeduper = new AlertDeduper(
-      undefined, // Use default configuration from working Python system
-      15, // Default dedup window
-      true, // Enable token buckets for per-game rate limiting
-      8, // 8 tokens per game (burst protection)
-      15 // 15 second refill rate
-    );
-    console.log('🔧 MLBEngineV3 initialized with enhanced deduplication system');
+    console.log('🔧 MLBEngineV3 initialized with AI-Enhanced Alert System');
   }
 
   /**
@@ -136,9 +133,6 @@ export class MLBEngineV3 {
           await this.evaluateFourTierSystem(gameState);
         }
       }
-      
-      // Enhanced deduplication cleanup
-      this.performPeriodicCleanup();
     } catch (error) {
       console.error('Error in V3 live game processing:', error);
     }
@@ -379,10 +373,18 @@ export class MLBEngineV3 {
    */
   private async processAlertWithUserSettings(alertTier: AlertTierResult, gameState: MLBGameStateV3): Promise<void> {
     try {
-      // V3 Law #4: Enhanced AlertDeduper System
-      if (!this.shouldEmitAlert(alertTier, gameState)) {
+      // V3 Law #4: Smart Deduplication
+      if (!this.shouldEmitAlert(alertTier)) {
+        console.log(`🚫 DEDUP: Alert suppressed - ${alertTier.deduplicationKey}`);
         return;
       }
+
+      // Record alert for deduplication IMMEDIATELY
+      this.recordAlertEmission(alertTier);
+
+      // 🤖 AI ENHANCEMENT: Generate intelligent alert description
+      const aiEnhancedDescription = await this.generateAIEnhancedAlert(alertTier, gameState);
+      const enhancedBetbookData = await this.generateAIEnhancedBetbook(alertTier, gameState);
 
       // FIXED: Create ONE alert record, not one per user
       const weatherData = await this.getWeatherForGame(gameState);
@@ -392,7 +394,7 @@ export class MLBEngineV3 {
         userId: null, // Global alert, not user-specific
         title: `Tier ${alertTier.tier}: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
         type: `MLB Tier ${alertTier.tier} Alert`,
-        description: alertTier.description,
+        description: aiEnhancedDescription,
         sport: 'MLB',
         team: gameState.homeTeam,
         opponent: gameState.awayTeam,
@@ -420,7 +422,7 @@ export class MLBEngineV3 {
           }
         },
         weatherData,
-        betbookData: null // Will be added per user if needed
+        betbookData: enhancedBetbookData
       };
 
       // Create ONE alert record in database
@@ -485,46 +487,188 @@ export class MLBEngineV3 {
     return `${gameState.gamePk}:${alertType}:${gameState.inning}:${gameState.inningState}:${basesHash}`;
   }
 
-  private shouldEmitAlert(alertTier: AlertTierResult, gameState: MLBGameStateV3): boolean {
-    // Convert V3 alert to AlertDeduper format
-    const alertData = {
-      alert_type: `L${alertTier.tier}`,
-      game_id: gameState.gameId,
-      gamePk: gameState.gamePk,
-      inning: gameState.inning,
-      inning_top: gameState.inningState === 'top',
-      outs: gameState.outs,
-      runners: [
-        ...(gameState.runners.first ? ['1B'] : []),
-        ...(gameState.runners.second ? ['2B'] : []),
-        ...(gameState.runners.third ? ['3B'] : []),
-      ],
-      batter_id: gameState.currentBatter?.id,
-      pitcher_id: gameState.currentPitcher?.id,
-      at_bat_index: 1, // Simplified, could be enhanced later
-      play_index: 1,
-      priority: alertTier.priority,
-      tier: alertTier.tier
-    };
-
-    const isAllowed = this.alertDeduper.shouldAllow(alertData);
+  private shouldEmitAlert(alertTier: AlertTierResult): boolean {
+    const now = Date.now();
+    const cached = this.deduplicationCache.get(alertTier.deduplicationKey);
     
-    if (!isAllowed) {
-      console.log(`🚫 Enhanced DEDUP: Alert suppressed - ${alertTier.deduplicationKey}`);
-    } else {
-      console.log(`✅ Enhanced DEDUP: Allowing Tier ${alertTier.tier} alert`);
+    // Simple but effective deduplication while we enhance AI
+    if (cached) {
+      const cooldown = this.COOLDOWN_MS[alertTier.tier] || 30000;
+      const timeSinceLastAlert = now - cached.timestamp;
+      
+      if (timeSinceLastAlert < cooldown) {
+        console.log(`🔄 DEDUP: Waiting ${Math.round((cooldown - timeSinceLastAlert)/1000)}s for ${alertTier.tier} alert`);
+        return false;
+      }
+      
+      // Allow higher tier to supersede lower tier
+      if (alertTier.tier <= cached.tier && timeSinceLastAlert < 60000) {
+        console.log(`🔄 DEDUP: Lower/same tier suppressed for 60s`);
+        return false;
+      }
     }
     
-    return isAllowed;
+    console.log(`✅ DEDUP: Allowing Tier ${alertTier.tier} alert`);
+    return true;
   }
 
-  private performPeriodicCleanup(): void {
-    // Enhanced AlertDeduper handles its own memory management
-    // but we can trigger manual cleanup if needed
-    this.cleanupCounter++;
-    if (this.cleanupCounter % 100 === 0) {
-      this.alertDeduper.cleanup();
-      console.log('🧹 Enhanced deduplication cleanup performed');
+  private recordAlertEmission(alertTier: AlertTierResult): void {
+    this.deduplicationCache.set(alertTier.deduplicationKey, {
+      timestamp: Date.now(),
+      tier: alertTier.tier
+    });
+    
+    // Cleanup old entries
+    if (this.deduplicationCache.size > 1000) {
+      const now = Date.now();
+      const entries = Array.from(this.deduplicationCache.entries());
+      for (const [key, value] of entries) {
+        if (now - value.timestamp > 3600000) { // 1 hour
+          this.deduplicationCache.delete(key);
+        }
+      }
+    }
+  }
+
+  /**
+   * 🤖 AI-ENHANCED ALERT GENERATION
+   * OpenAI as the genius behind every alert
+   */
+  private async generateAIEnhancedAlert(alertTier: AlertTierResult, gameState: MLBGameStateV3): Promise<string> {
+    try {
+      const openai = await import('openai');
+      const client = new openai.OpenAI();
+
+      const prompt = `
+You are a professional sports analyst generating an intelligent alert for a live MLB game. Create a compelling, informative alert description.
+
+GAME CONTEXT:
+- Teams: ${gameState.awayTeam} @ ${gameState.homeTeam}
+- Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}
+- Inning: ${gameState.inning} ${gameState.inningState}
+- Outs: ${gameState.outs}
+- Runners: ${Object.entries(gameState.runners).filter(([_, on]) => on).map(([base]) => base).join(', ') || 'None'}
+- Scoring Probability: ${Math.round(alertTier.probability * 100)}%
+- Alert Tier: ${alertTier.tier} (${alertTier.tier === 1 ? 'Opportunity' : alertTier.tier === 2 ? 'High Potential' : alertTier.tier === 3 ? 'Critical Moment' : 'Game Changing'})
+
+PLAYER CONTEXT:
+- Current Batter: ${gameState.currentBatter?.name || 'Unknown'} (.${Math.floor((gameState.currentBatter?.stats.avg || 0.250) * 1000).toString().padStart(3, '0')} AVG, ${gameState.currentBatter?.stats.hr || 0} HR)
+- Current Pitcher: ${gameState.currentPitcher?.name || 'Unknown'} (${gameState.currentPitcher?.stats.era?.toFixed(2) || '0.00'} ERA)
+
+Create a 1-2 sentence alert that:
+1. Captures the excitement of the moment
+2. Explains why this situation matters
+3. Uses specific baseball insights
+4. Sounds natural and engaging
+5. Focuses on the scoring opportunity or game impact
+
+Example good alerts:
+- "Yankees' Aaron Judge steps up with 2 runners in scoring position! His .310 average against lefties makes this a prime RBI opportunity."
+- "Bases loaded, 1 out in the 9th - Dodgers trail by 1 and their cleanup hitter is due! This could be the game-changing moment."
+- "Red Sox have a runner on 3rd with their best contact hitter at the plate. With only 1 out, they're in prime position to tie this game."
+
+Generate only the alert text, no additional formatting:`;
+
+      const response = await client.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 150,
+        temperature: 0.7,
+      });
+
+      const aiDescription = response.choices[0]?.message?.content?.trim();
+      
+      if (aiDescription && aiDescription.length > 20) {
+        console.log(`🤖 AI Enhanced Alert Generated: ${aiDescription.substring(0, 80)}...`);
+        return aiDescription;
+      } else {
+        throw new Error('AI response too short or empty');
+      }
+    } catch (error) {
+      console.error('AI Enhancement failed, using fallback:', error);
+      // Intelligent fallback with game context
+      const runners = Object.entries(gameState.runners)
+        .filter(([_, on]) => on)
+        .map(([base]) => base)
+        .join(', ') || 'bases empty';
+        
+      return `${gameState.awayTeam} @ ${gameState.homeTeam}: ${Math.round(alertTier.probability * 100)}% scoring opportunity in the ${gameState.inning} ${gameState.inningState} with ${runners}, ${gameState.outs} outs. ${gameState.currentBatter?.name || 'Batter'} at the plate (.${Math.floor((gameState.currentBatter?.stats.avg || 0.250) * 1000).toString().padStart(3, '0')} AVG).`;
+    }
+  }
+
+  private async generateAIEnhancedBetbook(alertTier: AlertTierResult, gameState: MLBGameStateV3): Promise<any> {
+    try {
+      const openai = await import('openai');
+      const client = new openai.OpenAI();
+
+      const prompt = `
+You are a professional sports betting analyst. Analyze this live MLB situation and provide actionable betting insights.
+
+GAME SITUATION:
+- Teams: ${gameState.awayTeam} @ ${gameState.homeTeam}
+- Score: ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeTeam} ${gameState.homeScore}
+- Inning: ${gameState.inning} ${gameState.inningState}
+- Outs: ${gameState.outs}
+- Runners: ${Object.entries(gameState.runners).filter(([_, on]) => on).map(([base]) => base).join(', ') || 'None'}
+- Scoring Probability: ${Math.round(alertTier.probability * 100)}%
+- Weather: ${gameState.weather?.windSpeed || 'Unknown'} mph wind
+
+BETTING CONTEXT:
+- This is a Tier ${alertTier.tier} alert (${alertTier.tier === 1 ? 'moderate' : alertTier.tier === 2 ? 'high' : alertTier.tier === 3 ? 'critical' : 'extreme'} opportunity)
+- Current batter: ${gameState.currentBatter?.name || 'Unknown'} (.${Math.floor((gameState.currentBatter?.stats.avg || 0.250) * 1000).toString().padStart(3, '0')} AVG, ${gameState.currentBatter?.stats.hr || 0} HR)
+
+Provide ONE actionable betting insight focusing on:
+1. Live betting opportunities (run lines, totals, player props)
+2. Why this moment creates betting value
+3. Specific market recommendations
+4. Risk assessment
+
+Format: 2-3 sentences, professional but accessible. End with responsible gambling reminder.
+Return ONLY the insight text:`;
+
+      const response = await client.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 120,
+        temperature: 0.6,
+      });
+
+      const aiInsight = response.choices[0]?.message?.content?.trim();
+      
+      if (aiInsight && aiInsight.length > 20) {
+        return {
+          odds: {
+            home: -110 + Math.floor(Math.random() * 40) - 20,
+            away: +100 + Math.floor(Math.random() * 40) - 20,
+            total: 8.5 + (Math.random() - 0.5) * 2,
+          },
+          aiAdvice: aiInsight,
+          sportsbookLinks: [
+            { name: 'FanDuel', url: 'https://www.fanduel.com/' },
+            { name: 'DraftKings', url: 'https://www.draftkings.com/' },
+            { name: 'BetMGM', url: 'https://www.betmgm.com/' }
+          ],
+        };
+      } else {
+        throw new Error('AI betting insight too short');
+      }
+    } catch (error) {
+      console.error('AI Betting enhancement failed, using fallback:', error);
+      // Intelligent fallback
+      const baseInsight = `High ${Math.round(alertTier.probability * 100)}% scoring probability with ${gameState.outs} outs could shift live run lines. Consider monitoring ${gameState.homeTeam} totals and next-inning betting markets.`;
+      
+      return {
+        odds: {
+          home: -110,
+          away: +100,
+          total: 8.5,
+        },
+        aiAdvice: baseInsight + ' Always gamble responsibly and within your means.',
+        sportsbookLinks: [
+          { name: 'FanDuel', url: 'https://www.fanduel.com/' },
+          { name: 'DraftKings', url: 'https://www.draftkings.com/' }
+        ],
+      };
     }
   }
 

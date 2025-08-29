@@ -306,10 +306,15 @@ export class AlertDeduper {
       }
     }
     
-    const digest = crypto.createHash('blake2b256')
-      .update(chunks.join('|'))
-      .digest('hex')
-      .substring(0, 24);
+    // Use simple hash instead of blake2b256 for compatibility
+    const combined = chunks.join('|');
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+      const char = combined.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    const digest = Math.abs(hash).toString(16).substring(0, 24);
     
     return `${gameId}:${alertType}:${digest}`;
   }
