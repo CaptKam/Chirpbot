@@ -185,6 +185,297 @@ export class MLBEngineV3 {
     console.log('🔧 MLBEngineV3 initialized with AI-Enhanced Alert System & Integrated Player Detection');
   }
 
+  // === INTEGRATED MLB API METHODS ===
+  // Complete MLB API functionality built directly into the engine
+
+  /**
+   * Get today's MLB games schedule
+   */
+  async getTodaysGames(date?: string): Promise<any[]> {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      const url = `${this.MLB_API_BASE}/schedule?sportId=1&date=${targetDate}&hydrate=game(content(summary,media(epg)),tickets),linescore(matchup,runners),metadata`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      if (!data?.dates?.[0]?.games) {
+        console.log(`📅 No games found for ${targetDate}`);
+        return [];
+      }
+
+      return data.dates[0].games.map((game: any) => ({
+        gamePk: game.gamePk,
+        gameId: game.gamePk.toString(),
+        homeTeam: game.teams.home.team.name,
+        awayTeam: game.teams.away.team.name,
+        homeScore: game.teams.home.score || 0,
+        awayScore: game.teams.away.score || 0,
+        status: game.status.detailedState,
+        gameDate: game.gameDate,
+        venue: game.venue.name,
+        inning: game.linescore?.currentInning,
+        inningState: game.linescore?.inningState,
+        linescore: game.linescore
+      }));
+    } catch (error) {
+      console.error('❌ Error fetching today\'s games:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get live games only
+   */
+  async getLiveGames(): Promise<any[]> {
+    try {
+      const allGames = await this.getTodaysGames();
+      return allGames.filter(game => 
+        game.status === 'In Progress' || 
+        game.status === 'Live' ||
+        game.status.includes('Inning')
+      );
+    } catch (error) {
+      console.error('❌ Error fetching live games:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get detailed live game feed
+   */
+  async getGameFeed(gamePk: number): Promise<any | null> {
+    try {
+      const url = `${this.MLB_API_BASE}/game/${gamePk}/feed/live`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data;
+    } catch (error) {
+      console.error(`❌ Error fetching game feed for ${gamePk}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get player statistics
+   */
+  async getPlayerStats(playerId: number, season?: number): Promise<any | null> {
+    try {
+      const currentSeason = season || new Date().getFullYear();
+      const url = `${this.MLB_API_BASE}/people/${playerId}/stats?stats=season&season=${currentSeason}&sportId=1`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data?.stats?.[0]?.splits?.[0]?.stat || null;
+    } catch (error) {
+      console.error(`❌ Error fetching player stats for ${playerId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get team roster
+   */
+  async getTeamRoster(teamId: number): Promise<any[]> {
+    try {
+      const url = `${this.MLB_API_BASE}/teams/${teamId}/roster`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data?.roster || [];
+    } catch (error) {
+      console.error(`❌ Error fetching roster for team ${teamId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get MLB teams
+   */
+  async getMLBTeams(): Promise<any[]> {
+    try {
+      const url = `${this.MLB_API_BASE}/teams?sportId=1`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data?.teams || [];
+    } catch (error) {
+      console.error('❌ Error fetching MLB teams:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get league standings
+   */
+  async getStandings(season?: number): Promise<any[]> {
+    try {
+      const currentSeason = season || new Date().getFullYear();
+      const url = `${this.MLB_API_BASE}/standings?leagueId=103,104&season=${currentSeason}&standingsTypes=regularSeason`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data?.records || [];
+    } catch (error) {
+      console.error('❌ Error fetching standings:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get game boxscore
+   */
+  async getGameBoxscore(gamePk: number): Promise<any | null> {
+    try {
+      const url = `${this.MLB_API_BASE}/game/${gamePk}/boxscore`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data;
+    } catch (error) {
+      console.error(`❌ Error fetching boxscore for ${gamePk}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get play-by-play data
+   */
+  async getPlayByPlay(gamePk: number): Promise<any[]> {
+    try {
+      const url = `${this.MLB_API_BASE}/game/${gamePk}/playByPlay`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data?.allPlays || [];
+    } catch (error) {
+      console.error(`❌ Error fetching play-by-play for ${gamePk}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get venue information
+   */
+  async getVenue(venueId: number): Promise<any | null> {
+    try {
+      const url = `${this.MLB_API_BASE}/venues/${venueId}`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data?.venues?.[0] || null;
+    } catch (error) {
+      console.error(`❌ Error fetching venue ${venueId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Search for players
+   */
+  async searchPlayers(query: string): Promise<any[]> {
+    try {
+      const url = `${this.MLB_API_BASE}/people/search?names=${encodeURIComponent(query)}`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      return data?.people || [];
+    } catch (error) {
+      console.error(`❌ Error searching players for "${query}":`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get season schedule for a team
+   */
+  async getTeamSchedule(teamId: number, season?: number): Promise<any[]> {
+    try {
+      const currentSeason = season || new Date().getFullYear();
+      const url = `${this.MLB_API_BASE}/schedule?sportId=1&teamId=${teamId}&season=${currentSeason}`;
+      
+      const data = await fetchJson(url, {
+        headers: {
+          'User-Agent': 'ChirpBot/2.0',
+          'Accept': 'application/json'
+        },
+        timeoutMs: 8000
+      });
+
+      const games: any[] = [];
+      data?.dates?.forEach((date: any) => {
+        games.push(...date.games);
+      });
+
+      return games;
+    } catch (error) {
+      console.error(`❌ Error fetching schedule for team ${teamId}:`, error);
+      return [];
+    }
+  }
+
+  // === END INTEGRATED MLB API METHODS ===
+
   /**
    * Integrated Enhanced MLB Feed - Gets detailed player information
    * Replaces the separate enhanced-mlb-feed service
