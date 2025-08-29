@@ -4,12 +4,6 @@ import { Deduper } from "./dedup";
 export const dedup = new Deduper({
   namespace: process.env.ADVANCED_MLB_ALERTS === "1" ? "advanced" : "legacy",
   lifecycleTtlMs: 10 * 60 * 1000, // 10 minutes per unique situation
-  perTypeCooldownMs: {
-    weather: 10_000,     // weather can chatter
-    windShift: 15_000,   // wind direction changes
-    starBatter: 5_000,   // star batter alerts with slight cooldown
-    powerHitter: 5_000,  // power hitter alerts with slight cooldown
-  },
   maxEntries: 50_000,
 });
 

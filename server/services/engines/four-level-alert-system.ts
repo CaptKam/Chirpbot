@@ -67,12 +67,10 @@ export interface AlertTier {
   description: string;
   metadata: {
     deduplicationKey: string;
-    cooldownMs: number;
   };
 }
 
 export class FourLevelAlertSystem {
-  private cooldownCache = new Map<string, number>();
   
   // Main evaluation function
   async maybeEvaluateGameAndAlert(game: GameState): Promise<AlertTier | null> {
@@ -97,12 +95,8 @@ export class FourLevelAlertSystem {
 
     const alert = this.buildAlert(game, levels, tier);
     
-    if (this.isDuplicateOrCoolingDown(alert)) {
-      console.log(`🚫 Alert blocked due to cooldown: ${alert.description}`);
-      return null;
-    }
-
-    this.persistAlertForCooldown(alert);
+    // Removed cooldown logic - alerts flow directly now
+    console.log(`✅ Processing alert: ${alert.description}`);
     return alert;
   }
 
@@ -389,7 +383,7 @@ export class FourLevelAlertSystem {
       description,
       metadata: {
         deduplicationKey: dedupKey,
-        cooldownMs: this.getCooldownMs(tier)
+        // Removed cooldown functionality
       }
     };
   }
@@ -428,40 +422,7 @@ export class FourLevelAlertSystem {
     return parts.join(':');
   }
 
-  private getCooldownMs(tier: number): number {
-    // Higher tiers get longer cooldowns
-    const cooldowns = [0, 60000, 90000, 120000, 180000]; // 0, 1min, 1.5min, 2min, 3min
-    return cooldowns[tier] || 60000;
-  }
-
-  // Duplicate/cooldown checking
-  private isDuplicateOrCoolingDown(alert: AlertTier): boolean {
-    const key = alert.metadata.deduplicationKey;
-    const lastSent = this.cooldownCache.get(key);
-    
-    if (!lastSent) {
-      return false;
-    }
-    
-    const elapsed = Date.now() - lastSent;
-    return elapsed < alert.metadata.cooldownMs;
-  }
-
-  private persistAlertForCooldown(alert: AlertTier): void {
-    this.cooldownCache.set(alert.metadata.deduplicationKey, Date.now());
-    
-    // Cleanup old entries (prevent memory leaks)
-    if (this.cooldownCache.size > 1000) {
-      const entries = Array.from(this.cooldownCache.entries());
-      const cutoff = Date.now() - 3600000; // 1 hour
-      
-      for (const [key, timestamp] of entries) {
-        if (timestamp < cutoff) {
-          this.cooldownCache.delete(key);
-        }
-      }
-    }
-  }
+  // Removed all cooldown functionality - alerts flow directly now
 
   // Convert GameState to MLBGameState for mathematical model
   private convertToMLBGameState(game: GameState): any | null {

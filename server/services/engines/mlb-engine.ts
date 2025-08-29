@@ -177,12 +177,6 @@ export interface DeduplicationContext {
 export class MLBEngineV3 {
   // Smart Deduplication with AI-Enhanced Alerts
   private deduplicationCache = new Map<string, { timestamp: number; tier: number }>();
-  private readonly COOLDOWN_MS = {
-    1: 15000,   // L1: 15 seconds
-    2: 30000,   // L2: 30 seconds
-    3: 45000,   // L3: 45 seconds
-    4: 60000    // L4: 60 seconds
-  };
   private readonly MLB_API_BASE = 'https://statsapi.mlb.com/api/v1';
   
   onAlert?: (alert: any) => void;
@@ -709,17 +703,10 @@ export class MLBEngineV3 {
     const now = Date.now();
     const cached = this.deduplicationCache.get(alertTier.deduplicationKey);
     
-    // Simple but effective deduplication while we enhance AI
+    // Simple deduplication - no cooldowns, direct processing
     if (cached) {
-      const cooldown = this.COOLDOWN_MS[alertTier.tier] || 30000;
+      // Allow higher tier to supersede lower tier within 60 seconds
       const timeSinceLastAlert = now - cached.timestamp;
-      
-      if (timeSinceLastAlert < cooldown) {
-        console.log(`🔄 DEDUP: Waiting ${Math.round((cooldown - timeSinceLastAlert)/1000)}s for ${alertTier.tier} alert`);
-        return false;
-      }
-      
-      // Allow higher tier to supersede lower tier
       if (alertTier.tier <= cached.tier && timeSinceLastAlert < 60000) {
         console.log(`🔄 DEDUP: Lower/same tier suppressed for 60s`);
         return false;
