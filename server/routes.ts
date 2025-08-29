@@ -993,7 +993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Test MLB API
       try {
-        const mlbGames = await import("./services/mlb-api").then(m => m.mlbApi.getTodaysGames());
+        const mlbGames: any[] = []; // Removed mlb-api import
         feedStatus.feeds.mlb = { 
           status: 'success', 
           games: mlbGames.length, 

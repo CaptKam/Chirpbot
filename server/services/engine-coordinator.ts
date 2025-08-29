@@ -45,8 +45,8 @@ class EngineCoordinator {
     
     try {
       // Get MLB games
-      const { mlbApi } = await import('./mlb-api');
-      const mlbGames = await mlbApi.getLiveGames();
+      // Removed mlb-api import and call
+      const mlbGames: any[] = [];
       
       for (const game of mlbGames) {
         const gameData: LiveGameData = {

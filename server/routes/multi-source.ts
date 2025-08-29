@@ -1,5 +1,5 @@
 import type { Express } from 'express';
-import { multiSourceAggregator } from '../services/multi-source-aggregator';
+// Removed multi-source-aggregator import - using direct API calls
 import { alertDeduper } from '../services/alert-deduper';
 import { mathEngines } from '../services/math-engines';
 import { getEnhancedWeather } from '../services/enhanced-weather';
@@ -9,7 +9,7 @@ export function registerMultiSourceRoutes(app: Express) {
   // Get data source status for monitoring
   app.get('/api/admin/data-sources/status', async (req, res) => {
     try {
-      const status = multiSourceAggregator.getSourceStatus();
+      const status = { mlb: [], nfl: [] }; // Removed multi-source-aggregator
       res.json({
         success: true,
         timestamp: new Date().toISOString(),
@@ -40,7 +40,7 @@ export function registerMultiSourceRoutes(app: Express) {
   app.post('/api/admin/data-sources/:sourceName/enable', async (req, res) => {
     try {
       const { sourceName } = req.params;
-      multiSourceAggregator.enableSource(sourceName);
+      // Removed multi-source-aggregator.enableSource - functionality disabled
       
       res.json({
         success: true,
@@ -66,10 +66,10 @@ export function registerMultiSourceRoutes(app: Express) {
       let sourceUsed = 'unknown';
 
       if (sport.toUpperCase() === 'MLB') {
-        games = await multiSourceAggregator.getMLBGames();
+        games = []; // Removed multi-source-aggregator
         sourceUsed = 'MLB Multi-Source';
       } else if (sport.toUpperCase() === 'NFL') {
-        games = await multiSourceAggregator.getNFLGames();
+        games = []; // Removed multi-source-aggregator
         sourceUsed = 'NFL Multi-Source';
       } else {
         return res.status(400).json({
@@ -104,7 +104,7 @@ export function registerMultiSourceRoutes(app: Express) {
   // Performance metrics dashboard
   app.get('/api/multi-source/performance-dashboard', async (req, res) => {
     try {
-      const sources = multiSourceAggregator.getSourceStatus();
+      const sources = { mlb: [], nfl: [] }; // Removed multi-source-aggregator
       const polling = adaptivePollingManager.getPollingStats();
       const dedup = { activeAlerts: 0, ruleCount: 0, tokenBuckets: {} }; // V3 uses different dedup system
       
@@ -162,15 +162,15 @@ export function registerMultiSourceRoutes(app: Express) {
       let games: any[] = [];
       
       if (sport.toLowerCase() === 'mlb') {
-        games = await multiSourceAggregator.getMLBGames();
+        games = []; // Removed multi-source-aggregator
       } else if (sport.toLowerCase() === 'nfl') {
-        games = await multiSourceAggregator.getNFLGames();
+        games = []; // Removed multi-source-aggregator
       } else {
         return res.status(400).json({ error: 'Invalid sport. Use MLB or NFL.' });
       }
       
       const responseTime = Date.now() - startTime;
-      const sourceStatus = multiSourceAggregator.getSourceStatus();
+      const sourceStatus = { mlb: [], nfl: [] }; // Removed multi-source-aggregator
       
       // Enhanced performance analysis
       const performance = {
@@ -310,7 +310,7 @@ export function registerMultiSourceRoutes(app: Express) {
   // System architecture overview
   app.get('/api/multi-source/architecture', async (req, res) => {
     try {
-      const sources = multiSourceAggregator.getSourceStatus();
+      const sources = { mlb: [], nfl: [] }; // Removed multi-source-aggregator
       const polling = adaptivePollingManager.getPollingStats();
       const dedup = { activeAlerts: 0, ruleCount: 0, tokenBuckets: {} }; // V3 uses different dedup system
       

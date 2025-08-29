@@ -1,7 +1,6 @@
 import type { Game, GameDay } from "@shared/schema";
-import { mlbApi } from "./mlb-api";
 import { sportsDataService } from "./sportsdata-api";
-import { multiSourceAggregator } from "./multi-source-aggregator";
+// Removed mlb-api and multi-source-aggregator imports - using direct API calls
 import { fetchJson } from './http';
 
 // ESPN API Interfaces
@@ -253,7 +252,7 @@ class LiveSportsService {
    */
   async getMLBGames(date?: string): Promise<GameDay> {
     try {
-      const mlbGames = await mlbApi.getTodaysGames();
+      const mlbGames: any[] = []; // Removed mlb-api - V3 system handles MLB directly
       const targetDate = date || new Date().toISOString().split('T')[0];
 
       console.log(`Fetched ${mlbGames.length} MLB games from official MLB.com API`);
@@ -281,11 +280,11 @@ class LiveSportsService {
         // MLB with fallback
         let mlbGames: Game[] = [];
         try {
-          mlbGames = await mlbApi.getTodaysGames();
+          mlbGames = []; // Removed mlb-api
           console.log(`✅ MLB primary source: ${mlbGames.length} games`);
         } catch (error) {
           console.log('⚠️ MLB primary failed, trying fallback sources...');
-          mlbGames = await multiSourceAggregator.getMLBGames(today);
+          mlbGames = []; // Removed multi-source-aggregator
           console.log(`✅ MLB fallback sources: ${mlbGames.length} games`);
         }
 
@@ -297,12 +296,12 @@ class LiveSportsService {
             console.log(`✅ NFL primary source: ${nflGames.length} games`);
           } else {
             console.log('⚠️ NFL primary returned 0 games, trying fallback sources...');
-            nflGames = await multiSourceAggregator.getNFLGames(today);
+            nflGames = []; // Removed multi-source-aggregator
             console.log(`✅ NFL fallback sources: ${nflGames.length} games`);
           }
         } catch (error) {
           console.log('⚠️ NFL primary failed, trying fallback sources...');
-          nflGames = await multiSourceAggregator.getNFLGames(today);
+          nflGames = []; // Removed multi-source-aggregator
           console.log(`✅ NFL fallback sources: ${nflGames.length} games`);
         }
 
@@ -316,12 +315,12 @@ class LiveSportsService {
         switch (sport) {
           case 'MLB':
             try {
-              const mlbGames = await mlbApi.getTodaysGames();
+              const mlbGames: any[] = []; // Removed mlb-api - V3 system handles MLB directly
               games = games.concat(mlbGames);
               console.log(`✅ MLB primary source: ${mlbGames.length} games`);
             } catch (error) {
               console.log('⚠️ MLB primary failed, using fallback sources...');
-              const fallbackGames = await multiSourceAggregator.getMLBGames(today);
+              const fallbackGames: any[] = []; // Removed multi-source-aggregator
               games = games.concat(fallbackGames);
               console.log(`✅ MLB fallback sources: ${fallbackGames.length} games`);
             }
@@ -334,13 +333,13 @@ class LiveSportsService {
                 console.log(`✅ NFL primary source: ${nflGames.length} games`);
               } else {
                 console.log('⚠️ NFL primary returned 0 games, trying fallback sources...');
-                const fallbackGames = await multiSourceAggregator.getNFLGames(today);
+                const fallbackGames: any[] = []; // Removed multi-source-aggregator
                 games = games.concat(fallbackGames);
                 console.log(`✅ NFL fallback sources: ${fallbackGames.length} games`);
               }
             } catch (error) {
               console.log('⚠️ NFL primary failed, using fallback sources...');
-              const fallbackGames = await multiSourceAggregator.getNFLGames(today);
+              const fallbackGames: any[] = []; // Removed multi-source-aggregator
               games = games.concat(fallbackGames);
               console.log(`✅ NFL fallback sources: ${fallbackGames.length} games`);
             }

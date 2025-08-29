@@ -9,7 +9,7 @@
 // - Betbook engine integration
 
 import { storage } from '../../storage';
-import { mlbApi } from '../mlb-api';
+// V3 system uses direct API calls instead of mlb-api wrapper
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { getWeatherData } from '../weather';
