@@ -192,12 +192,30 @@ export class NFLEngine {
     }
   }
 
+  private buildKidFriendlyTitle(alertType: string, gameState: NFLGameState): string {
+    switch (alertType) {
+      case 'red_zone':
+        return '🚨 RED ZONE! Team is close to scoring!';
+      case 'close_game':
+        return '🔥 SUPER CLOSE! Only one touchdown apart!';
+      case 'fourth_down':
+        return '💥 4TH DOWN! Big decision time!';
+      case 'two_minute_warning':
+        return '⏰ FINAL 2 MINUTES! Crunch time!';
+      default:
+        return '🏈 NFL ACTION! Something exciting is happening!';
+    }
+  }
+
   private async processAlert(alert: SimpleNFLAlert, gameState: NFLGameState): Promise<void> {
     try {
       this.recordAlertEmission(alert);
 
+      // Use kid-friendly title
+      const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
+
       const alertRecord = await storage.createAlert({
-        title: `NFL ${alert.type.replace('_', ' ').toUpperCase()}`,
+        title: kidFriendlyTitle,
         description: alert.description,
         sport: 'NFL',
         type: alert.type,

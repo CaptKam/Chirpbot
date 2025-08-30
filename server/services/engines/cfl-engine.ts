@@ -180,10 +180,28 @@ export class CFLEngine {
     return true;
   }
 
+  private buildKidFriendlyTitle(alertType: string, gameState: CFLGameState): string {
+    switch (alertType) {
+      case 'red_zone':
+        return '🚨 RED ZONE! Team is close to scoring!';
+      case 'close_game':
+        return '🏆 CLOSE GAME! Either team can win!';
+      case 'overtime':
+        return '⏰ OVERTIME! Extra CFL action!';
+      case 'final_minutes':
+        return '⏰ FINAL MINUTES! Game-deciding time!';
+      default:
+        return '🏈 CFL ACTION! Something exciting is happening!';
+    }
+  }
+
   private async processAlert(alert: SimpleCFLAlert, gameState: CFLGameState): Promise<void> {
     try {
+      // Use kid-friendly title
+      const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
+
       const alertRecord = await storage.createAlert({
-        title: `CFL ${alert.type.replace('_', ' ').toUpperCase()}`,
+        title: kidFriendlyTitle,
         description: alert.description,
         sport: 'CFL',
         type: alert.type,

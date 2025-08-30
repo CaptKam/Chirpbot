@@ -179,10 +179,28 @@ export class NHLEngine {
     return true;
   }
 
+  private buildKidFriendlyTitle(alertType: string, gameState: NHLGameState): string {
+    switch (alertType) {
+      case 'power_play':
+        return '⚡ POWER PLAY! Extra player advantage!';
+      case 'empty_net':
+        return '😨 EMPTY NET! Goalie pulled for extra attacker!';
+      case 'close_game':
+        return '🏆 ONE-GOAL GAME! Super close hockey!';
+      case 'overtime':
+        return '⏰ OVERTIME! Sudden death hockey!';
+      default:
+        return '🏒 NHL ACTION! Something exciting is happening!';
+    }
+  }
+
   private async processAlert(alert: SimpleNHLAlert, gameState: NHLGameState): Promise<void> {
     try {
+      // Use kid-friendly title
+      const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
+
       const alertRecord = await storage.createAlert({
-        title: `NHL ${alert.type.replace('_', ' ').toUpperCase()}`,
+        title: kidFriendlyTitle,
         description: alert.description,
         sport: 'NHL',
         type: alert.type,

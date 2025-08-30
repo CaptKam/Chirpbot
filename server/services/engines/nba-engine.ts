@@ -166,10 +166,26 @@ export class NBAEngine {
     return true;
   }
 
+  private buildKidFriendlyTitle(alertType: string, gameState: NBAGameState): string {
+    switch (alertType) {
+      case 'clutch_time':
+        return '🔥 CLUTCH TIME! Final minutes of close game!';
+      case 'overtime':
+        return '⚡ OVERTIME! Extra basketball action!';
+      case 'close_game':
+        return '🏀 NAIL-BITER! Super close game!';
+      default:
+        return '🏀 NBA ACTION! Something exciting is happening!';
+    }
+  }
+
   private async processAlert(alert: SimpleNBAAlert, gameState: NBAGameState): Promise<void> {
     try {
+      // Use kid-friendly title
+      const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
+
       const alertRecord = await storage.createAlert({
-        title: `NBA ${alert.type.replace('_', ' ').toUpperCase()}`,
+        title: kidFriendlyTitle,
         description: alert.description,
         sport: 'NBA',
         type: alert.type,
