@@ -1,0 +1,135 @@
+Thought for 59s
+Betbook-engine
+· typescript
+// betbook-engine.ts (v2)
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 180,
+      });
+      return (completion.choices[0]?.message?.content || this.fallbackAdvice(ctx, signals)).trim();
+    } catch (e) {
+      console.error('AI advice error', e);
+      return this.fallbackAdvice(ctx, signals);
+    }
+  }
+
+
+  private fallbackAdvice(ctx: AlertContext, signals: Signal[]): string {
+    if (!signals.length) return 'No actionable edge right now; wait for better prices or state changes.';
+    const s = signals[0];
+    const best = s.edges.slice().sort((a,b) => (b.edgePct ?? 0) - (a.edgePct ?? 0))[0];
+    if (!best) return 'Edges are marginal; monitor for improved numbers.';
+    return `Focus on ${best.selection} given small positive edge and cap sizing (~${best.stakeUnits}u). Avoid overexposure on a single game.`;
+  }
+}
+
+
+/*** ---------------------- BACKWARD‑COMPAT WRAPPERS ----------------------- ***/
+
+
+// v1 helpers kept for drop‑in compatibility
+export async function getBetbookData(alertContext: AlertContext): Promise<BetbookData> {
+  const engine = new BetbookEngine({ useOpenAI: false });
+  // allow inline odds via alertContext.offeredOdds
+  const signals = engine.evaluate(alertContext);
+  return engine.toBetbookData(alertContext, signals);
+}
+
+
+export function getBetbookDataSync(alertContext: AlertContext): BetbookData {
+  const engine = new BetbookEngine({ useOpenAI: false });
+  const signals = engine.evaluate(alertContext);
+  // Synchronous wrapper: avoid AI advice
+  return {
+    odds: {
+      home: alertContext.offeredOdds?.moneyline?.home,
+      away: alertContext.offeredOdds?.moneyline?.away,
+      total: alertContext.offeredOdds?.total?.number,
+    },
+    aiAdvice: engine['fallbackAdvice'](alertContext, signals),
+    sportsbookLinks: engine['getSportsbookLinks'](),
+    bettingInsights: signals.length ? signals.map(s => `${s.title} (conf ${s.confidence})`) : ['No strong edges at this moment'],
+    confidence: signals.reduce((m, s) => Math.max(m, s.confidence), 0),
+    signals,
+  };
+}
+
+
+export function shouldShowBetbook(alertContext: AlertContext): boolean {
+  const isLive = (alertContext.gameState || '').toUpperCase() === 'LIVE';
+  const hasTeams = !!alertContext.homeTeam && !!alertContext.awayTeam;
+  return isLive && hasTeams;
+}
+
+
+/*** ---------------------------- TEST HOOKS ------------------------------- ***/
+
+
+// Quick self‑check you can invoke from a unit test
+export function __selfCheck__() {
+  const engine = new BetbookEngine({ useOpenAI: false });
+  const ctx: AlertContext = {
+    sport: 'MLB',
+    gameId: 'TST',
+    homeTeam: 'Dodgers',
+    awayTeam: 'Cubs',
+    homeScore: 3,
+    awayScore: 3,
+    inning: 7,
+    halfInning: 'bottom',
+    outs: 1,
+    runners: { second: true },
+    windMph: 12,
+    windTowardOF: true,
+    gameState: 'LIVE',
+    offeredOdds: { total: { number: 8.5, over: +105, under: -110 }, moneyline: { home: -115, away: +105 } },
+  };
+  const signals = engine.evaluate(ctx);
+  if (!signals.length) throw new Error('Expected at least one MLB signal');
+  return signals;
+}
+
+
+
+Absolutely. I rebuilt your Betbook engine into a modular, state-aware, risk-smart system with cross-sport strategy plugins, proper edge math, de-duping, arbitrage checks, and (optional) LLM advice—while keeping your original exports so you can drop it in today.
+
+I’ve put the full TypeScript file in the canvas: betbook-engine.ts (v2 — ultra-sophisticated engine).
+Highlights:
+
+Plugins & features: MLB (RISP + wind boost, late-close ML), Tennis (hold/break pressure). Easy to add more.
+
+Edge math: implied prob, fair odds, EV, Kelly (scaled), exposure caps.
+
+Idempotency: TTL-based de-dupe keyed by game/strategy/selection/price.
+
+Lines registry: register multi-book lines; detects simple moneyline arbs.
+
+Risk manager: bankroll units, per-bet & per-game caps.
+
+Backwards compatible: getBetbookData, getBetbookDataSync, shouldShowBetbook.
+
+Test hook: __selfCheck__() to verify signals fire.
+
+How to use (quick)
+
+Replace your current file with the canvas version.
+
+(Optional) Feed lines before evaluating:
+
+engine.registerLines(gameId, [
+  { book: 'DK', type: 'MONEYLINE', selection: 'HOME', priceAmerican: -115, timestamp: Date.now() },
+  { book: 'FD', type: 'MONEYLINE', selection: 'AWAY', priceAmerican: +108, timestamp: Date.now() },
+  // totals, spreads, etc…
+]);
+
+
+Evaluate:
+
+const signals = engine.evaluate(alertContext);              // advanced signals
+const data = await engine.toBetbookData(alertContext, signals); // UI-friendly summary
+
+
+Or keep your old calls:
+
+const data = await getBetbookData(alertContext);
