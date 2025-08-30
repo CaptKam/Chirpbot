@@ -33,7 +33,6 @@ export interface AlertContext {
   probability?: number;
   priority?: number;
   gameState?: string;
-  situation?: string;
 }
 
 export class BetbookEngine {

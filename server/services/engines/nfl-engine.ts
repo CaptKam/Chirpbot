@@ -196,19 +196,9 @@ export class NFLEngine {
     try {
       this.recordAlertEmission(alert);
 
-      // Generate alert ID for debugging (matching MLB system)
-      const alertId = randomUUID();
-      console.log(`🆔 NFL: Generating alert with ID: ${alertId} | Type: ${alert.type}`);
-
-      // Build kid-friendly description (Law #6 compliance)
-      const kidFriendlyDescription = this.buildKidFriendlyDescription(alert, gameState);
-      const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
-
       const alertRecord = await storage.createAlert({
-        id: alertId,
-        debugId: alertId.substring(0, 8), // Short ID for easy debugging
-        title: kidFriendlyTitle,
-        description: kidFriendlyDescription,
+        title: `NFL ${alert.type.replace('_', ' ').toUpperCase()}`,
+        description: alert.description,
         sport: 'NFL',
         type: alert.type,
         priority: alert.priority,
@@ -221,105 +211,20 @@ export class NFLEngine {
           },
           quarter: gameState.quarter.toString(),
           status: 'live'
-        } as any,
-        createdAt: new Date(),
-        seen: false
+        } as any
       });
 
       // Broadcast to WebSocket clients
       if (this.onAlert) {
         this.onAlert({
           type: 'new_alert',
-          data: alertRecord
+          alert: alertRecord
         });
-        console.log(`📡 NFL: Alert broadcasted via WebSocket | ID: ${alertId.substring(0, 8)}`);
       }
 
-      console.log(`✅ NFL Alert generated: ${kidFriendlyDescription} (Priority: ${alert.priority})`);
-      console.log(`🆔 NFL: Alert ID: ${alertId} | Debug ID: ${alertId.substring(0, 8)} | Type: ${alert.type}`);
+      console.log(`✅ NFL Alert generated: ${alert.description}`);
     } catch (error) {
       console.error('❌ Error processing NFL alert:', error);
-    }
-  }
-
-  // Kid-friendly alert descriptions (Law #6 compliance)
-  private buildKidFriendlyDescription(alert: SimpleNFLAlert, gameState: NFLGameState): string {
-    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
-    const score = `${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
-    const quarter = this.getQuarterName(gameState.quarter);
-    
-    switch (alert.type) {
-      case 'close_game':
-        return `🏈 ONE SCORE GAME! Every play matters now!
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-Why it's exciting: Only one touchdown separates these teams - either could win!
-
-🎯 This is when legends are made!`;
-
-      case 'red_zone':
-        return `🚨 RED ZONE ALERT! ${gameState.possession} is close to scoring!
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-Situation: ${gameState.possession} is within 20 yards of the end zone!
-What happens next: They could score a touchdown any moment!
-
-🔥 The crowd is on their feet!`;
-
-      case 'fourth_down':
-        return `💥 4TH DOWN! Big decision time for ${gameState.possession}!
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-The Choice: Go for it or punt? This could change everything!
-Distance needed: ${gameState.yardsToGo} yards
-
-⚡ This is football drama at its finest!`;
-
-      case 'two_minute_warning':
-        return `⏰ TWO MINUTE WARNING! Crunch time is here!
-
-Score: ${score}
-Time: Final 2 minutes of ${quarter}
-What's happening: Teams are racing against the clock!
-
-🚨 Every second counts now - this is where games are won or lost!`;
-
-      default:
-        return `🏈 EXCITING PLAY in ${teamVs}!
-
-Score: ${score}
-Time: ${quarter}
-Something big is happening in this game!`;
-    }
-  }
-
-  private buildKidFriendlyTitle(alertType: string, gameState: NFLGameState): string {
-    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
-    
-    switch (alertType) {
-      case 'close_game':
-        return `🏈 ONE SCORE GAME! ${teamVs}`;
-      case 'red_zone':
-        return `🚨 RED ZONE! ${gameState.possession} close to scoring!`;
-      case 'fourth_down':
-        return `💥 4TH DOWN! Big decision for ${gameState.possession}!`;
-      case 'two_minute_warning':
-        return `⏰ TWO MINUTE WARNING! Crunch time!`;
-      default:
-        return `🏈 EXCITING PLAY! ${teamVs}`;
-    }
-  }
-
-  private getQuarterName(quarter: number): string {
-    switch (quarter) {
-      case 1: return '1st Quarter';
-      case 2: return '2nd Quarter';
-      case 3: return '3rd Quarter';
-      case 4: return '4th Quarter';
-      default: return quarter > 4 ? 'Overtime' : `Quarter ${quarter}`;
     }
   }
   

@@ -12,10 +12,10 @@ let ncaafAlertModel: any = null;
 
 // Type declaration for NCAAFAlertModel
 declare module './NCAAFAlertModel.cjs' {
-  const checkNCAAFAlerts: (gameState: any) => any;
-  const ncaafL1Alert: (gameState: any) => any;
-  const ncaafL2Alert: (gameState: any) => any;
-  const ncaafL3Alert: (gameState: any) => any;
+  export function checkNCAAFAlerts(gameState: any): any;
+  export function ncaafL1Alert(gameState: any): any;
+  export function ncaafL2Alert(gameState: any): any;
+  export function ncaafL3Alert(gameState: any): any;
 }
 
 interface NCAAGameState {
@@ -171,7 +171,7 @@ export class NCAAEngine {
     
     // Clean up old entries (older than 10 minutes)
     const tenMinutesAgo = now - (10 * 60 * 1000);
-    for (const [key, timestamp] of Array.from(NCAAEngine.alertContentCache.entries())) {
+    for (const [key, timestamp] of NCAAEngine.alertContentCache.entries()) {
       if (timestamp < tenMinutesAgo) {
         NCAAEngine.alertContentCache.delete(key);
       }
@@ -375,7 +375,7 @@ export class NCAAEngine {
         
         // Track game state changes for analysis
         const previousState = this.gameStateCache.get(gameState.gameId);
-        await this.trackGameEvents(previousState || null, gameState);
+        await this.trackGameEvents(previousState, gameState);
         
         // Store comprehensive game state snapshot
         await this.storeGameStateSnapshot(gameState);
@@ -427,7 +427,6 @@ export class NCAAEngine {
         title: `Game State: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
         description: `Q${gameState.period} ${gameState.timeRemaining}s - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd line`,
         gameInfo: {
-          status: 'live',
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
@@ -790,6 +789,26 @@ export class NCAAEngine {
     return alerts;
   }
 
+  private shouldSendAlert(alert: SimpleNCAAAlert): boolean {
+    const existing = this.deduplicationCache.get(alert.deduplicationKey);
+    const now = Date.now();
+    
+    if (!existing) {
+      this.deduplicationCache.set(alert.deduplicationKey, { timestamp: now, priority: alert.priority });
+      return true;
+    }
+    
+    const timeDiff = now - existing.timestamp;
+    const isHigherPriority = alert.priority > existing.priority;
+    
+    // Send if higher priority or enough time has passed
+    if (isHigherPriority || timeDiff > 180000) { // 3 minutes
+      this.deduplicationCache.set(alert.deduplicationKey, { timestamp: now, priority: alert.priority });
+      return true;
+    }
+    
+    return false;
+  }
 
   private async sendAlert(alert: SimpleNCAAAlert, gameState: NCAAGameState): Promise<void> {
     try {
@@ -801,7 +820,6 @@ export class NCAAEngine {
         priority: alert.priority,
         sport: 'NCAAF',
         gameInfo: {
-          status: 'live',
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
@@ -823,16 +841,7 @@ export class NCAAEngine {
       await storage.createAlert(alertData);
 
       // Send Telegram notification
-      // Send Telegram notification if configured
-      try {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_BOT_TOKEN || 'default_key',
-          chatId: process.env.TELEGRAM_CHAT_ID || 'default_chat'
-        };
-        await sendTelegramAlert(telegramConfig, alertData);
-      } catch (error) {
-        console.log('Telegram notification not configured, skipping');
-      }
+      await sendTelegramAlert(alertData);
 
       // Call alert callback if available
       if (this.onAlert) {
@@ -856,7 +865,7 @@ export class NCAAEngine {
     const now = Date.now();
     const maxAge = 3600000; // 1 hour
     
-    for (const [key, entry] of Array.from(this.deduplicationCache.entries())) {
+    for (const [key, entry] of this.deduplicationCache.entries()) {
       if (now - entry.timestamp > maxAge) {
         this.deduplicationCache.delete(key);
       }
@@ -1337,102 +1346,28 @@ Situation: Something exciting is happening in this game!`;
     }
   }
 
-  // Kid-friendly alert descriptions (Law #6 compliance)
-  private buildKidFriendlyDescription(alertType: string, gameState: NCAAGameState): string {
-    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
-    const score = `${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
-    const quarter = this.getQuarterName(gameState.quarter);
-    
-    switch (alertType) {
-      case 'redZone':
-        return `🚨 RED ZONE ALERT! ${gameState.offense || gameState.awayTeam} is close to scoring!
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-Situation: ${gameState.offense || gameState.awayTeam} is within 20 yards of the end zone!
-What happens next: They could score a touchdown any moment!
-
-🔥 The college crowd is going wild!`;
-
-      case 'fourthDown':
-        return `💥 4TH DOWN! Big decision time for ${gameState.offense || gameState.awayTeam}!
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-The Choice: Go for it or punt? This could change everything!
-Distance needed: ${gameState.distance} yards
-
-⚡ This is college football drama at its finest!`;
-
-      case 'ncaafCloseGame':
-        const pointDiff = Math.abs(gameState.score.home - gameState.score.away);
-        return `🔥 ONE SCORE GAME! Every play matters now!
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-Why it's exciting: Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} separate these teams - either could win!
-
-🎯 This is when college legends are made!`;
-
-      case 'twoMinuteWarning':
-        return `⏰ TWO MINUTE WARNING! Crunch time is here!
-
-Score: ${score}
-Time: Final 2 minutes of ${quarter}
-What's happening: Teams are racing against the clock!
-
-🚨 Every second counts now - this is where games are won or lost!`;
-
-      case 'overtime':
-        return `⚡ OVERTIME! Extra college football time!
-
-Score: ${score} (TIED!)
-Situation: Regulation time couldn't decide a winner!
-What's next: First team to score wins the game!
-
-🏆 College football at its most dramatic!`;
-
-      case 'goalLineStand':
-        return `🛡️ GOAL LINE STAND! Can the defense hold?
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-Situation: Offense is just yards away from scoring!
-The battle: Will they punch it in or get stopped?
-
-💪 This is football's ultimate test of will!`;
-
-      default:
-        return `🏈 EXCITING PLAY in ${teamVs}!
-
-Score: ${score}
-Time: ${quarter}
-Something big is happening in this college football game!`;
-    }
-  }
-
   private buildKidFriendlyTitle(alertType: string, gameState: NCAAGameState): string {
     const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
     
     switch (alertType) {
       case 'redZone':
-        return `🚨 RED ZONE! ${gameState.offense || gameState.awayTeam} close to scoring!`;
+        return `🚨 RED ZONE! ${gameState.awayTeam} is close to scoring!`;
       
       case 'fourthDown':
-        return `💥 4TH DOWN! Big decision for ${gameState.offense || gameState.awayTeam}!`;
+        return `💥 4TH DOWN! Big decision time for ${gameState.awayTeam}!`;
       
       case 'ncaafCloseGame':
         const pointDiff = Math.abs(gameState.score.home - gameState.score.away);
-        return `🔥 ONE SCORE GAME! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!`;
+        return `🔥 SUPER CLOSE! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!`;
       
       case 'overtime':
-        return `⚡ OVERTIME! Extra football time!`;
+        return `⚡ OVERTIME! ${teamVs} is tied - extra football!`;
       
       case 'twoMinuteWarning':
-        return `⏰ TWO MINUTE WARNING! Crunch time!`;
+        return `⏰ CRUNCH TIME! Less than 2 minutes left!`;
       
       case 'goalLineStand':
-        return `🛡️ GOAL LINE STAND! Can they score?`;
+        return `🛡️ GOAL LINE BATTLE! Will they score?`;
       
       case 'ncaafGameLive':
         return `🏈 GAME STARTED! ${teamVs}`;
@@ -1442,26 +1377,12 @@ Something big is happening in this college football game!`;
     }
   }
 
-  private getQuarterName(quarter: number): string {
-    switch (quarter) {
-      case 1: return '1st Quarter';
-      case 2: return '2nd Quarter';
-      case 3: return '3rd Quarter';
-      case 4: return '4th Quarter';
-      default: return quarter > 4 ? 'Overtime' : `Quarter ${quarter}`;
-    }
-  }
-
   private async sendTelegramIfEnabled(alert: any): Promise<void> {
     try {
       // Check if Telegram is enabled globally
       const settings = await this.getUserNCAAFSettings();
       if (settings?.telegramEnabled) {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_BOT_TOKEN || 'default_key',
-          chatId: process.env.TELEGRAM_CHAT_ID || 'default_chat'
-        };
-        await sendTelegramAlert(telegramConfig, alert);
+        await sendTelegramAlert(alert);
       }
     } catch (error) {
       console.error('Error sending Telegram alert:', error);
@@ -1491,16 +1412,13 @@ Something big is happening in this college football game!`;
       const alertId = randomUUID();
       console.log(`🆔 NCAAF: Generating CJS model alert with ID: ${alertId} | Type: ${modelValidation.alertType}`);
       
-      // Create kid-friendly title and description (Law #6 compliance)
+      // Create kid-friendly title based on alert type with error handling
       let kidFriendlyTitle: string;
-      let kidFriendlyDescription: string;
       try {
         kidFriendlyTitle = this.buildKidFriendlyTitle(modelValidation.alertType, gameState);
-        kidFriendlyDescription = this.buildKidFriendlyDescription(modelValidation.alertType, gameState);
       } catch (error) {
-        console.error('Error building kid-friendly content:', error);
+        console.error('Error building kid-friendly title:', error);
         kidFriendlyTitle = `🏈 ${modelValidation.alertType.toUpperCase()} - ${gameState.awayTeam} vs ${gameState.homeTeam}`;
-        kidFriendlyDescription = alertDescription;
       }
       
       const finalAlert = {
@@ -1509,7 +1427,7 @@ Something big is happening in this college football game!`;
         type: modelValidation.alertType,
         priority: modelValidation.priority,
         title: kidFriendlyTitle,
-        description: kidFriendlyDescription,
+        description: alertDescription,
         sport: 'NCAAF',
         gameInfo: {
           status: 'live',

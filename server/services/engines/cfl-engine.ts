@@ -182,19 +182,9 @@ export class CFLEngine {
 
   private async processAlert(alert: SimpleCFLAlert, gameState: CFLGameState): Promise<void> {
     try {
-      // Generate alert ID for debugging (matching MLB system)
-      const alertId = randomUUID();
-      console.log(`🆔 CFL: Generating alert with ID: ${alertId} | Type: ${alert.type}`);
-
-      // Build kid-friendly description (Law #6 compliance)
-      const kidFriendlyDescription = this.buildKidFriendlyDescription(alert, gameState);
-      const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
-
       const alertRecord = await storage.createAlert({
-        id: alertId,
-        debugId: alertId.substring(0, 8), // Short ID for easy debugging
-        title: kidFriendlyTitle,
-        description: kidFriendlyDescription,
+        title: `CFL ${alert.type.replace('_', ' ').toUpperCase()}`,
+        description: alert.description,
         sport: 'CFL',
         type: alert.type,
         priority: alert.priority,
@@ -207,106 +197,20 @@ export class CFLEngine {
           },
           quarter: gameState.quarter.toString(),
           status: 'live'
-        } as any,
-        createdAt: new Date(),
-        seen: false
+        } as any
       });
 
       // Broadcast to WebSocket clients
       if (this.onAlert) {
         this.onAlert({
-          type: 'new_alert',
+          type: 'alert',
           data: alertRecord
         });
-        console.log(`📡 CFL: Alert broadcasted via WebSocket | ID: ${alertId.substring(0, 8)}`);
       }
 
-      console.log(`✅ CFL Alert generated: ${kidFriendlyDescription} (Priority: ${alert.priority})`);
-      console.log(`🆔 CFL: Alert ID: ${alertId} | Debug ID: ${alertId.substring(0, 8)} | Type: ${alert.type}`);
+      console.log(`🏈 CFL Alert Generated: ${alert.description}`);
     } catch (error) {
       console.error('❌ Error processing CFL alert:', error);
-    }
-  }
-
-  // Kid-friendly alert descriptions (Law #6 compliance)
-  private buildKidFriendlyDescription(alert: SimpleCFLAlert, gameState: CFLGameState): string {
-    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
-    const score = `${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
-    const quarter = this.getQuarterName(gameState.quarter);
-    
-    switch (alert.type) {
-      case 'red_zone':
-        return `🚨 RED ZONE ALERT! Team is close to scoring!
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-What's happening: One team is within 20 yards of the end zone!
-Why it's exciting: They could score a touchdown any second!
-
-🏈 CFL red zone action - 3 downs to score!`;
-
-      case 'close_game':
-        const pointDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-        return `🏆 SUPER CLOSE GAME! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!
-
-Score: ${score}
-Time: ${quarter} (${gameState.timeRemaining} left)
-Why it's exciting: Either team could win with one good play!
-
-🔥 Canadian football at its finest!`;
-
-      case 'overtime':
-        return `⏰ OVERTIME! Extra CFL action!
-
-Score: ${score} (TIED!)
-What happened: The game was tied - now they play extra time!
-CFL Rules: Each team gets a chance to score from the 35-yard line!
-
-🍁 Bonus Canadian football - eh!`;
-
-      case 'final_minutes':
-        return `⏰ FINAL MINUTES! Crunch time in Canadian football!
-
-Score: ${score}
-Time: Under 2 minutes left in ${quarter}!
-What's happening: Teams are racing against the clock!
-
-🚨 Every second counts in CFL action!`;
-
-      default:
-        return `🏈 EXCITING CFL PLAY in ${teamVs}!
-
-Score: ${score}
-Time: ${quarter}
-Something big is happening in this Canadian football game!`;
-    }
-  }
-
-  private buildKidFriendlyTitle(alertType: string, gameState: CFLGameState): string {
-    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
-    
-    switch (alertType) {
-      case 'red_zone':
-        return `🚨 RED ZONE! Team close to scoring!`;
-      case 'close_game':
-        const pointDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-        return `🏆 SUPER CLOSE! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!`;
-      case 'overtime':
-        return `⏰ OVERTIME! ${teamVs}`;
-      case 'final_minutes':
-        return `⏰ FINAL MINUTES! Crunch time!`;
-      default:
-        return `🏈 EXCITING CFL PLAY! ${teamVs}`;
-    }
-  }
-
-  private getQuarterName(quarter: number): string {
-    switch (quarter) {
-      case 1: return '1st Quarter';
-      case 2: return '2nd Quarter';
-      case 3: return '3rd Quarter';
-      case 4: return '4th Quarter';
-      default: return quarter > 4 ? 'Overtime' : `Quarter ${quarter}`;
     }
   }
 
