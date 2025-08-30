@@ -163,6 +163,7 @@ export const settings = pgTable("settings", {
     ncaafOvertime: boolean;
     ncaafGoalLineStand: boolean;
     ncaafBigPlayPotential: boolean;
+    ncaafGameLive: boolean;
   }>().notNull(),
   telegramEnabled: boolean("telegram_enabled").notNull().default(false),
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),

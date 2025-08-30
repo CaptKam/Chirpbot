@@ -949,7 +949,7 @@ export class NCAAEngine {
         return;
       }
 
-      // Check if user has any NCAAF alerts enabled - basic live alerts should always proceed if any alert type is enabled
+      // Check if user has any NCAAF alerts enabled - but ONLY generate alerts for enabled types
       const userSettings = await this.getUserNCAAFSettings();
       console.log(`🔍 NCAAF: Debug - userSettings:`, JSON.stringify(userSettings, null, 2));
       const alertTypes = userSettings?.alertTypes || {};
@@ -960,7 +960,18 @@ export class NCAAEngine {
         console.log(`🔕 NCAAF: All NCAAF alerts disabled in user settings`);
         return;
       }
-      console.log(`✅ NCAAF: User settings allow alerts, proceeding...`);
+      
+      // IMPORTANT: For basic live alerts, we need to check if 'ncaafGameLive' toggle exists and is enabled
+      // If no specific toggle for basic live alerts, only proceed if red zone or other situational alerts are enabled
+      const hasBasicLiveEnabled = alertTypes.ncaafGameLive === true;
+      const hasSituationalEnabled = alertTypes.ncaafRedZone === true || alertTypes.ncaafFourthDown === true || 
+                                   alertTypes.ncaafCloseGame === true || alertTypes.ncaafTwoMinuteWarning === true;
+      
+      if (!hasBasicLiveEnabled && !hasSituationalEnabled) {
+        console.log(`🔕 NCAAF: No relevant alert types enabled for basic live alerts`);
+        return;
+      }
+      console.log(`✅ NCAAF: User has relevant alerts enabled, proceeding with proper toggle validation...`);
       
       console.log(`✅ NCAAF: User has alerts enabled, generating live game alert...`);
 
@@ -996,6 +1007,14 @@ export class NCAAEngine {
       }
       
       console.log(`✅ NCAAF: Alert passed deduplication - proceeding with basic alert (AI disabled)...`);
+
+      // Stage 3.5: VALIDATE SPECIFIC TOGGLE - Don't send basic live alerts unless specifically enabled
+      const isBasicLiveEnabled = this.isAlertTypeEnabled('ncaafGameLive', userSettings);
+      if (!isBasicLiveEnabled) {
+        console.log(`🔕 NCAAF: Basic live alerts (ncaafGameLive) disabled - alert blocked`);
+        return;
+      }
+      console.log(`✅ NCAAF: Basic live alert toggle validated - proceeding...`);
 
       // Stage 4: Create basic live game alert (AI completely disabled)
       const alert = {
@@ -1174,7 +1193,8 @@ export class NCAAEngine {
       'ncaafCloseGame': 'ncaafCloseGame',
       'overtime': 'ncaafOvertime',
       'goalLineStand': 'ncaafGoalLineStand',
-      'bigPlayPotential': 'ncaafBigPlayPotential'
+      'bigPlayPotential': 'ncaafBigPlayPotential',
+      'ncaafGameLive': 'ncaafGameLive' // For basic live game alerts
     };
     
     const settingKey = settingKeyMap[alertType] || alertType;
@@ -1252,6 +1272,14 @@ export class NCAAEngine {
         console.log(`🛡️ NCAAF: Alert blocked by CJS model validation`);
         return null;
       }
+
+      // Stage 1.5: CRITICAL - Validate user settings for THIS SPECIFIC alert type
+      const userSettings = await this.getUserNCAAFSettings();
+      if (!this.isAlertTypeEnabled(modelValidation.alertType, userSettings)) {
+        console.log(`🔕 NCAAF: Alert type ${modelValidation.alertType} is disabled in user settings - blocking alert`);
+        return null;
+      }
+      console.log(`✅ NCAAF: Alert type ${modelValidation.alertType} validated through user settings`);
 
       // Stage 2: Create alert object with CJS model data
       const finalAlert = {
