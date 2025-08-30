@@ -12,10 +12,10 @@ let ncaafAlertModel: any = null;
 
 // Type declaration for NCAAFAlertModel
 declare module './NCAAFAlertModel.cjs' {
-  export function checkNCAAFAlerts(gameState: any): any;
-  export function ncaafL1Alert(gameState: any): any;
-  export function ncaafL2Alert(gameState: any): any;
-  export function ncaafL3Alert(gameState: any): any;
+  const checkNCAAFAlerts: (gameState: any) => any;
+  const ncaafL1Alert: (gameState: any) => any;
+  const ncaafL2Alert: (gameState: any) => any;
+  const ncaafL3Alert: (gameState: any) => any;
 }
 
 interface NCAAGameState {
@@ -138,7 +138,7 @@ export class NCAAEngine {
     try {
       if (!ncaafAlertModel) {
         // Use dynamic import for CommonJS module
-        ncaafAlertModel = await import('./NCAAFAlertModel.cjs');
+        ncaafAlertModel = require('./NCAAFAlertModel.cjs');
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
@@ -171,7 +171,7 @@ export class NCAAEngine {
     
     // Clean up old entries (older than 10 minutes)
     const tenMinutesAgo = now - (10 * 60 * 1000);
-    for (const [key, timestamp] of NCAAEngine.alertContentCache.entries()) {
+    for (const [key, timestamp] of Array.from(NCAAEngine.alertContentCache.entries())) {
       if (timestamp < tenMinutesAgo) {
         NCAAEngine.alertContentCache.delete(key);
       }
@@ -375,7 +375,7 @@ export class NCAAEngine {
         
         // Track game state changes for analysis
         const previousState = this.gameStateCache.get(gameState.gameId);
-        await this.trackGameEvents(previousState, gameState);
+        await this.trackGameEvents(previousState || null, gameState);
         
         // Store comprehensive game state snapshot
         await this.storeGameStateSnapshot(gameState);
@@ -427,6 +427,7 @@ export class NCAAEngine {
         title: `Game State: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
         description: `Q${gameState.period} ${gameState.timeRemaining}s - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd line`,
         gameInfo: {
+          status: 'live',
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
@@ -789,26 +790,6 @@ export class NCAAEngine {
     return alerts;
   }
 
-  private shouldSendAlert(alert: SimpleNCAAAlert): boolean {
-    const existing = this.deduplicationCache.get(alert.deduplicationKey);
-    const now = Date.now();
-    
-    if (!existing) {
-      this.deduplicationCache.set(alert.deduplicationKey, { timestamp: now, priority: alert.priority });
-      return true;
-    }
-    
-    const timeDiff = now - existing.timestamp;
-    const isHigherPriority = alert.priority > existing.priority;
-    
-    // Send if higher priority or enough time has passed
-    if (isHigherPriority || timeDiff > 180000) { // 3 minutes
-      this.deduplicationCache.set(alert.deduplicationKey, { timestamp: now, priority: alert.priority });
-      return true;
-    }
-    
-    return false;
-  }
 
   private async sendAlert(alert: SimpleNCAAAlert, gameState: NCAAGameState): Promise<void> {
     try {
@@ -820,6 +801,7 @@ export class NCAAEngine {
         priority: alert.priority,
         sport: 'NCAAF',
         gameInfo: {
+          status: 'live',
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
@@ -841,7 +823,12 @@ export class NCAAEngine {
       await storage.createAlert(alertData);
 
       // Send Telegram notification
-      await sendTelegramAlert(alertData);
+      // Send Telegram notification if configured
+      try {
+        await sendTelegramAlert(alertData, `🏈 ${alert.description}`);
+      } catch (error) {
+        console.log('Telegram notification not configured, skipping');
+      }
 
       // Call alert callback if available
       if (this.onAlert) {
@@ -865,7 +852,7 @@ export class NCAAEngine {
     const now = Date.now();
     const maxAge = 3600000; // 1 hour
     
-    for (const [key, entry] of this.deduplicationCache.entries()) {
+    for (const [key, entry] of Array.from(this.deduplicationCache.entries())) {
       if (now - entry.timestamp > maxAge) {
         this.deduplicationCache.delete(key);
       }
