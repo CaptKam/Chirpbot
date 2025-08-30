@@ -201,7 +201,7 @@ export default function Alerts() {
 
                     {/* Row 4: Description - Law #7 Format (3 lines max) */}
                     <div className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="text-base text-slate-200 whitespace-pre-line leading-relaxed">
+                      <div className="text-base text-slate-200 whitespace-pre-line leading-relaxed max-h-[200px] overflow-y-auto">
                         {alert.description}
                       </div>
                     </div>
