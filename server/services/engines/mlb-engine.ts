@@ -133,7 +133,7 @@ export class MLBEngine {
    */
   async getTodaysGames(date: string = new Date().toISOString().split('T')[0]): Promise<any[]> {
     try {
-      const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=game(content(summary,media(epg))),decisions,person,probablePitcher,stats,homeRuns,previousPlay,game(content(media(epg)),summary),seriesStatus(useOverride=true)`;
+      const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=linescore,team`;
       const response = await fetch(url);
       const data = await response.json();
       
