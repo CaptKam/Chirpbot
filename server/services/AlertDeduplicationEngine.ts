@@ -30,15 +30,15 @@ export class AlertDeduplicationEngine {
   
   // Default deduplication rules - configurable per alert type
   private deduplicationRules: Map<string, DeduplicationRule> = new Map([
-    // NCAAF Rules
-    ['ncaafGameLive', { alertType: 'ncaafGameLive', cooldownSeconds: 300, scope: 'game' }], // 5 min cooldown
-    ['ncaafRedZone', { alertType: 'ncaafRedZone', cooldownSeconds: 120, realertAfterSeconds: 600, scope: 'game' }],
-    ['ncaafCloseGame', { alertType: 'ncaafCloseGame', cooldownSeconds: 180, realertAfterSeconds: 900, scope: 'game' }],
-    ['ncaafFourthDown', { alertType: 'ncaafFourthDown', cooldownSeconds: 60, scope: 'game' }],
-    ['ncaafOvertime', { alertType: 'ncaafOvertime', cooldownSeconds: 60, scope: 'game' }],
-    ['ncaafGoalLineStand', { alertType: 'ncaafGoalLineStand', cooldownSeconds: 90, scope: 'game' }],
-    ['ncaafBigPlayPotential', { alertType: 'ncaafBigPlayPotential', cooldownSeconds: 120, scope: 'game' }],
-    ['ncaafTwoMinuteWarning', { alertType: 'ncaafTwoMinuteWarning', cooldownSeconds: 180, scope: 'game' }],
+    // NCAAF Rules - Reduced cooldowns for faster alerts
+    ['ncaafGameLive', { alertType: 'ncaafGameLive', cooldownSeconds: 30, scope: 'game' }], // 30 sec cooldown
+    ['ncaafRedZone', { alertType: 'ncaafRedZone', cooldownSeconds: 45, realertAfterSeconds: 120, scope: 'game' }],
+    ['ncaafCloseGame', { alertType: 'ncaafCloseGame', cooldownSeconds: 60, realertAfterSeconds: 180, scope: 'game' }],
+    ['ncaafFourthDown', { alertType: 'ncaafFourthDown', cooldownSeconds: 30, scope: 'game' }],
+    ['ncaafOvertime', { alertType: 'ncaafOvertime', cooldownSeconds: 30, scope: 'game' }],
+    ['ncaafGoalLineStand', { alertType: 'ncaafGoalLineStand', cooldownSeconds: 45, scope: 'game' }],
+    ['ncaafBigPlayPotential', { alertType: 'ncaafBigPlayPotential', cooldownSeconds: 45, scope: 'game' }],
+    ['ncaafTwoMinuteWarning', { alertType: 'ncaafTwoMinuteWarning', cooldownSeconds: 60, scope: 'game' }],
     
     // MLB Rules  
     ['mlbGameLive', { alertType: 'mlbGameLive', cooldownSeconds: 300, scope: 'game' }],

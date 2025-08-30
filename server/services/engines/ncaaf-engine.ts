@@ -611,6 +611,12 @@ export class NCAAEngine {
           if (liveGames.length > 0) {
             fullGameData = liveGames[0]; // Use first live game for analysis
             console.log(`🎯 NCAAF: Using live game ${fullGameData.gameId} for AI analysis instead`);
+          } else {
+            // If no live games, use ANY available game data for AI analysis
+            if (allGames.length > 0) {
+              fullGameData = allGames[0];
+              console.log(`🎯 NCAAF: No live games, using any available game ${fullGameData.gameId} for AI analysis`);
+            }
           }
         }
         
