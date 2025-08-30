@@ -867,7 +867,7 @@ export class NCAAEngine {
     const now = Date.now();
     const maxAge = 3600000; // 1 hour
 
-    for (const [key, entry] of this.deduplicationCache.entries()) {
+    for (const [key, entry] of Array.from(this.deduplicationCache.entries())) {
       if (now - entry.timestamp > maxAge) {
         this.deduplicationCache.delete(key);
       }
@@ -995,9 +995,11 @@ export class NCAAEngine {
       try {
         betbookData = await getBetbookData({
           sport: 'NCAAF',
+          gameId: gameId,
           homeTeam: gameInfo.homeTeamName,
           awayTeam: gameInfo.awayTeamName,
-          situation: 'Game Live',
+          homeScore: 0,
+          awayScore: 0,
           probability: 0.8
         });
         console.log(`💰 NCAAF: Betbook data integrated for basic alert`);
