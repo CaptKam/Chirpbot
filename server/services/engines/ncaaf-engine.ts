@@ -551,15 +551,55 @@ export class NCAAEngine {
       
       console.log(`✅ NCAAF: User has alerts enabled, generating live game alert...`);
 
-      // Create basic live game alert
+      // Stage 2: OpenAI Enhancement - Generate enhanced description instead of basic text
+      let enhancedTitle = `🏈 COLLEGE FOOTBALL LIVE`;
+      let enhancedDescription = `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} is now live!`;
+      let aiConfidence = 0.75;
+      
+      try {
+        const aiDescription = await this.openAiEngine.generateSportsAlert({
+          sport: 'NCAAF',
+          situation: 'Game is now live and being monitored for exciting plays',
+          gameContext: `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`,
+          quarter: '1',
+          score: '0-0',
+          priority: 70
+        });
+        
+        if (aiDescription) {
+          enhancedTitle = aiDescription.title || enhancedTitle;
+          enhancedDescription = aiDescription.description || enhancedDescription;
+          aiConfidence = aiDescription.confidence || aiConfidence;
+          console.log(`🤖 NCAAF: OpenAI enhanced basic alert - Title: ${enhancedTitle}`);
+        }
+      } catch (error) {
+        console.error('🤖 NCAAF: OpenAI enhancement failed for basic alert, using fallback:', error);
+      }
+
+      // Stage 3: Betbook Analysis - Get betting insights even for basic alerts
+      let betbookData = null;
+      try {
+        betbookData = await getBetbookData({
+          sport: 'NCAAF',
+          homeTeam: gameInfo.homeTeamName,
+          awayTeam: gameInfo.awayTeamName,
+          situation: 'Game Live',
+          probability: 0.8
+        });
+        console.log(`💰 NCAAF: Betbook data integrated for basic alert`);
+      } catch (error) {
+        console.error('💰 NCAAF: Betbook data failed for basic alert:', error);
+      }
+
+      // Stage 4: Create enhanced live game alert (now with AI and betting insights)
       const alert = {
         id: randomUUID(),
         type: 'ncaafGameLive',
         sport: 'NCAAF',
         priority: 70,
-        title: `🏈 COLLEGE FOOTBALL LIVE`,
-        message: `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} is now live!`,
-        description: `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} is now live!`,
+        title: enhancedTitle,
+        message: enhancedDescription,
+        description: enhancedDescription,
         gameInfo: {
           sport: 'NCAAF',
           gameId: gameId,
@@ -570,7 +610,8 @@ export class NCAAEngine {
           score: { home: 0, away: 0 }
         },
         probability: 0.8,
-        confidence: 0.75,
+        confidence: aiConfidence,
+        betbookData: betbookData,
         timestamp: new Date(),
         userId: 'system',
         seen: false
