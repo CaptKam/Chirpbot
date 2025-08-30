@@ -1054,6 +1054,7 @@ What's happening: The game just kicked off - players are on the field!
           gameId: gameId,
           homeTeam: gameInfo.homeTeamName || 'Home Team',
           awayTeam: gameInfo.awayTeamName || 'Away Team',
+          status: 'STATUS_IN_PROGRESS',
           situation: 'Game Live',
           quarter: 'Live',
           score: { home: 0, away: 0 }
