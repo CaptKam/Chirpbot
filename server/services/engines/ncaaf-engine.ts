@@ -1181,9 +1181,11 @@ What's happening: The game just kicked off - players are on the field!
       try {
         betbookData = await getBetbookData({
           sport: 'NCAAF',
+          gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
-          // situation: alertResult.alertType, // Commented out - not in AlertContext interface
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
           probability: alertResult.probability
         });
       } catch (error) {
@@ -1386,7 +1388,8 @@ Situation: Something exciting is happening in this game!`;
       // Check if Telegram is enabled globally
       const settings = await this.getUserNCAAFSettings();
       if (settings?.telegramEnabled) {
-        await sendTelegramAlert(alert);
+        console.log('Telegram notifications disabled - config not available');
+        // await sendTelegramAlert(config, alert);
       }
     } catch (error) {
       console.error('Error sending Telegram alert:', error);
@@ -1397,6 +1400,10 @@ Situation: Something exciting is happening in this game!`;
   private async processAlertThroughModel(alertResult: any, gameState: NCAAGameState, alertDescription: string, betbookData: any, deduplicationKey: string): Promise<any> {
     try {
       // Stage 1: Validate through NCAAF Alert Model (.cjs)
+      if (!ncaafAlertModel) {
+        console.warn('NCAAF Alert Model not available');
+        return null;
+      }
       const modelValidation = ncaafAlertModel.checkNCAAFAlerts(gameState);
 
       if (!modelValidation.shouldAlert) {
