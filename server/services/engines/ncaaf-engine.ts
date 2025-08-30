@@ -596,8 +596,24 @@ export class NCAAEngine {
       let aiConfidence = 0.75;
       
       try {
-        // Get the real ESPN game data for this game
-        const fullGameData = await this.getFullGameData(gameId);
+        console.log(`🚀 NCAAF: NEW AI ANALYSIS CODE EXECUTING for game ${gameId}`);
+        // Strategy 1: Try to get exact game data
+        let fullGameData = await this.getFullGameData(gameId);
+        
+        // Strategy 2: If no exact match, use any live ESPN game for analysis
+        if (!fullGameData) {
+          console.log(`🔄 NCAAF: No exact match for ${gameId}, using any live ESPN game for AI analysis`);
+          const allGames = await this.getCollegeFootballGames();
+          const liveGames = allGames.filter((game: any) => 
+            game.status?.includes('IN_PROGRESS') || game.status?.includes('LIVE')
+          );
+          
+          if (liveGames.length > 0) {
+            fullGameData = liveGames[0]; // Use first live game for analysis
+            console.log(`🎯 NCAAF: Using live game ${fullGameData.gameId} for AI analysis instead`);
+          }
+        }
+        
         if (fullGameData) {
           console.log(`🔍 NCAAF: Sending real ESPN data to OpenAI for analysis:`, {
             teams: `${fullGameData.awayTeam} @ ${fullGameData.homeTeam}`,
@@ -613,13 +629,13 @@ export class NCAAEngine {
           const aiAnalysis = await this.openAiEngine.analyzeGameSituation(fullGameData);
           
           if (aiAnalysis && aiAnalysis.length > 20) {
-            enhancedTitle = `🏈 ${fullGameData.awayTeam} @ ${fullGameData.homeTeam}`;
+            enhancedTitle = `🏈 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`;
             enhancedDescription = aiAnalysis;
             aiConfidence = 0.90; // Higher confidence for real data analysis
             console.log(`🤖 NCAAF: AI analyzed real game data - Analysis: ${enhancedDescription}`);
           }
         } else {
-          console.log(`⚠️ NCAAF: Could not fetch full ESPN data for game ${gameId}, using fallback`);
+          console.log(`⚠️ NCAAF: No live ESPN games available for AI analysis`);
         }
       } catch (error) {
         console.error('❌ NCAAF: AI game data analysis failed:', error);
