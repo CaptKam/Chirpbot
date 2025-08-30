@@ -113,19 +113,17 @@ ADDITIONAL CONTEXT:
 - Game Status: ${status?.type?.description || 'Unknown'}
 
 ANALYSIS REQUEST:
-Based on this real-time data, provide 2-3 sentences of expert analysis focusing on:
-- Current field position and scoring opportunity
-- Time pressure and clock management implications  
-- Down and distance strategy considerations
-- Momentum and tactical situation
-- What fans should be watching for next
+Provide a concise 1-2 sentence alert focusing ONLY on the most important details:
+- Immediate scoring threat or critical situation
+- Key tactical moment (4th down, red zone, final minutes, etc.)
+- Most important thing happening RIGHT NOW
 
-Provide professional sports analysis like you're calling the game live on television. Focus on WHY this moment matters strategically.`;
+Be punchy and scannable. Think Twitter-style sports updates, not lengthy analysis.`;
 
       const completion = await this.client.chat.completions.create({
         model: 'gpt-5',
         messages: [{ role: 'user', content: prompt }],
-        max_completion_tokens: 250,
+        max_completion_tokens: 100,
       });
 
       const analysis = completion.choices[0]?.message?.content?.trim();
