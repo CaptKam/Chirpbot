@@ -431,7 +431,8 @@ export class NCAAEngine {
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
           quarter: gameState.quarter,
-          score: gameState.score
+          score: gameState.score,
+          status: 'STATUS_IN_PROGRESS'
         },
 
         // Store complete game state for analysis
@@ -737,7 +738,7 @@ export class NCAAEngine {
 
     // Close Game Alert
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    const isFinalMinutes = this.isFinalMinutes(gameState.timeRemaining, gameState.period);
+    const isFinalMinutes = this.isFinalMinutes(String(gameState.timeRemaining), gameState.period);
     if (scoreDiff <= 3 && isFinalMinutes) {
       alerts.push({
         type: 'closeGame',
@@ -823,6 +824,7 @@ export class NCAAEngine {
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
+          status: 'STATUS_IN_PROGRESS',
           score: {
             home: gameState.homeScore,
             away: gameState.awayScore
@@ -841,7 +843,7 @@ export class NCAAEngine {
       await storage.createAlert(alertData);
 
       // Send Telegram notification
-      await sendTelegramAlert(alertData);
+      await this.sendTelegramIfEnabled(alertData);
 
       // Call alert callback if available
       if (this.onAlert) {
@@ -1179,7 +1181,7 @@ What's happening: The game just kicked off - players are on the field!
           sport: 'NCAAF',
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
-          situation: alertResult.alertType,
+          // situation: alertResult.alertType, // Commented out - not in AlertContext interface
           probability: alertResult.probability
         });
       } catch (error) {
@@ -1253,7 +1255,7 @@ What's happening: The game just kicked off - players are on the field!
   }
 
   private buildAlertDescription(alertResult: any, gameState: NCAAGameState): string {
-    const quarter = this.getQuarterName(gameState.quarter || 1);
+    const quarter = this.getQuarterName(Number(gameState.quarter) || 1);
     const scoreText = `${gameState.awayTeam} ${gameState.score.away} - ${gameState.homeTeam} ${gameState.score.home}`;
     const timeLeft = this.formatTimeRemaining(gameState.timeRemaining);
 
@@ -1263,7 +1265,7 @@ What's happening: The game just kicked off - players are on the field!
 
 Score: ${scoreText}
 Time: ${quarter} ${timeLeft}
-Situation: ${this.getDownText(gameState.down)} down, need ${gameState.distance} yards
+Situation: ${this.getDownText(gameState.down || 1)} down, need ${gameState.distance || 10} yards
 Field Position: ${gameState.yardsToGoal} yards from the end zone`;
 
       case 'fourthDown':
@@ -1301,7 +1303,7 @@ Why it's exciting: Teams are rushing to score before time runs out!`;
 
 Score: ${scoreText}
 Time: ${quarter} ${timeLeft}
-Situation: ${this.getDownText(gameState.down)} down at the ${gameState.yardsToGoal} yard line
+Situation: ${this.getDownText(gameState.down || 1)} down at the ${gameState.yardsToGoal || 50} yard line
 What's happening: The defense is trying to stop them from scoring!`;
 
       default:
