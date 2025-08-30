@@ -39,17 +39,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Heartbeat interval to detect zombie connections - increased to 60 seconds
+  // Heartbeat interval to detect zombie connections
   const heartbeatInterval = setInterval(() => {
     wss.clients.forEach((ws: any) => {
       if (ws.isAlive === false) {
-        console.log('WebSocket client timed out, terminating connection');
         return ws.terminate();
       }
       ws.isAlive = false;
       ws.ping();
     });
-  }, 60000); // Increased from 30s to 60s to reduce ping frequency
+  }, 30000);
 
   // Ensure cleanup on server shutdown
   process.on('SIGINT', () => {
