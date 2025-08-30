@@ -8,14 +8,14 @@ import { OpenAiEngine } from './OpenAiEngine';
 import { getBetbookData } from './betbook-engine';
 
 // Import NCAAF Alert Model (CommonJS module)
-let ncaafAlertModel: any = null;
+let ncaafAlertModel: NCAAFAlertModelType | null = null;
 
-// Type declaration for NCAAFAlertModel
-declare module './NCAAFAlertModel.cjs' {
-  export function checkNCAAFAlerts(gameState: any): any;
-  export function ncaafL1Alert(gameState: any): any;
-  export function ncaafL2Alert(gameState: any): any;
-  export function ncaafL3Alert(gameState: any): any;
+// Type declaration for NCAAFAlertModel - avoiding module augmentation
+interface NCAAFAlertModelType {
+  checkNCAAFAlerts(gameState: any): any;
+  ncaafL1Alert(gameState: any): any;
+  ncaafL2Alert(gameState: any): any;
+  ncaafL3Alert(gameState: any): any;
 }
 
 interface NCAAGameState {
@@ -138,7 +138,7 @@ export class NCAAEngine {
     try {
       if (!ncaafAlertModel) {
         // Use dynamic import for CommonJS module
-        ncaafAlertModel = await import('./NCAAFAlertModel.cjs');
+        ncaafAlertModel = await import('./NCAAFAlertModel.cjs') as NCAAFAlertModelType;
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
