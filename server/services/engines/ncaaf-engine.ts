@@ -122,13 +122,14 @@ export class NCAAEngine {
   
   onAlert?: (alert: any) => void;
 
-  // OpenAI engine instance for alert description generation
-  private readonly openAiEngine: OpenAiEngine;
+  // OpenAI engine instance for alert description generation (conditional)
+  private readonly openAiEngine: OpenAiEngine | null;
 
   constructor() {
     console.log('🏈 NCAAF Engine initialized with ESPN API integration (College Football)');
-    // Initialize OpenAI engine for generating AI alert descriptions
-    this.openAiEngine = new OpenAiEngine();
+    // Do NOT initialize OpenAI engine - completely disabled
+    this.openAiEngine = null;
+    console.log('🚫 AI completely disabled in NCAAF engine');
     // Load the NCAAF Alert Model
     this.loadNCAAFAlertModel();
   }
@@ -1088,22 +1089,19 @@ export class NCAAEngine {
             redZone: fullGameData.espnData?.competitions[0]?.situation?.isRedZone
           });
           
-          const aiAnalysis = await this.openAiEngine.analyzeGameSituation(fullGameData);
-          console.log(`🔍 NCAAF: Raw AI Analysis Type: ${typeof aiAnalysis}, Value:`, aiAnalysis);
+          // AI COMPLETELY DISABLED - Use basic description instead
+          console.log(`🚫 NCAAF: AI disabled, using basic game description`);
           
-          if (aiAnalysis && aiAnalysis.length > 20) {
-            // Format title with team names and actual score
-            const scoreDisplay = `${fullGameData.awayScore}-${fullGameData.homeScore}`;
-            const periodDisplay = fullGameData.espnData?.status?.period ? ` | ${this.formatPeriod(fullGameData.espnData.status.period)}` : '';
-            const clockDisplay = fullGameData.espnData?.status?.displayClock ? ` ${fullGameData.espnData.status.displayClock}` : '';
-            
-            enhancedTitle = `📢 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (${scoreDisplay})${periodDisplay}${clockDisplay}`;
-            // Use the structured multi-line analysis from OpenAI
-            enhancedDescription = aiAnalysis;
-            aiConfidence = 0.90; // Higher confidence for real data analysis
-            console.log(`🤖 NCAAF: AI generated structured alert with ${aiAnalysis.length} chars`);
-            console.log(`🔍 NCAAF: AI Analysis Preview: "${aiAnalysis.substring(0, 100)}..."`);
-          }
+          // Format title with team names and actual score
+          const scoreDisplay = `${fullGameData.awayScore}-${fullGameData.homeScore}`;
+          const periodDisplay = fullGameData.espnData?.status?.period ? ` | ${this.formatPeriod(fullGameData.espnData.status.period)}` : '';
+          const clockDisplay = fullGameData.espnData?.status?.displayClock ? ` ${fullGameData.espnData.status.displayClock}` : '';
+          
+          enhancedTitle = `📢 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (${scoreDisplay})${periodDisplay}${clockDisplay}`;
+          // Use basic game description instead of AI
+          enhancedDescription = `🏈 COLLEGE FOOTBALL LIVE\n\n📊 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}\n🎯 Score: ${scoreDisplay}\n⏰ ${periodDisplay}${clockDisplay}\n\n🎪 Game in progress - no AI analysis`;
+          aiConfidence = 0.50; // Lower confidence for basic data
+          console.log(`📝 NCAAF: Basic game description generated (AI disabled)`);
         } else {
           console.log(`⚠️ NCAAF: No live ESPN games available for AI analysis`);
         }
@@ -1169,15 +1167,13 @@ export class NCAAEngine {
         return;
       }
 
-      // Stage 2: OpenAI Analysis - Generate contextual description  
-      const aiDescription = await this.openAiEngine.generateSportsAlert({
-        sport: 'NCAAF',
-        situation: alertResult.reasons.join(', '),
-        gameContext: `${gameState.awayTeam} @ ${gameState.homeTeam}`,
-        quarter: gameState.quarter?.toString() || '1',
-        score: `${gameState.score.away}-${gameState.score.home}`,
-        priority: alertResult.priority
-      });
+      // Stage 2: AI COMPLETELY DISABLED - Use basic description
+      console.log(`🚫 NCAAF: AI disabled, using basic alert description`);
+      const aiDescription = {
+        title: `NCAAF ${alertResult.alertType}`,
+        description: `🏈 ${gameState.awayTeam} @ ${gameState.homeTeam}\n📊 ${gameState.score.away}-${gameState.score.home}\n⏰ Q${gameState.quarter}\n\n${alertResult.reasons.join(', ')}`,
+        confidence: 0.50
+      };
 
       // Stage 3: Betbook Analysis - Generate betting insights
       const betbookData = await getBetbookData({
