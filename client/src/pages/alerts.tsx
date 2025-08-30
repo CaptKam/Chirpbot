@@ -56,6 +56,9 @@ export default function Alerts() {
       }).then(res => {
         if (!res.ok) throw new Error('Failed to mark as seen');
         return res.json();
+      }).catch(error => {
+        console.error('Error marking alert as seen:', error);
+        throw error;
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
@@ -83,6 +86,8 @@ export default function Alerts() {
         // Refresh the unseen count
         queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
         queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+      }).catch(error => {
+        console.error('Error marking all alerts as seen:', error);
       });
     }, 30000); // Increased from 8 to 30 seconds
 
@@ -209,6 +214,8 @@ export default function Alerts() {
               }).then(() => {
                 queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+              }).catch(error => {
+                console.error('Error marking all alerts as seen:', error);
               });
             }}
             className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-500/30"
