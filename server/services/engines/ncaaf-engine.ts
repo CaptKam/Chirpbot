@@ -1391,7 +1391,8 @@ ${situation}`;
       console.log(`🆔 NCAAF: Generating CJS model alert with ID: ${alertId} | Type: ${modelValidation.alertType}`);
 
       // Use the friendly title passed from calling method
-      const kidFriendlyTitle = friendlyTitle || this.buildStandardTitle(modelValidation.alertType, gameState);
+      const kidFriendlyTitle = friendlyTitle || this.createFriendlyTitle(modelValidation.alertType, gameState);
+      const friendlyDescription = this.createFriendlyDescription(modelValidation.alertType, gameState);
 
       const finalAlert = {
         id: alertId,
@@ -1399,7 +1400,7 @@ ${situation}`;
         type: modelValidation.alertType,
         priority: modelValidation.priority,
         title: kidFriendlyTitle,
-        description: alertDescription,
+        description: friendlyDescription,
         sport: 'NCAAF',
         gameInfo: {
           status: 'live',
