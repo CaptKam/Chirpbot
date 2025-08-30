@@ -317,7 +317,7 @@ export class NCAAEngine {
         });
       }
 
-      console.log(`🎯 NCAAF Engine Processing ${liveGames.length} live college football games`);
+      console.log(`🎯 NCAAF Engine Processing ${liveGames.length} college football games`);
 
       for (const game of liveGames) {
         await this.processGameForAlerts(game);
@@ -391,7 +391,7 @@ export class NCAAEngine {
       const quarter = this.getQuarterName(Number(gameState.quarter) || 1);
       const timeLeft = this.formatTimeRemaining(gameState.timeRemaining);
       const scoreText = `${gameState.awayTeam} ${gameState.score.away} - ${gameState.homeTeam} ${gameState.score.home}`;
-      
+
       const kidFriendlyTitle = `🏈 GAME UPDATE: ${gameState.awayTeam} vs ${gameState.homeTeam}`;
       const kidFriendlyDescription = `🏈 COLLEGE FOOTBALL UPDATE!
 
@@ -1156,7 +1156,7 @@ Game is now in progress`;
       } else {
         deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${gameState.down || 0}:${gameState.distance || 0}`;
       }
-      
+
       if (this.isDuplicateByKey(deduplicationKey)) {
         console.log(`🛡️ NCAAF: Alert blocked by deduplication - ${deduplicationKey}`);
         return;
@@ -1166,9 +1166,6 @@ Game is now in progress`;
 
       // Stage 2: Generate kid-friendly alert description (AI disabled)
       const alertDescription = this.buildAlertDescription(alertResult, gameState);
-
-      // Create kid-friendly title based on alert type
-      const kidFriendlyTitle = this.buildKidFriendlyTitle(alertResult.alertType, gameState);
 
       // Stage 3: Betbook Analysis - Generate betting insights
       let betbookData = null;
@@ -1331,7 +1328,7 @@ ${situation}`;
 
     switch (alertType) {
       case 'redZone':
-        return `🚨 RED ZONE (${scoreText})`;
+        return `🔴 Red Zone (${scoreText})`;
       case 'fourthDown':
         return `💥 4TH DOWN (${scoreText})`;
       case 'ncaafCloseGame':
@@ -1520,27 +1517,6 @@ ${situation}`;
 
     } catch (error) {
       console.error('Error storing game flow event:', error);
-    }
-  }
-
-  private buildKidFriendlyTitle(alertType: string, gameState: NCAAFGameState): string {
-    switch (alertType) {
-      case 'redZone':
-        return '🚨 RED ZONE! Team is close to scoring!';
-      case 'closeGame':
-        return '🔥 SUPER CLOSE! Only one touchdown apart!';
-      case 'fourthDown':
-        return '💥 4TH DOWN! Big decision time!';
-      case 'twoMinuteWarning':
-        return '⏰ FINAL 2 MINUTES! Crunch time!';
-      case 'overtime':
-        return '🏈 OVERTIME! Extra football action!';
-      case 'goalLineStand':
-        return '🛡️ GOAL LINE STAND! Defense holding strong!';
-      case 'bigPlayPotential':
-        return '⚡ BIG PLAY COMING! Explosive opportunity!';
-      default:
-        return '🏈 NCAAF ACTION! Something exciting is happening!';
     }
   }
 
