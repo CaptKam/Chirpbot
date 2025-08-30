@@ -89,54 +89,61 @@ export function useWebSocket() {
       };
 
       ws.onclose = (event) => {
-        console.log(`WebSocket disconnected: Code=${event.code}, Reason=${event.reason}`);
+        // Only log abnormal disconnections (not normal closures)
+        if (event.code !== 1000 && event.code !== 1001) {
+          console.log(`WebSocket disconnected: Code=${event.code}`);
+        }
         setIsConnected(false);
         wsRef.current = null; // Clear the ref
 
-        // Attempt to reconnect only if it was not a clean closure (code 1000)
-        // and if we haven't reached the max reconnect attempts
-        if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Exponential backoff, max 30s
-          reconnectTimeoutRef.current = setTimeout(() => {
-            console.log(`Attempting to reconnect WebSocket... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
-            setReconnectAttempts(prev => prev + 1);
-            connectWithCleanup();
-          }, delay);
-        } else if (reconnectAttempts >= maxReconnectAttempts) {
-          console.log('Max reconnection attempts reached. Stopping further attempts.');
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setIsConnected(false);
-        // Ensure the timeout is cleared if an error occurs before onclose is called
+        // Clear any existing reconnect timeout to avoid duplicates
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;
         }
-        // Attempt to reconnect on error as well, similar to onclose logic
-        if (reconnectAttempts < maxReconnectAttempts) {
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Exponential backoff, max 30s
-            reconnectTimeoutRef.current = setTimeout(() => {
-              console.log(`Attempting to reconnect WebSocket after error... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
-              setReconnectAttempts(prev => prev + 1);
-              connectWithCleanup();
-            }, delay);
-        } else {
-            console.error('Max WebSocket reconnection attempts reached after error.');
+
+        // Attempt to reconnect only if it was not a clean closure (code 1000 or 1001)
+        // and if we haven't reached the max reconnect attempts
+        if (event.code !== 1000 && event.code !== 1001 && reconnectAttempts < maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000); // Exponential backoff, max 10s
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log(`Reconnecting WebSocket... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+            setReconnectAttempts(prev => prev + 1);
+            connectWithCleanup();
+          }, delay);
+        } else if (reconnectAttempts >= maxReconnectAttempts && event.code !== 1000 && event.code !== 1001) {
+          console.log('Max reconnection attempts reached.');
+        }
+      };
+
+      ws.onerror = () => {
+        // Don't log the error event itself as it doesn't contain useful information
+        // The actual error details will be in the onclose event
+        // Don't trigger reconnection here as onclose will always be called after onerror
+        setIsConnected(false);
+        // Clear any existing timeout to avoid duplicates
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
         }
       };
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
       setIsConnected(false);
-      // Attempt to reconnect on creation failure as well
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        console.log(`Retrying WebSocket connection after creation failure... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
-        setReconnectAttempts(prev => prev + 1);
-        connectWithCleanup();
-      }, delay);
+      // Clear any existing timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      // Attempt to reconnect on creation failure
+      if (reconnectAttempts < maxReconnectAttempts) {
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log(`Retrying WebSocket connection... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+          setReconnectAttempts(prev => prev + 1);
+          connectWithCleanup();
+        }, delay);
+      }
     }
   }, [reconnectAttempts]); // Depend on reconnectAttempts to manage retry logic
 

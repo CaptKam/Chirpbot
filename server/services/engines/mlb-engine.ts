@@ -96,6 +96,7 @@ export class MLBEngine {
     try {
       if (!mlbAlertModel) {
         // Use dynamic import for CommonJS module
+        // @ts-ignore - CommonJS module import
         mlbAlertModel = await import('./mlbAlertModel.cjs');
       }
     } catch (error) {
@@ -486,6 +487,20 @@ export class MLBEngine {
       }
     } catch (error) {
       console.error('Error in monitorLiveGames:', error);
+    }
+  }
+
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      // Extract gamePk from gameId (format: "mlb-12345" or just "12345")
+      const gamePk = parseInt(gameId.replace('mlb-', ''));
+      
+      const gameState = await this.fetchDetailedGameState(gamePk);
+      if (gameState) {
+        await this.checkGameSituations(gameState);
+      }
+    } catch (error) {
+      console.error(`Error processing specific game ${gameId}:`, error);
     }
   }
 
