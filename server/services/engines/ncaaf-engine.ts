@@ -138,7 +138,7 @@ export class NCAAEngine {
     try {
       if (!ncaafAlertModel) {
         // Use dynamic import for CommonJS module
-        ncaafAlertModel = require('./NCAAFAlertModel.cjs');
+        ncaafAlertModel = await import('./NCAAFAlertModel.cjs');
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
@@ -825,7 +825,11 @@ export class NCAAEngine {
       // Send Telegram notification
       // Send Telegram notification if configured
       try {
-        await sendTelegramAlert(alertData, `🏈 ${alert.description}`);
+        const telegramConfig = {
+          botToken: process.env.TELEGRAM_BOT_TOKEN || 'default_key',
+          chatId: process.env.TELEGRAM_CHAT_ID || 'default_chat'
+        };
+        await sendTelegramAlert(telegramConfig, alertData);
       } catch (error) {
         console.log('Telegram notification not configured, skipping');
       }
@@ -1369,7 +1373,11 @@ Situation: Something exciting is happening in this game!`;
       // Check if Telegram is enabled globally
       const settings = await this.getUserNCAAFSettings();
       if (settings?.telegramEnabled) {
-        await sendTelegramAlert(alert);
+        const telegramConfig = {
+          botToken: process.env.TELEGRAM_BOT_TOKEN || 'default_key',
+          chatId: process.env.TELEGRAM_CHAT_ID || 'default_chat'
+        };
+        await sendTelegramAlert(telegramConfig, alert);
       }
     } catch (error) {
       console.error('Error sending Telegram alert:', error);
