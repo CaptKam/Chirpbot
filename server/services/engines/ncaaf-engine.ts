@@ -7,9 +7,15 @@ import { fetchJson } from '../http';
 import { OpenAiEngine } from './OpenAiEngine';
 import { getBetbookData } from './betbook-engine';
 
-// @ts-ignore - CommonJS module import
+// Import NCAAF Alert Model (CommonJS module)
+const ncaafAlertModel = require('./NCAAFAlertModel.cjs');
 
-// Type declaration for NCAAFAlertModel
+// Import AlertFormatValidator and SimpleAlert types from the new structure
+import { NCAAFGameStateV3, SimpleAlert } from './index';
+import { AlertFormatValidator } from './AlertFormatValidator';
+
+
+// Type declaration for NCAAFAlertModelType
 interface NCAAFAlertModelType {
   checkNCAAFAlerts(gameState: any): any;
   ncaafL1Alert(gameState: any): any;
@@ -17,107 +23,10 @@ interface NCAAFAlertModelType {
   ncaafL3Alert(gameState: any): any;
 }
 
-// Import NCAAF Alert Model (CommonJS module)
-let ncaafAlertModel: NCAAFAlertModelType | null = null;
+let ncaafAlertModelInstance: NCAAFAlertModelType | null = null;
 
-interface NCAAGameState {
-  gameId: string;
-  period: number;
-  quarter: number | string;
-  timeRemaining: number; // seconds remaining
-  homeScore: number;
-  awayScore: number;
-  homeTeam: string;
-  awayTeam: string;
-  sport: string; // 'football'
-  conference: string;
 
-  // Situational data
-  down?: number;
-  distance?: number;
-  yardsToGoal?: number;
-  offense?: string;
-  defense?: string;
-  fieldPosition?: number;
-  redZone?: boolean;
-  overtime?: boolean;
-  finalMinutes?: boolean;
-
-  // Score tracking
-  score: { home: number; away: number };
-
-  // Weather conditions
-  weather?: {
-    windMph?: number;
-    precipitation?: boolean;
-    dome?: boolean;
-    temperature?: number;
-    condition?: string;
-  };
-
-  // Game flow data
-  momentumFactor?: number;
-  topAdvantage?: number;
-  timeoutsRemaining?: {
-    home: number;
-    away: number;
-  };
-  playType?: string;
-  lastPlayResult?: string;
-
-  // Drive data
-  drives?: {
-    currentDrive: {
-      plays: number;
-      yards: number;
-      timeElapsed: string;
-    };
-    previousDrive: {
-      result: string;
-      yards: number;
-      plays: number;
-    };
-  };
-
-  // Team statistics
-  teamStats?: {
-    home: {
-      totalYards: number;
-      passingYards: number;
-      rushingYards: number;
-      turnovers: number;
-      penalties: number;
-      timeOfPossession: string;
-    };
-    away: {
-      totalYards: number;
-      passingYards: number;
-      rushingYards: number;
-      turnovers: number;
-      penalties: number;
-      timeOfPossession: string;
-    };
-  };
-
-  // Key player data
-  keyPlayers?: {
-    quarterbacks: any[];
-    runningBacks: any[];
-    receivers: any[];
-    kickers: any[];
-  };
-}
-
-interface SimpleNCAAAlert {
-  priority: number;
-  description: string;
-  reasons: string[];
-  probability: number;
-  deduplicationKey: string;
-  type: string;
-}
-
-export class NCAAEngine {
+export class NCAAFEngine {
   private readonly ESPN_FOOTBALL_API = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football';
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
   private static alertContentCache: Map<string, number> = new Map(); // Track alert content by hash
@@ -126,6 +35,14 @@ export class NCAAEngine {
 
   // OpenAI engine instance for alert description generation (conditional)
   private readonly openAiEngine: OpenAiEngine | null;
+
+  // Game state cache for tracking changes
+  private gameStateCache = new Map<string, NCAAGameState>();
+  
+  // New state for the refactored engine
+  private gameStates = new Map<string, NCAAFGameStateV3>();
+  private lastAlerts = new Map<string, string>();
+
 
   constructor() {
     console.log('🏈 NCAAF Engine initialized with ESPN API integration (College Football)');
@@ -138,9 +55,8 @@ export class NCAAEngine {
 
   private async loadNCAAFAlertModel() {
     try {
-      if (!ncaafAlertModel) {
-        // @ts-ignore - CommonJS module import  
-        ncaafAlertModel = await import('./NCAAFAlertModel.cjs') as any as NCAAFAlertModelType;
+      if (!ncaafAlertModelInstance) {
+        ncaafAlertModelInstance = ncaafAlertModel as any as NCAAFAlertModelType;
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
@@ -328,9 +244,6 @@ export class NCAAEngine {
       console.error('❌ NCAAF Alert Processing Error:', error);
     }
   }
-
-  // Game state cache for tracking changes
-  private gameStateCache = new Map<string, NCAAGameState>();
 
   private async processGameForAlerts(game: any): Promise<void> {
     try {
@@ -991,7 +904,11 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       }
 
       // Stage 2: Check deduplication BEFORE expensive AI analysis to save costs
-      let preliminaryDescription = `💥 ONE-SCORE GAME! Every play matters now!\n\n⚡️ Advanced AI: 35% scoring probability\n🎯 Key Factor: Field goal could change the lead\n💪 Strategy: Establish rhythm; control clock`;
+      let preliminaryDescription = `💥 ONE-SCORE GAME! Every play matters now!
+
+⚡️ Advanced AI: 35% scoring probability
+🎯 Key Factor: Field goal could change the lead
+💪 Strategy: Establish rhythm; control clock`;
 
       console.log(`🛡️ NCAAF: Checking deduplication BEFORE AI analysis to save costs...`);
       // Create temporary alert object for deduplication check
@@ -1117,7 +1034,7 @@ Game is now in progress`;
     try {
       // Ensure NCAAF Alert Model is loaded
       await this.loadNCAAFAlertModel();
-      if (!ncaafAlertModel) {
+      if (!ncaafAlertModelInstance) {
         console.error('NCAAF Alert Model not available, generating basic live alert instead');
         await this.generateBasicLiveAlert(gameState.gameId);
         return;
@@ -1126,7 +1043,7 @@ Game is now in progress`;
       console.log(`🎯 NCAAF: Running Alert Model check for ${gameState.awayTeam} @ ${gameState.homeTeam} - Q${gameState.quarter}, ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd`);
 
       // Stage 1: L1 Trigger - Use the NCAAF alert model to determine if an alert should fire
-      const alertResult = ncaafAlertModel.checkNCAAFAlerts(gameState);
+      const alertResult = ncaafAlertModelInstance.checkNCAAFAlerts(gameState);
 
       if (!alertResult.shouldAlert) {
         console.log(`🏈 NCAAF: Alert Model check complete - no alert conditions met`);
@@ -1367,11 +1284,11 @@ ${situation}`;
   private async processAlertThroughModel(alertResult: any, gameState: NCAAGameState, alertDescription: string, betbookData: any, deduplicationKey: string, friendlyTitle?: string): Promise<any> {
     try {
       // Stage 1: Validate through NCAAF Alert Model (.cjs)
-      if (!ncaafAlertModel) {
+      if (!ncaafAlertModelInstance) {
         console.warn('NCAAF Alert Model not available');
         return null;
       }
-      const modelValidation = ncaafAlertModel.checkNCAAFAlerts(gameState);
+      const modelValidation = ncaafAlertModelInstance.checkNCAAFAlerts(gameState);
 
       if (!modelValidation.shouldAlert) {
         console.log(`🛡️ NCAAF: Alert blocked by CJS model validation`);
@@ -1652,5 +1569,62 @@ ${situation}`;
     } catch (error) {
       console.error('Error tracking game events:', error);
     }
+  }
+  
+  // New monitor method from the edited snippet
+  async monitor(gameState: NCAAFGameStateV3): Promise<any[]> {
+    this.gameStates.set(gameState.gameId, gameState);
+
+    // Check redzone situation
+    if (gameState.yardsToGoal && gameState.yardsToGoal <= 20) {
+      const situationKey = `${gameState.quarter}_${gameState.down}_${gameState.yardsToGoal}`;
+      const lastAlert = this.lastAlerts.get(gameState.gameId);
+
+      if (lastAlert === situationKey) return [];
+
+      const alert = this.createStandardAlert(gameState, 'REDZONE');
+      const validation = AlertFormatValidator.validateCompliance(alert);
+
+      if (!validation.isValid) {
+        console.error('NCAAF ALERT VIOLATION:', validation.violations);
+        return [];
+      }
+
+      this.lastAlerts.set(gameState.gameId, situationKey);
+      return [alert];
+    }
+
+    return [];
+  }
+
+  private createStandardAlert(gameState: NCAAFGameStateV3, alertType: string): any {
+    const alertId = `ncaaf_${gameState.gameId}_${Date.now()}`;
+
+    const score = {
+      home: gameState.homeScore,
+      away: gameState.awayScore
+    };
+
+    return {
+      id: alertId,
+      type: alertType,
+      sport: 'NCAAF',
+      title: AlertFormatValidator.generateStandardTitle('NCAAF', alertType, score),
+      description: AlertFormatValidator.generateStandardDescription('NCAAF', alertType, gameState),
+      gameInfo: {
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        score,
+        status: 'Live',
+        situation: alertType,
+        quarter: gameState.quarter,
+        down: gameState.down,
+        distance: gameState.distance,
+        yardsToGoal: gameState.yardsToGoal
+      },
+      priority: 85,
+      timestamp: new Date(),
+      seen: false
+    };
   }
 }
