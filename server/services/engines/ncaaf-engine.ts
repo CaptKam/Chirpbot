@@ -9,16 +9,16 @@ import { getBetbookData } from './betbook-engine';
 
 // @ts-ignore - CommonJS module import
 
-// Import NCAAF Alert Model (CommonJS module)
-let ncaafAlertModel: NCAAFAlertModelType | null = null;
-
-// Type declaration for NCAAFAlertModel - avoiding module augmentation
+// Type declaration for NCAAFAlertModel
 interface NCAAFAlertModelType {
   checkNCAAFAlerts(gameState: any): any;
   ncaafL1Alert(gameState: any): any;
   ncaafL2Alert(gameState: any): any;
   ncaafL3Alert(gameState: any): any;
 }
+
+// Import NCAAF Alert Model (CommonJS module)
+let ncaafAlertModel: NCAAFAlertModelType | null = null;
 
 interface NCAAGameState {
   gameId: string;
