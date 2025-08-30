@@ -995,9 +995,9 @@ export class NCAAEngine {
         return; // Skip this alert and save the AI analysis cost
       }
       
-      console.log(`✅ NCAAF: Alert passed deduplication - proceeding with AI analysis...`);
+      console.log(`✅ NCAAF: Alert passed deduplication - proceeding with basic alert (AI disabled)...`);
 
-      // Stage 4: Create enhanced live game alert with comprehensive game state data
+      // Stage 4: Create basic live game alert (AI completely disabled)
       const alert = {
         id: randomUUID(),
         type: 'ncaafGameLive',
@@ -1016,30 +1016,22 @@ export class NCAAEngine {
           score: { home: 0, away: 0 }
         },
         
-        // Store comprehensive game state for analysis
-        analysisData: fullGameData ? {
+        // Store basic game data (AI disabled)
+        analysisData: {
           gameState: {
-            period: fullGameData.espnData?.status?.period || 1,
-            clock: fullGameData.espnData?.status?.displayClock || '15:00',
-            down: fullGameData.espnData?.competitions[0]?.situation?.down || 1,
-            distance: fullGameData.espnData?.competitions[0]?.situation?.distance || 10,
-            yardsToGoal: fullGameData.espnData?.competitions[0]?.situation?.yardLine || 50,
-            fieldPosition: fullGameData.espnData?.competitions[0]?.situation?.yardLine || 50,
-            redZone: fullGameData.espnData?.competitions[0]?.situation?.isRedZone || false,
+            period: 1,
+            clock: '15:00',
+            down: 1,
+            distance: 10,
+            yardsToGoal: 50,
+            fieldPosition: 50,
+            redZone: false,
             timeoutsRemaining: {
-              home: fullGameData.espnData?.competitions[0]?.situation?.homeTimeouts || 3,
-              away: fullGameData.espnData?.competitions[0]?.situation?.awayTimeouts || 3
+              home: 3,
+              away: 3
             }
-          },
-          teamStats: this.extractTeamStats(fullGameData.espnData),
-          drives: this.extractDriveData(fullGameData.espnData),
-          weather: this.extractWeatherData(fullGameData.espnData),
-          keyPlayers: this.extractKeyPlayers(fullGameData.espnData),
-          venue: fullGameData.espnData?.competitions[0]?.venue?.name || 'Unknown',
-          attendance: fullGameData.espnData?.competitions[0]?.attendance || 0,
-          broadcasters: fullGameData.espnData?.competitions[0]?.broadcast || [],
-          lastPlay: fullGameData.espnData?.competitions[0]?.situation?.lastPlay?.text || ''
-        } : null,
+          }
+        },
         
         probability: 0.8,
         confidence: aiConfidence,
@@ -1049,77 +1041,12 @@ export class NCAAEngine {
         seen: false
       };
 
-      // Stage 3: AI Game Data Analysis (expensive operation) - only for alerts that will be sent
+      // Stage 3: AI COMPLETELY DISABLED - Use basic descriptions only
       enhancedTitle = `📢 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (0-0)`;
-      enhancedDescription = preliminaryDescription; // Start with preliminary
-      aiConfidence = 0.75;
+      enhancedDescription = `🏈 COLLEGE FOOTBALL LIVE\n\n📊 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}\n🎯 Score: 0-0\n⏰ Live Game\n\n🎪 Game in progress - basic monitoring only`;
+      aiConfidence = 0.50;
       
-      try {
-        console.log(`🚀 NCAAF: Running AI analysis for confirmed alert: ${gameId}`);
-        // Strategy 1: Try to get exact game data
-        let fullGameData = await this.getFullGameData(gameId);
-        
-        // Strategy 2: If no exact match, create realistic game data for the specific game
-        if (!fullGameData) {
-          console.log(`🔄 NCAAF: No exact ESPN match for ${gameId}, creating realistic game data for AI analysis`);
-          
-          // Create realistic game data using the specific game info we have
-          fullGameData = {
-            gameId: gameId,
-            awayTeam: gameInfo.awayTeamName,
-            homeTeam: gameInfo.homeTeamName,
-            awayScore: 0,
-            homeScore: 0,
-            espnData: {
-              status: {
-                period: 1,
-                displayClock: '15:00',
-                type: { name: 'STATUS_IN_PROGRESS' }
-              },
-              competitions: [{
-                situation: {
-                  down: 1,
-                  distance: 10,
-                  yardLine: 25,
-                  isRedZone: false
-                }
-              }]
-            }
-          };
-          console.log(`🎯 NCAAF: Created realistic game data for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} AI analysis`);
-        }
-        
-        if (fullGameData) {
-          console.log(`🔍 NCAAF: Sending real ESPN data to OpenAI for analysis:`, {
-            teams: `${fullGameData.awayTeam} @ ${fullGameData.homeTeam}`,
-            score: `${fullGameData.awayScore}-${fullGameData.homeScore}`,
-            period: fullGameData.espnData?.status?.period,
-            clock: fullGameData.espnData?.status?.displayClock,
-            down: fullGameData.espnData?.competitions[0]?.situation?.down,
-            distance: fullGameData.espnData?.competitions[0]?.situation?.distance,
-            yardLine: fullGameData.espnData?.competitions[0]?.situation?.yardLine,
-            redZone: fullGameData.espnData?.competitions[0]?.situation?.isRedZone
-          });
-          
-          // AI COMPLETELY DISABLED - Use basic description instead
-          console.log(`🚫 NCAAF: AI disabled, using basic game description`);
-          
-          // Format title with team names and actual score
-          const scoreDisplay = `${fullGameData.awayScore}-${fullGameData.homeScore}`;
-          const periodDisplay = fullGameData.espnData?.status?.period ? ` | ${this.formatPeriod(fullGameData.espnData.status.period)}` : '';
-          const clockDisplay = fullGameData.espnData?.status?.displayClock ? ` ${fullGameData.espnData.status.displayClock}` : '';
-          
-          enhancedTitle = `📢 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (${scoreDisplay})${periodDisplay}${clockDisplay}`;
-          // Use basic game description instead of AI
-          enhancedDescription = `🏈 COLLEGE FOOTBALL LIVE\n\n📊 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}\n🎯 Score: ${scoreDisplay}\n⏰ ${periodDisplay}${clockDisplay}\n\n🎪 Game in progress - no AI analysis`;
-          aiConfidence = 0.50; // Lower confidence for basic data
-          console.log(`📝 NCAAF: Basic game description generated (AI disabled)`);
-        } else {
-          console.log(`⚠️ NCAAF: No live ESPN games available for AI analysis`);
-        }
-      } catch (error) {
-        console.error('❌ NCAAF: Error in AI analysis:', error);
-      }
+      console.log(`🚫 NCAAF: AI disabled, using basic game description only`);
       
       // Update alert with AI-enhanced content
       alert.title = enhancedTitle;
