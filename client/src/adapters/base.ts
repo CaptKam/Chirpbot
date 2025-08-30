@@ -15,7 +15,7 @@ export function toVM(alert: any): AlertVM {
     return {
       id: alert.id,
       sport: alert.sport as Sport || 'MLB',
-      title: alert.type || 'Alert',
+      title: alert.title || alert.description || 'Game Alert',
       situation: 'Unknown situation',
       scoreline: 'Score unavailable',
       period: '',

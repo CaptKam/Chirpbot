@@ -49,7 +49,7 @@ const mlb: SportAdapter = {
     return {
       id: a.id,
       sport: "MLB",
-      title: (a.type || 'Game Alert').replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim(),
+      title: a.title || a.description || 'Baseball Action!',
       situation,
       scoreline: (() => {
         // V3 engine provides scores as homeScore/awayScore directly

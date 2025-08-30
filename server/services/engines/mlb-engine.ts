@@ -71,13 +71,14 @@ export interface SimpleAlert {
   reasons: string[];
   probability: number;
   deduplicationKey: string;
+  type: string; // Added to support different alert types for kid-friendly titles
 }
 
 export class MLBEngine {
   // Simple Deduplication
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
   private readonly MLB_API_BASE = 'https://statsapi.mlb.com/api/v1';
-  
+
   onAlert?: (alert: any) => void;
 
   // OpenAI engine instance used for Stage 2 alert description generation
@@ -108,7 +109,7 @@ export class MLBEngine {
     try {
       const targetDate = date || new Date().toISOString().split('T')[0];
       const url = `${this.MLB_API_BASE}/schedule?sportId=1&date=${targetDate}&hydrate=game(content(summary,media(epg)),tickets),linescore(matchup,runners),metadata`;
-      
+
       const data = await fetchJson(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
@@ -155,7 +156,7 @@ export class MLBEngine {
       const modelState = this.mapGameStateForAlertModel(gameState);
       const scoringResult = mlbAlertModel.calcMLBScoringAlert(modelState);
       const severity = scoringResult.severity || 'NONE';
-      
+
       if (severity !== 'NONE') {
         const reasons: string[] = scoringResult.reasons || scoringResult.reason || [];
         const alert: SimpleAlert = {
@@ -163,9 +164,10 @@ export class MLBEngine {
           description: '',
           reasons,
           probability: scoringResult.p_adj,
-          deduplicationKey: this.generateDeduplicationKey(gameState, 'SCORING')
+          deduplicationKey: this.generateDeduplicationKey(gameState, 'SCORING'),
+          type: this.getAlertType(gameState, scoringResult) // Determine alert type
         };
-        
+
         if (this.shouldEmitAlert(alert)) {
           await this.processAlert(alert, gameState);
         }
@@ -200,7 +202,7 @@ export class MLBEngine {
           priority: alert.priority
         };
         description = await this.openAiEngine.generateAlertDescription(gameSituation);
-        
+
         // Ensure description fits within 120 character limit
         if (description.length > 120) {
           description = description.substring(0, 117) + '...';
@@ -209,7 +211,7 @@ export class MLBEngine {
         console.error('Stage 2 OpenAI refinement failed:', error);
         description = this.buildFallbackDescription(gameState, alert);
       }
-      
+
       // Stage 3: Betbook Insights
       let betbookData = null;
       try {
@@ -236,10 +238,10 @@ export class MLBEngine {
           confidence: 0
         };
       }
-      
+
       // Stage 4: Delivery
       await this.deliverAlert(alert, gameState, description, betbookData);
-      
+
     } catch (error) {
       console.error('Error processing alert through four-stage flow:', error);
     }
@@ -253,7 +255,7 @@ export class MLBEngine {
       // Stage 1: Validate through MLB Alert Model (.cjs)
       const modelState = this.mapGameStateForAlertModel(gameState);
       const modelValidation = mlbAlertModel.checkScoringProbability(modelState);
-      
+
       if (!modelValidation.shouldAlert) {
         console.log(`🛡️ MLB: Alert blocked by CJS model validation`);
         return;
@@ -262,13 +264,13 @@ export class MLBEngine {
       // Stage 2: Create alert with CJS model validation
       const alertId = randomUUID();
       console.log(`🆔 MLB: Generating scoring alert with ID: ${alertId}`);
-      
+
       const alertData = {
         id: alertId,
         debugId: alertId.substring(0, 8), // Short ID for easy debugging
         type: 'SCORING',
         sport: 'MLB',
-        title: 'MLB Scoring Opportunity',
+        title: this.buildKidFriendlyTitle(alert.type, gameState), // Use kid-friendly title
         description: description,
         priority: modelValidation.priority,
         gameInfo: {
@@ -293,7 +295,7 @@ export class MLBEngine {
           balls: gameState.balls,
           strikes: gameState.strikes
         },
-        
+
         // Store CJS model analysis
         alertModelData: {
           validatedBy: 'mlbAlertModel.cjs',
@@ -301,7 +303,7 @@ export class MLBEngine {
           modelValidation: modelValidation,
           severity: modelValidation.severity
         },
-        
+
         createdAt: new Date(),
         seen: false,
         betbookData: betbookData
@@ -311,11 +313,11 @@ export class MLBEngine {
       const createdAlert = await storage.createAlert(alertData);
       console.log(`💾 MLB: Alert stored in database`);
       console.log(`🆔 MLB: Alert ID: ${alertData.id} | Debug ID: ${alertData.debugId} | Type: ${alertData.type} | Priority: ${modelValidation.priority}`);
-      
+
       // Stage 4: Record alert emission for deduplication
       this.recordAlertEmission(alert);
       console.log(`🔄 MLB: Deduplication recorded for: ${alert.deduplicationKey}`);
-      
+
       // Stage 5: Broadcast to WebSocket clients
       if (this.onAlert) {
         this.onAlert({
@@ -324,9 +326,9 @@ export class MLBEngine {
         });
         console.log(`📡 MLB: Alert broadcasted via WebSocket | ID: ${alertData.debugId}`);
       }
-      
+
       console.log(`✅ MLB Alert delivered via CJS model: ${description} (Priority: ${modelValidation.priority})`);
-      
+
     } catch (error) {
       console.error('Error delivering alert through CJS model:', error);
     }
@@ -439,11 +441,11 @@ export class MLBEngine {
   private shouldEmitAlert(alert: SimpleAlert): boolean {
     const now = Date.now();
     const cached = this.deduplicationCache.get(alert.deduplicationKey);
-    
+
     if (cached && (now - cached.timestamp) < 60000) {
       return false; // 60 second cooldown
     }
-    
+
     return true;
   }
 
@@ -452,92 +454,16 @@ export class MLBEngine {
       timestamp: Date.now(),
       priority: alert.priority
     });
-    
+
     // Cleanup old entries
     if (this.deduplicationCache.size > 1000) {
       const oldestEntries = Array.from(this.deduplicationCache.entries())
         .sort(([,a], [,b]) => a.timestamp - b.timestamp)
         .slice(0, 100);
-      
+
       for (const [key] of oldestEntries) {
         this.deduplicationCache.delete(key);
       }
-    }
-  }
-
-  // === SPECIFIC GAME PROCESSING ===
-
-  async processSpecificGame(gameId: string): Promise<void> {
-    try {
-      const games = await this.getTodaysGames();
-      const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
-      
-      if (!targetGame) {
-        console.log(`⚾ MLB: Game ${gameId} not found in today's games`);
-        return;
-      }
-
-      // Extract gamePk from either the game object or parse from gameId
-      let gamePk: number;
-      if (targetGame.gamePk) {
-        gamePk = targetGame.gamePk;
-      } else if (gameId.includes('-')) {
-        // Parse from gameId format like "mlb-776527"
-        gamePk = parseInt(gameId.split('-')[1]);
-      } else {
-        // Try to parse the gameId directly
-        gamePk = parseInt(gameId);
-      }
-
-      if (isNaN(gamePk)) {
-        console.log(`⚾ MLB: Invalid gamePk for game ${gameId}`);
-        return;
-      }
-
-      const gameState = await this.fetchDetailedGameState(gamePk);
-      if (gameState) {
-        await this.checkGameSituations(gameState);
-      }
-    } catch (error) {
-      console.error(`❌ MLB: Error processing specific game ${gameId}:`, error);
-    }
-  }
-
-  // === SPECIFIC GAME PROCESSING ===
-
-  async processSpecificGame(gameId: string): Promise<void> {
-    try {
-      const games = await this.getTodaysGames();
-      const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
-      
-      if (!targetGame) {
-        console.log(`⚾ MLB: Game ${gameId} not found in today's games`);
-        return;
-      }
-
-      // Extract gamePk from either the game object or parse from gameId
-      let gamePk: number;
-      if (targetGame.gamePk) {
-        gamePk = targetGame.gamePk;
-      } else if (gameId.includes('-')) {
-        // Parse from gameId format like "mlb-776527"
-        gamePk = parseInt(gameId.split('-')[1]);
-      } else {
-        // Try to parse the gameId directly
-        gamePk = parseInt(gameId);
-      }
-
-      if (isNaN(gamePk)) {
-        console.log(`⚾ MLB: Invalid gamePk for game ${gameId}`);
-        return;
-      }
-
-      const gameState = await this.fetchDetailedGameState(gamePk);
-      if (gameState) {
-        await this.checkGameSituations(gameState);
-      }
-    } catch (error) {
-      console.error(`❌ MLB: Error processing specific game ${gameId}:`, error);
     }
   }
 
@@ -703,5 +629,41 @@ export class MLBEngine {
     else if (gameState.outs === 2) baseProb *= 0.7;
 
     return Math.min(baseProb, 0.95);
+  }
+
+  // Helper to determine alert type for kid-friendly titles
+  private getAlertType(gameState: MLBGameStateV3, scoringResult: any): string {
+    if (gameState.runners.first && gameState.runners.second && gameState.runners.third) {
+      return 'basesLoaded';
+    } else if (gameState.runners.second || gameState.runners.third) {
+      return 'risp';
+    } else if (gameState.inning >= 9) {
+      return 'extraInnings';
+    } else if (gameState.inning >= 7) {
+      return 'lateInning';
+    } else if (Math.abs(gameState.homeScore - gameState.awayScore) <= 1) {
+      return 'closeGame';
+    }
+    return 'general'; // Default type
+  }
+
+  // Kid-friendly title builder
+  private buildKidFriendlyTitle(alertType: string, gameState: any): string {
+    switch (alertType) {
+      case 'risp':
+        return '⚾ SCORING CHANCE! Runners in scoring position!';
+      case 'basesLoaded':
+        return '🏟️ BASES LOADED! Maximum scoring opportunity!';
+      case 'homeRun': // Assuming this might be added later or derived from other logic
+        return '💥 HOME RUN ALERT! Big swing coming up!';
+      case 'closeGame':
+        return '🔥 CLOSE GAME! Every run matters!';
+      case 'extraInnings':
+        return '⏰ EXTRA INNINGS! Bonus baseball action!';
+      case 'lateInning':
+        return '🚨 CRUNCH TIME! Late inning pressure!';
+      default:
+        return '⚾ BASEBALL ACTION! Something exciting is happening!';
+    }
   }
 }
