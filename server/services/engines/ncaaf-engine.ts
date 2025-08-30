@@ -162,7 +162,7 @@ export class NCAAEngine {
     // Cooldown times in milliseconds
     switch (alertType) {
       case 'ncaafGameLive': return 2 * 60 * 1000; // 2 minutes for basic live alerts
-      case 'ncaafRedZone': return 1 * 60 * 1000;   // 1 minute for red zone
+      case 'ncaafRedZone': return 5 * 60 * 1000;   // 5 minutes for red zone (reduced frequency)
       case 'ncaafFourthDown': return 30 * 1000; // 30 seconds for 4th down
       case 'ncaafCloseGame': return 1 * 60 * 1000;  // 1 minute for close games
       default: return 2 * 60 * 1000; // 2 minutes default
@@ -1154,8 +1154,17 @@ What's happening: The game just kicked off - players are on the field!
 
       console.log(`✅ NCAAF: Alert type ${alertResult.alertType} is enabled in user settings`);
 
-      // Check deduplication using proper alert model data
-      const deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${gameState.down || 0}:${gameState.distance || 0}`;
+      // Enhanced deduplication for redzone alerts - include field position to prevent spam
+      let deduplicationKey: string;
+      if (alertResult.alertType === 'redZone') {
+        // For redzone, include field position and use longer key to reduce frequency
+        const positionZone = gameState.yardsToGoal <= 5 ? 'goalLine' : 
+                           gameState.yardsToGoal <= 10 ? 'innerRedZone' : 'redZone';
+        deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${positionZone}:${Math.floor((gameState.down || 1) / 2)}`;
+      } else {
+        deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${gameState.down || 0}:${gameState.distance || 0}`;
+      }
+      
       if (this.isDuplicateByKey(deduplicationKey)) {
         console.log(`🛡️ NCAAF: Alert blocked by deduplication - ${deduplicationKey}`);
         return;
@@ -1237,7 +1246,15 @@ What's happening: The game just kicked off - players are on the field!
     const now = Date.now();
     const existing = this.deduplicationCache.get(deduplicationKey);
 
-    if (existing && (now - existing.timestamp) < 120000) { // 2 minute cooldown for situation-specific alerts
+    // Different cooldown times based on alert type
+    let cooldownTime = 120000; // 2 minutes default
+    if (deduplicationKey.includes(':redZone:')) {
+      cooldownTime = 300000; // 5 minutes for redzone alerts
+    } else if (deduplicationKey.includes(':fourthDown:')) {
+      cooldownTime = 60000; // 1 minute for fourth down
+    }
+
+    if (existing && (now - existing.timestamp) < cooldownTime) {
       return true;
     }
 

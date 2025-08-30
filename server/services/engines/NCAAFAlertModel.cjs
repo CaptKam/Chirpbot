@@ -156,11 +156,22 @@ function calcNCAAFScoringAlert(gs) {
  * Check for red zone scoring opportunities
  */
 function checkRedZone(gs) {
+  // More selective redzone alerts - only fire on HIGH impact situations
   if (gs.yardsToGoal <= 20) {
     const result = calcNCAAFScoringAlert(gs);
+    
+    // Only alert on HIGH severity redzone situations or critical downs
+    const isHighImpact = result.severity === 'HIGH' || 
+                        (gs.down >= 3 && gs.yardsToGoal <= 10) || 
+                        (gs.down === 4 && gs.yardsToGoal <= 20);
+    
+    if (!isHighImpact) {
+      return { shouldAlert: false };
+    }
+    
     return {
-      shouldAlert: result.severity !== 'NONE',
-      reasons: [`Red Zone: ${gs.down}/${gs.distance} at ${gs.yardsToGoal}yd line`],
+      shouldAlert: true,
+      reasons: [`Critical Red Zone: ${gs.down}/${gs.distance} at ${gs.yardsToGoal}yd line`],
       priority: result.priority + 5, // Red zone bonus
       probability: result.p_adj,
       severity: result.severity,
