@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Flame, Wind, Gauge, Clock3, User, AlertTriangle, Zap, TriangleAlert, Trophy } from "lucide-react";
+import { Flame, Wind, Gauge, Clock3, User, AlertTriangle, Zap, TriangleAlert, Trophy, Target } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Alert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -85,7 +85,7 @@ export default function Alerts() {
         queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
       });
     }, 30000); // Increased from 8 to 30 seconds
-    
+
     return () => clearTimeout(timer);
   }, []); // Only run once when component mounts
 
@@ -96,14 +96,14 @@ export default function Alerts() {
       const data = lastMessage.data;
       if (data && 'type' in data && 'sport' in data && 'title' in data && 'id' in data) {
         const newAlert = data as unknown as Alert;
-      
+
         // Update the alerts list in the query cache to add the new alert at the beginning
         queryClient.setQueryData<Alert[]>(["/api/alerts"], (oldAlerts) => {
           // Add default properties for WebSocket alert data
           const alertWithDefaults = { ...newAlert, seen: false, sentToTelegram: false };
-          
+
           if (!oldAlerts) return [alertWithDefaults];
-          
+
           // Check if alert already exists to prevent duplicates (check by ID and timestamp)
           const exists = oldAlerts.some(alert => 
             alert.id === alertWithDefaults.id || 
@@ -111,16 +111,16 @@ export default function Alerts() {
              alert.timestamp === alertWithDefaults.timestamp)
           );
           if (exists) return oldAlerts;
-          
+
           // Add new alert at the beginning of the list
           return [alertWithDefaults, ...oldAlerts];
         });
-      
+
         // Instantly update the unseen count as well
         queryClient.setQueryData<{ count: number }>(['/api/alerts/unseen/count'], (oldCount) => {
           return { count: (oldCount?.count || 0) + 1 };
         });
-        
+
         // Refresh both queries to ensure consistency (but the UI already updated instantly)
         queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
         queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] });
@@ -340,85 +340,108 @@ export default function Alerts() {
                     </span>
 
                     <div className="p-4 space-y-3">
-                      {/* Row 1: Situation + RP + time */}
+                      {/* Row 1: Clear Sport & Teams */}
                       <div className="flex items-start justify-between">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Pill className="bg-orange-500/15 ring-orange-400/40 text-orange-200">
-                            <AlertTriangle className="w-3.5 h-3.5" />
-                            {vm.situation}
-                          </Pill>
-                          {vm.edge.value && (
-                            <Pill className="bg-indigo-500/15 ring-indigo-400/40 text-indigo-200">
-                              <Gauge className="w-3.5 h-3.5" />
-                              {vm.edge.label} {vm.edge.value}
-                            </Pill>
-                          )}
-                          {vm.priority && (
-                            <Pill className={(() => {
-                              const priority = vm.priority;
-                              if (priority >= 95) return "bg-red-500/20 ring-red-400/50 text-red-200"; // Critical
-                              if (priority >= 90) return "bg-orange-500/20 ring-orange-400/50 text-orange-200"; // Very High
-                              if (priority >= 85) return "bg-amber-500/20 ring-amber-400/50 text-amber-200"; // High
-                              if (priority >= 80) return "bg-yellow-500/20 ring-yellow-400/50 text-yellow-200"; // Medium-High
-                              return "bg-rose-500/15 ring-rose-400/40 text-rose-200"; // Medium
-                            })()}>
-                              <Flame className="w-3.5 h-3.5" />
-                              Priority {vm.priority}
-                            </Pill>
-                          )}
-                          {vm.sport && (
-                            <Pill className="bg-emerald-500/15 ring-emerald-400/40 text-emerald-200">
-                              <Trophy className="w-3.5 h-3.5" />
-                              {vm.sport}
-                            </Pill>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="bg-blue-500/20 text-blue-300 text-xs font-semibold px-2 py-1 rounded">
+                              {alert.sport || alert.gameInfo?.sport || 'SPORT'}
+                            </span>
+                            <span className="text-slate-400 text-xs">
+                              {alert.type || 'ALERT_TYPE'}
+                            </span>
+                          </div>
+                          <h3 className="text-white font-bold text-lg leading-tight">
+                            {alert.gameInfo?.awayTeam || 'Away Team'} @ {alert.gameInfo?.homeTeam || 'Home Team'}
+                          </h3>
+                          {/* Current Score if available */}
+                          {alert.gameInfo?.score && (
+                            <div className="text-slate-300 text-sm mt-1">
+                              Score: {alert.gameInfo.score.away}-{alert.gameInfo.score.home}
+                              {alert.gameInfo?.quarter && ` • Q${alert.gameInfo.quarter}`}
+                              {alert.gameInfo?.inning && ` • ${alert.gameInfo.inning}${alert.gameInfo.inningState ? ` ${alert.gameInfo.inningState}` : ''}`}
+                            </div>
                           )}
                         </div>
-                        {/* Alert timestamp - compact display */}
-                        {vm.createdAt && (
-                          <Pill className="bg-zinc-600/20 ring-zinc-500/30 text-zinc-300 shrink-0 text-xs px-2 py-1">
-                            <Clock3 className="w-3 h-3" />
-                            {(() => {
-                              const now = Date.now();
-                              const then = new Date(vm.createdAt).getTime();
-                              const diffMs = now - then;
-                              const diffMins = Math.floor(diffMs / 60000);
-                              const diffHours = Math.floor(diffMins / 60);
-                              const diffDays = Math.floor(diffHours / 24);
-                              
-                              if (diffDays > 0) return `${diffDays}d`;
-                              if (diffHours > 0) return `${diffHours}h`;
-                              if (diffMins > 0) return `${diffMins}m`;
-                              return '<1m';
-                            })()}
-                          </Pill>
-                        )}
-                      </div>
-
-                      {/* Row 2: Teams/score + inning + runners diamond */}
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-[15px] font-semibold text-slate-100 truncate">
-                            {vm.scoreline}
+                        <div className="text-right ml-4">
+                          <span className="text-slate-400 text-xs">
+                            {new Date(alert.timestamp || alert.createdAt).toLocaleTimeString()}
+                          </span>
+                          <div className="text-slate-300 text-sm font-medium mt-1">
+                            Priority: {alert.priority || 'N/A'}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {vm.widget}
-                          {/* Optional batter chip */}
-                          {vm.actor && (
-                            <Pill className="bg-violet-500/15 ring-violet-400/40 text-violet-200">
-                              <User className="w-3.5 h-3.5" />
-                              {vm.actor}
-                            </Pill>
+                      </div>
+
+                      {/* Row 2: Alert Description */}
+                      <div className="bg-slate-800/50 rounded-lg p-3">
+                        <p className="text-slate-200 text-sm leading-relaxed">
+                          {alert.description || alert.message || 'No description available'}
+                        </p>
+                      </div>
+
+                      {/* Row 3: Game Situation Details */}
+                      {(alert.gameInfo?.runners || alert.gameInfo?.outs !== undefined || alert.gameInfo?.down || alert.gameInfo?.yardsToGoal) && (
+                        <div className="bg-slate-700/30 rounded-lg p-3 space-y-2">
+                          <h4 className="text-slate-300 text-xs font-semibold uppercase tracking-wide">Game Situation</h4>
+
+                          {/* MLB Situation */}
+                          {alert.sport === 'MLB' && (
+                            <div className="flex items-center space-x-4 text-sm">
+                              {alert.gameInfo?.runners && (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-slate-400">Runners:</span>
+                                  <span className="text-slate-200">
+                                    {Object.entries(alert.gameInfo.runners)
+                                      .filter(([_, value]) => value)
+                                      .map(([base]) => base === 'first' ? '1st' : base === 'second' ? '2nd' : '3rd')
+                                      .join(', ') || 'None'}
+                                  </span>
+                                </div>
+                              )}
+                              {alert.gameInfo?.outs !== undefined && (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-slate-400">Outs:</span>
+                                  <span className="text-slate-200">{alert.gameInfo.outs}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* NCAAF Situation */}
+                          {alert.sport === 'NCAAF' && (
+                            <div className="flex items-center space-x-4 text-sm">
+                              {alert.gameInfo?.down && (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-slate-400">Down:</span>
+                                  <span className="text-slate-200">{alert.gameInfo.down} & {alert.gameInfo.distance || '?'}</span>
+                                </div>
+                              )}
+                              {alert.gameInfo?.yardsToGoal && (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-slate-400">Field Position:</span>
+                                  <span className="text-slate-200">{alert.gameInfo.yardsToGoal} yards to goal</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Scoring Probability */}
+                          {(alert.gameInfo as any)?.scoringProbability && (
+                            <div className="flex items-center space-x-2">
+                              <Target className="w-4 h-4 text-emerald-400" />
+                              <span className="text-emerald-300 text-sm font-medium">
+                                {Math.round(((alert.gameInfo as any).scoringProbability || 0) * 100)}% scoring probability
+                              </span>
+                            </div>
                           )}
                         </div>
-                      </div>
+                      )}
 
-                      {/* Row 3: 1-line action copy */}
-                      <div className="text-sm text-slate-200">
-                        {vm.actionLine}
-                      </div>
+                      {/* Row 4: Score + betting info */}
+                      <div className="flex items-center justify-between"></div>
 
-                      {/* Row 4: Why tags (wind/tier/etc) */}
+                      {/* Row 5: Tags (VM based) */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-1">
                         {vm.tags?.map((tag, index) => (
                           <Pill key={index} className={tag.includes('Wind') ? "bg-teal-500/15 ring-teal-400/40 text-teal-200" : "bg-neutral-500/15 ring-neutral-400/30 text-neutral-300"}>
@@ -479,34 +502,34 @@ export default function Alerts() {
                               const totalScore = homeScore + awayScore;
                               const inningNum = alert.gameInfo?.inning ? 
                                 (typeof alert.gameInfo.inning === 'number' ? alert.gameInfo.inning : parseInt(alert.gameInfo.inning)) : 0;
-                              
+
                               // SPECIFIC betting-focused reasons
                               if (alert.gameInfo?.runners?.second || alert.gameInfo?.runners?.third) {
                                 const overLine = Math.max(totalScore + 1.5, 7.5);
                                 reasons.push(`RISP: Bet Over ${overLine} runs - 68% scoring rate with runners in scoring position`);
                               }
-                              
+
                               if (alert.gameInfo?.runners?.first && alert.gameInfo?.runners?.second && alert.gameInfo?.runners?.third) {
                                 const overLine = Math.max(totalScore + 2, 8.5);
                                 reasons.push(`BASES LOADED: Bet Over ${overLine} runs - 85% chance of multiple runs scoring`);
                               }
-                              
+
                               if (inningNum >= 7 && Math.abs(homeScore - awayScore) <= 2) {
                                 reasons.push(`CLUTCH SPOT: Live bet moneyline - Close game, bullpen fatigue increases volatility`);
                               }
-                              
+
                               if (alert.priority >= 90) {
                                 const teamTotal = Math.max(Math.max(homeScore, awayScore) + 1.5, 4.5);
                                 reasons.push(`HIGH VALUE: Bet team total Over ${teamTotal} - Critical momentum shift detected`);
                               }
-                              
+
                               // Fallback if no specific situations
                               if (reasons.length === 0) {
                                 const overLine = Math.max(totalScore + 1, 7.0);
                                 reasons.push(`LIVE BET: Over ${overLine} runs - Offensive situation developing`);
                                 reasons.push(`MOMENTUM: Consider next inning props - Game flow shifting`);
                               }
-                              
+
                               return reasons.slice(0, 2).map((reason: string, idx: number) => (
                                 <div key={idx} className="text-sm text-slate-200 flex items-start space-x-3">
                                   <span className="text-emerald-400 font-bold mt-0.5">💰</span>
@@ -518,7 +541,7 @@ export default function Alerts() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Alert Footer - Game Situation Bar */}
                     {alert.gameInfo?.inning && alert.gameInfo?.inningState && (
                       <AlertFooter
