@@ -334,223 +334,67 @@ export default function Alerts() {
                         : "opacity-80"
                     )}
                   >
-                    {/* NEW badge */}
-                    {vm.isNew && (
+                    {!alert.seen && (
                       <span className="absolute top-2 right-2 bg-emerald-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full">
                         NEW
                       </span>
                     )}
 
-                    {/* Alert ID debug tag */}
-                    <span className="absolute top-2 left-2 bg-slate-700/80 text-slate-300 text-[9px] font-mono px-2 py-0.5 rounded-md border border-slate-600/50">
-                      ID: {alert.id.slice(-8)}
-                    </span>
-
                     <div className="p-4 space-y-3">
-                      {/* Row 1: Clear Sport & Teams */}
+                      {/* Header: Sport | Alert Type | Teams */}
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
-                            <span className="bg-blue-500/20 text-blue-300 text-xs font-semibold px-2 py-1 rounded">
-                              {alert.sport || alert.gameInfo?.sport || 'SPORT'}
+                            <span className="bg-emerald-500/20 text-emerald-300 text-xs font-semibold px-2 py-1 rounded">
+                              {alert.sport}
                             </span>
-                            <span className="text-slate-400 text-xs">
-                              {alert.type || 'ALERT_TYPE'}
+                            <span className="bg-red-500/20 text-red-300 text-xs font-semibold px-2 py-1 rounded">
+                              {alert.type.toUpperCase()}
                             </span>
                           </div>
-                          <h3 className="text-white font-bold text-lg leading-tight">
-                            {alert.gameInfo?.awayTeam || 'Away Team'} @ {alert.gameInfo?.homeTeam || 'Home Team'}
+                          <h3 className="text-white font-bold text-lg">
+                            {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
                           </h3>
-                          {/* Current Score if available */}
-                          {alert.gameInfo?.score && (
-                            <div className="text-slate-300 text-sm mt-1">
-                              Score: {alert.gameInfo.score.away}-{alert.gameInfo.score.home}
-                              {alert.gameInfo?.quarter && ` • Q${alert.gameInfo.quarter}`}
-                              {alert.gameInfo?.inning && ` • ${alert.gameInfo.inning}${alert.gameInfo.inningState ? ` ${alert.gameInfo.inningState}` : ''}`}
-                            </div>
-                          )}
                         </div>
-                        <div className="text-right ml-4">
-                          <span className="text-slate-400 text-xs">
-                            {new Date(alert.timestamp || alert.createdAt).toLocaleTimeString()}
-                          </span>
-                          <div className="text-slate-300 text-sm font-medium mt-1">
-                            Priority: {alert.priority || 'N/A'}
-                          </div>
+                        <div className="text-right text-slate-400 text-xs">
+                          {formatDistanceToNow(new Date(alert.timestamp || alert.createdAt), { addSuffix: true })}
                         </div>
                       </div>
 
-                      {/* Row 2: Alert Description */}
+                      {/* Alert Message */}
                       <div className="bg-slate-800/50 rounded-lg p-3">
-                        <p className="text-slate-200 text-sm leading-relaxed">
-                          {alert.description || alert.message || 'No description available'}
+                        <p className="text-slate-200 text-sm">
+                          {alert.description || alert.message}
                         </p>
                       </div>
 
-                      {/* Row 3: Game Situation Details */}
-                      {(alert.gameInfo?.runners || alert.gameInfo?.outs !== undefined || alert.gameInfo?.down || alert.gameInfo?.yardsToGoal) && (
-                        <div className="bg-slate-700/30 rounded-lg p-3 space-y-2">
-                          <h4 className="text-slate-300 text-xs font-semibold uppercase tracking-wide">Game Situation</h4>
-
-                          {/* MLB Situation */}
-                          {alert.sport === 'MLB' && (
-                            <div className="flex items-center space-x-4 text-sm">
-                              {alert.gameInfo?.runners && (
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-slate-400">Runners:</span>
-                                  <span className="text-slate-200">
-                                    {Object.entries(alert.gameInfo.runners)
-                                      .filter(([_, value]) => value)
-                                      .map(([base]) => base === 'first' ? '1st' : base === 'second' ? '2nd' : '3rd')
-                                      .join(', ') || 'None'}
-                                  </span>
-                                </div>
-                              )}
-                              {alert.gameInfo?.outs !== undefined && (
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-slate-400">Outs:</span>
-                                  <span className="text-slate-200">{alert.gameInfo.outs}</span>
-                                </div>
-                              )}
-                            </div>
+                      {/* Game Context */}
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-4">
+                          {alert.gameInfo?.score && (
+                            <span className="text-slate-300">
+                              {alert.gameInfo.score.away}-{alert.gameInfo.score.home}
+                            </span>
                           )}
-
-                          {/* NCAAF Situation */}
-                          {alert.sport === 'NCAAF' && (
-                            <div className="flex items-center space-x-4 text-sm">
-                              {alert.gameInfo?.down && (
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-slate-400">Down:</span>
-                                  <span className="text-slate-200">{alert.gameInfo.down} & {alert.gameInfo.distance || '?'}</span>
-                                </div>
-                              )}
-                              {alert.gameInfo?.yardsToGoal && (
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-slate-400">Field Position:</span>
-                                  <span className="text-slate-200">{alert.gameInfo.yardsToGoal} yards to goal</span>
-                                </div>
-                              )}
-                            </div>
+                          {alert.gameInfo?.inning && (
+                            <span className="text-slate-400">
+                              {alert.gameInfo.inningState} {alert.gameInfo.inning}
+                            </span>
                           )}
-
-                          {/* Scoring Probability */}
-                          {(alert.gameInfo as any)?.scoringProbability && (
-                            <div className="flex items-center space-x-2">
-                              <Target className="w-4 h-4 text-emerald-400" />
-                              <span className="text-emerald-300 text-sm font-medium">
-                                {Math.round(((alert.gameInfo as any).scoringProbability || 0) * 100)}% scoring probability
-                              </span>
-                            </div>
+                          {alert.gameInfo?.quarter && (
+                            <span className="text-slate-400">
+                              Q{alert.gameInfo.quarter}
+                            </span>
                           )}
                         </div>
-                      )}
-
-                      {/* Row 4: Score + betting info */}
-                      <div className="flex items-center justify-between"></div>
-
-                      {/* Row 5: Tags (VM based) */}
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                        {vm.tags?.map((tag, index) => (
-                          <Pill key={index} className={tag.includes('Wind') ? "bg-teal-500/15 ring-teal-400/40 text-teal-200" : "bg-neutral-500/15 ring-neutral-400/30 text-neutral-300"}>
-                            {tag.includes('Wind') && <Wind className="w-3.5 h-3.5" />}
-                            {tag}
-                          </Pill>
-                        ))}
+                        <div className="text-emerald-400 font-semibold">
+                          Priority: {alert.priority}
+                        </div>
                       </div>
-
-                      {/* Tier Analysis Details - Show for all high-priority alerts */}
-                      {((alert.gameInfo as any)?.v3Analysis || (alert.priority && alert.priority >= 80)) && (
-                        <div className="bg-blue-500/10 backdrop-blur-sm rounded-lg p-4 ring-1 ring-blue-500/20 space-y-3 mt-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">
-                                  {(alert.gameInfo as any)?.v3Analysis?.tier || Math.ceil((alert.priority || 70) / 25)}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-blue-200 font-semibold text-base">
-                                  Tier {(alert.gameInfo as any)?.v3Analysis?.tier || Math.ceil((alert.priority || 70) / 25)} Alert
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2 bg-emerald-500/10 px-3 py-1 rounded-full">
-                              <Zap className="w-4 h-4 text-emerald-400" />
-                              <span className="text-emerald-400 font-mono text-base font-semibold">
-                                {(() => {
-                                  if ((alert.gameInfo as any)?.v3Analysis?.probability) {
-                                    return Math.round((alert.gameInfo as any).v3Analysis.probability * 100);
-                                  }
-                                  // Generate probability based on priority
-                                  const priority = alert.priority || 70;
-                                  if (priority >= 95) return 85;
-                                  if (priority >= 90) return 80; 
-                                  if (priority >= 85) return 75;
-                                  if (priority >= 80) return 70;
-                                  return 65;
-                                })()}%
-                              </span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            {(() => {
-                              if ((alert.gameInfo as any)?.v3Analysis?.reasons) {
-                                return (alert.gameInfo as any).v3Analysis.reasons.slice(0, 3).map((reason: string, idx: number) => (
-                                  <div key={idx} className="text-sm text-slate-200 flex items-start space-x-3">
-                                    <span className="text-blue-400 font-bold mt-0.5">•</span>
-                                    <span className="leading-relaxed">{reason}</span>
-                                  </div>
-                                ));
-                              }
-                              // Generate ACTIONABLE betting reasons based on actual game data
-                              const reasons = [];
-                              const homeScore = (alert.gameInfo as any)?.homeScore || 0;
-                              const awayScore = (alert.gameInfo as any)?.awayScore || 0;
-                              const totalScore = homeScore + awayScore;
-                              const inningNum = alert.gameInfo?.inning ? 
-                                (typeof alert.gameInfo.inning === 'number' ? alert.gameInfo.inning : parseInt(alert.gameInfo.inning)) : 0;
-
-                              // SPECIFIC betting-focused reasons
-                              if (alert.gameInfo?.runners?.second || alert.gameInfo?.runners?.third) {
-                                const overLine = Math.max(totalScore + 1.5, 7.5);
-                                reasons.push(`RISP: Bet Over ${overLine} runs - 68% scoring rate with runners in scoring position`);
-                              }
-
-                              if (alert.gameInfo?.runners?.first && alert.gameInfo?.runners?.second && alert.gameInfo?.runners?.third) {
-                                const overLine = Math.max(totalScore + 2, 8.5);
-                                reasons.push(`BASES LOADED: Bet Over ${overLine} runs - 85% chance of multiple runs scoring`);
-                              }
-
-                              if (inningNum >= 7 && Math.abs(homeScore - awayScore) <= 2) {
-                                reasons.push(`CLUTCH SPOT: Live bet moneyline - Close game, bullpen fatigue increases volatility`);
-                              }
-
-                              if (alert.priority >= 90) {
-                                const teamTotal = Math.max(Math.max(homeScore, awayScore) + 1.5, 4.5);
-                                reasons.push(`HIGH VALUE: Bet team total Over ${teamTotal} - Critical momentum shift detected`);
-                              }
-
-                              // Fallback if no specific situations
-                              if (reasons.length === 0) {
-                                const overLine = Math.max(totalScore + 1, 7.0);
-                                reasons.push(`LIVE BET: Over ${overLine} runs - Offensive situation developing`);
-                                reasons.push(`MOMENTUM: Consider next inning props - Game flow shifting`);
-                              }
-
-                              return reasons.slice(0, 2).map((reason: string, idx: number) => (
-                                <div key={idx} className="text-sm text-slate-200 flex items-start space-x-3">
-                                  <span className="text-emerald-400 font-bold mt-0.5">💰</span>
-                                  <span className="leading-relaxed font-medium">{reason}</span>
-                                </div>
-                              ));
-                            })()}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
-                    {/* Alert Footer - Game Situation Bar */}
-                    {alert.gameInfo?.inning && alert.gameInfo?.inningState && (
+                    {/* Baseball Footer */}
+                    {alert.sport === 'MLB' && alert.gameInfo?.inning && (
                       <AlertFooter
                         half={alert.gameInfo.inningState === 'top' ? 'Top' : 'Bottom'}
                         inning={parseInt(alert.gameInfo.inning)}
