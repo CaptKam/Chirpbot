@@ -126,14 +126,14 @@ export default function Alerts() {
       </div>
 
       {/* Alerts Feed - LAW #7 COMPLIANT DISPLAY */}
-      <div className="p-2 space-y-2">
+      <div className="p-4 space-y-3">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-2 animate-pulse max-w-[300px]">
-                <div className="h-3 bg-slate-700 rounded w-3/4 mb-1"></div>
-                <div className="h-3 bg-slate-700 rounded w-full mb-1"></div>
-                <div className="h-3 bg-slate-700 rounded w-2/3"></div>
+              <div key={i} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4 animate-pulse">
+                <div className="h-6 bg-slate-700 rounded w-3/4 mb-3"></div>
+                <div className="h-4 bg-slate-700 rounded w-full mb-2"></div>
+                <div className="h-4 bg-slate-700 rounded w-2/3"></div>
               </div>
             ))}
           </div>
@@ -165,7 +165,7 @@ export default function Alerts() {
                 <Card
                   onClick={() => { if (!alert.seen) markAlertAsSeen(alert.id); }}
                   className={cn(
-                    "relative overflow-hidden backdrop-blur-sm transition-all duration-300 max-w-[300px] w-full",
+                    "relative overflow-hidden backdrop-blur-sm transition-all duration-300",
                     "ring-1 ring-white/10 hover:ring-white/20",
                     "dark bg-card text-card-foreground",
                     !alert.seen
@@ -174,14 +174,14 @@ export default function Alerts() {
                   )}
                 >
                   {/* LAW #7: CLEAN LAYOUT - NO DUPLICATE INFO */}
-                  <div className="p-3 space-y-2">
+                  <div className="p-6 space-y-4">
                     {/* Row 1: Sport + NEW Badge */}
                     <div className="flex items-center justify-between">
-                      <span className="bg-blue-500/20 text-blue-300 text-xs font-bold px-2 py-0.5 rounded-full">
+                      <span className="bg-blue-500/20 text-blue-300 text-base font-bold px-3 py-1 rounded-full">
                         {alert.sport}
                       </span>
                       {!alert.seen && (
-                        <span className="bg-emerald-400 text-slate-900 text-xs font-black px-1.5 py-0.5 rounded-full">
+                        <span className="bg-emerald-400 text-slate-900 text-sm font-black px-2 py-1 rounded-full">
                           NEW
                         </span>
                       )}
@@ -189,29 +189,29 @@ export default function Alerts() {
 
                     {/* Row 2: TITLE - Law #7 Format */}
                     <div>
-                      <h2 className="text-sm font-bold text-white leading-tight">
+                      <h2 className="text-xl font-bold text-white leading-tight">
                         {alert.title}
                       </h2>
                     </div>
 
                     {/* Row 3: Teams - ONLY HERE, NOWHERE ELSE */}
-                    <div className="text-xs text-slate-200 font-medium">
+                    <div className="text-lg text-slate-200 font-medium">
                       {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
                     </div>
 
                     {/* Row 4: Description - Law #7 Format (3 lines max) */}
-                    <div className="bg-slate-800/50 rounded p-2">
-                      <div className="text-xs text-slate-200 leading-tight overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>
+                    <div className="bg-slate-800/50 rounded-lg p-4">
+                      <div className="text-base text-slate-200 whitespace-pre-line leading-relaxed">
                         {alert.description}
                       </div>
                     </div>
 
                     {/* Row 5: Timestamp + Priority */}
-                    <div className="flex items-center justify-between text-xs text-slate-400">
+                    <div className="flex items-center justify-between text-lg text-slate-400">
                       <span>
                         {new Date(alert.timestamp || alert.createdAt).toLocaleTimeString()}
                       </span>
-                      <span className="bg-slate-700/50 px-1.5 py-0.5 rounded text-xs">
+                      <span className="bg-slate-700/50 px-2 py-1 rounded">
                         Priority: {alert.priority}
                       </span>
                     </div>
