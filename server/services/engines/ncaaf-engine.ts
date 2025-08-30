@@ -1071,8 +1071,14 @@ export class NCAAEngine {
       };
 
       // Stage 3: AI COMPLETELY DISABLED - Use basic descriptions only
-      enhancedTitle = `📢 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (0-0)`;
-      enhancedDescription = `🏈 COLLEGE FOOTBALL LIVE\n\n📊 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}\n🎯 Score: 0-0\n⏰ Live Game\n\n🎪 Game in progress - basic monitoring only`;
+      enhancedTitle = `🏈 GAME STARTED! ${gameInfo.awayTeamName} vs ${gameInfo.homeTeamName}`;
+      enhancedDescription = `🏈 COLLEGE FOOTBALL IS LIVE!
+
+Teams Playing: ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}
+Score: Just started! (0-0)
+What's happening: The game just kicked off - players are on the field!
+
+🎉 Get ready for some exciting college football action!`;
       aiConfidence = 0.50;
       
       console.log(`🚫 NCAAF: AI disabled, using basic game description only`);
@@ -1234,30 +1240,96 @@ export class NCAAEngine {
   }
 
   private buildAlertDescription(alertResult: any, gameState: NCAAGameState): string {
-    const quarter = gameState.quarter || 1;
-    const scoreText = `${gameState.score.away}-${gameState.score.home}`;
+    const quarter = this.getQuarterName(gameState.quarter || 1);
+    const scoreText = `${gameState.awayTeam} ${gameState.score.away} - ${gameState.homeTeam} ${gameState.score.home}`;
+    const timeLeft = this.formatTimeRemaining(gameState.timeRemaining);
     
     switch (alertResult.alertType) {
       case 'redZone':
-        return `🚨 RED ZONE! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd line`;
+        return `🚨 RED ZONE ALERT! ${gameState.awayTeam} is close to scoring!
+        
+Score: ${scoreText}
+Time: ${quarter} ${timeLeft}
+Situation: ${this.getDownText(gameState.down)} down, need ${gameState.distance} yards
+Field Position: ${gameState.yardsToGoal} yards from the end zone`;
       
       case 'fourthDown':
-        return `💥 4TH DOWN! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - 4th & ${gameState.distance} at ${gameState.yardsToGoal}yd line`;
+        return `💥 4TH DOWN DECISION! Big play coming up!
+        
+Score: ${scoreText}
+Time: ${quarter} ${timeLeft}
+Situation: 4th down - ${gameState.awayTeam} needs ${gameState.distance} yards or they lose the ball!
+Field Position: ${gameState.yardsToGoal} yards from scoring`;
       
       case 'ncaafCloseGame':
-        return `🔥 CLOSE GAME! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - ${Math.abs(gameState.score.home - gameState.score.away)} point game`;
+        const pointDiff = Math.abs(gameState.score.home - gameState.score.away);
+        return `🔥 SUPER CLOSE GAME! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!
+        
+Score: ${scoreText}
+Time: ${quarter} ${timeLeft}
+Why it matters: Either team could win - every play is huge!`;
       
       case 'overtime':
-        return `⚡ OVERTIME! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Extra football!`;
+        return `⚡ OVERTIME! The game is tied - extra football time!
+        
+Score: ${scoreText} (TIED!)
+Time: Overtime period
+What happens: Each team gets a chance to score - first to score more wins!`;
       
       case 'twoMinuteWarning':
-        return `⏰ TWO MINUTE DRILL! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - Final 2 minutes`;
+        return `⏰ CRUNCH TIME! Less than 2 minutes left!
+        
+Score: ${scoreText}
+Time: ${quarter} - under 2 minutes remaining
+Why it's exciting: Teams are rushing to score before time runs out!`;
       
       case 'goalLineStand':
-        return `🛡️ GOAL LINE STAND! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd`;
+        return `🛡️ GOAL LINE BATTLE! ${gameState.awayTeam} is trying to punch it in!
+        
+Score: ${scoreText}
+Time: ${quarter} ${timeLeft}
+Situation: ${this.getDownText(gameState.down)} down at the ${gameState.yardsToGoal} yard line
+What's happening: The defense is trying to stop them from scoring!`;
       
       default:
-        return `🏈 ${alertResult.alertType.toUpperCase()}: ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter}`;
+        return `🏈 ${alertResult.alertType.toUpperCase()} ALERT!
+        
+Score: ${scoreText}
+Time: ${quarter} ${timeLeft}
+Situation: Something exciting is happening in this game!`;
+    }
+  }
+
+  private getQuarterName(quarter: number): string {
+    switch (quarter) {
+      case 1: return '1st Quarter';
+      case 2: return '2nd Quarter'; 
+      case 3: return '3rd Quarter';
+      case 4: return '4th Quarter';
+      default: return quarter > 4 ? 'Overtime' : `Quarter ${quarter}`;
+    }
+  }
+
+  private getDownText(down: number): string {
+    switch (down) {
+      case 1: return '1st';
+      case 2: return '2nd';
+      case 3: return '3rd';
+      case 4: return '4th';
+      default: return `${down}th`;
+    }
+  }
+
+  private formatTimeRemaining(seconds: number): string {
+    if (!seconds || seconds <= 0) return '';
+    
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (minutes > 0) {
+      return `(${minutes}:${remainingSeconds.toString().padStart(2, '0')} left)`;
+    } else {
+      return `(${remainingSeconds} seconds left)`;
     }
   }
 
