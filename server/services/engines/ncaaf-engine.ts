@@ -1022,9 +1022,19 @@ export class NCAAEngine {
       }
       console.log(`✅ NCAAF: Basic live alert toggle validated - proceeding...`);
 
-      // Stage 4: Create basic live game alert (AI completely disabled)
+      // Stage 4: Create basic live game alert (AI completely disabled) with kid-friendly format
       const alertId = randomUUID();
       console.log(`🆔 NCAAF: Generating basic live alert with ID: ${alertId}`);
+      
+      // Create kid-friendly title and description
+      const kidFriendlyTitle = `🏈 GAME STARTED! ${gameInfo.awayTeamName} vs ${gameInfo.homeTeamName}`;
+      const kidFriendlyDescription = `🏈 COLLEGE FOOTBALL IS LIVE!
+
+Teams Playing: ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}
+Score: Just started! (0-0)
+What's happening: The game just kicked off - players are on the field!
+
+🎉 Get ready for some exciting college football action!`;
       
       const alert = {
         id: alertId,
@@ -1032,9 +1042,9 @@ export class NCAAEngine {
         type: 'ncaafGameLive',
         sport: 'NCAAF',
         priority: 70,
-        title: enhancedTitle,
-        message: enhancedDescription,
-        description: enhancedDescription,
+        title: kidFriendlyTitle,
+        message: kidFriendlyDescription,
+        description: kidFriendlyDescription,
         gameInfo: {
           sport: 'NCAAF',
           gameId: gameId,
@@ -1063,7 +1073,7 @@ export class NCAAEngine {
         },
         
         probability: 0.8,
-        confidence: aiConfidence,
+        confidence: 0.75,
         betbookData: betbookData,
         timestamp: new Date(),
         userId: 'system',
@@ -1156,8 +1166,11 @@ What's happening: The game just kicked off - players are on the field!
 
       console.log(`🎯 NCAAF: Proceeding with alert delivery - ${alertResult.alertType}`);
 
-      // Stage 2: Generate alert description (AI disabled)
+      // Stage 2: Generate kid-friendly alert description (AI disabled)
       const alertDescription = this.buildAlertDescription(alertResult, gameState);
+      
+      // Create kid-friendly title based on alert type
+      const kidFriendlyTitle = this.buildKidFriendlyTitle(alertResult.alertType, gameState);
 
       // Stage 3: Betbook Analysis - Generate betting insights
       let betbookData = null;
@@ -1333,6 +1346,37 @@ Situation: Something exciting is happening in this game!`;
     }
   }
 
+  private buildKidFriendlyTitle(alertType: string, gameState: NCAAGameState): string {
+    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
+    
+    switch (alertType) {
+      case 'redZone':
+        return `🚨 RED ZONE! ${gameState.awayTeam} is close to scoring!`;
+      
+      case 'fourthDown':
+        return `💥 4TH DOWN! Big decision time for ${gameState.awayTeam}!`;
+      
+      case 'ncaafCloseGame':
+        const pointDiff = Math.abs(gameState.score.home - gameState.score.away);
+        return `🔥 SUPER CLOSE! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!`;
+      
+      case 'overtime':
+        return `⚡ OVERTIME! ${teamVs} is tied - extra football!`;
+      
+      case 'twoMinuteWarning':
+        return `⏰ CRUNCH TIME! Less than 2 minutes left!`;
+      
+      case 'goalLineStand':
+        return `🛡️ GOAL LINE BATTLE! Will they score?`;
+      
+      case 'ncaafGameLive':
+        return `🏈 GAME STARTED! ${teamVs}`;
+      
+      default:
+        return `🏈 EXCITING PLAY! ${teamVs}`;
+    }
+  }
+
   private async sendTelegramIfEnabled(alert: any): Promise<void> {
     try {
       // Check if Telegram is enabled globally
@@ -1373,7 +1417,7 @@ Situation: Something exciting is happening in this game!`;
         debugId: alertId.substring(0, 8), // Short ID for easy debugging
         type: modelValidation.alertType,
         priority: modelValidation.priority,
-        title: `🏈 NCAAF ${modelValidation.alertType.toUpperCase()}`,
+        title: kidFriendlyTitle,
         description: alertDescription,
         sport: 'NCAAF',
         gameInfo: {
