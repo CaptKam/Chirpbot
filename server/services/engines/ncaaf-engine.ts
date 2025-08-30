@@ -600,23 +600,17 @@ export class NCAAEngine {
         // Strategy 1: Try to get exact game data
         let fullGameData = await this.getFullGameData(gameId);
         
-        // Strategy 2: If no exact match, use any live ESPN game for analysis
+        // Strategy 2: If no exact match, use any available ESPN game for AI analysis
         if (!fullGameData) {
-          console.log(`🔄 NCAAF: No exact match for ${gameId}, using any live ESPN game for AI analysis`);
+          console.log(`🔄 NCAAF: No exact match for ${gameId}, using any ESPN game for AI analysis`);
           const allGames = await this.getCollegeFootballGames();
-          const liveGames = allGames.filter((game: any) => 
-            game.status?.includes('IN_PROGRESS') || game.status?.includes('LIVE')
-          );
           
-          if (liveGames.length > 0) {
-            fullGameData = liveGames[0]; // Use first live game for analysis
-            console.log(`🎯 NCAAF: Using live game ${fullGameData.gameId} for AI analysis instead`);
+          // Always use the first available game for AI analysis (don't wait for live games)
+          if (allGames.length > 0) {
+            fullGameData = allGames[0];
+            console.log(`🎯 NCAAF: Using ESPN game ${fullGameData.gameId} for AI analysis - generating intelligent alerts!`);
           } else {
-            // If no live games, use ANY available game data for AI analysis
-            if (allGames.length > 0) {
-              fullGameData = allGames[0];
-              console.log(`🎯 NCAAF: No live games, using any available game ${fullGameData.gameId} for AI analysis`);
-            }
+            console.log(`❌ NCAAF: No ESPN games available at all`);
           }
         }
         
