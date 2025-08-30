@@ -392,7 +392,7 @@ export class NCAAEngine {
       const timeLeft = this.formatTimeRemaining(gameState.timeRemaining);
       const scoreText = `${gameState.awayTeam} ${gameState.score.away} - ${gameState.homeTeam} ${gameState.score.home}`;
 
-      const kidFriendlyTitle = `🏈 GAME UPDATE: ${gameState.awayTeam} vs ${gameState.homeTeam}`;
+      const kidFriendlyTitle = this.createFriendlyTitle('gameStateSnapshot', gameState);
       const kidFriendlyDescription = `🏈 COLLEGE FOOTBALL UPDATE!
 
 Teams Playing: ${gameState.awayTeam} @ ${gameState.homeTeam}
@@ -1531,19 +1531,21 @@ ${situation}`;
     
     switch (alertType) {
       case 'redZone':
-        return `🚨 RED ZONE! ${gameState.offense} is close to scoring!`;
+        return `🚨 RED ZONE! ${gameState.offense || gameState.awayTeam || gameState.homeTeam} is close to scoring!`;
       case 'closeGame':
         return `🔥 CLOSE GAME! ${scoreText} - Anyone can win!`;
       case 'fourthDown':
-        return `💥 4TH DOWN! ${gameState.offense} must convert or lose the ball!`;
+        return `💥 4TH DOWN! ${gameState.offense || gameState.awayTeam || gameState.homeTeam} must convert or lose the ball!`;
       case 'twoMinuteWarning':
         return `⏰ 2 MINUTES LEFT! ${scoreText} - Crunch time!`;
       case 'overtime':
         return `🏈 OVERTIME! ${scoreText} - Extra football!`;
       case 'goalLineStand':
-        return `🛡️ GOAL LINE STAND! ${gameState.defense} trying to stop a score!`;
+        return `🛡️ GOAL LINE STAND! ${gameState.defense || (gameState.offense === gameState.awayTeam ? gameState.homeTeam : gameState.awayTeam)} trying to stop a score!`;
       case 'bigPlayPotential':
-        return `⚡ BIG PLAY SETUP! ${gameState.offense} has a great chance!`;
+        return `⚡ BIG PLAY SETUP! ${gameState.offense || gameState.awayTeam || gameState.homeTeam} has a great chance!`;
+      case 'gameStateSnapshot':
+        return `📊 GAME TRACKER: ${scoreText} - Quarter ${gameState.quarter}`;
       default:
         return `🏈 EXCITING MOMENT! ${scoreText}`;
     }
