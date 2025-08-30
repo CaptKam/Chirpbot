@@ -563,10 +563,10 @@ export class NCAAEngine {
           awayTeam: gameInfo.awayTeamName,
           homeScore: 0,
           awayScore: 0,
-          gameState: '1st Quarter',
-          situationContext: 'Game is now live and being monitored for exciting plays',
-          scoringProbability: 0.8,
-          priority: 70
+          gameState: 'Opening Kickoff - 1st Quarter',
+          situationContext: `${gameInfo.awayTeamName} opens their season on the road against ${gameInfo.homeTeamName}. Both teams have game-planned extensively for this moment, with offensive coordinators looking to establish early rhythm while defensive units aim to create immediate pressure and force early mistakes. The opening drive will set the tone for momentum and field position battle.`,
+          scoringProbability: 0.75,
+          priority: 85
         };
         const aiDescription = await this.openAiEngine.generateAlertDescription(gameSituation);
         

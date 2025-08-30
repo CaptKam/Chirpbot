@@ -91,28 +91,44 @@ export class OpenAiEngine {
    */
   async generateAlertDescription(situation: GameSituation): Promise<string> {
     try {
-      const prompt = `Create a compelling, concise sports alert (max 120 characters) for this situation:
+      const prompt = `You are a professional college football analyst providing real-time insights. Analyze this live game situation and provide a sophisticated, detailed alert for sports enthusiasts:
 
-${situation.sport} GAME: ${situation.awayTeam} @ ${situation.homeTeam}
-Score: ${situation.awayTeam} ${situation.awayScore} - ${situation.homeTeam} ${situation.homeScore}
-Situation: ${situation.situationContext}
-${situation.scoringProbability ? `Scoring Probability: ${Math.round(situation.scoringProbability * 100)}%` : ''}
+🏈 LIVE COLLEGE FOOTBALL ANALYSIS REQUEST:
 
-Make it exciting and informative for sports fans.`;
+MATCHUP: ${situation.awayTeam} @ ${situation.homeTeam}
+CURRENT SCORE: ${situation.awayTeam} ${situation.awayScore} - ${situation.homeTeam} ${situation.homeScore}
+GAME STATE: ${situation.gameState}
+SITUATION: ${situation.situationContext}
+${situation.scoringProbability ? `SCORING PROBABILITY: ${Math.round(situation.scoringProbability * 100)}%` : ''}
+ALERT PRIORITY: ${situation.priority}/100
+
+ANALYSIS REQUIREMENTS:
+- Provide 2-3 sentences of sophisticated game analysis
+- Include strategic insights about team positioning and momentum  
+- Mention specific tactical implications and what to watch for
+- Use professional sports terminology
+- Make it engaging for serious college football fans
+- Focus on WHY this moment matters, not just WHAT is happening
+
+Format your response as a single, flowing analytical description (no bullet points or lists). Sound like an expert analyst breaking down the action for passionate fans.`;
 
       const completion = await this.client.chat.completions.create({
         model: 'gpt-5', // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         messages: [{ role: 'user', content: prompt }],
-        max_completion_tokens: 50,
+        max_completion_tokens: 200,
         // temperature: 1 (default) - gpt-5 only supports default value
       });
 
       const description = completion.choices[0]?.message?.content?.trim();
       
-      if (description && description.length > 10) {
+      console.log(`🤖 OpenAI Raw Response Length: ${description ? description.length : 0}`);
+      console.log(`🤖 OpenAI Raw Response: "${description}"`);
+      
+      if (description && description.length > 15) {
         return description;
       } else {
-        throw new Error('Generated description too short');
+        console.log(`❌ Description too short (${description ? description.length : 0} chars): "${description}"`);
+        throw new Error(`Generated description too short: ${description ? description.length : 0} characters`);
       }
     } catch (error) {
       console.error('❌ OpenAI Alert Description Error:', error);
