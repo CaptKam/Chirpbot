@@ -1412,8 +1412,14 @@ Situation: Something exciting is happening in this game!`;
       const alertId = randomUUID();
       console.log(`🆔 NCAAF: Generating CJS model alert with ID: ${alertId} | Type: ${modelValidation.alertType}`);
       
-      // Create kid-friendly title based on alert type
-      const kidFriendlyTitle = this.buildKidFriendlyTitle(modelValidation.alertType, gameState);
+      // Create kid-friendly title based on alert type with error handling
+      let kidFriendlyTitle: string;
+      try {
+        kidFriendlyTitle = this.buildKidFriendlyTitle(modelValidation.alertType, gameState);
+      } catch (error) {
+        console.error('Error building kid-friendly title:', error);
+        kidFriendlyTitle = `🏈 ${modelValidation.alertType.toUpperCase()} - ${gameState.awayTeam} vs ${gameState.homeTeam}`;
+      }
       
       const finalAlert = {
         id: alertId,
