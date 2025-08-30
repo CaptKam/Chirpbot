@@ -246,17 +246,27 @@ export class MLBEngine {
   }
 
   /**
-   * Stage 4: Delivery - Create alert record and broadcast to clients
+   * Stage 4: Delivery - Route through CJS Alert Model then create alert record
    */
   private async deliverAlert(alert: SimpleAlert, gameState: MLBGameStateV3, description: string, betbookData: any): Promise<void> {
     try {
+      // Stage 1: Validate through MLB Alert Model (.cjs)
+      const modelState = this.mapGameStateForAlertModel(gameState);
+      const modelValidation = mlbAlertModel.checkScoringProbability(modelState);
+      
+      if (!modelValidation.shouldAlert) {
+        console.log(`🛡️ MLB: Alert blocked by CJS model validation`);
+        return;
+      }
+
+      // Stage 2: Create alert with CJS model validation
       const alertData = {
         id: randomUUID(),
         type: 'SCORING',
         sport: 'MLB',
         title: 'MLB Scoring Opportunity',
         description: description,
-        priority: alert.priority,
+        priority: modelValidation.priority,
         gameInfo: {
           status: 'Live',
           homeTeam: gameState.homeTeam,
@@ -273,24 +283,33 @@ export class MLBEngine {
             home: gameState.homeScore,
             away: gameState.awayScore
           },
-          priority: alert.priority,
-          scoringProbability: alert.probability,
+          priority: modelValidation.priority,
+          scoringProbability: modelValidation.probability,
           currentBatter: gameState.currentBatter,
           balls: gameState.balls,
           strikes: gameState.strikes
         },
+        
+        // Store CJS model analysis
+        alertModelData: {
+          validatedBy: 'mlbAlertModel.cjs',
+          originalAlert: alert,
+          modelValidation: modelValidation,
+          severity: modelValidation.severity
+        },
+        
         createdAt: new Date(),
         seen: false,
         betbookData: betbookData
       };
 
-      // Create alert in database
+      // Stage 3: Create alert in database (now properly validated)
       const createdAlert = await storage.createAlert(alertData);
       
-      // Record alert emission for deduplication
+      // Stage 4: Record alert emission for deduplication
       this.recordAlertEmission(alert);
       
-      // Broadcast to WebSocket clients
+      // Stage 5: Broadcast to WebSocket clients
       if (this.onAlert) {
         this.onAlert({
           type: 'new_alert',
@@ -298,10 +317,10 @@ export class MLBEngine {
         });
       }
       
-      console.log(`✅ MLB Alert delivered: ${description} (Priority: ${alert.priority})`);
+      console.log(`✅ MLB Alert delivered via CJS model: ${description} (Priority: ${modelValidation.priority})`);
       
     } catch (error) {
-      console.error('Error delivering alert:', error);
+      console.error('Error delivering alert through CJS model:', error);
     }
   }
 

@@ -1137,73 +1137,11 @@ export class NCAAEngine {
         console.error('Stage 3 Betbook insights failed:', error);
       }
 
-      // Stage 4: Delivery - Create and store the alert with comprehensive data
-      const finalAlert = {
-        id: randomUUID(),
-        type: alertResult.alertType,
-        priority: alertResult.priority,
-        title: `🏈 NCAAF ${alertResult.alertType.toUpperCase()}`,
-        description: alertDescription,
-        sport: 'NCAAF',
-        gameInfo: {
-          status: 'live',
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          score: gameState.score,
-          quarter: gameState.quarter,
-          situation: alertResult.alertType,
-          down: gameState.down,
-          distance: gameState.distance,
-          yardsToGoal: gameState.yardsToGoal
-        },
-        
-        // Store comprehensive game state for analysis
-        gameStateSnapshot: {
-          timestamp: new Date(),
-          period: gameState.period,
-          timeRemaining: gameState.timeRemaining,
-          down: gameState.down,
-          distance: gameState.distance,
-          yardsToGoal: gameState.yardsToGoal,
-          fieldPosition: gameState.fieldPosition,
-          offense: gameState.offense,
-          defense: gameState.defense,
-          redZone: gameState.redZone,
-          overtime: gameState.overtime,
-          finalMinutes: gameState.finalMinutes,
-          timeoutsRemaining: gameState.timeoutsRemaining,
-          playType: gameState.playType,
-          lastPlayResult: gameState.lastPlayResult,
-          weather: gameState.weather,
-          teamStats: gameState.teamStats,
-          drives: gameState.drives,
-          keyPlayers: gameState.keyPlayers,
-          momentumFactor: gameState.momentumFactor,
-          conference: gameState.conference
-        },
-        
-        probability: alertResult.probability,
-        confidence: 0.75,
-        betbookData: betbookData,
-        timestamp: new Date(),
-        sentToTelegram: false,
-        seen: false,
-        reasons: alertResult.reasons
-      };
-
-      // Store alert in database  
-      await storage.createAlert(finalAlert);
+      // Stage 4: Delivery - Route through Alert Model for validation and processing
+      const validatedAlert = await this.processAlertThroughModel(alertResult, gameState, alertDescription, betbookData, deduplicationKey);
       
-      // Record deduplication
-      this.recordDeduplicationByKey(deduplicationKey);
-      
-      // Send to Telegram if enabled
-      await this.sendTelegramIfEnabled(finalAlert);
-      
-      // Call onAlert callback if set
-      if (this.onAlert) {
-        this.onAlert(finalAlert);
+      if (validatedAlert) {
+        console.log(`🏈 NCAAF Alert Generated: ${alertResult.alertType} - ${gameState.awayTeam} @ ${gameState.homeTeam} (Priority: ${alertResult.priority})`);
       }
 
       console.log(`🏈 NCAAF Alert Generated: ${alertResult.alertType} - ${gameState.awayTeam} @ ${gameState.homeTeam} (Priority: ${alertResult.priority})`);
@@ -1301,6 +1239,91 @@ export class NCAAEngine {
       }
     } catch (error) {
       console.error('Error sending Telegram alert:', error);
+    }
+  }
+
+  // Process alert through CJS alert model before sending to alerts page
+  private async processAlertThroughModel(alertResult: any, gameState: NCAAGameState, alertDescription: string, betbookData: any, deduplicationKey: string): Promise<any> {
+    try {
+      // Stage 1: Validate through NCAAF Alert Model (.cjs)
+      const modelValidation = ncaafAlertModel.checkNCAAFAlerts(gameState);
+      
+      if (!modelValidation.shouldAlert) {
+        console.log(`🛡️ NCAAF: Alert blocked by CJS model validation`);
+        return null;
+      }
+
+      // Stage 2: Create alert object with CJS model data
+      const finalAlert = {
+        id: randomUUID(),
+        type: modelValidation.alertType,
+        priority: modelValidation.priority,
+        title: `🏈 NCAAF ${modelValidation.alertType.toUpperCase()}`,
+        description: alertDescription,
+        sport: 'NCAAF',
+        gameInfo: {
+          status: 'live',
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          score: gameState.score,
+          quarter: gameState.quarter,
+          situation: modelValidation.alertType,
+          down: gameState.down,
+          distance: gameState.distance,
+          yardsToGoal: gameState.yardsToGoal
+        },
+        
+        // Store CJS model analysis
+        alertModelData: {
+          validatedBy: 'NCAAFAlertModel.cjs',
+          originalResult: alertResult,
+          modelResult: modelValidation,
+          gameStateSnapshot: {
+            timestamp: new Date(),
+            period: gameState.period,
+            timeRemaining: gameState.timeRemaining,
+            down: gameState.down,
+            distance: gameState.distance,
+            yardsToGoal: gameState.yardsToGoal,
+            fieldPosition: gameState.fieldPosition,
+            offense: gameState.offense,
+            defense: gameState.defense,
+            redZone: gameState.redZone,
+            overtime: gameState.overtime,
+            finalMinutes: gameState.finalMinutes,
+            conference: gameState.conference
+          }
+        },
+        
+        probability: modelValidation.probability,
+        confidence: 0.75,
+        betbookData: betbookData,
+        timestamp: new Date(),
+        sentToTelegram: false,
+        seen: false,
+        reasons: modelValidation.reasons
+      };
+
+      // Stage 3: Store alert in database (now properly validated)
+      await storage.createAlert(finalAlert);
+      
+      // Stage 4: Record deduplication
+      this.recordDeduplicationByKey(deduplicationKey);
+      
+      // Stage 5: Send to Telegram if enabled
+      await this.sendTelegramIfEnabled(finalAlert);
+      
+      // Stage 6: Call onAlert callback if set (WebSocket broadcast)
+      if (this.onAlert) {
+        this.onAlert(finalAlert);
+      }
+
+      return finalAlert;
+      
+    } catch (error) {
+      console.error('❌ Error processing alert through CJS model:', error);
+      return null;
     }
   }
 
