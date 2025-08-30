@@ -7,6 +7,8 @@ import { fetchJson } from '../http';
 import { OpenAiEngine } from './OpenAiEngine';
 import { getBetbookData } from './betbook-engine';
 
+// @ts-ignore - CommonJS module import
+
 // Import NCAAF Alert Model (CommonJS module)
 let ncaafAlertModel: NCAAFAlertModelType | null = null;
 
@@ -137,8 +139,8 @@ export class NCAAEngine {
   private async loadNCAAFAlertModel() {
     try {
       if (!ncaafAlertModel) {
-        // Use dynamic import for CommonJS module
-        ncaafAlertModel = await import('./NCAAFAlertModel.cjs') as NCAAFAlertModelType;
+        // @ts-ignore - CommonJS module import  
+        ncaafAlertModel = await import('./NCAAFAlertModel.cjs') as any as NCAAFAlertModelType;
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
