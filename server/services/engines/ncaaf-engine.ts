@@ -1017,8 +1017,12 @@ export class NCAAEngine {
       console.log(`✅ NCAAF: Basic live alert toggle validated - proceeding...`);
 
       // Stage 4: Create basic live game alert (AI completely disabled)
+      const alertId = randomUUID();
+      console.log(`🆔 NCAAF: Generating basic live alert with ID: ${alertId}`);
+      
       const alert = {
-        id: randomUUID(),
+        id: alertId,
+        debugId: alertId.substring(0, 8), // Short ID for easy debugging
         type: 'ncaafGameLive',
         sport: 'NCAAF',
         priority: 70,
@@ -1074,7 +1078,8 @@ export class NCAAEngine {
 
       // Store and broadcast the alert
       await storage.createAlert(alert);
-      console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (ID: ${alert.id})`);
+      console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`);
+      console.log(`🆔 NCAAF: Alert ID: ${alert.id} | Debug ID: ${alert.debugId} | Type: ${alert.type}`);
       
       if (this.onAlert) {
         this.onAlert(alert);
@@ -1282,8 +1287,12 @@ export class NCAAEngine {
       console.log(`✅ NCAAF: Alert type ${modelValidation.alertType} validated through user settings`);
 
       // Stage 2: Create alert object with CJS model data
+      const alertId = randomUUID();
+      console.log(`🆔 NCAAF: Generating CJS model alert with ID: ${alertId} | Type: ${modelValidation.alertType}`);
+      
       const finalAlert = {
-        id: randomUUID(),
+        id: alertId,
+        debugId: alertId.substring(0, 8), // Short ID for easy debugging
         type: modelValidation.alertType,
         priority: modelValidation.priority,
         title: `🏈 NCAAF ${modelValidation.alertType.toUpperCase()}`,
@@ -1335,9 +1344,12 @@ export class NCAAEngine {
 
       // Stage 3: Store alert in database (now properly validated)
       await storage.createAlert(finalAlert);
+      console.log(`💾 NCAAF: Alert stored in database`);
+      console.log(`🆔 NCAAF: Alert ID: ${finalAlert.id} | Debug ID: ${finalAlert.debugId} | Type: ${finalAlert.type} | Priority: ${finalAlert.priority}`);
       
       // Stage 4: Record deduplication
       this.recordDeduplicationByKey(deduplicationKey);
+      console.log(`🔄 NCAAF: Deduplication recorded for: ${deduplicationKey}`);
       
       // Stage 5: Send to Telegram if enabled
       await this.sendTelegramIfEnabled(finalAlert);
@@ -1345,6 +1357,7 @@ export class NCAAEngine {
       // Stage 6: Call onAlert callback if set (WebSocket broadcast)
       if (this.onAlert) {
         this.onAlert(finalAlert);
+        console.log(`📡 NCAAF: Alert broadcasted via WebSocket | ID: ${finalAlert.debugId}`);
       }
 
       return finalAlert;

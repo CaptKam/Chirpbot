@@ -90,7 +90,7 @@ app.use((req, res, next) => {
     console.error('⚠️ Database seeding failed (may already be seeded):', err);
     // Continue anyway - the database might already be seeded
   }
-  
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -104,7 +104,7 @@ app.use((req, res, next) => {
       method: _req.method,
       status
     });
-    
+
     // Ensure response is sent if not already sent
     if (!res.headersSent) {
       res.status(status).json({ message });
@@ -134,3 +134,45 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })();
+
+// This is a placeholder for the WebSocket server setup.
+// In a real application, you would initialize your WebSocket server here.
+// For example:
+// import WebSocket from 'ws';
+// const wss = new WebSocket.Server({ server });
+//
+// Replace the following placeholder with your actual WebSocket server initialization and alert callback handling.
+// For the purpose of this example, we'll assume 'wss' and 'alertEngineManager' are defined elsewhere and accessible.
+
+// Example placeholder for WebSocket server and alert manager
+const wss: any = { clients: new Set() }; // Mock WebSocket server
+const alertEngineManager: any = {
+  setAlertCallback: (callback: (alert: any) => void) => {
+    // Simulate an alert being generated
+    // setTimeout(() => {
+    //   callback({ id: 'a1b2c3d4', type: 'System', message: 'CPU Usage High', data: { cpu: 95 } });
+    // }, 5000);
+    // setTimeout(() => {
+    //   callback({ id: 'e5f6g7h8', type: 'Network', message: 'High Latency', data: { latency: 200 } });
+    // }, 10000);
+  }
+};
+
+// Applying the requested changes to the alert callback
+alertEngineManager.setAlertCallback((alert: any) => {
+    const alertId = alert.id || alert.data?.id || 'unknown';
+    const debugId = alert.debugId || alert.data?.debugId || alertId.substring(0, 8);
+    console.log(`📡 WEBSOCKET: Broadcasting alert | ID: ${alertId} | Debug ID: ${debugId} | Type: ${alert.type || alert.data?.type}`);
+
+    // Broadcast to all connected clients
+    wss.clients.forEach((client: any) => {
+      if (client.readyState === client.OPEN) {
+        client.send(JSON.stringify({
+          type: 'new_alert',
+          data: alert
+        }));
+      }
+    });
+
+    console.log(`📡 WEBSOCKET: Alert broadcasted to ${wss.clients.size} clients`);
+  });

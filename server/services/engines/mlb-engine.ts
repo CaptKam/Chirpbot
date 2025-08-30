@@ -260,8 +260,12 @@ export class MLBEngine {
       }
 
       // Stage 2: Create alert with CJS model validation
+      const alertId = randomUUID();
+      console.log(`🆔 MLB: Generating scoring alert with ID: ${alertId}`);
+      
       const alertData = {
-        id: randomUUID(),
+        id: alertId,
+        debugId: alertId.substring(0, 8), // Short ID for easy debugging
         type: 'SCORING',
         sport: 'MLB',
         title: 'MLB Scoring Opportunity',
@@ -305,9 +309,12 @@ export class MLBEngine {
 
       // Stage 3: Create alert in database (now properly validated)
       const createdAlert = await storage.createAlert(alertData);
+      console.log(`💾 MLB: Alert stored in database`);
+      console.log(`🆔 MLB: Alert ID: ${alertData.id} | Debug ID: ${alertData.debugId} | Type: ${alertData.type} | Priority: ${modelValidation.priority}`);
       
       // Stage 4: Record alert emission for deduplication
       this.recordAlertEmission(alert);
+      console.log(`🔄 MLB: Deduplication recorded for: ${alert.deduplicationKey}`);
       
       // Stage 5: Broadcast to WebSocket clients
       if (this.onAlert) {
@@ -315,6 +322,7 @@ export class MLBEngine {
           type: 'new_alert',
           data: createdAlert
         });
+        console.log(`📡 MLB: Alert broadcasted via WebSocket | ID: ${alertData.debugId}`);
       }
       
       console.log(`✅ MLB Alert delivered via CJS model: ${description} (Priority: ${modelValidation.priority})`);

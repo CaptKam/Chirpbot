@@ -39,6 +39,7 @@ export const teams = pgTable("teams", {
 
 export const alerts = pgTable("alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  debugId: text("debug_id"), // Short ID for easy debugging (first 8 chars of main ID)
   type: text("type").notNull(), // RISP, RedZone, ClutchTime, etc.
   sport: text("sport").notNull(),
   title: text("title").notNull(),

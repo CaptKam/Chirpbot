@@ -36,7 +36,7 @@ export interface IStorage {
   getAlertsBySport(sport: string): Promise<Alert[]>;
   getAlertsByType(type: string): Promise<Alert[]>;
   getRecentAlerts(limit?: number): Promise<Alert[]>;
-  createAlert(alert: InsertAlert): Promise<Alert>;
+  createAlert(alert: InsertAlert & { debugId?: string }): Promise<Alert>;
   markAlertSentToTelegram(id: string): Promise<void>;
   markAlertAsSeen(id: string): Promise<void>;
   markAllAlertsAsSeen(): Promise<void>;
@@ -436,7 +436,7 @@ export class MemStorage implements IStorage {
       .slice(0, limit);
   }
 
-  async createAlert(insertAlert: InsertAlert): Promise<Alert> {
+  async createAlert(insertAlert: InsertAlert & { debugId?: string }): Promise<Alert> {
     const id = randomUUID();
     const alert: Alert = { 
       ...insertAlert, 
@@ -468,6 +468,11 @@ export class MemStorage implements IStorage {
       } : null
     };
     this.alerts.set(id, alert);
+
+    console.log(`💾 STORAGE: Alert created | ID: ${id} | Type: ${alert.type} | Sport: ${alert.sport}`);
+    if (insertAlert.debugId) {
+      console.log(`🆔 STORAGE: Debug ID: ${insertAlert.debugId}`);
+    }
 
     // Auto-clear old alerts if we have more than 30
     if (this.alerts.size > 30) {
@@ -770,7 +775,10 @@ export class MemStorage implements IStorage {
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {
+  private db; // Add db property for direct access
+
   constructor() {
+    this.db = db; // Assign db to the property
     // Initialize master alert controls when the database storage is created
     this.initializeMasterAlertControls().catch(console.error);
   }
@@ -778,7 +786,7 @@ export class DatabaseStorage implements IStorage {
   private async initializeMasterAlertControls() {
     try {
       // Check if controls already exist
-      const existingControls = await db.select().from(masterAlertControls).limit(1);
+      const existingControls = await this.db.select().from(masterAlertControls).limit(1);
       if (existingControls.length > 0) {
         return; // Already initialized
       }
@@ -839,7 +847,7 @@ export class DatabaseStorage implements IStorage {
 
       // Insert all controls into database
       if (allAlerts.length > 0) {
-        await db.insert(masterAlertControls).values(
+        await this.db.insert(masterAlertControls).values(
           allAlerts.map(alert => ({
             sport: alert.sport,
             alertKey: alert.alertKey,
@@ -858,38 +866,38 @@ export class DatabaseStorage implements IStorage {
 
   // User methods
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     // Case-insensitive search for username or email
     const lowerInput = username.toLowerCase();
-    const [user] = await db.select().from(users)
+    const [user] = await this.db.select().from(users)
       .where(sql`(LOWER(${users.username}) = ${lowerInput} OR LOWER(${users.email}) = ${lowerInput})`);
     return user || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const lowerEmail = email.toLowerCase();
-    const [user] = await db.select().from(users)
+    const [user] = await this.db.select().from(users)
       .where(sql`LOWER(${users.email}) = ${lowerEmail}`);
     return user || undefined;
   }
 
   async getUserByOAuthId(provider: 'google' | 'apple', oauthId: string): Promise<User | undefined> {
     const column = provider === 'google' ? users.googleId : users.appleId;
-    const [user] = await db.select().from(users).where(eq(column, oauthId));
+    const [user] = await this.db.select().from(users).where(eq(column, oauthId));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await this.db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async updateUserTelegramSettings(id: string, telegramBotToken: string, telegramChatId: string, enabled: boolean): Promise<User | undefined> {
-    const [user] = await db.update(users)
+    const [user] = await this.db.update(users)
       .set({
         telegramBotToken,
         telegramChatId,
@@ -902,31 +910,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUsersWithTelegramEnabled(): Promise<User[]> {
-    return await db.select()
+    return await this.db.select()
       .from(users)
       .where(eq(users.telegramEnabled, true));
   }
 
   // Team methods (legacy, but maintained for compatibility)
   async getAllTeams(): Promise<Team[]> {
-    return await db.select().from(teams);
+    return await this.db.select().from(teams);
   }
 
   async getTeamsBySport(sport: string): Promise<Team[]> {
-    return await db.select().from(teams).where(eq(teams.sport, sport));
+    return await this.db.select().from(teams).where(eq(teams.sport, sport));
   }
 
   async getMonitoredTeams(): Promise<Team[]> {
-    return await db.select().from(teams).where(eq(teams.monitored, true));
+    return await this.db.select().from(teams).where(eq(teams.monitored, true));
   }
 
   async createTeam(insertTeam: InsertTeam): Promise<Team> {
-    const [team] = await db.insert(teams).values(insertTeam).returning();
+    const [team] = await this.db.insert(teams).values(insertTeam).returning();
     return team;
   }
 
   async updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined> {
-    const [updatedTeam] = await db.update(teams).set(updates).where(eq(teams.id, id)).returning();
+    const [updatedTeam] = await this.db.update(teams).set(updates).where(eq(teams.id, id)).returning();
     return updatedTeam || undefined;
   }
 
@@ -936,62 +944,62 @@ export class DatabaseStorage implements IStorage {
 
   // User Monitored Games methods (NEW - for persistent game selection)
   async getUserMonitoredGames(userId: string): Promise<UserMonitoredTeam[]> {
-    return await db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
+    return await this.db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
   }
 
   async getUserMonitoredGamesBySport(userId: string, sport: string): Promise<UserMonitoredTeam[]> {
-    return await db.select().from(userMonitoredTeams)
+    return await this.db.select().from(userMonitoredTeams)
       .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.sport, sport)));
   }
 
   async addUserMonitoredGame(monitoring: InsertUserMonitoredTeam): Promise<UserMonitoredTeam> {
-    const [monitoredGame] = await db.insert(userMonitoredTeams).values(monitoring).returning();
+    const [monitoredGame] = await this.db.insert(userMonitoredTeams).values(monitoring).returning();
     return monitoredGame;
   }
 
   async removeUserMonitoredGame(userId: string, gameId: string): Promise<void> {
-    await db.delete(userMonitoredTeams)
+    await this.db.delete(userMonitoredTeams)
       .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.gameId, gameId)));
   }
 
   async clearAllUserMonitoredGames(userId: string): Promise<void> {
-    await db.delete(userMonitoredTeams)
+    await this.db.delete(userMonitoredTeams)
       .where(eq(userMonitoredTeams.userId, userId));
   }
 
   async isGameMonitoredByUser(userId: string, gameId: string): Promise<boolean> {
-    const [result] = await db.select().from(userMonitoredTeams)
+    const [result] = await this.db.select().from(userMonitoredTeams)
       .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.gameId, gameId)));
     return !!result;
   }
 
   async getAllMonitoredGames(): Promise<UserMonitoredTeam[]> {
-    const result = await db.select().from(userMonitoredTeams);
+    const result = await this.db.select().from(userMonitoredTeams);
     return result;
   }
 
   async removeGameFromAllUsers(gameId: string): Promise<void> {
-    await db.delete(userMonitoredTeams).where(eq(userMonitoredTeams.gameId, gameId));
+    await this.db.delete(userMonitoredTeams).where(eq(userMonitoredTeams.gameId, gameId));
   }
 
   // Alert methods
   async getAllAlerts(): Promise<Alert[]> {
-    return await db.select().from(alerts);
+    return await this.db.select().from(alerts);
   }
 
   async getAlertsBySport(sport: string): Promise<Alert[]> {
-    return await db.select().from(alerts).where(eq(alerts.sport, sport));
+    return await this.db.select().from(alerts).where(eq(alerts.sport, sport));
   }
 
   async getAlertsByType(type: string): Promise<Alert[]> {
-    return await db.select().from(alerts).where(eq(alerts.type, type));
+    return await this.db.select().from(alerts).where(eq(alerts.type, type));
   }
 
   async getRecentAlerts(limit = 50): Promise<Alert[]> {
-    return await db.select().from(alerts).orderBy(desc(alerts.timestamp)).limit(limit);
+    return await this.db.select().from(alerts).orderBy(desc(alerts.timestamp)).limit(limit);
   }
 
-  async createAlert(insertAlert: InsertAlert): Promise<Alert> {
+  async createAlert(insertAlert: InsertAlert & { debugId?: string }): Promise<Alert> {
     const alertToInsert = {
       ...insertAlert,
       priority: insertAlert.priority || insertAlert.gameInfo?.priority || 70, // Save to main priority column
@@ -1018,100 +1026,106 @@ export class DatabaseStorage implements IStorage {
         windDirection: insertAlert.weatherData.windDirection as string | undefined,
       } : null,
     };
-    const [alert] = await db.insert(alerts).values([alertToInsert]).returning();
+    const [alert] = await this.db.insert(alerts).values([alertToInsert]).returning();
+    
+    console.log(`💾 STORAGE: Alert created | ID: ${alert.id} | Type: ${alert.type} | Sport: ${alert.sport}`);
+    if (insertAlert.debugId) {
+      console.log(`🆔 STORAGE: Debug ID: ${insertAlert.debugId}`);
+    }
+    
     return alert;
   }
 
   async markAlertSentToTelegram(id: string): Promise<void> {
-    await db.update(alerts).set({ sentToTelegram: true }).where(eq(alerts.id, id));
+    await this.db.update(alerts).set({ sentToTelegram: true }).where(eq(alerts.id, id));
   }
 
   async markAlertAsSeen(id: string): Promise<void> {
-    await db.update(alerts).set({ seen: true }).where(eq(alerts.id, id));
+    await this.db.update(alerts).set({ seen: true }).where(eq(alerts.id, id));
   }
 
   async markAllAlertsAsSeen(): Promise<void> {
-    await db.update(alerts).set({ seen: true });
+    await this.db.update(alerts).set({ seen: true });
   }
 
   async getUnseenAlertsCount(): Promise<number> {
-    const result = await db.select({ count: sql`count(*)` }).from(alerts).where(eq(alerts.seen, false));
+    const result = await this.db.select({ count: sql`count(*)` }).from(alerts).where(eq(alerts.seen, false));
     return Number(result[0]?.count || 0);
   }
 
   async deleteAlert(id: string): Promise<void> {
-    await db.delete(alerts).where(eq(alerts.id, id));
+    await this.db.delete(alerts).where(eq(alerts.id, id));
   }
 
   async clearAllUserAlerts(userId: string): Promise<void> {
     // Clear all alerts since they're global in the current system
-    await db.delete(alerts);
+    await this.db.delete(alerts);
   }
 
   // Settings methods
   async getSettingsBySport(sport: string): Promise<Settings | undefined> {
-    const [setting] = await db.select().from(settings).where(eq(settings.sport, sport));
+    const [setting] = await this.db.select().from(settings).where(eq(settings.sport, sport));
     return setting || undefined;
   }
 
   async getAllSettings(): Promise<Settings[]> {
-    return await db.select().from(settings);
+    return await this.db.select().from(settings);
   }
 
   async createSettings(insertSettings: InsertSettings): Promise<Settings> {
-    const [setting] = await db.insert(settings).values(insertSettings).returning();
+    const [setting] = await this.db.insert(settings).values(insertSettings).returning();
     return setting;
   }
 
   async updateSettings(sport: string, updates: Partial<Settings>): Promise<Settings | undefined> {
-    const [updatedSettings] = await db.update(settings).set(updates).where(eq(settings.sport, sport)).returning();
+    const [updatedSettings] = await this.db.update(settings).set(updates).where(eq(settings.sport, sport)).returning();
     return updatedSettings || undefined;
   }
 
   // Admin AI Settings methods
   async getAiSettingsBySport(sport: string): Promise<AiSettings | undefined> {
-    const [aiSetting] = await db.select().from(aiSettings).where(eq(aiSettings.sport, sport));
+    const [aiSetting] = await this.db.select().from(aiSettings).where(eq(aiSettings.sport, sport));
     return aiSetting || undefined;
   }
 
   async getAllAiSettings(): Promise<AiSettings[]> {
-    return await db.select().from(aiSettings);
+    return await this.db.select().from(aiSettings);
   }
 
   async createAiSettings(settings: InsertAiSettings): Promise<AiSettings> {
-    const [aiSetting] = await db.insert(aiSettings).values(settings).returning();
+    const [aiSetting] = await this.db.insert(aiSettings).values(settings).returning();
     return aiSetting;
   }
 
   async updateAiSettings(sport: string, updates: Partial<AiSettings>): Promise<AiSettings | undefined> {
-    const [updatedAiSettings] = await db.update(aiSettings).set(updates).where(eq(aiSettings.sport, sport)).returning();
+    const [updatedAiSettings] = await this.db.update(aiSettings).set(updates).where(eq(aiSettings.sport, sport)).returning();
     return updatedAiSettings || undefined;
   }
 
   // AI Learning Logs methods
   async getAllAiLearningLogs(): Promise<AiLearningLog[]> {
-    return await db.select().from(aiLearningLogs).orderBy(desc(aiLearningLogs.createdAt));
+    return await this.db.select().from(aiLearningLogs).orderBy(desc(aiLearningLogs.createdAt));
   }
 
   async getAiLearningLogsBySport(sport: string): Promise<AiLearningLog[]> {
-    return await db.select().from(aiLearningLogs)
+    return await this.db.select().from(aiLearningLogs)
       .where(eq(aiLearningLogs.sport, sport))
       .orderBy(desc(aiLearningLogs.createdAt));
   }
 
   async getAiLearningLogsByType(sport: string, alertType: string): Promise<AiLearningLog[]> {
-    return await db.select().from(aiLearningLogs)
+    return await this.db.select().from(aiLearningLogs)
       .where(and(eq(aiLearningLogs.sport, sport), eq(aiLearningLogs.alertType, alertType)))
       .orderBy(desc(aiLearningLogs.createdAt));
   }
 
   async createAiLearningLog(log: InsertAiLearningLog): Promise<AiLearningLog> {
-    const [aiLog] = await db.insert(aiLearningLogs).values(log).returning();
+    const [aiLog] = await this.db.insert(aiLearningLogs).values(log).returning();
     return aiLog;
   }
 
   async updateAiLearningLogFeedback(id: string, feedback: number, feedbackText?: string): Promise<AiLearningLog | undefined> {
-    const [updatedLog] = await db.update(aiLearningLogs)
+    const [updatedLog] = await this.db.update(aiLearningLogs)
       .set({ userFeedback: feedback, userFeedbackText: feedbackText })
       .where(eq(aiLearningLogs.id, id))
       .returning();
@@ -1119,64 +1133,64 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentAiLearningLogs(limit = 50): Promise<AiLearningLog[]> {
-    return await db.select().from(aiLearningLogs)
+    return await this.db.select().from(aiLearningLogs)
       .orderBy(desc(aiLearningLogs.createdAt))
       .limit(limit);
   }
 
   // Audit Logs methods
   async getAllAuditLogs(): Promise<AuditLog[]> {
-    return await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
+    return await this.db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
   }
 
   async getAuditLogsByUser(userId: string): Promise<AuditLog[]> {
-    return await db.select().from(auditLogs)
+    return await this.db.select().from(auditLogs)
       .where(eq(auditLogs.userId, userId))
       .orderBy(desc(auditLogs.createdAt));
   }
 
   async getAuditLogsByResource(resource: string): Promise<AuditLog[]> {
-    return await db.select().from(auditLogs)
+    return await this.db.select().from(auditLogs)
       .where(eq(auditLogs.resource, resource))
       .orderBy(desc(auditLogs.createdAt));
   }
 
   async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
-    const [auditLog] = await db.insert(auditLogs).values(log).returning();
+    const [auditLog] = await this.db.insert(auditLogs).values(log).returning();
     return auditLog;
   }
 
   async getRecentAuditLogs(limit = 50): Promise<AuditLog[]> {
-    return await db.select().from(auditLogs)
+    return await this.db.select().from(auditLogs)
       .orderBy(desc(auditLogs.createdAt))
       .limit(limit);
   }
 
   // Master Alert Control methods
   async getAllMasterAlertControls(): Promise<MasterAlertControl[]> {
-    return await db.select().from(masterAlertControls);
+    return await this.db.select().from(masterAlertControls);
   }
 
   async getMasterAlertControlsBySport(sport: string): Promise<MasterAlertControl[]> {
-    return await db.select().from(masterAlertControls)
+    return await this.db.select().from(masterAlertControls)
       .where(eq(masterAlertControls.sport, sport));
   }
 
   async getMasterAlertControl(alertKey: string, sport: string): Promise<MasterAlertControl | undefined> {
-    const [control] = await db.select().from(masterAlertControls)
+    const [control] = await this.db.select().from(masterAlertControls)
       .where(and(eq(masterAlertControls.alertKey, alertKey), eq(masterAlertControls.sport, sport)));
     return control || undefined;
   }
 
   async createMasterAlertControl(control: InsertMasterAlertControl): Promise<MasterAlertControl> {
-    const [masterControl] = await db.insert(masterAlertControls)
+    const [masterControl] = await this.db.insert(masterAlertControls)
       .values(control)
       .returning();
     return masterControl;
   }
 
   async updateMasterAlertControl(alertKey: string, sport: string, updates: Partial<MasterAlertControl>): Promise<MasterAlertControl | undefined> {
-    const [updated] = await db.update(masterAlertControls)
+    const [updated] = await this.db.update(masterAlertControls)
       .set({ ...updates, updatedAt: new Date() })
       .where(and(eq(masterAlertControls.alertKey, alertKey), eq(masterAlertControls.sport, sport)))
       .returning();
@@ -1184,7 +1198,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEnabledAlertKeysBySport(sport: string): Promise<string[]> {
-    const controls = await db.select({ alertKey: masterAlertControls.alertKey })
+    const controls = await this.db.select({ alertKey: masterAlertControls.alertKey })
       .from(masterAlertControls)
       .where(and(eq(masterAlertControls.sport, sport), eq(masterAlertControls.enabled, true)));
     return controls.map(control => control.alertKey);
@@ -1192,7 +1206,7 @@ export class DatabaseStorage implements IStorage {
 
   // ChirpBot V3 Extensions Implementation
   async getUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    return await this.db.select().from(users);
   }
 
   async getSettingsByUserId(userId: string): Promise<Settings | undefined> {
@@ -1201,7 +1215,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserWithTelegramSettings(userId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    const [user] = await this.db.select().from(users).where(eq(users.id, userId));
     if (user && user.telegramBotToken && user.telegramChatId) {
       return user;
     }
