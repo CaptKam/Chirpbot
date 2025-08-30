@@ -949,29 +949,35 @@ export class NCAAEngine {
         return;
       }
 
-      // Check if user has any NCAAF alerts enabled - but ONLY generate alerts for enabled types
+      // Check if user has any NCAAF alerts enabled - STRICT validation
       const userSettings = await this.getUserNCAAFSettings();
       console.log(`🔍 NCAAF: Debug - userSettings:`, JSON.stringify(userSettings, null, 2));
       const alertTypes = userSettings?.alertTypes || {};
       console.log(`🔍 NCAAF: Debug - alertTypes:`, JSON.stringify(alertTypes, null, 2));
-      const hasAnyEnabled = Object.values(alertTypes).some((enabled: any) => enabled === true);
+      
+      // Check ALL relevant NCAAF toggles - if ALL are disabled, block alert
+      const ncaafToggles = [
+        'ncaafGameLive', 'ncaafRedZone', 'ncaafFourthDown', 
+        'ncaafCloseGame', 'ncaafTwoMinuteWarning', 'ncaafOvertime',
+        'ncaafGoalLineStand', 'ncaafBigPlayPotential'
+      ];
+      
+      const hasAnyEnabled = ncaafToggles.some(toggle => alertTypes[toggle] === true);
       console.log(`🔍 NCAAF: Debug - hasAnyEnabled:`, hasAnyEnabled);
+      
       if (!hasAnyEnabled) {
-        console.log(`🔕 NCAAF: All NCAAF alerts disabled in user settings`);
+        console.log(`🔕 NCAAF: ALL NCAAF alerts disabled in user settings - blocking all alerts`);
         return;
       }
       
-      // IMPORTANT: For basic live alerts, we need to check if 'ncaafGameLive' toggle exists and is enabled
-      // If no specific toggle for basic live alerts, only proceed if red zone or other situational alerts are enabled
+      // STRICT: For basic live alerts, check if 'ncaafGameLive' toggle is specifically enabled
       const hasBasicLiveEnabled = alertTypes.ncaafGameLive === true;
-      const hasSituationalEnabled = alertTypes.ncaafRedZone === true || alertTypes.ncaafFourthDown === true || 
-                                   alertTypes.ncaafCloseGame === true || alertTypes.ncaafTwoMinuteWarning === true;
       
-      if (!hasBasicLiveEnabled && !hasSituationalEnabled) {
-        console.log(`🔕 NCAAF: No relevant alert types enabled for basic live alerts`);
+      if (!hasBasicLiveEnabled) {
+        console.log(`🔕 NCAAF: Basic live alerts (ncaafGameLive) specifically disabled - blocking alert`);
         return;
       }
-      console.log(`✅ NCAAF: User has relevant alerts enabled, proceeding with proper toggle validation...`);
+      console.log(`✅ NCAAF: Basic live alerts specifically enabled, proceeding...`);
       
       console.log(`✅ NCAAF: User has alerts enabled, generating live game alert...`);
 
