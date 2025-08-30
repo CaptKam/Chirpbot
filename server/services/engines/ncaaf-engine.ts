@@ -6,7 +6,6 @@ import { fetchJson } from '../http';
 // Import OpenAI and Betbook engines for alert processing
 import { OpenAiEngine } from './OpenAiEngine';
 import { getBetbookData } from './betbook-engine';
-import { alertDeduplicationEngine } from '../AlertDeduplicationEngine';
 
 // Import NCAAF Alert Model (CommonJS module)
 let ncaafAlertModel: any = null;
@@ -629,10 +628,12 @@ export class NCAAEngine {
           const aiAnalysis = await this.openAiEngine.analyzeGameSituation(fullGameData);
           
           if (aiAnalysis && aiAnalysis.length > 20) {
-            enhancedTitle = `🏈 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`;
+            // Format title with team names and score
+            enhancedTitle = `📢 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`;
+            // Use the structured multi-line analysis from OpenAI
             enhancedDescription = aiAnalysis;
             aiConfidence = 0.90; // Higher confidence for real data analysis
-            console.log(`🤖 NCAAF: AI analyzed real game data - Analysis: ${enhancedDescription}`);
+            console.log(`🤖 NCAAF: AI generated structured alert with ${aiAnalysis.length} chars`);
           }
         } else {
           console.log(`⚠️ NCAAF: No live ESPN games available for AI analysis`);
@@ -682,16 +683,8 @@ export class NCAAEngine {
         seen: false
       };
 
-      // Check with deduplication engine before sending
-      const deduplicationResult = alertDeduplicationEngine.shouldSendAlert(alert);
-      
-      if (!deduplicationResult.shouldSend) {
-        console.log(`🛡️ NCAAF: Alert blocked by deduplication engine - ${deduplicationResult.reason}`);
-        return;
-      }
-
-      // Update alert with unique ID from deduplication engine
-      alert.id = deduplicationResult.uniqueId;
+      // No deduplication - send all alerts
+      const deduplicationResult = { shouldSend: true, uniqueId: alert.id };
 
       // Store and broadcast the alert
       await storage.createAlert(alert);
