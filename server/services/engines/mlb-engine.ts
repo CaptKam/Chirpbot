@@ -465,6 +465,82 @@ export class MLBEngine {
     }
   }
 
+  // === SPECIFIC GAME PROCESSING ===
+
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      const games = await this.getTodaysGames();
+      const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
+      
+      if (!targetGame) {
+        console.log(`⚾ MLB: Game ${gameId} not found in today's games`);
+        return;
+      }
+
+      // Extract gamePk from either the game object or parse from gameId
+      let gamePk: number;
+      if (targetGame.gamePk) {
+        gamePk = targetGame.gamePk;
+      } else if (gameId.includes('-')) {
+        // Parse from gameId format like "mlb-776527"
+        gamePk = parseInt(gameId.split('-')[1]);
+      } else {
+        // Try to parse the gameId directly
+        gamePk = parseInt(gameId);
+      }
+
+      if (isNaN(gamePk)) {
+        console.log(`⚾ MLB: Invalid gamePk for game ${gameId}`);
+        return;
+      }
+
+      const gameState = await this.fetchDetailedGameState(gamePk);
+      if (gameState) {
+        await this.checkGameSituations(gameState);
+      }
+    } catch (error) {
+      console.error(`❌ MLB: Error processing specific game ${gameId}:`, error);
+    }
+  }
+
+  // === SPECIFIC GAME PROCESSING ===
+
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      const games = await this.getTodaysGames();
+      const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
+      
+      if (!targetGame) {
+        console.log(`⚾ MLB: Game ${gameId} not found in today's games`);
+        return;
+      }
+
+      // Extract gamePk from either the game object or parse from gameId
+      let gamePk: number;
+      if (targetGame.gamePk) {
+        gamePk = targetGame.gamePk;
+      } else if (gameId.includes('-')) {
+        // Parse from gameId format like "mlb-776527"
+        gamePk = parseInt(gameId.split('-')[1]);
+      } else {
+        // Try to parse the gameId directly
+        gamePk = parseInt(gameId);
+      }
+
+      if (isNaN(gamePk)) {
+        console.log(`⚾ MLB: Invalid gamePk for game ${gameId}`);
+        return;
+      }
+
+      const gameState = await this.fetchDetailedGameState(gamePk);
+      if (gameState) {
+        await this.checkGameSituations(gameState);
+      }
+    } catch (error) {
+      console.error(`❌ MLB: Error processing specific game ${gameId}:`, error);
+    }
+  }
+
   // === GAME MONITORING LOGIC ===
 
   async monitorLiveGames(): Promise<void> {

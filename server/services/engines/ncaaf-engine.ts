@@ -137,8 +137,8 @@ export class NCAAEngine {
   private async loadNCAAFAlertModel() {
     try {
       if (!ncaafAlertModel) {
-        // Use dynamic import for CommonJS module
-        ncaafAlertModel = await import('./NCAAFAlertModel.cjs') as NCAAFAlertModelType;
+        // Use require for CommonJS module to avoid type issues
+        ncaafAlertModel = require('./NCAAFAlertModel.cjs') as NCAAFAlertModelType;
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
@@ -171,7 +171,7 @@ export class NCAAEngine {
     
     // Clean up old entries (older than 10 minutes)
     const tenMinutesAgo = now - (10 * 60 * 1000);
-    for (const [key, timestamp] of NCAAEngine.alertContentCache.entries()) {
+    for (const [key, timestamp] of Array.from(NCAAEngine.alertContentCache.entries())) {
       if (timestamp < tenMinutesAgo) {
         NCAAEngine.alertContentCache.delete(key);
       }
@@ -375,7 +375,7 @@ export class NCAAEngine {
         
         // Track game state changes for analysis
         const previousState = this.gameStateCache.get(gameState.gameId);
-        await this.trackGameEvents(previousState, gameState);
+        await this.trackGameEvents(previousState || null, gameState);
         
         // Store comprehensive game state snapshot
         await this.storeGameStateSnapshot(gameState);
@@ -427,6 +427,7 @@ export class NCAAEngine {
         title: `Game State: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
         description: `Q${gameState.period} ${gameState.timeRemaining}s - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd line`,
         gameInfo: {
+          status: 'live',
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
@@ -455,7 +456,13 @@ export class NCAAEngine {
       // Store every 5th snapshot to avoid database bloat
       const shouldStore = Math.random() < 0.2; // 20% of snapshots
       if (shouldStore) {
-        await storage.createAlert(snapshot);
+        await storage.createAlert({
+          ...snapshot,
+          gameInfo: {
+            ...snapshot.gameInfo,
+            status: 'in_progress'
+          }
+        });
         console.log(`📊 Game State Snapshot Stored: ${gameState.awayTeam} @ ${gameState.homeTeam}`);
       }
       
@@ -789,7 +796,7 @@ export class NCAAEngine {
     return alerts;
   }
 
-  private shouldSendAlert(alert: SimpleNCAAAlert): boolean {
+  private shouldSendAlertV2(alert: SimpleNCAAAlert): boolean {
     const existing = this.deduplicationCache.get(alert.deduplicationKey);
     const now = Date.now();
     
@@ -823,6 +830,7 @@ export class NCAAEngine {
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
+          status: 'STATUS_IN_PROGRESS',
           score: {
             home: gameState.homeScore,
             away: gameState.awayScore
@@ -841,7 +849,7 @@ export class NCAAEngine {
       await storage.createAlert(alertData);
 
       // Send Telegram notification
-      await sendTelegramAlert(alertData);
+      await sendTelegramAlert(alertData, {});
 
       // Call alert callback if available
       if (this.onAlert) {
@@ -865,7 +873,7 @@ export class NCAAEngine {
     const now = Date.now();
     const maxAge = 3600000; // 1 hour
     
-    for (const [key, entry] of this.deduplicationCache.entries()) {
+    for (const [key, entry] of Array.from(this.deduplicationCache.entries())) {
       if (now - entry.timestamp > maxAge) {
         this.deduplicationCache.delete(key);
       }
@@ -995,7 +1003,6 @@ export class NCAAEngine {
           sport: 'NCAAF',
           homeTeam: gameInfo.homeTeamName,
           awayTeam: gameInfo.awayTeamName,
-          situation: 'Game Live',
           probability: 0.8
         });
         console.log(`💰 NCAAF: Betbook data integrated for basic alert`);
@@ -1099,7 +1106,13 @@ What's happening: The game just kicked off - players are on the field!
       alert.confidence = aiConfidence;
 
       // Store and broadcast the alert
-      await storage.createAlert(alert);
+      await storage.createAlert({
+        ...alert,
+        gameInfo: {
+          ...alert.gameInfo,
+          status: 'live'
+        }
+      });
       console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`);
       console.log(`🆔 NCAAF: Alert ID: ${alert.id} | Debug ID: ${alert.debugId} | Type: ${alert.type}`);
       
@@ -1179,7 +1192,6 @@ What's happening: The game just kicked off - players are on the field!
           sport: 'NCAAF',
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
-          situation: alertResult.alertType,
           probability: alertResult.probability
         });
       } catch (error) {
@@ -1393,6 +1405,10 @@ Situation: Something exciting is happening in this game!`;
   private async processAlertThroughModel(alertResult: any, gameState: NCAAGameState, alertDescription: string, betbookData: any, deduplicationKey: string): Promise<any> {
     try {
       // Stage 1: Validate through NCAAF Alert Model (.cjs)
+      if (!ncaafAlertModel) {
+        console.log('🛡️ NCAAF: Alert Model not loaded');
+        return null;
+      }
       const modelValidation = ncaafAlertModel.checkNCAAFAlerts(gameState);
       
       if (!modelValidation.shouldAlert) {
@@ -1542,7 +1558,13 @@ Situation: Something exciting is happening in this game!`;
       };
 
       // Store the game flow event
-      await storage.createAlert(gameFlowEvent);
+      await storage.createAlert({
+        ...gameFlowEvent,
+        gameInfo: {
+          ...gameFlowEvent.gameInfo,
+          status: 'in_progress'
+        }
+      });
       console.log(`📊 Game Flow Event Stored: ${eventType} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
       
     } catch (error) {
