@@ -1412,6 +1412,9 @@ Situation: Something exciting is happening in this game!`;
       const alertId = randomUUID();
       console.log(`🆔 NCAAF: Generating CJS model alert with ID: ${alertId} | Type: ${modelValidation.alertType}`);
       
+      // Create kid-friendly title based on alert type
+      const kidFriendlyTitle = this.buildKidFriendlyTitle(modelValidation.alertType, gameState);
+      
       const finalAlert = {
         id: alertId,
         debugId: alertId.substring(0, 8), // Short ID for easy debugging
