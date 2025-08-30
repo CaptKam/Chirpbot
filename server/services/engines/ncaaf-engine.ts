@@ -657,13 +657,72 @@ export class NCAAEngine {
       
       console.log(`✅ NCAAF: User has alerts enabled, generating live game alert...`);
 
-      // Stage 2: AI Game Data Analysis - Let OpenAI analyze the real ESPN data  
-      let enhancedTitle = `🏈 LIVE ANALYSIS`;
+      // Removed old AI analysis - now happens AFTER deduplication check for cost optimization
+      
+      // Set initial alert content (will be enhanced after deduplication)
+      let enhancedTitle = `📢 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (0-0)`;
       let enhancedDescription = `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} is now live!`;
       let aiConfidence = 0.75;
+
+      // Stage 3: Betbook Analysis - Get betting insights even for basic alerts
+      let betbookData = null;
+      try {
+        betbookData = await getBetbookData({
+          sport: 'NCAAF',
+          homeTeam: gameInfo.homeTeamName,
+          awayTeam: gameInfo.awayTeamName,
+          situation: 'Game Live',
+          probability: 0.8
+        });
+        console.log(`💰 NCAAF: Betbook data integrated for basic alert`);
+      } catch (error) {
+        console.error('💰 NCAAF: Betbook data failed for basic alert:', error);
+      }
+
+      // Stage 2: Check deduplication BEFORE expensive AI analysis to save costs
+      let preliminaryDescription = `💥 ONE-SCORE GAME! Every play matters now!\n\n⚡️ Advanced AI: 35% scoring probability\n🎯 Key Factor: Field goal could change the lead\n💪 Strategy: Establish rhythm; control clock`;
+      
+      console.log(`🛡️ NCAAF: Checking deduplication BEFORE AI analysis to save costs...`);
+      if (!this.shouldSendAlert(gameId, preliminaryDescription, 'ncaafGameLive')) {
+        console.log(`💰 NCAAF: Alert blocked by deduplication - saved AI analysis cost!`);
+        return; // Skip this alert and save the AI analysis cost
+      }
+      
+      console.log(`✅ NCAAF: Alert passed deduplication - proceeding with AI analysis...`);
+
+      // Stage 4: Create enhanced live game alert (only after passing deduplication)
+      const alert = {
+        id: randomUUID(),
+        type: 'ncaafGameLive',
+        sport: 'NCAAF',
+        priority: 70,
+        title: enhancedTitle,
+        message: enhancedDescription,
+        description: enhancedDescription,
+        gameInfo: {
+          sport: 'NCAAF',
+          gameId: gameId,
+          homeTeam: gameInfo.homeTeamName || 'Home Team',
+          awayTeam: gameInfo.awayTeamName || 'Away Team',
+          situation: 'Game Live',
+          quarter: 'Live',
+          score: { home: 0, away: 0 }
+        },
+        probability: 0.8,
+        confidence: aiConfidence,
+        betbookData: betbookData,
+        timestamp: new Date(),
+        userId: 'system',
+        seen: false
+      };
+
+      // Stage 3: AI Game Data Analysis (expensive operation) - only for alerts that will be sent
+      enhancedTitle = `📢 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (0-0)`;
+      enhancedDescription = preliminaryDescription; // Start with preliminary
+      aiConfidence = 0.75;
       
       try {
-        console.log(`🚀 NCAAF: NEW AI ANALYSIS CODE EXECUTING for game ${gameId}`);
+        console.log(`🚀 NCAAF: Running AI analysis for confirmed alert: ${gameId}`);
         // Strategy 1: Try to get exact game data
         let fullGameData = await this.getFullGameData(gameId);
         
@@ -729,54 +788,13 @@ export class NCAAEngine {
           console.log(`⚠️ NCAAF: No live ESPN games available for AI analysis`);
         }
       } catch (error) {
-        console.error('❌ NCAAF: AI game data analysis failed:', error);
+        console.error('❌ NCAAF: Error in AI analysis:', error);
       }
-
-      // Stage 3: Betbook Analysis - Get betting insights even for basic alerts
-      let betbookData = null;
-      try {
-        betbookData = await getBetbookData({
-          sport: 'NCAAF',
-          homeTeam: gameInfo.homeTeamName,
-          awayTeam: gameInfo.awayTeamName,
-          situation: 'Game Live',
-          probability: 0.8
-        });
-        console.log(`💰 NCAAF: Betbook data integrated for basic alert`);
-      } catch (error) {
-        console.error('💰 NCAAF: Betbook data failed for basic alert:', error);
-      }
-
-      // Stage 4: Create enhanced live game alert (now with AI and betting insights)
-      const alert = {
-        id: randomUUID(),
-        type: 'ncaafGameLive',
-        sport: 'NCAAF',
-        priority: 70,
-        title: enhancedTitle,
-        message: enhancedDescription,
-        description: enhancedDescription,
-        gameInfo: {
-          sport: 'NCAAF',
-          gameId: gameId,
-          homeTeam: gameInfo.homeTeamName || 'Home Team',
-          awayTeam: gameInfo.awayTeamName || 'Away Team',
-          situation: 'Game Live',
-          quarter: 'Live',
-          score: { home: 0, away: 0 }
-        },
-        probability: 0.8,
-        confidence: aiConfidence,
-        betbookData: betbookData,
-        timestamp: new Date(),
-        userId: 'system',
-        seen: false
-      };
-
-      // Smart deduplication to prevent flooding
-      if (!this.shouldSendAlert(gameId, enhancedDescription, 'ncaafGameLive')) {
-        return; // Skip this alert
-      }
+      
+      // Update alert with AI-enhanced content
+      alert.title = enhancedTitle;
+      alert.description = enhancedDescription;
+      alert.confidence = aiConfidence;
 
       // Store and broadcast the alert
       await storage.createAlert(alert);
