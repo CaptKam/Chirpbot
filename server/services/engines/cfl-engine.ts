@@ -279,6 +279,27 @@ export class CFLEngine {
       return 0;
     }
   }
+
+  // === SPECIFIC GAME PROCESSING ===
+
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      const games = await this.getTodaysGames();
+      const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
+      
+      if (!targetGame) {
+        console.log(`🏈 CFL: Game ${gameId} not found in today's games`);
+        return;
+      }
+
+      const gameState = this.extractGameState(targetGame.espnData);
+      if (gameState) {
+        await this.checkGameSituations(gameState);
+      }
+    } catch (error) {
+      console.error(`❌ CFL: Error processing specific game ${gameId}:`, error);
+    }
+  }
 }
 
 export const cflEngine = new CFLEngine();

@@ -281,6 +281,27 @@ export class NFLEngine {
     }
   }
 
+  // === SPECIFIC GAME PROCESSING ===
+
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      const games = await this.getTodaysGames();
+      const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
+      
+      if (!targetGame) {
+        console.log(`🏈 NFL: Game ${gameId} not found in today's games`);
+        return;
+      }
+
+      const gameState = this.extractGameState(targetGame.espnData);
+      if (gameState) {
+        await this.checkGameSituations(gameState);
+      }
+    } catch (error) {
+      console.error(`❌ NFL: Error processing specific game ${gameId}:`, error);
+    }
+  }
+
   // === MONITORING METHODS ===
 
   async startMonitoring(): Promise<void> {
