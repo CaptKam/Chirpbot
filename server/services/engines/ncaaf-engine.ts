@@ -29,19 +29,81 @@ interface NCAAGameState {
   awayTeam: string;
   sport: string; // 'football'
   conference: string;
+  
+  // Situational data
   down?: number;
   distance?: number;
   yardsToGoal?: number;
   offense?: string;
   defense?: string;
+  fieldPosition?: number;
+  redZone?: boolean;
+  overtime?: boolean;
+  finalMinutes?: boolean;
+  
+  // Score tracking
   score: { home: number; away: number };
+  
+  // Weather conditions
   weather?: {
     windMph?: number;
     precipitation?: boolean;
     dome?: boolean;
+    temperature?: number;
+    condition?: string;
   };
+  
+  // Game flow data
   momentumFactor?: number;
   topAdvantage?: number;
+  timeoutsRemaining?: {
+    home: number;
+    away: number;
+  };
+  playType?: string;
+  lastPlayResult?: string;
+  
+  // Drive data
+  drives?: {
+    currentDrive: {
+      plays: number;
+      yards: number;
+      timeElapsed: string;
+    };
+    previousDrive: {
+      result: string;
+      yards: number;
+      plays: number;
+    };
+  };
+  
+  // Team statistics
+  teamStats?: {
+    home: {
+      totalYards: number;
+      passingYards: number;
+      rushingYards: number;
+      turnovers: number;
+      penalties: number;
+      timeOfPossession: string;
+    };
+    away: {
+      totalYards: number;
+      passingYards: number;
+      rushingYards: number;
+      turnovers: number;
+      penalties: number;
+      timeOfPossession: string;
+    };
+  };
+  
+  // Key player data
+  keyPlayers?: {
+    quarterbacks: any[];
+    runningBacks: any[];
+    receivers: any[];
+    kickers: any[];
+  };
 }
 
 interface SimpleNCAAAlert {
@@ -299,6 +361,9 @@ export class NCAAEngine {
     }
   }
 
+  // Game state cache for tracking changes
+  private gameStateCache = new Map<string, NCAAGameState>();
+
   private async processGameForAlerts(game: any): Promise<void> {
     try {
       const gameState = this.parseGameState(game);
@@ -309,6 +374,16 @@ export class NCAAEngine {
       }
 
       console.log(`🏈 NCAAF: Processing game state for ${gameState.gameId} - Quarter: ${gameState.quarter}, Score: ${gameState.score?.home || 0}-${gameState.score?.away || 0}`);
+      
+      // Track game state changes for analysis
+      const previousState = this.gameStateCache.get(gameState.gameId);
+      await this.trackGameEvents(previousState, gameState);
+      
+      // Store comprehensive game state snapshot
+      await this.storeGameStateSnapshot(gameState);
+      
+      // Update cache
+      this.gameStateCache.set(gameState.gameId, gameState);
       
       // If no detailed game data, generate basic live alert
       if (!gameState.quarter || gameState.quarter === 'undefined' || gameState.quarter === undefined) {
@@ -329,11 +404,59 @@ export class NCAAEngine {
     }
   }
 
+  // Store periodic game state snapshots for analysis
+  private async storeGameStateSnapshot(gameState: NCAAGameState): Promise<void> {
+    try {
+      const snapshot = {
+        id: randomUUID(),
+        type: 'gameStateSnapshot',
+        sport: 'NCAAF',
+        title: `Game State: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+        description: `Q${gameState.period} ${gameState.timeRemaining}s - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd line`,
+        gameInfo: {
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          quarter: gameState.quarter,
+          score: gameState.score
+        },
+        
+        // Store complete game state for analysis
+        snapshotData: {
+          timestamp: new Date(),
+          gameState: gameState,
+          situationalContext: {
+            scoringOpportunity: gameState.redZone || (gameState.yardsToGoal && gameState.yardsToGoal <= 30),
+            criticalDown: gameState.down && gameState.down >= 3,
+            closeGame: Math.abs(gameState.homeScore - gameState.awayScore) <= 7,
+            lateGame: gameState.period >= 4,
+            weatherImpact: gameState.weather?.precipitation || (gameState.weather?.windMph && gameState.weather.windMph > 15)
+          }
+        },
+        
+        timestamp: new Date(),
+        seen: false,
+        priority: 50 // Low priority for snapshots
+      };
+
+      // Store every 5th snapshot to avoid database bloat
+      const shouldStore = Math.random() < 0.2; // 20% of snapshots
+      if (shouldStore) {
+        await storage.createAlert(snapshot);
+        console.log(`📊 Game State Snapshot Stored: ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+      }
+      
+    } catch (error) {
+      console.error('Error storing game state snapshot:', error);
+    }
+  }
+
   private parseGameState(game: any): NCAAGameState | null {
     try {
       const espnData = game.espnData;
       const competition = espnData.competitions[0];
       const status = espnData.status;
+      const situation = competition.situation || {};
 
       // Extract period/quarter info
       let period = 0;
@@ -347,22 +470,56 @@ export class NCAAEngine {
         timeRemaining = status.displayClock;
       }
 
-      return {
+      // Extract detailed game state for analysis
+      const gameState: NCAAGameState = {
         gameId: game.gameId,
         period,
-        timeRemaining,
+        quarter: period,
+        timeRemaining: this.parseTimeToSeconds(timeRemaining),
         homeScore: game.homeScore,
         awayScore: game.awayScore,
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
         sport: 'football',
         conference: competition.conference?.name || 'Unknown',
+        
+        // Situational data
+        down: situation.down || 0,
+        distance: situation.distance || 0,
+        yardsToGoal: situation.yardLine || 0,
+        offense: situation.possessionTeam?.team?.name || '',
+        defense: situation.possessionTeam?.team?.name === game.homeTeam ? game.awayTeam : game.homeTeam,
+        
+        // Score object for compatibility
+        score: { 
+          home: game.homeScore, 
+          away: game.awayScore 
+        },
+
+        // Weather conditions (if available)
+        weather: this.extractWeatherData(espnData),
+        
+        // Momentum factors
+        momentumFactor: this.calculateMomentumFactor(game.homeScore, game.awayScore, period),
+        topAdvantage: 0, // Would need more data to calculate time of possession
+        
+        // Additional situational flags
         redZone: this.isRedZone(espnData),
         overtime: period > 4,
         finalMinutes: this.isFinalMinutes(timeRemaining, period),
-        down: this.getDown(espnData),
-        yardsToGo: this.getYardsToGo(espnData)
+        fieldPosition: situation.yardLine || 50,
+        timeoutsRemaining: {
+          home: situation.homeTimeouts || 3,
+          away: situation.awayTimeouts || 3
+        },
+        playType: situation.lastPlay?.type?.text || '',
+        lastPlayResult: situation.lastPlay?.text || '',
+        drives: this.extractDriveData(espnData),
+        teamStats: this.extractTeamStats(espnData),
+        keyPlayers: this.extractKeyPlayers(espnData)
       };
+
+      return gameState;
     } catch (error) {
       console.error('❌ Error parsing NCAAF game state:', error);
       return null;
@@ -410,6 +567,143 @@ export class NCAAEngine {
       return espnData.competitions[0]?.situation?.distance || 0;
     } catch {
       return 0;
+    }
+  }
+
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString || timeString === '0:00') return 0;
+    
+    try {
+      const parts = timeString.split(':');
+      if (parts.length === 2) {
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  private extractWeatherData(espnData: any): any {
+    try {
+      const weather = espnData.weather || {};
+      return {
+        windMph: weather.windSpeed || 0,
+        precipitation: weather.conditionId === 'rain' || weather.condition?.toLowerCase().includes('rain'),
+        dome: espnData.competitions[0]?.venue?.indoor || false,
+        temperature: weather.temperature || 70,
+        condition: weather.condition || 'Clear'
+      };
+    } catch {
+      return {
+        windMph: 0,
+        precipitation: false,
+        dome: false,
+        temperature: 70,
+        condition: 'Clear'
+      };
+    }
+  }
+
+  private calculateMomentumFactor(homeScore: number, awayScore: number, period: number): number {
+    // Simple momentum calculation based on recent scoring and game flow
+    const scoreDiff = Math.abs(homeScore - awayScore);
+    let momentum = 1.0;
+    
+    // Close games have higher momentum swings
+    if (scoreDiff <= 7) momentum += 0.2;
+    
+    // Late game momentum matters more
+    if (period >= 4) momentum += 0.3;
+    
+    return momentum;
+  }
+
+  private extractDriveData(espnData: any): any {
+    try {
+      const drives = espnData.competitions[0]?.drives || [];
+      return {
+        currentDrive: {
+          plays: drives.current?.plays || 0,
+          yards: drives.current?.yards || 0,
+          timeElapsed: drives.current?.timeElapsed || '0:00'
+        },
+        previousDrive: {
+          result: drives.previous?.result || '',
+          yards: drives.previous?.yards || 0,
+          plays: drives.previous?.plays || 0
+        }
+      };
+    } catch {
+      return {
+        currentDrive: { plays: 0, yards: 0, timeElapsed: '0:00' },
+        previousDrive: { result: '', yards: 0, plays: 0 }
+      };
+    }
+  }
+
+  private extractTeamStats(espnData: any): any {
+    try {
+      const statistics = espnData.competitions[0]?.statistics || [];
+      const homeStats = statistics.find((s: any) => s.name === 'home') || {};
+      const awayStats = statistics.find((s: any) => s.name === 'away') || {};
+      
+      return {
+        home: {
+          totalYards: homeStats.totalYards || 0,
+          passingYards: homeStats.passingYards || 0,
+          rushingYards: homeStats.rushingYards || 0,
+          turnovers: homeStats.turnovers || 0,
+          penalties: homeStats.penalties || 0,
+          timeOfPossession: homeStats.possessionTime || '0:00'
+        },
+        away: {
+          totalYards: awayStats.totalYards || 0,
+          passingYards: awayStats.passingYards || 0,
+          rushingYards: awayStats.rushingYards || 0,
+          turnovers: awayStats.turnovers || 0,
+          penalties: awayStats.penalties || 0,
+          timeOfPossession: awayStats.possessionTime || '0:00'
+        }
+      };
+    } catch {
+      return {
+        home: { totalYards: 0, passingYards: 0, rushingYards: 0, turnovers: 0, penalties: 0, timeOfPossession: '0:00' },
+        away: { totalYards: 0, passingYards: 0, rushingYards: 0, turnovers: 0, penalties: 0, timeOfPossession: '0:00' }
+      };
+    }
+  }
+
+  private extractKeyPlayers(espnData: any): any {
+    try {
+      const roster = espnData.competitions[0]?.roster || {};
+      return {
+        quarterbacks: this.getPlayersByPosition(roster, 'QB'),
+        runningBacks: this.getPlayersByPosition(roster, 'RB'),
+        receivers: this.getPlayersByPosition(roster, 'WR'),
+        kickers: this.getPlayersByPosition(roster, 'K')
+      };
+    } catch {
+      return {
+        quarterbacks: [],
+        runningBacks: [],
+        receivers: [],
+        kickers: []
+      };
+    }
+  }
+
+  private getPlayersByPosition(roster: any, position: string): any[] {
+    try {
+      const players = [];
+      for (const team of Object.values(roster)) {
+        const teamPlayers = (team as any).athletes || [];
+        const positionPlayers = teamPlayers.filter((p: any) => p.position === position);
+        players.push(...positionPlayers.slice(0, 3)); // Top 3 per position
+      }
+      return players;
+    } catch {
+      return [];
     }
   }
 
@@ -690,7 +984,7 @@ export class NCAAEngine {
       
       console.log(`✅ NCAAF: Alert passed deduplication - proceeding with AI analysis...`);
 
-      // Stage 4: Create enhanced live game alert (only after passing deduplication)
+      // Stage 4: Create enhanced live game alert with comprehensive game state data
       const alert = {
         id: randomUUID(),
         type: 'ncaafGameLive',
@@ -708,6 +1002,32 @@ export class NCAAEngine {
           quarter: 'Live',
           score: { home: 0, away: 0 }
         },
+        
+        // Store comprehensive game state for analysis
+        analysisData: fullGameData ? {
+          gameState: {
+            period: fullGameData.espnData?.status?.period || 1,
+            clock: fullGameData.espnData?.status?.displayClock || '15:00',
+            down: fullGameData.espnData?.competitions[0]?.situation?.down || 1,
+            distance: fullGameData.espnData?.competitions[0]?.situation?.distance || 10,
+            yardsToGoal: fullGameData.espnData?.competitions[0]?.situation?.yardLine || 50,
+            fieldPosition: fullGameData.espnData?.competitions[0]?.situation?.yardLine || 50,
+            redZone: fullGameData.espnData?.competitions[0]?.situation?.isRedZone || false,
+            timeoutsRemaining: {
+              home: fullGameData.espnData?.competitions[0]?.situation?.homeTimeouts || 3,
+              away: fullGameData.espnData?.competitions[0]?.situation?.awayTimeouts || 3
+            }
+          },
+          teamStats: this.extractTeamStats(fullGameData.espnData),
+          drives: this.extractDriveData(fullGameData.espnData),
+          weather: this.extractWeatherData(fullGameData.espnData),
+          keyPlayers: this.extractKeyPlayers(fullGameData.espnData),
+          venue: fullGameData.espnData?.competitions[0]?.venue?.name || 'Unknown',
+          attendance: fullGameData.espnData?.competitions[0]?.attendance || 0,
+          broadcasters: fullGameData.espnData?.competitions[0]?.broadcast || [],
+          lastPlay: fullGameData.espnData?.competitions[0]?.situation?.lastPlay?.text || ''
+        } : null,
+        
         probability: 0.8,
         confidence: aiConfidence,
         betbookData: betbookData,
@@ -868,7 +1188,7 @@ export class NCAAEngine {
         probability: alertResult.probability
       });
 
-      // Stage 4: Delivery - Create and store the alert
+      // Stage 4: Delivery - Create and store the alert with comprehensive data
       const finalAlert = {
         id: randomUUID(),
         type: alertResult.alertType,
@@ -884,6 +1204,32 @@ export class NCAAEngine {
           quarter: gameState.quarter,
           situation: alertResult.alertType
         },
+        
+        // Store comprehensive game state for analysis
+        gameStateSnapshot: {
+          timestamp: new Date(),
+          period: gameState.period,
+          timeRemaining: gameState.timeRemaining,
+          down: gameState.down,
+          distance: gameState.distance,
+          yardsToGoal: gameState.yardsToGoal,
+          fieldPosition: gameState.fieldPosition,
+          offense: gameState.offense,
+          defense: gameState.defense,
+          redZone: gameState.redZone,
+          overtime: gameState.overtime,
+          finalMinutes: gameState.finalMinutes,
+          timeoutsRemaining: gameState.timeoutsRemaining,
+          playType: gameState.playType,
+          lastPlayResult: gameState.lastPlayResult,
+          weather: gameState.weather,
+          teamStats: gameState.teamStats,
+          drives: gameState.drives,
+          keyPlayers: gameState.keyPlayers,
+          momentumFactor: gameState.momentumFactor,
+          conference: gameState.conference
+        },
+        
         probability: alertResult.probability,
         confidence: aiDescription?.confidence || 0.75,
         betbookData: betbookData || undefined,
@@ -976,6 +1322,115 @@ export class NCAAEngine {
       }
     } catch (error) {
       console.error('Error sending Telegram alert:', error);
+    }
+  }
+
+  // Store game flow events for comprehensive analysis
+  private async storeGameFlowEvent(gameState: NCAAGameState, eventType: string, eventData: any): Promise<void> {
+    try {
+      const gameFlowEvent = {
+        id: randomUUID(),
+        type: 'gameFlowEvent',
+        sport: 'NCAAF',
+        title: `Game Flow: ${eventType}`,
+        description: `${eventType} event in ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+        gameInfo: {
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          quarter: gameState.quarter,
+          score: gameState.score,
+          eventType: eventType
+        },
+        
+        // Store detailed event data
+        eventData: {
+          timestamp: new Date(),
+          period: gameState.period,
+          timeRemaining: gameState.timeRemaining,
+          down: gameState.down,
+          distance: gameState.distance,
+          yardsToGoal: gameState.yardsToGoal,
+          fieldPosition: gameState.fieldPosition,
+          eventType: eventType,
+          eventDetails: eventData,
+          gameContext: {
+            scoreDifferential: Math.abs(gameState.homeScore - gameState.awayScore),
+            possession: gameState.offense,
+            weather: gameState.weather,
+            momentumFactor: gameState.momentumFactor
+          }
+        },
+        
+        timestamp: new Date(),
+        seen: false,
+        priority: 60 // Lower priority for flow events
+      };
+
+      // Store the game flow event
+      await storage.createAlert(gameFlowEvent);
+      console.log(`📊 Game Flow Event Stored: ${eventType} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+      
+    } catch (error) {
+      console.error('Error storing game flow event:', error);
+    }
+  }
+
+  // Track significant game events for analysis
+  private async trackGameEvents(previousState: NCAAGameState | null, currentState: NCAAGameState): Promise<void> {
+    if (!previousState) return;
+
+    try {
+      // Score change event
+      if (previousState.homeScore !== currentState.homeScore || previousState.awayScore !== currentState.awayScore) {
+        await this.storeGameFlowEvent(currentState, 'SCORE_CHANGE', {
+          previousScore: { home: previousState.homeScore, away: previousState.awayScore },
+          newScore: { home: currentState.homeScore, away: currentState.awayScore },
+          scoringTeam: currentState.homeScore > previousState.homeScore ? currentState.homeTeam : currentState.awayTeam
+        });
+      }
+
+      // Quarter change event
+      if (previousState.period !== currentState.period) {
+        await this.storeGameFlowEvent(currentState, 'QUARTER_CHANGE', {
+          previousQuarter: previousState.period,
+          newQuarter: currentState.period
+        });
+      }
+
+      // Red zone entry/exit
+      if (previousState.redZone !== currentState.redZone) {
+        await this.storeGameFlowEvent(currentState, currentState.redZone ? 'RED_ZONE_ENTRY' : 'RED_ZONE_EXIT', {
+          team: currentState.offense,
+          fieldPosition: currentState.fieldPosition
+        });
+      }
+
+      // Turnover detection (possession change)
+      if (previousState.offense !== currentState.offense && currentState.offense) {
+        await this.storeGameFlowEvent(currentState, 'POSSESSION_CHANGE', {
+          previousPossession: previousState.offense,
+          newPossession: currentState.offense,
+          fieldPosition: currentState.fieldPosition
+        });
+      }
+
+      // Timeout usage
+      if (previousState.timeoutsRemaining && currentState.timeoutsRemaining) {
+        const homeTimeoutUsed = previousState.timeoutsRemaining.home > currentState.timeoutsRemaining.home;
+        const awayTimeoutUsed = previousState.timeoutsRemaining.away > currentState.timeoutsRemaining.away;
+        
+        if (homeTimeoutUsed || awayTimeoutUsed) {
+          await this.storeGameFlowEvent(currentState, 'TIMEOUT_USED', {
+            team: homeTimeoutUsed ? currentState.homeTeam : currentState.awayTeam,
+            timeoutsRemaining: currentState.timeoutsRemaining,
+            gameContext: 'strategic timeout'
+          });
+        }
+      }
+
+    } catch (error) {
+      console.error('Error tracking game events:', error);
     }
   }
 }
