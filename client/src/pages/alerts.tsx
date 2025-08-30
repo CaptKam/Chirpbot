@@ -189,13 +189,13 @@ export default function Alerts() {
 
                     {/* Row 2: TITLE - Law #7 Format */}
                     <div>
-                      <h2 className="text-2xl font-bold text-white leading-tight">
+                      <h2 className="text-lg font-bold text-white leading-tight">
                         {alert.title}
                       </h2>
                     </div>
 
                     {/* Row 3: Teams - ONLY HERE, NOWHERE ELSE */}
-                    <div className="text-lg text-slate-200 font-medium">
+                    <div className="text-base text-slate-200 font-medium">
                       {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
                     </div>
 
