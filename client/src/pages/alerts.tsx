@@ -334,6 +334,11 @@ export default function Alerts() {
                       </span>
                     )}
 
+                    {/* Alert ID debug tag */}
+                    <span className="absolute top-2 left-2 bg-slate-700/80 text-slate-300 text-[9px] font-mono px-2 py-0.5 rounded-md border border-slate-600/50">
+                      ID: {alert.id.slice(-8)}
+                    </span>
+
                     <div className="p-4 space-y-3">
                       {/* Row 1: Situation + RP + time */}
                       <div className="flex items-start justify-between">
