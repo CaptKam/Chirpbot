@@ -6,6 +6,7 @@ import { fetchJson } from '../http';
 // Import OpenAI and Betbook engines for alert processing
 import { OpenAiEngine } from './OpenAiEngine';
 import { getBetbookData } from './betbook-engine';
+import { alertDeduplicationEngine } from '../AlertDeduplicationEngine';
 
 // Import NCAAF Alert Model (CommonJS module)
 let ncaafAlertModel: any = null;
@@ -575,9 +576,20 @@ export class NCAAEngine {
         seen: false
       };
 
+      // Check with deduplication engine before sending
+      const deduplicationResult = alertDeduplicationEngine.shouldSendAlert(alert);
+      
+      if (!deduplicationResult.shouldSend) {
+        console.log(`🛡️ NCAAF: Alert blocked by deduplication engine - ${deduplicationResult.reason}`);
+        return;
+      }
+
+      // Update alert with unique ID from deduplication engine
+      alert.id = deduplicationResult.uniqueId;
+
       // Store and broadcast the alert
       await storage.createAlert(alert);
-      console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`);
+      console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} (ID: ${alert.id})`);
       
       if (this.onAlert) {
         this.onAlert(alert);
