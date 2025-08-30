@@ -1150,8 +1150,9 @@ Game is now in progress`;
       let deduplicationKey: string;
       if (alertResult.alertType === 'redZone') {
         // For redzone, include field position and use longer key to reduce frequency
-        const positionZone = gameState.yardsToGoal <= 5 ? 'goalLine' : 
-                           gameState.yardsToGoal <= 10 ? 'innerRedZone' : 'redZone';
+        const yardsToGoal = gameState.yardsToGoal || 20;
+        const positionZone = yardsToGoal <= 5 ? 'goalLine' : 
+                           yardsToGoal <= 10 ? 'innerRedZone' : 'redZone';
         deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${positionZone}:${Math.floor((gameState.down || 1) / 2)}`;
       } else {
         deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${gameState.down || 0}:${gameState.distance || 0}`;
@@ -1522,7 +1523,7 @@ ${situation}`;
     }
   }
 
-  private createFriendlyTitle(alertType: string, gameState: NCAAFGameState): string {
+  private createFriendlyTitle(alertType: string, gameState: NCAAGameState): string {
     const homeTeam = gameState.homeTeam;
     const awayTeam = gameState.awayTeam;
     const scoreText = `${awayTeam} ${gameState.awayScore}-${gameState.homeScore} ${homeTeam}`;
@@ -1547,8 +1548,8 @@ ${situation}`;
     }
   }
 
-  private createFriendlyDescription(alertType: string, gameState: NCAAFGameState): string {
-    const quarter = this.getQuarterName(gameState.quarter);
+  private createFriendlyDescription(alertType: string, gameState: NCAAGameState): string {
+    const quarter = this.getQuarterName(Number(gameState.quarter));
     const timeLeft = gameState.timeRemaining || 'Unknown time';
     const downInfo = gameState.down && gameState.distance ? 
       `${gameState.down}${this.getOrdinalSuffix(gameState.down)} down and ${gameState.distance} yards` : 
