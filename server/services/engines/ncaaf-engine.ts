@@ -1523,6 +1523,27 @@ ${situation}`;
     }
   }
 
+  private buildKidFriendlyTitle(alertType: string, gameState: NCAAFGameState): string {
+    switch (alertType) {
+      case 'redZone':
+        return '🚨 RED ZONE! Team is close to scoring!';
+      case 'closeGame':
+        return '🔥 SUPER CLOSE! Only one touchdown apart!';
+      case 'fourthDown':
+        return '💥 4TH DOWN! Big decision time!';
+      case 'twoMinuteWarning':
+        return '⏰ FINAL 2 MINUTES! Crunch time!';
+      case 'overtime':
+        return '🏈 OVERTIME! Extra football action!';
+      case 'goalLineStand':
+        return '🛡️ GOAL LINE STAND! Defense holding strong!';
+      case 'bigPlayPotential':
+        return '⚡ BIG PLAY COMING! Explosive opportunity!';
+      default:
+        return '🏈 NCAAF ACTION! Something exciting is happening!';
+    }
+  }
+
   // Track significant game events for analysis
   private async trackGameEvents(previousState: NCAAGameState | null, currentState: NCAAGameState): Promise<void> {
     if (!previousState) return;
