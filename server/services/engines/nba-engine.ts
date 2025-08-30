@@ -168,9 +168,19 @@ export class NBAEngine {
 
   private async processAlert(alert: SimpleNBAAlert, gameState: NBAGameState): Promise<void> {
     try {
+      // Generate alert ID for debugging (matching MLB system)
+      const alertId = randomUUID();
+      console.log(`🆔 NBA: Generating alert with ID: ${alertId} | Type: ${alert.type}`);
+
+      // Build kid-friendly description (Law #6 compliance)
+      const kidFriendlyDescription = this.buildKidFriendlyDescription(alert, gameState);
+      const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
+
       const alertRecord = await storage.createAlert({
-        title: `NBA ${alert.type.replace('_', ' ').toUpperCase()}`,
-        description: alert.description,
+        id: alertId,
+        debugId: alertId.substring(0, 8), // Short ID for easy debugging
+        title: kidFriendlyTitle,
+        description: kidFriendlyDescription,
         sport: 'NBA',
         type: alert.type,
         priority: alert.priority,
@@ -183,20 +193,94 @@ export class NBAEngine {
           },
           period: gameState.period.toString(),
           status: 'live'
-        } as any
+        } as any,
+        createdAt: new Date(),
+        seen: false
       });
 
       // Broadcast to WebSocket clients
       if (this.onAlert) {
         this.onAlert({
-          type: 'alert',
+          type: 'new_alert',
           data: alertRecord
         });
+        console.log(`📡 NBA: Alert broadcasted via WebSocket | ID: ${alertId.substring(0, 8)}`);
       }
 
-      console.log(`🏀 NBA Alert Generated: ${alert.description}`);
+      console.log(`✅ NBA Alert generated: ${kidFriendlyDescription} (Priority: ${alert.priority})`);
+      console.log(`🆔 NBA: Alert ID: ${alertId} | Debug ID: ${alertId.substring(0, 8)} | Type: ${alert.type}`);
     } catch (error) {
       console.error('❌ Error processing NBA alert:', error);
+    }
+  }
+
+  // Kid-friendly alert descriptions (Law #6 compliance)
+  private buildKidFriendlyDescription(alert: SimpleNBAAlert, gameState: NBAGameState): string {
+    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
+    const score = `${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
+    const period = this.getPeriodName(gameState.period);
+    
+    switch (alert.type) {
+      case 'clutch_time':
+        return `🏀 CLUTCH TIME! Every shot matters now!
+
+Score: ${score}
+Time: ${period} - Under 5 minutes left!
+Why it's exciting: This game is super close and either team could win!
+
+⚡ These are the moments players dream about!`;
+
+      case 'overtime':
+        return `⚡ OVERTIME! Extra basketball time!
+
+Score: ${score} (TIED!)
+What happened: The game was tied at the end - now they play extra time!
+What's next: First team to outscore the other in overtime wins!
+
+🔥 Free bonus basketball - the best kind!`;
+
+      case 'close_game':
+        const pointDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+        return `🔥 SUPER CLOSE GAME! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!
+
+Score: ${score}
+Time: ${period} (${gameState.timeRemaining} left)
+Why it's exciting: Either team could take the lead with just one basket!
+
+🎯 This is what makes basketball amazing!`;
+
+      default:
+        return `🏀 EXCITING PLAY in ${teamVs}!
+
+Score: ${score}
+Time: ${period}
+Something big is happening in this game!`;
+    }
+  }
+
+  private buildKidFriendlyTitle(alertType: string, gameState: NBAGameState): string {
+    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
+    
+    switch (alertType) {
+      case 'clutch_time':
+        return `🏀 CLUTCH TIME! ${teamVs}`;
+      case 'overtime':
+        return `⚡ OVERTIME! ${teamVs}`;
+      case 'close_game':
+        const pointDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+        return `🔥 SUPER CLOSE! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!`;
+      default:
+        return `🏀 EXCITING PLAY! ${teamVs}`;
+    }
+  }
+
+  private getPeriodName(period: number): string {
+    switch (period) {
+      case 1: return '1st Quarter';
+      case 2: return '2nd Quarter';
+      case 3: return '3rd Quarter';
+      case 4: return '4th Quarter';
+      default: return period > 4 ? 'Overtime' : `Period ${period}`;
     }
   }
 

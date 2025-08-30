@@ -181,9 +181,19 @@ export class NHLEngine {
 
   private async processAlert(alert: SimpleNHLAlert, gameState: NHLGameState): Promise<void> {
     try {
+      // Generate alert ID for debugging (matching MLB system)
+      const alertId = randomUUID();
+      console.log(`🆔 NHL: Generating alert with ID: ${alertId} | Type: ${alert.type}`);
+
+      // Build kid-friendly description (Law #6 compliance)
+      const kidFriendlyDescription = this.buildKidFriendlyDescription(alert, gameState);
+      const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
+
       const alertRecord = await storage.createAlert({
-        title: `NHL ${alert.type.replace('_', ' ').toUpperCase()}`,
-        description: alert.description,
+        id: alertId,
+        debugId: alertId.substring(0, 8), // Short ID for easy debugging
+        title: kidFriendlyTitle,
+        description: kidFriendlyDescription,
         sport: 'NHL',
         type: alert.type,
         priority: alert.priority,
@@ -196,20 +206,103 @@ export class NHLEngine {
           },
           period: gameState.period.toString(),
           status: 'live'
-        } as any
+        } as any,
+        createdAt: new Date(),
+        seen: false
       });
 
       // Broadcast to WebSocket clients
       if (this.onAlert) {
         this.onAlert({
-          type: 'alert',
+          type: 'new_alert',
           data: alertRecord
         });
+        console.log(`📡 NHL: Alert broadcasted via WebSocket | ID: ${alertId.substring(0, 8)}`);
       }
 
-      console.log(`🏒 NHL Alert Generated: ${alert.description}`);
+      console.log(`✅ NHL Alert generated: ${kidFriendlyDescription} (Priority: ${alert.priority})`);
+      console.log(`🆔 NHL: Alert ID: ${alertId} | Debug ID: ${alertId.substring(0, 8)} | Type: ${alert.type}`);
     } catch (error) {
       console.error('❌ Error processing NHL alert:', error);
+    }
+  }
+
+  // Kid-friendly alert descriptions (Law #6 compliance)
+  private buildKidFriendlyDescription(alert: SimpleNHLAlert, gameState: NHLGameState): string {
+    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
+    const score = `${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
+    const period = this.getPeriodName(gameState.period);
+    
+    switch (alert.type) {
+      case 'power_play':
+        return `⚡ POWER PLAY! One team has extra players on the ice!
+
+Score: ${score}
+Time: ${period} (${gameState.timeRemaining} left)
+What's happening: One team has a player advantage - great chance to score!
+
+🏒 More players = more chances to score!`;
+
+      case 'empty_net':
+        return `😨 EMPTY NET! The goalie is gone!
+
+Score: ${score}
+Time: ${period} (${gameState.timeRemaining} left)
+What's happening: One team pulled their goalie for an extra player!
+Why it matters: Open net = easy goal if the other team gets the puck!
+
+🥅 It's like playing with no goalkeeper!`;
+
+      case 'close_game':
+        return `🏆 ONE-GOAL GAME! Super close hockey action!
+
+Score: ${score}
+Time: ${period} (${gameState.timeRemaining} left)
+Why it's exciting: Just one goal separates these teams!
+
+⚡ Any shot could be the game winner!`;
+
+      case 'overtime':
+        return `⏰ OVERTIME! Extra hockey time!
+
+Score: ${score} (TIED!)
+What happened: The game was tied - now they play extra time!
+How it works: First team to score wins instantly!
+
+🔥 Sudden death hockey - the most exciting kind!`;
+
+      default:
+        return `🏒 EXCITING PLAY in ${teamVs}!
+
+Score: ${score}
+Time: ${period}
+Something big is happening on the ice!`;
+    }
+  }
+
+  private buildKidFriendlyTitle(alertType: string, gameState: NHLGameState): string {
+    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
+    
+    switch (alertType) {
+      case 'power_play':
+        return `⚡ POWER PLAY! Extra player advantage!`;
+      case 'empty_net':
+        return `😨 EMPTY NET! Goalie pulled!`;
+      case 'close_game':
+        return `🏆 ONE-GOAL GAME! ${teamVs}`;
+      case 'overtime':
+        return `⏰ OVERTIME! ${teamVs}`;
+      default:
+        return `🏒 EXCITING PLAY! ${teamVs}`;
+    }
+  }
+
+  private getPeriodName(period: number): string {
+    switch (period) {
+      case 1: return '1st Period';
+      case 2: return '2nd Period';
+      case 3: return '3rd Period';
+      default: return period > 3 ? 'Overtime' : `Period ${period}`;
     }
   }
 
