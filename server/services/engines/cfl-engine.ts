@@ -30,7 +30,7 @@ interface SimpleCFLAlert {
 export class CFLEngine {
   private readonly ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/cfl';
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
-  
+
   onAlert?: (alert: any) => void;
 
   constructor() {
@@ -42,7 +42,7 @@ export class CFLEngine {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
       const url = `${this.ESPN_API_BASE}/scoreboard`;
-      
+
       const data: any = await fetchJson(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
@@ -81,9 +81,9 @@ export class CFLEngine {
         game.status === 'STATUS_IN_PROGRESS' || 
         game.status.toLowerCase().includes('quarter')
       );
-      
+
       console.log(`🏈 CFL Engine Processing ${liveGames.length} live games`);
-      
+
       for (const game of liveGames) {
         const gameState = this.extractGameState(game.espnData);
         if (gameState) {
@@ -167,16 +167,16 @@ export class CFLEngine {
   private shouldEmitAlert(alert: SimpleCFLAlert): boolean {
     const now = Date.now();
     const existing = this.deduplicationCache.get(alert.deduplicationKey);
-    
+
     if (existing && now - existing.timestamp < 120000) { // 2-minute cooldown
       return false;
     }
-    
+
     this.deduplicationCache.set(alert.deduplicationKey, {
       timestamp: now,
       priority: alert.priority
     });
-    
+
     return true;
   }
 
@@ -245,9 +245,9 @@ export class CFLEngine {
     try {
       const competition = espnData.competitions?.[0];
       if (!competition) return null;
-      
+
       const status = competition.status;
-      
+
       return {
         gameId: `cfl-${espnData.id}`,
         quarter: status.period || 1,
@@ -267,7 +267,7 @@ export class CFLEngine {
       return null;
     }
   }
-  
+
   private parseTimeRemaining(timeString: string): number {
     try {
       const parts = timeString.split(':');
@@ -286,7 +286,7 @@ export class CFLEngine {
     try {
       const games = await this.getTodaysGames();
       const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
-      
+
       if (!targetGame) {
         console.log(`🏈 CFL: Game ${gameId} not found in today's games`);
         return;
@@ -298,6 +298,73 @@ export class CFLEngine {
       }
     } catch (error) {
       console.error(`❌ CFL: Error processing specific game ${gameId}:`, error);
+    }
+  }
+
+  // LAW #7: Standard title format
+  private buildStandardTitle(alertType: string, gameState: any): string {
+    const scoreText = `${gameState.awayScore || 0}-${gameState.homeScore || 0}`;
+
+    switch (alertType) {
+      case 'redZone':
+        return `🚨 RED ZONE (${scoreText})`;
+      case 'fourthDown':
+        return `💥 4TH DOWN (${scoreText})`;
+      case 'closeGame':
+        const pointDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+        return `🔥 ${pointDiff}-POINT GAME (${scoreText})`;
+      case 'overtime':
+        return `⚡ OVERTIME (${scoreText})`;
+      default:
+        return `🏈 CFL ALERT (${scoreText})`;
+    }
+  }
+
+  // LAW #7: Standard description format
+  private buildStandardDescription(alertType: string, gameState: any): string {
+    const quarter = this.getQuarterName(gameState.quarter || 1);
+    const timeLeft = this.formatTimeRemaining(gameState.timeRemaining || 0);
+    const situation = `${gameState.down || 1}${this.getOrdinalSuffix(gameState.down || 1)} & ${gameState.distance || 10}, ${gameState.yardsToGoal || 55}yd line`;
+    const impact = this.getAlertReasonByType(alertType);
+
+    return `${quarter} ${timeLeft}
+${situation}
+${impact}`;
+  }
+
+  private buildFallbackDescription(gameState: any, alertType: string): string {
+    return this.buildStandardDescription(alertType, gameState);
+  }
+
+  private getQuarterName(quarter: number): string {
+    switch (quarter) {
+      case 1: return '1st Quarter';
+      case 2: return '2nd Quarter';
+      case 3: return '3rd Quarter';
+      case 4: return '4th Quarter';
+      default: return `${quarter}th Quarter`;
+    }
+  }
+
+  private formatTimeRemaining(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    const paddedSeconds = remainingSeconds < 10 ? `0${remainingSeconds}` : `${remainingSeconds}`;
+    return `${minutes}:${paddedSeconds}`;
+  }
+
+  private getAlertReasonByType(alertType: string): string {
+    switch (alertType) {
+      case 'redZone':
+        return 'Team is in the red zone, increasing scoring probability.';
+      case 'fourthDown':
+        return 'Team is facing a 4th down, a critical moment for possession.';
+      case 'closeGame':
+        return 'The game is close, creating high tension and potential for a comeback.';
+      case 'overtime':
+        return 'The game has gone into overtime, adding excitement and high stakes.';
+      default:
+        return 'An exciting moment is happening in the CFL game.';
     }
   }
 }

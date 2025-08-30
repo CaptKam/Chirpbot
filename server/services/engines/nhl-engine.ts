@@ -29,7 +29,7 @@ interface SimpleNHLAlert {
 export class NHLEngine {
   private readonly ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl';
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
-  
+
   onAlert?: (alert: any) => void;
 
   constructor() {
@@ -41,7 +41,7 @@ export class NHLEngine {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
       const url = `${this.ESPN_API_BASE}/scoreboard`;
-      
+
       const data: any = await fetchJson(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
@@ -80,9 +80,9 @@ export class NHLEngine {
         game.status === 'STATUS_IN_PROGRESS' || 
         game.status.toLowerCase().includes('period')
       );
-      
+
       console.log(`🏒 NHL Engine Processing ${liveGames.length} live games`);
-      
+
       for (const game of liveGames) {
         const gameState = this.extractGameState(game.espnData);
         if (gameState) {
@@ -166,16 +166,16 @@ export class NHLEngine {
   private shouldEmitAlert(alert: SimpleNHLAlert): boolean {
     const now = Date.now();
     const existing = this.deduplicationCache.get(alert.deduplicationKey);
-    
+
     if (existing && now - existing.timestamp < 120000) { // 2-minute cooldown
       return false;
     }
-    
+
     this.deduplicationCache.set(alert.deduplicationKey, {
       timestamp: now,
       priority: alert.priority
     });
-    
+
     return true;
   }
 
@@ -239,15 +239,15 @@ export class NHLEngine {
     if (j == 3 && k != 13) return 'rd';
     return 'th';
   }
-  
-  
+
+
   extractGameState(espnData: any): NHLGameState | null {
     try {
       const competition = espnData.competitions?.[0];
       if (!competition) return null;
-      
+
       const status = competition.status;
-      
+
       return {
         gameId: `nhl-${espnData.id}`,
         period: status.period || 1,
@@ -266,7 +266,7 @@ export class NHLEngine {
       return null;
     }
   }
-  
+
   private parseTimeRemaining(timeString: string): number {
     try {
       const parts = timeString.split(':');
@@ -285,7 +285,7 @@ export class NHLEngine {
     try {
       const games = await this.getTodaysGames();
       const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
-      
+
       if (!targetGame) {
         console.log(`🏒 NHL: Game ${gameId} not found in today's games`);
         return;
@@ -297,6 +297,74 @@ export class NHLEngine {
       }
     } catch (error) {
       console.error(`❌ NHL: Error processing specific game ${gameId}:`, error);
+    }
+  }
+
+  // LAW #7: Standard title format
+  private buildStandardTitle(alertType: string, gameState: any): string {
+    const scoreText = `${gameState.awayScore || 0}-${gameState.homeScore || 0}`;
+
+    switch (alertType) {
+      case 'power_play':
+        return `⚡ POWER PLAY (${scoreText})`;
+      case 'close_game':
+        const goalDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+        return `🔥 ${goalDiff}-GOAL GAME (${scoreText})`;
+      case 'thirdPeriod':
+        return `🚨 3RD PERIOD (${scoreText})`;
+      case 'overtime':
+        return `⚡ OVERTIME (${scoreText})`;
+      default:
+        return `🏒 GAME ALERT (${scoreText})`;
+    }
+  }
+
+  // LAW #7: Standard description format
+  private buildStandardDescription(alertType: string, gameState: any): string {
+    const period = this.getPeriodName(gameState.period || 1);
+    const timeLeft = this.formatTimeRemaining(gameState.timeRemaining || 0);
+    const impact = this.getAlertReasonByType(alertType);
+
+    return `${period} ${timeLeft}
+Power play opportunity
+${impact}`;
+  }
+
+  private buildFallbackDescription(gameState: any, alertType: string): string {
+    return this.buildStandardDescription(alertType, gameState);
+  }
+
+  // Helper to get period name (e.g., 1st, 2nd, 3rd, OT)
+  private getPeriodName(period: number): string {
+    if (period < 4) {
+      return `${period}${this.getOrdinalSuffix(period)} Period`;
+    } else if (period === 4) {
+      return 'Overtime';
+    } else {
+      return `Period ${period}`; // For potential future periods or unusual cases
+    }
+  }
+
+  // Helper to format time remaining (e.g., 10:30)
+  private formatTimeRemaining(timeInSeconds: number): string {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // Helper to get a generic reason based on alert type
+  private getAlertReasonByType(alertType: string): string {
+    switch (alertType) {
+      case 'power_play':
+        return 'Power play opportunity';
+      case 'close_game':
+        return 'Very close game, high stakes';
+      case 'overtime':
+        return 'Sudden death overtime, one goal wins';
+      case 'empty_net':
+        return 'Goalie pulled for an extra attacker';
+      default:
+        return 'Significant game event';
     }
   }
 }

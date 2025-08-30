@@ -31,7 +31,7 @@ interface SimpleNFLAlert {
 export class NFLEngine {
   private readonly ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
-  
+
   onAlert?: (alert: any) => void;
 
   constructor() {
@@ -43,7 +43,7 @@ export class NFLEngine {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
       const url = `${this.ESPN_API_BASE}/scoreboard`;
-      
+
       const data: any = await fetchJson(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
@@ -83,9 +83,9 @@ export class NFLEngine {
         game.status.toLowerCase().includes('period') ||
         game.status.toLowerCase().includes('quarter')
       );
-      
+
       console.log(`🏈 NFL Engine Processing ${liveGames.length} live games`);
-      
+
       for (const game of liveGames) {
         const gameState = this.extractGameState(game.espnData);
         if (gameState) {
@@ -166,11 +166,11 @@ export class NFLEngine {
   private shouldEmitAlert(alert: SimpleNFLAlert): boolean {
     const now = Date.now();
     const cached = this.deduplicationCache.get(alert.deduplicationKey);
-    
+
     if (cached && (now - cached.timestamp) < 120000) { // 2 minute cooldown for NFL
       return false;
     }
-    
+
     return true;
   }
 
@@ -179,7 +179,7 @@ export class NFLEngine {
       timestamp: Date.now(),
       priority: alert.priority
     });
-    
+
     // Cleanup old entries
     if (this.deduplicationCache.size > 1000) {
       const now = Date.now();
@@ -245,21 +245,21 @@ export class NFLEngine {
       console.error('❌ Error processing NFL alert:', error);
     }
   }
-  
+
   extractGameState(espnData: any): NFLGameState | null {
     try {
       const competition = espnData.competitions?.[0];
       if (!competition) return null;
-      
+
       const situation = competition.situation || {};
       const status = competition.status || {};
       const homeTeam = competition.competitors?.find((c: any) => c.homeAway === 'home');
       const awayTeam = competition.competitors?.find((c: any) => c.homeAway === 'away');
-      
+
       const possessionTeam = situation.possession ? 
         homeTeam?.id === situation.possession ? homeTeam.team.displayName : awayTeam?.team.displayName 
         : "";
-      
+
       return {
         gameId: `nfl-${espnData.id}`,
         quarter: status.period || 1,
@@ -287,7 +287,7 @@ export class NFLEngine {
     try {
       const games = await this.getTodaysGames();
       const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
-      
+
       if (!targetGame) {
         console.log(`🏈 NFL: Game ${gameId} not found in today's games`);
         return;
@@ -306,10 +306,87 @@ export class NFLEngine {
 
   async startMonitoring(): Promise<void> {
     console.log('🏈 Starting NFL monitoring with ESPN API...');
-    
+
     setInterval(async () => {
       await this.processLiveGamesOnly();
     }, 30000); // 30 second interval for NFL
+  }
+
+  // LAW #7: Helper methods for formatting
+  private getQuarterName(quarter: number): string {
+    if (quarter === 5) return 'OT';
+    return `Q${quarter}`;
+  }
+
+  private formatTimeRemaining(time: string): string {
+    if (time.includes(':')) {
+      return time;
+    }
+    // Assuming time is in minutes if not a string with ':'
+    const minutes = Math.floor(parseInt(time) / 60);
+    const seconds = parseInt(time) % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  private getOrdinalSuffix(num: number): string {
+    if (num === 1) return 'st';
+    if (num === 2) return 'nd';
+    if (num === 3) return 'rd';
+    return 'th';
+  }
+
+  private getAlertReasonByType(alertType: string): string {
+    switch (alertType) {
+      case 'red_zone':
+        return 'Possession in scoring range';
+      case 'fourth_down':
+        return 'Facing 4th down decision';
+      case 'close_game':
+        return 'One score difference in late stages';
+      case 'overtime':
+        return 'Currently in overtime';
+      case 'two_minute_warning':
+        return 'Approaching the 2-minute warning';
+      default:
+        return 'Significant game event occurring';
+    }
+  }
+
+  // LAW #7: Standard title format - WHAT + SCORE only
+  private buildStandardTitle(alertType: string, gameState: any): string {
+    const scoreText = `${gameState.awayScore || 0}-${gameState.homeScore || 0}`;
+
+    switch (alertType) {
+      case 'red_zone':
+        return `🚨 RED ZONE (${scoreText})`;
+      case 'fourth_down':
+        return `💥 4TH DOWN (${scoreText})`;
+      case 'close_game':
+        const pointDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+        return `🔥 ${pointDiff}-POINT GAME (${scoreText})`;
+      case 'overtime':
+        return `⚡ OVERTIME (${scoreText})`;
+      case 'two_minute_warning':
+        return `⏰ 2-MINUTE WARNING (${scoreText})`;
+      default:
+        return `🏈 GAME ALERT (${scoreText})`;
+    }
+  }
+
+  // LAW #7: Standard description format - 3 lines max, no duplicate info
+  private buildStandardDescription(alertType: string, gameState: any): string {
+    const quarter = this.getQuarterName(gameState.quarter || 1);
+    const timeLeft = this.formatTimeRemaining(gameState.timeRemaining || 0);
+    const situation = `${gameState.down || 1}${this.getOrdinalSuffix(gameState.down || 1)} & ${gameState.distance || 10}, ${gameState.yardsToGoal || 50}yd line`;
+    const impact = this.getAlertReasonByType(alertType);
+
+    return `${quarter} ${timeLeft}
+${situation}
+${impact}`;
+  }
+
+  private buildFallbackDescription(gameState: any, alertType: string): string {
+    return this.buildStandardDescription(alertType, gameState);
   }
 }
 

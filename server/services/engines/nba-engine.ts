@@ -27,7 +27,7 @@ interface SimpleNBAAlert {
 export class NBAEngine {
   private readonly ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
-  
+
   onAlert?: (alert: any) => void;
 
   constructor() {
@@ -39,7 +39,7 @@ export class NBAEngine {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
       const url = `${this.ESPN_API_BASE}/scoreboard`;
-      
+
       const data: any = await fetchJson(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
@@ -79,9 +79,9 @@ export class NBAEngine {
         game.status.toLowerCase().includes('period') ||
         game.status.toLowerCase().includes('quarter')
       );
-      
+
       console.log(`🏀 NBA Engine Processing ${liveGames.length} live games`);
-      
+
       for (const game of liveGames) {
         const gameState = this.extractGameState(game.espnData);
         if (gameState) {
@@ -153,16 +153,16 @@ export class NBAEngine {
   private shouldEmitAlert(alert: SimpleNBAAlert): boolean {
     const now = Date.now();
     const existing = this.deduplicationCache.get(alert.deduplicationKey);
-    
+
     if (existing && now - existing.timestamp < 120000) { // 2-minute cooldown
       return false;
     }
-    
+
     this.deduplicationCache.set(alert.deduplicationKey, {
       timestamp: now,
       priority: alert.priority
     });
-    
+
     return true;
   }
 
@@ -224,15 +224,15 @@ export class NBAEngine {
     if (j == 3 && k != 13) return 'rd';
     return 'th';
   }
-  
-  
+
+
   extractGameState(espnData: any): NBAGameState | null {
     try {
       const competition = espnData.competitions?.[0];
       if (!competition) return null;
-      
+
       const status = competition.status;
-      
+
       return {
         gameId: `nba-${espnData.id}`,
         period: status.period || 1,
@@ -249,7 +249,7 @@ export class NBAEngine {
       return null;
     }
   }
-  
+
   private parseTimeRemaining(timeString: string): number {
     try {
       const parts = timeString.split(':');
@@ -268,7 +268,7 @@ export class NBAEngine {
     try {
       const games = await this.getTodaysGames();
       const targetGame = games.find(game => game.gameId === gameId || game.id === gameId);
-      
+
       if (!targetGame) {
         console.log(`🏀 NBA: Game ${gameId} not found in today's games`);
         return;
@@ -280,6 +280,72 @@ export class NBAEngine {
       }
     } catch (error) {
       console.error(`❌ NBA: Error processing specific game ${gameId}:`, error);
+    }
+  }
+
+  // LAW #7: Standard title format
+  private buildStandardTitle(alertType: string, gameState: any): string {
+    const scoreText = `${gameState.awayScore || 0}-${gameState.homeScore || 0}`;
+
+    switch (alertType) {
+      case 'closeGame':
+        const pointDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+        return `🔥 ${pointDiff}-POINT GAME (${scoreText})`;
+      case 'fourthQuarter':
+        return `🚨 4TH QUARTER (${scoreText})`;
+      case 'overtime':
+        return `⚡ OVERTIME (${scoreText})`;
+      case 'clutchTime':
+        return `⏰ CLUTCH TIME (${scoreText})`;
+      default:
+        return `🏀 GAME ALERT (${scoreText})`;
+    }
+  }
+
+  // LAW #7: Standard description format
+  private buildStandardDescription(alertType: string, gameState: any): string {
+    const quarter = this.getQuarterName(gameState.quarter || 1);
+    const timeLeft = this.formatTimeRemaining(gameState.timeRemaining || 0);
+    const impact = this.getAlertReasonByType(alertType);
+
+    return `${quarter} ${timeLeft}
+Close game situation developing
+${impact}`;
+  }
+
+  private buildFallbackDescription(gameState: any, alertType: string): string {
+    return this.buildStandardDescription(alertType, gameState);
+  }
+
+  // Helper to get quarter name (e.g., 1st Quarter, 2nd Quarter)
+  private getQuarterName(quarter: number): string {
+    if (quarter <= 4) {
+      return `${quarter}${this.getOrdinalSuffix(quarter)} Quarter`;
+    } else {
+      return `${quarter - 4}OT`;
+    }
+  }
+
+  // Helper to format time remaining (e.g., 12:00)
+  private formatTimeRemaining(timeInSeconds: number): string {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // Helper to get alert reason based on type
+  private getAlertReasonByType(alertType: string): string {
+    switch (alertType) {
+      case 'clutch_time':
+        return 'High leverage situation in the final minutes of a close game.';
+      case 'overtime':
+        return 'The game has gone into overtime.';
+      case 'close_game':
+        return 'The game is very close, within a few points.';
+      case 'fourth_quarter':
+        return 'The fourth quarter is underway.';
+      default:
+        return 'An important NBA game event is happening.';
     }
   }
 }

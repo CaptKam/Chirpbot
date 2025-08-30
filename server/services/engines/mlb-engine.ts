@@ -210,7 +210,7 @@ export class MLBEngine {
         }
       } catch (error) {
         console.error('Stage 2 OpenAI refinement failed:', error);
-        description = this.buildFallbackDescription(gameState, alert);
+        description = this.buildStandardDescription(gameState, alert);
       }
 
       // Stage 3: Betbook Insights
@@ -271,7 +271,7 @@ export class MLBEngine {
         debugId: alertId.substring(0, 8), // Short ID for easy debugging
         type: 'SCORING',
         sport: 'MLB',
-        title: this.buildKidFriendlyTitle(alert.type, gameState), // Use kid-friendly title
+        title: this.buildStandardTitle(alert.type, gameState), // LAW #7: Standard title format
         description: description,
         priority: modelValidation.priority,
         gameInfo: {
@@ -414,9 +414,9 @@ export class MLBEngine {
   }
 
   /**
-   * LAW #7: Consistent description format - no duplicate information
+   * LAW #7: Standard description format - consistent across all sports
    */
-  private buildFallbackDescription(gameState: MLBGameStateV3, alert: SimpleAlert): string {
+  private buildStandardDescription(gameState: MLBGameStateV3, alert: SimpleAlert): string {
     const runners: string[] = [];
     if (gameState.runners.first) runners.push('1st');
     if (gameState.runners.second) runners.push('2nd');
@@ -666,8 +666,8 @@ ${Math.round(alert.probability * 100)}% scoring probability`;
     return 'general'; // Default type
   }
 
-  // LAW #7: Title shows WHAT + SCORE only
-  private buildKidFriendlyTitle(alertType: string, gameState: any): string {
+  // LAW #7: Standard title format - consistent across all sports
+  private buildStandardTitle(alertType: string, gameState: any): string {
     const scoreText = `${gameState.awayScore}-${gameState.homeScore}`;
     
     switch (alertType) {

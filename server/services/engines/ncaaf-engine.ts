@@ -1325,8 +1325,8 @@ ${situation}`;
     }
   }
 
-  private buildKidFriendlyTitle(alertType: string, gameState: NCAAGameState): string {
-    // LAW #7: Title shows WHAT + SCORE only - no team names (shown separately)
+  // LAW #7: Standard title format - WHAT + SCORE only (consistent across all sports)
+  private buildStandardTitle(alertType: string, gameState: NCAAGameState): string {
     const scoreText = `${gameState.score.away}-${gameState.score.home}`;
 
     switch (alertType) {
@@ -1390,14 +1390,8 @@ ${situation}`;
       const alertId = randomUUID();
       console.log(`🆔 NCAAF: Generating CJS model alert with ID: ${alertId} | Type: ${modelValidation.alertType}`);
 
-      // Create kid-friendly title based on alert type with error handling
-      let kidFriendlyTitle: string;
-      try {
-        kidFriendlyTitle = this.buildKidFriendlyTitle(modelValidation.alertType, gameState);
-      } catch (error) {
-        console.error('Error building kid-friendly title:', error);
-        kidFriendlyTitle = `🏈 ${modelValidation.alertType.toUpperCase()} - ${gameState.awayTeam} vs ${gameState.homeTeam}`;
-      }
+      // LAW #7: Standard title format (NO team names, score only)
+      const kidFriendlyTitle = this.buildStandardTitle(modelValidation.alertType, gameState);
 
       const finalAlert = {
         id: alertId,
