@@ -252,10 +252,10 @@ export class MemStorage implements IStorage {
           nhlCloseGame: sport === "NHL",
           emptyNet: sport === "NHL",
 
-          // CFL Alert Types
-          touchdownAlert: sport === "CFL",
-          fieldGoalRange: sport === "CFL",
-          finalMinutes: sport === "CFL",
+          // CFL Alert Types - Note: CFL not defined in schema yet
+          // touchdownAlert: sport === "CFL",
+          // fieldGoalRange: sport === "CFL", 
+          // finalMinutes: sport === "CFL",
         },
         telegramEnabled: true,
         pushNotificationsEnabled: true,
