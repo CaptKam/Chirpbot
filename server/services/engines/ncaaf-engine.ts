@@ -522,6 +522,45 @@ export class NCAAEngine {
     }
   }
 
+  /**
+   * Get full ESPN game data for AI analysis
+   */
+  private async getFullGameData(gameId: string): Promise<any | null> {
+    try {
+      const games = await this.getCollegeFootballGames();
+      console.log(`🔍 NCAAF: Looking for gameId "${gameId}" in ${games.length} games`);
+      
+      // Try multiple lookup strategies
+      let foundGame = games.find((game: any) => game.gameId === gameId);
+      
+      if (!foundGame) {
+        // Try ESPN ID match
+        foundGame = games.find((game: any) => game.espnData?.id === gameId);
+      }
+      
+      if (!foundGame) {
+        // Try partial ID match (remove cfb- prefix)
+        const cleanGameId = gameId.replace('cfb-', '');
+        foundGame = games.find((game: any) => 
+          game.gameId.includes(cleanGameId) || 
+          game.espnData?.id?.toString() === cleanGameId
+        );
+      }
+      
+      if (foundGame) {
+        console.log(`✅ NCAAF: Found ESPN data for game ${gameId}`);
+        return foundGame;
+      } else {
+        console.log(`❌ NCAAF: No ESPN data found for gameId "${gameId}"`);
+        console.log(`🔍 NCAAF: Available game IDs:`, games.map(g => ({ gameId: g.gameId, espnId: g.espnData?.id })).slice(0, 3));
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ NCAAF: Error fetching full game data:', error);
+      return null;
+    }
+  }
+
   // Generate a basic "Game Live" alert when detailed data isn't available
   private async generateBasicLiveAlert(gameId: string): Promise<void> {
     try {
@@ -551,33 +590,39 @@ export class NCAAEngine {
       
       console.log(`✅ NCAAF: User has alerts enabled, generating live game alert...`);
 
-      // Stage 2: OpenAI Enhancement - Generate enhanced description instead of basic text
-      let enhancedTitle = `🏈 COLLEGE FOOTBALL LIVE`;
+      // Stage 2: AI Game Data Analysis - Let OpenAI analyze the real ESPN data  
+      let enhancedTitle = `🏈 LIVE ANALYSIS`;
       let enhancedDescription = `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName} is now live!`;
       let aiConfidence = 0.75;
       
       try {
-        const gameSituation = {
-          sport: 'NCAAF',
-          homeTeam: gameInfo.homeTeamName,
-          awayTeam: gameInfo.awayTeamName,
-          homeScore: 0,
-          awayScore: 0,
-          gameState: 'Opening Kickoff - 1st Quarter',
-          situationContext: `${gameInfo.awayTeamName} opens their season on the road against ${gameInfo.homeTeamName}. Both teams have game-planned extensively for this moment, with offensive coordinators looking to establish early rhythm while defensive units aim to create immediate pressure and force early mistakes. The opening drive will set the tone for momentum and field position battle.`,
-          scoringProbability: 0.75,
-          priority: 85
-        };
-        const aiDescription = await this.openAiEngine.generateAlertDescription(gameSituation);
-        
-        if (aiDescription && aiDescription.length > 10) {
-          enhancedTitle = `🏈 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`;
-          enhancedDescription = aiDescription;
-          aiConfidence = 0.85; // Higher confidence for AI-generated content
-          console.log(`🤖 NCAAF: OpenAI enhanced basic alert - Description: ${enhancedDescription}`);
+        // Get the real ESPN game data for this game
+        const fullGameData = await this.getFullGameData(gameId);
+        if (fullGameData) {
+          console.log(`🔍 NCAAF: Sending real ESPN data to OpenAI for analysis:`, {
+            teams: `${fullGameData.awayTeam} @ ${fullGameData.homeTeam}`,
+            score: `${fullGameData.awayScore}-${fullGameData.homeScore}`,
+            period: fullGameData.espnData?.status?.period,
+            clock: fullGameData.espnData?.status?.displayClock,
+            down: fullGameData.espnData?.competitions[0]?.situation?.down,
+            distance: fullGameData.espnData?.competitions[0]?.situation?.distance,
+            yardLine: fullGameData.espnData?.competitions[0]?.situation?.yardLine,
+            redZone: fullGameData.espnData?.competitions[0]?.situation?.isRedZone
+          });
+          
+          const aiAnalysis = await this.openAiEngine.analyzeGameSituation(fullGameData);
+          
+          if (aiAnalysis && aiAnalysis.length > 20) {
+            enhancedTitle = `🏈 ${fullGameData.awayTeam} @ ${fullGameData.homeTeam}`;
+            enhancedDescription = aiAnalysis;
+            aiConfidence = 0.90; // Higher confidence for real data analysis
+            console.log(`🤖 NCAAF: AI analyzed real game data - Analysis: ${enhancedDescription}`);
+          }
+        } else {
+          console.log(`⚠️ NCAAF: Could not fetch full ESPN data for game ${gameId}, using fallback`);
         }
       } catch (error) {
-        console.error('🤖 NCAAF: OpenAI enhancement failed for basic alert, using fallback:', error);
+        console.error('❌ NCAAF: AI game data analysis failed:', error);
       }
 
       // Stage 3: Betbook Analysis - Get betting insights even for basic alerts

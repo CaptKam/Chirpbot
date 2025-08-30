@@ -87,7 +87,88 @@ export class OpenAiEngine {
   }
 
   /**
-   * Generate a concise alert description for sports situations
+   * Analyze real-time game data and provide intelligent insights
+   */
+  async analyzeGameSituation(gameData: any): Promise<string> {
+    try {
+      const situation = gameData.espnData?.competitions[0]?.situation;
+      const status = gameData.espnData?.status;
+      const competition = gameData.espnData?.competitions[0];
+      
+      const prompt = `You are an expert college football analyst with access to real-time ESPN game data. Analyze this live game situation and provide intelligent insights:
+
+🏈 REAL-TIME GAME DATA ANALYSIS:
+
+TEAMS: ${gameData.awayTeam} @ ${gameData.homeTeam}
+SCORE: ${gameData.awayTeam} ${gameData.awayScore} - ${gameData.homeTeam} ${gameData.homeScore}
+TIME: ${status?.displayClock || 'Unknown'} remaining in ${this.getQuarter(status?.period)}
+FIELD POSITION: ${situation?.yardLine ? `${situation.team?.abbreviation} ${situation.yardLine}` : 'Unknown'}
+DOWN & DISTANCE: ${situation?.down ? `${this.getDownText(situation.down)} & ${situation.distance}` : 'Unknown'}
+RED ZONE: ${situation?.isRedZone ? 'YES' : 'NO'}
+POSSESSION: ${situation?.team?.displayName || 'Unknown'}
+
+ADDITIONAL CONTEXT:
+- Conference: ${competition?.conference?.name || 'Unknown'}
+- Venue: ${competition?.venue?.fullName || 'Unknown'}
+- Game Status: ${status?.type?.description || 'Unknown'}
+
+ANALYSIS REQUEST:
+Based on this real-time data, provide 2-3 sentences of expert analysis focusing on:
+- Current field position and scoring opportunity
+- Time pressure and clock management implications  
+- Down and distance strategy considerations
+- Momentum and tactical situation
+- What fans should be watching for next
+
+Provide professional sports analysis like you're calling the game live on television. Focus on WHY this moment matters strategically.`;
+
+      const completion = await this.client.chat.completions.create({
+        model: 'gpt-5',
+        messages: [{ role: 'user', content: prompt }],
+        max_completion_tokens: 250,
+      });
+
+      const analysis = completion.choices[0]?.message?.content?.trim();
+      
+      console.log(`🤖 OpenAI Game Analysis Length: ${analysis ? analysis.length : 0}`);
+      console.log(`🤖 OpenAI Game Analysis: "${analysis}"`);
+      
+      if (analysis && analysis.length > 20) {
+        return analysis;
+      } else {
+        console.log(`❌ Analysis too short (${analysis ? analysis.length : 0} chars): "${analysis}"`);
+        throw new Error(`Generated analysis too short: ${analysis ? analysis.length : 0} characters`);
+      }
+    } catch (error) {
+      console.error('❌ OpenAI Game Analysis Error:', error);
+      return this.getFallbackGameAnalysis(gameData);
+    }
+  }
+
+  private getQuarter(period: number): string {
+    if (!period) return '1st Quarter';
+    if (period === 1) return '1st Quarter';
+    if (period === 2) return '2nd Quarter';
+    if (period === 3) return '3rd Quarter';
+    if (period === 4) return '4th Quarter';
+    if (period > 4) return 'Overtime';
+    return `Period ${period}`;
+  }
+
+  private getDownText(down: number): string {
+    if (down === 1) return '1st';
+    if (down === 2) return '2nd';
+    if (down === 3) return '3rd';
+    if (down === 4) return '4th';
+    return `${down}th`;
+  }
+
+  private getFallbackGameAnalysis(gameData: any): string {
+    return `${gameData.awayTeam} trails ${gameData.homeTeam} ${gameData.awayScore}-${gameData.homeScore} in a developing game situation. The momentum could shift dramatically with the next possession as both teams battle for field position and scoring opportunities.`;
+  }
+
+  /**
+   * Generate a concise alert description for sports situations (Legacy method)
    */
   async generateAlertDescription(situation: GameSituation): Promise<string> {
     try {
