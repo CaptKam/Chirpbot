@@ -387,12 +387,28 @@ export class NCAAEngine {
   // Store periodic game state snapshots for analysis
   private async storeGameStateSnapshot(gameState: NCAAGameState): Promise<void> {
     try {
+      // Create kid-friendly title and description per Law #6
+      const quarter = this.getQuarterName(Number(gameState.quarter) || 1);
+      const timeLeft = this.formatTimeRemaining(gameState.timeRemaining);
+      const scoreText = `${gameState.awayTeam} ${gameState.score.away} - ${gameState.homeTeam} ${gameState.score.home}`;
+      
+      const kidFriendlyTitle = `🏈 GAME UPDATE: ${gameState.awayTeam} vs ${gameState.homeTeam}`;
+      const kidFriendlyDescription = `🏈 COLLEGE FOOTBALL UPDATE!
+
+Teams Playing: ${gameState.awayTeam} @ ${gameState.homeTeam}
+Score: ${scoreText}
+Time: ${quarter} ${timeLeft}
+Down & Distance: ${this.getDownText(gameState.down || 1)} down, need ${gameState.distance || 10} yards
+Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
+
+📊 Game tracking data saved for analysis!`;
+
       const snapshot = {
         id: randomUUID(),
         type: 'gameStateSnapshot',
         sport: 'NCAAF',
-        title: `Game State: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
-        description: `Q${gameState.period} ${gameState.timeRemaining}s - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd line`,
+        title: kidFriendlyTitle,
+        description: kidFriendlyDescription,
         gameInfo: {
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
