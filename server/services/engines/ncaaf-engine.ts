@@ -375,7 +375,7 @@ export class NCAAEngine {
 
         // Track game state changes for analysis
         const previousState = this.gameStateCache.get(gameState.gameId);
-        await this.trackGameEvents(previousState, gameState);
+        await this.trackGameEvents(previousState || null, gameState);
 
         // Store comprehensive game state snapshot
         await this.storeGameStateSnapshot(gameState);
@@ -1524,6 +1524,7 @@ Situation: Something exciting is happening in this game!`;
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
+          status: 'STATUS_IN_PROGRESS',
           quarter: gameState.quarter,
           score: gameState.score,
           eventType: eventType
