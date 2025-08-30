@@ -1022,15 +1022,11 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       const alertId = randomUUID();
       console.log(`🆔 NCAAF: Generating basic live alert with ID: ${alertId}`);
 
-      // Create kid-friendly title and description
-      const kidFriendlyTitle = `🏈 GAME STARTED! ${gameInfo.awayTeamName} vs ${gameInfo.homeTeamName}`;
-      const kidFriendlyDescription = `🏈 COLLEGE FOOTBALL IS LIVE!
-
-Teams Playing: ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}
-Score: Just started! (0-0)
-What's happening: The game just kicked off - players are on the field!
-
-🎉 Get ready for some exciting college football action!`;
+      // LAW #7: Consistent format - title shows WHAT + SCORE, description shows game info once
+      const kidFriendlyTitle = `🏈 LIVE GAME (0-0)`;
+      const kidFriendlyDescription = `1st Quarter 15:00
+Kickoff completed
+Game is now in progress`;
 
       const alert = {
         id: alertId,
@@ -1077,15 +1073,11 @@ What's happening: The game just kicked off - players are on the field!
         seen: false
       };
 
-      // Stage 3: AI COMPLETELY DISABLED - Use basic descriptions only
-      enhancedTitle = `🏈 GAME STARTED! ${gameInfo.awayTeamName} vs ${gameInfo.homeTeamName}`;
-      enhancedDescription = `🏈 COLLEGE FOOTBALL IS LIVE!
-
-Teams Playing: ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}
-Score: Just started! (0-0)
-What's happening: The game just kicked off - players are on the field!
-
-🎉 Get ready for some exciting college football action!`;
+      // LAW #7: No AI needed - consistent basic format
+      enhancedTitle = `🏈 LIVE GAME (0-0)`;
+      enhancedDescription = `1st Quarter 15:00
+Kickoff completed  
+Game is now in progress`;
       aiConfidence = 0.50;
 
       console.log(`🚫 NCAAF: AI disabled, using basic game description only`);
@@ -1269,63 +1261,34 @@ What's happening: The game just kicked off - players are on the field!
   }
 
   private buildAlertDescription(alertResult: any, gameState: NCAAGameState): string {
+    // LAW #7: Consistent format, no duplicate info, 3-second readability
     const quarter = this.getQuarterName(Number(gameState.quarter) || 1);
-    const scoreText = `${gameState.awayTeam} ${gameState.score.away} - ${gameState.homeTeam} ${gameState.score.home}`;
     const timeLeft = this.formatTimeRemaining(gameState.timeRemaining);
+    const situation = this.getSituationText(alertResult.alertType, gameState);
 
-    switch (alertResult.alertType) {
+    // Single consistent format for ALL alerts
+    return `${quarter} ${timeLeft}
+${this.getDownText(gameState.down || 1)} & ${gameState.distance || 10}, ${gameState.yardsToGoal || 50}yd line
+${situation}`;
+  }
+
+  private getSituationText(alertType: string, gameState: NCAAGameState): string {
+    switch (alertType) {
       case 'redZone':
-        return `🚨 RED ZONE ALERT! ${gameState.awayTeam} is close to scoring!
-
-Score: ${scoreText}
-Time: ${quarter} ${timeLeft}
-Situation: ${this.getDownText(gameState.down || 1)} down, need ${gameState.distance || 10} yards
-Field Position: ${gameState.yardsToGoal} yards from the end zone`;
-
+        return `Red zone scoring opportunity - high probability`;
       case 'fourthDown':
-        return `💥 4TH DOWN DECISION! Big play coming up!
-
-Score: ${scoreText}
-Time: ${quarter} ${timeLeft}
-Situation: 4th down - ${gameState.awayTeam} needs ${gameState.distance} yards or they lose the ball!
-Field Position: ${gameState.yardsToGoal} yards from scoring`;
-
+        return `4th down decision - must convert or lose possession`;
       case 'ncaafCloseGame':
         const pointDiff = Math.abs(gameState.score.home - gameState.score.away);
-        return `🔥 SUPER CLOSE GAME! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!
-
-Score: ${scoreText}
-Time: ${quarter} ${timeLeft}
-Why it matters: Either team could win - every play is huge!`;
-
+        return `${pointDiff}-point game in final minutes`;
       case 'overtime':
-        return `⚡ OVERTIME! The game is tied - extra football time!
-
-Score: ${scoreText} (TIED!)
-Time: Overtime period
-What happens: Each team gets a chance to score - first to score more wins!`;
-
+        return `Overtime period - next score could decide winner`;
       case 'twoMinuteWarning':
-        return `⏰ CRUNCH TIME! Less than 2 minutes left!
-
-Score: ${scoreText}
-Time: ${quarter} - under 2 minutes remaining
-Why it's exciting: Teams are rushing to score before time runs out!`;
-
+        return `Under 2 minutes - crunch time pressure`;
       case 'goalLineStand':
-        return `🛡️ GOAL LINE BATTLE! ${gameState.awayTeam} is trying to punch it in!
-
-Score: ${scoreText}
-Time: ${quarter} ${timeLeft}
-Situation: ${this.getDownText(gameState.down || 1)} down at the ${gameState.yardsToGoal || 50} yard line
-What's happening: The defense is trying to stop them from scoring!`;
-
+        return `Goal line stand - defense trying to prevent score`;
       default:
-        return `🏈 ${alertResult.alertType.toUpperCase()} ALERT!
-
-Score: ${scoreText}
-Time: ${quarter} ${timeLeft}
-Situation: Something exciting is happening in this game!`;
+        return `Critical game situation developing`;
     }
   }
 
@@ -1363,33 +1326,27 @@ Situation: Something exciting is happening in this game!`;
   }
 
   private buildKidFriendlyTitle(alertType: string, gameState: NCAAGameState): string {
-    const teamVs = `${gameState.awayTeam} vs ${gameState.homeTeam}`;
+    // LAW #7: Title shows WHAT + SCORE only - no team names (shown separately)
+    const scoreText = `${gameState.score.away}-${gameState.score.home}`;
 
     switch (alertType) {
       case 'redZone':
-        return `🚨 RED ZONE! ${gameState.awayTeam} is close to scoring!`;
-
+        return `🚨 RED ZONE (${scoreText})`;
       case 'fourthDown':
-        return `💥 4TH DOWN! Big decision time for ${gameState.awayTeam}!`;
-
+        return `💥 4TH DOWN (${scoreText})`;
       case 'ncaafCloseGame':
         const pointDiff = Math.abs(gameState.score.home - gameState.score.away);
-        return `🔥 SUPER CLOSE! Only ${pointDiff} point${pointDiff === 1 ? '' : 's'} apart!`;
-
+        return `🔥 ${pointDiff}-POINT GAME (${scoreText})`;
       case 'overtime':
-        return `⚡ OVERTIME! ${teamVs} is tied - extra football!`;
-
+        return `⚡ OVERTIME (${scoreText})`;
       case 'twoMinuteWarning':
-        return `⏰ CRUNCH TIME! Less than 2 minutes left!`;
-
+        return `⏰ 2-MINUTE WARNING (${scoreText})`;
       case 'goalLineStand':
-        return `🛡️ GOAL LINE BATTLE! Will they score?`;
-
+        return `🛡️ GOAL LINE STAND (${scoreText})`;
       case 'ncaafGameLive':
-        return `🏈 GAME STARTED! ${teamVs}`;
-
+        return `🏈 LIVE GAME (${scoreText})`;
       default:
-        return `🏈 EXCITING PLAY! ${teamVs}`;
+        return `🏈 GAME ALERT (${scoreText})`;
     }
   }
 

@@ -414,7 +414,7 @@ export class MLBEngine {
   }
 
   /**
-   * Fallback description used when OpenAI fails to generate a suitable alert description.
+   * LAW #7: Consistent description format - no duplicate information
    */
   private buildFallbackDescription(gameState: MLBGameStateV3, alert: SimpleAlert): string {
     const runners: string[] = [];
@@ -422,7 +422,11 @@ export class MLBEngine {
     if (gameState.runners.second) runners.push('2nd');
     if (gameState.runners.third) runners.push('3rd');
     const suffix = this.getOrdinalSuffix(gameState.inning);
-    return `${gameState.awayTeam} @ ${gameState.homeTeam}: ${Math.round(alert.probability * 100)}% scoring chance in the ${gameState.inning}${suffix} ${gameState.inningState} with ${runners.join('&') || 'no runners'}, ${gameState.outs} outs.`;
+    
+    // Single consistent format: INNING | SITUATION | PROBABILITY
+    return `${gameState.inning}${suffix} ${gameState.inningState}, ${gameState.outs} outs
+${runners.length ? 'Runners on ' + runners.join(' & ') : 'Bases empty'}
+${Math.round(alert.probability * 100)}% scoring probability`;
   }
 
   private getOrdinalSuffix(num: number): string {
@@ -662,23 +666,25 @@ export class MLBEngine {
     return 'general'; // Default type
   }
 
-  // Kid-friendly title builder
+  // LAW #7: Title shows WHAT + SCORE only
   private buildKidFriendlyTitle(alertType: string, gameState: any): string {
+    const scoreText = `${gameState.awayScore}-${gameState.homeScore}`;
+    
     switch (alertType) {
       case 'risp':
-        return '⚾ SCORING CHANCE! Runners in scoring position!';
+        return `⚾ SCORING CHANCE (${scoreText})`;
       case 'basesLoaded':
-        return '🏟️ BASES LOADED! Maximum scoring opportunity!';
-      case 'homeRun': // Assuming this might be added later or derived from other logic
-        return '💥 HOME RUN ALERT! Big swing coming up!';
+        return `🏟️ BASES LOADED (${scoreText})`;
+      case 'homeRun':
+        return `💥 HOME RUN ALERT (${scoreText})`;
       case 'closeGame':
-        return '🔥 CLOSE GAME! Every run matters!';
+        return `🔥 CLOSE GAME (${scoreText})`;
       case 'extraInnings':
-        return '⏰ EXTRA INNINGS! Bonus baseball action!';
+        return `⏰ EXTRA INNINGS (${scoreText})`;
       case 'lateInning':
-        return '🚨 CRUNCH TIME! Late inning pressure!';
+        return `🚨 LATE INNING (${scoreText})`;
       default:
-        return '⚾ BASEBALL ACTION! Something exciting is happening!';
+        return `⚾ SCORING ALERT (${scoreText})`;
     }
   }
 }
