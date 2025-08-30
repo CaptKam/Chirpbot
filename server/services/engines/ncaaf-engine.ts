@@ -56,6 +56,7 @@ interface SimpleNCAAAlert {
 export class NCAAEngine {
   private readonly ESPN_FOOTBALL_API = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football';
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
+  private static alertContentCache: Map<string, number> = new Map(); // Track alert content by hash
   
   onAlert?: (alert: any) => void;
 
@@ -78,6 +79,63 @@ export class NCAAEngine {
       }
     } catch (error) {
       console.error('Failed to load NCAAF Alert Model:', error);
+    }
+  }
+  
+  // Simple deduplication to prevent alert flooding
+  private shouldSendAlert(gameId: string, alertContent: string, alertType: string): boolean {
+    const now = Date.now();
+    
+    // Create deduplication key based on game and content
+    const contentHash = this.createContentHash(alertContent);
+    const deduplicationKey = `${gameId}-${alertType}-${contentHash}`;
+    
+    // Check if we've sent this exact alert recently
+    const lastSent = NCAAEngine.alertContentCache.get(deduplicationKey);
+    
+    if (lastSent) {
+      const timeSinceLastAlert = now - lastSent;
+      const cooldownTime = this.getCooldownTime(alertType);
+      
+      if (timeSinceLastAlert < cooldownTime) {
+        console.log(`🛡️ NCAAF: Alert blocked - sent ${Math.floor(timeSinceLastAlert/1000)}s ago (cooldown: ${cooldownTime/1000}s)`);
+        return false;
+      }
+    }
+    
+    // Record this alert
+    NCAAEngine.alertContentCache.set(deduplicationKey, now);
+    
+    // Clean up old entries (older than 10 minutes)
+    const tenMinutesAgo = now - (10 * 60 * 1000);
+    for (const [key, timestamp] of NCAAEngine.alertContentCache.entries()) {
+      if (timestamp < tenMinutesAgo) {
+        NCAAEngine.alertContentCache.delete(key);
+      }
+    }
+    
+    return true;
+  }
+  
+  private createContentHash(content: string): string {
+    // Simple hash function for content
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+  
+  private getCooldownTime(alertType: string): number {
+    // Cooldown times in milliseconds
+    switch (alertType) {
+      case 'ncaafGameLive': return 5 * 60 * 1000; // 5 minutes for basic live alerts
+      case 'ncaafRedZone': return 2 * 60 * 1000;   // 2 minutes for red zone
+      case 'ncaafFourthDown': return 1 * 60 * 1000; // 1 minute for 4th down
+      case 'ncaafCloseGame': return 3 * 60 * 1000;  // 3 minutes for close games
+      default: return 3 * 60 * 1000; // 3 minutes default
     }
   }
 
@@ -683,8 +741,10 @@ export class NCAAEngine {
         seen: false
       };
 
-      // No deduplication - send all alerts
-      const deduplicationResult = { shouldSend: true, uniqueId: alert.id };
+      // Smart deduplication to prevent flooding
+      if (!this.shouldSendAlert(gameId, enhancedDescription, 'ncaafGameLive')) {
+        return; // Skip this alert
+      }
 
       // Store and broadcast the alert
       await storage.createAlert(alert);
