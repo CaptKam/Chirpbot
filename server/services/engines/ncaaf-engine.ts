@@ -8,7 +8,7 @@ import { OpenAiEngine } from './OpenAiEngine';
 import { getBetbookData } from './betbook-engine';
 
 // Import NCAAF Alert Model (CommonJS module)
-const ncaafAlertModel = require('./NCAAFAlertModel.cjs');
+import ncaafAlertModel from './NCAAFAlertModel.cjs';
 
 // Import AlertFormatValidator and SimpleAlert types from the new structure
 import { NCAAFGameStateV3, SimpleAlert } from './index';

@@ -2,7 +2,7 @@
 import { MLBGameStateV3, SimpleAlert } from './index';
 import { AlertFormatValidator } from './AlertFormatValidator';
 
-const mlbAlertModel = require('./mlbAlertModel.cjs');
+import mlbAlertModel from './mlbAlertModel.cjs';
 
 interface MLBAlert {
   id: string;
@@ -126,5 +126,38 @@ export class MLBEngine {
       weather: null,
       park: null
     };
+  }
+
+  /**
+   * Get today's MLB games - Required for API compatibility
+   */
+  async getTodaysGames(date: string = new Date().toISOString().split('T')[0]): Promise<any[]> {
+    try {
+      const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=game(content(summary,media(epg))),decisions,person,probablePitcher,stats,homeRuns,previousPlay,game(content(media(epg)),summary),seriesStatus(useOverride=true)`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!data.dates || data.dates.length === 0) {
+        return [];
+      }
+      
+      const games = data.dates[0].games || [];
+      
+      return games.map((game: any) => ({
+        gameId: game.gamePk.toString(),
+        homeTeam: game.teams.home.team.name,
+        awayTeam: game.teams.away.team.name,
+        homeScore: game.teams.home.score || 0,
+        awayScore: game.teams.away.score || 0,
+        status: game.status.abstractGameState,
+        gameDate: game.gameDate,
+        venue: game.venue.name,
+        inning: game.linescore?.currentInning || 1,
+        inningState: game.linescore?.inningState || 'Top'
+      }));
+    } catch (error) {
+      console.error('Error fetching MLB games:', error);
+      return [];
+    }
   }
 }
