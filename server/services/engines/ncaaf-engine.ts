@@ -368,37 +368,49 @@ export class NCAAEngine {
   private async processGameForAlerts(game: any): Promise<void> {
     try {
       const gameState = this.parseGameState(game);
-      if (!gameState) {
-        console.log(`🏈 NCAAF: No game state parsed for ${game.gameId}, generating basic alert...`);
-        await this.generateBasicLiveAlert(game.gameId);
-        return;
-      }
-
-      console.log(`🏈 NCAAF: Processing game state for ${gameState.gameId} - Quarter: ${gameState.quarter}, Score: ${gameState.score?.home || 0}-${gameState.score?.away || 0}`);
       
-      // Track game state changes for analysis
-      const previousState = this.gameStateCache.get(gameState.gameId);
-      await this.trackGameEvents(previousState, gameState);
-      
-      // Store comprehensive game state snapshot
-      await this.storeGameStateSnapshot(gameState);
-      
-      // Update cache
-      this.gameStateCache.set(gameState.gameId, gameState);
-      
-      // If no detailed game data, generate basic live alert
-      if (!gameState.quarter || gameState.quarter === 'undefined' || gameState.quarter === undefined) {
-        console.log(`🏈 NCAAF: No detailed quarter data for ${gameState.gameId} (quarter: ${gameState.quarter}), generating basic live alert...`);
-        await this.generateBasicLiveAlert(gameState.gameId);
-        return;
-      }
-      
-      const alerts = this.generateAlertsForGame(gameState);
-      
-      for (const alert of alerts) {
-        if (this.shouldSendAlert(alert)) {
-          await this.sendAlert(alert, gameState);
-        }
+      // ALWAYS use the NCAAF Alert Model for proper situation analysis
+      if (gameState) {
+        console.log(`🏈 NCAAF: Processing detailed game state for ${gameState.gameId} - Quarter: ${gameState.quarter}, Score: ${gameState.score?.home || 0}-${gameState.score?.away || 0}`);
+        
+        // Track game state changes for analysis
+        const previousState = this.gameStateCache.get(gameState.gameId);
+        await this.trackGameEvents(previousState, gameState);
+        
+        // Store comprehensive game state snapshot
+        await this.storeGameStateSnapshot(gameState);
+        
+        // Update cache
+        this.gameStateCache.set(gameState.gameId, gameState);
+        
+        // Use NCAAF Alert Model for situation-specific alerts
+        await this.checkGameSituations(gameState);
+      } else {
+        console.log(`🏈 NCAAF: No detailed game state parsed for ${game.gameId}, using basic live detection...`);
+        
+        // Create minimal game state for basic alert
+        const basicGameState: NCAAGameState = {
+          gameId: game.gameId,
+          period: 1,
+          quarter: 1,
+          timeRemaining: 900, // 15 minutes default
+          homeScore: game.homeScore || 0,
+          awayScore: game.awayScore || 0,
+          homeTeam: game.homeTeam,
+          awayTeam: game.awayTeam,
+          sport: 'football',
+          conference: 'Unknown',
+          score: { home: game.homeScore || 0, away: game.awayScore || 0 },
+          down: 1,
+          distance: 10,
+          yardsToGoal: 50,
+          redZone: false,
+          overtime: false,
+          finalMinutes: false
+        };
+        
+        // Use the NCAAF Alert Model even for basic states
+        await this.checkGameSituations(basicGameState);
       }
     } catch (error) {
       console.error(`❌ Error processing alerts for game ${game.id}:`, error);
@@ -1144,61 +1156,79 @@ export class NCAAEngine {
       // Ensure NCAAF Alert Model is loaded
       await this.loadNCAAFAlertModel();
       if (!ncaafAlertModel) {
-        console.error('NCAAF Alert Model not available, skipping situation check');
+        console.error('NCAAF Alert Model not available, generating basic live alert instead');
+        await this.generateBasicLiveAlert(gameState.gameId);
         return;
       }
+
+      console.log(`🎯 NCAAF: Running Alert Model check for ${gameState.awayTeam} @ ${gameState.homeTeam} - Q${gameState.quarter}, ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd`);
 
       // Stage 1: L1 Trigger - Use the NCAAF alert model to determine if an alert should fire
       const alertResult = ncaafAlertModel.checkNCAAFAlerts(gameState);
       
       if (!alertResult.shouldAlert) {
+        console.log(`🏈 NCAAF: Alert Model check complete - no alert conditions met`);
         return; // No alert conditions met
       }
 
+      console.log(`🚨 NCAAF: Alert Model triggered - Type: ${alertResult.alertType}, Priority: ${alertResult.priority}, Probability: ${alertResult.probability}`);
+
       // Get user settings to check if this alert type is enabled
       const userSettings = await this.getUserNCAAFSettings();
+      const alertTypes = userSettings?.alertTypes || {};
+      
       if (!this.isAlertTypeEnabled(alertResult.alertType, userSettings)) {
         console.log(`🔕 NCAAF Alert disabled in user settings: ${alertResult.alertType}`);
         return;
       }
 
-      // Check deduplication
-      if (this.isDuplicate(alertResult, gameState)) {
+      console.log(`✅ NCAAF: Alert type ${alertResult.alertType} is enabled in user settings`);
+
+      // Check deduplication using proper alert model data
+      const deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${gameState.down || 0}:${gameState.distance || 0}`;
+      if (this.isDuplicateByKey(deduplicationKey)) {
+        console.log(`🛡️ NCAAF: Alert blocked by deduplication - ${deduplicationKey}`);
         return;
       }
 
-      // Stage 2: AI COMPLETELY DISABLED - Use basic description
-      console.log(`🚫 NCAAF: AI disabled, using basic alert description`);
-      const aiDescription = {
-        title: `NCAAF ${alertResult.alertType}`,
-        description: `🏈 ${gameState.awayTeam} @ ${gameState.homeTeam}\n📊 ${gameState.score.away}-${gameState.score.home}\n⏰ Q${gameState.quarter}\n\n${alertResult.reasons.join(', ')}`,
-        confidence: 0.50
-      };
+      console.log(`🎯 NCAAF: Proceeding with alert delivery - ${alertResult.alertType}`);
+
+      // Stage 2: Generate alert description (AI disabled)
+      const alertDescription = this.buildAlertDescription(alertResult, gameState);
 
       // Stage 3: Betbook Analysis - Generate betting insights
-      const betbookData = await getBetbookData({
-        sport: 'NCAAF',
-        homeTeam: gameState.homeTeam,
-        awayTeam: gameState.awayTeam,
-        situation: alertResult.alertType,
-        probability: alertResult.probability
-      });
+      let betbookData = null;
+      try {
+        betbookData = await getBetbookData({
+          sport: 'NCAAF',
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          situation: alertResult.alertType,
+          probability: alertResult.probability
+        });
+      } catch (error) {
+        console.error('Stage 3 Betbook insights failed:', error);
+      }
 
       // Stage 4: Delivery - Create and store the alert with comprehensive data
       const finalAlert = {
         id: randomUUID(),
         type: alertResult.alertType,
         priority: alertResult.priority,
-        title: aiDescription?.title || `NCAAF ${alertResult.alertType}`,
-        message: aiDescription?.description || alertResult.reasons.join(', '),
-        gameData: {
-          sport: 'NCAAF',
+        title: `🏈 NCAAF ${alertResult.alertType.toUpperCase()}`,
+        description: alertDescription,
+        sport: 'NCAAF',
+        gameInfo: {
+          status: 'live',
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,
           awayTeam: gameState.awayTeam,
           score: gameState.score,
           quarter: gameState.quarter,
-          situation: alertResult.alertType
+          situation: alertResult.alertType,
+          down: gameState.down,
+          distance: gameState.distance,
+          yardsToGoal: gameState.yardsToGoal
         },
         
         // Store comprehensive game state for analysis
@@ -1227,47 +1257,29 @@ export class NCAAEngine {
         },
         
         probability: alertResult.probability,
-        confidence: aiDescription?.confidence || 0.75,
-        betbookData: betbookData || undefined,
+        confidence: 0.75,
+        betbookData: betbookData,
         timestamp: new Date(),
         sentToTelegram: false,
-        seen: false
+        seen: false,
+        reasons: alertResult.reasons
       };
 
       // Store alert in database  
-      await storage.createAlert({
-        ...finalAlert,
-        sport: 'NCAAF',
-        description: finalAlert.message,
-        gameInfo: {
-          status: 'live',
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          score: gameState.score,
-          quarter: gameState.quarter
-        }
-      });
+      await storage.createAlert(finalAlert);
+      
+      // Record deduplication
+      this.recordDeduplicationByKey(deduplicationKey);
       
       // Send to Telegram if enabled
-      await this.sendTelegramIfEnabled({
-        ...finalAlert,
-        sport: 'NCAAF',
-        description: finalAlert.message,
-        gameInfo: {
-          status: 'live',
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          score: gameState.score,
-          quarter: gameState.quarter
-        }
-      });
+      await this.sendTelegramIfEnabled(finalAlert);
       
       // Call onAlert callback if set
       if (this.onAlert) {
         this.onAlert(finalAlert);
       }
 
-      console.log(`🏈 NCAAF Alert Generated: ${alertResult.alertType} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+      console.log(`🏈 NCAAF Alert Generated: ${alertResult.alertType} - ${gameState.awayTeam} @ ${gameState.homeTeam} (Priority: ${alertResult.priority})`);
 
     } catch (error) {
       console.error('Error in NCAAF checkGameSituations:', error);
@@ -1287,26 +1299,70 @@ export class NCAAEngine {
   }
 
   private isAlertTypeEnabled(alertType: string, userSettings: any): boolean {
-    // Map alert types to user setting keys
-    const settingKey = alertType; // Direct mapping since we use the same keys
-    return userSettings[settingKey] === true;
+    const alertTypes = userSettings?.alertTypes || {};
+    
+    // Map alert model types to user setting keys
+    const settingKeyMap: Record<string, string> = {
+      'redZone': 'ncaafRedZone',
+      'fourthDown': 'ncaafFourthDown', 
+      'twoMinuteWarning': 'ncaafTwoMinuteWarning',
+      'ncaafCloseGame': 'ncaafCloseGame',
+      'overtime': 'ncaafOvertime',
+      'goalLineStand': 'ncaafGoalLineStand',
+      'bigPlayPotential': 'ncaafBigPlayPotential'
+    };
+    
+    const settingKey = settingKeyMap[alertType] || alertType;
+    const isEnabled = alertTypes[settingKey] === true;
+    
+    console.log(`🔍 NCAAF: Alert type ${alertType} -> setting ${settingKey} = ${isEnabled}`);
+    return isEnabled;
   }
 
-  private isDuplicate(alertResult: any, gameState: NCAAGameState): boolean {
-    const deduplicationKey = `${gameState.gameId}:${alertResult.alertType}:${gameState.quarter}:${gameState.down || 0}`;
+  private isDuplicateByKey(deduplicationKey: string): boolean {
     const now = Date.now();
     const existing = this.deduplicationCache.get(deduplicationKey);
     
-    if (existing && (now - existing.timestamp) < 60000) { // 1 minute cooldown
+    if (existing && (now - existing.timestamp) < 120000) { // 2 minute cooldown for situation-specific alerts
       return true;
     }
     
-    this.deduplicationCache.set(deduplicationKey, {
-      timestamp: now,
-      priority: alertResult.priority
-    });
-    
     return false;
+  }
+
+  private recordDeduplicationByKey(deduplicationKey: string): void {
+    this.deduplicationCache.set(deduplicationKey, {
+      timestamp: Date.now(),
+      priority: 80
+    });
+  }
+
+  private buildAlertDescription(alertResult: any, gameState: NCAAGameState): string {
+    const quarter = gameState.quarter || 1;
+    const scoreText = `${gameState.score.away}-${gameState.score.home}`;
+    
+    switch (alertResult.alertType) {
+      case 'redZone':
+        return `🚨 RED ZONE! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd line`;
+      
+      case 'fourthDown':
+        return `💥 4TH DOWN! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - 4th & ${gameState.distance} at ${gameState.yardsToGoal}yd line`;
+      
+      case 'ncaafCloseGame':
+        return `🔥 CLOSE GAME! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - ${Math.abs(gameState.score.home - gameState.score.away)} point game`;
+      
+      case 'overtime':
+        return `⚡ OVERTIME! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Extra football!`;
+      
+      case 'twoMinuteWarning':
+        return `⏰ TWO MINUTE DRILL! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - Final 2 minutes`;
+      
+      case 'goalLineStand':
+        return `🛡️ GOAL LINE STAND! ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter} - ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd`;
+      
+      default:
+        return `🏈 ${alertResult.alertType.toUpperCase()}: ${gameState.awayTeam} @ ${gameState.homeTeam} (${scoreText}) - Q${quarter}`;
+    }
   }
 
   private async sendTelegramIfEnabled(alert: any): Promise<void> {
