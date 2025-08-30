@@ -166,6 +166,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete specific alert by ID
+  app.delete('/api/alerts/:alertId', async (req, res) => {
+    try {
+      const { alertId } = req.params;
+      console.log(`🗑️ Deleting alert with ID: ${alertId}`);
+      
+      // Delete the alert from storage
+      await storage.deleteAlert(alertId);
+      
+      res.json({ 
+        success: true, 
+        message: `Alert ${alertId} deleted successfully` 
+      });
+    } catch (error) {
+      console.error('❌ Error deleting alert:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
   // Test endpoint to create a simple NCAAF alert directly
   app.post('/api/test-create-simple-ncaaf-alert', async (req, res) => {
     try {
