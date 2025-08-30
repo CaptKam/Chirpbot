@@ -145,41 +145,6 @@ export class NCAAEngine {
     }
   }
 
-  // Simple deduplication to prevent alert flooding
-  private shouldSendAlert(gameId: string, alertContent: string, alertType: string): boolean {
-    const now = Date.now();
-
-    // Create deduplication key based on game and content
-    const contentHash = this.createContentHash(alertContent);
-    const deduplicationKey = `${gameId}-${alertType}-${contentHash}`;
-
-    // Check if we've sent this exact alert recently
-    const lastSent = NCAAEngine.alertContentCache.get(deduplicationKey);
-
-    if (lastSent) {
-      const timeSinceLastAlert = now - lastSent;
-      const cooldownTime = this.getCooldownTime(alertType);
-
-      if (timeSinceLastAlert < cooldownTime) {
-        console.log(`🛡️ NCAAF: Alert blocked - sent ${Math.floor(timeSinceLastAlert/1000)}s ago (cooldown: ${cooldownTime/1000}s)`);
-        return false;
-      }
-    }
-
-    // Record this alert
-    NCAAEngine.alertContentCache.set(deduplicationKey, now);
-
-    // Clean up old entries (older than 10 minutes)
-    const tenMinutesAgo = now - (10 * 60 * 1000);
-    for (const [key, timestamp] of Array.from(NCAAEngine.alertContentCache.entries())) {
-      if (timestamp < tenMinutesAgo) {
-        NCAAEngine.alertContentCache.delete(key);
-      }
-    }
-
-    return true;
-  }
-
   private createContentHash(content: string): string {
     // Simple hash function for content
     let hash = 0;
@@ -1011,7 +976,16 @@ export class NCAAEngine {
       let preliminaryDescription = `💥 ONE-SCORE GAME! Every play matters now!\n\n⚡️ Advanced AI: 35% scoring probability\n🎯 Key Factor: Field goal could change the lead\n💪 Strategy: Establish rhythm; control clock`;
 
       console.log(`🛡️ NCAAF: Checking deduplication BEFORE AI analysis to save costs...`);
-      if (!this.shouldSendAlert(gameId, preliminaryDescription, 'ncaafGameLive')) {
+      // Create temporary alert object for deduplication check
+      const tempAlert = {
+        type: 'ncaafGameLive',
+        priority: 75,
+        description: preliminaryDescription,
+        reasons: ['Game is live'],
+        probability: 0.8,
+        deduplicationKey: `${gameId}:ncaafGameLive:0`
+      };
+      if (!this.shouldSendAlert(tempAlert)) {
         console.log(`💰 NCAAF: Alert blocked by deduplication - saved AI analysis cost!`);
         return; // Skip this alert and save the AI analysis cost
       }
