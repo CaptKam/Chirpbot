@@ -1164,7 +1164,9 @@ Game is now in progress`;
 
       console.log(`🎯 NCAAF: Proceeding with alert delivery - ${alertResult.alertType}`);
 
-      // Stage 2: Generate kid-friendly alert description (AI disabled)
+      // Stage 2: Generate user-friendly alert title and description
+      const friendlyTitle = this.createFriendlyTitle(alertResult.alertType, gameState);
+      const friendlyDescription = this.createFriendlyDescription(alertResult.alertType, gameState);
       const alertDescription = this.buildAlertDescription(alertResult, gameState);
 
       // Stage 3: Betbook Analysis - Generate betting insights
@@ -1183,8 +1185,8 @@ Game is now in progress`;
         console.error('Stage 3 Betbook insights failed:', error);
       }
 
-      // Stage 4: Delivery - Route through Alert Model for validation and processing
-      const validatedAlert = await this.processAlertThroughModel(alertResult, gameState, alertDescription, betbookData, deduplicationKey);
+      // Stage 4: Delivery - Route through Alert Model for validation and processing  
+      const validatedAlert = await this.processAlertThroughModel(alertResult, gameState, friendlyDescription, betbookData, deduplicationKey, friendlyTitle);
 
       if (validatedAlert) {
         console.log(`🏈 NCAAF Alert Generated: ${alertResult.alertType} - ${gameState.awayTeam} @ ${gameState.homeTeam} (Priority: ${alertResult.priority})`);
@@ -1361,7 +1363,7 @@ ${situation}`;
   }
 
   // Process alert through CJS alert model before sending to alerts page
-  private async processAlertThroughModel(alertResult: any, gameState: NCAAGameState, alertDescription: string, betbookData: any, deduplicationKey: string): Promise<any> {
+  private async processAlertThroughModel(alertResult: any, gameState: NCAAGameState, alertDescription: string, betbookData: any, deduplicationKey: string, friendlyTitle?: string): Promise<any> {
     try {
       // Stage 1: Validate through NCAAF Alert Model (.cjs)
       if (!ncaafAlertModel) {
@@ -1387,8 +1389,8 @@ ${situation}`;
       const alertId = randomUUID();
       console.log(`🆔 NCAAF: Generating CJS model alert with ID: ${alertId} | Type: ${modelValidation.alertType}`);
 
-      // LAW #7: Standard title format (NO team names, score only)
-      const kidFriendlyTitle = this.buildStandardTitle(modelValidation.alertType, gameState);
+      // Use the friendly title passed from calling method
+      const kidFriendlyTitle = friendlyTitle || this.buildStandardTitle(modelValidation.alertType, gameState);
 
       const finalAlert = {
         id: alertId,
@@ -1518,6 +1520,76 @@ ${situation}`;
     } catch (error) {
       console.error('Error storing game flow event:', error);
     }
+  }
+
+  private createFriendlyTitle(alertType: string, gameState: NCAAFGameState): string {
+    const homeTeam = gameState.homeTeam;
+    const awayTeam = gameState.awayTeam;
+    const scoreText = `${awayTeam} ${gameState.awayScore}-${gameState.homeScore} ${homeTeam}`;
+    
+    switch (alertType) {
+      case 'redZone':
+        return `🚨 RED ZONE! ${gameState.offense} is close to scoring!`;
+      case 'closeGame':
+        return `🔥 CLOSE GAME! ${scoreText} - Anyone can win!`;
+      case 'fourthDown':
+        return `💥 4TH DOWN! ${gameState.offense} must convert or lose the ball!`;
+      case 'twoMinuteWarning':
+        return `⏰ 2 MINUTES LEFT! ${scoreText} - Crunch time!`;
+      case 'overtime':
+        return `🏈 OVERTIME! ${scoreText} - Extra football!`;
+      case 'goalLineStand':
+        return `🛡️ GOAL LINE STAND! ${gameState.defense} trying to stop a score!`;
+      case 'bigPlayPotential':
+        return `⚡ BIG PLAY SETUP! ${gameState.offense} has a great chance!`;
+      default:
+        return `🏈 EXCITING MOMENT! ${scoreText}`;
+    }
+  }
+
+  private createFriendlyDescription(alertType: string, gameState: NCAAFGameState): string {
+    const quarter = this.getQuarterName(gameState.quarter);
+    const timeLeft = gameState.timeRemaining || 'Unknown time';
+    const downInfo = gameState.down && gameState.distance ? 
+      `${gameState.down}${this.getOrdinalSuffix(gameState.down)} down and ${gameState.distance} yards` : 
+      'Unknown down';
+    const fieldPos = gameState.yardsToGoal ? `${gameState.yardsToGoal} yards from goal` : 'Field position unknown';
+    
+    switch (alertType) {
+      case 'redZone':
+        return `${gameState.offense} is in the RED ZONE! They're only ${gameState.yardsToGoal || 20} yards away from scoring a touchdown. It's ${downInfo} in the ${quarter} quarter with ${timeLeft} remaining. This is a high-scoring opportunity!`;
+      
+      case 'closeGame':
+        const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+        return `This game is SUPER CLOSE! Only ${scoreDiff} points separate the teams in the ${quarter} quarter with ${timeLeft} left. Either team could win this game!`;
+      
+      case 'fourthDown':
+        return `It's 4TH DOWN for ${gameState.offense}! They need ${gameState.distance || 'unknown'} yards to get a first down. If they don't make it, they lose the ball to the other team. Big decision time in the ${quarter} quarter!`;
+      
+      case 'twoMinuteWarning':
+        return `FINAL 2 MINUTES! The clock is running down in the ${quarter} quarter. This is crunch time - every play matters now. ${gameState.offense} has the ball and needs to make something happen!`;
+      
+      case 'overtime':
+        return `OVERTIME FOOTBALL! The game was tied at the end of regulation, so now we get extra football! First team to score wins. ${gameState.offense} has the ball - this could decide the game!`;
+      
+      case 'goalLineStand':
+        return `GOAL LINE STAND! ${gameState.offense} is trying to score from very close to the goal line, but ${gameState.defense} is fighting hard to stop them. This is a battle of inches!`;
+      
+      case 'bigPlayPotential':
+        return `BIG PLAY OPPORTUNITY! ${gameState.offense} is in a great position to make a huge play. It's ${downInfo} from ${fieldPos} in the ${quarter} quarter. Something exciting could happen!`;
+      
+      default:
+        return `Exciting moment in college football! ${gameState.awayTeam} vs ${gameState.homeTeam} in the ${quarter} quarter with ${timeLeft} remaining. Score: ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore}.`;
+    }
+  }
+
+  private getOrdinalSuffix(num: number): string {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) return 'st';
+    if (j === 2 && k !== 12) return 'nd';  
+    if (j === 3 && k !== 13) return 'rd';
+    return 'th';
   }
 
   // Track significant game events for analysis
