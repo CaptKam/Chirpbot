@@ -62,8 +62,8 @@ export class OpenAiEngine {
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 300,
-        temperature: 0.7
+        max_completion_tokens: 300,
+        // temperature: 1 (default) - gpt-5 only supports default value
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -103,8 +103,8 @@ Make it exciting and informative for sports fans.`;
       const completion = await this.client.chat.completions.create({
         model: 'gpt-5', // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 50,
-        temperature: 0.8
+        max_completion_tokens: 50,
+        // temperature: 1 (default) - gpt-5 only supports default value
       });
 
       const description = completion.choices[0]?.message?.content?.trim();
@@ -140,8 +140,8 @@ Provide a brief analysis (max 150 characters) of how these players might impact 
       const completion = await this.client.chat.completions.create({
         model: 'gpt-5', // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 60,
-        temperature: 0.6
+        max_completion_tokens: 60,
+        // temperature: 1 (default) - gpt-5 only supports default value
       });
 
       return completion.choices[0]?.message?.content?.trim() || 'Player impact analysis unavailable';
@@ -168,8 +168,8 @@ What's the most important factor fans should watch for? (max 100 characters)`;
       const completion = await this.client.chat.completions.create({
         model: 'gpt-5', // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 40,
-        temperature: 0.7
+        max_completion_tokens: 40,
+        // temperature: 1 (default) - gpt-5 only supports default value
       });
 
       return completion.choices[0]?.message?.content?.trim() || 'Key insight unavailable';

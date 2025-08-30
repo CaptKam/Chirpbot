@@ -557,20 +557,24 @@ export class NCAAEngine {
       let aiConfidence = 0.75;
       
       try {
-        const aiDescription = await this.openAiEngine.generateSportsAlert({
+        const gameSituation = {
           sport: 'NCAAF',
-          situation: 'Game is now live and being monitored for exciting plays',
-          gameContext: `${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`,
-          quarter: '1',
-          score: '0-0',
+          homeTeam: gameInfo.homeTeamName,
+          awayTeam: gameInfo.awayTeamName,
+          homeScore: 0,
+          awayScore: 0,
+          gameState: '1st Quarter',
+          situationContext: 'Game is now live and being monitored for exciting plays',
+          scoringProbability: 0.8,
           priority: 70
-        });
+        };
+        const aiDescription = await this.openAiEngine.generateAlertDescription(gameSituation);
         
-        if (aiDescription) {
-          enhancedTitle = aiDescription.title || enhancedTitle;
-          enhancedDescription = aiDescription.description || enhancedDescription;
-          aiConfidence = aiDescription.confidence || aiConfidence;
-          console.log(`🤖 NCAAF: OpenAI enhanced basic alert - Title: ${enhancedTitle}`);
+        if (aiDescription && aiDescription.length > 10) {
+          enhancedTitle = `🏈 ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`;
+          enhancedDescription = aiDescription;
+          aiConfidence = 0.85; // Higher confidence for AI-generated content
+          console.log(`🤖 NCAAF: OpenAI enhanced basic alert - Description: ${enhancedDescription}`);
         }
       } catch (error) {
         console.error('🤖 NCAAF: OpenAI enhancement failed for basic alert, using fallback:', error);

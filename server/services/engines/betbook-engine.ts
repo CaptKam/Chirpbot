@@ -85,8 +85,8 @@ Provide a brief, specific betting recommendation (max 120 chars) focusing on liv
       const completion = await this.client.chat.completions.create({
         model: 'gpt-5', // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 50,
-        temperature: 0.6
+        max_completion_tokens: 50,
+        // temperature: 1 (default) - gpt-5 only supports default value
       });
 
       const advice = completion.choices[0]?.message?.content?.trim();
@@ -123,8 +123,8 @@ Provide 3 specific betting insights in JSON format:
         model: 'gpt-5', // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: "json_object" },
-        max_tokens: 150,
-        temperature: 0.7
+        max_completion_tokens: 150,
+        // temperature: 1 (default) - gpt-5 only supports default value
       });
 
       const response = completion.choices[0]?.message?.content;
