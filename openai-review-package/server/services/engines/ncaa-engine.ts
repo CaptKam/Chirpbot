@@ -32,7 +32,7 @@ interface SimpleNCAAAlert {
 export class NCAAEngine {
   private readonly ESPN_FOOTBALL_API = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football';
   private deduplicationCache = new Map<string, { timestamp: number; priority: number }>();
-  
+
   onAlert?: (alert: any) => void;
 
   constructor() {
@@ -54,7 +54,7 @@ export class NCAAEngine {
   private async getCollegeFootballGames(): Promise<any[]> {
     try {
       const url = `${this.ESPN_FOOTBALL_API}/scoreboard`;
-      
+
       const data: any = await fetchJson(url, {
         headers: {
           'User-Agent': 'ChirpBot/2.0',
@@ -93,16 +93,32 @@ export class NCAAEngine {
 
   async processGameAlerts(): Promise<void> {
     try {
-      const games = await this.getTodaysGames();
-      const liveGames = games.filter(game => 
+      // Check if any NCAAF games are being monitored
+      const monitoredGames = await storage.getAllMonitoredGames();
+      const ncaafMonitoredGames = monitoredGames.filter(g => g.sport === 'NCAAF');
+
+      if (ncaafMonitoredGames.length === 0) {
+        console.log('🔕 NCAAF: No games being monitored, skipping alert processing');
+        return;
+      }
+
+      console.log(`📊 NCAAF: Found ${ncaafMonitoredGames.length} monitored games`);
+
+      const footballGames = await this.getCollegeFootballGames();
+      const liveGames = footballGames.filter(game => 
         game.status === 'STATUS_IN_PROGRESS' || 
         game.status === 'STATUS_HALFTIME' ||
         game.status === 'STATUS_OVERTIME'
       );
 
-      console.log(`🎯 NCAAF Engine Processing ${liveGames.length} live college football games`);
+      // Only process games that are being monitored
+      const monitoredLiveGames = liveGames.filter(game => 
+        ncaafMonitoredGames.some(monitored => monitored.gameId === game.gameId)
+      );
 
-      for (const game of liveGames) {
+      console.log(`🎯 NCAAF Engine Processing ${monitoredLiveGames.length} monitored live college football games`);
+
+      for (const game of monitoredLiveGames) {
         await this.processGameForAlerts(game);
       }
 
@@ -118,7 +134,7 @@ export class NCAAEngine {
       if (!gameState) return;
 
       const alerts = this.generateAlertsForGame(gameState);
-      
+
       for (const alert of alerts) {
         if (this.shouldSendAlert(alert)) {
           await this.sendAlert(alert, gameState);
@@ -138,11 +154,11 @@ export class NCAAEngine {
       // Extract period/quarter info
       let period = 0;
       let timeRemaining = '';
-      
+
       if (status.period) {
         period = status.period;
       }
-      
+
       if (status.displayClock) {
         timeRemaining = status.displayClock;
       }
@@ -173,10 +189,10 @@ export class NCAAEngine {
     try {
       const situation = espnData.competitions[0]?.situation;
       if (!situation) return false;
-      
+
       const yardLine = situation.yardLine;
       const isRedZone = situation.isRedZone;
-      
+
       return isRedZone || (yardLine && yardLine <= 20);
     } catch {
       return false;
@@ -185,9 +201,9 @@ export class NCAAEngine {
 
   private isFinalMinutes(timeRemaining: string, period: number): boolean {
     if (!timeRemaining) return false;
-    
+
     if (period < 4) return false; // Must be 4th quarter or later
-    
+
     try {
       const [minutes] = timeRemaining.split(':').map(Number);
       return minutes <= 2;
@@ -284,21 +300,21 @@ export class NCAAEngine {
   private shouldSendAlert(alert: SimpleNCAAAlert): boolean {
     const existing = this.deduplicationCache.get(alert.deduplicationKey);
     const now = Date.now();
-    
+
     if (!existing) {
       this.deduplicationCache.set(alert.deduplicationKey, { timestamp: now, priority: alert.priority });
       return true;
     }
-    
+
     const timeDiff = now - existing.timestamp;
     const isHigherPriority = alert.priority > existing.priority;
-    
+
     // Send if higher priority or enough time has passed
     if (isHigherPriority || timeDiff > 180000) { // 3 minutes
       this.deduplicationCache.set(alert.deduplicationKey, { timestamp: now, priority: alert.priority });
       return true;
     }
-    
+
     return false;
   }
 
@@ -356,7 +372,7 @@ export class NCAAEngine {
   private cleanupOldDedupEntries(): void {
     const now = Date.now();
     const maxAge = 3600000; // 1 hour
-    
+
     for (const [key, entry] of this.deduplicationCache.entries()) {
       if (now - entry.timestamp > maxAge) {
         this.deduplicationCache.delete(key);
