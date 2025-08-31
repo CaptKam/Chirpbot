@@ -59,10 +59,43 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
         if (!hasMonitoredGames) continue;
 
-        // NCAAF: COMPLETELY BLOCKED until live games exist - NO ALERTS EVER for scheduled games
+        // NCAAF: Only process actually live games - no fake alerts for scheduled games
         if (sport === 'NCAAF') {
-          console.log('🚫 NCAAF: COMPLETELY DISABLED - no alert generation when no live games');
-          // Do not even check games - complete silence for NCAAF until live games exist
+          console.log('🏈 NCAAF: Checking for actually live games only...');
+          const { NCAAFEngine } = await import('./ncaaf-engine');
+          const engine = new NCAAFEngine();
+          const todaysGames = await engine.getTodaysGames();
+          
+          // STRICT: Only process games that are genuinely live/in-progress
+          const actuallyLiveGames = todaysGames.filter(game => {
+            const isActuallyLive = game.status === 'STATUS_IN_PROGRESS' || 
+                                   game.status === 'STATUS_HALFTIME' ||
+                                   game.status === 'STATUS_OVERTIME' ||
+                                   game.status === 'STATUS_FIRST_HALF' ||
+                                   game.status === 'STATUS_SECOND_HALF';
+            
+            if (!isActuallyLive) {
+              console.log(`🚫 NCAAF: Skipping non-live game ${game.gameId} - Status: ${game.status}`);
+            }
+            return isActuallyLive;
+          });
+          
+          // Only start engines for monitored games that are actually live
+          const monitoredGames = await storage.getAllMonitoredGames();
+          for (const monitoredGame of monitoredGames.filter(g => g.sport === 'NCAAF')) {
+            const isGameLive = actuallyLiveGames.some(liveGame => 
+              liveGame.gameId === monitoredGame.gameId || 
+              liveGame.espnData?.id?.toString() === monitoredGame.gameId.replace('cfb-', '')
+            );
+            
+            if (isGameLive) {
+              const engineKey = `${sport}_${monitoredGame.gameId}`;
+              if (!this.activeEngines.has(engineKey)) {
+                console.log(`🔴 NCAAF: Starting engine for live monitored game ${monitoredGame.gameId}`);
+                await this.startEngineForGame(sport, monitoredGame.gameId);
+              }
+            }
+          }
           continue;
         }
 
@@ -161,8 +194,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return cflEngine;
         case 'NCAAF':
-          console.log('🚫 NCAAF ENGINE CREATION BLOCKED - no live games exist');
-          throw new Error('NCAAF engines completely disabled until live games exist');
+          const { NCAAFEngine } = await import('./ncaaf-engine');
+          return new NCAAFEngine();
         default:
           console.warn(`No engine available for sport: ${sport}`);
           return null;

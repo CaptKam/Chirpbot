@@ -344,9 +344,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameData: game
         }));
       } else if (sport === 'NCAAF') {
-        // NCAAF COMPLETELY BLOCKED - no live games exist
-        console.log('🚫 NCAAF GAMES API BLOCKED - no live games exist');
-        games = []; // Return empty array - no NCAAF data until live games exist
+        // Use ESPN NCAAF API integration (College Football Only)
+        const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+        const ncaaEngine = new NCAAFEngine();
         games = await ncaaEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface
