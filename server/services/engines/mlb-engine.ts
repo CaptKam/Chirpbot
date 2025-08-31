@@ -31,6 +31,7 @@ interface MLBAlert {
 export class MLBEngine {
   private gameStates = new Map<string, MLBGameStateV3>();
   private lastAlerts = new Map<string, string>();
+  public onAlert?: (alert: any) => void;
 
   /**
    * LAW #6 & #7: Create standardized MLB alert with betting data
@@ -153,6 +154,55 @@ export class MLBEngine {
       weather: null,
       park: null
     };
+  }
+
+  /**
+   * Process a specific game for live monitoring - Required for engine compatibility
+   */
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      // Fetch specific game data from MLB API
+      const url = `https://statsapi.mlb.com/api/v1/game/${gameId}/linescore`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!data || !data.teams) {
+        console.log(`🔍 MLB: No data found for game ${gameId}`);
+        return;
+      }
+
+      // Convert to MLBGameStateV3 format
+      const gameState: MLBGameStateV3 = {
+        gameId: gameId,
+        homeTeam: data.teams.home.team?.name || 'Home Team',
+        awayTeam: data.teams.away.team?.name || 'Away Team',
+        homeScore: data.teams.home.runs || 0,
+        awayScore: data.teams.away.runs || 0,
+        inning: data.currentInning || 1,
+        inningState: data.inningState || 'Top',
+        outs: data.outs || 0,
+        runners: {
+          first: data.offense?.first || null,
+          second: data.offense?.second || null,
+          third: data.offense?.third || null
+        },
+        balls: data.balls || 0,
+        strikes: data.strikes || 0
+      };
+
+      console.log(`⚾ MLB: Processing game ${gameId} - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore})`);
+
+      // Process the game state for alerts
+      const alerts = await this.monitor(gameState);
+      
+      // If alerts generated, trigger them via callback
+      if (alerts.length > 0 && this.onAlert) {
+        alerts.forEach(alert => this.onAlert!(alert));
+      }
+      
+    } catch (error) {
+      console.error(`❌ MLB: Error processing game ${gameId}:`, error);
+    }
   }
 
   /**
