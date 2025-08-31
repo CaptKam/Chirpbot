@@ -379,8 +379,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         }),
         description: AlertFormatValidator.generateStandardDescription('MLB', 'SCORING', gameStateData),
         gameInfo: {
-          homeTeam: gameStateData.homeTeam || 'Home Team',
-          awayTeam: gameStateData.awayTeam || 'Away Team',
+          homeTeam: gameStateData.homeTeam || 'Home',
+          awayTeam: gameStateData.awayTeam || 'Away',
           score: { home: gameStateData.homeScore || 0, away: gameStateData.awayScore || 0 },
           status: 'Live',
           situation: 'RISP',

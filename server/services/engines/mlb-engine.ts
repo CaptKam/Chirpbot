@@ -2,6 +2,7 @@
 import { MLBGameStateV3, SimpleAlert } from './index';
 import { AlertFormatValidator } from './AlertFormatValidator';
 import { getBetbookData, type AlertContext, type BetbookData } from './betbook-engine';
+import { storage } from '../../storage';
 
 import mlbAlertModel from './mlbAlertModel.cjs';
 
@@ -266,8 +267,8 @@ export class MLBEngine {
       return {
         gameId: game.gameId,
         gamePk: parseInt(game.gameId) || game.gamePk,
-        homeTeam: fallbackHomeTeam || 'Home Team',
-        awayTeam: fallbackAwayTeam || 'Away Team',
+        homeTeam: fallbackHomeTeam || 'Home',
+        awayTeam: fallbackAwayTeam || 'Away',
         homeScore: game.homeScore || 0,
         awayScore: game.awayScore || 0,
         inning: game.inning || 1,
@@ -342,8 +343,8 @@ export class MLBEngine {
     return {
       gameId: gameData.gamePk?.toString() || 'unknown',
       gamePk: gameData.gamePk || 0,
-      homeTeam: gameData.gameData?.teams?.home?.name || fallbackHomeTeam || 'Home Team',
-      awayTeam: gameData.gameData?.teams?.away?.name || fallbackAwayTeam || 'Away Team',
+      homeTeam: gameData.gameData?.teams?.home?.name || fallbackHomeTeam || 'Home',
+      awayTeam: gameData.gameData?.teams?.away?.name || fallbackAwayTeam || 'Away',
       homeScore: gameData.gameData?.teams?.home?.score || 0,
       awayScore: gameData.gameData?.teams?.away?.score || 0,
       inning: currentInning,

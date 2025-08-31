@@ -337,8 +337,8 @@ Respond with JSON containing:
 
   private getFallbackDescription(situation: GameSituation): string {
     const prob = situation.scoringProbability ? `${Math.round(situation.scoringProbability * 100)}% ` : '';
-    const awayTeam = situation.awayTeam && situation.awayTeam !== 'Unknown' ? situation.awayTeam : 'Away Team';
-    const homeTeam = situation.homeTeam && situation.homeTeam !== 'Unknown' ? situation.homeTeam : 'Home Team';
+    const awayTeam = situation.awayTeam && situation.awayTeam !== 'Unknown' ? situation.awayTeam : 'Away';
+    const homeTeam = situation.homeTeam && situation.homeTeam !== 'Unknown' ? situation.homeTeam : 'Home';
     return `${awayTeam} @ ${homeTeam}: ${prob}scoring opportunity in ${situation.gameState}`;
   }
 }
