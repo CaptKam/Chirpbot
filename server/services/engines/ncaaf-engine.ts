@@ -767,17 +767,21 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       const targetGame = games.find(game => game.gameId === gameId);
 
       if (!targetGame) {
-        console.log(`🏈 NCAAF: Game ${gameId} not found, generating basic live game alert`);
-        await this.generateBasicLiveAlert(gameId);
+        console.log(`🏈 NCAAF: Game ${gameId} not found in today's games`);
         return;
       }
 
-      console.log(`🏈 NCAAF: Found game data for ${gameId}, processing alerts...`);
+      // CRITICAL: Only process if game is actually live!
+      if (targetGame.status !== 'STATUS_IN_PROGRESS') {
+        console.log(`⏸️ NCAAF: Game ${gameId} is ${targetGame.status} - skipping alert generation`);
+        return;
+      }
+
+      console.log(`🏈 NCAAF: Found LIVE game data for ${gameId}, processing alerts...`);
       await this.processGameForAlerts(targetGame);
     } catch (error) {
       console.error(`❌ NCAAF: Error processing specific game ${gameId}:`, error);
-      // Fallback: try to generate a basic alert anyway
-      await this.generateBasicLiveAlert(gameId);
+      // Do NOT generate fake alerts on error
     }
   }
 
