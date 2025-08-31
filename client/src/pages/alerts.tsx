@@ -175,9 +175,14 @@ export default function Alerts() {
                   {/* Header: Team Names, Score, and Sport */}
                   {alert.gameInfo?.awayTeam && alert.gameInfo?.homeTeam && (
                     <div className="flex items-center justify-between w-full px-4 py-3 bg-white/5 backdrop-blur-sm text-white border-b border-white/10">
-                      <span className="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-1 rounded-full text-[11px] ring-1 ring-emerald-500/30">
-                        {alert.sport}
-                      </span>
+                      <div className="flex flex-col items-start">
+                        <span className="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-1 rounded-full text-[11px] ring-1 ring-emerald-500/30">
+                          {alert.sport}
+                        </span>
+                        <span className="text-[10px] text-slate-400 mt-1 font-mono">
+                          ID: {alert.id.slice(0, 8)}
+                        </span>
+                      </div>
                       <div className="text-center text-lg font-bold">
                         <span className="text-slate-100">{alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}</span>
                         {alert.gameInfo?.score && (
