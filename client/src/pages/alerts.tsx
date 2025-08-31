@@ -103,6 +103,7 @@ export default function Alerts() {
           </Button>
         )}
       </header>
+
       {/* Filters */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 p-4">
         <div className="flex items-center justify-between gap-2">
@@ -123,6 +124,7 @@ export default function Alerts() {
           </div>
         </div>
       </div>
+
       {/* Alerts Feed - LAW #7 COMPLIANT DISPLAY */}
       <div className="p-4 space-y-3">
         {isLoading ? (
@@ -163,7 +165,7 @@ export default function Alerts() {
                 <Card
                   onClick={() => { if (!alert.seen) markAlertAsSeen(alert.id); }}
                   className={cn(
-                    "relative overflow-hidden backdrop-blur-sm transition-all duration-300 max-h-[300px]",
+                    "relative overflow-hidden backdrop-blur-sm transition-all duration-300",
                     "ring-1 ring-white/10 hover:ring-white/20",
                     "dark bg-card text-card-foreground",
                     !alert.seen
@@ -172,7 +174,7 @@ export default function Alerts() {
                   )}
                 >
                   {/* LAW #7: CLEAN LAYOUT - NO DUPLICATE INFO */}
-                  <div className="p-6 space-y-4 overflow-y-auto max-h-[280px]">
+                  <div className="p-6 space-y-4">
                     {/* Row 1: Sport + NEW Badge */}
                     <div className="flex items-center justify-between">
                       <span className="bg-blue-500/20 text-blue-300 text-base font-bold px-3 py-1 rounded-full">
@@ -187,19 +189,19 @@ export default function Alerts() {
 
                     {/* Row 2: TITLE - Law #7 Format */}
                     <div>
-                      <h2 className="font-bold text-white text-[12px]">
+                      <h2 className="text-xl font-bold text-white leading-tight">
                         {alert.title}
                       </h2>
                     </div>
 
                     {/* Row 3: Teams - ONLY HERE, NOWHERE ELSE */}
-                    <div className="text-slate-200 font-medium text-[13px]">
+                    <div className="text-lg text-slate-200 font-medium">
                       {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
                     </div>
 
                     {/* Row 4: Description - Law #7 Format (3 lines max) */}
                     <div className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="text-slate-200 whitespace-pre-line max-h-[200px] overflow-y-auto text-[14px]">
+                      <div className="text-base text-slate-200 whitespace-pre-line leading-relaxed">
                         {alert.description}
                       </div>
                     </div>
