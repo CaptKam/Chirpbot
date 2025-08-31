@@ -105,6 +105,27 @@ export const alerts = pgTable("alerts", {
     windSpeed?: number;
     windDirection?: string;
   }>(),
+  betbookData: jsonb("betbook_data").$type<{
+    odds: {
+      home: number;
+      away: number;
+      total: number;
+    };
+    aiAdvice: string;
+    sportsbookLinks: Array<{
+      name: string;
+      url: string;
+    }>;
+    bettingInsights: string[];
+    confidence: number;
+    signals: Array<{
+      strategy: string;
+      title: string;
+      selection: string;
+      confidence: number;
+      reasoning: string[];
+    }>;
+  }>(),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   sentToTelegram: boolean("sent_to_telegram").notNull().default(false),
   seen: boolean("seen").notNull().default(false),

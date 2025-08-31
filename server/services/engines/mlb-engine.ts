@@ -1,6 +1,7 @@
 
 import { MLBGameStateV3, SimpleAlert } from './index';
 import { AlertFormatValidator } from './AlertFormatValidator';
+import { getBetbookData, type AlertContext, type BetbookData } from './betbook-engine';
 
 import mlbAlertModel from './mlbAlertModel.cjs';
 
@@ -21,6 +22,7 @@ interface MLBAlert {
     outs: number;
     runners: { first: boolean; second: boolean; third: boolean };
   };
+  betbookData?: BetbookData;
   priority: number;
   timestamp: Date;
   seen: boolean;
@@ -31,9 +33,9 @@ export class MLBEngine {
   private lastAlerts = new Map<string, string>();
 
   /**
-   * LAW #6 & #7: Create standardized MLB alert
+   * LAW #6 & #7: Create standardized MLB alert with betting data
    */
-  private createStandardAlert(gameState: MLBGameStateV3, alertResult: any): MLBAlert {
+  private async createStandardAlert(gameState: MLBGameStateV3, alertResult: any): Promise<MLBAlert> {
     const alertId = `mlb_${gameState.gameId}_${Date.now()}`;
     
     // Use model validation
@@ -43,6 +45,30 @@ export class MLBEngine {
       home: gameState.homeScore,
       away: gameState.awayScore
     };
+
+    // Generate betting context for betbook-engine
+    const alertContext: AlertContext = {
+      sport: 'MLB',
+      gameId: gameState.gameId,
+      homeTeam: gameState.homeTeam,
+      awayTeam: gameState.awayTeam,
+      homeScore: gameState.homeScore,
+      awayScore: gameState.awayScore,
+      inning: gameState.inning,
+      outs: gameState.outs,
+      runners: gameState.runners,
+      priority: modelValidation.priority || 80,
+      probability: modelValidation.probability || 0.65
+    };
+
+    // Generate betting data using betbook-engine
+    let betbookData: BetbookData | undefined;
+    try {
+      betbookData = await getBetbookData(alertContext);
+    } catch (error) {
+      console.error('Error generating betbook data:', error);
+      // Continue without betting data if it fails
+    }
 
     return {
       id: alertId,
@@ -65,6 +91,7 @@ export class MLBEngine {
           third: !!gameState.runners.third
         }
       },
+      betbookData,
       priority: modelValidation.priority || 80,
       timestamp: new Date(),
       seen: false
@@ -94,7 +121,7 @@ export class MLBEngine {
     }
 
     // Create standardized alert
-    const alert = this.createStandardAlert(gameState, modelResult);
+    const alert = await this.createStandardAlert(gameState, modelResult);
     
     // Validate compliance with Laws #6 and #7
     const validation = AlertFormatValidator.validateCompliance(alert);
