@@ -219,15 +219,6 @@ export default function Alerts() {
                       </div>
                     </div>
 
-                    {/* Row 5: Timestamp + Priority */}
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>
-                        {new Date(alert.timestamp || alert.createdAt).toLocaleTimeString()}
-                      </span>
-                      <span className="bg-slate-700/50 px-2 py-1 rounded text-xs">
-                        Priority: {alert.priority}
-                      </span>
-                    </div>
                   </div>
                   
                   {/* Sport-Specific Footer */}
