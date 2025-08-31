@@ -193,13 +193,13 @@ export default function Alerts() {
                     </div>
 
                     {/* Row 3: Teams - ONLY HERE, NOWHERE ELSE */}
-                    <div className="text-lg text-slate-200 font-medium">
+                    <div className="text-slate-200 font-medium text-[13px]">
                       {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
                     </div>
 
                     {/* Row 4: Description - Law #7 Format (3 lines max) */}
                     <div className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="text-base text-slate-200 whitespace-pre-line leading-relaxed max-h-[200px] overflow-y-auto">
+                      <div className="text-slate-200 whitespace-pre-line max-h-[200px] overflow-y-auto text-[14px]">
                         {alert.description}
                       </div>
                     </div>
