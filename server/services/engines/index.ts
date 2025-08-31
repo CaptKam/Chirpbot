@@ -254,15 +254,27 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   stopAllEngines(): void {
-    console.log('🛑 Stopping all sport alert engines...');
+    console.log('🛑 EMERGENCY STOP: Stopping all sport alert engines...');
+
+    // EMERGENCY: Check for any NCAAF engines that might be cached
+    const ncaafKeys = Array.from(this.intervalIds.keys()).filter(key => key.includes('NCAAF'));
+    if (ncaafKeys.length > 0) {
+      console.log(`🚨 EMERGENCY: Found ${ncaafKeys.length} cached NCAAF engines - FORCE REMOVING:`, ncaafKeys);
+    }
 
     for (const [key, intervalId] of Array.from(this.intervalIds.entries())) {
       clearInterval(intervalId);
-      console.log(`✅ ${key} engine stopped`);
+      if (key.includes('NCAAF')) {
+        console.log(`🚨 EMERGENCY CLEARED NCAAF: ${key}`);
+      } else {
+        console.log(`✅ ${key} engine stopped`);
+      }
     }
 
     this.intervalIds.clear();
     this.activeEngines.clear();
+    
+    console.log('✅ EMERGENCY STOP COMPLETE: All engines cleared');
   }
 
   setAlertCallback(callback: (alert: any) => void): void {
