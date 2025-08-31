@@ -541,48 +541,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual alert creation endpoint - uses AlertService for proper validation
   app.post("/api/alerts", async (req, res) => {
     try {
       const validatedData = insertAlertSchema.parse(req.body);
       
-      // Get weather data for the game location using city name
-      let weatherData = null;
-      if (validatedData.gameInfo.homeTeam) {
-        const teamCityMap: Record<string, string> = {
-          'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
-          'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
-          'Athletics': 'Oakland', // Handle short name
-          'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
-          'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
-          'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
-          'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
-          'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
-          'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
-          'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
-          'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
-          'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
-          'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
-          'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
-          'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
-          'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
-        };
-        
-        const cityName = teamCityMap[validatedData.gameInfo.homeTeam] || validatedData.gameInfo.homeTeam;
-        weatherData = null; // Weather service removed
+      // Import AlertService for proper 4-step validation
+      const { alertService } = await import('./services/AlertService');
+      
+      // Convert manual alert data to game state format
+      const gameStateData = {
+        sport: validatedData.sport,
+        gameId: `manual_${Date.now()}`,
+        homeTeam: validatedData.gameInfo.homeTeam,
+        awayTeam: validatedData.gameInfo.awayTeam,
+        homeScore: validatedData.gameInfo.score?.home || 0,
+        awayScore: validatedData.gameInfo.score?.away || 0,
+        inning: parseInt(validatedData.gameInfo.inning || '1'),
+        inningState: validatedData.gameInfo.inningState || 'top',
+        outs: validatedData.gameInfo.outs || 0,
+        runners: validatedData.gameInfo.runners || { first: false, second: false, third: false }
+      };
+
+      // Use AlertService 4-step validation flow
+      const alert = await alertService.createValidatedAlert(
+        validatedData.sport,
+        gameStateData.gameId,
+        gameStateData,
+        'Manual API Creation'
+      );
+
+      if (alert) {
+        res.json({ 
+          success: true, 
+          message: 'Alert created via 4-step validation flow',
+          alert,
+          debugId: alert.debugId
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Alert validation failed - does not meet AlertModel criteria' 
+        });
       }
-
-      const settings = await storage.getSettingsBySport(validatedData.sport);
-
-      // DISABLED: Direct storage.createAlert bypasses 4-step flow
-      // const alert = await storage.createAlert({
-      //   ...validatedData,
-      //   weatherData,
-      // });
-
-      res.status(410).json({ 
-        success: false, 
-        message: 'Alert creation disabled - alerts must follow proper 4-step validation flow' 
-      });
     } catch (error) {
       console.error("Failed to create alert:", error);
       res.status(400).json({ message: "Invalid alert data" });
@@ -1316,148 +1317,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint to trigger alerts for all sports
+  // Test endpoint to trigger alerts using AlertService
   app.post("/api/test/generate-alerts", async (req, res) => {
     try {
+      const { alertService } = await import('./services/AlertService');
       const testAlerts = [];
       const timestamp = new Date().toISOString();
       
-      // Test MLB Alert with V3 Analysis
-      const mlbAlert = {
-        type: "V3 Tier 3 Alert",
+      // Test MLB Alert with proper game state data
+      const mlbGameState = {
         sport: "MLB",
-        title: "Test MLB V3: Yankees @ Red Sox",
-        description: "🎯 V3 Analysis: Elite clutch situation detected",
-        priority: 95,
-        gameInfo: {
-          homeTeam: "Boston Red Sox",
-          awayTeam: "New York Yankees",
-          status: "Live",
-          inning: 9,
-          inningState: "bottom",
-          outs: 2,
-          balls: 3,
-          strikes: 2,
-          runners: { first: true, second: true, third: true },
-          scoringProbability: 0.78,
-          v3Analysis: {
-            tier: 3,
-            probability: 0.88,
-            reasons: [
-              "Bases loaded, 2 outs - maximum leverage situation",
-              "9th inning pressure with elite hitter at bat",
-              "Statistical model: 2.25 expected runs in this situation",
-              "Historical data: 78% scoring probability with current matchup",
-              "Environmental factors favor offensive breakthrough"
-            ]
-          },
-          betbookData: {
-            recommendation: "BET NOW: Over 9.5 runs - High leverage bases loaded situation",
-            confidence: "Elite opportunity - 88% AI confidence rating",
-            odds: "+115", 
-            reasoning: "Advanced v3 analysis indicates premium betting value"
-          }
-        }
+        gameId: `test_mlb_${Date.now()}`,
+        homeTeam: "Boston Red Sox",
+        awayTeam: "New York Yankees",
+        homeScore: 5,
+        awayScore: 4,
+        inning: 9,
+        inningState: "bottom",
+        outs: 2,
+        runners: { first: true, second: true, third: true }
       };
 
-      // Test NFL Alert - Red Zone
-      const nflAlert = {
-        type: "Red Zone",
-        sport: "NFL",
-        title: "Test NFL Game: Cowboys @ Eagles",
-        description: "Red zone opportunity! Cowboys at the 15-yard line",
-        gameInfo: {
+      // Test other sports game states
+      const testGameStates = [
+        mlbGameState,
+        {
+          sport: "NFL",
+          gameId: `test_nfl_${Date.now()}`,
           homeTeam: "Philadelphia Eagles",
           awayTeam: "Dallas Cowboys",
-          status: "Live",
-          quarter: "4",
-          timeRemaining: "2:35",
+          homeScore: 21,
+          awayScore: 17,
+          quarter: 4,
           down: 3,
-          yardsToGo: 7,
-          possession: "Cowboys",
-          redZone: true
-        }
-      };
-
-      // Test NBA Alert - Clutch Time
-      const nbaAlert = {
-        type: "Clutch Time",
-        sport: "NBA",
-        title: "Test NBA Game: Lakers @ Celtics",
-        description: "Clutch time! 3-point game with 45 seconds left",
-        gameInfo: {
+          yardsToGo: 7
+        },
+        {
+          sport: "NBA", 
+          gameId: `test_nba_${Date.now()}`,
           homeTeam: "Boston Celtics",
           awayTeam: "Los Angeles Lakers",
-          status: "Live",
-          period: "4",
-          timeRemaining: "0:45",
-          clutchTime: true,
-          overtime: false
+          homeScore: 98,
+          awayScore: 95,
+          period: 4,
+          timeRemaining: "0:45"
         }
-      };
+      ];
 
-      // Test NHL Alert - Power Play
-      const nhlAlert = {
-        type: "Power Play",
-        sport: "NHL",
-        title: "Test NHL Game: Rangers @ Bruins",
-        description: "Power play opportunity for the Rangers!",
-        gameInfo: {
-          homeTeam: "Boston Bruins",
-          awayTeam: "New York Rangers",
-          status: "Live",
-          period: "3",
-          timeRemaining: "5:23",
-          powerPlay: true,
-          emptyNet: false
-        }
-      };
-
-      // Create test alerts
-      for (const alertData of [mlbAlert, nflAlert, nbaAlert, nhlAlert]) {
+      // Create test alerts using AlertService
+      for (const gameState of testGameStates) {
         try {
-          const teamCityMap: Record<string, string> = {
-            'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
-            'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
-            'Athletics': 'Oakland', 'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
-            'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
-            'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
-            'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
-            'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
-            'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
-            'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
-            'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
-            'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
-            'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
-            'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
-            'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
-            'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
-          };
-          
-          const cityName = teamCityMap[alertData.gameInfo.homeTeam] || alertData.gameInfo.homeTeam;
-          const weatherData = null; // Weather service removed
-          
-          // DISABLED: Direct storage.createAlert bypasses 4-step flow
-          // const alert = await storage.createAlert({
-          //   ...alertData,
-          //   weatherData,
-          //   sentToTelegram: false
-          // });
+          const alert = await alertService.createValidatedAlert(
+            gameState.sport,
+            gameState.gameId,
+            gameState,
+            `Test Alert Generation: ${gameState.sport}`
+          );
 
-          // testAlerts.push(alert);
-          
-          // Broadcast to WebSocket clients  
-          // broadcast({ type: 'new_alert', data: alert });
+          if (alert) {
+            testAlerts.push(alert);
+            
+            // Broadcast to WebSocket clients  
+            broadcast({ type: 'new_alert', data: alert });
+            
+            console.log(`✅ Test alert created for ${gameState.sport}: ${alert.debugId}`);
+          } else {
+            console.log(`❌ Test alert validation failed for ${gameState.sport}`);
+          }
         } catch (error) {
-          console.error(`Failed to create ${alertData.sport} test alert:`, error);
+          console.error(`Failed to create ${gameState.sport} test alert:`, error);
         }
       }
 
       res.json({
-        message: "Test alerts generated successfully",
+        message: "Test alerts generated via AlertService 4-step validation",
         count: testAlerts.length,
-        alerts: testAlerts,
-        timestamp
+        alerts: testAlerts.map(a => ({ id: a.id, debugId: a.debugId, sport: a.sport, title: a.title })),
+        timestamp,
+        note: "Only alerts that pass AlertModel validation are created"
       });
     } catch (error) {
       console.error("Test alert generation failed:", error);

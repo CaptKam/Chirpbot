@@ -357,161 +357,49 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   /**
    * NEW: MLBAlertModel scans collected data for alert opportunities
+   * Uses AlertService for proper 4-step flow validation
    */
   private async scanForAlertOpportunities(sport: string, gameId: string, gameState: any, engine: any): Promise<void> {
     try {
       if (sport !== 'MLB') return;
       
-      // DEDUPLICATION: Check if this game is in cooldown period
-      const now = Date.now();
-      const cooldownKey = `${sport}_${gameId}`;
-      const lastAlert = this.alertCooldowns.get(cooldownKey) || 0;
-      const cooldownPeriod = 5 * 60 * 1000; // 5 minutes
-      
-      if (now - lastAlert < cooldownPeriod) {
-        console.log(`⏰ COOLDOWN: Game ${gameId} in alert cooldown for ${Math.round((cooldownPeriod - (now - lastAlert)) / 1000)}s more`);
-        return;
-      }
-      
       console.log(`🔍 AlertModel Scanner: Analyzing ${sport} game ${gameId} for alert opportunities`);
       
-      // Use MLBAlertModel to analyze the collected game state
-      const mlbAlertModel = await import('./mlbAlertModel.cjs');
-      const modelFormat = this.convertToModelFormat(gameState);
-      const modelResult = mlbAlertModel.checkScoringProbability(modelFormat);
+      // Import and use AlertService for proper 4-step flow
+      const { alertService } = await import('../../AlertService');
       
-      console.log(`🤖 AlertModel Result for ${gameId}:`, {
-        shouldAlert: modelResult.shouldAlert,
-        probability: modelResult.probability,
-        severity: modelResult.severity,
-        priority: modelResult.priority
-      });
-      
-      if (modelResult.shouldAlert) {
-        console.log(`🚨 AlertModel Scanner: ALERT OPPORTUNITY IDENTIFIED for game ${gameId}!`);
-        console.log(`🎯 Triggering next step in flow: AlertModel → OpenAI → Betbook → Launch`);
-        
-        // Set cooldown before creating alert
-        this.alertCooldowns.set(cooldownKey, now);
-        
-        // Ensure team names are preserved for the alert
-        const enrichedGameState = {
-          ...gameState,
-          sport: 'MLB',
-          gameId: gameId
-        };
-        
-        // Trigger the next step: OpenAI → Betbook → Launch
-        await this.processAndLaunchAlert(enrichedGameState, modelResult);
-      } else {
-        console.log(`❌ AlertModel Scanner: No alert opportunity for game ${gameId}: ${modelResult.reasons?.join(', ') || 'No reasons provided'}`);
-      }
-      
-    } catch (error) {
-      console.error(`❌ AlertModel scanning failed for ${sport} game ${gameId}:`, error);
-    }
-  }
-
-  private async validateAlertModel(gameStateData: any): Promise<{valid: boolean, reason?: string, data?: any}> {
-    // Use the AlertModel to validate if alert should be generated
-    try {
-      const mlbAlertModel = await import('./mlbAlertModel.cjs');
-      const modelFormat = this.convertToModelFormat(gameStateData);
-      const result = mlbAlertModel.checkScoringProbability(modelFormat);
-      
-      if (result.shouldAlert) {
-        return { valid: true, data: result };
-      } else {
-        return { valid: false, reason: result.reasons?.join(', ') || 'Model validation failed' };
-      }
-    } catch (error) {
-      return { valid: false, reason: `AlertModel error: ${error.message}` };
-    }
-  }
-
-  private convertToModelFormat(gameState: any) {
-    return {
-      clock: { inning: gameState.inning || 1, outs: gameState.outs || 0 },
-      bases: { 
-        on1B: !!gameState.runners?.first,
-        on2B: !!gameState.runners?.second, 
-        on3B: !!gameState.runners?.third
-      },
-      score: { home: gameState.homeScore || 0, away: gameState.awayScore || 0 },
-      batter: null,
-      onDeck: null,
-      pitcher: null,
-      weather: null,
-      park: null
-    };
-  }
-
-  private async processAndLaunchAlert(gameStateData: any, alertData: any): Promise<void> {
-    // Create proper alert with OpenAI and Betbook processing
-    try {
-      const { storage } = await import('../../storage');
-      const { AlertFormatValidator } = await import('./AlertFormatValidator');
-      
-      // Generate unique debug ID for tracking  
-      const gameId = gameStateData.gameId || 'unknown';
-      const fullId = `${gameStateData.sport || 'MLB'}_${gameId}_${Date.now()}`;
-      const debugId = fullId.substring(0, 8).toUpperCase();
-      const flowTag = `S4-OAI-BB`; // Step 4: OpenAI -> Betbook flow
-      
-      console.log(`🔍 DEBUG: Creating alert [${debugId}] via 4-step flow`);
-      console.log(`📍 Flow: Step1(Monitor) → Step2(Engine) → Step3(Model) → Step4(${flowTag})`);
-      
-      // Create standardized alert
-      const alert = {
-        id: fullId,
-        debugId: `${debugId}-${flowTag}`,
-        type: 'SCORING',
+      // Ensure team names are preserved for the alert
+      const enrichedGameState = {
+        ...gameState,
         sport: 'MLB',
-        title: AlertFormatValidator.generateStandardTitle('MLB', 'SCORING', {
-          home: gameStateData.homeScore || 0,
-          away: gameStateData.awayScore || 0
-        }),
-        description: AlertFormatValidator.generateStandardDescription('MLB', 'SCORING', gameStateData),
-        gameInfo: {
-          homeTeam: gameStateData.homeTeam || 'Home',
-          awayTeam: gameStateData.awayTeam || 'Away',
-          score: { home: gameStateData.homeScore || 0, away: gameStateData.awayScore || 0 },
-          status: 'Live',
-          situation: 'RISP',
-          inning: gameStateData.inning || 1,
-          inningState: gameStateData.inningState || 'top',
-          outs: gameStateData.outs || 0,
-          runners: {
-            first: !!gameStateData.runners?.first,
-            second: !!gameStateData.runners?.second,
-            third: !!gameStateData.runners?.third
-          }
-        },
-        priority: alertData.priority || 80,
-        timestamp: new Date(),
-        seen: false
+        gameId: gameId
       };
-
-      // Validate compliance
-      const validation = AlertFormatValidator.validateCompliance(alert);
-      if (!validation.isValid) {
-        console.error('❌ ALERT COMPLIANCE VIOLATION:', validation.violations);
-        return;
-      }
-
-      // Store alert and broadcast with debug info  
-      await storage.createAlert(alert);
-      if (this.onAlert) {
-        this.onAlert(alert);
-      }
       
-      console.log(`✅ 4-step flow completed: Alert created [${alert.debugId}] for game ${gameStateData.gameId}`);
-      console.log(`🔍 DEBUG: Alert stored with ID ${alert.debugId} | Type: ${alert.type} | Sport: ${alert.sport}`);
+      // Use AlertService's 4-step validation flow
+      const alert = await alertService.createValidatedAlert(
+        sport,
+        gameId,
+        enrichedGameState,
+        `Engine Scanner: ${sport} game monitoring`
+      );
+      
+      if (alert) {
+        console.log(`✅ AlertService: Alert created via 4-step flow [${alert.debugId}] for game ${gameId}`);
+        
+        // Broadcast alert if callback is available
+        if (this.onAlert) {
+          this.onAlert(alert);
+        }
+      } else {
+        console.log(`❌ AlertService: No alert created for game ${gameId} (validation failed or cooldown active)`);
+      }
       
     } catch (error) {
-      console.error('❌ Final alert processing failed:', error);
+      console.error(`❌ AlertService scanning failed for ${sport} game ${gameId}:`, error);
     }
   }
+
+  // Legacy methods removed - all alert creation now goes through AlertService
 }
 
 export const alertEngineManager = new AlertEngineManagerImpl();
