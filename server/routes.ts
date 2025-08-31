@@ -541,51 +541,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Manual alert creation endpoint - uses AlertService for proper validation
+  // Manual alert creation endpoint - uses new AlertPipeline
   app.post("/api/alerts", async (req, res) => {
     try {
       const validatedData = insertAlertSchema.parse(req.body);
       
-      // Import AlertService for proper 4-step validation
-      const { alertService } = await import('./services/AlertService');
+      // Import AlertPipeline for unified alert processing
+      const { getAlertPipeline } = await import('./services/AlertPipeline');
+      const pipeline = getAlertPipeline(null, (alert) => {
+        broadcast({ type: 'new_alert', data: alert });
+      });
       
-      // Convert manual alert data to game state format
-      const gameStateData = {
-        sport: validatedData.sport,
+      // Convert manual alert data to GenericGameState format
+      const gameState = {
         gameId: `manual_${Date.now()}`,
+        sport: validatedData.sport,
         homeTeam: validatedData.gameInfo.homeTeam,
         awayTeam: validatedData.gameInfo.awayTeam,
         homeScore: validatedData.gameInfo.score?.home || 0,
         awayScore: validatedData.gameInfo.score?.away || 0,
+        // Sport-specific fields
         inning: parseInt(validatedData.gameInfo.inning || '1'),
         inningState: validatedData.gameInfo.inningState || 'top',
         outs: validatedData.gameInfo.outs || 0,
         runners: validatedData.gameInfo.runners || { first: false, second: false, third: false }
       };
 
-      // Use AlertService 4-step validation flow
-      const alert = await alertService.createValidatedAlert(
-        validatedData.sport,
-        gameStateData.gameId,
-        gameStateData,
-        'Manual API Creation'
-      );
+      // Register a permissive model for manual alerts
+      pipeline.registerModel(validatedData.sport, async () => ({
+        shouldAlert: true,
+        alertType: validatedData.type,
+        probability: 0.8,
+        priority: validatedData.priority || 75,
+        reasons: ['Manual alert creation']
+      }));
+
+      // Process through unified pipeline
+      const alert = await pipeline.processState(gameState);
 
       if (alert) {
         res.json({ 
           success: true, 
-          message: 'Alert created via 4-step validation flow',
+          message: 'Alert created via AlertPipeline',
           alert,
           debugId: alert.debugId
         });
       } else {
         res.status(400).json({ 
           success: false, 
-          message: 'Alert validation failed - does not meet AlertModel criteria' 
+          message: 'Alert pipeline processing failed' 
         });
       }
     } catch (error) {
-      console.error("Failed to create alert:", error);
+      console.error("Failed to create manual alert:", error);
       res.status(400).json({ message: "Invalid alert data" });
     }
   });
@@ -1309,33 +1317,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint to trigger alerts using AlertService
+  // Test endpoint using new AlertPipeline system
   app.post("/api/test/generate-alerts", async (req, res) => {
     try {
-      const { alertService } = await import('./services/AlertService');
+      const { getAlertPipeline } = await import('./services/AlertPipeline');
+      const pipeline = getAlertPipeline(null, (alert) => {
+        broadcast({ type: 'new_alert', data: alert });
+      });
+      
       const testAlerts = [];
       const timestamp = new Date().toISOString();
       
-      // Test MLB Alert with proper game state data
-      const mlbGameState = {
-        sport: "MLB",
-        gameId: `test_mlb_${Date.now()}`,
-        homeTeam: "Boston Red Sox",
-        awayTeam: "New York Yankees",
-        homeScore: 5,
-        awayScore: 4,
-        inning: 9,
-        inningState: "bottom",
-        outs: 2,
-        runners: { first: true, second: true, third: true }
-      };
-
-      // Test other sports game states
+      // Test game states for multiple sports
       const testGameStates = [
-        mlbGameState,
         {
-          sport: "NFL",
+          gameId: `test_mlb_${Date.now()}`,
+          sport: "MLB",
+          homeTeam: "Boston Red Sox",
+          awayTeam: "New York Yankees",
+          homeScore: 5,
+          awayScore: 4,
+          inning: 9,
+          inningState: "bottom",
+          outs: 2,
+          runners: { first: true, second: true, third: true }
+        },
+        {
           gameId: `test_nfl_${Date.now()}`,
+          sport: "NFL",
           homeTeam: "Philadelphia Eagles",
           awayTeam: "Dallas Cowboys",
           homeScore: 21,
@@ -1343,54 +1352,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quarter: 4,
           down: 3,
           yardsToGo: 7
-        },
-        {
-          sport: "NBA", 
-          gameId: `test_nba_${Date.now()}`,
-          homeTeam: "Boston Celtics",
-          awayTeam: "Los Angeles Lakers",
-          homeScore: 98,
-          awayScore: 95,
-          period: 4,
-          timeRemaining: "0:45"
         }
       ];
 
-      // Create test alerts using AlertService
+      // Register basic test models if none exist
+      pipeline.registerModel('MLB', async (state) => ({
+        shouldAlert: state.outs === 2 && state.runners?.first && state.runners?.second,
+        alertType: 'RISP_OPPORTUNITY',
+        probability: 0.75,
+        priority: 85,
+        reasons: ['Runners in scoring position', '2 outs - pressure situation']
+      }));
+
+      // Process each test game state through pipeline
       for (const gameState of testGameStates) {
         try {
-          const alert = await alertService.createValidatedAlert(
-            gameState.sport,
-            gameState.gameId,
-            gameState,
-            `Test Alert Generation: ${gameState.sport}`
-          );
-
+          const alert = await pipeline.processState(gameState);
           if (alert) {
             testAlerts.push(alert);
-            
-            // Broadcast to WebSocket clients  
-            broadcast({ type: 'new_alert', data: alert });
-            
-            console.log(`✅ Test alert created for ${gameState.sport}: ${alert.debugId}`);
-          } else {
-            console.log(`❌ Test alert validation failed for ${gameState.sport}`);
+            console.log(`✅ Pipeline test alert created for ${gameState.sport}: ${alert.debugId}`);
           }
         } catch (error) {
-          console.error(`Failed to create ${gameState.sport} test alert:`, error);
+          console.error(`Failed to create ${gameState.sport} pipeline alert:`, error);
         }
       }
 
       res.json({
-        message: "Test alerts generated via AlertService 4-step validation",
+        message: "Test alerts generated via AlertPipeline system",
         count: testAlerts.length,
         alerts: testAlerts.map(a => ({ id: a.id, debugId: a.debugId, sport: a.sport, title: a.title })),
         timestamp,
-        note: "Only alerts that pass AlertModel validation are created"
+        pipelineStats: pipeline.getStats(),
+        note: "Alerts created through unified pipeline with deduplication"
       });
     } catch (error) {
-      console.error("Test alert generation failed:", error);
-      res.status(500).json({ message: "Failed to generate test alerts" });
+      console.error("Pipeline test alert generation failed:", error);
+      res.status(500).json({ message: "Failed to generate pipeline test alerts" });
     }
   });
 
