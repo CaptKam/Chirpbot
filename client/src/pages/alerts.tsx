@@ -186,30 +186,30 @@ export default function Alerts() {
                     </div>
 
                     {/* Row 2: TITLE - Law #7 Format */}
-                    <div>
-                      <h2 className="font-bold text-white text-[14px]">
+                    <div className="mb-2">
+                      <h2 className="text-sm font-semibold text-white leading-normal break-words">
                         {alert.title}
                       </h2>
                     </div>
 
                     {/* Row 3: Teams - ONLY HERE, NOWHERE ELSE */}
-                    <div className="text-[13px] text-slate-200 font-medium">
+                    <div className="text-xs text-slate-200 font-medium mb-2">
                       {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
                     </div>
 
                     {/* Row 4: Description - Law #7 Format (3 lines max) */}
-                    <div className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="text-[12px] text-slate-200 whitespace-pre-line">
+                    <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
+                      <div className="text-xs text-slate-200 leading-relaxed break-words">
                         {alert.description}
                       </div>
                     </div>
 
                     {/* Row 5: Timestamp + Priority */}
-                    <div className="flex items-center justify-between text-lg text-slate-400">
+                    <div className="flex items-center justify-between text-xs text-slate-400">
                       <span>
                         {new Date(alert.timestamp || alert.createdAt).toLocaleTimeString()}
                       </span>
-                      <span className="bg-slate-700/50 px-2 py-1 rounded">
+                      <span className="bg-slate-700/50 px-2 py-1 rounded text-xs">
                         Priority: {alert.priority}
                       </span>
                     </div>
