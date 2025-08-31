@@ -209,12 +209,7 @@ export default function Alerts() {
                       </h2>
                     </div>
 
-                    {/* Row 3: Teams - ONLY HERE, NOWHERE ELSE */}
-                    <div className="text-xs text-slate-200 font-medium mb-2">
-                      {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
-                    </div>
-
-                    {/* Row 4: Description - Law #7 Format (3 lines max, NO TEAM NAMES) */}
+                    {/* Row 3: Description - Law #7 Format (3 lines max, NO TEAM NAMES) */}
                     <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
                       <div className="text-xs text-slate-200 leading-relaxed break-words">
                         {alert.description?.replace(/Mississippi State Bulldogs?/gi, 'Offense')
