@@ -338,8 +338,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
             engine.gameStates?.set(gameId, gameState);
             console.log(`✅ ${sport}: Game data collected and stored for ${gameId}`);
             
-            // NEW: Let AlertModel scan this collected data for alert opportunities
-            await this.scanForAlertOpportunities(sport, gameId, gameState, engine);
+            // DISABLED: Alert scanning removed - data collection only
           }
         }
       }
@@ -357,46 +356,12 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   /**
    * NEW: MLBAlertModel scans collected data for alert opportunities
-   * Uses AlertService for proper 4-step flow validation
+   * DISABLED: Alert generation removed - data collection only
    */
   private async scanForAlertOpportunities(sport: string, gameId: string, gameState: any, engine: any): Promise<void> {
-    try {
-      if (sport !== 'MLB') return;
-      
-      console.log(`🔍 AlertModel Scanner: Analyzing ${sport} game ${gameId} for alert opportunities`);
-      
-      // Import and use AlertService for proper 4-step flow
-      const { alertService } = await import('../../AlertService');
-      
-      // Ensure team names are preserved for the alert
-      const enrichedGameState = {
-        ...gameState,
-        sport: 'MLB',
-        gameId: gameId
-      };
-      
-      // Use AlertService's 4-step validation flow
-      const alert = await alertService.createValidatedAlert(
-        sport,
-        gameId,
-        enrichedGameState,
-        `Engine Scanner: ${sport} game monitoring`
-      );
-      
-      if (alert) {
-        console.log(`✅ AlertService: Alert created via 4-step flow [${alert.debugId}] for game ${gameId}`);
-        
-        // Broadcast alert if callback is available
-        if (this.onAlert) {
-          this.onAlert(alert);
-        }
-      } else {
-        console.log(`❌ AlertService: No alert created for game ${gameId} (validation failed or cooldown active)`);
-      }
-      
-    } catch (error) {
-      console.error(`❌ AlertService scanning failed for ${sport} game ${gameId}:`, error);
-    }
+    // DISABLED: Alert generation completely disabled
+    console.log(`📊 Data Collection Only: ${sport} game ${gameId} data stored (no alerts generated)`);
+    return;
   }
 
   // Legacy methods removed - all alert creation now goes through AlertService
