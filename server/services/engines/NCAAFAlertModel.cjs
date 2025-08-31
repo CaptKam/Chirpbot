@@ -1,9 +1,8 @@
-// NCAAFAlertModel.cjs
+// NCAAFAlertModel.cjs - DISABLED
 //
-// A comprehensive College Football scoring and momentum probability model with tiered alert checks.
-// This module provides functions to estimate the probability of scoring, momentum shifts,
-// and critical game situations based on field position, down/distance, and game context.
-// It includes tiered alert checks (L1, L2, L3) to determine when an alert should be raised.
+// COLLEGE FOOTBALL ALERT MODEL COMPLETELY DISABLED
+// This module has been disabled to prevent any NCAAF alert generation.
+// All functions now return "no alert" results to maintain compatibility.
 
 // Baseline probability of scoring from different field positions and down/distance
 // Keys are field position zones and down. Values are probabilities based on college football analytics.
@@ -291,109 +290,41 @@ function checkBigPlayPotential(gs) {
 }
 
 /**
- * L1 check: Basic scoring opportunities (red zone, 4th down, two-minute)
+ * L1 check: Basic scoring opportunities - DISABLED
  */
 function ncaafL1Alert(gs) {
-  const checks = [
-    checkRedZone(gs),
-    checkFourthDown(gs),
-    checkTwoMinuteWarning(gs),
-    checkBigPlayPotential(gs)
-  ];
-  
-  const activeAlert = checks.find(check => check.shouldAlert);
-  if (activeAlert) {
-    return {
-      yes: true,
-      reason: activeAlert.reasons[0],
-      priorityHint: activeAlert.priority,
-      alertType: activeAlert.alertType
-    };
-  }
-  return { yes: false };
+  // DISABLED: All NCAAF L1 alerts disabled
+  return { yes: false, reason: 'NCAAF L1 alerts disabled' };
 }
 
 /**
- * L2 check: High-impact situations (close games, goal line, overtime)
+ * L2 check: High-impact situations - DISABLED
  */
 function ncaafL2Alert(gs) {
-  const checks = [
-    checkCloseGame(gs),
-    checkGoalLineStand(gs),
-    checkOvertime(gs)
-  ];
-  
-  const activeAlert = checks.find(check => check.shouldAlert);
-  if (activeAlert && activeAlert.severity !== 'LOW') {
-    return {
-      yes: true,
-      reason: activeAlert.reasons[0],
-      priorityHint: activeAlert.priority,
-      alertType: activeAlert.alertType
-    };
-  }
-  return { yes: false };
+  // DISABLED: All NCAAF L2 alerts disabled
+  return { yes: false, reason: 'NCAAF L2 alerts disabled' };
 }
 
 /**
- * L3 check: Critical situations only (overtime, goal line stands, late 4th down)
+ * L3 check: Critical situations only - DISABLED
  */
 function ncaafL3Alert(gs) {
-  const checks = [
-    checkOvertime(gs),
-    checkGoalLineStand(gs)
-  ];
-  
-  // Special case: 4th down in final 2 minutes
-  if (gs.down === 4 && gs.timeRemaining <= 120) {
-    checks.push(checkFourthDown(gs));
-  }
-  
-  const activeAlert = checks.find(check => check.shouldAlert && check.severity === 'HIGH');
-  if (activeAlert) {
-    return {
-      yes: true,
-      reason: activeAlert.reasons[0],
-      priorityHint: activeAlert.priority,
-      alertType: activeAlert.alertType
-    };
-  }
-  return { yes: false };
+  // DISABLED: All NCAAF L3 alerts disabled
+  return { yes: false, reason: 'NCAAF L3 alerts disabled' };
 }
 
 /**
- * Comprehensive NCAAF alert checker
+ * Comprehensive NCAAF alert checker - DISABLED
  */
 function checkNCAAFAlerts(gs) {
-  const allChecks = [
-    checkRedZone(gs),
-    checkFourthDown(gs),
-    checkTwoMinuteWarning(gs),
-    checkCloseGame(gs),
-    checkOvertime(gs),
-    checkGoalLineStand(gs),
-    checkBigPlayPotential(gs)
-  ];
-  
-  const activeAlerts = allChecks.filter(check => check.shouldAlert);
-  
-  if (activeAlerts.length > 0) {
-    // Return the highest priority alert
-    const topAlert = activeAlerts.reduce((prev, current) => 
-      current.priority > prev.priority ? current : prev
-    );
-    
-    return {
-      shouldAlert: true,
-      alertType: topAlert.alertType,
-      reasons: topAlert.reasons,
-      priority: topAlert.priority,
-      probability: topAlert.probability,
-      severity: topAlert.severity
-    };
-  }
-  
-  return { shouldAlert: false };
+  // DISABLED: NCAAF alert module completely disabled
+  return { 
+    shouldAlert: false,
+    reasons: ['NCAAF alerts disabled'],
+    priority: 0,
+    probability: 0,
+    severity: 'NONE'
+  };
 }
 
 // Export functions using CommonJS for compatibility with existing system
