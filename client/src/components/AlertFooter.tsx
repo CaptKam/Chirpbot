@@ -107,14 +107,14 @@ const AlertFooter: React.FC<AlertFooterProps> = ({ sport, gameInfo, createdAt })
         return (
           <>
             <div className="flex items-center space-x-3">
-              {gameInfo?.half && gameInfo?.inning && (
+              {gameInfo?.inning && (
                 <div className="flex items-center space-x-1">
                   {gameInfo.half === 'Top' ? (
                     <ChevronUp className="w-4 h-4 text-blue-400" />
-                  ) : (
+                  ) : gameInfo.half === 'Bottom' ? (
                     <ChevronDown className="w-4 h-4 text-orange-400" />
-                  )}
-                  <span className="text-sm font-semibold">{gameInfo.inning}</span>
+                  ) : null}
+                  <span className="text-sm font-semibold text-yellow-400">{gameInfo.inning}{gameInfo.half ? (gameInfo.half === 'Top' ? 'T' : 'B') : ''}</span>
                 </div>
               )}
               {gameInfo?.bases && <BaseballDiamond bases={gameInfo.bases} />}
