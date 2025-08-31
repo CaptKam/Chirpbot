@@ -405,9 +405,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         return;
       }
 
-      // Store alert and broadcast with debug info
-      // DISABLED: Direct storage.createAlert bypasses 4-step flow
-      // await storage.createAlert(alert);
+      // Store alert and broadcast with debug info  
+      await storage.createAlert(alert);
       if (this.onAlert) {
         this.onAlert(alert);
       }

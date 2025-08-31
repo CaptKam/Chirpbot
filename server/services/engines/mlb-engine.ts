@@ -304,7 +304,7 @@ export class MLBEngine {
    * Map API data to game state WITH FULL PLAYER DATA
    */
   private mapToGameState(gameData: any, fallbackHomeTeam?: string, fallbackAwayTeam?: string): MLBGameStateV3 {
-    const linescore = gameData.gameData?.linescore || {};
+    const linescore = gameData.liveData?.linescore || {};
     const currentInning = linescore.currentInning || 1;
     const inningState = linescore.inningState || 'Top';
     const offense = linescore.offense || {};
