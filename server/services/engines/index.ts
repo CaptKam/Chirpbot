@@ -43,7 +43,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   private async checkAllSportsForLiveGames(): Promise<void> {
-    const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'CFL', 'NCAAF'];
+    const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'CFL']; // NCAAF REMOVED - completely disabled
     
     for (const sport of sports) {
       try {
