@@ -1353,6 +1353,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Demo MLB alert endpoint - single clean alert
+  app.post("/api/demo/mlb-alert", async (req, res) => {
+    try {
+      const demoAlert = {
+        id: `demo_mlb_${Date.now()}`,
+        type: "SCORING",
+        sport: "MLB",
+        title: "🚨 SCORING OPPORTUNITY! High probability run situation detected",
+        description: `Score: Yankees 4 - Red Sox 3
+Time: Bottom 8th, 2 outs
+Situation: Runners on 2nd and 3rd base
+Field Position: 85% scoring probability
+Weather: Perfect hitting conditions`,
+        gameInfo: {
+          homeTeam: "Boston Red Sox",
+          awayTeam: "New York Yankees",
+          score: { home: 3, away: 4 },
+          status: "Live",
+          inning: 8,
+          inningState: "bottom",
+          outs: 2,
+          runners: { first: false, second: true, third: true }
+        },
+        priority: 90,
+        timestamp: new Date(),
+        seen: false
+      };
+
+      // Store the demo alert
+      await storage.createAlert(demoAlert);
+
+      res.json({ 
+        success: true, 
+        message: "Demo MLB alert created successfully",
+        alert: demoAlert 
+      });
+    } catch (error) {
+      console.error('Demo alert creation error:', error);
+      res.status(500).json({ 
+        error: 'Failed to create demo alert',
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
   // Test endpoint to trigger alerts for all sports
   app.post("/api/test/generate-alerts", async (req, res) => {
     try {
