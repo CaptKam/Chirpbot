@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Clock3, Timer } from 'lucide-react';
+import { Clock3, Timer, ChevronUp, ChevronDown } from 'lucide-react';
 
 export interface AlertFooterProps {
   sport: 'MLB' | 'NFL' | 'NCAAF' | 'NBA' | 'NHL';
@@ -108,9 +108,14 @@ const AlertFooter: React.FC<AlertFooterProps> = ({ sport, gameInfo, createdAt })
           <>
             <div className="flex items-center space-x-3">
               {gameInfo?.half && gameInfo?.inning && (
-                <span className="text-sm font-semibold whitespace-nowrap">
-                  {gameInfo.half} {gameInfo.inning}
-                </span>
+                <div className="flex items-center space-x-1">
+                  {gameInfo.half === 'Top' ? (
+                    <ChevronUp className="w-4 h-4 text-blue-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-orange-400" />
+                  )}
+                  <span className="text-sm font-semibold">{gameInfo.inning}</span>
+                </div>
               )}
               {gameInfo?.bases && <BaseballDiamond bases={gameInfo.bases} />}
             </div>
