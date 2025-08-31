@@ -571,28 +571,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const settings = await storage.getSettingsBySport(validatedData.sport);
 
-      const alert = await storage.createAlert({
-        ...validatedData,
-        weatherData,
+      // DISABLED: Direct storage.createAlert bypasses 4-step flow
+      // const alert = await storage.createAlert({
+      //   ...validatedData,
+      //   weatherData,
+      // });
+
+      res.status(410).json({ 
+        success: false, 
+        message: 'Alert creation disabled - alerts must follow proper 4-step validation flow' 
       });
-
-      // Send to Telegram if both push notifications and telegram are enabled
-      if (settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
-          chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
-        };
-
-        const sent = await sendTelegramAlert(telegramConfig, alert);
-        if (sent) {
-          await storage.markAlertSentToTelegram(alert.id);
-        }
-      }
-
-      // Broadcast new alert to connected clients
-      broadcast({ type: 'new_alert', data: alert });
-
-      res.json(alert);
     } catch (error) {
       console.error("Failed to create alert:", error);
       res.status(400).json({ message: "Invalid alert data" });
@@ -1136,8 +1124,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sentToTelegram: false
       };
 
-      const alert = await storage.createAlert(testAlert);
-      broadcast({ type: 'new_alert', data: alert });
+      // DISABLED: Direct storage.createAlert bypasses 4-step flow
+      // const alert = await storage.createAlert(testAlert);
+      // broadcast({ type: 'new_alert', data: alert });
       
       res.json({
         success: true,
@@ -1446,16 +1435,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const cityName = teamCityMap[alertData.gameInfo.homeTeam] || alertData.gameInfo.homeTeam;
           const weatherData = null; // Weather service removed
           
-          const alert = await storage.createAlert({
-            ...alertData,
-            weatherData,
-            sentToTelegram: false
-          });
+          // DISABLED: Direct storage.createAlert bypasses 4-step flow
+          // const alert = await storage.createAlert({
+          //   ...alertData,
+          //   weatherData,
+          //   sentToTelegram: false
+          // });
 
-          testAlerts.push(alert);
+          // testAlerts.push(alert);
           
-          // Broadcast to WebSocket clients
-          broadcast({ type: 'new_alert', data: alert });
+          // Broadcast to WebSocket clients  
+          // broadcast({ type: 'new_alert', data: alert });
         } catch (error) {
           console.error(`Failed to create ${alertData.sport} test alert:`, error);
         }

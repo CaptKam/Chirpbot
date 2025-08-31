@@ -382,7 +382,8 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       // Store every 5th snapshot to avoid database bloat
       const shouldStore = Math.random() < 0.2; // 20% of snapshots
       if (shouldStore) {
-        await storage.createAlert(snapshot);
+        // DISABLED: Direct storage.createAlert bypasses 4-step flow
+        // await storage.createAlert(snapshot);
         console.log(`📊 Game State Snapshot Stored: ${gameState.awayTeam} @ ${gameState.homeTeam}`);
       }
 
@@ -766,7 +767,8 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       };
 
       // Store alert in database
-      await storage.createAlert(alertData);
+      // DISABLED: Direct storage.createAlert bypasses 4-step flow
+      // await storage.createAlert(alertData);
 
       // Send Telegram notification
       await this.sendTelegramIfEnabled(alertData);
@@ -1039,7 +1041,8 @@ Game is now in progress`;
       alert.confidence = aiConfidence;
 
       // Store and broadcast the alert
-      await storage.createAlert(alert);
+      // DISABLED: Direct storage.createAlert bypasses 4-step flow
+      // await storage.createAlert(alert);
       console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`);
       console.log(`🆔 NCAAF: Alert ID: ${alert.id} | Debug ID: ${alert.debugId} | Type: ${alert.type}`);
 
@@ -1398,7 +1401,8 @@ ${situation}`;
       };
 
       // Stage 3: Store alert in database (now properly validated)
-      await storage.createAlert(finalAlert);
+      // DISABLED: Direct storage.createAlert bypasses 4-step flow
+      // await storage.createAlert(finalAlert);
       console.log(`💾 NCAAF: Alert stored in database`);
       console.log(`🆔 NCAAF: Alert ID: ${finalAlert.id} | Debug ID: ${finalAlert.debugId} | Type: ${finalAlert.type} | Priority: ${finalAlert.priority}`);
 
@@ -1467,7 +1471,8 @@ ${situation}`;
       };
 
       // Store the game flow event
-      await storage.createAlert(gameFlowEvent);
+      // DISABLED: Direct storage.createAlert bypasses 4-step flow
+      // await storage.createAlert(gameFlowEvent);
       console.log(`📊 Game Flow Event Stored: ${eventType} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
 
     } catch (error) {
