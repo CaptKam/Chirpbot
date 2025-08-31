@@ -6,39 +6,20 @@ import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shar
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 
 // Import sport engines
-let MLBEngine: any, NFLEngine: any, NBAEngine: any, NHLEngine: any, CFLEngine: any, NCAAFEngine: any;
-let nbaEngine: any, nflEngine: any, nhlEngine: any, cflEngine: any, ncaafEngine: any;
+import { MLBEngine } from './services/engines/mlb-engine';
+import { NFLEngine } from './services/engines/nfl-engine';
+import { NBAEngine } from './services/engines/nba-engine';
+import { NHLEngine } from './services/engines/nhl-engine';
+import { CFLEngine } from './services/engines/cfl-engine';
+import { NCAAFEngine } from './services/engines/ncaaf-engine';
+import { aiHealthMonitor } from './services/ai-health-monitor';
 
-// Import AI health monitor
-let aiHealthMonitor: any;
-
-// Initialize engines and health monitor
-try {
-  // Try to import engines - they may not exist
-  MLBEngine = (await import('./services/engines/mlb-engine').catch(() => ({ MLBEngine: class { async getTodaysGames() { return []; } } }))).MLBEngine;
-  NFLEngine = (await import('./services/engines/nfl-engine').catch(() => ({ NFLEngine: class { async getTodaysGames() { return []; } } }))).NFLEngine;
-  NBAEngine = (await import('./services/engines/nba-engine').catch(() => ({ NBAEngine: class { async getTodaysGames() { return []; } } }))).NBAEngine;
-  NHLEngine = (await import('./services/engines/nhl-engine').catch(() => ({ NHLEngine: class { async getTodaysGames() { return []; } } }))).NHLEngine;
-  CFLEngine = (await import('./services/engines/cfl-engine').catch(() => ({ CFLEngine: class { async getTodaysGames() { return []; } } }))).CFLEngine;
-  NCAAFEngine = (await import('./services/engines/ncaaf-engine').catch(() => ({ NCAAFEngine: class { async getTodaysGames() { return []; } } }))).NCAAFEngine;
-  
-  // Initialize engine instances
-  nbaEngine = new NBAEngine();
-  nflEngine = new NFLEngine();
-  nhlEngine = new NHLEngine();
-  cflEngine = new CFLEngine();
-  ncaafEngine = new NCAAFEngine();
-  
-  // Try to import AI health monitor
-  aiHealthMonitor = (await import('./services/ai-health-monitor').catch(() => ({
-    getLivenessStatus: () => ({ status: 'OK', timestamp: Date.now() }),
-    getReadinessStatus: () => ({ ready: true, timestamp: Date.now() }),
-    getDetailedMetrics: () => ({ uptime: 0, averageLatency: 0 }),
-    getHealthHistory: () => []
-  })));
-} catch (error) {
-  console.warn('Some engines or services could not be loaded:', error.message);
-}
+// Initialize engine instances
+const nbaEngine = new NBAEngine();
+const nflEngine = new NFLEngine();
+const nhlEngine = new NHLEngine();
+const cflEngine = new CFLEngine();
+const ncaafEngine = new NCAAFEngine();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
