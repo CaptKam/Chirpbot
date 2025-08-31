@@ -31,6 +31,7 @@ interface MLBAlert {
 export class MLBEngine {
   private gameStates = new Map<string, MLBGameStateV3>();
   private lastAlerts = new Map<string, string>();
+  public onAlert?: (alert: any) => void;
 
   /**
    * LAW #6 & #7: Create standardized MLB alert with betting data
@@ -107,6 +108,13 @@ export class MLBEngine {
     // Check if situation warrants alert
     const modelResult = mlbAlertModel.checkScoringProbability(this.convertToModelFormat(gameState));
     
+    // Debug logging to understand why alerts aren't being generated
+    console.log(`⚾ MLB DEBUG Game ${gameState.gameId} (${gameState.awayTeam} @ ${gameState.homeTeam}):`);
+    console.log(`   Score: ${gameState.awayScore}-${gameState.homeScore}, Inning: ${gameState.inning}${gameState.inningState}, Outs: ${gameState.outs}`);
+    console.log(`   Runners: 1B:${!!gameState.runners.first} 2B:${!!gameState.runners.second} 3B:${!!gameState.runners.third}`);
+    console.log(`   Model result: prob=${(modelResult.probability * 100).toFixed(1)}%, severity=${modelResult.severity}, shouldAlert=${modelResult.shouldAlert}`);
+    console.log(`   Reasons: ${modelResult.reasons?.join(', ')}`);
+    
     if (!modelResult.shouldAlert) {
       return [];
     }
@@ -153,6 +161,64 @@ export class MLBEngine {
       weather: null,
       park: null
     };
+  }
+
+  /**
+   * Process a specific game for live monitoring - Required for engine compatibility
+   */
+  async processSpecificGame(gameId: string): Promise<void> {
+    try {
+      // Fetch specific game data from MLB API
+      const url = `https://statsapi.mlb.com/api/v1/game/${gameId}/linescore`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!data || !data.teams) {
+        console.log(`🔍 MLB: No data found for game ${gameId}`);
+        return;
+      }
+
+      // Get team names from monitored games data (fallback for API limitations)
+      const { storage } = await import('../../storage');
+      const monitoredGames = await storage.getAllMonitoredGames();
+      const gameInfo = monitoredGames.find(g => g.gameId === gameId);
+      
+      // Use actual team names from monitored games, with API fallback
+      const homeTeam = gameInfo?.homeTeamName || data.teams.home.team?.name || 'Home Team';
+      const awayTeam = gameInfo?.awayTeamName || data.teams.away.team?.name || 'Away Team';
+
+      // Convert to MLBGameStateV3 format
+      const gameState: MLBGameStateV3 = {
+        gameId: gameId,
+        homeTeam: homeTeam,
+        awayTeam: awayTeam,
+        homeScore: data.teams.home.runs || 0,
+        awayScore: data.teams.away.runs || 0,
+        inning: data.currentInning || 1,
+        inningState: data.inningState || 'Top',
+        outs: data.outs || 0,
+        runners: {
+          first: data.offense?.first || null,
+          second: data.offense?.second || null,
+          third: data.offense?.third || null
+        },
+        balls: data.balls || 0,
+        strikes: data.strikes || 0
+      };
+
+      console.log(`⚾ MLB: Processing game ${gameId} - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore})`);
+
+      // Process the game state for alerts
+      const alerts = await this.monitor(gameState);
+      
+      // If alerts generated, trigger them via callback
+      if (alerts.length > 0 && this.onAlert) {
+        alerts.forEach(alert => this.onAlert!(alert));
+      }
+      
+    } catch (error) {
+      console.error(`❌ MLB: Error processing game ${gameId}:`, error);
+    }
   }
 
   /**

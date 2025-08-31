@@ -107,14 +107,14 @@ const AlertFooter: React.FC<AlertFooterProps> = ({ sport, gameInfo, createdAt })
         return (
           <>
             <div className="flex items-center space-x-3">
-              {gameInfo?.half && gameInfo?.inning && (
+              {gameInfo?.inning && (
                 <div className="flex items-center space-x-1">
                   {gameInfo.half === 'Top' ? (
                     <ChevronUp className="w-4 h-4 text-blue-400" />
-                  ) : (
+                  ) : gameInfo.half === 'Bottom' ? (
                     <ChevronDown className="w-4 h-4 text-orange-400" />
-                  )}
-                  <span className="text-sm font-semibold">{gameInfo.inning}</span>
+                  ) : null}
+                  <span className="text-sm font-semibold text-yellow-400">{gameInfo.inning}{gameInfo.half ? (gameInfo.half === 'Top' ? 'T' : 'B') : ''}</span>
                 </div>
               )}
               {gameInfo?.bases && <BaseballDiamond bases={gameInfo.bases} />}
@@ -144,11 +144,6 @@ const AlertFooter: React.FC<AlertFooterProps> = ({ sport, gameInfo, createdAt })
                   <span className="text-xs font-mono">{gameInfo.clock}</span>
                 </div>
               )}
-              {gameInfo?.score && (
-                <span className="text-xs bg-gray-700 px-2 py-1 rounded">
-                  {gameInfo.score.away}-{gameInfo.score.home}
-                </span>
-              )}
             </div>
           </>
         );
@@ -159,11 +154,6 @@ const AlertFooter: React.FC<AlertFooterProps> = ({ sport, gameInfo, createdAt })
             <div className="flex items-center space-x-3">
               {gameInfo?.period && (
                 <span className="text-sm font-semibold">Q{gameInfo.period}</span>
-              )}
-              {gameInfo?.score && (
-                <span className="text-sm bg-orange-600 px-2 py-1 rounded text-white">
-                  {gameInfo.score.away}-{gameInfo.score.home}
-                </span>
               )}
             </div>
             <div className="flex items-center space-x-3">
@@ -213,11 +203,6 @@ const AlertFooter: React.FC<AlertFooterProps> = ({ sport, gameInfo, createdAt })
         return (
           <div className="flex items-center space-x-3">
             <span className="text-sm text-gray-400">Live Game</span>
-            {gameInfo?.score && (
-              <span className="text-sm bg-gray-700 px-2 py-1 rounded">
-                {gameInfo.score.away}-{gameInfo.score.home}
-              </span>
-            )}
           </div>
         );
     }
