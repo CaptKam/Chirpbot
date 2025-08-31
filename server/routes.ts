@@ -12,7 +12,7 @@ import { aiHealthMonitor } from "./services/ai-health-monitor";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
-  
+
   // Setup WebSocket server with heartbeat
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const clients = new Set<WebSocket>();
@@ -100,10 +100,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { alertId } = req.params;
       console.log(`🗑️ Deleting alert with ID: ${alertId}`);
-      
+
       // Delete the alert from storage
       await storage.deleteAlert(alertId);
-      
+
       res.json({ 
         success: true, 
         message: `Alert ${alertId} deleted successfully` 
@@ -122,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('🧪 Creating simple NCAAF alert directly...');
       const { randomUUID } = await import('crypto');
-      
+
       // Create a simple test alert with correct structure
       const testAlert = {
         type: 'ncaafGameLive',
@@ -145,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store the alert directly
       await storage.createAlert(testAlert);
       console.log('✅ Simple NCAAF test alert created and stored');
-      
+
       res.json({ 
         success: true,
         message: 'Simple NCAAF test alert created successfully',
@@ -176,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const metrics = aiHealthMonitor.getDetailedMetrics();
       const history = aiHealthMonitor.getHealthHistory();
-      
+
       res.json({
         metrics,
         recentHistory: history.slice(-10), // Last 10 health checks
@@ -199,15 +199,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sport = req.query.sport as string || 'MLB';
       const dateParam = req.query.date as string;
       const targetDate = dateParam || new Date().toISOString().split('T')[0];
-      
+
       let games: any[] = [];
-      
+
       if (sport === 'MLB') {
         // Use our integrated MLB API
         const { MLBEngine } = await import('./services/engines/mlb-engine');
         const mlbEngine = new MLBEngine();
         games = await mlbEngine.getTodaysGames(targetDate);
-        
+
         // Transform to match our Game interface
         games = games.map(game => ({
           id: game.gameId,
@@ -239,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use ESPN NBA API integration
         const { nbaEngine } = await import('./services/engines/nba-engine');
         games = await nbaEngine.getTodaysGames(targetDate);
-        
+
         // Transform to match our Game interface  
         games = games.map(game => ({
           id: game.gameId,
@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use ESPN NFL API integration
         const { nflEngine } = await import('./services/engines/nfl-engine');
         games = await nflEngine.getTodaysGames(targetDate);
-        
+
         // Transform to match our Game interface
         games = games.map(game => ({
           id: game.gameId,
@@ -293,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use ESPN NHL API integration
         const { nhlEngine } = await import('./services/engines/nhl-engine');
         games = await nhlEngine.getTodaysGames(targetDate);
-        
+
         // Transform to match our Game interface
         games = games.map(game => ({
           id: game.gameId,
@@ -320,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use ESPN CFL API integration
         const { cflEngine } = await import('./services/engines/cfl-engine');
         games = await cflEngine.getTodaysGames(targetDate);
-        
+
         // Transform to match our Game interface
         games = games.map(game => ({
           id: game.gameId,
@@ -348,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
         const ncaaEngine = new NCAAFEngine();
         games = await ncaaEngine.getTodaysGames(targetDate);
-        
+
         // Transform to match our Game interface
         games = games.map(game => ({
           id: game.gameId,
@@ -374,7 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       }
       // All major sports now connected to APIs
-      
+
       res.json({ date: targetDate, games, sport });
     } catch (error) {
       console.error('Error fetching games:', error);
@@ -417,14 +417,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { monitored } = req.body;
       const team = await storage.toggleTeamMonitoring(id, monitored);
-      
+
       if (!team) {
         return res.status(404).json({ message: "Team not found" });
       }
 
       // Broadcast team monitoring change
       broadcast({ type: 'team_monitoring_changed', data: team });
-      
+
       res.json(team);
     } catch (error) {
       res.status(500).json({ message: "Failed to update team monitoring" });
@@ -432,6 +432,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alerts routes with v3Analysis enhancement
+  // Get specific alert by ID
+  app.get("/api/alerts/:alertId", async (req, res) => {
+    try {
+      const { alertId } = req.params;
+      console.log(`🔍 API: Looking up alert ${alertId}`);
+
+      const alerts = await storage.getAllAlerts();
+      const alert = alerts.find(a => a.id.includes(alertId) || a.id === alertId);
+
+      if (!alert) {
+        return res.status(404).json({ error: `Alert ${alertId} not found` });
+      }
+
+      console.log(`✅ API: Found alert ${alertId}`);
+      console.log(`📋 API: Alert details:`, JSON.stringify({
+        id: alert.id,
+        type: alert.type,
+        sport: alert.sport,
+        gameInfo: alert.gameInfo,
+        timestamp: alert.timestamp
+      }, null, 2));
+
+      res.json(alert);
+    } catch (error) {
+      console.error('Error fetching specific alert:', error);
+      res.status(500).json({ error: 'Failed to fetch alert details' });
+    }
+  });
+
+  // Get all alerts
   app.get("/api/alerts", async (req, res) => {
     try {
       const sport = req.query.sport as string;
@@ -446,7 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         alerts = await storage.getRecentAlerts(limit);
       }
-      
+
       // Always limit to max 30 alerts for performance
       if (alerts.length > 30) {
         alerts = alerts.slice(0, 30);
@@ -458,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const priority = alert.priority || 50;
         if (priority >= 80 && (!alert.gameInfo || !(alert.gameInfo as any).v3Analysis)) {
           const probability = Math.min(0.95, 0.60 + (priority - 80) * 0.02);
-          
+
           const v3Analysis = {
             probability,
             reasons: [
@@ -469,14 +499,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "Environmental and situational factors analyzed"
             ]
           };
-          
+
           const betbookData = {
             recommendation: `VALUE ALERT: ${alert.sport} live betting opportunity`,
             confidence: `${Math.round(probability * 100)}% AI confidence rating`,
             odds: priority >= 90 ? "+115" : "+105",
             reasoning: `V3 analysis confirms premium betting value for this situation`
           };
-          
+
           return {
             ...alert,
             gameInfo: {
@@ -499,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/alerts", async (req, res) => {
     try {
       const validatedData = insertAlertSchema.parse(req.body);
-      
+
       // Get weather data for the game location using city name
       let weatherData = null;
       if (validatedData.gameInfo.homeTeam) {
@@ -521,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
           'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
         };
-        
+
         const cityName = teamCityMap[validatedData.gameInfo.homeTeam] || validatedData.gameInfo.homeTeam;
         weatherData = null; // Weather service removed
       }
@@ -606,7 +636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/settings", async (req, res) => {
     try {
       const sport = req.query.sport as string;
-      
+
       if (sport) {
         const settings = await storage.getSettingsBySport(sport);
         if (!settings) {
@@ -662,7 +692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sport } = req.params;
       const updates = req.body;
-      
+
       const settings = await storage.updateSettings(sport, updates);
       if (!settings) {
         return res.status(404).json({ message: "Settings not found" });
@@ -670,7 +700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Broadcast settings change
       broadcast({ type: 'settings_changed', data: settings });
-      
+
       res.json(settings);
     } catch (error) {
       res.status(500).json({ message: "Failed to update settings" });
@@ -682,11 +712,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport } = req.query;
-      
+
       const monitoredGames = sport 
         ? await storage.getUserMonitoredGamesBySport(userId, sport as string)
         : await storage.getUserMonitoredGames(userId);
-        
+
       res.json(monitoredGames);
     } catch (error) {
       console.error("Error fetching monitored games:", error);
@@ -698,8 +728,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { gameId, sport, homeTeamName, awayTeamName } = req.body;
-      
-      
+
+
       const monitoring = await storage.addUserMonitoredGame({
         userId,
         gameId,
@@ -707,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         homeTeamName,
         awayTeamName
       });
-      
+
       res.json(monitoring);
     } catch (error) {
       console.error("Error adding monitored game:", error);
@@ -718,8 +748,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
     try {
       const { userId, gameId } = req.params;
-      
-      
+
+
       await storage.removeUserMonitoredGame(userId, gameId);
       res.json({ success: true });
     } catch (error) {
@@ -731,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/user/:userId/monitored-games/:gameId/status', async (req, res) => {
     try {
       const { userId, gameId } = req.params;
-      
+
       const isMonitored = await storage.isGameMonitoredByUser(userId, gameId);
       res.json({ isMonitored });
     } catch (error) {
@@ -747,7 +777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { telegramBotToken, telegramChatId, telegramEnabled } = req.body;
 
       const user = await storage.updateUserTelegramSettings(userId, telegramBotToken, telegramChatId, telegramEnabled);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -766,7 +796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found", connected: false });
       }
@@ -781,14 +811,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const isConnected = await testTelegramConnection(telegramConfig);
-      
+
       if (!isConnected) {
         return res.json({ 
           connected: false, 
           message: "Connection failed. Please check your bot token and chat ID. Make sure your bot is active and you've started a conversation with it." 
         });
       }
-      
+
       res.json({ connected: true, message: "Successfully connected to your Telegram bot!" });
     } catch (error) {
       console.error("Error testing user Telegram connection:", error);
@@ -800,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -843,19 +873,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Import modular sport engines
   const { alertEngineManager } = await import('./services/engines');
-  
+
   // Setup alert broadcasting for all sports
   alertEngineManager.setAlertCallback((alert: any) => {
     broadcast({ type: 'new_alert', data: alert });
   });
-  
+
   // Start all sport engines (MLB: 10s, NFL: 30s, NBA: 20s, NHL: 15s, Weather: 5min, AI: 15s)
   await alertEngineManager.startAllEngines();
 
   // Helper function to generate alert descriptions
   function generateAlertDescription(alertType: string, game: any): string {
     const score = `${game.awayTeam.name} ${game.awayTeam.score || Math.floor(Math.random() * 15)} - ${game.homeTeam.score || Math.floor(Math.random() * 15)} ${game.homeTeam.name}`;
-    
+
     switch (alertType) {
       case 'RISP Opportunity':
         return `Runners likely in scoring position! ${score} - Prime RBI opportunity developing`;
@@ -874,7 +904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const { usernameOrEmail, password, firstName, lastName } = req.body;
-      
+
       if (!usernameOrEmail || !password) {
         return res.status(400).json({ message: "Username/email and password are required" });
       }
@@ -889,7 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if this is an email or username
       const isEmail = usernameOrEmail.includes('@');
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByUsername(usernameOrEmail);
       if (existingUser) {
@@ -910,9 +940,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: lastName || null,
         authMethod: 'local' as const
       };
-      
+
       const user = await storage.createUser(userData);
-      
+
       // Start session
       (req.session as any).userId = user.id;
       (req.session as any).userInfo = {
@@ -967,8 +997,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/logout", async (req, res) => {
     try {
       const session = req.session as any;
-      
-      
+
+
       req.session.destroy((err) => {
         if (err) {
           console.error("Session destroy error:", err);
@@ -986,7 +1016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { usernameOrEmail, password } = req.body;
-      
+
       if (!usernameOrEmail || !password) {
         return res.status(400).json({ message: "Username/email and password are required" });
       }
@@ -1095,7 +1125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const alert = await storage.createAlert(testAlert);
       broadcast({ type: 'new_alert', data: alert });
-      
+
       res.json({
         success: true,
         message: "Quick alert created successfully",
@@ -1115,23 +1145,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/test/weather", async (req, res) => {
     try {
       // Weather service removed - using mock data
-      
+
       console.log('🌤️ === WEATHER API DEBUG TEST STARTING ===');
-      
+
       // Check environment variables first
       const apiKeyStatus = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
       console.log(`🔑 API Key Status: ${apiKeyStatus ? 'Present' : 'Missing'}`);
       console.log(`🔑 API Key Value: ${apiKeyStatus ? `${apiKeyStatus.substring(0, 8)}...` : 'None'}`);
       console.log(`🔑 Is placeholder key: ${apiKeyStatus === "default_key" || apiKeyStatus === "your_actual_openweathermap_api_key_here"}`);
-      
+
       const testCities = [
         'New York', 'Los Angeles', 'Chicago', 'Phoenix', 
         'Miami', 'Boston', 'Denver', 'Seattle',
         'Kansas City', 'Tampa', 'Arlington'
       ];
-      
+
       const weatherResults = [];
-      
+
       for (const city of testCities) {
         console.log(`\n🌤️ Testing weather for: ${city}`);
         try {
@@ -1153,12 +1183,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Test problematic team names
       console.log('\n🏟️ Testing problematic team names:');
       const problemTeams = ['Kansas City Royals', 'New York Yankees', 'Los Angeles Dodgers'];
       const teamResults = [];
-      
+
       for (const team of problemTeams) {
         console.log(`🏟️ Testing: ${team}`);
         try {
@@ -1178,9 +1208,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       console.log('🌤️ === WEATHER API DEBUG TEST COMPLETE ===\n');
-      
+
       res.json({
         timestamp: new Date().toISOString(),
         apiKeyConfigured: !!(apiKeyStatus && 
@@ -1287,7 +1317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const testAlerts = [];
       const timestamp = new Date().toISOString();
-      
+
       // Test MLB Alert with V3 Analysis
       const mlbAlert = {
         type: "V3 Tier 3 Alert",
@@ -1321,7 +1351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             recommendation: "BET NOW: Over 9.5 runs - High leverage bases loaded situation",
             confidence: "Elite opportunity - 88% AI confidence rating",
             odds: "+115", 
-            reasoning: "Advanced v3 analysis indicates premium betting value"
+            reasoning: "Advanced v3 analysis confirms premium betting value"
           }
         }
       };
@@ -1399,10 +1429,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
             'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
           };
-          
+
           const cityName = teamCityMap[alertData.gameInfo.homeTeam] || alertData.gameInfo.homeTeam;
           const weatherData = null; // Weather service removed
-          
+
           const alert = await storage.createAlert({
             ...alertData,
             weatherData,
@@ -1410,7 +1440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           testAlerts.push(alert);
-          
+
           // Broadcast to WebSocket clients
           broadcast({ type: 'new_alert', data: alert });
         } catch (error) {
@@ -1450,7 +1480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return { stadium, weather };
         })
       );
-      
+
       const successful = results.filter(r => r.status === 'fulfilled').length;
       res.json({
         message: 'Weather engine operational',
