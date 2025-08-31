@@ -333,9 +333,12 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         if (game) {
           const gameState = await engine.buildGameState(game);
           if (gameState) {
-            // Store data in engine for calendar tracking only
+            // Store data in engine for calendar tracking AND alert scanning
             engine.gameStates?.set(gameId, gameState);
             console.log(`✅ ${sport}: Game data collected and stored for ${gameId}`);
+            
+            // NEW: Let AlertModel scan this collected data for alert opportunities
+            await this.scanForAlertOpportunities(sport, gameId, gameState, engine);
           }
         }
       }
@@ -348,6 +351,42 @@ class AlertEngineManagerImpl implements AlertEngineManager {
       
     } catch (error) {
       console.error(`❌ ${sport} data collection failed for game ${gameId}:`, error);
+    }
+  }
+
+  /**
+   * NEW: MLBAlertModel scans collected data for alert opportunities
+   */
+  private async scanForAlertOpportunities(sport: string, gameId: string, gameState: any, engine: any): Promise<void> {
+    try {
+      if (sport !== 'MLB') return;
+      
+      console.log(`🔍 AlertModel Scanner: Analyzing ${sport} game ${gameId} for alert opportunities`);
+      
+      // Use MLBAlertModel to analyze the collected game state
+      const mlbAlertModel = await import('./mlbAlertModel.cjs');
+      const modelFormat = this.convertToModelFormat(gameState);
+      const modelResult = mlbAlertModel.checkScoringProbability(modelFormat);
+      
+      console.log(`🤖 AlertModel Result for ${gameId}:`, {
+        shouldAlert: modelResult.shouldAlert,
+        probability: modelResult.probability,
+        severity: modelResult.severity,
+        priority: modelResult.priority
+      });
+      
+      if (modelResult.shouldAlert) {
+        console.log(`🚨 AlertModel Scanner: ALERT OPPORTUNITY IDENTIFIED for game ${gameId}!`);
+        console.log(`🎯 Triggering next step in flow: AlertModel → OpenAI → Betbook → Launch`);
+        
+        // Trigger the next step: OpenAI → Betbook → Launch
+        await this.processAndLaunchAlert(gameState, modelResult);
+      } else {
+        console.log(`❌ AlertModel Scanner: No alert opportunity for game ${gameId}: ${modelResult.reasons?.join(', ') || 'No reasons provided'}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ AlertModel scanning failed for ${sport} game ${gameId}:`, error);
     }
   }
 
