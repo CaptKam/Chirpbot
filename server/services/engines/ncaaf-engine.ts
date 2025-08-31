@@ -1008,79 +1008,37 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       }
       console.log(`✅ NCAAF: Basic live alert toggle validated - proceeding...`);
 
-      // Stage 4: Create basic live game alert (AI completely disabled) with kid-friendly format
-      const alertId = randomUUID();
-      console.log(`🆔 NCAAF: Generating basic live alert with ID: ${alertId}`);
-
-      // LAW #7: Consistent format - title shows WHAT + SCORE, description shows game info once
-      const kidFriendlyTitle = `🏈 LIVE GAME (0-0)`;
-      const kidFriendlyDescription = `1st Quarter 15:00
-Kickoff completed
-Game is now in progress`;
+      // Use real ESPN game data - no fake alerts
+      const score = actualGame.score || { away: 0, home: 0 };
+      const realTitle = `🏈 LIVE: ${actualGame.awayTeam} @ ${actualGame.homeTeam} (${score.away}-${score.home})`;
+      const realDescription = `${actualGame.awayTeam} @ ${actualGame.homeTeam} is live\nStatus: ${actualGame.status}`;
 
       const alert = {
-        id: alertId,
-        debugId: alertId.substring(0, 8), // Short ID for easy debugging
-        type: 'ncaafGameLive',
+        id: randomUUID(),
+        debugId: randomUUID().substring(0, 8),
+        type: 'ncaafGameLive', 
         sport: 'NCAAF',
         priority: 70,
-        title: kidFriendlyTitle,
-        message: kidFriendlyDescription,
-        description: kidFriendlyDescription,
+        title: realTitle,
+        description: realDescription,
         gameInfo: {
           sport: 'NCAAF',
           gameId: gameId,
-          homeTeam: gameInfo.homeTeamName || 'Home Team',
-          awayTeam: gameInfo.awayTeamName || 'Away Team',
-          status: 'STATUS_IN_PROGRESS',
-          situation: 'Game Live',
-          quarter: 'Live',
-          score: { home: 0, away: 0 }
+          homeTeam: actualGame.homeTeam,
+          awayTeam: actualGame.awayTeam,
+          status: actualGame.status, // Use REAL status from ESPN
+          score: score
         },
-
-        // Store basic game data (AI disabled)
-        analysisData: {
-          gameState: {
-            period: 1,
-            clock: '15:00',
-            down: 1,
-            distance: 10,
-            yardsToGoal: 50,
-            fieldPosition: 50,
-            redZone: false,
-            timeoutsRemaining: {
-              home: 3,
-              away: 3
-            }
-          }
-        },
-
         probability: 0.8,
         confidence: 0.75,
-        betbookData: betbookData,
         timestamp: new Date(),
-        userId: 'system',
         seen: false
       };
 
-      // LAW #7: No AI needed - consistent basic format
-      enhancedTitle = `🏈 LIVE GAME (0-0)`;
-      enhancedDescription = `1st Quarter 15:00
-Kickoff completed  
-Game is now in progress`;
-      aiConfidence = 0.50;
-
-      console.log(`🚫 NCAAF: AI disabled, using basic game description only`);
-
-      // Update alert with AI-enhanced content
-      alert.title = enhancedTitle;
-      alert.description = enhancedDescription;
-      alert.confidence = aiConfidence;
-
-      // Store and broadcast the alert
+      // Store and broadcast the real alert
       await storage.createAlert(alert);
-      console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`);
-      console.log(`🆔 NCAAF: Alert ID: ${alert.id} | Debug ID: ${alert.debugId} | Type: ${alert.type}`);
+      console.log(`📢 NCAAF: REAL live alert sent for ${actualGame.awayTeam} @ ${actualGame.homeTeam}`);
+      console.log(`🆔 NCAAF: Alert ID: ${alert.id}`);
 
       if (this.onAlert) {
         this.onAlert(alert);
