@@ -6,6 +6,7 @@ import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calcula
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import AlertFooter from './AlertFooter';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';

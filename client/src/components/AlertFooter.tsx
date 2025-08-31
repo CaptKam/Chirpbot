@@ -1,21 +1,45 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Clock3 } from 'lucide-react';
-import { Pill } from './Pill';
+import { Clock3, Timer } from 'lucide-react';
 
 export interface AlertFooterProps {
-  half: 'Top' | 'Bottom';
-  inning: number;
-  bases: {
-    first: boolean;
-    second: boolean;
-    third: boolean;
-    home?: boolean;   // optional, if you want to show home plate too
+  sport: 'MLB' | 'NFL' | 'NCAAF' | 'NBA' | 'NHL';
+  gameInfo?: {
+    // MLB specific
+    half?: 'Top' | 'Bottom';
+    inning?: number;
+    bases?: {
+      first: boolean;
+      second: boolean;
+      third: boolean;
+      home?: boolean;
+    };
+    balls?: number;
+    strikes?: number;
+    outs?: number;
+    
+    // Football specific
+    quarter?: number;
+    down?: number;
+    distance?: number;
+    yardLine?: number;
+    possessionTeam?: string;
+    
+    // Basketball specific
+    period?: number;
+    fouls?: { home: number; away: number };
+    
+    // Hockey specific
+    shots?: { home: number; away: number };
+    penalties?: number;
+    
+    // Common
+    clock?: string;
+    score?: { home: number; away: number };
+    homeTeam?: string;
+    awayTeam?: string;
   };
-  balls?: number;   // 0..4 (optional)
-  strikes?: number; // 0..3 (optional)
-  outs: number;    // 0..3
-  createdAt?: string; // timestamp for the timer
+  createdAt?: string;
 }
 
 // Reusable indicator for B/S/O lights
@@ -44,68 +68,165 @@ const Indicator: React.FC<{ label: string; count?: number; max: number }> = ({
   );
 };
 
+// Baseball Diamond Component
+const BaseballDiamond: React.FC<{ bases: { first: boolean; second: boolean; third: boolean; home?: boolean } }> = ({ bases }) => (
+  <div className="relative w-8 h-8 ml-2">
+    {/* Second Base (top) */}
+    <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 border border-gray-500 ${bases.second ? 'bg-green-500' : 'bg-gray-700'}`}></div>
+    {/* Third Base (left) */}
+    <div className={`absolute top-1/2 left-0 transform -translate-y-1/2 w-2 h-2 rotate-45 border border-gray-500 ${bases.third ? 'bg-green-500' : 'bg-gray-700'}`}></div>
+    {/* First Base (right) */}
+    <div className={`absolute top-1/2 right-0 transform -translate-y-1/2 w-2 h-2 rotate-45 border border-gray-500 ${bases.first ? 'bg-green-500' : 'bg-gray-700'}`}></div>
+    {/* Home Plate (bottom) */}
+    <div className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 border border-gray-500 ${bases.home ? 'bg-green-500' : 'bg-gray-700'}`}></div>
+  </div>
+);
+
+// Football Field Component  
+const FootballField: React.FC<{ down?: number; distance?: number; yardLine?: number }> = ({ down, distance, yardLine }) => (
+  <div className="flex items-center space-x-2 text-xs">
+    {down && distance && (
+      <span className="bg-orange-600 px-2 py-1 rounded text-white font-semibold">
+        {down}{down === 1 ? 'st' : down === 2 ? 'nd' : down === 3 ? 'rd' : 'th'} & {distance}
+      </span>
+    )}
+    {yardLine && (
+      <span className="text-green-400 font-medium">{yardLine} yd</span>
+    )}
+  </div>
+);
+
 /**
- * AlertFooter
- *
- * Renders a dark bar with:
- *   • Half inning and inning number on the left.
- *   • A row of 4 diamonds for bases (highlighted green when occupied).
- *   • Indicators for balls (max 4), strikes (max 3) and outs (max 3).
+ * Multi-Sport AlertFooter
+ * Shows sport-specific quick glance information
  */
-const AlertFooter: React.FC<AlertFooterProps> = ({
-  half,
-  inning,
-  bases,
-  balls,
-  strikes,
-  outs,
-  createdAt,
-}) => {
-  // In order: first, second, third, home (home is optional).
-  const baseOrder: (keyof typeof bases)[] = ['first', 'second', 'third', 'home'];
+const AlertFooter: React.FC<AlertFooterProps> = ({ sport, gameInfo, createdAt }) => {
+  const renderSportSpecific = () => {
+    switch (sport) {
+      case 'MLB':
+        return (
+          <>
+            <div className="flex items-center space-x-3">
+              {gameInfo?.half && gameInfo?.inning && (
+                <span className="text-sm font-semibold whitespace-nowrap">
+                  {gameInfo.half} {gameInfo.inning}
+                </span>
+              )}
+              {gameInfo?.bases && <BaseballDiamond bases={gameInfo.bases} />}
+            </div>
+            <div className="flex items-center space-x-3">
+              <Indicator label="B" count={gameInfo?.balls} max={4} />
+              <Indicator label="S" count={gameInfo?.strikes} max={3} />
+              <Indicator label="O" count={gameInfo?.outs} max={3} />
+            </div>
+          </>
+        );
+      
+      case 'NFL':
+      case 'NCAAF':
+        return (
+          <>
+            <div className="flex items-center space-x-3">
+              {gameInfo?.quarter && (
+                <span className="text-sm font-semibold">Q{gameInfo.quarter}</span>
+              )}
+              <FootballField down={gameInfo?.down} distance={gameInfo?.distance} yardLine={gameInfo?.yardLine} />
+            </div>
+            <div className="flex items-center space-x-2">
+              {gameInfo?.clock && (
+                <div className="flex items-center space-x-1">
+                  <Timer className="w-3 h-3 text-yellow-400" />
+                  <span className="text-xs font-mono">{gameInfo.clock}</span>
+                </div>
+              )}
+              {gameInfo?.score && (
+                <span className="text-xs bg-gray-700 px-2 py-1 rounded">
+                  {gameInfo.score.away}-{gameInfo.score.home}
+                </span>
+              )}
+            </div>
+          </>
+        );
+      
+      case 'NBA':
+        return (
+          <>
+            <div className="flex items-center space-x-3">
+              {gameInfo?.period && (
+                <span className="text-sm font-semibold">Q{gameInfo.period}</span>
+              )}
+              {gameInfo?.score && (
+                <span className="text-sm bg-orange-600 px-2 py-1 rounded text-white">
+                  {gameInfo.score.away}-{gameInfo.score.home}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center space-x-3">
+              {gameInfo?.fouls && (
+                <>
+                  <span className="text-xs">Fouls: {gameInfo.fouls.away}-{gameInfo.fouls.home}</span>
+                </>
+              )}
+              {gameInfo?.clock && (
+                <div className="flex items-center space-x-1">
+                  <Timer className="w-3 h-3 text-yellow-400" />
+                  <span className="text-xs font-mono">{gameInfo.clock}</span>
+                </div>
+              )}
+            </div>
+          </>
+        );
+      
+      case 'NHL':
+        return (
+          <>
+            <div className="flex items-center space-x-3">
+              {gameInfo?.period && (
+                <span className="text-sm font-semibold">P{gameInfo.period}</span>
+              )}
+              {gameInfo?.shots && (
+                <span className="text-xs">SOG: {gameInfo.shots.away}-{gameInfo.shots.home}</span>
+              )}
+            </div>
+            <div className="flex items-center space-x-3">
+              {gameInfo?.penalties && gameInfo.penalties > 0 && (
+                <span className="text-xs bg-red-600 px-2 py-1 rounded text-white">
+                  {gameInfo.penalties} PEN
+                </span>
+              )}
+              {gameInfo?.clock && (
+                <div className="flex items-center space-x-1">
+                  <Timer className="w-3 h-3 text-yellow-400" />
+                  <span className="text-xs font-mono">{gameInfo.clock}</span>
+                </div>
+              )}
+            </div>
+          </>
+        );
+      
+      default:
+        return (
+          <div className="flex items-center space-x-3">
+            <span className="text-sm text-gray-400">Live Game</span>
+            {gameInfo?.score && (
+              <span className="text-sm bg-gray-700 px-2 py-1 rounded">
+                {gameInfo.score.away}-{gameInfo.score.home}
+              </span>
+            )}
+          </div>
+        );
+    }
+  };
 
   return (
-    <div className="flex items-center justify-between w-full px-4 py-2 bg-gray-800 text-white rounded-b-xl">
-      <div className="flex items-center space-x-3">
-        <span className="text-base font-semibold whitespace-nowrap">
-          {half} of {inning}
-        </span>
-        {/* Baseball Field Diamond */}
-        <div className="relative w-8 h-8 ml-2">
-          {/* Second Base (top) */}
-          <div
-            className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 border border-gray-500 ${
-              bases.second ? 'bg-green-500' : 'bg-gray-700'
-            }`}
-          ></div>
-          
-          {/* Third Base (left) */}
-          <div
-            className={`absolute top-1/2 left-0 transform -translate-y-1/2 w-2 h-2 rotate-45 border border-gray-500 ${
-              bases.third ? 'bg-green-500' : 'bg-gray-700'
-            }`}
-          ></div>
-          
-          {/* First Base (right) */}
-          <div
-            className={`absolute top-1/2 right-0 transform -translate-y-1/2 w-2 h-2 rotate-45 border border-gray-500 ${
-              bases.first ? 'bg-green-500' : 'bg-gray-700'
-            }`}
-          ></div>
-          
-          {/* Home Plate (bottom) */}
-          <div
-            className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 border border-gray-500 ${
-              bases.home ? 'bg-green-500' : 'bg-gray-700'
-            }`}
-          ></div>
+    <div className="flex items-center justify-between w-full px-4 py-2 bg-slate-800/90 backdrop-blur-sm text-white border-t border-white/10">
+      {renderSportSpecific()}
+      {createdAt && (
+        <div className="flex items-center space-x-1 text-xs text-gray-400">
+          <Clock3 className="w-3 h-3" />
+          <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true })}</span>
         </div>
-      </div>
-      <div className="flex items-center space-x-4">
-        <Indicator label="B" count={balls} max={4} />
-        <Indicator label="S" count={strikes} max={3} />
-        <Indicator label="O" count={outs} max={3} />
-      </div>
+      )}
     </div>
   );
 };

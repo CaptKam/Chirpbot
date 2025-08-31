@@ -7,6 +7,7 @@ import type { Alert } from "@shared/schema";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { cn } from "@/lib/utils";
+import AlertFooter from "@/components/AlertFooter";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
@@ -220,6 +221,36 @@ export default function Alerts() {
                       </span>
                     </div>
                   </div>
+                  
+                  {/* Sport-Specific Footer */}
+                  <AlertFooter
+                    sport={alert.sport as 'MLB' | 'NFL' | 'NCAAF' | 'NBA' | 'NHL'}
+                    gameInfo={{
+                      // MLB specific
+                      half: alert.gameInfo?.inningState === 'top' ? 'Top' : alert.gameInfo?.inningState === 'bottom' ? 'Bottom' : undefined,
+                      inning: parseInt(alert.gameInfo?.inning || '0') || undefined,
+                      bases: alert.gameInfo?.runners ? {
+                        first: alert.gameInfo.runners.first,
+                        second: alert.gameInfo.runners.second,
+                        third: alert.gameInfo.runners.third,
+                      } : undefined,
+                      balls: alert.gameInfo?.balls,
+                      strikes: alert.gameInfo?.strikes,
+                      outs: alert.gameInfo?.outs,
+                      
+                      // Football specific  
+                      quarter: parseInt(alert.gameInfo?.quarter || '0') || undefined,
+                      
+                      // Basketball specific
+                      period: parseInt(alert.gameInfo?.period || '0') || undefined,
+                      
+                      // Common fields
+                      score: alert.gameInfo?.score,
+                      homeTeam: alert.gameInfo?.homeTeam,
+                      awayTeam: alert.gameInfo?.awayTeam,
+                    }}
+                    createdAt={alert.timestamp || alert.createdAt}
+                  />
                 </Card>
               </SwipeableCard>
             ))}
