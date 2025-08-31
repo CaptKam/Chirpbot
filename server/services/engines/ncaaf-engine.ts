@@ -880,10 +880,36 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
     }
   }
 
-  // Generate a basic "Game Live" alert when detailed data isn't available
+  // Generate a basic "Game Live" alert ONLY for verified live games
   private async generateBasicLiveAlert(gameId: string): Promise<void> {
     try {
-      console.log(`🏈 NCAAF: Generating basic live alert for game ${gameId}`);
+      console.log(`🏈 NCAAF: Checking if game ${gameId} is actually live before generating alert...`);
+
+      // CRITICAL: First verify the game is actually live from ESPN API
+      const todaysGames = await this.getTodaysGames();
+      const actualGame = todaysGames.find(game => 
+        game.gameId === gameId || 
+        game.espnData?.id?.toString() === gameId.replace('cfb-', '')
+      );
+
+      if (!actualGame) {
+        console.log(`🚫 NCAAF: Game ${gameId} not found in today's games - NO FAKE ALERT`);
+        return;
+      }
+
+      // STRICT: Only generate alerts for genuinely live games
+      const isActuallyLive = actualGame.status === 'STATUS_IN_PROGRESS' || 
+                             actualGame.status === 'STATUS_HALFTIME' ||
+                             actualGame.status === 'STATUS_OVERTIME' ||
+                             actualGame.status === 'STATUS_FIRST_HALF' ||
+                             actualGame.status === 'STATUS_SECOND_HALF';
+
+      if (!isActuallyLive) {
+        console.log(`🚫 NCAAF: Game ${gameId} is not live (Status: ${actualGame.status}) - NO FAKE ALERT`);
+        return;
+      }
+
+      console.log(`✅ NCAAF: Game ${gameId} is verified live (Status: ${actualGame.status}) - proceeding with alert`);
 
       // Get monitored games to find team names
       const monitoredGames = await storage.getAllMonitoredGames();
