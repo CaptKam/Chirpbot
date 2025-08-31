@@ -146,8 +146,9 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return cflEngine;
         case 'NCAAF':
-          const { NCAAFEngine } = await import('./ncaaf-engine');
-          return new NCAAFEngine();
+          // DISABLED: NCAAF engine completely disabled
+          console.log('🚫 NCAAF Engine disabled - no college football monitoring');
+          return null;
         default:
           console.warn(`No engine available for sport: ${sport}`);
           return null;
