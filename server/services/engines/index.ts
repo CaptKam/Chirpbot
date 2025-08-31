@@ -43,13 +43,13 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   private async checkAllSportsForLiveGames(): Promise<void> {
-    const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'CFL', 'NCAAF'];
+    // NCAAF COMPLETELY DISABLED - Remove from sports list
+    const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'CFL'];
     
     for (const sport of sports) {
       try {
         const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
         if (!hasMonitoredGames) continue;
-
 
         const games = await this.getTodaysGamesForSport(sport);
         
@@ -146,8 +146,9 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return cflEngine;
         case 'NCAAF':
-          // DISABLED: NCAAF engine completely disabled
-          console.log('🚫 NCAAF Engine disabled - no college football monitoring');
+          // DISABLED: NCAAF engine completely disabled - block all NCAAF processing
+          console.log('🚫 NCAAF Engine completely disabled - no college football monitoring');
+          console.log('🚫 NCAAF Engine blocked - preventing all NCAAF alert generation');
           return null;
         default:
           console.warn(`No engine available for sport: ${sport}`);

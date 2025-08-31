@@ -388,11 +388,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameData: game
         }));
       } else if (sport === 'NCAAF') {
-        // DISABLED: NCAAF engine completely disabled
-        console.log('🚫 NCAAF games API disabled - no college football games');
-        games = [];
+        // DISABLED: NCAAF engine completely disabled - block all NCAAF requests
+        console.log('🚫 NCAAF games API completely disabled - no college football games');
+        console.log('🚫 NCAAF API request blocked - preventing all NCAAF data access');
+        return res.status(410).json({ 
+          message: 'NCAAF API disabled - no college football monitoring',
+          sport: 'NCAAF',
+          games: []
+        });
         
-        // Transform to match our Game interface
+        // This code will never execute due to return above
+        games = [];
         games = games.map(game => ({
           id: game.gameId,
           homeTeam: {
