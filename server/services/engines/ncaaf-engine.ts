@@ -1442,65 +1442,86 @@ ${situation}`;
   }
 
   private createFriendlyTitle(alertType: string, gameState: NCAAGameState): string {
-    const homeTeam = gameState.homeTeam;
-    const awayTeam = gameState.awayTeam;
-    const scoreText = `${awayTeam} ${gameState.awayScore}-${gameState.homeScore} ${homeTeam}`;
+    const scoreText = `${gameState.awayScore}-${gameState.homeScore}`;
     
     switch (alertType) {
       case 'redZone':
-        return `🚨 RED ZONE! ${gameState.offense || gameState.awayTeam || gameState.homeTeam} is close to scoring!`;
+        return `🚨 RED ZONE (${scoreText})`;
       case 'closeGame':
-        return `🔥 CLOSE GAME! ${scoreText} - Anyone can win!`;
+        return `🔥 CLOSE GAME (${scoreText})`;
       case 'fourthDown':
-        return `💥 4TH DOWN! ${gameState.offense || gameState.awayTeam || gameState.homeTeam} must convert or lose the ball!`;
+        return `💥 4TH DOWN (${scoreText})`;
       case 'twoMinuteWarning':
-        return `⏰ 2 MINUTES LEFT! ${scoreText} - Crunch time!`;
+        return `⏰ 2-MINUTE WARNING (${scoreText})`;
       case 'overtime':
-        return `🏈 OVERTIME! ${scoreText} - Extra football!`;
+        return `🏈 OVERTIME (${scoreText})`;
       case 'goalLineStand':
-        return `🛡️ GOAL LINE STAND! ${gameState.defense || (gameState.offense === gameState.awayTeam ? gameState.homeTeam : gameState.awayTeam)} trying to stop a score!`;
+        return `🛡️ GOAL LINE STAND (${scoreText})`;
       case 'bigPlayPotential':
-        return `⚡ BIG PLAY SETUP! ${gameState.offense || gameState.awayTeam || gameState.homeTeam} has a great chance!`;
+        return `⚡ BIG PLAY SETUP (${scoreText})`;
       case 'gameStateSnapshot':
-        return `📊 GAME TRACKER: ${scoreText} - Quarter ${gameState.quarter}`;
+        return `📊 GAME TRACKER (${scoreText})`;
+      case 'ncaafGameLive':
+        return `🏈 LIVE GAME (${scoreText})`;
       default:
-        return `🏈 EXCITING MOMENT! ${scoreText}`;
+        return `🏈 GAME ALERT (${scoreText})`;
     }
   }
 
   private createFriendlyDescription(alertType: string, gameState: NCAAGameState): string {
     const quarter = this.getQuarterName(Number(gameState.quarter));
-    const timeLeft = gameState.timeRemaining || 'Unknown time';
+    const timeLeft = this.formatTimeRemaining(gameState.timeRemaining || 0);
     const downInfo = gameState.down && gameState.distance ? 
-      `${gameState.down}${this.getOrdinalSuffix(gameState.down)} down and ${gameState.distance} yards` : 
-      'Unknown down';
-    const fieldPos = gameState.yardsToGoal ? `${gameState.yardsToGoal} yards from goal` : 'Field position unknown';
+      `${this.getDownText(gameState.down)}, ${gameState.distance} yards to go` : 
+      '1st down, 10 yards to go';
+    const fieldPos = gameState.yardsToGoal ? `${gameState.yardsToGoal} yards from goal` : '50 yards from goal';
     
     switch (alertType) {
       case 'redZone':
-        return `${gameState.offense} is in the RED ZONE! They're only ${gameState.yardsToGoal || 20} yards away from scoring a touchdown. It's ${downInfo} in the ${quarter} quarter with ${timeLeft} remaining. This is a high-scoring opportunity!`;
+        return `${quarter} ${timeLeft}
+${downInfo}
+${fieldPos} - High scoring opportunity!`;
       
       case 'closeGame':
         const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-        return `This game is SUPER CLOSE! Only ${scoreDiff} points separate the teams in the ${quarter} quarter with ${timeLeft} left. Either team could win this game!`;
+        return `${quarter} ${timeLeft}
+${downInfo}
+${scoreDiff}-point game - Either team can win!`;
       
       case 'fourthDown':
-        return `It's 4TH DOWN for ${gameState.offense}! They need ${gameState.distance || 'unknown'} yards to get a first down. If they don't make it, they lose the ball to the other team. Big decision time in the ${quarter} quarter!`;
+        return `${quarter} ${timeLeft}
+4th down, ${gameState.distance || 10} yards needed
+Convert or lose possession!`;
       
       case 'twoMinuteWarning':
-        return `FINAL 2 MINUTES! The clock is running down in the ${quarter} quarter. This is crunch time - every play matters now. ${gameState.offense} has the ball and needs to make something happen!`;
+        return `${quarter} ${timeLeft}
+${downInfo}
+Crunch time - every play matters!`;
       
       case 'overtime':
-        return `OVERTIME FOOTBALL! The game was tied at the end of regulation, so now we get extra football! First team to score wins. ${gameState.offense} has the ball - this could decide the game!`;
+        return `Overtime period
+${downInfo}
+${fieldPos} - Next score could decide it!`;
       
       case 'goalLineStand':
-        return `GOAL LINE STAND! ${gameState.offense} is trying to score from very close to the goal line, but ${gameState.defense} is fighting hard to stop them. This is a battle of inches!`;
+        return `${quarter} ${timeLeft}
+${downInfo}
+Goal line - Battle of inches!`;
       
       case 'bigPlayPotential':
-        return `BIG PLAY OPPORTUNITY! ${gameState.offense} is in a great position to make a huge play. It's ${downInfo} from ${fieldPos} in the ${quarter} quarter. Something exciting could happen!`;
+        return `${quarter} ${timeLeft}
+${downInfo}
+${fieldPos} - Big play opportunity!`;
+
+      case 'ncaafGameLive':
+        return `${quarter} 15:00
+Kickoff completed
+Game is now in progress`;
       
       default:
-        return `Exciting moment in college football! ${gameState.awayTeam} vs ${gameState.homeTeam} in the ${quarter} quarter with ${timeLeft} remaining. Score: ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore}.`;
+        return `${quarter} ${timeLeft}
+${downInfo}
+${fieldPos}`;
     }
   }
 

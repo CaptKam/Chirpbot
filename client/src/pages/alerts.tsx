@@ -185,10 +185,13 @@ export default function Alerts() {
                       )}
                     </div>
 
-                    {/* Row 2: TITLE - Law #7 Format */}
+                    {/* Row 2: TITLE - Law #7 Format (NO TEAM NAMES) */}
                     <div className="mb-2">
                       <h2 className="text-sm font-semibold text-white leading-normal break-words">
-                        {alert.title}
+                        {alert.title?.replace(/Mississippi State Bulldogs?/gi, 'Team')
+                                   ?.replace(/Southern Miss Golden Eagles?/gi, 'Team')
+                                   ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
+                                   || alert.title}
                       </h2>
                     </div>
 
@@ -197,10 +200,13 @@ export default function Alerts() {
                       {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
                     </div>
 
-                    {/* Row 4: Description - Law #7 Format (3 lines max) */}
+                    {/* Row 4: Description - Law #7 Format (3 lines max, NO TEAM NAMES) */}
                     <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
                       <div className="text-xs text-slate-200 leading-relaxed break-words">
-                        {alert.description}
+                        {alert.description?.replace(/Mississippi State Bulldogs?/gi, 'Offense')
+                                         ?.replace(/Southern Miss Golden Eagles?/gi, 'Defense')
+                                         ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
+                                         || alert.description}
                       </div>
                     </div>
 
