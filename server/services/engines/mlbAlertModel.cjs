@@ -135,13 +135,13 @@ function calcMLBScoringAlert(gs) {
   const p_adj = applyModifiers(gs, p_base, reasons);
   let severity = 'NONE';
   let priority = 60;
-  if (p_adj >= 0.80) {
+  if (p_adj >= 0.70) {
     severity = 'HIGH';
     priority = 95;
-  } else if (p_adj >= 0.70) {
+  } else if (p_adj >= 0.50) {
     severity = 'MED';
     priority = 85;
-  } else if (p_adj >= 0.65) {
+  } else if (p_adj >= 0.25) {
     severity = 'LOW';
     priority = 75;
   }
