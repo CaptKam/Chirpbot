@@ -171,11 +171,20 @@ export class MLBEngine {
         return;
       }
 
+      // Get team names from monitored games data (fallback for API limitations)
+      const { storage } = await import('../../storage');
+      const monitoredGames = await storage.getAllMonitoredGames();
+      const gameInfo = monitoredGames.find(g => g.gameId === gameId);
+      
+      // Use actual team names from monitored games, with API fallback
+      const homeTeam = gameInfo?.homeTeamName || data.teams.home.team?.name || 'Home Team';
+      const awayTeam = gameInfo?.awayTeamName || data.teams.away.team?.name || 'Away Team';
+
       // Convert to MLBGameStateV3 format
       const gameState: MLBGameStateV3 = {
         gameId: gameId,
-        homeTeam: data.teams.home.team?.name || 'Home Team',
-        awayTeam: data.teams.away.team?.name || 'Away Team',
+        homeTeam: homeTeam,
+        awayTeam: awayTeam,
         homeScore: data.teams.home.runs || 0,
         awayScore: data.teams.away.runs || 0,
         inning: data.currentInning || 1,
