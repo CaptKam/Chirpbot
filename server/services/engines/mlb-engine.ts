@@ -237,7 +237,8 @@ export class MLBEngine {
       if (game.status && (game.status.includes('Progress') || game.status.includes('Live'))) {
         const detailedGame = await this.getGameDetails(game.gameId);
         if (detailedGame) {
-          return this.mapToGameState(detailedGame);
+          // Pass original team names as fallbacks for when API data is missing
+          return this.mapToGameState(detailedGame, game.homeTeam, game.awayTeam);
         }
       }
       
@@ -281,7 +282,7 @@ export class MLBEngine {
   /**
    * Map API data to game state WITH FULL PLAYER DATA
    */
-  private mapToGameState(gameData: any): MLBGameStateV3 {
+  private mapToGameState(gameData: any, fallbackHomeTeam?: string, fallbackAwayTeam?: string): MLBGameStateV3 {
     const linescore = gameData.gameData?.linescore || {};
     const currentInning = linescore.currentInning || 1;
     const inningState = linescore.inningState || 'Top';
@@ -321,8 +322,8 @@ export class MLBEngine {
     return {
       gameId: gameData.gamePk?.toString() || 'unknown',
       gamePk: gameData.gamePk || 0,
-      homeTeam: gameData.gameData?.teams?.home?.name || 'Home Team',
-      awayTeam: gameData.gameData?.teams?.away?.name || 'Away Team',
+      homeTeam: gameData.gameData?.teams?.home?.name || fallbackHomeTeam || 'Home Team',
+      awayTeam: gameData.gameData?.teams?.away?.name || fallbackAwayTeam || 'Away Team',
       homeScore: gameData.gameData?.teams?.home?.score || 0,
       awayScore: gameData.gameData?.teams?.away?.score || 0,
       inning: currentInning,
