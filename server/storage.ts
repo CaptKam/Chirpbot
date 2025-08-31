@@ -91,6 +91,7 @@ export class MemStorage implements IStorage {
   private alerts: Map<string, Alert>;
   private settings: Map<string, Settings>;
   private masterAlertControls: Map<string, MasterAlertControl>;
+  private inMemory: boolean = true; // Added for consistency with DatabaseStorage
 
   constructor() {
     this.users = new Map();
@@ -436,59 +437,35 @@ export class MemStorage implements IStorage {
       .slice(0, limit);
   }
 
-  async createAlert(insertAlert: InsertAlert & { debugId?: string }): Promise<Alert> {
+  async createAlert(alert: InsertAlert & { debugId?: string }): Promise<Alert> {
     const id = randomUUID();
-    // Generate debug ID if not provided
-    const debugId = insertAlert.debugId || `${id.substring(0, 8).toUpperCase()}-DIRECT`;
-    
-    const alert: Alert = { 
-      ...insertAlert, 
+    const timestamp = new Date();
+
+    const newAlert: Alert = {
+      ...alert,
       id,
-      debugId,
-      timestamp: new Date(),
-      sentToTelegram: false,
+      timestamp,
+      createdAt: timestamp.toISOString(),
       seen: false,
-      gameInfo: {
-        ...insertAlert.gameInfo,
-        quarter: insertAlert.gameInfo.quarter as string | undefined,
-        inning: insertAlert.gameInfo.inning as string | undefined,
-        period: insertAlert.gameInfo.period as string | undefined,
-        inningState: insertAlert.gameInfo.inningState as "top" | "bottom" | undefined,
-        outs: insertAlert.gameInfo.outs as number | undefined,
-        balls: insertAlert.gameInfo.balls as number | undefined,
-        strikes: insertAlert.gameInfo.strikes as number | undefined,
-        runners: insertAlert.gameInfo.runners as { first: boolean; second: boolean; third: boolean; } | undefined,
-        score: insertAlert.gameInfo.score as { home: number; away: number; } | undefined,
-        priority: insertAlert.gameInfo.priority as number | undefined,
-        scoringProbability: insertAlert.gameInfo.scoringProbability as number | undefined,
-        currentPitcher: insertAlert.gameInfo.currentPitcher as { id: number; name: string; throwHand: string; stats: { era: number; whip: number; strikeOuts: number; wins: number; losses: number; }; } | undefined,
-        currentBatter: insertAlert.gameInfo.currentBatter as { id: number; name: string; batSide: string; stats: { avg: number; hr: number; rbi: number; obp: number; ops: number; }; } | undefined,
-      },
-      weatherData: insertAlert.weatherData ? {
-        temperature: insertAlert.weatherData.temperature,
-        condition: insertAlert.weatherData.condition,
-        windSpeed: insertAlert.weatherData.windSpeed as number | undefined,
-        windDirection: insertAlert.weatherData.windDirection as string | undefined
-      } : null
     };
-    this.alerts.set(id, alert);
 
-    console.log(`💾 STORAGE: Alert created | Debug ID: ${alert.debugId} | Type: ${alert.type} | Sport: ${alert.sport}`);
-    console.log(`🔍 DEBUG: Full ID: ${id} | Debug: ${alert.debugId} | Priority: ${alert.priority || 70}`);
+    // DETAILED TRACE: Log the call stack to identify the source
+    const stack = new Error().stack;
+    const caller = stack?.split('\n')[2]?.trim() || 'Unknown caller';
 
-    // Auto-clear old alerts if we have more than 30
-    if (this.alerts.size > 30) {
-      const sortedAlerts = Array.from(this.alerts.entries())
-        .sort((a, b) => b[1].timestamp.getTime() - a[1].timestamp.getTime());
+    console.log(`🔍 ALERT CREATION TRACE: ID ${id.substring(0, 8)} | Caller: ${caller}`);
+    console.log(`📋 Alert Details: Sport=${alert.sport}, Title="${alert.title?.substring(0, 50)}..."`);
+    console.log(`🎯 Debug ID: ${alert.debugId || 'No debug ID'}`);
 
-      // Keep only the 30 most recent alerts
-      const alertsToDelete = sortedAlerts.slice(30);
-      alertsToDelete.forEach(([alertId]) => {
-        this.alerts.delete(alertId);
-      });
+    if (this.inMemory) {
+      this.alerts.set(id, newAlert);
+      console.log(`✅ In-memory alert created: ${id.substring(0, 8)}... via ${caller}`);
+    } else {
+      await db.insert(alerts).values(newAlert);
+      console.log(`✅ Database alert created: ${id.substring(0, 8)}... via ${caller}`);
     }
 
-    return alert;
+    return newAlert;
   }
 
   async markAlertSentToTelegram(id: string): Promise<void> {
@@ -1004,7 +981,7 @@ export class DatabaseStorage implements IStorage {
   async createAlert(insertAlert: InsertAlert & { debugId?: string }): Promise<Alert> {
     // Generate debug ID if not provided
     const debugId = insertAlert.debugId || `${insertAlert.id?.substring(0, 8).toUpperCase() || 'DB'}-DIRECT`;
-    
+
     const alertToInsert = {
       ...insertAlert,
       debugId,
@@ -1033,10 +1010,10 @@ export class DatabaseStorage implements IStorage {
       } : null,
     };
     const [alert] = await this.db.insert(alerts).values([alertToInsert]).returning();
-    
+
     console.log(`💾 STORAGE: Alert created | Debug ID: ${alert.debugId} | Type: ${alert.type} | Sport: ${alert.sport}`);
     console.log(`🔍 DEBUG: Full ID: ${alert.id} | Debug: ${alert.debugId} | Priority: ${alert.priority || 70}`);
-    
+
     return alert;
   }
 
