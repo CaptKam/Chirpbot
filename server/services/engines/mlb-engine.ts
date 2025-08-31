@@ -233,21 +233,41 @@ export class MLBEngine {
    */
   private async buildGameState(game: any): Promise<MLBGameStateV3 | null> {
     try {
+      // IMPORTANT: Get monitored game data for accurate team names
+      let fallbackHomeTeam = game.homeTeam;
+      let fallbackAwayTeam = game.awayTeam;
+      
+      try {
+        const monitoredGames = await storage.getAllMonitoredGames();
+        console.log(`🔍 MLB: Found ${monitoredGames.length} total monitored games`);
+        const monitoredGame = monitoredGames.find(mg => mg.gameId === game.gameId);
+        if (monitoredGame) {
+          fallbackHomeTeam = monitoredGame.homeTeamName || game.homeTeam;
+          fallbackAwayTeam = monitoredGame.awayTeamName || game.awayTeam;
+          console.log(`🏷️ MLB: Using monitored team names - ${fallbackAwayTeam} @ ${fallbackHomeTeam}`);
+        } else {
+          console.log(`🔍 MLB: Game ${game.gameId} not found in monitored games. Available IDs: [${monitoredGames.map(g => g.gameId).join(', ')}]`);
+        }
+      } catch (error) {
+        console.error(`❌ MLB: Storage error for game ${game.gameId}:`, error);
+        console.log(`⚠️ MLB: Could not get monitored game data for ${game.gameId}, using fallback`);
+      }
+      
       // For live games, get detailed data
       if (game.status && (game.status.includes('Progress') || game.status.includes('Live'))) {
         const detailedGame = await this.getGameDetails(game.gameId);
         if (detailedGame) {
-          // Pass original team names as fallbacks for when API data is missing
-          return this.mapToGameState(detailedGame, game.homeTeam, game.awayTeam);
+          // Pass monitored team names as authoritative fallbacks
+          return this.mapToGameState(detailedGame, fallbackHomeTeam, fallbackAwayTeam);
         }
       }
       
-      // Basic game state from schedule data - Use proper team names
+      // Basic game state from schedule data - Use monitored team names
       return {
         gameId: game.gameId,
         gamePk: parseInt(game.gameId) || game.gamePk,
-        homeTeam: game.homeTeam || 'Home Team',
-        awayTeam: game.awayTeam || 'Away Team',
+        homeTeam: fallbackHomeTeam || 'Home Team',
+        awayTeam: fallbackAwayTeam || 'Away Team',
         homeScore: game.homeScore || 0,
         awayScore: game.awayScore || 0,
         inning: game.inning || 1,
