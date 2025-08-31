@@ -165,7 +165,7 @@ export default function Alerts() {
                 <Card
                   onClick={() => { if (!alert.seen) markAlertAsSeen(alert.id); }}
                   className={cn(
-                    "relative overflow-hidden backdrop-blur-sm transition-all duration-300",
+                    "relative overflow-hidden backdrop-blur-sm transition-all duration-300 max-h-[300px]",
                     "ring-1 ring-white/10 hover:ring-white/20",
                     "dark bg-card text-card-foreground",
                     !alert.seen
@@ -174,7 +174,7 @@ export default function Alerts() {
                   )}
                 >
                   {/* LAW #7: CLEAN LAYOUT - NO DUPLICATE INFO */}
-                  <div className="p-6 space-y-4">
+                  <div className="p-6 space-y-4 overflow-y-auto max-h-[280px]">
                     {/* Row 1: Sport + NEW Badge */}
                     <div className="flex items-center justify-between">
                       <span className="bg-blue-500/20 text-blue-300 text-base font-bold px-3 py-1 rounded-full">
