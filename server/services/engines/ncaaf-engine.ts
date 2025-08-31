@@ -653,7 +653,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'redZone',
         priority: 85,
-        description: `${gameState.awayTeam} in the red zone vs ${gameState.homeTeam}`,
+        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'RED_ZONE', gameState),
         reasons: ['Team driving inside the 20-yard line'],
         probability: 75,
         deduplicationKey: `${gameState.gameId}:redZone:${gameState.period}`
@@ -667,7 +667,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'closeGame',
         priority: 90,
-        description: `Close game! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
+        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'CLOSE_GAME', gameState),
         reasons: [`${scoreDiff}-point game in final minutes`],
         probability: 85,
         deduplicationKey: `${gameState.gameId}:closeGame:${gameState.period}`
@@ -679,7 +679,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'overtime',
         priority: 95,
-        description: `OVERTIME: ${gameState.awayTeam} vs ${gameState.homeTeam}`,
+        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'OVERTIME', gameState),
         reasons: ['Game has gone to overtime'],
         probability: 100,
         deduplicationKey: `${gameState.gameId}:overtime:${gameState.period}`
@@ -692,7 +692,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'touchdownAlert',
         priority: 92,
-        description: `TOUCHDOWN! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
+        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'TOUCHDOWN', gameState),
         reasons: ['Touchdown scored'],
         probability: 100,
         deduplicationKey: `${gameState.gameId}:touchdown:${gameState.period}:${gameState.homeScore + gameState.awayScore}`
@@ -704,7 +704,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'finalMinutes',
         priority: 80,
-        description: `Final minutes: ${gameState.awayTeam} vs ${gameState.homeTeam}`,
+        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'FINAL_MINUTES', gameState),
         reasons: ['Game in final minutes'],
         probability: 70,
         deduplicationKey: `${gameState.gameId}:finalMinutes:${gameState.period}`
@@ -1428,7 +1428,7 @@ ${situation}`;
         type: 'gameFlowEvent',
         sport: 'NCAAF',
         title: `Game Flow: ${eventType}`,
-        description: `${eventType} event in ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'GAME_FLOW_EVENT', gameState),
         gameInfo: {
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,

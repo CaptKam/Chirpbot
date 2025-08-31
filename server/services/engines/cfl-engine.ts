@@ -2,6 +2,7 @@ import { storage } from '../../storage';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { fetchJson } from '../http';
+import { AlertFormatValidator } from './AlertFormatValidator';
 
 interface CFLGameState {
   gameId: string;
@@ -103,7 +104,7 @@ export class CFLEngine {
       if (gameState.redZone) {
         alerts.push({
           priority: 85,
-          description: `🚨 RED ZONE! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
+          description: AlertFormatValidator.generateStandardDescription('CFL', 'RED_ZONE', gameState),
           reasons: ['Red zone opportunity', 'High scoring probability', 'Within 20 yards of goal'],
           probability: 0.8,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'RED_ZONE'),
@@ -115,7 +116,7 @@ export class CFLEngine {
       if (Math.abs(gameState.homeScore - gameState.awayScore) <= 3 && gameState.quarter >= 4) {
         alerts.push({
           priority: 90,
-          description: `🏆 CLOSE GAME! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
+          description: AlertFormatValidator.generateStandardDescription('CFL', 'CLOSE_GAME', gameState),
           reasons: ['Close game', `${gameState.quarter}${this.getOrdinalSuffix(gameState.quarter)} quarter`, 'Either team can win'],
           probability: 0.9,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'CLOSE_GAME'),
@@ -127,7 +128,7 @@ export class CFLEngine {
       if (gameState.overtime) {
         alerts.push({
           priority: 95,
-          description: `⏰ OVERTIME! ${gameState.awayTeam} vs ${gameState.homeTeam} going to extra time`,
+          description: AlertFormatValidator.generateStandardDescription('CFL', 'OVERTIME', gameState),
           reasons: ['Overtime period', 'Sudden death', 'High stakes CFL action'],
           probability: 1.0,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'OVERTIME'),
@@ -139,7 +140,7 @@ export class CFLEngine {
       if (gameState.finalMinutes && gameState.quarter === 4) {
         alerts.push({
           priority: 88,
-          description: `⏰ FINAL MINUTES! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${gameState.timeRemaining} left`,
+          description: AlertFormatValidator.generateStandardDescription('CFL', 'FINAL_MINUTES', gameState),
           reasons: ['Final 2 minutes', 'Crunch time', 'Game-deciding moments'],
           probability: 0.85,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'FINAL_MINUTES'),

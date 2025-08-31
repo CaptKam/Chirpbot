@@ -231,8 +231,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return await cflEngine.getTodaysGames(today);
         case 'NCAAF':
-          const { NCAAEngine } = await import('./ncaaf-engine');
-          const ncaafEngine = new NCAAEngine();
+          const { NCAAFEngine } = await import('./ncaaf-engine');
+          const ncaafEngine = new NCAAFEngine();
           return await ncaafEngine.getTodaysGames(today);
         default:
           return [];
@@ -324,7 +324,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
       console.log(`🔔 Processing alert: ${alert.sport} - ${alert.type} (Priority: ${alert.priority})`);
       
       // Get sport-specific settings for this alert
-      const sportSettings = await storage.getUserSettings('', alert.sport); // TODO: Get actual user ID
+      const sportSettings = await storage.getSettingsBySport(alert.sport); // Use correct storage method
       if (!sportSettings) {
         console.log(`⚠️ No sport settings found for ${alert.sport}`);
         return;
@@ -337,7 +337,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
       }
 
       // Get global user Telegram credentials
-      const users = await storage.getAllUsers();
+      const users = await storage.getUsers();
       const user = users[0]; // TODO: Get actual user for this alert
       if (!user || !user.telegramBotToken || !user.telegramChatId) {
         console.log(`🚫 Global Telegram credentials not configured - skipping notification`);

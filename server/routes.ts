@@ -344,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Failed to create alert:", error);
       res.status(400).json({ 
         error: "Invalid alert data",
-        details: error.message,
+        details: (error as Error).message,
         compliance: 'Law #6: Error handling'
       });
     }
@@ -445,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({
         error: 'Validation failed',
-        details: error.message,
+        details: (error as Error).message,
         compliance: 'Law #6: Error structure'
       });
     }
