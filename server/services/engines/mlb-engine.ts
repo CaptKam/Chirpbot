@@ -108,6 +108,13 @@ export class MLBEngine {
     // Check if situation warrants alert
     const modelResult = mlbAlertModel.checkScoringProbability(this.convertToModelFormat(gameState));
     
+    // Debug logging to understand why alerts aren't being generated
+    console.log(`⚾ MLB DEBUG Game ${gameState.gameId} (${gameState.awayTeam} @ ${gameState.homeTeam}):`);
+    console.log(`   Score: ${gameState.awayScore}-${gameState.homeScore}, Inning: ${gameState.inning}${gameState.inningState}, Outs: ${gameState.outs}`);
+    console.log(`   Runners: 1B:${!!gameState.runners.first} 2B:${!!gameState.runners.second} 3B:${!!gameState.runners.third}`);
+    console.log(`   Model result: prob=${(modelResult.probability * 100).toFixed(1)}%, severity=${modelResult.severity}, shouldAlert=${modelResult.shouldAlert}`);
+    console.log(`   Reasons: ${modelResult.reasons?.join(', ')}`);
+    
     if (!modelResult.shouldAlert) {
       return [];
     }
