@@ -7,23 +7,14 @@ import { fetchJson } from '../http';
 import { OpenAiEngine } from './OpenAiEngine';
 import { getBetbookData } from './betbook-engine';
 
-// Import NCAAF Alert Model (CommonJS module)
-import ncaafAlertModel from './NCAAFAlertModel.cjs';
+// NCAAFAlertModel.cjs deleted - import removed
 
 // Import AlertFormatValidator and SimpleAlert types from the new structure
 import { NCAAFGameStateV3, SimpleAlert } from './index';
 import { AlertFormatValidator } from './AlertFormatValidator';
 
 
-// Type declaration for NCAAFAlertModelType
-interface NCAAFAlertModelType {
-  checkNCAAFAlerts(gameState: any): any;
-  ncaafL1Alert(gameState: any): any;
-  ncaafL2Alert(gameState: any): any;
-  ncaafL3Alert(gameState: any): any;
-}
-
-let ncaafAlertModelInstance: NCAAFAlertModelType | null = null;
+// NCAAFAlertModelType disabled - model deleted
 
 
 export class NCAAFEngine {
@@ -49,19 +40,10 @@ export class NCAAFEngine {
     // Do NOT initialize OpenAI engine - completely disabled
     this.openAiEngine = null;
     console.log('🚫 AI completely disabled in NCAAF engine');
-    // Load the NCAAF Alert Model
-    this.loadNCAAFAlertModel();
+    // NCAAF Alert Model disabled - file deleted
   }
 
-  private async loadNCAAFAlertModel() {
-    try {
-      if (!ncaafAlertModelInstance) {
-        ncaafAlertModelInstance = ncaafAlertModel as any as NCAAFAlertModelType;
-      }
-    } catch (error) {
-      console.error('Failed to load NCAAF Alert Model:', error);
-    }
-  }
+  // loadNCAAFAlertModel() removed - model deleted
 
   private createContentHash(content: string): string {
     // Simple hash function for content
@@ -1068,18 +1050,11 @@ Game is now in progress`;
 
   async checkGameSituations(gameState: NCAAGameState): Promise<void> {
     try {
-      // Ensure NCAAF Alert Model is loaded
-      await this.loadNCAAFAlertModel();
-      if (!ncaafAlertModelInstance) {
-        console.error('NCAAF Alert Model not available, generating basic live alert instead');
-        await this.generateBasicLiveAlert(gameState.gameId);
-        return;
-      }
-
-      console.log(`🎯 NCAAF: Running Alert Model check for ${gameState.awayTeam} @ ${gameState.homeTeam} - Q${gameState.quarter}, ${gameState.down}/${gameState.distance} at ${gameState.yardsToGoal}yd`);
-
-      // Stage 1: L1 Trigger - Use the NCAAF alert model to determine if an alert should fire
-      const alertResult = ncaafAlertModelInstance.checkNCAAFAlerts(gameState);
+      // NCAAF Alert Model disabled - file deleted
+      console.log(`🚫 NCAAF: Alert Model disabled - no alerts generated`);
+      
+      // Alert generation disabled
+      const alertResult = { shouldAlert: false, alertType: 'disabled', priority: 0, probability: 0 };
 
       if (!alertResult.shouldAlert) {
         console.log(`🏈 NCAAF: Alert Model check complete - no alert conditions met`);
@@ -1319,17 +1294,9 @@ ${situation}`;
   // Process alert through CJS alert model before sending to alerts page
   private async processAlertThroughModel(alertResult: any, gameState: NCAAGameState, alertDescription: string, betbookData: any, deduplicationKey: string, friendlyTitle?: string): Promise<any> {
     try {
-      // Stage 1: Validate through NCAAF Alert Model (.cjs)
-      if (!ncaafAlertModelInstance) {
-        console.warn('NCAAF Alert Model not available');
-        return null;
-      }
-      const modelValidation = ncaafAlertModelInstance.checkNCAAFAlerts(gameState);
-
-      if (!modelValidation.shouldAlert) {
-        console.log(`🛡️ NCAAF: Alert blocked by CJS model validation`);
-        return null;
-      }
+      // NCAAF Alert Model disabled - file deleted
+      console.log('🚫 NCAAF Alert Model disabled - no alerts generated');
+      return null;
 
       // Stage 1.5: CRITICAL - Validate user settings for THIS SPECIFIC alert type
       const userSettings = await this.getUserNCAAFSettings();
@@ -1370,7 +1337,7 @@ ${situation}`;
 
         // Store CJS model analysis
         alertModelData: {
-          validatedBy: 'NCAAFAlertModel.cjs',
+          validatedBy: 'Disabled',
           originalResult: alertResult,
           modelResult: modelValidation,
           gameStateSnapshot: {
