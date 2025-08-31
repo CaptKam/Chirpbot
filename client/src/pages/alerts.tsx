@@ -15,6 +15,7 @@ const FILTER_OPTIONS = [
   { id: "nfl", label: "NFL", active: false },
   { id: "nba", label: "NBA", active: false },
   { id: "nhl", label: "NHL", active: false },
+  { id: "ncaaf", label: "NCAAF", active: false },
 ];
 
 export default function Alerts() {
@@ -73,6 +74,15 @@ export default function Alerts() {
       );
     })
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) : [];
+
+  // Debug logging
+  console.log('DEBUG - Alerts data:', {
+    totalAlerts: alerts.length,
+    activeFilters,
+    filteredCount: filteredAlerts.length,
+    sampleSport: alerts[0]?.sport,
+    isLoading
+  });
 
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
