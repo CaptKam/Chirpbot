@@ -4,11 +4,11 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
-import { getWeatherData, getEnhancedWeather } from "./services/engines/Weather-engine";
+// Weather engine removed
 // Removed mock sportsService - using real data only
 // Removed liveSportsService - using direct API calls
 // Removed registerMultiSourceRoutes import - file deleted
-import { aiHealthMonitor } from "./services/ai-health-monitor";
+// AI health monitor removed
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -875,16 +875,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Import modular sport engines
-  const { alertEngineManager } = await import('./services/engines');
-  
-  // Setup alert broadcasting for all sports
-  alertEngineManager.setAlertCallback((alert: any) => {
-    broadcast({ type: 'new_alert', data: alert });
-  });
-  
-  // Start all sport engines (MLB: 10s, NFL: 30s, NBA: 20s, NHL: 15s, Weather: 5min, AI: 15s)
-  await alertEngineManager.startAllEngines();
+  // ENGINES DISABLED - All sport engines have been removed
+  console.log('🚫 Sport engines are disabled - no alert generation will occur');
 
   // Helper function to generate alert descriptions
   function generateAlertDescription(alertType: string, game: any): string {
