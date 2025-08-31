@@ -174,21 +174,21 @@ export default function Alerts() {
                 >
                   {/* Header: Team Names, Score, and Sport */}
                   {alert.gameInfo?.awayTeam && alert.gameInfo?.homeTeam && (
-                    <div className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm text-white border-b border-blue-300/20">
-                      <span className="bg-blue-500/30 text-blue-200 font-bold px-2 py-1 rounded-full text-[11px] border border-blue-400/30">
+                    <div className="flex items-center justify-between w-full px-4 py-3 bg-[#1C2B5E] backdrop-blur-sm text-white border-b border-[#2387F4]/30">
+                      <span className="bg-[#2387F4]/30 text-[#2387F4] font-bold px-2 py-1 rounded-full text-[11px] border border-[#2387F4]/50">
                         {alert.sport}
                       </span>
                       <div className="text-center text-lg font-bold">
-                        <span className="text-blue-200">{alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}</span>
+                        <span className="text-white">{alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}</span>
                         {alert.gameInfo?.score && (
-                          <span className="mx-4 text-amber-300 font-mono font-black">
+                          <span className="mx-4 text-[#F02D3A] font-mono font-black">
                             {alert.gameInfo.score.away} - {alert.gameInfo.score.home}
                           </span>
                         )}
-                        <span className="text-purple-200">{alert.gameInfo.homeTeam.split(' ').slice(-1)[0]}</span>
+                        <span className="text-white">{alert.gameInfo.homeTeam.split(' ').slice(-1)[0]}</span>
                       </div>
                       {!alert.seen && (
-                        <span className="bg-emerald-500 text-white text-xs font-black px-2 py-1 rounded-full shadow-lg">
+                        <span className="bg-[#F02D3A] text-white text-xs font-black px-2 py-1 rounded-full shadow-lg">
                           NEW
                         </span>
                       )}
@@ -196,10 +196,10 @@ export default function Alerts() {
                   )}
 
                   {/* LAW #7: CLEAN LAYOUT - NO DUPLICATE INFO */}
-                  <div className="p-6 space-y-6 bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-blue-900/20">
+                  <div className="p-6 space-y-6 bg-[#F2F4F7] dark:bg-slate-900">
                     {/* Row 1: TITLE - Law #7 Format (NO TEAM NAMES) */}
                     <div className="mb-2">
-                      <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-normal break-words">
+                      <h2 className="text-sm font-semibold text-[#1C2B5E] dark:text-white leading-normal break-words">
                         {alert.title?.replace(/Mississippi State Bulldogs?/gi, 'Team')
                                    ?.replace(/Southern Miss Golden Eagles?/gi, 'Team')
                                    ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
@@ -208,7 +208,7 @@ export default function Alerts() {
                     </div>
 
                     {/* Row 3: Description - Law #7 Format (3 lines max, NO TEAM NAMES) */}
-                    <div className="bg-white/80 dark:bg-slate-800/60 rounded-lg p-3 mb-2 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 mb-2 border border-[#DCE1E7] dark:border-slate-700 shadow-sm">
                       <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed break-words">
                         {alert.description?.replace(/Mississippi State Bulldogs?/gi, 'Offense')
                                          ?.replace(/Southern Miss Golden Eagles?/gi, 'Defense')
