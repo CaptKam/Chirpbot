@@ -272,27 +272,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </p>
                 </div>
                 
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Calculator className="w-4 h-4 text-yellow-400" />
-                    <span className="text-xs text-yellow-200 font-semibold">Value Insight</span>
-                  </div>
-                  <p className="text-white text-xs leading-relaxed">
-                    {(() => {
-                      const priority = alertData.priority || 70;
-                      
-                      if (priority >= 95) {
-                        return "Strong value detected - Consider increased stake size.";
-                      } else if (priority >= 85) {
-                        return "Moderate value - Standard betting size recommended.";
-                      } else if (priority >= 80) {
-                        return "Good value - Consider standard betting size.";
-                      } else {
-                        return "Monitor closely - Wait for better value opportunities.";
-                      }
-                    })()}
-                  </p>
-                </div>
               </div>
             )}
 
