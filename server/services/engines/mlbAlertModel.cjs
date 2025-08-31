@@ -8,11 +8,11 @@
 
 // Baseline probability of at least one run scoring in the remainder of
 // the inning for each base/out state.  Keys are outs (0–2) and the
-// base mask (0–7).  Values are adjusted to target 70% scoring probability.
+// base mask (0–7).  Values are realistic probabilities based on game situations.
 const PROB_BASE = {
-  0: { 0: 0.70, 1: 0.75, 2: 0.80, 3: 0.82, 4: 0.83, 5: 0.85, 6: 0.88, 7: 0.92 },
-  1: { 0: 0.65, 1: 0.70, 2: 0.75, 3: 0.78, 4: 0.80, 5: 0.82, 6: 0.85, 7: 0.88 },
-  2: { 0: 0.60, 1: 0.65, 2: 0.70, 3: 0.72, 4: 0.75, 5: 0.77, 6: 0.80, 7: 0.83 }
+  0: { 0: 0.25, 1: 0.38, 2: 0.62, 3: 0.68, 4: 0.45, 5: 0.72, 6: 0.85, 7: 0.88 },
+  1: { 0: 0.15, 1: 0.25, 2: 0.42, 3: 0.48, 4: 0.32, 5: 0.58, 6: 0.68, 7: 0.73 },
+  2: { 0: 0.08, 1: 0.12, 2: 0.22, 3: 0.28, 4: 0.18, 5: 0.35, 6: 0.42, 7: 0.48 }
 };
 
 /**
@@ -134,13 +134,13 @@ function calcMLBScoringAlert(gs) {
   const p_adj = applyModifiers(gs, p_base, reasons);
   let severity = 'NONE';
   let priority = 60;
-  if (p_adj >= 0.70) {
+  if (p_adj >= 0.75) {
     severity = 'HIGH';
     priority = 95;
-  } else if (p_adj >= 0.50) {
+  } else if (p_adj >= 0.55) {
     severity = 'MED';
     priority = 85;
-  } else if (p_adj >= 0.25) {
+  } else if (p_adj >= 0.35) {
     severity = 'LOW';
     priority = 75;
   }

@@ -11,6 +11,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   private intervalIds = new Map<string, NodeJS.Timeout>();
   private activeEngines = new Map<string, any>();
   private onAlert?: (alert: any) => void;
+  private alertCooldowns = new Map<string, number>(); // Prevent alert spam
 
   constructor() {
     console.log('🎯 Dynamic Sport Engine Manager initialized');
@@ -361,6 +362,17 @@ class AlertEngineManagerImpl implements AlertEngineManager {
     try {
       if (sport !== 'MLB') return;
       
+      // DEDUPLICATION: Check if this game is in cooldown period
+      const now = Date.now();
+      const cooldownKey = `${sport}_${gameId}`;
+      const lastAlert = this.alertCooldowns.get(cooldownKey) || 0;
+      const cooldownPeriod = 5 * 60 * 1000; // 5 minutes
+      
+      if (now - lastAlert < cooldownPeriod) {
+        console.log(`⏰ COOLDOWN: Game ${gameId} in alert cooldown for ${Math.round((cooldownPeriod - (now - lastAlert)) / 1000)}s more`);
+        return;
+      }
+      
       console.log(`🔍 AlertModel Scanner: Analyzing ${sport} game ${gameId} for alert opportunities`);
       
       // Use MLBAlertModel to analyze the collected game state
@@ -379,8 +391,18 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         console.log(`🚨 AlertModel Scanner: ALERT OPPORTUNITY IDENTIFIED for game ${gameId}!`);
         console.log(`🎯 Triggering next step in flow: AlertModel → OpenAI → Betbook → Launch`);
         
+        // Set cooldown before creating alert
+        this.alertCooldowns.set(cooldownKey, now);
+        
+        // Ensure team names are preserved for the alert
+        const enrichedGameState = {
+          ...gameState,
+          sport: 'MLB',
+          gameId: gameId
+        };
+        
         // Trigger the next step: OpenAI → Betbook → Launch
-        await this.processAndLaunchAlert(gameState, modelResult);
+        await this.processAndLaunchAlert(enrichedGameState, modelResult);
       } else {
         console.log(`❌ AlertModel Scanner: No alert opportunity for game ${gameId}: ${modelResult.reasons?.join(', ') || 'No reasons provided'}`);
       }
@@ -430,8 +452,9 @@ class AlertEngineManagerImpl implements AlertEngineManager {
       const { storage } = await import('../../storage');
       const { AlertFormatValidator } = await import('./AlertFormatValidator');
       
-      // Generate unique debug ID for tracking
-      const fullId = `${gameStateData.sport || 'MLB'}_${gameStateData.gameId}_${Date.now()}`;
+      // Generate unique debug ID for tracking  
+      const gameId = gameStateData.gameId || 'unknown';
+      const fullId = `${gameStateData.sport || 'MLB'}_${gameId}_${Date.now()}`;
       const debugId = fullId.substring(0, 8).toUpperCase();
       const flowTag = `S4-OAI-BB`; // Step 4: OpenAI -> Betbook flow
       
