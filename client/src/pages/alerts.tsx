@@ -200,18 +200,27 @@ export default function Alerts() {
                     {/* Row 1: TITLE - Law #7 Format (NO TEAM NAMES) */}
                     <div className="mb-2">
                       <h2 className="text-sm font-semibold text-slate-100 leading-normal break-words">
-                        {alert.title?.replace(/Mississippi State Bulldogs?/gi, 'Team')
-                                   ?.replace(/Southern Miss Golden Eagles?/gi, 'Team')
-                                   ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
+                        {alert.title?.replace(/Unknown @ Unknown/gi, '')
+                                   ?.replace(/Unknown @/gi, '')
+                                   ?.replace(/@ Unknown/gi, '')
+                                   ?.replace(/\b[A-Z][a-z]+ @ [A-Z][a-z]+[a-z]*\b/g, '')
+                                   ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, '')
+                                   ?.replace(/:/g, '')
+                                   ?.replace(/^\s+|\s+$/g, '')
                                    || alert.title}
                       </h2>
                     </div>
 
                     {/* Row 3: Description - Law #7 Format (3 lines max, NO TEAM NAMES) */}
                     <div className="text-xs text-slate-300 leading-relaxed break-words">
-                      {alert.description?.replace(/Mississippi State Bulldogs?/gi, 'Offense')
-                                       ?.replace(/Southern Miss Golden Eagles?/gi, 'Defense')
-                                       ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
+                      {alert.description?.replace(/Unknown @ Unknown/gi, '')
+                                       ?.replace(/Unknown @/gi, '')
+                                       ?.replace(/@ Unknown/gi, '')
+                                       ?.replace(/\b[A-Z][a-z]+ @ [A-Z][a-z]+[a-z]*\b/g, '')
+                                       ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, '')
+                                       ?.replace(/:\s*\d+% scoring/g, '\n\n• High probability scoring')
+                                       ?.replace(/:/g, '')
+                                       ?.replace(/^\s+|\s+$/g, '')
                                        || alert.description}
                     </div>
 
