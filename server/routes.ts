@@ -92,76 +92,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint for NCAAF engine import debugging
-  app.get('/api/test-ncaaf-engine', async (req, res) => {
-    try {
-      console.log('🧪 Testing NCAAF engine import...');
-      console.log('🚫 NCAAF ENGINE BLOCKED - test endpoint disabled until live games exist');
-      throw new Error('NCAAF engines completely disabled until live games exist');
-      console.log('✅ NCAAF engine instance created successfully');
-      
-      res.json({ 
-        success: true, 
-        type: typeof NCAAFEngine,
-        instance: !!engine,
-        message: 'NCAAF engine import and instantiation successful'
-      });
-    } catch (error) {
-      console.error('❌ NCAAF engine test failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
 
-  // Test endpoint to manually trigger NCAAF engine start for Army game
-  app.post('/api/test-start-ncaaf-engine', async (req, res) => {
-    try {
-      console.log('🧪 Testing NCAAF engine start for Army game...');
-      const { AlertEngineManager } = await import('./services/engines');
-      await AlertEngineManager.handleGameStateChange('cfb-401762432', 'NCAAF', 'live');
-      console.log('✅ NCAAF engine start triggered');
-      
-      res.json({ 
-        success: true,
-        message: 'NCAAF engine start triggered for Army game'
-      });
-    } catch (error) {
-      console.error('❌ NCAAF engine start test failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
 
-  // Test endpoint to force generate a NCAAF alert
-  app.post('/api/test-force-ncaaf-alert', async (req, res) => {
-    try {
-      console.log('🧪 Force generating NCAAF alert...');
-      console.log('🚫 NCAAF ALERT GENERATION BLOCKED - no live games exist');
-      throw new Error('NCAAF alert generation completely disabled until live games exist');
-      
-      // Force generate basic live alert
-      await engine.processSpecificGame('cfb-401762432');
-      console.log('✅ NCAAF alert generation completed');
-      
-      res.json({ 
-        success: true,
-        message: 'NCAAF alert force generation completed'
-      });
-    } catch (error) {
-      console.error('❌ NCAAF alert generation test failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
 
   // Delete specific alert by ID
   app.delete('/api/alerts/:alertId', async (req, res) => {
