@@ -103,7 +103,6 @@ export default function Alerts() {
           </Button>
         )}
       </header>
-
       {/* Filters */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 p-4">
         <div className="flex items-center justify-between gap-2">
@@ -124,7 +123,6 @@ export default function Alerts() {
           </div>
         </div>
       </div>
-
       {/* Alerts Feed - LAW #7 COMPLIANT DISPLAY */}
       <div className="p-4 space-y-3">
         {isLoading ? (
@@ -189,19 +187,19 @@ export default function Alerts() {
 
                     {/* Row 2: TITLE - Law #7 Format */}
                     <div>
-                      <h2 className="text-xl font-bold text-white leading-tight">
+                      <h2 className="font-bold text-white text-[14px]">
                         {alert.title}
                       </h2>
                     </div>
 
                     {/* Row 3: Teams - ONLY HERE, NOWHERE ELSE */}
-                    <div className="text-lg text-slate-200 font-medium">
+                    <div className="text-[13px] text-slate-200 font-medium">
                       {alert.gameInfo?.awayTeam} @ {alert.gameInfo?.homeTeam}
                     </div>
 
                     {/* Row 4: Description - Law #7 Format (3 lines max) */}
                     <div className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="text-base text-slate-200 whitespace-pre-line leading-relaxed">
+                      <div className="text-[12px] text-slate-200 whitespace-pre-line">
                         {alert.description}
                       </div>
                     </div>
