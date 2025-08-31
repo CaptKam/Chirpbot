@@ -96,11 +96,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/test-ncaaf-engine', async (req, res) => {
     try {
       console.log('🧪 Testing NCAAF engine import...');
-      const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
-      console.log('✅ NCAAF engine import successful');
-      console.log('🔍 NCAAFEngine type:', typeof NCAAFEngine);
-      
-      const engine = new NCAAFEngine();
+      console.log('🚫 NCAAF ENGINE BLOCKED - test endpoint disabled until live games exist');
+      throw new Error('NCAAF engines completely disabled until live games exist');
       console.log('✅ NCAAF engine instance created successfully');
       
       res.json({ 
@@ -145,8 +142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/test-force-ncaaf-alert', async (req, res) => {
     try {
       console.log('🧪 Force generating NCAAF alert...');
-      const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
-      const engine = new NCAAFEngine();
+      console.log('🚫 NCAAF ALERT GENERATION BLOCKED - no live games exist');
+      throw new Error('NCAAF alert generation completely disabled until live games exist');
       
       // Force generate basic live alert
       await engine.processSpecificGame('cfb-401762432');
@@ -415,9 +412,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameData: game
         }));
       } else if (sport === 'NCAAF') {
-        // Use ESPN NCAAF API integration (College Football Only)
-        const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
-        const ncaaEngine = new NCAAFEngine();
+        // NCAAF COMPLETELY BLOCKED - no live games exist
+        console.log('🚫 NCAAF GAMES API BLOCKED - no live games exist');
+        games = []; // Return empty array - no NCAAF data until live games exist
         games = await ncaaEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface
