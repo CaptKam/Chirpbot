@@ -438,7 +438,7 @@ export class AlertPipeline {
   getStats() {
     return {
       monitoredGames: this.monitor.getAllStates().length,
-      registeredModels: this.detector.modelRegistry.size,
+      registeredModels: this.detector['modelRegistry'].size,
       dedupCacheSize: this.dedupCache.size,
       cooldownMs: this.cooldownMs
     };
@@ -457,4 +457,4 @@ export function getAlertPipeline(aiEngine: any = null, broadcast: DeliveryCallba
 }
 
 // Export types and classes
-export { GameMonitor, AlertDetector, AlertEnricher, BettingInsights, AlertDelivery };
+// Note: Classes are already exported above with 'export class' syntax
