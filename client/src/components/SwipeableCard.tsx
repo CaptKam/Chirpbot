@@ -299,20 +299,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
             )}
 
-            {/* AI Advice */}
-            {alertData?.betbookData?.aiAdvice && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Target className="w-4 h-4 text-purple-400" />
-                  <span className="text-xs text-purple-200 font-semibold">AI Recommendation</span>
-                </div>
-                <p className="text-white text-xs leading-relaxed">
-                  {alertData.betbookData.aiAdvice.length > 100 
-                    ? alertData.betbookData.aiAdvice.substring(0, 100) + '...' 
-                    : alertData.betbookData.aiAdvice}
-                </p>
-              </div>
-            )}
 
             {/* Quick Sportsbook Access */}
             <div className="space-y-2">
