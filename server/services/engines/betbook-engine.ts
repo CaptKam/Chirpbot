@@ -8,9 +8,9 @@ import OpenAI from 'openai';
 
 export interface BetbookData {
   odds: {
-    home?: number;
-    away?: number;
-    total?: number;
+    home: number;
+    away: number;
+    total: number;
   };
   aiAdvice: string;
   sportsbookLinks: Array<{
@@ -30,7 +30,6 @@ export interface AlertContext {
   homeScore: number;
   awayScore: number;
   inning?: number;
-  quarter?: number;
   period?: string;
   probability?: number;
   priority?: number;
@@ -40,10 +39,6 @@ export interface AlertContext {
   runners?: { first?: boolean; second?: boolean; third?: boolean };
   windMph?: number;
   windTowardOF?: boolean;
-  down?: number;
-  distance?: number;
-  yardsToGoal?: number;
-  timeRemaining?: number;
   offeredOdds?: {
     moneyline?: { home: number; away: number };
     total?: { number: number; over: number; under: number };
@@ -75,7 +70,7 @@ export interface Edge {
   offeredOdds: number;
   impliedProb: number;
   fairProb: number;
-  edgePct?: number;
+  edgePct: number;
   expectedValue: number;
   stakeUnits: number;
 }
@@ -92,7 +87,7 @@ export class BetbookEngine {
     if (this.useOpenAI && process.env.OPENAI_API_KEY) {
       this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     }
-    console.log('💰 Betbook Engine v2 initialized');
+    console.log('💰 Betbook AI Engine v2 initialized');
   }
 
   /**
@@ -114,10 +109,7 @@ export class BetbookEngine {
     
     // Sport-specific strategy plugins
     if (ctx.sport === 'MLB') signals.push(...this.mlbStrategies(ctx));
-    if (ctx.sport === 'NCAAF') signals.push(...this.ncaafStrategies(ctx));
-    if (ctx.sport === 'NFL') signals.push(...this.nflStrategies(ctx));
-    if (ctx.sport === 'NBA') signals.push(...this.nbaStrategies(ctx));
-    if (ctx.sport === 'NHL') signals.push(...this.nhlStrategies(ctx));
+    if (ctx.sport === 'Tennis') signals.push(...this.tennisStrategies(ctx));
     
     // Filter and sort by confidence
     const validSignals = signals
@@ -187,103 +179,21 @@ export class BetbookEngine {
     return signals;
   }
 
-  // ===== NCAAF STRATEGIES =====
-  private ncaafStrategies(ctx: AlertContext): Signal[] {
+  // ===== TENNIS STRATEGIES =====
+  private tennisStrategies(ctx: AlertContext): Signal[] {
     const signals: Signal[] = [];
     
-    // Red Zone Strategy
-    if ((ctx.yardsToGoal ?? 50) <= 20) {
+    // Service hold under pressure
+    if (ctx.gameState?.includes('break point')) {
       signals.push({
-        strategy: 'NCAAF_RED_ZONE',
-        title: 'Red Zone Scoring Opportunity',
-        selection: 'OVER',
+        strategy: 'TENNIS_BREAK_POINT',
+        title: 'Break Point Opportunity',
+        selection: 'BREAK',
         confidence: 72,
-        edges: this.calculateEdges(ctx, 'TOTAL', 'OVER', 0.65),
+        edges: this.calculateEdges(ctx, 'NEXT_GAME', 'BREAK', 0.35),
         reasoning: [
-          `Inside ${ctx.yardsToGoal} yard line - high scoring probability`,
-          'Red zone conversion rates favor over'
-        ]
-      });
-    }
-
-    // Fourth Down Strategy
-    if (ctx.down === 4) {
-      const shortYardage = (ctx.distance ?? 10) <= 2;
-      signals.push({
-        strategy: 'NCAAF_FOURTH_DOWN',
-        title: shortYardage ? 'Short Yardage Conversion' : 'Fourth Down Gamble',
-        selection: shortYardage ? 'CONVERSION' : 'TURNOVER',
-        confidence: shortYardage ? 68 : 62,
-        edges: this.calculateEdges(ctx, 'NEXT_PLAY', shortYardage ? 'CONVERSION' : 'TURNOVER', shortYardage ? 0.58 : 0.42),
-        reasoning: [
-          `4th and ${ctx.distance} - ${shortYardage ? 'short yardage' : 'long distance'}`,
-          `Historical conversion rate: ${shortYardage ? '58%' : '42%'}`
-        ]
-      });
-    }
-
-    return signals;
-  }
-
-  // ===== NFL STRATEGIES =====
-  private nflStrategies(ctx: AlertContext): Signal[] {
-    const signals: Signal[] = [];
-    
-    // Two-minute drill
-    if ((ctx.timeRemaining ?? 0) <= 120 && (ctx.quarter ?? 0) >= 4) {
-      signals.push({
-        strategy: 'NFL_TWO_MINUTE',
-        title: 'Two-Minute Drill',
-        selection: 'OVER',
-        confidence: 70,
-        edges: this.calculateEdges(ctx, 'TOTAL', 'OVER', 0.55),
-        reasoning: [
-          'Final 2 minutes - increased pace and scoring',
-          'Teams forced to pass more frequently'
-        ]
-      });
-    }
-
-    return signals;
-  }
-
-  // ===== NBA STRATEGIES =====
-  private nbaStrategies(ctx: AlertContext): Signal[] {
-    const signals: Signal[] = [];
-    
-    // Close game in final minutes
-    if ((ctx.period === '4th' || ctx.period === 'OT') && Math.abs(ctx.homeScore - ctx.awayScore) <= 5) {
-      signals.push({
-        strategy: 'NBA_CLOSE_GAME',
-        title: 'Close Game Final Minutes',
-        selection: 'UNDER',
-        confidence: 65,
-        edges: this.calculateEdges(ctx, 'TOTAL', 'UNDER', 0.52),
-        reasoning: [
-          '5-point game in final minutes',
-          'Teams slow pace, focus on possession'
-        ]
-      });
-    }
-
-    return signals;
-  }
-
-  // ===== NHL STRATEGIES =====
-  private nhlStrategies(ctx: AlertContext): Signal[] {
-    const signals: Signal[] = [];
-    
-    // Empty net situations
-    if (ctx.period === '3rd' && (ctx.timeRemaining ?? 0) <= 120) {
-      signals.push({
-        strategy: 'NHL_EMPTY_NET',
-        title: 'Potential Empty Net',
-        selection: 'OVER',
-        confidence: 75,
-        edges: this.calculateEdges(ctx, 'TOTAL', 'OVER', 0.60),
-        reasoning: [
-          'Final 2 minutes - empty net possibility',
-          'Historical empty net goal rate 60%'
+          'Server under pressure on break point',
+          'Historical break conversion rates favor returner'
         ]
       });
     }
@@ -320,7 +230,7 @@ export class BetbookEngine {
         expectedValue,
         stakeUnits
       };
-    }).filter(edge => (edge.edgePct ?? 0) > 2); // Only show edges > 2%
+    }).filter(edge => edge.edgePct > 2); // Only show edges > 2%
   }
 
   // ===== ARBITRAGE DETECTION =====
@@ -378,7 +288,7 @@ export class BetbookEngine {
   }
 
   private buildCacheKey(ctx: AlertContext): string {
-    return `${ctx.gameId}:${ctx.inning || ctx.quarter || ctx.period}:${ctx.homeScore}-${ctx.awayScore}`;
+    return `${ctx.gameId}:${ctx.inning || ctx.period}:${ctx.homeScore}-${ctx.awayScore}`;
   }
 
   private isDuplicate(key: string): boolean {
@@ -435,12 +345,11 @@ Focus on timing and value opportunities.`;
 
       const completion = await this.client.chat.completions.create({
         model: 'gpt-4o',
-        messages: [
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.3,
-        max_tokens: 180,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 50,
+        temperature: 0.3
       });
+
       return (completion.choices[0]?.message?.content || this.fallbackAdvice(ctx, signals)).trim();
     } catch (e) {
       console.error('AI advice error', e);
@@ -450,55 +359,61 @@ Focus on timing and value opportunities.`;
 
   private fallbackAdvice(ctx: AlertContext, signals: Signal[]): string {
     if (!signals.length) return 'No actionable edge right now; wait for better prices or state changes.';
-    const s = signals[0];
-    const best = s.edges.slice().sort((a,b) => (b.edgePct ?? 0) - (a.edgePct ?? 0))[0];
-    if (!best) return 'Edges are marginal; monitor for improved numbers.';
-    return `Focus on ${best.selection} given small positive edge and cap sizing (~${best.stakeUnits}u). Avoid overexposure on a single game.`;
+    const best = signals[0];
+    return `Focus on ${best.selection} given ${best.confidence}% confidence. Size appropriately and avoid overexposure.`;
   }
 }
 
-/*** ---------------------- BACKWARD‑COMPAT WRAPPERS ----------------------- ***/
+// ===== BACKWARD COMPATIBILITY EXPORTS =====
 
-// v1 helpers kept for drop‑in compatibility
+const engineInstance = new BetbookEngine({ useOpenAI: true });
+
+/**
+ * Generate Betbook information for a given alert context using AI analysis
+ */
 export async function getBetbookData(alertContext: AlertContext): Promise<BetbookData> {
-  const engine = new BetbookEngine({ useOpenAI: false });
-  // allow inline odds via alertContext.offeredOdds
-  const signals = engine.evaluate(alertContext);
-  return engine.toBetbookData(alertContext, signals);
+  const signals = engineInstance.evaluate(alertContext);
+  return await engineInstance.toBetbookData(alertContext, signals);
 }
 
+/**
+ * Legacy synchronous function
+ */
 export function getBetbookDataSync(alertContext: AlertContext): BetbookData {
   const engine = new BetbookEngine({ useOpenAI: false });
   const signals = engine.evaluate(alertContext);
-  // Synchronous wrapper: avoid AI advice
+  
   return {
     odds: {
-      home: alertContext.offeredOdds?.moneyline?.home,
-      away: alertContext.offeredOdds?.moneyline?.away,
-      total: alertContext.offeredOdds?.total?.number,
+      home: alertContext.offeredOdds?.moneyline?.home ?? -110,
+      away: alertContext.offeredOdds?.moneyline?.away ?? +100,
+      total: alertContext.offeredOdds?.total?.number ?? 8.5
     },
     aiAdvice: engine['fallbackAdvice'](alertContext, signals),
     sportsbookLinks: engine['getSportsbookLinks'](),
-    bettingInsights: signals.length ? signals.map(s => `${s.title} (conf ${s.confidence})`) : ['No strong edges at this moment'],
-    confidence: signals.reduce((m, s) => Math.max(m, s.confidence), 0),
-    signals,
+    bettingInsights: signals.length ? signals.map(s => `${s.title} (${s.confidence}% conf)`) : ['No strong edges detected'],
+    confidence: signals.reduce((max, s) => Math.max(max, s.confidence), 60),
+    signals
   };
 }
 
+/**
+ * Check if Betbook should be available for this alert context
+ */
 export function shouldShowBetbook(alertContext: AlertContext): boolean {
   const isLive = (alertContext.gameState || '').toUpperCase() === 'LIVE';
   const hasTeams = !!alertContext.homeTeam && !!alertContext.awayTeam;
   return isLive && hasTeams;
 }
 
-/*** ---------------------------- TEST HOOKS ------------------------------- ***/
-
-// Quick self‑check you can invoke from a unit test
+/**
+ * Self-check function for testing
+ */
 export function __selfCheck__() {
   const engine = new BetbookEngine({ useOpenAI: false });
   const ctx: AlertContext = {
     sport: 'MLB',
-    gameId: 'TST',
+    gameId: 'TEST',
     homeTeam: 'Dodgers',
     awayTeam: 'Cubs',
     homeScore: 3,
@@ -510,7 +425,10 @@ export function __selfCheck__() {
     windMph: 12,
     windTowardOF: true,
     gameState: 'LIVE',
-    offeredOdds: { total: { number: 8.5, over: +105, under: -110 }, moneyline: { home: -115, away: +105 } },
+    offeredOdds: { 
+      total: { number: 8.5, over: +105, under: -110 }, 
+      moneyline: { home: -115, away: +105 } 
+    }
   };
   const signals = engine.evaluate(ctx);
   if (!signals.length) throw new Error('Expected at least one MLB signal');

@@ -96,16 +96,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/test-ncaaf-engine', async (req, res) => {
     try {
       console.log('🧪 Testing NCAAF engine import...');
-      const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+      const { NCAAEngine } = await import('./services/engines/ncaaf-engine');
       console.log('✅ NCAAF engine import successful');
-      console.log('🔍 NCAAFEngine type:', typeof NCAAFEngine);
+      console.log('🔍 NCAAEngine type:', typeof NCAAEngine);
       
-      const engine = new NCAAFEngine();
+      const engine = new NCAAEngine();
       console.log('✅ NCAAF engine instance created successfully');
       
       res.json({ 
         success: true, 
-        type: typeof NCAAFEngine,
+        type: typeof NCAAEngine,
         instance: !!engine,
         message: 'NCAAF engine import and instantiation successful'
       });
@@ -145,8 +145,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/test-force-ncaaf-alert', async (req, res) => {
     try {
       console.log('🧪 Force generating NCAAF alert...');
-      const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
-      const engine = new NCAAFEngine();
+      const { NCAAEngine } = await import('./services/engines/ncaaf-engine');
+      const engine = new NCAAEngine();
       
       // Force generate basic live alert
       await engine.processSpecificGame('cfb-401762432');
@@ -416,8 +416,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       } else if (sport === 'NCAAF') {
         // Use ESPN NCAAF API integration (College Football Only)
-        const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
-        const ncaaEngine = new NCAAFEngine();
+        const { NCAAEngine } = await import('./services/engines/ncaaf-engine');
+        const ncaaEngine = new NCAAEngine();
         games = await ncaaEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface
