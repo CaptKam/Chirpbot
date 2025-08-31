@@ -261,13 +261,17 @@ export class MLBEngine {
   }
 
   /**
-   * Get detailed game data from MLB API
+   * Get detailed game data from MLB API with FULL PLAYER DATA
    */
   private async getGameDetails(gameId: string): Promise<any> {
     try {
-      const url = `https://statsapi.mlb.com/api/v1/game/${gameId}/linescore`;
+      // NEW: Get complete live game data with player information
+      const url = `https://statsapi.mlb.com/api/v1/game/${gameId}/live?hydrate=linescore,plays,decisions,person,stats`;
       const response = await fetch(url);
-      return await response.json();
+      const data = await response.json();
+      
+      console.log(`📊 MLB: Retrieved detailed game data for ${gameId} with player info`);
+      return data;
     } catch (error) {
       console.error(`❌ MLB: Error fetching game details for ${gameId}:`, error);
       return null;
@@ -275,27 +279,73 @@ export class MLBEngine {
   }
 
   /**
-   * Map API data to game state
+   * Map API data to game state WITH FULL PLAYER DATA
    */
   private mapToGameState(gameData: any): MLBGameStateV3 {
-    const linescore = gameData.linescore || {};
+    const linescore = gameData.gameData?.linescore || {};
     const currentInning = linescore.currentInning || 1;
     const inningState = linescore.inningState || 'Top';
+    const offense = linescore.offense || {};
+    const defense = linescore.defense || {};
+    
+    // Extract current batter data
+    const currentBatter = offense.batter ? {
+      id: offense.batter.id,
+      name: offense.batter.fullName || 'Unknown Batter',
+      position: offense.batter.primaryPosition?.name || 'Unknown',
+      stats: {
+        hr: offense.batter.stats?.batting?.homeRuns || 0,
+        avg: parseFloat(offense.batter.stats?.batting?.avg || '0.000'),
+        ops: parseFloat(offense.batter.stats?.batting?.ops || '0.000'),
+        obp: parseFloat(offense.batter.stats?.batting?.obp || '0.000'),
+        slg: parseFloat(offense.batter.stats?.batting?.slg || '0.000')
+      }
+    } : undefined;
+
+    // Extract current pitcher data
+    const currentPitcher = defense.pitcher ? {
+      id: defense.pitcher.id,
+      name: defense.pitcher.fullName || 'Unknown Pitcher',
+      position: 'P',
+      stats: {
+        era: parseFloat(defense.pitcher.stats?.pitching?.era || '0.00'),
+        whip: parseFloat(defense.pitcher.stats?.pitching?.whip || '0.00'),
+        strikeOuts: defense.pitcher.stats?.pitching?.strikeOuts || 0,
+        wins: defense.pitcher.stats?.pitching?.wins || 0,
+        losses: defense.pitcher.stats?.pitching?.losses || 0
+      }
+    } : undefined;
+    
+    console.log(`👤 MLB Player Data: Batter=${currentBatter?.name}, Pitcher=${currentPitcher?.name}`);
     
     return {
       gameId: gameData.gamePk?.toString() || 'unknown',
       gamePk: gameData.gamePk || 0,
-      homeTeam: gameData.teams?.home?.team?.name || 'Home Team',
-      awayTeam: gameData.teams?.away?.team?.name || 'Away Team',
-      homeScore: gameData.teams?.home?.score || 0,
-      awayScore: gameData.teams?.away?.score || 0,
+      homeTeam: gameData.gameData?.teams?.home?.name || 'Home Team',
+      awayTeam: gameData.gameData?.teams?.away?.name || 'Away Team',
+      homeScore: gameData.gameData?.teams?.home?.score || 0,
+      awayScore: gameData.gameData?.teams?.away?.score || 0,
       inning: currentInning,
       inningState: inningState.toLowerCase() as 'top' | 'bottom',
       outs: linescore.outs || 0,
+      balls: linescore.balls || 0,
+      strikes: linescore.strikes || 0,
+      currentBatter,
+      currentPitcher,
+      venue: gameData.gameData?.venue?.name,
       runners: {
-        first: linescore.offense?.first ? { playerId: 0, playerName: 'Runner' } : undefined,
-        second: linescore.offense?.second ? { playerId: 0, playerName: 'Runner' } : undefined,
-        third: linescore.offense?.third ? { playerId: 0, playerName: 'Runner' } : undefined
+        first: offense.first ? { 
+          playerId: offense.first.id, 
+          playerName: offense.first.fullName || 'Runner' 
+        } : undefined,
+        second: offense.second ? { 
+          playerId: offense.second.id, 
+          playerName: offense.second.fullName || 'Runner' 
+        } : undefined,
+        third: offense.third ? { 
+          playerId: offense.third.id, 
+          playerName: offense.third.fullName || 'Runner' 
+        } : undefined
       }
     };
   }
