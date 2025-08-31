@@ -172,16 +172,13 @@ export default function Alerts() {
                       : "opacity-80"
                   )}
                 >
-                  {/* LAW #7: CLEAN LAYOUT - NO DUPLICATE INFO */}
-                  <div className="p-6 space-y-4">
-                    {/* Header: Team Names, Score, and Sport */}
-                    {alert.gameInfo?.awayTeam && alert.gameInfo?.homeTeam && (
-                      <div className="text-center text-lg font-bold text-white mb-4 bg-slate-700/50 rounded-lg py-2 px-4 relative">
-                        <span className="absolute left-3 top-2">
-                          <span className="bg-blue-500/20 text-blue-300 font-bold px-2 py-1 rounded-full text-[11px]">
-                            {alert.sport}
-                          </span>
-                        </span>
+                  {/* Header: Team Names, Score, and Sport */}
+                  {alert.gameInfo?.awayTeam && alert.gameInfo?.homeTeam && (
+                    <div className="flex items-center justify-between w-full px-4 py-3 bg-slate-800/90 backdrop-blur-sm text-white border-b border-white/10">
+                      <span className="bg-blue-500/20 text-blue-300 font-bold px-2 py-1 rounded-full text-[11px]">
+                        {alert.sport}
+                      </span>
+                      <div className="text-center text-lg font-bold">
                         <span className="text-blue-300">{alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}</span>
                         {alert.gameInfo?.score && (
                           <span className="mx-4 text-yellow-400 font-mono">
@@ -189,15 +186,18 @@ export default function Alerts() {
                           </span>
                         )}
                         <span className="text-orange-300">{alert.gameInfo.homeTeam.split(' ').slice(-1)[0]}</span>
-                        {!alert.seen && (
-                          <span className="absolute right-3 top-2 bg-emerald-400 text-slate-900 text-xs font-black px-2 py-1 rounded-full">
-                            NEW
-                          </span>
-                        )}
                       </div>
-                    )}
+                      {!alert.seen && (
+                        <span className="bg-emerald-400 text-slate-900 text-xs font-black px-2 py-1 rounded-full">
+                          NEW
+                        </span>
+                      )}
+                    </div>
+                  )}
 
-                    {/* Row 2: TITLE - Law #7 Format (NO TEAM NAMES) */}
+                  {/* LAW #7: CLEAN LAYOUT - NO DUPLICATE INFO */}
+                  <div className="p-6 space-y-6">
+                    {/* Row 1: TITLE - Law #7 Format (NO TEAM NAMES) */}
                     <div className="mb-2">
                       <h2 className="text-sm font-semibold text-white leading-normal break-words">
                         {alert.title?.replace(/Mississippi State Bulldogs?/gi, 'Team')
