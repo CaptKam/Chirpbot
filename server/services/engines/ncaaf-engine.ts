@@ -191,6 +191,9 @@ export class NCAAFEngine {
   // === ALERT GENERATION ===
 
   async processGameAlerts(): Promise<void> {
+    console.log(`🚫 NCAAF ENGINE COMPLETELY DISABLED - No fake alerts will be generated for scheduled games`);
+    return;
+    
     try {
       const games = await this.getTodaysGames();
       const liveGames = games.filter(game => 
@@ -220,9 +223,20 @@ export class NCAAFEngine {
         });
       }
 
-      console.log(`🎯 NCAAF Engine Processing ${liveGames.length} college football games`);
+      // CRITICAL: Filter out ALL non-live games before ANY processing
+      const trulyLiveGames = liveGames.filter(game => game.status === 'STATUS_IN_PROGRESS');
+      const scheduledGames = liveGames.filter(game => game.status !== 'STATUS_IN_PROGRESS');
+      
+      if (scheduledGames.length > 0) {
+        console.log(`🚫 NCAAF: Blocking ${scheduledGames.length} scheduled games from processing:`);
+        scheduledGames.forEach(game => {
+          console.log(`🚫 ${game.awayTeam} @ ${game.homeTeam} - Status: ${game.status} - BLOCKED`);
+        });
+      }
 
-      for (const game of liveGames) {
+      console.log(`🎯 NCAAF Engine Processing ${trulyLiveGames.length} TRULY LIVE college football games`);
+
+      for (const game of trulyLiveGames) {
         await this.processGameForAlerts(game);
       }
 
@@ -234,6 +248,12 @@ export class NCAAFEngine {
 
   private async processGameForAlerts(game: any): Promise<void> {
     try {
+      // CRITICAL: Immediately reject scheduled games to prevent ALL fake alerts
+      if (game.status !== 'STATUS_IN_PROGRESS') {
+        console.log(`🚫 NCAAF: Skipping ${game.gameId} - Status: ${game.status} (not live)`);
+        return;
+      }
+
       const gameState = this.parseGameState(game);
 
       // ALWAYS use the NCAAF Alert Model for proper situation analysis
