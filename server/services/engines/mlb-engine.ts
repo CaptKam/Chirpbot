@@ -102,23 +102,33 @@ export class MLBEngine {
    * Main monitoring function - completely rewritten
    */
   async monitor(gameState: MLBGameStateV3): Promise<MLBAlert[]> {
+    console.log(`🎯 MLB Monitor: Checking game ${gameState.gameId} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+    console.log(`📊 Game State: Inning ${gameState.inning} ${gameState.inningState}, Score: ${gameState.awayScore}-${gameState.homeScore}`);
+    console.log(`🏃 Runners: 1st=${!!gameState.runners.first}, 2nd=${!!gameState.runners.second}, 3rd=${!!gameState.runners.third}, Outs=${gameState.outs}`);
+    
     this.gameStates.set(gameState.gameId, gameState);
 
     // Check if situation warrants alert
     const modelResult = mlbAlertModel.checkScoringProbability(this.convertToModelFormat(gameState));
+    console.log(`🤖 Model Result:`, modelResult);
     
     if (!modelResult.shouldAlert) {
+      console.log(`❌ MLB: Model says no alert needed for game ${gameState.gameId}`);
       return [];
     }
 
     // Create situation key for deduplication
     const situationKey = this.createSituationKey(gameState);
     const lastAlert = this.lastAlerts.get(gameState.gameId);
+    console.log(`🔄 Dedup Check: Current=${situationKey}, Last=${lastAlert}`);
 
     // Only alert if situation changed
     if (lastAlert === situationKey) {
+      console.log(`🔄 MLB: Skipping duplicate alert for game ${gameState.gameId}`);
       return [];
     }
+
+    console.log(`🚨 MLB: Creating new alert for game ${gameState.gameId}`);
 
     // Create standardized alert
     const alert = await this.createStandardAlert(gameState, modelResult);
@@ -130,6 +140,7 @@ export class MLBEngine {
       return [];
     }
 
+    console.log(`✅ MLB: Alert created successfully for game ${gameState.gameId}`);
     this.lastAlerts.set(gameState.gameId, situationKey);
     return [alert];
   }
@@ -152,6 +163,147 @@ export class MLBEngine {
       pitcher: null,
       weather: null,
       park: null
+    };
+  }
+
+  /**
+   * Process a specific game for testing/debugging
+   */
+  async processSpecificGame(gameId: string): Promise<void> {
+    console.log(`🎯 MLB: Processing specific game ${gameId}`);
+    
+    try {
+      const games = await this.getTodaysGames();
+      const game = games.find(g => g.gameId === gameId);
+      
+      if (!game) {
+        console.log(`❌ MLB: Game ${gameId} not found in today's games`);
+        // Create mock live game state for testing
+        const mockGameState: MLBGameStateV3 = {
+          gameId,
+          gamePk: parseInt(gameId) || 12345,
+          homeTeam: 'Boston Red Sox',
+          awayTeam: 'New York Yankees',
+          homeScore: 3,
+          awayScore: 4,
+          inning: 8,
+          inningState: 'bottom',
+          outs: 1,
+          runners: {
+            first: { playerId: 12345, playerName: 'Test Player' },
+            second: { playerId: 12346, playerName: 'Test Player 2' },
+            third: undefined
+          }
+        };
+        
+        console.log(`🧪 MLB: Using mock game state for testing`);
+        const alerts = await this.monitor(mockGameState);
+        
+        if (alerts.length > 0) {
+          console.log(`🚨 MLB: Generated ${alerts.length} test alerts`);
+          // Store alerts and broadcast them
+          for (const alert of alerts) {
+            const { storage } = await import('../../storage');
+            await storage.createAlert(alert);
+            if (this.onAlert) {
+              this.onAlert(alert);
+            }
+          }
+        }
+        return;
+      }
+
+      // Build game state from real game data
+      const gameState = await this.buildGameState(game);
+      if (gameState) {
+        const alerts = await this.monitor(gameState);
+        
+        if (alerts.length > 0) {
+          console.log(`🚨 MLB: Generated ${alerts.length} alerts for game ${gameId}`);
+          // Store alerts and broadcast them
+          for (const alert of alerts) {
+            const { storage } = await import('../../storage');
+            await storage.createAlert(alert);
+            if (this.onAlert) {
+              this.onAlert(alert);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`❌ MLB: Error processing game ${gameId}:`, error);
+    }
+  }
+
+  /**
+   * Build game state from game data
+   */
+  private async buildGameState(game: any): Promise<MLBGameStateV3 | null> {
+    try {
+      // For live games, get detailed data
+      if (game.status && (game.status.includes('Progress') || game.status.includes('Live'))) {
+        const detailedGame = await this.getGameDetails(game.gameId);
+        if (detailedGame) {
+          return this.mapToGameState(detailedGame);
+        }
+      }
+      
+      // Basic game state from schedule data
+      return {
+        gameId: game.gameId,
+        gamePk: parseInt(game.gameId) || game.gamePk,
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeScore: game.homeScore || 0,
+        awayScore: game.awayScore || 0,
+        inning: game.inning || 1,
+        inningState: game.inningState || 'top',
+        outs: 0,
+        runners: {}
+      };
+    } catch (error) {
+      console.error('❌ MLB: Error building game state:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get detailed game data from MLB API
+   */
+  private async getGameDetails(gameId: string): Promise<any> {
+    try {
+      const url = `https://statsapi.mlb.com/api/v1/game/${gameId}/linescore`;
+      const response = await fetch(url);
+      return await response.json();
+    } catch (error) {
+      console.error(`❌ MLB: Error fetching game details for ${gameId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Map API data to game state
+   */
+  private mapToGameState(gameData: any): MLBGameStateV3 {
+    const linescore = gameData.linescore || {};
+    const currentInning = linescore.currentInning || 1;
+    const inningState = linescore.inningState || 'Top';
+    
+    return {
+      gameId: gameData.gamePk?.toString() || 'unknown',
+      gamePk: gameData.gamePk || 0,
+      homeTeam: gameData.teams?.home?.team?.name || 'Home Team',
+      awayTeam: gameData.teams?.away?.team?.name || 'Away Team',
+      homeScore: gameData.teams?.home?.score || 0,
+      awayScore: gameData.teams?.away?.score || 0,
+      inning: currentInning,
+      inningState: inningState.toLowerCase() as 'top' | 'bottom',
+      outs: linescore.outs || 0,
+      runners: {
+        first: linescore.offense?.first ? { playerId: 0, playerName: 'Runner' } : undefined,
+        second: linescore.offense?.second ? { playerId: 0, playerName: 'Runner' } : undefined,
+        third: linescore.offense?.third ? { playerId: 0, playerName: 'Runner' } : undefined
+      }
     };
   }
 

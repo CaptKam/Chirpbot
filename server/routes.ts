@@ -92,6 +92,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint for MLB engine status and monitored games
+  app.get('/api/test-mlb-status', async (req, res) => {
+    try {
+      console.log('🧪 Testing MLB engine status...');
+      const { MLBEngine } = await import('./services/engines/mlb-engine');
+      const engine = new MLBEngine();
+      
+      // Get today's games
+      const todaysGames = await engine.getTodaysGames();
+      console.log(`📅 Found ${todaysGames.length} MLB games today`);
+      
+      // Get monitored games
+      const allMonitoredGames = await storage.getAllMonitoredGames();
+      const mlbMonitoredGames = allMonitoredGames.filter(game => game.sport === 'MLB');
+      console.log(`👀 Found ${mlbMonitoredGames.length} monitored MLB games`);
+      
+      // Check which games are live
+      const liveGames = todaysGames.filter(game => 
+        game.status && (game.status.includes('Progress') || game.status.includes('Live'))
+      );
+      console.log(`🔴 Found ${liveGames.length} live MLB games`);
+      
+      res.json({ 
+        success: true,
+        todaysGames: todaysGames.length,
+        monitoredGames: mlbMonitoredGames.length,
+        liveGames: liveGames.length,
+        gameDetails: todaysGames.map(game => ({
+          id: game.gameId,
+          teams: `${game.awayTeam} @ ${game.homeTeam}`,
+          status: game.status,
+          score: `${game.awayScore}-${game.homeScore}`,
+          monitored: mlbMonitoredGames.some(mg => mg.gameId === game.gameId)
+        })),
+        monitoredGamesList: mlbMonitoredGames
+      });
+    } catch (error) {
+      console.error('❌ MLB status check failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  });
+
   // Test endpoint for NCAAF engine import debugging
   app.get('/api/test-ncaaf-engine', async (req, res) => {
     try {
@@ -133,6 +179,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('❌ NCAAF engine start test failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  });
+
+  // Test endpoint to force generate MLB alerts
+  app.post('/api/test-force-mlb-alert', async (req, res) => {
+    try {
+      console.log('🧪 Force generating MLB alert...');
+      const { MLBEngine } = await import('./services/engines/mlb-engine');
+      const engine = new MLBEngine();
+      
+      // Set up alert callback to capture generated alerts
+      const generatedAlerts: any[] = [];
+      engine.onAlert = (alert: any) => {
+        generatedAlerts.push(alert);
+        broadcast({ type: 'new_alert', data: alert });
+      };
+      
+      // Force generate alert for a mock live game
+      await engine.processSpecificGame('test-game-12345');
+      console.log('✅ MLB alert generation completed');
+      
+      res.json({ 
+        success: true,
+        message: 'MLB alert force generation completed',
+        alertsGenerated: generatedAlerts.length,
+        alerts: generatedAlerts
+      });
+    } catch (error) {
+      console.error('❌ MLB alert generation test failed:', error);
       res.status(500).json({ 
         success: false, 
         error: error.message,
