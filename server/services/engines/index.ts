@@ -183,8 +183,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return await cflEngine.getTodaysGames(today);
         case 'NCAAF':
-          const { NCAAEngine } = await import('./ncaaf-engine');
-          const ncaafEngine = new NCAAEngine();
+          const { NCAAFEngine } = await import('./ncaaf-engine');
+          const ncaafEngine = new NCAAFEngine();
           return await ncaafEngine.getTodaysGames(today);
         default:
           return [];
