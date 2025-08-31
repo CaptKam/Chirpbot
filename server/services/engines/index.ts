@@ -14,6 +14,15 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   constructor() {
     console.log('🎯 Dynamic Sport Engine Manager initialized');
+    
+    // Set up the main alert callback to integrate sport-specific settings with global Telegram credentials
+    this.onAlert = async (alert: any) => {
+      try {
+        await this.processAlert(alert);
+      } catch (error) {
+        console.error('🚨 Error processing alert:', error);
+      }
+    };
   }
 
   async startAllEngines(): Promise<void> {
@@ -283,6 +292,53 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   setAlertCallback(callback: (alert: any) => void): void {
     this.onAlert = callback;
+  }
+
+  /**
+   * Process alert and integrate sport-specific settings with global Telegram credentials
+   */
+  private async processAlert(alert: any): Promise<void> {
+    try {
+      console.log(`🔔 Processing alert: ${alert.sport} - ${alert.type} (Priority: ${alert.priority})`);
+      
+      // Get sport-specific settings for this alert
+      const sportSettings = await storage.getUserSettings('', alert.sport); // TODO: Get actual user ID
+      if (!sportSettings) {
+        console.log(`⚠️ No sport settings found for ${alert.sport}`);
+        return;
+      }
+
+      // Check if Telegram is enabled for this sport
+      if (!sportSettings.telegramEnabled) {
+        console.log(`📵 Telegram disabled for ${alert.sport} - skipping notification`);
+        return;
+      }
+
+      // Get global user Telegram credentials
+      const users = await storage.getAllUsers();
+      const user = users[0]; // TODO: Get actual user for this alert
+      if (!user || !user.telegramBotToken || !user.telegramChatId) {
+        console.log(`🚫 Global Telegram credentials not configured - skipping notification`);
+        return;
+      }
+
+      // Send Telegram notification
+      const { sendTelegramAlert } = await import('../telegram');
+      const telegramConfig = {
+        botToken: user.telegramBotToken,
+        chatId: user.telegramChatId
+      };
+      
+      const success = await sendTelegramAlert(telegramConfig, alert);
+      if (success) {
+        console.log(`✅ Telegram notification sent for ${alert.sport} alert`);
+      } else {
+        console.log(`❌ Failed to send Telegram notification for ${alert.sport} alert`);
+      }
+      
+    } catch (error) {
+      console.error('🚨 Error processing alert for Telegram:', error);
+    }
   }
 }
 
