@@ -320,20 +320,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   private async validateAlertModel(gameStateData: any): Promise<{valid: boolean, reason?: string, data?: any}> {
-    // Use the AlertModel to validate if alert should be generated
-    try {
-      const mlbAlertModel = await import('./mlbAlertModel.cjs');
-      const modelFormat = this.convertToModelFormat(gameStateData);
-      const result = mlbAlertModel.checkScoringProbability(modelFormat);
-      
-      if (result.shouldAlert) {
-        return { valid: true, data: result };
-      } else {
-        return { valid: false, reason: result.reasons?.join(', ') || 'Model validation failed' };
-      }
-    } catch (error) {
-      return { valid: false, reason: `AlertModel error: ${error.message}` };
-    }
+    // DISABLED: MLBalertModel.cjs validation disabled
+    return { valid: false, reason: 'MLBalertModel.cjs disabled by user request' };
   }
 
   private convertToModelFormat(gameState: any) {
