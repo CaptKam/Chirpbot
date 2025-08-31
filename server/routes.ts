@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (sport === 'MLB') {
         // Use our integrated MLB API
-        const { MLBEngine } = await import('./services/engines/mlb-engine');
+        // MLBEngine removed - no more alert generation
         const mlbEngine = new MLBEngine();
         games = await mlbEngine.getTodaysGames(targetDate);
         
@@ -281,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       } else if (sport === 'NBA') {
         // Use ESPN NBA API integration
-        const { nbaEngine } = await import('./services/engines/nba-engine');
+        // NBAEngine removed - no more alert generation
         games = await nbaEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface  
@@ -308,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       } else if (sport === 'NFL') {
         // Use ESPN NFL API integration
-        const { nflEngine } = await import('./services/engines/nfl-engine');
+        // NFLEngine removed - no more alert generation
         games = await nflEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface
@@ -335,7 +335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       } else if (sport === 'NHL') {
         // Use ESPN NHL API integration
-        const { nhlEngine } = await import('./services/engines/nhl-engine');
+        // NHLEngine removed - no more alert generation
         games = await nhlEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface
@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       } else if (sport === 'CFL') {
         // Use ESPN CFL API integration
-        const { cflEngine } = await import('./services/engines/cfl-engine');
+        // CFLEngine removed - no more alert generation
         games = await cflEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface
@@ -390,7 +390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (sport === 'NCAAF') {
         // ENABLED: NCAAF calendar for monitoring (alerts still disabled)
         console.log('📅 NCAAF: Fetching college football games for calendar');
-        const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+        // NCAAFEngine removed - no more alert generation
         const ncaafEngine = new NCAAFEngine();
         games = await ncaafEngine.getTodaysGames(targetDate);
         
