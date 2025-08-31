@@ -163,8 +163,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return cflEngine;
         case 'NCAAF':
-          const { NCAAEngine } = await import('./ncaaf-engine');
-          return new NCAAEngine();
+          const { NCAAFEngine } = await import('./ncaaf-engine');
+          return new NCAAFEngine();
         default:
           console.warn(`No engine available for sport: ${sport}`);
           return null;
