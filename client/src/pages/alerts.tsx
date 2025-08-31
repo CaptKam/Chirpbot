@@ -156,8 +156,8 @@ export default function Alerts() {
                   awayScore: alert.gameInfo?.score?.away || 0,
                   probability: 0.75,
                   priority: alert.priority || 75,
-                  betbookData: null,
-                  gameInfo: { v3Analysis: null }
+                  betbookData: alert.betbookData,
+                  gameInfo: alert.gameInfo
                 }}
               >
                 <Card
