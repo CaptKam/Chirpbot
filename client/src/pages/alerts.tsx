@@ -157,8 +157,8 @@ export default function Alerts() {
                   awayScore: alert.gameInfo?.score?.away || 0,
                   probability: 0.75,
                   priority: alert.priority || 75,
-                  betbookData: alert.betbookData,
-                  gameInfo: alert.gameInfo
+                  betbookData: alert.betbookData || undefined,
+                  gameInfo: alert.gameInfo as any
                 }}
               >
                 <Card
@@ -258,7 +258,7 @@ export default function Alerts() {
                       homeTeam: alert.gameInfo?.homeTeam,
                       awayTeam: alert.gameInfo?.awayTeam,
                     }}
-                    createdAt={alert.timestamp || alert.createdAt}
+                    createdAt={new Date(alert.timestamp).toISOString()}
                   />
                 </Card>
               </SwipeableCard>
