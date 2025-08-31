@@ -248,12 +248,12 @@ export class MLBEngine {
         }
       }
       
-      // Basic game state from schedule data
+      // Basic game state from schedule data - Use proper team names
       return {
         gameId: game.gameId,
         gamePk: parseInt(game.gameId) || game.gamePk,
-        homeTeam: game.homeTeam,
-        awayTeam: game.awayTeam,
+        homeTeam: game.homeTeam || 'Home Team',
+        awayTeam: game.awayTeam || 'Away Team',
         homeScore: game.homeScore || 0,
         awayScore: game.awayScore || 0,
         inning: game.inning || 1,
