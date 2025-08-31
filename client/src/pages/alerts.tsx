@@ -8,6 +8,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { cn } from "@/lib/utils";
 import AlertFooter from "@/components/AlertFooter";
+import { getTeamColor } from "@/utils/teamColors";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All", active: true },
@@ -177,13 +178,17 @@ export default function Alerts() {
                     {/* Header: Team Names and Score */}
                     {alert.gameInfo?.awayTeam && alert.gameInfo?.homeTeam && (
                       <div className="text-center text-lg font-bold text-white mb-4 bg-slate-700/50 rounded-lg py-2 px-4">
-                        <span className="text-blue-300">{alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}</span>
+                        <span style={{ color: getTeamColor(alert.gameInfo.awayTeam) }}>
+                          {alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}
+                        </span>
                         {alert.gameInfo?.score && (
                           <span className="mx-4 text-yellow-400 font-mono">
                             {alert.gameInfo.score.away} - {alert.gameInfo.score.home}
                           </span>
                         )}
-                        <span className="text-orange-300">{alert.gameInfo.homeTeam.split(' ').slice(-1)[0]}</span>
+                        <span style={{ color: getTeamColor(alert.gameInfo.homeTeam) }}>
+                          {alert.gameInfo.homeTeam.split(' ').slice(-1)[0]}
+                        </span>
                       </div>
                     )}
                     
