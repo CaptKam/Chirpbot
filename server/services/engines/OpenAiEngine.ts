@@ -337,12 +337,7 @@ Respond with JSON containing:
 
   private getFallbackDescription(situation: GameSituation): string {
     const prob = situation.scoringProbability ? `${Math.round(situation.scoringProbability * 100)}% ` : '';
-    // Don't include team names if they're unknown or missing
-    const teamInfo = (situation.awayTeam && situation.homeTeam && 
-                      situation.awayTeam !== 'Unknown' && situation.homeTeam !== 'Unknown') 
-                      ? `${situation.awayTeam} @ ${situation.homeTeam}: ` 
-                      : '';
-    return `${teamInfo}${prob}scoring opportunity in ${situation.gameState}`;
+    return `${situation.awayTeam} @ ${situation.homeTeam}: ${prob}scoring opportunity in ${situation.gameState}`;
   }
 }
 

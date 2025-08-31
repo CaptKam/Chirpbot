@@ -2,7 +2,6 @@ import { storage } from '../../storage';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { fetchJson } from '../http';
-import { AlertFormatValidator } from './AlertFormatValidator';
 
 interface NBAGameState {
   gameId: string;
@@ -114,7 +113,7 @@ export class NBAEngine {
       if (gameState.overtime) {
         alerts.push({
           priority: 95,
-          description: AlertFormatValidator.generateStandardDescription('NBA', 'OVERTIME', gameState),
+          description: `⚡ OVERTIME! ${gameState.awayTeam} vs ${gameState.homeTeam} going to extra time`,
           reasons: ['Overtime period', 'Extended game action', 'Betting implications'],
           probability: 1.0,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'OVERTIME'),
@@ -185,14 +184,9 @@ export class NBAEngine {
       // Use kid-friendly title
       const kidFriendlyTitle = this.buildKidFriendlyTitle(alert.type, gameState);
 
-      // Use AlertFormatValidator for LAW #7 compliance
-      const score = { home: gameState.homeScore, away: gameState.awayScore };
-      const standardTitle = AlertFormatValidator.generateStandardTitle('NBA', alert.type.toUpperCase(), score);
-      const standardDescription = AlertFormatValidator.generateStandardDescription('NBA', alert.type.toUpperCase(), gameState);
-
       const alertRecord = await storage.createAlert({
-        title: standardTitle,
-        description: standardDescription,
+        title: kidFriendlyTitle,
+        description: alert.description,
         sport: 'NBA',
         type: alert.type,
         priority: alert.priority,

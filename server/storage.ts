@@ -1000,47 +1000,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAlert(insertAlert: InsertAlert & { debugId?: string }): Promise<Alert> {
-    // CRITICAL: Validate this is for a LIVE game only - NO EXCEPTIONS
-    if (insertAlert.gameInfo) {
-      const gameStatus = insertAlert.gameInfo.status;
-      const isScheduled = gameStatus === 'STATUS_SCHEDULED' || 
-                         gameStatus === 'STATUS_PREGAME' ||
-                         gameStatus?.includes('SCHEDULED') ||
-                         gameStatus?.includes('PREGAME');
-
-      if (isScheduled) {
-        console.log(`🚫 STORAGE: BLOCKED ALERT CREATION - Game is not live!`);
-        console.log(`🚫 STORAGE: Game: ${insertAlert.gameInfo.awayTeam} @ ${insertAlert.gameInfo.homeTeam}`);
-        console.log(`🚫 STORAGE: Status: ${gameStatus}`);
-        console.log(`🚫 STORAGE: Alert type: ${insertAlert.type}`);
-
-        const stack = new Error().stack;
-        console.log(`🚫 STORAGE: Attempted creation from: ${stack?.split('\n')[2]?.trim()}`);
-
-        throw new Error(`LIVE GAME VALIDATION FAILED: Cannot create alerts for non-live games (Status: ${gameStatus})`);
-      }
-
-      // Additional validation - ensure status indicates live gameplay
-      const validLiveStatuses = [
-        'STATUS_IN_PROGRESS', 'STATUS_HALFTIME', 'STATUS_OVERTIME',
-        'STATUS_FIRST_HALF', 'STATUS_SECOND_HALF', 'Live', 'live'
-      ];
-
-      const isValidLive = validLiveStatuses.some(status => 
-        gameStatus?.includes(status) || gameStatus === status
-      );
-
-      if (!isValidLive && insertAlert.sport !== 'MLB') { // MLB has different status patterns
-        console.log(`⚠️ STORAGE: WARNING - Questionable game status for alert creation`);
-        console.log(`⚠️ STORAGE: Game: ${insertAlert.gameInfo.awayTeam} @ ${insertAlert.gameInfo.homeTeam}`);
-        console.log(`⚠️ STORAGE: Status: ${gameStatus}`);
-      }
-    }
-
     const alertToInsert = {
       ...insertAlert,
-      timestamp: insertAlert.timestamp || new Date(),
-      seen: insertAlert.seen ?? false,
       priority: insertAlert.priority || insertAlert.gameInfo?.priority || 70, // Save to main priority column
       gameInfo: {
         ...insertAlert.gameInfo,
@@ -1066,21 +1027,12 @@ export class DatabaseStorage implements IStorage {
       } : null,
     };
     const [alert] = await this.db.insert(alerts).values([alertToInsert]).returning();
-
-    // Enhanced logging to track alert creation source
-    const stack = new Error().stack;
-    const callerLine = stack?.split('\n')[2]?.trim() || 'unknown';
-
+    
     console.log(`💾 STORAGE: Alert created | ID: ${alert.id} | Type: ${alert.type} | Sport: ${alert.sport}`);
-    console.log(`📍 STORAGE: Alert source: ${callerLine}`);
     if (insertAlert.debugId) {
       console.log(`🆔 STORAGE: Debug ID: ${insertAlert.debugId}`);
     }
-    if (alert.gameInfo?.homeTeam && alert.gameInfo?.awayTeam) {
-      console.log(`🏟️ STORAGE: Game: ${alert.gameInfo.awayTeam} @ ${alert.gameInfo.homeTeam}`);
-      console.log(`🎮 STORAGE: Game Status: ${alert.gameInfo.status}`);
-    }
-
+    
     return alert;
   }
 

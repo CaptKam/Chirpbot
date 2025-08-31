@@ -206,32 +206,15 @@ export class NCAAFEngine {
   async processGameAlerts(): Promise<void> {
     try {
       const games = await this.getTodaysGames();
-      const liveGames = games.filter(game => {
-        // STRICT: Only process games that are actually live/in-progress
-        const isLive = game.status === 'STATUS_IN_PROGRESS' || 
-                      game.status === 'STATUS_HALFTIME' ||
-                      game.status === 'STATUS_OVERTIME' ||
-                      game.status === 'STATUS_FIRST_HALF' ||
-                      game.status === 'STATUS_SECOND_HALF' ||
-                      game.status.includes('QUARTER') ||
-                      game.status.includes('PERIOD');
-        
-        // Also check if period > 0 (game has started)
-        const hasStarted = game.period > 0;
-        
-        // BLOCK scheduled/pregame games completely
-        const isScheduled = game.status === 'STATUS_SCHEDULED' || 
-                           game.status === 'STATUS_PREGAME' ||
-                           game.status.includes('PREGAME') ||
-                           game.status.includes('SCHEDULED');
-        
-        if (isScheduled) {
-          console.log(`🚫 NCAAF: Blocking scheduled game ${game.awayTeam} @ ${game.homeTeam} - Status: ${game.status}`);
-          return false;
-        }
-        
-        return isLive && hasStarted;
-      });
+      const liveGames = games.filter(game => 
+        game.status === 'STATUS_IN_PROGRESS' || 
+        game.status === 'STATUS_HALFTIME' ||
+        game.status === 'STATUS_OVERTIME' ||
+        game.status === 'STATUS_FIRST_HALF' ||
+        game.status === 'STATUS_SECOND_HALF' ||
+        game.status.includes('QUARTER') ||
+        game.status.includes('PERIOD')
+      );
 
       // Also log games that are about to start or in pre-game
       const upcomingGames = games.filter(game => 
@@ -264,17 +247,6 @@ export class NCAAFEngine {
 
   private async processGameForAlerts(game: any): Promise<void> {
     try {
-      // FIRST: Validate game is actually live before any processing
-      const isScheduled = game.status === 'STATUS_SCHEDULED' || 
-                         game.status === 'STATUS_PREGAME' ||
-                         game.status.includes('PREGAME') ||
-                         game.status.includes('SCHEDULED');
-
-      if (isScheduled) {
-        console.log(`🚫 NCAAF: Blocking alert processing for scheduled game ${game.awayTeam} @ ${game.homeTeam}`);
-        return;
-      }
-
       const gameState = this.parseGameState(game);
 
       // ALWAYS use the NCAAF Alert Model for proper situation analysis
@@ -653,7 +625,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'redZone',
         priority: 85,
-        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'RED_ZONE', gameState),
+        description: `${gameState.awayTeam} in the red zone vs ${gameState.homeTeam}`,
         reasons: ['Team driving inside the 20-yard line'],
         probability: 75,
         deduplicationKey: `${gameState.gameId}:redZone:${gameState.period}`
@@ -667,7 +639,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'closeGame',
         priority: 90,
-        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'CLOSE_GAME', gameState),
+        description: `Close game! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
         reasons: [`${scoreDiff}-point game in final minutes`],
         probability: 85,
         deduplicationKey: `${gameState.gameId}:closeGame:${gameState.period}`
@@ -679,7 +651,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'overtime',
         priority: 95,
-        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'OVERTIME', gameState),
+        description: `OVERTIME: ${gameState.awayTeam} vs ${gameState.homeTeam}`,
         reasons: ['Game has gone to overtime'],
         probability: 100,
         deduplicationKey: `${gameState.gameId}:overtime:${gameState.period}`
@@ -692,7 +664,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'touchdownAlert',
         priority: 92,
-        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'TOUCHDOWN', gameState),
+        description: `TOUCHDOWN! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
         reasons: ['Touchdown scored'],
         probability: 100,
         deduplicationKey: `${gameState.gameId}:touchdown:${gameState.period}:${gameState.homeScore + gameState.awayScore}`
@@ -704,7 +676,7 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       alerts.push({
         type: 'finalMinutes',
         priority: 80,
-        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'FINAL_MINUTES', gameState),
+        description: `Final minutes: ${gameState.awayTeam} vs ${gameState.homeTeam}`,
         reasons: ['Game in final minutes'],
         probability: 70,
         deduplicationKey: `${gameState.gameId}:finalMinutes:${gameState.period}`
@@ -803,41 +775,22 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
     try {
       console.log(`🏈 NCAAF: Processing specific game ${gameId} for alerts...`);
 
-      // Try to get game data and check if it's actually live
+      // Try to get game data and generate basic alerts
       const games = await this.getTodaysGames();
       const targetGame = games.find(game => game.gameId === gameId);
 
       if (!targetGame) {
-        console.log(`🏈 NCAAF: Game ${gameId} not found in today's games - skipping alert generation`);
+        console.log(`🏈 NCAAF: Game ${gameId} not found, generating basic live game alert`);
+        await this.generateBasicLiveAlert(gameId);
         return;
       }
 
-      // STRICT: Check if game is actually live before processing
-      const isScheduled = targetGame.status === 'STATUS_SCHEDULED' || 
-                         targetGame.status === 'STATUS_PREGAME' ||
-                         targetGame.status.includes('PREGAME') ||
-                         targetGame.status.includes('SCHEDULED');
-
-      if (isScheduled) {
-        console.log(`🚫 NCAAF: Game ${gameId} (${targetGame.awayTeam} @ ${targetGame.homeTeam}) is scheduled/pregame - NO ALERTS GENERATED`);
-        console.log(`📅 NCAAF: Game status: ${targetGame.status}, scheduled for future kickoff`);
-        return;
-      }
-
-      const isLive = targetGame.status === 'STATUS_IN_PROGRESS' || 
-                    targetGame.status === 'STATUS_HALFTIME' ||
-                    targetGame.status === 'STATUS_OVERTIME' ||
-                    (targetGame.period > 0);
-
-      if (!isLive) {
-        console.log(`🚫 NCAAF: Game ${gameId} is not live (Status: ${targetGame.status}, Period: ${targetGame.period}) - NO ALERTS`);
-        return;
-      }
-
-      console.log(`✅ NCAAF: Game ${gameId} is confirmed LIVE - processing alerts...`);
+      console.log(`🏈 NCAAF: Found game data for ${gameId}, processing alerts...`);
       await this.processGameForAlerts(targetGame);
     } catch (error) {
       console.error(`❌ NCAAF: Error processing specific game ${gameId}:`, error);
+      // Fallback: try to generate a basic alert anyway
+      await this.generateBasicLiveAlert(gameId);
     }
   }
 
@@ -880,36 +833,10 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
     }
   }
 
-  // Generate a basic "Game Live" alert ONLY for verified live games
+  // Generate a basic "Game Live" alert when detailed data isn't available
   private async generateBasicLiveAlert(gameId: string): Promise<void> {
     try {
-      console.log(`🏈 NCAAF: Checking if game ${gameId} is actually live before generating alert...`);
-
-      // CRITICAL: First verify the game is actually live from ESPN API
-      const todaysGames = await this.getTodaysGames();
-      const actualGame = todaysGames.find(game => 
-        game.gameId === gameId || 
-        game.espnData?.id?.toString() === gameId.replace('cfb-', '')
-      );
-
-      if (!actualGame) {
-        console.log(`🚫 NCAAF: Game ${gameId} not found in today's games - NO FAKE ALERT`);
-        return;
-      }
-
-      // STRICT: Only generate alerts for genuinely live games
-      const isActuallyLive = actualGame.status === 'STATUS_IN_PROGRESS' || 
-                             actualGame.status === 'STATUS_HALFTIME' ||
-                             actualGame.status === 'STATUS_OVERTIME' ||
-                             actualGame.status === 'STATUS_FIRST_HALF' ||
-                             actualGame.status === 'STATUS_SECOND_HALF';
-
-      if (!isActuallyLive) {
-        console.log(`🚫 NCAAF: Game ${gameId} is not live (Status: ${actualGame.status}) - NO FAKE ALERT`);
-        return;
-      }
-
-      console.log(`✅ NCAAF: Game ${gameId} is verified live (Status: ${actualGame.status}) - proceeding with alert`);
+      console.log(`🏈 NCAAF: Generating basic live alert for game ${gameId}`);
 
       // Get monitored games to find team names
       const monitoredGames = await storage.getAllMonitoredGames();
@@ -1008,37 +935,79 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
       }
       console.log(`✅ NCAAF: Basic live alert toggle validated - proceeding...`);
 
-      // Use real ESPN game data - no fake alerts
-      const score = actualGame.score || { away: 0, home: 0 };
-      const realTitle = `🏈 LIVE: ${actualGame.awayTeam} @ ${actualGame.homeTeam} (${score.away}-${score.home})`;
-      const realDescription = `${actualGame.awayTeam} @ ${actualGame.homeTeam} is live\nStatus: ${actualGame.status}`;
+      // Stage 4: Create basic live game alert (AI completely disabled) with kid-friendly format
+      const alertId = randomUUID();
+      console.log(`🆔 NCAAF: Generating basic live alert with ID: ${alertId}`);
+
+      // LAW #7: Consistent format - title shows WHAT + SCORE, description shows game info once
+      const kidFriendlyTitle = `🏈 LIVE GAME (0-0)`;
+      const kidFriendlyDescription = `1st Quarter 15:00
+Kickoff completed
+Game is now in progress`;
 
       const alert = {
-        id: randomUUID(),
-        debugId: randomUUID().substring(0, 8),
-        type: 'ncaafGameLive', 
+        id: alertId,
+        debugId: alertId.substring(0, 8), // Short ID for easy debugging
+        type: 'ncaafGameLive',
         sport: 'NCAAF',
         priority: 70,
-        title: realTitle,
-        description: realDescription,
+        title: kidFriendlyTitle,
+        message: kidFriendlyDescription,
+        description: kidFriendlyDescription,
         gameInfo: {
           sport: 'NCAAF',
           gameId: gameId,
-          homeTeam: actualGame.homeTeam,
-          awayTeam: actualGame.awayTeam,
-          status: actualGame.status, // Use REAL status from ESPN
-          score: score
+          homeTeam: gameInfo.homeTeamName || 'Home Team',
+          awayTeam: gameInfo.awayTeamName || 'Away Team',
+          status: 'STATUS_IN_PROGRESS',
+          situation: 'Game Live',
+          quarter: 'Live',
+          score: { home: 0, away: 0 }
         },
+
+        // Store basic game data (AI disabled)
+        analysisData: {
+          gameState: {
+            period: 1,
+            clock: '15:00',
+            down: 1,
+            distance: 10,
+            yardsToGoal: 50,
+            fieldPosition: 50,
+            redZone: false,
+            timeoutsRemaining: {
+              home: 3,
+              away: 3
+            }
+          }
+        },
+
         probability: 0.8,
         confidence: 0.75,
+        betbookData: betbookData,
         timestamp: new Date(),
+        userId: 'system',
         seen: false
       };
 
-      // Store and broadcast the real alert
+      // LAW #7: No AI needed - consistent basic format
+      enhancedTitle = `🏈 LIVE GAME (0-0)`;
+      enhancedDescription = `1st Quarter 15:00
+Kickoff completed  
+Game is now in progress`;
+      aiConfidence = 0.50;
+
+      console.log(`🚫 NCAAF: AI disabled, using basic game description only`);
+
+      // Update alert with AI-enhanced content
+      alert.title = enhancedTitle;
+      alert.description = enhancedDescription;
+      alert.confidence = aiConfidence;
+
+      // Store and broadcast the alert
       await storage.createAlert(alert);
-      console.log(`📢 NCAAF: REAL live alert sent for ${actualGame.awayTeam} @ ${actualGame.homeTeam}`);
-      console.log(`🆔 NCAAF: Alert ID: ${alert.id}`);
+      console.log(`📢 NCAAF: Basic live alert sent for ${gameInfo.awayTeamName} @ ${gameInfo.homeTeamName}`);
+      console.log(`🆔 NCAAF: Alert ID: ${alert.id} | Debug ID: ${alert.debugId} | Type: ${alert.type}`);
 
       if (this.onAlert) {
         this.onAlert(alert);
@@ -1428,7 +1397,7 @@ ${situation}`;
         type: 'gameFlowEvent',
         sport: 'NCAAF',
         title: `Game Flow: ${eventType}`,
-        description: AlertFormatValidator.generateStandardDescription('NCAAF', 'GAME_FLOW_EVENT', gameState),
+        description: `${eventType} event in ${gameState.awayTeam} @ ${gameState.homeTeam}`,
         gameInfo: {
           gameId: gameState.gameId,
           homeTeam: gameState.homeTeam,

@@ -2,7 +2,6 @@ import { storage } from '../../storage';
 import { sendTelegramAlert } from '../telegram';
 import { randomUUID } from 'crypto';
 import { fetchJson } from '../http';
-import { AlertFormatValidator } from './AlertFormatValidator';
 
 interface NHLGameState {
   gameId: string;
@@ -103,7 +102,7 @@ export class NHLEngine {
       if (gameState.powerPlay) {
         alerts.push({
           priority: 85,
-          description: AlertFormatValidator.generateStandardDescription('NHL', 'POWER_PLAY', gameState),
+          description: `⚡ POWER PLAY! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
           reasons: ['Man advantage opportunity', 'High scoring probability', 'Power play active'],
           probability: 0.9,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'POWER_PLAY'),
@@ -115,7 +114,7 @@ export class NHLEngine {
       if (gameState.emptyNet) {
         alerts.push({
           priority: 95,
-          description: AlertFormatValidator.generateStandardDescription('NHL', 'EMPTY_NET', gameState),
+          description: `😨 EMPTY NET! ${gameState.awayTeam} vs ${gameState.homeTeam} goalie pulled`,
           reasons: ['Goalie pulled', 'Extra attacker', 'Desperation time'],
           probability: 1.0,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'EMPTY_NET'),
@@ -127,7 +126,7 @@ export class NHLEngine {
       if (Math.abs(gameState.homeScore - gameState.awayScore) <= 1 && gameState.period >= 2) {
         alerts.push({
           priority: 80,
-          description: AlertFormatValidator.generateStandardDescription('NHL', 'CLOSE_GAME', gameState),
+          description: `🏆 ONE-GOAL GAME! ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`,
           reasons: ['One-goal difference', `${gameState.period}${this.getOrdinalSuffix(gameState.period)} period`, 'Anyone can win'],
           probability: 0.8,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'CLOSE_GAME'),
@@ -139,7 +138,7 @@ export class NHLEngine {
       if (gameState.overtime) {
         alerts.push({
           priority: 90,
-          description: AlertFormatValidator.generateStandardDescription('NHL', 'OVERTIME', gameState),
+          description: `⏰ OVERTIME! ${gameState.awayTeam} vs ${gameState.homeTeam} going to extra time`,
           reasons: ['Overtime period', 'Sudden death', 'High stakes'],
           probability: 1.0,
           deduplicationKey: this.generateDeduplicationKey(gameState, 'OVERTIME'),

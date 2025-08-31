@@ -15,7 +15,6 @@ const FILTER_OPTIONS = [
   { id: "nfl", label: "NFL", active: false },
   { id: "nba", label: "NBA", active: false },
   { id: "nhl", label: "NHL", active: false },
-  { id: "ncaaf", label: "NCAAF", active: false },
 ];
 
 export default function Alerts() {
@@ -74,15 +73,6 @@ export default function Alerts() {
       );
     })
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) : [];
-
-  // Debug logging
-  console.log('DEBUG - Alerts data:', {
-    totalAlerts: alerts.length,
-    activeFilters,
-    filteredCount: filteredAlerts.length,
-    sampleSport: alerts[0]?.sport,
-    isLoading
-  });
 
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
@@ -167,8 +157,8 @@ export default function Alerts() {
                   awayScore: alert.gameInfo?.score?.away || 0,
                   probability: 0.75,
                   priority: alert.priority || 75,
-                  betbookData: alert.betbookData || undefined,
-                  gameInfo: alert.gameInfo as any
+                  betbookData: alert.betbookData,
+                  gameInfo: alert.gameInfo
                 }}
               >
                 <Card
@@ -185,14 +175,9 @@ export default function Alerts() {
                   {/* Header: Team Names, Score, and Sport */}
                   {alert.gameInfo?.awayTeam && alert.gameInfo?.homeTeam && (
                     <div className="flex items-center justify-between w-full px-4 py-3 bg-white/5 backdrop-blur-sm text-white border-b border-white/10">
-                      <div className="flex flex-col items-start">
-                        <span className="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-1 rounded-full text-[11px] ring-1 ring-emerald-500/30">
-                          {alert.sport}
-                        </span>
-                        <span className="text-[10px] text-slate-400 mt-1 font-mono">
-                          ID: {alert.id.slice(0, 8)}
-                        </span>
-                      </div>
+                      <span className="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-1 rounded-full text-[11px] ring-1 ring-emerald-500/30">
+                        {alert.sport}
+                      </span>
                       <div className="text-center text-lg font-bold">
                         <span className="text-slate-100">{alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}</span>
                         {alert.gameInfo?.score && (
@@ -215,27 +200,18 @@ export default function Alerts() {
                     {/* Row 1: TITLE - Law #7 Format (NO TEAM NAMES) */}
                     <div className="mb-2">
                       <h2 className="text-sm font-semibold text-slate-100 leading-normal break-words">
-                        {alert.title?.replace(/Unknown @ Unknown/gi, '')
-                                   ?.replace(/Unknown @/gi, '')
-                                   ?.replace(/@ Unknown/gi, '')
-                                   ?.replace(/\b[A-Z][a-z]+ @ [A-Z][a-z]+[a-z]*\b/g, '')
-                                   ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, '')
-                                   ?.replace(/:/g, '')
-                                   ?.replace(/^\s+|\s+$/g, '')
+                        {alert.title?.replace(/Mississippi State Bulldogs?/gi, 'Team')
+                                   ?.replace(/Southern Miss Golden Eagles?/gi, 'Team')
+                                   ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
                                    || alert.title}
                       </h2>
                     </div>
 
                     {/* Row 3: Description - Law #7 Format (3 lines max, NO TEAM NAMES) */}
                     <div className="text-xs text-slate-300 leading-relaxed break-words">
-                      {alert.description?.replace(/Unknown @ Unknown/gi, '')
-                                       ?.replace(/Unknown @/gi, '')
-                                       ?.replace(/@ Unknown/gi, '')
-                                       ?.replace(/\b[A-Z][a-z]+ @ [A-Z][a-z]+[a-z]*\b/g, '')
-                                       ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, '')
-                                       ?.replace(/:\s*\d+% scoring/g, '\n\n• High probability scoring')
-                                       ?.replace(/:/g, '')
-                                       ?.replace(/^\s+|\s+$/g, '')
+                      {alert.description?.replace(/Mississippi State Bulldogs?/gi, 'Offense')
+                                       ?.replace(/Southern Miss Golden Eagles?/gi, 'Defense')
+                                       ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
                                        || alert.description}
                     </div>
 
@@ -268,7 +244,7 @@ export default function Alerts() {
                       homeTeam: alert.gameInfo?.homeTeam,
                       awayTeam: alert.gameInfo?.awayTeam,
                     }}
-                    createdAt={new Date(alert.timestamp).toISOString()}
+                    createdAt={alert.timestamp || alert.createdAt}
                   />
                 </Card>
               </SwipeableCard>

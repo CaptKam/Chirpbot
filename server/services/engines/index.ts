@@ -14,15 +14,6 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   constructor() {
     console.log('🎯 Dynamic Sport Engine Manager initialized');
-    
-    // Set up the main alert callback to integrate sport-specific settings with global Telegram credentials
-    this.onAlert = async (alert: any) => {
-      try {
-        await this.processAlert(alert);
-      } catch (error) {
-        console.error('🚨 Error processing alert:', error);
-      }
-    };
   }
 
   async startAllEngines(): Promise<void> {
@@ -59,41 +50,19 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
         if (!hasMonitoredGames) continue;
 
-        // NCAAF: Only process actually live games - no fake alerts for scheduled games
+        // Temporary fix for NCAAF: Skip getTodaysGamesForSport and directly process monitored games
         if (sport === 'NCAAF') {
-          console.log('🏈 NCAAF: Checking for actually live games only...');
-          const { NCAAFEngine } = await import('./ncaaf-engine');
-          const engine = new NCAAFEngine();
-          const todaysGames = await engine.getTodaysGames();
-          
-          // STRICT: Only process games that are genuinely live/in-progress
-          const actuallyLiveGames = todaysGames.filter(game => {
-            const isActuallyLive = game.status === 'STATUS_IN_PROGRESS' || 
-                                   game.status === 'STATUS_HALFTIME' ||
-                                   game.status === 'STATUS_OVERTIME' ||
-                                   game.status === 'STATUS_FIRST_HALF' ||
-                                   game.status === 'STATUS_SECOND_HALF';
-            
-            if (!isActuallyLive) {
-              console.log(`🚫 NCAAF: Skipping non-live game ${game.gameId} - Status: ${game.status}`);
-            }
-            return isActuallyLive;
-          });
-          
-          // Only start engines for monitored games that are actually live
+          console.log('🏈 NCAAF: Using direct monitoring bypass...');
           const monitoredGames = await storage.getAllMonitoredGames();
-          for (const monitoredGame of monitoredGames.filter(g => g.sport === 'NCAAF')) {
-            const isGameLive = actuallyLiveGames.some(liveGame => 
-              liveGame.gameId === monitoredGame.gameId || 
-              liveGame.espnData?.id?.toString() === monitoredGame.gameId.replace('cfb-', '')
-            );
+          const ncaafGames = monitoredGames.filter(game => game.sport === 'NCAAF');
+          
+          for (const game of ncaafGames) {
+            // For monitored NCAAF games, force start engines and process alerts
+            console.log(`🏈 NCAAF: Force starting engine for monitored game ${game.gameId}`);
+            const engineKey = `${sport}_${game.gameId}`;
             
-            if (isGameLive) {
-              const engineKey = `${sport}_${monitoredGame.gameId}`;
-              if (!this.activeEngines.has(engineKey)) {
-                console.log(`🔴 NCAAF: Starting engine for live monitored game ${monitoredGame.gameId}`);
-                await this.startEngineForGame(sport, monitoredGame.gameId);
-              }
+            if (!this.activeEngines.has(engineKey)) {
+              await this.startEngineForGame(sport, game.gameId);
             }
           }
           continue;
@@ -231,8 +200,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return await cflEngine.getTodaysGames(today);
         case 'NCAAF':
-          const { NCAAFEngine } = await import('./ncaaf-engine');
-          const ncaafEngine = new NCAAFEngine();
+          const { NCAAEngine } = await import('./ncaaf-engine');
+          const ncaafEngine = new NCAAEngine();
           return await ncaafEngine.getTodaysGames(today);
         default:
           return [];
@@ -314,53 +283,6 @@ class AlertEngineManagerImpl implements AlertEngineManager {
 
   setAlertCallback(callback: (alert: any) => void): void {
     this.onAlert = callback;
-  }
-
-  /**
-   * Process alert and integrate sport-specific settings with global Telegram credentials
-   */
-  private async processAlert(alert: any): Promise<void> {
-    try {
-      console.log(`🔔 Processing alert: ${alert.sport} - ${alert.type} (Priority: ${alert.priority})`);
-      
-      // Get sport-specific settings for this alert
-      const sportSettings = await storage.getSettingsBySport(alert.sport); // Use correct storage method
-      if (!sportSettings) {
-        console.log(`⚠️ No sport settings found for ${alert.sport}`);
-        return;
-      }
-
-      // Check if Telegram is enabled for this sport
-      if (!sportSettings.telegramEnabled) {
-        console.log(`📵 Telegram disabled for ${alert.sport} - skipping notification`);
-        return;
-      }
-
-      // Get global user Telegram credentials
-      const users = await storage.getUsers();
-      const user = users[0]; // TODO: Get actual user for this alert
-      if (!user || !user.telegramBotToken || !user.telegramChatId) {
-        console.log(`🚫 Global Telegram credentials not configured - skipping notification`);
-        return;
-      }
-
-      // Send Telegram notification
-      const { sendTelegramAlert } = await import('../telegram');
-      const telegramConfig = {
-        botToken: user.telegramBotToken,
-        chatId: user.telegramChatId
-      };
-      
-      const success = await sendTelegramAlert(telegramConfig, alert);
-      if (success) {
-        console.log(`✅ Telegram notification sent for ${alert.sport} alert`);
-      } else {
-        console.log(`❌ Failed to send Telegram notification for ${alert.sport} alert`);
-      }
-      
-    } catch (error) {
-      console.error('🚨 Error processing alert for Telegram:', error);
-    }
   }
 }
 
