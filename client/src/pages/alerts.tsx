@@ -103,7 +103,6 @@ export default function Alerts() {
           </Button>
         )}
       </header>
-
       {/* Filters */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 p-4">
         <div className="flex items-center justify-between gap-2">
@@ -124,7 +123,6 @@ export default function Alerts() {
           </div>
         </div>
       </div>
-
       {/* Alerts Feed - LAW #7 COMPLIANT DISPLAY */}
       <div className="p-4 space-y-3">
         {isLoading ? (
@@ -189,7 +187,7 @@ export default function Alerts() {
 
                     {/* Row 2: TITLE - Law #7 Format */}
                     <div>
-                      <h2 className="text-xl font-bold text-white leading-tight">
+                      <h2 className="font-bold text-white text-[12px]">
                         {alert.title}
                       </h2>
                     </div>
