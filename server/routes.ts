@@ -388,9 +388,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameData: game
         }));
       } else if (sport === 'NCAAF') {
-        // DISABLED: NCAAF engine completely disabled
-        console.log('🚫 NCAAF games API disabled - no college football games');
-        games = [];
+        // ENABLED: NCAAF calendar for monitoring (alerts still disabled)
+        console.log('📅 NCAAF: Fetching college football games for calendar');
+        const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+        const ncaafEngine = new NCAAFEngine();
+        games = await ncaafEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface
         games = games.map(game => ({
