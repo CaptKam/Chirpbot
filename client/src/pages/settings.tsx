@@ -131,10 +131,11 @@ export default function Settings() {
   });
 
   const { data: settings, isLoading } = useQuery<Settings>({
-    queryKey: ["/api/settings", activeSport],
+    queryKey: ["/api/settings", { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
-      const [, sport] = queryKey;
-      const response = await fetch(`/api/settings?sport=${sport}`, {
+      const [url, params] = queryKey;
+      const searchParams = new URLSearchParams(params as Record<string, string>);
+      const response = await fetch(`${url}?${searchParams}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch settings");
@@ -162,7 +163,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       // Invalidate specific sport settings instead of all settings
-      queryClient.invalidateQueries({ queryKey: ["/api/settings", activeSport] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings", { sport: activeSport }] });
       queryClient.invalidateQueries({ queryKey: ["/api/settings/enabled-alert-keys", activeSport] });
       toast({
         title: "Settings Updated",
