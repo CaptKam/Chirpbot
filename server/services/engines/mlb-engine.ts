@@ -203,26 +203,22 @@ export class MLBEngine {
         };
         
         console.log(`🧪 MLB: Using mock game state for testing`);
-        const alerts = await this.monitor(mockGameState);
+        // REMOVED: MLB engine should only gather/store data, not generate alerts
+        console.log(`📊 MLB: Game state collected and stored - NO ALERT GENERATION`);
         
-        if (alerts.length > 0) {
-          console.log(`🚨 MLB: Generated ${alerts.length} test alerts - DISABLED FOR 4-STEP FLOW`);
-          // DISABLED: Direct alert creation bypasses 4-step flow
-          // These alerts should be created through the proper flow only
-        }
+        // Store the game state data in memory for calendar tracking
+        this.gameStates.set(mockGameState.gameId, mockGameState);
         return;
       }
 
       // Build game state from real game data
       const gameState = await this.buildGameState(game);
       if (gameState) {
-        const alerts = await this.monitor(gameState);
+        // REMOVED: MLB engine should only gather/store data, not generate alerts
+        console.log(`📊 MLB: Game state collected and stored for ${gameId} - NO ALERT GENERATION`);
         
-        if (alerts.length > 0) {
-          console.log(`🚨 MLB: Generated ${alerts.length} alerts for game ${gameId} - DISABLED FOR 4-STEP FLOW`);
-          // DISABLED: Direct alert creation bypasses 4-step flow
-          // These alerts should be created through the proper flow only
-        }
+        // Store the game state data in memory for calendar tracking
+        this.gameStates.set(gameState.gameId, gameState);
       }
     } catch (error) {
       console.error(`❌ MLB: Error processing game ${gameId}:`, error);

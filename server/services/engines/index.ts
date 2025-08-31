@@ -96,10 +96,10 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         }
       };
 
-      // Start monitoring this specific game using proper 4-step flow
+      // Start monitoring this specific game - DATA COLLECTION ONLY (NO ALERTS)
       const intervalId = setInterval(async () => {
         try {
-          await this.executeProperAlertFlow(sport, gameId, engine);
+          await this.collectGameDataOnly(sport, gameId, engine);
         } catch (error) {
           console.error(`🚨 ${sport} engine error for game ${gameId}:`, error);
         }
@@ -317,6 +317,38 @@ class AlertEngineManagerImpl implements AlertEngineManager {
       }
     }
     return null;
+  }
+
+  /**
+   * NEW: Collect game data only - NO ALERT GENERATION
+   */
+  private async collectGameDataOnly(sport: string, gameId: string, engine: any): Promise<void> {
+    try {
+      console.log(`📊 ${sport} Data Collection: Gathering data for game ${gameId} - NO ALERTS`);
+      
+      // STEP 1: Just collect and store game data
+      if (sport === 'MLB' && engine.buildGameState) {
+        const games = await engine.getTodaysGames();
+        const game = games.find((g: any) => g.gameId === gameId);
+        if (game) {
+          const gameState = await engine.buildGameState(game);
+          if (gameState) {
+            // Store data in engine for calendar tracking only
+            engine.gameStates?.set(gameId, gameState);
+            console.log(`✅ ${sport}: Game data collected and stored for ${gameId}`);
+          }
+        }
+      }
+      
+      // For other sports, just call their data collection methods
+      if (sport !== 'MLB' && engine.getTodaysGames) {
+        await engine.getTodaysGames();
+        console.log(`✅ ${sport}: Data collection completed for ${gameId}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ ${sport} data collection failed for game ${gameId}:`, error);
+    }
   }
 
   private async validateAlertModel(gameStateData: any): Promise<{valid: boolean, reason?: string, data?: any}> {
