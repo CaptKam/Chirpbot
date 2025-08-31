@@ -175,17 +175,24 @@ export default function Alerts() {
                   {/* Header: Team Names, Score, and Sport */}
                   {alert.gameInfo?.awayTeam && alert.gameInfo?.homeTeam && (
                     <div className="flex items-center justify-between w-full px-4 py-3 bg-white/5 backdrop-blur-sm text-white border-b border-white/10">
-                      <span className="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-1 rounded-full text-[11px] ring-1 ring-emerald-500/30">
-                        {alert.sport}
-                      </span>
-                      <div className="text-center text-lg font-bold">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-1 rounded-full text-[11px] ring-1 ring-emerald-500/30">
+                          {alert.sport}
+                        </span>
+                        {(alert as any).debugId && (
+                          <span className="bg-slate-700/50 text-slate-300 font-mono px-2 py-1 rounded text-[10px] ring-1 ring-slate-600/30">
+                            ID: {(alert as any).debugId}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 text-center text-lg font-bold">
                         <span className="text-slate-100">
                           {alert.gameInfo.awayTeam === 'Unknown' || !alert.gameInfo.awayTeam 
                             ? 'Away' 
                             : alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}
                         </span>
                         {alert.gameInfo?.score && (
-                          <span className="mx-4 text-emerald-400 font-mono font-black">
+                          <span className="mx-3 text-emerald-400 font-mono font-black">
                             {alert.gameInfo.score.away} - {alert.gameInfo.score.home}
                           </span>
                         )}
@@ -196,7 +203,7 @@ export default function Alerts() {
                         </span>
                       </div>
                       {!alert.seen && (
-                        <span className="bg-emerald-500 text-white text-xs font-black px-2 py-1 rounded-full shadow-lg">
+                        <span className="bg-emerald-500 text-white text-xs font-black px-2 py-1 rounded-full shadow-lg shrink-0">
                           NEW
                         </span>
                       )}
