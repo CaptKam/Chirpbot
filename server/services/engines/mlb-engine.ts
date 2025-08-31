@@ -4,7 +4,7 @@ import { AlertFormatValidator } from './AlertFormatValidator';
 import { getBetbookData, type AlertContext, type BetbookData } from './betbook-engine';
 import { storage } from '../../storage';
 
-// mlbAlertModel.cjs deleted - import removed
+import mlbAlertModel from './mlbAlertModel.cjs';
 
 interface MLBAlert {
   id: string;
@@ -43,8 +43,8 @@ export class MLBEngine {
     
     console.log(`🔍 DEBUG: Creating MLB alert [${debugId}] via Step 2 MLB Engine`);
     
-    // Model validation disabled - mlbAlertModel.cjs deleted
-    const modelValidation = { priority: 80, probability: 0.65 };
+    // Use model validation
+    const modelValidation = mlbAlertModel.checkScoringProbability(this.convertToModelFormat(gameState));
     
     const score = {
       home: gameState.homeScore,
@@ -115,8 +115,7 @@ export class MLBEngine {
     this.gameStates.set(gameState.gameId, gameState);
 
     // Check if situation warrants alert
-    // Model validation disabled - mlbAlertModel.cjs deleted
-    const modelResult = { shouldAlert: false, priority: 80, probability: 0.65 };
+    const modelResult = mlbAlertModel.checkScoringProbability(this.convertToModelFormat(gameState));
     console.log(`🤖 Model Result:`, modelResult);
     
     if (!modelResult.shouldAlert) {
