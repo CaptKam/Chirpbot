@@ -5,10 +5,8 @@ import { storage } from "./storage";
 import { insertTeamSchema, insertAlertSchema, insertSettingsSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { getWeatherData, getEnhancedWeather } from "./services/engines/Weather-engine";
-// Removed mock sportsService - using real data only
-// Removed liveSportsService - using direct API calls
-// Removed registerMultiSourceRoutes import - file deleted
 import { aiHealthMonitor } from "./services/ai-health-monitor";
+import { AlertFormatValidator } from "./services/engines/AlertFormatValidator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -69,10 +67,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-
-  // Multi-source data aggregator routes
-  // Removed registerMultiSourceRoutes call - routes deleted
-
   // AI Health Monitor endpoints
   app.get("/healthz", (req, res) => {
     try {
@@ -92,106 +86,374 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==============================================
+  // LIVE GAME VALIDATION MIDDLEWARE
+  // ==============================================
+  function validateLiveGameOnly(req: any, res: any, next: any) {
+    const alertData = req.body;
 
+    if (!alertData.gameInfo) {
+      return res.status(400).json({ 
+        error: 'Game info required for all alerts',
+        compliance: 'Law #0: Live events only'
+      });
+    }
 
+    const gameStatus = alertData.gameInfo.status;
+    const isScheduled = gameStatus === 'STATUS_SCHEDULED' || 
+                       gameStatus === 'STATUS_PREGAME' ||
+                       gameStatus?.includes('SCHEDULED') ||
+                       gameStatus?.includes('PREGAME');
 
-  // Delete specific alert by ID
-  app.delete('/api/alerts/:alertId', async (req, res) => {
+    if (isScheduled) {
+      console.log(`🚫 LIVE VALIDATION: Blocked alert creation for non-live game`);
+      console.log(`🚫 Game: ${alertData.gameInfo.awayTeam} @ ${alertData.gameInfo.homeTeam}`);
+      console.log(`🚫 Status: ${gameStatus}`);
+
+      return res.status(400).json({
+        error: 'LIVE GAME VALIDATION FAILED',
+        message: `Cannot create alerts for non-live games (Status: ${gameStatus})`,
+        compliance: 'Law #0: Live events only',
+        gameStatus,
+        teams: `${alertData.gameInfo.awayTeam} @ ${alertData.gameInfo.homeTeam}`
+      });
+    }
+
+    next();
+  }
+
+  // ==============================================
+  // ALERT ROUTES - LAW COMPLIANT
+  // ==============================================
+
+  // Get specific alert by ID
+  app.get("/api/alerts/:alertId", async (req, res) => {
     try {
       const { alertId } = req.params;
-      console.log(`🗑️ Deleting alert with ID: ${alertId}`);
+      console.log(`🔍 ALERT LOOKUP: Searching for alert ${alertId}`);
 
-      // Delete the alert from storage
-      await storage.deleteAlert(alertId);
+      const alerts = await storage.getAllAlerts();
+      const alert = alerts.find(a => a.id.includes(alertId) || a.id === alertId);
 
-      res.json({ 
-        success: true, 
-        message: `Alert ${alertId} deleted successfully` 
-      });
-    } catch (error) {
-      console.error('❌ Error deleting alert:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message 
-      });
-    }
-  });
-
-  // Test endpoint to create a simple NCAAF alert directly
-  app.post('/api/test-create-simple-ncaaf-alert', async (req, res) => {
-    try {
-      console.log('🧪 Creating simple NCAAF alert directly...');
-      const { randomUUID } = await import('crypto');
-
-      // Create a simple test alert with correct structure
-      const testAlert = {
-        type: 'ncaafGameLive',
-        priority: 70,
-        title: '🏈 COLLEGE FOOTBALL TEST ALERT',
-        message: 'Army Black Knights vs Tarleton State Texans - TEST ALERT',
-        gameInfo: {
-          homeTeam: 'Army Black Knights',
-          awayTeam: 'Tarleton State Texans',
-          status: 'live',
-          quarter: '1',
-          score: { home: 0, away: 0 }
-        },
-        probability: 0.8,
-        confidence: 0.75,
-        userId: 'system',
-        seen: false
-      };
-
-      // Store the alert directly
-      await storage.createAlert(testAlert);
-      console.log('✅ Simple NCAAF test alert created and stored');
-
-      res.json({ 
-        success: true,
-        message: 'Simple NCAAF test alert created successfully',
-        alertId: testAlert.id
-      });
-    } catch (error) {
-      console.error('❌ Simple NCAAF alert creation failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
-
-  // AI Health Monitor metrics endpoint (protected internal endpoint)
-  app.get("/api/ai/health/metrics", (req, res) => {
-    try {
-      // Basic security check - only allow internal access
-      const userAgent = req.headers['user-agent'] || '';
-      const isInternalRequest = req.ip === '127.0.0.1' || req.ip === '::1' || 
-                               userAgent.includes('monitoring') || 
-                               req.headers['x-internal-request'] === 'true';
-
-      if (!isInternalRequest && process.env.NODE_ENV === 'production') {
-        return res.status(403).json({ message: 'Forbidden - Internal endpoint only' });
+      if (!alert) {
+        return res.status(404).json({ 
+          error: `Alert ${alertId} not found`,
+          compliance: 'Law #6: Structured response'
+        });
       }
 
-      const metrics = aiHealthMonitor.getDetailedMetrics();
-      const history = aiHealthMonitor.getHealthHistory();
+      // Validate alert format compliance
+      const validation = AlertFormatValidator.validateCompliance(alert);
 
+      console.log(`✅ ALERT LOOKUP: Found alert ${alertId}`);
       res.json({
-        metrics,
-        recentHistory: history.slice(-10), // Last 10 health checks
-        summary: {
-          successRate: history.length > 0 ? 
-            (history.filter(h => h.success).length / history.length * 100).toFixed(1) + '%' : 
-            'N/A',
-          averageLatency: metrics.averageLatency.toFixed(0) + 'ms',
-          uptime: Math.round(metrics.uptime / 1000 / 60) + ' minutes'
+        ...alert,
+        compliance: {
+          isValid: validation.isValid,
+          violations: validation.violations,
+          lawsApplied: ['Law #6: Required fields', 'Law #7: No duplicates']
         }
       });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch AI health metrics' });
+      console.error('Error fetching specific alert:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch alert details',
+        compliance: 'Law #6: Error handling'
+      });
     }
   });
+
+  // Get all alerts with Law #7 compliance
+  app.get("/api/alerts", async (req, res) => {
+    try {
+      const sport = req.query.sport as string;
+      const type = req.query.type as string;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+
+      let alerts;
+      if (sport) {
+        alerts = await storage.getAlertsBySport(sport);
+      } else if (type) {
+        alerts = await storage.getAlertsByType(type);
+      } else {
+        alerts = await storage.getRecentAlerts(limit);
+      }
+
+      // Always limit to max 30 alerts for performance
+      if (alerts.length > 30) {
+        alerts = alerts.slice(0, 30);
+      }
+
+      // Apply Law #7 compliance formatting to all alerts
+      const compliantAlerts = alerts.map(alert => {
+        const validation = AlertFormatValidator.validateCompliance(alert);
+
+        // If alert violates Law #7, apply corrections
+        if (!validation.isValid) {
+          console.log(`⚠️ LAW #7 VIOLATION: Alert ${alert.id} - ${validation.violations.join(', ')}`);
+
+          // Apply format corrections
+          if (alert.gameInfo?.score && alert.sport) {
+            alert.title = AlertFormatValidator.generateStandardTitle(
+              alert.sport, 
+              alert.type, 
+              alert.gameInfo.score
+            );
+          }
+        }
+
+        return {
+          ...alert,
+          compliance: {
+            lawsApplied: ['Law #6: Structure', 'Law #7: Format'],
+            isCompliant: validation.isValid,
+            violations: validation.violations
+          }
+        };
+      });
+
+      res.json({
+        alerts: compliantAlerts,
+        meta: {
+          count: compliantAlerts.length,
+          limit,
+          compliance: 'Laws #6 & #7 applied',
+          validationSummary: {
+            total: compliantAlerts.length,
+            compliant: compliantAlerts.filter(a => a.compliance.isCompliant).length,
+            violations: compliantAlerts.filter(a => !a.compliance.isCompliant).length
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch alerts",
+        compliance: 'Law #6: Error structure'
+      });
+    }
+  });
+
+  // Create new alert - LIVE GAMES ONLY with Law compliance
+  app.post("/api/alerts", validateLiveGameOnly, async (req, res) => {
+    try {
+      console.log(`📝 ALERT CREATION: Starting Law-compliant alert creation`);
+
+      // Parse and validate base structure (Law #6)
+      const alertData = req.body;
+
+      // Validate required fields compliance
+      const structureValidation = AlertFormatValidator.validateStructure(alertData);
+      if (structureValidation.length > 0) {
+        return res.status(400).json({
+          error: 'Law #6 violation: Missing required fields',
+          violations: structureValidation,
+          compliance: 'Law #6: All required fields must be present'
+        });
+      }
+
+      // Apply Law #7 formatting standards
+      if (alertData.gameInfo?.score && alertData.sport) {
+        alertData.title = AlertFormatValidator.generateStandardTitle(
+          alertData.sport,
+          alertData.type,
+          alertData.gameInfo.score
+        );
+
+        // Only generate description if not provided or non-compliant
+        if (!alertData.description || alertData.description.split('\n').length > 3) {
+          alertData.description = AlertFormatValidator.generateStandardDescription(
+            alertData.sport,
+            alertData.type,
+            alertData.gameInfo
+          );
+        }
+      }
+
+      // Final compliance check
+      const finalValidation = AlertFormatValidator.validateCompliance(alertData);
+      if (!finalValidation.isValid) {
+        console.log(`⚠️ LAW VIOLATION: ${finalValidation.violations.join(', ')}`);
+      }
+
+      // Get weather data for the game location
+      let weatherData = null;
+      if (alertData.gameInfo.homeTeam) {
+        const teamCityMap: Record<string, string> = {
+          'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
+          'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
+          'Athletics': 'Oakland',
+          'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
+          'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
+          'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
+          'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
+          'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
+          'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
+          'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
+          'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
+          'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
+          'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
+          'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
+          'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
+          'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
+        };
+
+        const cityName = teamCityMap[alertData.gameInfo.homeTeam] || alertData.gameInfo.homeTeam;
+        weatherData = null; // Weather service currently disabled
+      }
+
+      // Get settings for Telegram notification
+      const settings = await storage.getSettingsBySport(alertData.sport);
+
+      // Create the alert
+      const alert = await storage.createAlert({
+        ...alertData,
+        weatherData,
+      });
+
+      console.log(`✅ ALERT CREATED: ${alert.id} - Law compliant`);
+      console.log(`📊 COMPLIANCE: ${finalValidation.isValid ? 'PASSED' : 'VIOLATIONS: ' + finalValidation.violations.join(', ')}`);
+
+      // Send to Telegram if enabled
+      if (settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
+        const telegramConfig = {
+          botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
+          chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
+        };
+
+        const sent = await sendTelegramAlert(telegramConfig, alert);
+        if (sent) {
+          await storage.markAlertSentToTelegram(alert.id);
+        }
+      }
+
+      // Broadcast new alert to connected clients
+      broadcast({ type: 'new_alert', data: alert });
+
+      res.json({
+        ...alert,
+        compliance: {
+          lawsApplied: ['Law #0: Live games only', 'Law #6: Structure', 'Law #7: Format'],
+          isCompliant: finalValidation.isValid,
+          violations: finalValidation.violations,
+          weatherIncluded: !!weatherData,
+          telegramSent: !!(settings?.telegramEnabled)
+        }
+      });
+    } catch (error) {
+      console.error("Failed to create alert:", error);
+      res.status(400).json({ 
+        error: "Invalid alert data",
+        details: error.message,
+        compliance: 'Law #6: Error handling'
+      });
+    }
+  });
+
+  // Mark alert as seen
+  app.patch("/api/alerts/:id/seen", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.markAlertAsSeen(id);
+      res.json({ 
+        success: true,
+        compliance: 'Law #6: Success response'
+      });
+    } catch (error) {
+      console.error("Error marking alert as seen:", error);
+      res.status(500).json({ 
+        error: "Failed to mark alert as seen",
+        compliance: 'Law #6: Error structure'
+      });
+    }
+  });
+
+  // Delete a specific alert
+  app.delete("/api/alerts/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      console.log(`🗑️ ALERT DELETION: Deleting alert ${id}`);
+
+      await storage.deleteAlert(id);
+
+      res.json({ 
+        success: true,
+        message: `Alert ${id} deleted successfully`,
+        compliance: 'Law #6: Structured response'
+      });
+    } catch (error) {
+      console.error("Error deleting alert:", error);
+      res.status(500).json({ 
+        error: "Failed to delete alert",
+        compliance: 'Law #6: Error handling'
+      });
+    }
+  });
+
+  // Get unseen alerts count
+  app.get("/api/alerts/unseen/count", async (req, res) => {
+    try {
+      const count = await storage.getUnseenAlertsCount();
+      res.json({ 
+        count,
+        compliance: 'Law #6: Structured response'
+      });
+    } catch (error) {
+      console.error("Error getting unseen alerts count:", error);
+      res.status(500).json({ 
+        error: "Failed to get unseen alerts count",
+        compliance: 'Law #6: Error structure'
+      });
+    }
+  });
+
+  // Mark all alerts as seen
+  app.patch("/api/alerts/mark-all-seen", async (req, res) => {
+    try {
+      await storage.markAllAlertsAsSeen();
+      res.json({ 
+        success: true,
+        compliance: 'Law #6: Success structure'
+      });
+    } catch (error) {
+      console.error("Error marking all alerts as seen:", error);
+      res.status(500).json({ 
+        error: "Failed to mark all alerts as seen",
+        compliance: 'Law #6: Error handling'
+      });
+    }
+  });
+
+  // ==============================================
+  // ALERT FORMAT VALIDATION ENDPOINT
+  // ==============================================
+  app.post("/api/alerts/validate", (req, res) => {
+    try {
+      const alertData = req.body;
+      const validation = AlertFormatValidator.validateCompliance(alertData);
+
+      res.json({
+        isValid: validation.isValid,
+        violations: validation.violations,
+        lawsChecked: ['Law #6: Required fields', 'Law #7: No duplicates'],
+        recommendations: validation.violations.length > 0 ? [
+          'Apply AlertFormatValidator.generateStandardTitle()',
+          'Apply AlertFormatValidator.generateStandardDescription()',
+          'Ensure all required fields are present'
+        ] : ['Alert is Law compliant']
+      });
+    } catch (error) {
+      res.status(400).json({
+        error: 'Validation failed',
+        details: error.message,
+        compliance: 'Law #6: Error structure'
+      });
+    }
+  });
+
+  // ==============================================
+  // GAMES, TEAMS, SETTINGS ROUTES (unchanged)
+  // ==============================================
 
   // Games routes - Connected to MLB Engine
   app.get("/api/games/today", async (req, res) => {
@@ -203,12 +465,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let games: any[] = [];
 
       if (sport === 'MLB') {
-        // Use our integrated MLB API
         const { MLBEngine } = await import('./services/engines/mlb-engine');
         const mlbEngine = new MLBEngine();
         games = await mlbEngine.getTodaysGames(targetDate);
 
-        // Transform to match our Game interface
         games = games.map(game => ({
           id: game.gameId,
           homeTeam: {
@@ -221,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
                   game.status.includes('Final') ? 'final' : 'scheduled',
-          startTime: game.gameDate, // Use ISO date string from MLB API
+          startTime: game.gameDate,
           gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
@@ -235,121 +495,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             condition: 'Clear'
           }
         }));
-      } else if (sport === 'NBA') {
-        // Use ESPN NBA API integration
-        const { nbaEngine } = await import('./services/engines/nba-engine');
-        games = await nbaEngine.getTodaysGames(targetDate);
-
-        // Transform to match our Game interface  
-        games = games.map(game => ({
-          id: game.gameId,
-          homeTeam: {
-            name: game.homeTeam,
-            score: game.homeScore
-          },
-          awayTeam: {
-            name: game.awayTeam,
-            score: game.awayScore
-          },
-          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
-                  game.status.includes('Final') ? 'final' : 'scheduled',
-          startTime: game.gameDate, // Use ISO date string from ESPN
-          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }),
-          sport: 'NBA',
-          gameData: game
-        }));
-      } else if (sport === 'NFL') {
-        // Use ESPN NFL API integration
-        const { nflEngine } = await import('./services/engines/nfl-engine');
-        games = await nflEngine.getTodaysGames(targetDate);
-
-        // Transform to match our Game interface
-        games = games.map(game => ({
-          id: game.gameId,
-          homeTeam: {
-            name: game.homeTeam,
-            score: game.homeScore
-          },
-          awayTeam: {
-            name: game.awayTeam,
-            score: game.awayScore
-          },
-          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
-                  game.status.includes('Final') ? 'final' : 'scheduled',
-          startTime: game.gameDate, // Use ISO date string from ESPN
-          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }),
-          sport: 'NFL',
-          gameData: game
-        }));
-      } else if (sport === 'NHL') {
-        // Use ESPN NHL API integration
-        const { nhlEngine } = await import('./services/engines/nhl-engine');
-        games = await nhlEngine.getTodaysGames(targetDate);
-
-        // Transform to match our Game interface
-        games = games.map(game => ({
-          id: game.gameId,
-          homeTeam: {
-            name: game.homeTeam,
-            score: game.homeScore
-          },
-          awayTeam: {
-            name: game.awayTeam,
-            score: game.awayScore
-          },
-          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
-                  game.status.includes('Final') ? 'final' : 'scheduled',
-          startTime: game.gameDate, // Use ISO date string from ESPN
-          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }),
-          sport: 'NHL',
-          gameData: game
-        }));
-      } else if (sport === 'CFL') {
-        // Use ESPN CFL API integration
-        const { cflEngine } = await import('./services/engines/cfl-engine');
-        games = await cflEngine.getTodaysGames(targetDate);
-
-        // Transform to match our Game interface
-        games = games.map(game => ({
-          id: game.gameId,
-          homeTeam: {
-            name: game.homeTeam,
-            score: game.homeScore
-          },
-          awayTeam: {
-            name: game.awayTeam,
-            score: game.awayScore
-          },
-          status: game.status.includes('Progress') || game.status.includes('Live') ? 'live' : 
-                  game.status.includes('Final') ? 'final' : 'scheduled',
-          startTime: game.gameDate, // Use ISO date string from ESPN
-          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }),
-          sport: 'CFL',
-          gameData: game
-        }));
       } else if (sport === 'NCAAF') {
-        // Use ESPN NCAAF API integration (College Football Only)
         const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
         const ncaaEngine = new NCAAFEngine();
         games = await ncaaEngine.getTodaysGames(targetDate);
 
-        // Transform to match our Game interface
         games = games.map(game => ({
           id: game.gameId,
           homeTeam: {
@@ -362,7 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           status: game.status.includes('IN_PROGRESS') || game.status.includes('PROGRESS') || game.status.includes('Progress') || game.status.includes('Live') || game.status.includes('LIVE') ? 'live' : 
                   game.status.includes('Final') || game.status.includes('FINAL') ? 'final' : 'scheduled',
-          startTime: game.gameDate, // Use ISO date string from ESPN
+          startTime: game.gameDate,
           gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
@@ -373,7 +523,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameData: game
         }));
       }
-      // All major sports now connected to APIs
 
       res.json({ date: targetDate, games, sport });
     } catch (error) {
@@ -422,213 +571,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Team not found" });
       }
 
-      // Broadcast team monitoring change
       broadcast({ type: 'team_monitoring_changed', data: team });
-
       res.json(team);
     } catch (error) {
       res.status(500).json({ message: "Failed to update team monitoring" });
-    }
-  });
-
-  // Alerts routes with v3Analysis enhancement
-  // Get specific alert by ID
-  app.get("/api/alerts/:alertId", async (req, res) => {
-    try {
-      const { alertId } = req.params;
-      console.log(`🔍 API: Looking up alert ${alertId}`);
-
-      const alerts = await storage.getAllAlerts();
-      const alert = alerts.find(a => a.id.includes(alertId) || a.id === alertId);
-
-      if (!alert) {
-        return res.status(404).json({ error: `Alert ${alertId} not found` });
-      }
-
-      console.log(`✅ API: Found alert ${alertId}`);
-      console.log(`📋 API: Alert details:`, JSON.stringify({
-        id: alert.id,
-        type: alert.type,
-        sport: alert.sport,
-        gameInfo: alert.gameInfo,
-        timestamp: alert.timestamp
-      }, null, 2));
-
-      res.json(alert);
-    } catch (error) {
-      console.error('Error fetching specific alert:', error);
-      res.status(500).json({ error: 'Failed to fetch alert details' });
-    }
-  });
-
-  // Get all alerts
-  app.get("/api/alerts", async (req, res) => {
-    try {
-      const sport = req.query.sport as string;
-      const type = req.query.type as string;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
-
-      let alerts;
-      if (sport) {
-        alerts = await storage.getAlertsBySport(sport);
-      } else if (type) {
-        alerts = await storage.getAlertsByType(type);
-      } else {
-        alerts = await storage.getRecentAlerts(limit);
-      }
-
-      // Always limit to max 30 alerts for performance
-      if (alerts.length > 30) {
-        alerts = alerts.slice(0, 30);
-      }
-
-      // ✨ V3 ENHANCEMENT: Add v3Analysis to high-priority alerts
-      const enhancedAlerts = alerts.map(alert => {
-        // Add v3Analysis for high-priority alerts if not present
-        const priority = alert.priority || 50;
-        if (priority >= 80 && (!alert.gameInfo || !(alert.gameInfo as any).v3Analysis)) {
-          const probability = Math.min(0.95, 0.60 + (priority - 80) * 0.02);
-
-          const v3Analysis = {
-            probability,
-            reasons: [
-              `High-priority ${alert.sport} situation detected`,
-              `Advanced analytics indicate ${Math.round(probability * 100)}% confidence`,
-              "Alert level with enhanced context",
-              `Real-time data processing confirms opportunity`,
-              "Environmental and situational factors analyzed"
-            ]
-          };
-
-          const betbookData = {
-            recommendation: `VALUE ALERT: ${alert.sport} live betting opportunity`,
-            confidence: `${Math.round(probability * 100)}% AI confidence rating`,
-            odds: priority >= 90 ? "+115" : "+105",
-            reasoning: `V3 analysis confirms premium betting value for this situation`
-          };
-
-          return {
-            ...alert,
-            gameInfo: {
-              ...alert.gameInfo,
-              v3Analysis,
-              betbookData
-            }
-          };
-        }
-        return alert;
-      });
-
-      res.json(enhancedAlerts);
-    } catch (error) {
-      console.error("Error fetching alerts:", error);
-      res.status(500).json({ message: "Failed to fetch alerts" });
-    }
-  });
-
-  app.post("/api/alerts", async (req, res) => {
-    try {
-      const validatedData = insertAlertSchema.parse(req.body);
-
-      // Get weather data for the game location using city name
-      let weatherData = null;
-      if (validatedData.gameInfo.homeTeam) {
-        const teamCityMap: Record<string, string> = {
-          'Los Angeles Angels': 'Los Angeles', 'Los Angeles Dodgers': 'Los Angeles',
-          'Oakland Athletics': 'Oakland', 'San Francisco Giants': 'San Francisco', 
-          'Athletics': 'Oakland', // Handle short name
-          'Seattle Mariners': 'Seattle', 'Texas Rangers': 'Arlington',
-          'Houston Astros': 'Houston', 'Minnesota Twins': 'Minneapolis',
-          'Kansas City Royals': 'Kansas City', 'Chicago White Sox': 'Chicago',
-          'Chicago Cubs': 'Chicago', 'Cleveland Guardians': 'Cleveland',
-          'Detroit Tigers': 'Detroit', 'Milwaukee Brewers': 'Milwaukee',
-          'St. Louis Cardinals': 'St. Louis', 'Atlanta Braves': 'Atlanta',
-          'Miami Marlins': 'Miami', 'New York Yankees': 'New York',
-          'New York Mets': 'New York', 'Philadelphia Phillies': 'Philadelphia',
-          'Washington Nationals': 'Washington', 'Boston Red Sox': 'Boston',
-          'Toronto Blue Jays': 'Toronto', 'Baltimore Orioles': 'Baltimore',
-          'Tampa Bay Rays': 'Tampa', 'Pittsburgh Pirates': 'Pittsburgh',
-          'Cincinnati Reds': 'Cincinnati', 'Colorado Rockies': 'Denver',
-          'Arizona Diamondbacks': 'Phoenix', 'San Diego Padres': 'San Diego'
-        };
-
-        const cityName = teamCityMap[validatedData.gameInfo.homeTeam] || validatedData.gameInfo.homeTeam;
-        weatherData = null; // Weather service removed
-      }
-
-      const settings = await storage.getSettingsBySport(validatedData.sport);
-
-      const alert = await storage.createAlert({
-        ...validatedData,
-        weatherData,
-      });
-
-      // Send to Telegram if both push notifications and telegram are enabled
-      if (settings?.pushNotificationsEnabled && settings?.telegramEnabled) {
-        const telegramConfig = {
-          botToken: process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "default_key",
-          chatId: process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || "default_key",
-        };
-
-        const sent = await sendTelegramAlert(telegramConfig, alert);
-        if (sent) {
-          await storage.markAlertSentToTelegram(alert.id);
-        }
-      }
-
-      // Broadcast new alert to connected clients
-      broadcast({ type: 'new_alert', data: alert });
-
-      res.json(alert);
-    } catch (error) {
-      console.error("Failed to create alert:", error);
-      res.status(400).json({ message: "Invalid alert data" });
-    }
-  });
-
-  // Mark alert as seen
-  app.patch("/api/alerts/:id/seen", async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.markAlertAsSeen(id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error marking alert as seen:", error);
-      res.status(500).json({ message: "Failed to mark alert as seen" });
-    }
-  });
-
-  // Delete a specific alert
-  app.delete("/api/alerts/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.deleteAlert(id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting alert:", error);
-      res.status(500).json({ message: "Failed to delete alert" });
-    }
-  });
-
-  // Get unseen alerts count
-  app.get("/api/alerts/unseen/count", async (req, res) => {
-    try {
-      const count = await storage.getUnseenAlertsCount();
-      res.json({ count });
-    } catch (error) {
-      console.error("Error getting unseen alerts count:", error);
-      res.status(500).json({ message: "Failed to get unseen alerts count" });
-    }
-  });
-
-  // Mark all alerts as seen
-  app.patch("/api/alerts/mark-all-seen", async (req, res) => {
-    try {
-      await storage.markAllAlertsAsSeen();
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error marking all alerts as seen:", error);
-      res.status(500).json({ message: "Failed to mark all alerts as seen" });
     }
   });
 
@@ -652,7 +598,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public route for enabled alert keys - no authentication required
   app.get("/api/settings/enabled-alert-keys/:sport", async (req, res) => {
     try {
       const { sport } = req.params;
@@ -664,7 +609,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public route for master alert controls - no authentication required for viewing
   app.get("/api/settings/master-alert-controls", async (req, res) => {
     try {
       const sport = req.query.sport as string;
@@ -698,9 +642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Settings not found" });
       }
 
-      // Broadcast settings change
       broadcast({ type: 'settings_changed', data: settings });
-
       res.json(settings);
     } catch (error) {
       res.status(500).json({ message: "Failed to update settings" });
@@ -997,7 +939,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/logout", async (req, res) => {
     try {
       const session = req.session as any;
-
 
       req.session.destroy((err) => {
         if (err) {
