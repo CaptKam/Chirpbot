@@ -176,7 +176,7 @@ export default function Alerts() {
                   <div className="p-6 space-y-4">
                     {/* Row 1: Sport + NEW Badge */}
                     <div className="flex items-center justify-between">
-                      <span className="bg-blue-500/20 text-blue-300 text-base font-bold px-3 py-1 rounded-full">
+                      <span className="bg-blue-500/20 text-blue-300 font-bold px-3 py-1 rounded-full text-[13px]">
                         {alert.sport}
                       </span>
                       {!alert.seen && (
