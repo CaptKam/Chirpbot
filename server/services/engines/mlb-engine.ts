@@ -200,15 +200,9 @@ export class MLBEngine {
         const alerts = await this.monitor(mockGameState);
         
         if (alerts.length > 0) {
-          console.log(`🚨 MLB: Generated ${alerts.length} test alerts`);
-          // Store alerts and broadcast them
-          for (const alert of alerts) {
-            const { storage } = await import('../../storage');
-            await storage.createAlert(alert);
-            if (this.onAlert) {
-              this.onAlert(alert);
-            }
-          }
+          console.log(`🚨 MLB: Generated ${alerts.length} test alerts - DISABLED FOR 4-STEP FLOW`);
+          // DISABLED: Direct alert creation bypasses 4-step flow
+          // These alerts should be created through the proper flow only
         }
         return;
       }
@@ -219,15 +213,9 @@ export class MLBEngine {
         const alerts = await this.monitor(gameState);
         
         if (alerts.length > 0) {
-          console.log(`🚨 MLB: Generated ${alerts.length} alerts for game ${gameId}`);
-          // Store alerts and broadcast them
-          for (const alert of alerts) {
-            const { storage } = await import('../../storage');
-            await storage.createAlert(alert);
-            if (this.onAlert) {
-              this.onAlert(alert);
-            }
-          }
+          console.log(`🚨 MLB: Generated ${alerts.length} alerts for game ${gameId} - DISABLED FOR 4-STEP FLOW`);
+          // DISABLED: Direct alert creation bypasses 4-step flow
+          // These alerts should be created through the proper flow only
         }
       }
     } catch (error) {

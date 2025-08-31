@@ -187,64 +187,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint to force generate MLB alerts
-  app.post('/api/test-force-mlb-alert', async (req, res) => {
-    try {
-      console.log('🧪 Force generating MLB alert...');
-      const { MLBEngine } = await import('./services/engines/mlb-engine');
-      const engine = new MLBEngine();
-      
-      // Set up alert callback to capture generated alerts
-      const generatedAlerts: any[] = [];
-      engine.onAlert = (alert: any) => {
-        generatedAlerts.push(alert);
-        broadcast({ type: 'new_alert', data: alert });
-      };
-      
-      // Force generate alert for a mock live game
-      await engine.processSpecificGame('test-game-12345');
-      console.log('✅ MLB alert generation completed');
-      
-      res.json({ 
-        success: true,
-        message: 'MLB alert force generation completed',
-        alertsGenerated: generatedAlerts.length,
-        alerts: generatedAlerts
-      });
-    } catch (error) {
-      console.error('❌ MLB alert generation test failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
+  // DISABLED: Test endpoint bypasses 4-step flow - alerts must go through proper validation
+  // app.post('/api/test-force-mlb-alert', async (req, res) => {
+  //   // DISABLED: This endpoint bypasses Game Status → Sport Engine → AlertModel → OpenAI → Betbook → Launch flow
+  //   res.status(410).json({ 
+  //     success: false, 
+  //     message: 'Endpoint disabled - alerts must follow proper 4-step flow system' 
+  //   });
+  // });
 
-  // Test endpoint to force generate a NCAAF alert
-  app.post('/api/test-force-ncaaf-alert', async (req, res) => {
-    try {
-      console.log('🧪 Force generating NCAAF alert...');
-      const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
-      const engine = new NCAAFEngine();
-      
-      // Force generate basic live alert
-      await engine.processSpecificGame('cfb-401762432');
-      console.log('✅ NCAAF alert generation completed');
-      
-      res.json({ 
-        success: true,
-        message: 'NCAAF alert force generation completed'
-      });
-    } catch (error) {
-      console.error('❌ NCAAF alert generation test failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
+  // DISABLED: Test endpoint bypasses 4-step flow - NCAAF engine completely disabled anyway
+  // app.post('/api/test-force-ncaaf-alert', async (req, res) => {
+  //   // DISABLED: This endpoint bypasses Game Status → Sport Engine → AlertModel → OpenAI → Betbook → Launch flow
+  //   res.status(410).json({ 
+  //     success: false, 
+  //     message: 'Endpoint disabled - NCAAF engine completely disabled and alerts must follow proper 4-step flow' 
+  //   });
+  // });
 
   // Delete specific alert by ID
   app.delete('/api/alerts/:alertId', async (req, res) => {
@@ -268,49 +227,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint to create a simple NCAAF alert directly
-  app.post('/api/test-create-simple-ncaaf-alert', async (req, res) => {
-    try {
-      console.log('🧪 Creating simple NCAAF alert directly...');
-      const { randomUUID } = await import('crypto');
-      
-      // Create a simple test alert with correct structure
-      const testAlert = {
-        type: 'ncaafGameLive',
-        priority: 70,
-        title: '🏈 COLLEGE FOOTBALL TEST ALERT',
-        message: 'Army Black Knights vs Tarleton State Texans - TEST ALERT',
-        gameInfo: {
-          homeTeam: 'Army Black Knights',
-          awayTeam: 'Tarleton State Texans',
-          status: 'live',
-          quarter: '1',
-          score: { home: 0, away: 0 }
-        },
-        probability: 0.8,
-        confidence: 0.75,
-        userId: 'system',
-        seen: false
-      };
-
-      // Store the alert directly
-      await storage.createAlert(testAlert);
-      console.log('✅ Simple NCAAF test alert created and stored');
-      
-      res.json({ 
-        success: true,
-        message: 'Simple NCAAF test alert created successfully',
-        alertId: testAlert.id
-      });
-    } catch (error) {
-      console.error('❌ Simple NCAAF alert creation failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
+  // DISABLED: Direct alert creation bypasses 4-step flow - completely disabled
+  // app.post('/api/test-create-simple-ncaaf-alert', async (req, res) => {
+  //   // DISABLED: Direct storage.createAlert bypasses Game Status → Sport Engine → AlertModel → OpenAI → Betbook → Launch flow
+  //   res.status(410).json({ 
+  //     success: false, 
+  //     message: 'Endpoint disabled - direct alert creation bypasses proper 4-step validation flow' 
+  //   });
+  // });
 
   // AI Health Monitor metrics endpoint (protected internal endpoint)
   app.get("/api/ai/health/metrics", (req, res) => {
