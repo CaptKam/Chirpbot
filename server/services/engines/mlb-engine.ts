@@ -1,4 +1,3 @@
-
 import { MLBGameStateV3, SimpleAlert } from './index';
 import { AlertFormatValidator } from './AlertFormatValidator';
 import { getBetbookData, type AlertContext, type BetbookData } from './betbook-engine';
@@ -38,10 +37,10 @@ export class MLBEngine {
    */
   private async createStandardAlert(gameState: MLBGameStateV3, alertResult: any): Promise<MLBAlert> {
     const alertId = `mlb_${gameState.gameId}_${Date.now()}`;
-    
+
     // Use model validation
     const modelValidation = mlbAlertModel.checkScoringProbability(this.convertToModelFormat(gameState));
-    
+
     const score = {
       home: gameState.homeScore,
       away: gameState.awayScore
@@ -107,14 +106,14 @@ export class MLBEngine {
 
     // Check if situation warrants alert
     const modelResult = mlbAlertModel.checkScoringProbability(this.convertToModelFormat(gameState));
-    
+
     // Debug logging to understand why alerts aren't being generated
     console.log(`⚾ MLB DEBUG Game ${gameState.gameId} (${gameState.awayTeam} @ ${gameState.homeTeam}):`);
     console.log(`   Score: ${gameState.awayScore}-${gameState.homeScore}, Inning: ${gameState.inning}${gameState.inningState}, Outs: ${gameState.outs}`);
     console.log(`   Runners: 1B:${!!gameState.runners.first} 2B:${!!gameState.runners.second} 3B:${!!gameState.runners.third}`);
     console.log(`   Model result: prob=${(modelResult.probability * 100).toFixed(1)}%, severity=${modelResult.severity}, shouldAlert=${modelResult.shouldAlert}`);
     console.log(`   Reasons: ${modelResult.reasons?.join(', ')}`);
-    
+
     if (!modelResult.shouldAlert) {
       return [];
     }
@@ -130,7 +129,7 @@ export class MLBEngine {
 
     // Create standardized alert
     const alert = await this.createStandardAlert(gameState, modelResult);
-    
+
     // Validate compliance with Laws #6 and #7
     const validation = AlertFormatValidator.validateCompliance(alert);
     if (!validation.isValid) {
@@ -172,7 +171,7 @@ export class MLBEngine {
       const url = `https://statsapi.mlb.com/api/v1/game/${gameId}/linescore`;
       const response = await fetch(url);
       const data = await response.json();
-      
+
       if (!data || !data.teams) {
         console.log(`🔍 MLB: No data found for game ${gameId}`);
         return;
@@ -182,7 +181,7 @@ export class MLBEngine {
       const { storage } = await import('../../storage');
       const monitoredGames = await storage.getAllMonitoredGames();
       const gameInfo = monitoredGames.find(g => g.gameId === gameId);
-      
+
       // Use actual team names from monitored games, with API fallback
       const homeTeam = gameInfo?.homeTeamName || data.teams.home.team?.name || 'Home Team';
       const awayTeam = gameInfo?.awayTeamName || data.teams.away.team?.name || 'Away Team';
@@ -210,12 +209,12 @@ export class MLBEngine {
 
       // Process the game state for alerts
       const alerts = await this.monitor(gameState);
-      
+
       // If alerts generated, trigger them via callback
       if (alerts.length > 0 && this.onAlert) {
         alerts.forEach(alert => this.onAlert!(alert));
       }
-      
+
     } catch (error) {
       console.error(`❌ MLB: Error processing game ${gameId}:`, error);
     }
@@ -229,13 +228,13 @@ export class MLBEngine {
       const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=linescore,team`;
       const response = await fetch(url);
       const data = await response.json();
-      
+
       if (!data.dates || data.dates.length === 0) {
         return [];
       }
-      
+
       const games = data.dates[0].games || [];
-      
+
       return games.map((game: any) => ({
         gameId: game.gamePk.toString(),
         homeTeam: game.teams.home.team.name,
