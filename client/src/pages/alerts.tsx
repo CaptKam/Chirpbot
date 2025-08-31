@@ -208,13 +208,11 @@ export default function Alerts() {
                     </div>
 
                     {/* Row 3: Description - Law #7 Format (3 lines max, NO TEAM NAMES) */}
-                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 mb-2 ring-1 ring-white/10 shadow-sm">
-                      <div className="text-xs text-slate-300 leading-relaxed break-words">
-                        {alert.description?.replace(/Mississippi State Bulldogs?/gi, 'Offense')
-                                         ?.replace(/Southern Miss Golden Eagles?/gi, 'Defense')
-                                         ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
-                                         || alert.description}
-                      </div>
+                    <div className="text-xs text-slate-300 leading-relaxed break-words">
+                      {alert.description?.replace(/Mississippi State Bulldogs?/gi, 'Offense')
+                                       ?.replace(/Southern Miss Golden Eagles?/gi, 'Defense')
+                                       ?.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+s?\b/g, 'Team')
+                                       || alert.description}
                     </div>
 
                   </div>
