@@ -191,8 +191,7 @@ export class NCAAFEngine {
   // === ALERT GENERATION ===
 
   async processGameAlerts(): Promise<void> {
-    console.log(`🚫 NCAAF ENGINE COMPLETELY DISABLED - No fake alerts will be generated for scheduled games`);
-    return;
+    console.log(`🏈 NCAAF Engine processing college football games for alerts...`);
     
     try {
       const games = await this.getTodaysGames();

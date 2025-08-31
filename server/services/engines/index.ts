@@ -43,7 +43,7 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   private async checkAllSportsForLiveGames(): Promise<void> {
-    const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'CFL']; // NCAAF REMOVED - completely disabled
+    const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'CFL', 'NCAAF']; // NCAAF REACTIVATED
     
     for (const sport of sports) {
       try {
@@ -146,9 +146,8 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return cflEngine;
         case 'NCAAF':
-          // DISABLED: NCAAF engine completely disabled
-          console.log('🚫 NCAAF Engine disabled - no college football monitoring');
-          return null;
+          const { NCAAFEngine } = await import('./ncaaf-engine');
+          return new NCAAFEngine();
         default:
           console.warn(`No engine available for sport: ${sport}`);
           return null;
@@ -184,9 +183,9 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return await cflEngine.getTodaysGames(today);
         case 'NCAAF':
-          // DISABLED: NCAAF engine completely disabled
-          console.log('🚫 NCAAF getTodaysGames disabled - no college football games');
-          return [];
+          const { NCAAFEngine } = await import('./ncaaf-engine');
+          const ncaafEngine = new NCAAFEngine();
+          return await ncaafEngine.getTodaysGames(today);
         default:
           return [];
       }
@@ -254,21 +253,11 @@ class AlertEngineManagerImpl implements AlertEngineManager {
   }
 
   stopAllEngines(): void {
-    console.log('🛑 EMERGENCY STOP: Stopping all sport alert engines...');
-
-    // EMERGENCY: Check for any NCAAF engines that might be cached
-    const ncaafKeys = Array.from(this.intervalIds.keys()).filter(key => key.includes('NCAAF'));
-    if (ncaafKeys.length > 0) {
-      console.log(`🚨 EMERGENCY: Found ${ncaafKeys.length} cached NCAAF engines - FORCE REMOVING:`, ncaafKeys);
-    }
+    console.log('🛑 Stopping all sport alert engines...');
 
     for (const [key, intervalId] of Array.from(this.intervalIds.entries())) {
       clearInterval(intervalId);
-      if (key.includes('NCAAF')) {
-        console.log(`🚨 EMERGENCY CLEARED NCAAF: ${key}`);
-      } else {
-        console.log(`✅ ${key} engine stopped`);
-      }
+      console.log(`✅ ${key} engine stopped`);
     }
 
     this.intervalIds.clear();
