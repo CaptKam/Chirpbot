@@ -358,9 +358,18 @@ class AlertEngineManagerImpl implements AlertEngineManager {
       const { storage } = await import('../../storage');
       const { AlertFormatValidator } = await import('./AlertFormatValidator');
       
+      // Generate unique debug ID for tracking
+      const fullId = `${gameStateData.sport || 'MLB'}_${gameStateData.gameId}_${Date.now()}`;
+      const debugId = fullId.substring(0, 8).toUpperCase();
+      const flowTag = `S4-OAI-BB`; // Step 4: OpenAI -> Betbook flow
+      
+      console.log(`🔍 DEBUG: Creating alert [${debugId}] via 4-step flow`);
+      console.log(`📍 Flow: Step1(Monitor) → Step2(Engine) → Step3(Model) → Step4(${flowTag})`);
+      
       // Create standardized alert
       const alert = {
-        id: `mlb_${gameStateData.gameId}_${Date.now()}`,
+        id: fullId,
+        debugId: `${debugId}-${flowTag}`,
         type: 'SCORING',
         sport: 'MLB',
         title: AlertFormatValidator.generateStandardTitle('MLB', 'SCORING', {
@@ -395,13 +404,14 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         return;
       }
 
-      // Store alert and broadcast
+      // Store alert and broadcast with debug info
       await storage.createAlert(alert);
       if (this.onAlert) {
         this.onAlert(alert);
       }
       
-      console.log(`✅ 4-step flow completed: Alert created for ${gameStateData.gameId}`);
+      console.log(`✅ 4-step flow completed: Alert created [${alert.debugId}] for game ${gameStateData.gameId}`);
+      console.log(`🔍 DEBUG: Alert stored with ID ${alert.debugId} | Type: ${alert.type} | Sport: ${alert.sport}`);
       
     } catch (error) {
       console.error('❌ Final alert processing failed:', error);

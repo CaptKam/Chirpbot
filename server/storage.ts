@@ -438,9 +438,13 @@ export class MemStorage implements IStorage {
 
   async createAlert(insertAlert: InsertAlert & { debugId?: string }): Promise<Alert> {
     const id = randomUUID();
+    // Generate debug ID if not provided
+    const debugId = insertAlert.debugId || `${id.substring(0, 8).toUpperCase()}-DIRECT`;
+    
     const alert: Alert = { 
       ...insertAlert, 
-      id, 
+      id,
+      debugId,
       timestamp: new Date(),
       sentToTelegram: false,
       seen: false,
@@ -469,10 +473,8 @@ export class MemStorage implements IStorage {
     };
     this.alerts.set(id, alert);
 
-    console.log(`💾 STORAGE: Alert created | ID: ${id} | Type: ${alert.type} | Sport: ${alert.sport}`);
-    if (insertAlert.debugId) {
-      console.log(`🆔 STORAGE: Debug ID: ${insertAlert.debugId}`);
-    }
+    console.log(`💾 STORAGE: Alert created | Debug ID: ${alert.debugId} | Type: ${alert.type} | Sport: ${alert.sport}`);
+    console.log(`🔍 DEBUG: Full ID: ${id} | Debug: ${alert.debugId} | Priority: ${alert.priority || 70}`);
 
     // Auto-clear old alerts if we have more than 30
     if (this.alerts.size > 30) {
@@ -1000,8 +1002,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAlert(insertAlert: InsertAlert & { debugId?: string }): Promise<Alert> {
+    // Generate debug ID if not provided
+    const debugId = insertAlert.debugId || `${insertAlert.id?.substring(0, 8).toUpperCase() || 'DB'}-DIRECT`;
+    
     const alertToInsert = {
       ...insertAlert,
+      debugId,
       priority: insertAlert.priority || insertAlert.gameInfo?.priority || 70, // Save to main priority column
       gameInfo: {
         ...insertAlert.gameInfo,
@@ -1028,10 +1034,8 @@ export class DatabaseStorage implements IStorage {
     };
     const [alert] = await this.db.insert(alerts).values([alertToInsert]).returning();
     
-    console.log(`💾 STORAGE: Alert created | ID: ${alert.id} | Type: ${alert.type} | Sport: ${alert.sport}`);
-    if (insertAlert.debugId) {
-      console.log(`🆔 STORAGE: Debug ID: ${insertAlert.debugId}`);
-    }
+    console.log(`💾 STORAGE: Alert created | Debug ID: ${alert.debugId} | Type: ${alert.type} | Sport: ${alert.sport}`);
+    console.log(`🔍 DEBUG: Full ID: ${alert.id} | Debug: ${alert.debugId} | Priority: ${alert.priority || 70}`);
     
     return alert;
   }

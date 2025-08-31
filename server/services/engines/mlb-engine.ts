@@ -7,6 +7,7 @@ import mlbAlertModel from './mlbAlertModel.cjs';
 
 interface MLBAlert {
   id: string;
+  debugId?: string;
   type: string;
   sport: 'MLB';
   title: string;
@@ -37,6 +38,9 @@ export class MLBEngine {
    */
   private async createStandardAlert(gameState: MLBGameStateV3, alertResult: any): Promise<MLBAlert> {
     const alertId = `mlb_${gameState.gameId}_${Date.now()}`;
+    const debugId = `${alertId.substring(0, 8).toUpperCase()}-S2-MLB`; // Step 2: MLB Engine
+    
+    console.log(`🔍 DEBUG: Creating MLB alert [${debugId}] via Step 2 MLB Engine`);
     
     // Use model validation
     const modelValidation = mlbAlertModel.checkScoringProbability(this.convertToModelFormat(gameState));
@@ -72,6 +76,7 @@ export class MLBEngine {
 
     return {
       id: alertId,
+      debugId,
       type: 'SCORING',
       sport: 'MLB',
       title: AlertFormatValidator.generateStandardTitle('MLB', 'SCORING', score),
