@@ -50,23 +50,6 @@ class AlertEngineManagerImpl implements AlertEngineManager {
         const hasMonitoredGames = await this.hasMonitoredGamesForSport(sport);
         if (!hasMonitoredGames) continue;
 
-        // Temporary fix for NCAAF: Skip getTodaysGamesForSport and directly process monitored games
-        if (sport === 'NCAAF') {
-          console.log('🏈 NCAAF: Using direct monitoring bypass...');
-          const monitoredGames = await storage.getAllMonitoredGames();
-          const ncaafGames = monitoredGames.filter(game => game.sport === 'NCAAF');
-          
-          for (const game of ncaafGames) {
-            // For monitored NCAAF games, force start engines and process alerts
-            console.log(`🏈 NCAAF: Force starting engine for monitored game ${game.gameId}`);
-            const engineKey = `${sport}_${game.gameId}`;
-            
-            if (!this.activeEngines.has(engineKey)) {
-              await this.startEngineForGame(sport, game.gameId);
-            }
-          }
-          continue;
-        }
 
         const games = await this.getTodaysGamesForSport(sport);
         
