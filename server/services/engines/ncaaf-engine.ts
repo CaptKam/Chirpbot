@@ -206,15 +206,32 @@ export class NCAAFEngine {
   async processGameAlerts(): Promise<void> {
     try {
       const games = await this.getTodaysGames();
-      const liveGames = games.filter(game => 
-        game.status === 'STATUS_IN_PROGRESS' || 
-        game.status === 'STATUS_HALFTIME' ||
-        game.status === 'STATUS_OVERTIME' ||
-        game.status === 'STATUS_FIRST_HALF' ||
-        game.status === 'STATUS_SECOND_HALF' ||
-        game.status.includes('QUARTER') ||
-        game.status.includes('PERIOD')
-      );
+      const liveGames = games.filter(game => {
+        // STRICT: Only process games that are actually live/in-progress
+        const isLive = game.status === 'STATUS_IN_PROGRESS' || 
+                      game.status === 'STATUS_HALFTIME' ||
+                      game.status === 'STATUS_OVERTIME' ||
+                      game.status === 'STATUS_FIRST_HALF' ||
+                      game.status === 'STATUS_SECOND_HALF' ||
+                      game.status.includes('QUARTER') ||
+                      game.status.includes('PERIOD');
+        
+        // Also check if period > 0 (game has started)
+        const hasStarted = game.period > 0;
+        
+        // BLOCK scheduled/pregame games completely
+        const isScheduled = game.status === 'STATUS_SCHEDULED' || 
+                           game.status === 'STATUS_PREGAME' ||
+                           game.status.includes('PREGAME') ||
+                           game.status.includes('SCHEDULED');
+        
+        if (isScheduled) {
+          console.log(`🚫 NCAAF: Blocking scheduled game ${game.awayTeam} @ ${game.homeTeam} - Status: ${game.status}`);
+          return false;
+        }
+        
+        return isLive && hasStarted;
+      });
 
       // Also log games that are about to start or in pre-game
       const upcomingGames = games.filter(game => 
@@ -247,6 +264,17 @@ export class NCAAFEngine {
 
   private async processGameForAlerts(game: any): Promise<void> {
     try {
+      // FIRST: Validate game is actually live before any processing
+      const isScheduled = game.status === 'STATUS_SCHEDULED' || 
+                         game.status === 'STATUS_PREGAME' ||
+                         game.status.includes('PREGAME') ||
+                         game.status.includes('SCHEDULED');
+
+      if (isScheduled) {
+        console.log(`🚫 NCAAF: Blocking alert processing for scheduled game ${game.awayTeam} @ ${game.homeTeam}`);
+        return;
+      }
+
       const gameState = this.parseGameState(game);
 
       // ALWAYS use the NCAAF Alert Model for proper situation analysis
@@ -775,22 +803,41 @@ Field Position: ${gameState.yardsToGoal || 50} yards from the end zone
     try {
       console.log(`🏈 NCAAF: Processing specific game ${gameId} for alerts...`);
 
-      // Try to get game data and generate basic alerts
+      // Try to get game data and check if it's actually live
       const games = await this.getTodaysGames();
       const targetGame = games.find(game => game.gameId === gameId);
 
       if (!targetGame) {
-        console.log(`🏈 NCAAF: Game ${gameId} not found, generating basic live game alert`);
-        await this.generateBasicLiveAlert(gameId);
+        console.log(`🏈 NCAAF: Game ${gameId} not found in today's games - skipping alert generation`);
         return;
       }
 
-      console.log(`🏈 NCAAF: Found game data for ${gameId}, processing alerts...`);
+      // STRICT: Check if game is actually live before processing
+      const isScheduled = targetGame.status === 'STATUS_SCHEDULED' || 
+                         targetGame.status === 'STATUS_PREGAME' ||
+                         targetGame.status.includes('PREGAME') ||
+                         targetGame.status.includes('SCHEDULED');
+
+      if (isScheduled) {
+        console.log(`🚫 NCAAF: Game ${gameId} (${targetGame.awayTeam} @ ${targetGame.homeTeam}) is scheduled/pregame - NO ALERTS GENERATED`);
+        console.log(`📅 NCAAF: Game status: ${targetGame.status}, scheduled for future kickoff`);
+        return;
+      }
+
+      const isLive = targetGame.status === 'STATUS_IN_PROGRESS' || 
+                    targetGame.status === 'STATUS_HALFTIME' ||
+                    targetGame.status === 'STATUS_OVERTIME' ||
+                    (targetGame.period > 0);
+
+      if (!isLive) {
+        console.log(`🚫 NCAAF: Game ${gameId} is not live (Status: ${targetGame.status}, Period: ${targetGame.period}) - NO ALERTS`);
+        return;
+      }
+
+      console.log(`✅ NCAAF: Game ${gameId} is confirmed LIVE - processing alerts...`);
       await this.processGameForAlerts(targetGame);
     } catch (error) {
       console.error(`❌ NCAAF: Error processing specific game ${gameId}:`, error);
-      // Fallback: try to generate a basic alert anyway
-      await this.generateBasicLiveAlert(gameId);
     }
   }
 
