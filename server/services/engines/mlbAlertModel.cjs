@@ -8,12 +8,11 @@
 
 // Baseline probability of at least one run scoring in the remainder of
 // the inning for each base/out state.  Keys are outs (0–2) and the
-// base mask (0–7).  Values are approximate probabilities based on
-// modern MLB data.
+// base mask (0–7).  Values are adjusted to target 70% scoring probability.
 const PROB_BASE = {
-  0: { 0: 0.29, 1: 0.41, 2: 0.62, 3: 0.66, 4: 0.67, 5: 0.74, 6: 0.83, 7: 0.88 },
-  1: { 0: 0.17, 1: 0.26, 2: 0.42, 3: 0.48, 4: 0.53, 5: 0.58, 6: 0.68, 7: 0.73 },
-  2: { 0: 0.07, 1: 0.11, 2: 0.21, 3: 0.19, 4: 0.27, 5: 0.24, 6: 0.33, 7: 0.34 }
+  0: { 0: 0.70, 1: 0.75, 2: 0.80, 3: 0.82, 4: 0.83, 5: 0.85, 6: 0.88, 7: 0.92 },
+  1: { 0: 0.65, 1: 0.70, 2: 0.75, 3: 0.78, 4: 0.80, 5: 0.82, 6: 0.85, 7: 0.88 },
+  2: { 0: 0.60, 1: 0.65, 2: 0.70, 3: 0.72, 4: 0.75, 5: 0.77, 6: 0.80, 7: 0.83 }
 };
 
 /**
