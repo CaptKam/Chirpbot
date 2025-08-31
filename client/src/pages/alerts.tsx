@@ -174,9 +174,14 @@ export default function Alerts() {
                 >
                   {/* LAW #7: CLEAN LAYOUT - NO DUPLICATE INFO */}
                   <div className="p-6 space-y-4">
-                    {/* Header: Team Names and Score */}
+                    {/* Header: Team Names, Score, and Sport */}
                     {alert.gameInfo?.awayTeam && alert.gameInfo?.homeTeam && (
-                      <div className="text-center text-lg font-bold text-white mb-4 bg-slate-700/50 rounded-lg py-2 px-4">
+                      <div className="text-center text-lg font-bold text-white mb-4 bg-slate-700/50 rounded-lg py-2 px-4 relative">
+                        <span className="absolute left-3 top-2">
+                          <span className="bg-blue-500/20 text-blue-300 font-bold px-2 py-1 rounded-full text-[11px]">
+                            {alert.sport}
+                          </span>
+                        </span>
                         <span className="text-blue-300">{alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}</span>
                         {alert.gameInfo?.score && (
                           <span className="mx-4 text-yellow-400 font-mono">
@@ -184,20 +189,13 @@ export default function Alerts() {
                           </span>
                         )}
                         <span className="text-orange-300">{alert.gameInfo.homeTeam.split(' ').slice(-1)[0]}</span>
+                        {!alert.seen && (
+                          <span className="absolute right-3 top-2 bg-emerald-400 text-slate-900 text-xs font-black px-2 py-1 rounded-full">
+                            NEW
+                          </span>
+                        )}
                       </div>
                     )}
-                    
-                    {/* Row 1: Sport + NEW Badge */}
-                    <div className="flex items-center justify-between">
-                      <span className="bg-blue-500/20 text-blue-300 font-bold px-3 py-1 rounded-full text-[13px]">
-                        {alert.sport}
-                      </span>
-                      {!alert.seen && (
-                        <span className="bg-emerald-400 text-slate-900 text-sm font-black px-2 py-1 rounded-full">
-                          NEW
-                        </span>
-                      )}
-                    </div>
 
                     {/* Row 2: TITLE - Law #7 Format (NO TEAM NAMES) */}
                     <div className="mb-2">
