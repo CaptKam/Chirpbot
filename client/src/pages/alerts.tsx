@@ -179,13 +179,21 @@ export default function Alerts() {
                         {alert.sport}
                       </span>
                       <div className="text-center text-lg font-bold">
-                        <span className="text-slate-100">{alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}</span>
+                        <span className="text-slate-100">
+                          {alert.gameInfo.awayTeam === 'Unknown' || !alert.gameInfo.awayTeam 
+                            ? 'Away' 
+                            : alert.gameInfo.awayTeam.split(' ').slice(-1)[0]}
+                        </span>
                         {alert.gameInfo?.score && (
                           <span className="mx-4 text-emerald-400 font-mono font-black">
                             {alert.gameInfo.score.away} - {alert.gameInfo.score.home}
                           </span>
                         )}
-                        <span className="text-slate-100">{alert.gameInfo.homeTeam.split(' ').slice(-1)[0]}</span>
+                        <span className="text-slate-100">
+                          {alert.gameInfo.homeTeam === 'Unknown' || !alert.gameInfo.homeTeam 
+                            ? 'Home' 
+                            : alert.gameInfo.homeTeam.split(' ').slice(-1)[0]}
+                        </span>
                       </div>
                       {!alert.seen && (
                         <span className="bg-emerald-500 text-white text-xs font-black px-2 py-1 rounded-full shadow-lg">
