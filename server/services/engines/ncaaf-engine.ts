@@ -287,6 +287,29 @@ export class NCAAFEngine {
   // Store periodic game state snapshots for analysis
   private async storeGameStateSnapshot(gameState: NCAAGameState): Promise<void> {
     try {
+      // CRITICAL: Only store snapshots for games that are actually live and monitored
+      const games = await this.getTodaysGames();
+      const actualGame = games.find(game => game.gameId === gameState.gameId);
+      
+      if (!actualGame) {
+        console.log(`🚫 NCAAF: No game found for ${gameState.gameId}, skipping snapshot`);
+        return;
+      }
+      
+      if (actualGame.status !== 'STATUS_IN_PROGRESS') {
+        console.log(`🚫 NCAAF: Game ${gameState.gameId} is ${actualGame.status}, not live - skipping snapshot`);
+        return;
+      }
+      
+      // Check if the game is being monitored by any user
+      const monitoredGames = await storage.getAllMonitoredGames();
+      const isMonitored = monitoredGames.some(mg => mg.gameId === gameState.gameId);
+      
+      if (!isMonitored) {
+        console.log(`🚫 NCAAF: Game ${gameState.gameId} is not being monitored - skipping snapshot`);
+        return;
+      }
+
       // Create kid-friendly title and description per Law #6
       const quarter = this.getQuarterName(Number(gameState.quarter) || 1);
       const timeLeft = this.formatTimeRemaining(gameState.timeRemaining);
