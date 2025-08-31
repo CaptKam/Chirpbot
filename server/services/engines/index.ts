@@ -184,9 +184,9 @@ class AlertEngineManagerImpl implements AlertEngineManager {
           const { cflEngine } = await import('./cfl-engine');
           return await cflEngine.getTodaysGames(today);
         case 'NCAAF':
-          const { NCAAFEngine } = await import('./ncaaf-engine');
-          const ncaafEngine = new NCAAFEngine();
-          return await ncaafEngine.getTodaysGames(today);
+          // DISABLED: NCAAF engine completely disabled
+          console.log('🚫 NCAAF getTodaysGames disabled - no college football games');
+          return [];
         default:
           return [];
       }

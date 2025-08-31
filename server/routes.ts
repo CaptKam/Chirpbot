@@ -138,54 +138,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint for NCAAF engine import debugging
-  app.get('/api/test-ncaaf-engine', async (req, res) => {
-    try {
-      console.log('🧪 Testing NCAAF engine import...');
-      const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
-      console.log('✅ NCAAF engine import successful');
-      console.log('🔍 NCAAFEngine type:', typeof NCAAFEngine);
-      
-      const engine = new NCAAFEngine();
-      console.log('✅ NCAAF engine instance created successfully');
-      
-      res.json({ 
-        success: true, 
-        type: typeof NCAAFEngine,
-        instance: !!engine,
-        message: 'NCAAF engine import and instantiation successful'
-      });
-    } catch (error) {
-      console.error('❌ NCAAF engine test failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
+  // DISABLED: NCAAF engine test route completely disabled
+  // app.get('/api/test-ncaaf-engine', async (req, res) => {
+  //   // DISABLED: NCAAF engine completely disabled
+  //   res.status(410).json({ 
+  //     success: false, 
+  //     message: 'NCAAF engine test endpoint disabled - no college football monitoring' 
+  //   });
+  // });
 
-  // Test endpoint to manually trigger NCAAF engine start for Army game
-  app.post('/api/test-start-ncaaf-engine', async (req, res) => {
-    try {
-      console.log('🧪 Testing NCAAF engine start for Army game...');
-      const { AlertEngineManager } = await import('./services/engines');
-      await AlertEngineManager.handleGameStateChange('cfb-401762432', 'NCAAF', 'live');
-      console.log('✅ NCAAF engine start triggered');
-      
-      res.json({ 
-        success: true,
-        message: 'NCAAF engine start triggered for Army game'
-      });
-    } catch (error) {
-      console.error('❌ NCAAF engine start test failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  });
+  // DISABLED: NCAAF engine start test completely disabled
+  // app.post('/api/test-start-ncaaf-engine', async (req, res) => {
+  //   // DISABLED: NCAAF engine completely disabled
+  //   res.status(410).json({ 
+  //     success: false, 
+  //     message: 'NCAAF engine start test disabled - no college football monitoring' 
+  //   });
+  // });
 
   // DISABLED: Test endpoint bypasses 4-step flow - alerts must go through proper validation
   // app.post('/api/test-force-mlb-alert', async (req, res) => {
@@ -419,10 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameData: game
         }));
       } else if (sport === 'NCAAF') {
-        // Use ESPN NCAAF API integration (College Football Only)
-        const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
-        const ncaaEngine = new NCAAFEngine();
-        games = await ncaaEngine.getTodaysGames(targetDate);
+        // DISABLED: NCAAF engine completely disabled
+        console.log('🚫 NCAAF games API disabled - no college football games');
+        games = [];
         
         // Transform to match our Game interface
         games = games.map(game => ({
