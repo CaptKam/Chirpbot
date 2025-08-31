@@ -227,9 +227,9 @@ const AlertFooter: React.FC<AlertFooterProps> = ({ sport, gameInfo, createdAt })
     <div className="flex items-center justify-between w-full px-4 py-2 bg-slate-800/90 backdrop-blur-sm text-white border-t border-white/10">
       {renderSportSpecific()}
       {createdAt && (
-        <div className="flex items-center space-x-1 text-xs text-gray-400">
-          <Clock3 className="w-3 h-3" />
-          <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true })}</span>
+        <div className="flex items-center space-x-0.5 text-[8px] text-gray-500">
+          <Clock3 className="w-2 h-2" />
+          <span>{formatDistanceToNow(new Date(createdAt)).replace(' ago', '').replace('about ', '').replace('less than a ', '<1').replace(' minutes', 'm').replace(' minute', 'm').replace(' hours', 'h').replace(' hour', 'h')}</span>
         </div>
       )}
     </div>
