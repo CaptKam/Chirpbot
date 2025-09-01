@@ -107,8 +107,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/test-mlb-status', async (req, res) => {
     try {
       console.log('🧪 Testing MLB engine status...');
-      const { MLBEngine } = await import('./services/engines/mlb-engine');
-      const engine = new MLBEngine();
+      // DISABLED: MLBEngine creation causes fake alerts
+      // const { MLBEngine } = await import('./services/engines/mlb-engine');
+      // const engine = new MLBEngine();
       
       // Get today's games
       const todaysGames = await engine.getTodaysGames();
@@ -259,8 +260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (sport === 'MLB') {
         // Use our integrated MLB API
-        // MLBEngine removed - no more alert generation
-        const mlbEngine = new MLBEngine();
+        // DISABLED: MLBEngine creation causes fake alerts
+        // const mlbEngine = new MLBEngine();
         games = await mlbEngine.getTodaysGames(targetDate);
         
         // Transform to match our Game interface
@@ -1114,48 +1115,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.redirect("/?oauth=error&provider=apple");
   });
 
-  // Quick test endpoint without AI
-  app.post("/api/test/quick-alert", async (req, res) => {
-    try {
-      const testAlert = {
-        type: "Quick Test",
-        sport: "MLB",
-        title: "Test Alert - Immediate Response",
-        description: "Testing alert system without AI delay",
-        gameInfo: {
-          homeTeam: "Test Home Team",
-          awayTeam: "Test Away Team",
-          status: "Live"
-        },
-        aiContext: "Quick test - AI bypassed",
-        aiConfidence: 100,
-        weatherData: {
-          temperature: 72,
-          condition: "Clear",
-          windSpeed: 5,
-          windDirection: "N"
-        },
-        sentToTelegram: false
-      };
-
-      // DISABLED: Direct storage.createAlert bypasses 4-step flow
-      // const alert = await storage.createAlert(testAlert);
-      // broadcast({ type: 'new_alert', data: alert });
-      
-      res.json({
-        success: true,
-        message: "Quick alert created successfully",
-        alert
-      });
-    } catch (error: any) {
-      console.error("Quick test failed:", error);
-      res.status(500).json({ 
-        success: false,
-        message: "Quick test failed",
-        error: error.message 
-      });
-    }
-  });
 
   // Test weather data specifically
   app.get("/api/test/weather", async (req, res) => {
@@ -1328,79 +1287,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint using new AlertPipeline system
-  app.post("/api/test/generate-alerts", async (req, res) => {
-    try {
-      const { getAlertPipeline } = await import('./services/AlertPipeline');
-      const pipeline = getAlertPipeline(null, (alert) => {
-        broadcast({ type: 'new_alert', data: alert });
-      });
-      
-      const testAlerts = [];
-      const timestamp = new Date().toISOString();
-      
-      // Test game states for multiple sports
-      const testGameStates = [
-        {
-          gameId: `test_mlb_${Date.now()}`,
-          sport: "MLB",
-          homeTeam: "Boston Red Sox",
-          awayTeam: "New York Yankees",
-          homeScore: 5,
-          awayScore: 4,
-          inning: 9,
-          inningState: "bottom",
-          outs: 2,
-          runners: { first: true, second: true, third: true }
-        },
-        {
-          gameId: `test_nfl_${Date.now()}`,
-          sport: "NFL",
-          homeTeam: "Philadelphia Eagles",
-          awayTeam: "Dallas Cowboys",
-          homeScore: 21,
-          awayScore: 17,
-          quarter: 4,
-          down: 3,
-          yardsToGo: 7
-        }
-      ];
-
-      // Register basic test models if none exist
-      pipeline.registerModel('MLB', async (state) => ({
-        shouldAlert: state.outs === 2 && state.runners?.first && state.runners?.second,
-        alertType: 'RISP_OPPORTUNITY',
-        probability: 0.75,
-        priority: 85,
-        reasons: ['Runners in scoring position', '2 outs - pressure situation']
-      }));
-
-      // Process each test game state through pipeline
-      for (const gameState of testGameStates) {
-        try {
-          const alert = await pipeline.processState(gameState);
-          if (alert) {
-            testAlerts.push(alert);
-            console.log(`✅ Pipeline test alert created for ${gameState.sport}: ${alert.debugId}`);
-          }
-        } catch (error) {
-          console.error(`Failed to create ${gameState.sport} pipeline alert:`, error);
-        }
-      }
-
-      res.json({
-        message: "Test alerts generated via AlertPipeline system",
-        count: testAlerts.length,
-        alerts: testAlerts.map(a => ({ id: a.id, debugId: a.debugId, sport: a.sport, title: a.title })),
-        timestamp,
-        pipelineStats: pipeline.getStats(),
-        note: "Alerts created through unified pipeline with deduplication"
-      });
-    } catch (error) {
-      console.error("Pipeline test alert generation failed:", error);
-      res.status(500).json({ message: "Failed to generate pipeline test alerts" });
-    }
-  });
 
   // Helper function for weather data (fallback since weather service was removed)
   async function getEnhancedWeather(venue: string) {

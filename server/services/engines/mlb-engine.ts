@@ -175,12 +175,8 @@ export class MLBEngine {
    * Start the MLB engine monitoring
    */
   async start(): Promise<void> {
-    console.log('🎯 MLBEngine started - monitoring for live games');
-    
-    // Monitor live games every 30 seconds
-    setInterval(async () => {
-      await this.processLiveGames();
-    }, 30000);
+    console.log('🎯 MLBEngine started - monitoring disabled');
+    // Monitoring completely disabled - no fake alerts will be generated
   }
 
   /**

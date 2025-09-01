@@ -372,6 +372,13 @@ export class AlertPipeline {
    */
   async processState(state: GenericGameState): Promise<EnrichedAlert | null> {
     try {
+      // SAFETY CHECK: Reject any fake game states
+      if (state.homeTeam === 'Unknown' || state.awayTeam === 'Unknown' || 
+          state.homeTeam?.includes('Unknown') || state.awayTeam?.includes('Unknown')) {
+        console.log(`🚫 AlertPipeline: Rejected fake game state for ${state.gameId}`);
+        return null;
+      }
+      
       console.log(`🔄 AlertPipeline: Processing ${state.sport} game ${state.gameId}`);
       
       // Update internal cache

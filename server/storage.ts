@@ -35,6 +35,16 @@ export const storage = {
 
   // Alert operations  
   async createAlert(alertData: any) {
+    // SAFETY CHECK: Reject fake alerts with Unknown teams
+    if (alertData.game_info && 
+        (alertData.game_info.homeTeam === 'Unknown' || 
+         alertData.game_info.awayTeam === 'Unknown' ||
+         alertData.game_info.homeTeam?.includes('Unknown') ||
+         alertData.game_info.awayTeam?.includes('Unknown'))) {
+      console.log('🚫 STORAGE: Rejected fake alert with Unknown teams');
+      return null;
+    }
+    
     const result = await db.insert(alerts).values(alertData).returning();
     return result[0];
   },
