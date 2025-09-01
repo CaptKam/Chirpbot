@@ -7,6 +7,9 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
+import { health } from "./http/health";
+import { alertsApi } from "./api/alerts";
+import { initializeScheduler } from "./scheduler";
 
 const { Pool } = pg;
 
@@ -33,146 +36,75 @@ const pgPool = new Pool({
 
 const PgSession = connectPgSimple(session);
 
-// Session middleware with PostgreSQL store
+// Session configuration with PostgreSQL backing
 app.use(session({
   store: new PgSession({
     pool: pgPool,
     tableName: 'session',
-    createTableIfMissing: true
+    createTableIfMissing: true,
   }),
-  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'chirpbot-dev-secret-key-12345'),
+  secret: process.env.SESSION_SECRET || 'chirpbot-v2-secret-key-change-in-production',
+  name: 'connect.sid',
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
   }
 }));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+// Health and readiness endpoints
+app.use(health);
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+// Alert API endpoints
+app.use('/api/alerts', alertsApi);
 
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
+// Apply global error handler for async errors
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ 
+    message: 'Internal server error',
+    timestamp: new Date().toISOString()
   });
-
-  next();
 });
 
-(async () => {
-  // Initialize database with required seed data
+// Initialize components
+async function initializeServer() {
   try {
+    // Seed database
+    console.log('🌱 Starting database seeding...');
     await seedDatabase();
+    console.log('✅ Database seeding completed successfully!');
+    
+    // Initialize scheduler for background tasks
+    initializeScheduler();
+    
     console.log('✅ Database initialization complete');
-  } catch (err) {
-    console.error('⚠️ Database seeding failed (may already be seeded):', err);
-    // Continue anyway - the database might already be seeded
+  } catch (error) {
+    console.error('❌ Failed to initialize server:', error);
+    process.exit(1);
   }
+}
 
+// Register API routes and start server
+(async () => {
+  await initializeServer();
+  
   const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    console.error('Express error handler:', {
-      error: err.message,
-      stack: err.stack,
-      url: _req.url,
-      method: _req.method,
-      status
-    });
-
-    // Ensure response is sent if not already sent
-    if (!res.headersSent) {
-      res.status(status).json({ message });
-    }
-    // Don't throw err - this was causing unhandled rejections!
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  
+  // Setup Vite for development or static file serving for production
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  // Start server
+  const PORT = parseInt(process.env.PORT || "5000");
+  server.listen(PORT, "0.0.0.0", () => {
+    log(`serving on port ${PORT}`);
   });
 })();
-
-// This is a placeholder for the WebSocket server setup.
-// In a real application, you would initialize your WebSocket server here.
-// For example:
-// import WebSocket from 'ws';
-// const wss = new WebSocket.Server({ server });
-//
-// Replace the following placeholder with your actual WebSocket server initialization and alert callback handling.
-// For the purpose of this example, we'll assume 'wss' and 'alertEngineManager' are defined elsewhere and accessible.
-
-// Example placeholder for WebSocket server and alert manager
-const wss: any = { clients: new Set() }; // Mock WebSocket server
-const alertEngineManager: any = {
-  setAlertCallback: (callback: (alert: any) => void) => {
-    // Simulate an alert being generated
-    // setTimeout(() => {
-    //   callback({ id: 'a1b2c3d4', type: 'System', message: 'CPU Usage High', data: { cpu: 95 } });
-    // }, 5000);
-    // setTimeout(() => {
-    //   callback({ id: 'e5f6g7h8', type: 'Network', message: 'High Latency', data: { latency: 200 } });
-    // }, 10000);
-  }
-};
-
-// Applying the requested changes to the alert callback
-alertEngineManager.setAlertCallback((alert: any) => {
-    const alertId = alert.id || alert.data?.id || 'unknown';
-    const debugId = alert.debugId || alert.data?.debugId || alertId.substring(0, 8);
-    console.log(`📡 WEBSOCKET: Broadcasting alert | ID: ${alertId} | Debug ID: ${debugId} | Type: ${alert.type || alert.data?.type}`);
-
-    // Broadcast to all connected clients
-    wss.clients.forEach((client: any) => {
-      if (client.readyState === client.OPEN) {
-        client.send(JSON.stringify({
-          type: 'new_alert',
-          data: alert
-        }));
-      }
-    });
-
-    console.log(`📡 WEBSOCKET: Alert broadcasted to ${wss.clients.size} clients`);
-  });

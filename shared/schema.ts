@@ -112,6 +112,57 @@ export type Settings = typeof settings.$inferSelect;
 export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
 export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
 
+// New alert system tables
+export const plays = pgTable("plays", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(),
+  gameId: text("game_id").notNull(),
+  ts: timestamp("ts").notNull(),
+  payload: jsonb("payload").notNull(),
+});
+
+export const alerts = pgTable("alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertKey: varchar("alert_key", { length: 24 }).notNull().unique(),
+  sport: text("sport").notNull(),
+  gameId: text("game_id").notNull(),
+  type: text("type").notNull(),
+  state: text("state").notNull().default("NEW"), // NEW/DELIVERED/ACKED/EXPIRED
+  score: integer("score").notNull(),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const alertCooldowns = pgTable("alert_cooldowns", {
+  sport: text("sport").notNull(),
+  gameId: text("game_id").notNull(),
+  type: text("type").notNull(),
+  until: timestamp("until").notNull(),
+}, (table) => ({
+  uniqueConstraint: sql`UNIQUE(${table.sport}, ${table.gameId}, ${table.type})`,
+}));
+
+// Insert schemas for new tables
+export const insertPlaySchema = createInsertSchema(plays).omit({
+  id: true,
+});
+
+export const insertAlertSchema = createInsertSchema(alerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAlertCooldownSchema = createInsertSchema(alertCooldowns);
+
+// Types for new tables
+export type InsertPlay = z.infer<typeof insertPlaySchema>;
+export type Play = typeof plays.$inferSelect;
+
+export type InsertAlert = z.infer<typeof insertAlertSchema>;
+export type Alert = typeof alerts.$inferSelect;
+
+export type InsertAlertCooldown = z.infer<typeof insertAlertCooldownSchema>;
+export type AlertCooldown = typeof alertCooldowns.$inferSelect;
 
 // Game types for live sports data
 export interface Game {
