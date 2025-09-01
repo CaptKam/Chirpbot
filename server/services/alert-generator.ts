@@ -207,67 +207,202 @@ export class AlertGenerator {
 
   private async generateLiveAlertsForGame(game: any): Promise<number> {
     let alertCount = 0;
-    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+    
+    // Fetch detailed live feed data for granular alerts
+    try {
+      const liveData = await this.fetchDetailedLiveData(game.gameId);
+      if (!liveData) return 0;
 
-    // Close game alert for live games (within 3 runs, inning 7+)
-    if (scoreDiff <= 3 && (game.homeScore > 0 || game.awayScore > 0)) {
-      const alertKey = `${game.gameId}_LIVE_CLOSE`;
-      const message = `🔥 LIVE: Close game! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - Currently live!`;
-      
-      try {
-        await db.execute(sql`
-          INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
-          VALUES (gen_random_uuid(), ${alertKey}, 'MLB', ${game.gameId}, 
-                  'CLOSE_GAME_LIVE', 'NEW', 95, ${JSON.stringify({
-                    message,
-                    context: {
-                      homeTeam: game.homeTeam,
-                      awayTeam: game.awayTeam,
-                      homeScore: game.homeScore,
-                      awayScore: game.awayScore,
-                      scoreDiff
-                    }
-                  })}, NOW())
-          ON CONFLICT (alert_key) DO NOTHING
-        `);
-        
-        console.log(`🚨 NEW LIVE ALERT: ${message}`);
-        alertCount++;
-      } catch (error) {
-        // Ignore conflicts (already exists)
-      }
+      // Generate alerts based on detailed game state
+      alertCount += await this.generateBaseRunnerAlerts(game, liveData);
+      alertCount += await this.generateInningPressureAlerts(game, liveData);
+      alertCount += await this.generateAtBatAlerts(game, liveData);
+      alertCount += await this.generateScoringAlerts(game, liveData);
+
+    } catch (error) {
+      console.error(`Error fetching live data for game ${game.gameId}:`, error);
+      // Fallback to basic alerts
+      alertCount += await this.generateBasicLiveAlerts(game);
     }
 
-    // High-scoring live game alert (15+ runs)
-    const totalRuns = game.homeScore + game.awayScore;
-    if (totalRuns >= 15) {
-      const alertKey = `${game.gameId}_LIVE_HIGH_SCORING`;
-      const message = `⚾ LIVE: High-scoring game! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - ${totalRuns} runs!`;
+    return alertCount;
+  }
+
+  private async fetchDetailedLiveData(gameId: string): Promise<any> {
+    try {
+      const response = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gameId}/feed/live`);
+      const data = await response.json();
+      return data.liveData;
+    } catch (error) {
+      console.error(`Failed to fetch live data for game ${gameId}:`, error);
+      return null;
+    }
+  }
+
+  private async generateBaseRunnerAlerts(game: any, liveData: any): Promise<number> {
+    let alertCount = 0;
+    const plays = liveData?.plays;
+    if (!plays) return 0;
+
+    const currentPlay = plays.currentPlay;
+    const runners = currentPlay?.runners || [];
+    
+    // Check for bases loaded situation
+    const basesOccupied = new Set();
+    runners.forEach((runner: any) => {
+      if (runner.movement?.end) {
+        basesOccupied.add(runner.movement.end);
+      }
+    });
+
+    if (basesOccupied.has('2B') && basesOccupied.has('3B') && basesOccupied.has('1B')) {
+      const inning = liveData.linescore?.currentInning || 0;
+      const outs = currentPlay?.count?.outs || 0;
+      const alertKey = `${game.gameId}_BASES_LOADED_${inning}_${outs}`;
+      const message = `🔥 BASES LOADED! ${game.awayTeam} vs ${game.homeTeam} - ${outs} outs, Inning ${inning}`;
       
-      try {
-        await db.execute(sql`
-          INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
-          VALUES (gen_random_uuid(), ${alertKey}, 'MLB', ${game.gameId}, 
-                  'HIGH_SCORING_LIVE', 'NEW', 90, ${JSON.stringify({
-                    message,
-                    context: {
-                      homeTeam: game.homeTeam,
-                      awayTeam: game.awayTeam,
-                      homeScore: game.homeScore,
-                      awayScore: game.awayScore,
-                      totalRuns
-                    }
-                  })}, NOW())
-          ON CONFLICT (alert_key) DO NOTHING
-        `);
-        
-        console.log(`🚨 NEW LIVE ALERT: ${message}`);
-        alertCount++;
-      } catch (error) {
-        // Ignore conflicts
+      alertCount += await this.saveRealTimeAlert(alertKey, 'BASES_LOADED', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        inning,
+        outs,
+        situation: 'bases_loaded'
+      }, 98);
+    }
+
+    // Check for runner in scoring position (2nd or 3rd base)
+    if ((basesOccupied.has('2B') || basesOccupied.has('3B')) && !basesOccupied.has('1B')) {
+      const inning = liveData.linescore?.currentInning || 0;
+      const outs = currentPlay?.count?.outs || 0;
+      const alertKey = `${game.gameId}_RISP_${inning}_${outs}`;
+      const message = `⚾ RUNNER IN SCORING POSITION! ${game.awayTeam} vs ${game.homeTeam} - ${outs} outs`;
+      
+      alertCount += await this.saveRealTimeAlert(alertKey, 'RISP', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        inning,
+        outs,
+        situation: 'runner_in_scoring_position'
+      }, 85);
+    }
+
+    return alertCount;
+  }
+
+  private async generateInningPressureAlerts(game: any, liveData: any): Promise<number> {
+    let alertCount = 0;
+    const inning = liveData.linescore?.currentInning || 0;
+    const isTopInning = liveData.linescore?.isTopInning;
+    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+
+    // Late inning pressure situations
+    if (inning >= 8 && scoreDiff <= 2) {
+      const alertKey = `${game.gameId}_LATE_PRESSURE_${inning}`;
+      const situation = isTopInning ? 'top' : 'bottom';
+      const message = `🔥 LATE INNING PRESSURE! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - ${situation} ${inning}th`;
+      
+      alertCount += await this.saveRealTimeAlert(alertKey, 'LATE_PRESSURE', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        inning,
+        isTopInning,
+        scoreDiff
+      }, 92);
+    }
+
+    return alertCount;
+  }
+
+  private async generateAtBatAlerts(game: any, liveData: any): Promise<number> {
+    let alertCount = 0;
+    const currentPlay = liveData?.plays?.currentPlay;
+    if (!currentPlay) return 0;
+
+    const count = currentPlay.count;
+    const balls = count?.balls || 0;
+    const strikes = count?.strikes || 0;
+
+    // Full count situation (3-2)
+    if (balls === 3 && strikes === 2) {
+      const alertKey = `${game.gameId}_FULL_COUNT_${Date.now()}`;
+      const message = `⚾ FULL COUNT! ${game.awayTeam} vs ${game.homeTeam} - 3-2 count, pressure on!`;
+      
+      alertCount += await this.saveRealTimeAlert(alertKey, 'FULL_COUNT', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        balls,
+        strikes,
+        situation: 'full_count'
+      }, 80);
+    }
+
+    return alertCount;
+  }
+
+  private async generateScoringAlerts(game: any, liveData: any): Promise<number> {
+    let alertCount = 0;
+    const allPlays = liveData?.plays?.allPlays || [];
+    
+    // Check the most recent play for scoring
+    if (allPlays.length > 0) {
+      const lastPlay = allPlays[allPlays.length - 1];
+      const playEvents = lastPlay.playEvents || [];
+      
+      for (const event of playEvents) {
+        if (event.details?.event === 'Home Run') {
+          const alertKey = `${game.gameId}_HOME_RUN_${lastPlay.about?.atBatIndex}`;
+          const message = `🏠 HOME RUN! ${game.awayTeam} vs ${game.homeTeam} - Just happened!`;
+          
+          alertCount += await this.saveRealTimeAlert(alertKey, 'HOME_RUN_LIVE', game.gameId, message, {
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            batter: lastPlay.matchup?.batter?.fullName,
+            inning: lastPlay.about?.inning
+          }, 100);
+        }
       }
     }
 
     return alertCount;
+  }
+
+  private async generateBasicLiveAlerts(game: any): Promise<number> {
+    let alertCount = 0;
+    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+
+    // Fallback to basic close game alert
+    if (scoreDiff <= 3 && (game.homeScore > 0 || game.awayScore > 0)) {
+      const alertKey = `${game.gameId}_LIVE_CLOSE`;
+      const message = `🔥 LIVE: Close game! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore}`;
+      
+      alertCount += await this.saveRealTimeAlert(alertKey, 'CLOSE_GAME_LIVE', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        scoreDiff
+      }, 85);
+    }
+
+    return alertCount;
+  }
+
+  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number): Promise<number> {
+    try {
+      await db.execute(sql`
+        INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
+        VALUES (gen_random_uuid(), ${alertKey}, 'MLB', ${gameId}, 
+                ${type}, 'NEW', ${priority}, ${JSON.stringify({ message, context })}, NOW())
+        ON CONFLICT (alert_key) DO NOTHING
+      `);
+      
+      console.log(`🚨 REAL-TIME ALERT: ${message}`);
+      return 1;
+    } catch (error) {
+      // Ignore conflicts (already exists)
+      return 0;
+    }
   }
 }
