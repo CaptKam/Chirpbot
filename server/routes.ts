@@ -406,35 +406,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       
-      // Return mock alerts for now
-      const mockAlerts = [
-        {
-          id: "alert-1",
-          type: "CLOSE_GAME", 
-          message: "Game tied 5-5 in the 8th inning!",
-          gameId: "776503",
-          sport: "MLB",
-          homeTeam: "Cincinnati Reds",
-          awayTeam: "Toronto Blue Jays",
-          confidence: 95,
-          priority: 90,
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "alert-2",
-          type: "BASES_LOADED",
-          message: "Bases loaded with 2 outs for the Red Sox!",
-          gameId: "776505", 
-          sport: "MLB",
-          homeTeam: "Boston Red Sox",
-          awayTeam: "Cleveland Guardians",
-          confidence: 88,
-          priority: 85,
-          createdAt: new Date(Date.now() - 300000).toISOString()
+      // Get real alerts from database
+      const result = await db.execute(sql`
+        SELECT id, type, game_id, sport, score, payload, created_at 
+        FROM alerts 
+        ORDER BY created_at DESC 
+        LIMIT ${limit}
+      `);
+      
+      const alerts = result.rows.map(row => {
+        let payload = {};
+        try {
+          payload = JSON.parse(row.payload || '{}');
+        } catch (e) {
+          payload = {};
         }
-      ];
-
-      res.json(mockAlerts.slice(0, limit));
+        
+        return {
+          id: row.id,
+          type: row.type,
+          message: payload.situation || `${row.type} alert for game ${row.game_id}`,
+          gameId: row.game_id,
+          sport: row.sport || 'MLB',
+          homeTeam: payload.context?.scoreline ? `Home Team` : 'Home Team',
+          awayTeam: payload.context?.scoreline ? `Away Team` : 'Away Team',
+          confidence: row.score || 85,
+          priority: row.score || 80,
+          createdAt: row.created_at
+        };
+      });
+      
+      res.json(alerts);
     } catch (error) {
       console.error("Error fetching alerts:", error);
       res.status(500).json({ message: "Failed to fetch alerts" });
