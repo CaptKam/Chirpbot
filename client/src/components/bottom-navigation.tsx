@@ -1,12 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, Settings } from "lucide-react";
+import { Calendar, Settings, AlertTriangle } from 'lucide-react';
 
 export function BottomNavigation() {
   const [location] = useLocation();
-  
+
 
   const navItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
+    { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts" },
     { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
   ];
 
@@ -15,7 +16,7 @@ export function BottomNavigation() {
       <div className="flex">
         {navItems.map(({ path, icon: Icon, label, testId }) => {
           const isActive = location === path || (path === "/dashboard" && location === "/");
-          
+
           return (
             <Link
               key={path}

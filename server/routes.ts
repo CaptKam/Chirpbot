@@ -334,157 +334,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alerts routes
-  app.get("/api/alerts", async (req, res) => {
+  app.get('/api/alerts', async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
-      
-      // Return mock alerts for now
-      const mockAlerts = [
-        {
-          id: "alert-1",
-          type: "CLOSE_GAME", 
-          message: "Game tied 5-5 in the 8th inning!",
-          gameId: "776503",
-          sport: "MLB",
-          homeTeam: "Cincinnati Reds",
-          awayTeam: "Toronto Blue Jays",
-          confidence: 95,
-          priority: 90,
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "alert-2",
-          type: "BASES_LOADED",
-          message: "Bases loaded with 2 outs for the Red Sox!",
-          gameId: "776505", 
-          sport: "MLB",
-          homeTeam: "Boston Red Sox",
-          awayTeam: "Cleveland Guardians",
-          confidence: 88,
-          priority: 85,
-          createdAt: new Date(Date.now() - 300000).toISOString()
-        }
-      ];
-
-      res.json(mockAlerts.slice(0, limit));
+      const alerts = await storage.getRecentAlerts();
+      res.json(alerts);
     } catch (error) {
-      console.error("Error fetching alerts:", error);
-      res.status(500).json({ message: "Failed to fetch alerts" });
+      console.error('Error fetching alerts:', error);
+      res.status(500).json({ message: 'Failed to fetch recent alerts' });
     }
   });
 
-  // Games routes
-  app.get("/api/games/today", async (req, res) => {
+  app.get('/api/alerts/stats', async (req, res) => {
     try {
-      const sport = req.query.sport as string || 'MLB';
-      const dateParam = req.query.date as string;
-      const targetDate = dateParam || new Date().toISOString().split('T')[0];
-      
-      let games: any[] = [];
-      
-      if (sport === 'MLB') {
-        // Use real MLB API data
-        const { MLBApiService } = await import('./services/mlb-api');
-        const mlbService = new MLBApiService();
-        const mlbGames = await mlbService.getTodaysGames(targetDate);
-        
-        // Transform to match our Game interface
-        games = mlbGames.map(game => ({
-          id: game.gameId,
-          homeTeam: {
-            name: game.homeTeam,
-            score: game.homeScore
-          },
-          awayTeam: {
-            name: game.awayTeam,
-            score: game.awayScore
-          },
-          status: game.status,
-          startTime: game.gameDate,
-          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }),
-          venue: game.venue,
-          inning: game.inning,
-          inningState: game.inningState,
-          weather: {
-            temperature: 72,
-            condition: 'Clear'
-          }
-        }));
-      }
-      
-      res.json({
-        sport,
-        date: targetDate,
-        games
-      });
+      const stats = await storage.getAlertStats();
+      res.json(stats);
     } catch (error) {
-      console.error("Error fetching games:", error);
-      res.status(500).json({ message: "Failed to fetch games" });
+      console.error('Error fetching alert stats:', error);
+      res.status(500).json({ message: 'Failed to fetch alert stats' });
     }
   });
 
-  // User monitored games endpoints
-  app.get('/api/user/:userId/monitored-games', async (req, res) => {
+  app.get('/api/alerts/count', async (req, res) => {
     try {
-      const { userId } = req.params;
-      const { sport } = req.query;
-      
-      const monitoredGames = sport 
-        ? await storage.getUserMonitoredGamesBySport(userId, sport as string)
-        : await storage.getUserMonitoredGames(userId);
-        
-      res.json(monitoredGames);
+      const count = await storage.countAlerts();
+      res.json({ count });
     } catch (error) {
-      console.error("Error fetching monitored games:", error);
-      res.status(500).json({ message: "Failed to fetch monitored games" });
-    }
-  });
-
-  app.post('/api/user/:userId/monitored-games', async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { gameId, sport, homeTeamName, awayTeamName } = req.body;
-      
-      const monitoring = await storage.addUserMonitoredGame({
-        userId,
-        gameId,
-        sport,
-        homeTeamName,
-        awayTeamName
-      });
-      
-      res.json(monitoring);
-    } catch (error) {
-      console.error("Error adding monitored game:", error);
-      res.status(500).json({ message: "Failed to add monitored game" });
-    }
-  });
-
-  app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
-    try {
-      const { userId, gameId } = req.params;
-      
-      await storage.removeUserMonitoredGame(userId, gameId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error removing monitored game:", error);
-      res.status(500).json({ message: "Failed to remove monitored game" });
-    }
-  });
-
-  app.get('/api/user/:userId/monitored-games/:gameId/status', async (req, res) => {
-    try {
-      const { userId, gameId } = req.params;
-      
-      const isMonitored = await storage.isGameMonitoredByUser(userId, gameId);
-      res.json({ isMonitored });
-    } catch (error) {
-      console.error("Error checking game monitoring status:", error);
-      res.status(500).json({ message: "Failed to check monitoring status" });
+      console.error('Error counting alerts:', error);
+      res.status(500).json({ message: 'Failed to count alerts' });
     }
   });
 

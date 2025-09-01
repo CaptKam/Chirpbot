@@ -10,6 +10,7 @@ import Calendar from "./pages/calendar";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
+import Alerts from './pages/alerts';
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
@@ -63,7 +64,7 @@ function RegularAppContent() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const { lastMessage } = useWebSocket();
-  
+
   // Get settings to check if push notifications are enabled
   const { data: settings } = useQuery({
     queryKey: ['/api/settings'],
@@ -90,7 +91,7 @@ function RegularAppContent() {
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
         <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
-        <Route path="/calendar" component={() => <ProtectedRoute component={Calendar} />} />
+        <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={Settings} />} />
         <Route component={NotFound} />
