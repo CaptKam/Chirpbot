@@ -3,6 +3,7 @@ import React from 'react';
 interface TeamLogoProps {
   teamName: string;
   abbreviation?: string;
+  sport?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -32,11 +33,14 @@ const teamNameToAbbr: Record<string, string> = {
   'Colorado Rockies': 'COL',
   'Los Angeles Angels': 'LAA',
   'Cincinnati Reds': 'CIN',
-  'Arizona Diamondbacks': 'AZ',
+  'Arizona Diamondbacks': 'ARI',
+  'Diamondbacks': 'ARI',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
+  'Padres': 'SD',
   'New York Mets': 'NYM',
   'Washington Nationals': 'WSH',
+  'Nationals': 'WSH',
   'Athletics': 'OAK',
   'Oakland Athletics': 'OAK',
   'Minnesota Twins': 'MIN',
@@ -65,7 +69,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Rockies': 'COL',
   'Angels': 'LAA',
   'Reds': 'CIN',
-  'Diamondbacks': 'AZ',
+  'Diamondbacks': 'ARI',
   'Guardians': 'CLE',
   'Padres': 'SD',
   'Mets': 'NYM',
@@ -143,6 +147,7 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'LAA': 'https://a.espncdn.com/i/teamlogos/mlb/500/laa.png',
       'CIN': 'https://a.espncdn.com/i/teamlogos/mlb/500/cin.png',
       'AZ': 'https://a.espncdn.com/i/teamlogos/mlb/500/ari.png',
+      'ARI': 'https://a.espncdn.com/i/teamlogos/mlb/500/ari.png',
       'CLE': 'https://a.espncdn.com/i/teamlogos/mlb/500/cle.png',
       'SD': 'https://a.espncdn.com/i/teamlogos/mlb/500/sd.png',
       'NYM': 'https://a.espncdn.com/i/teamlogos/mlb/500/nym.png',
@@ -192,7 +197,7 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
   return null;
 };
 
-export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }: TeamLogoProps) {
+export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className = '' }: TeamLogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',

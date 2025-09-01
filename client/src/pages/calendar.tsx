@@ -449,6 +449,7 @@ export default function Calendar() {
                         <TeamLogo
                           teamName={removeCity(game.awayTeam)}
                           abbreviation={extractTeamAbbreviation(game.awayTeam)}
+                          sport={activeSport}
                           size="md"
                           className="shadow-sm"
                         />
@@ -456,6 +457,7 @@ export default function Calendar() {
                         <TeamLogo
                           teamName={removeCity(game.homeTeam)}
                           abbreviation={extractTeamAbbreviation(game.homeTeam)}
+                          sport={activeSport}
                           size="md"
                           className="shadow-sm"
                         />
