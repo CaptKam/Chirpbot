@@ -534,7 +534,7 @@ export function TeamLogo({ teamName, abbreviation, size = 'md', className = '' }
   // Generic fallback logo with better styling
   const defaultLogo = (
     <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
-      <span className="text-white font-black text-xs">{teamAbbr || teamName.slice(0, 3).toUpperCase()}</span>
+      <span className="text-white font-black text-xs">{teamAbbr || (teamName || '').slice(0, 3).toUpperCase()}</span>
     </div>
   );
 
