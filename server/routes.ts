@@ -380,101 +380,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dateParam = req.query.date as string;
       const targetDate = dateParam || new Date().toISOString().split('T')[0];
       
-      // Return mock data for now - can be enhanced later with real API calls
-      const mockGames = [
-        {
-          id: "776503",
+      let games: any[] = [];
+      
+      if (sport === 'MLB') {
+        // Use real MLB API data
+        const { MLBApiService } = await import('./services/mlb-api');
+        const mlbService = new MLBApiService();
+        const mlbGames = await mlbService.getTodaysGames(targetDate);
+        
+        // Transform to match our Game interface
+        games = mlbGames.map(game => ({
+          id: game.gameId,
           homeTeam: {
-            name: "Cincinnati Reds",
-            score: 0
+            name: game.homeTeam,
+            score: game.homeScore
           },
           awayTeam: {
-            name: "Toronto Blue Jays", 
-            score: 0
+            name: game.awayTeam,
+            score: game.awayScore
           },
-          status: "scheduled",
-          startTime: "2025-09-01T19:10:00Z",
-          gameTime: "7:10 PM",
-          venue: "Great American Ball Park",
-          inning: null,
-          inningState: null,
+          status: game.status,
+          startTime: game.gameDate,
+          gameTime: new Date(game.gameDate).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          venue: game.venue,
+          inning: game.inning,
+          inningState: game.inningState,
           weather: {
-            temperature: 78,
-            condition: "Clear"
+            temperature: 72,
+            condition: 'Clear'
           }
-        },
-        {
-          id: "776505",
-          homeTeam: {
-            name: "Boston Red Sox",
-            score: 0
-          },
-          awayTeam: {
-            name: "Cleveland Guardians",
-            score: 0
-          },
-          status: "scheduled", 
-          startTime: "2025-09-01T19:10:00Z",
-          gameTime: "7:10 PM",
-          venue: "Fenway Park",
-          inning: null,
-          inningState: null,
-          weather: {
-            temperature: 75,
-            condition: "Partly Cloudy"
-          }
-        },
-        {
-          id: "776499",
-          homeTeam: {
-            name: "Houston Astros",
-            score: 0
-          },
-          awayTeam: {
-            name: "Los Angeles Angels",
-            score: 0
-          },
-          status: "scheduled",
-          startTime: "2025-09-01T20:10:00Z", 
-          gameTime: "8:10 PM",
-          venue: "Minute Maid Park",
-          inning: null,
-          inningState: null,
-          weather: {
-            temperature: 82,
-            condition: "Clear"
-          }
-        },
-        {
-          id: "776501",
-          homeTeam: {
-            name: "Detroit Tigers",
-            score: 0
-          },
-          awayTeam: {
-            name: "New York Mets",
-            score: 0
-          },
-          status: "scheduled",
-          startTime: "2025-09-01T19:10:00Z",
-          gameTime: "7:10 PM", 
-          venue: "Comerica Park",
-          inning: null,
-          inningState: null,
-          weather: {
-            temperature: 73,
-            condition: "Overcast"
-          }
-        }
-      ];
-
-      // Filter games by sport if needed
-      const filteredGames = sport === 'MLB' ? mockGames : [];
+        }));
+      }
       
       res.json({
         sport,
         date: targetDate,
-        games: filteredGames
+        games
       });
     } catch (error) {
       console.error("Error fetching games:", error);
