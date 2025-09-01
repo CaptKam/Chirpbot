@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { eq, and, desc, count } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, sportAlertSettings, alerts } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, alerts, plays, alertCooldowns } from "../shared/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -124,11 +124,11 @@ export const storage = {
   // User monitored games operations
   async getUserMonitoredGames(userId: string, sport?: string) {
     let query = db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
-    
+
     if (sport) {
       query = query.where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.sport, sport)));
     }
-    
+
     return await query;
   },
 
@@ -140,11 +140,11 @@ export const storage = {
         eq(userMonitoredTeams.userId, data.userId),
         eq(userMonitoredTeams.gameId, data.gameId)
       ));
-    
+
     if (existing.length > 0) {
       return existing[0];
     }
-    
+
     const result = await db.insert(userMonitoredTeams).values(data).returning();
     return result[0];
   },
@@ -199,7 +199,7 @@ export const storage = {
 
   async upsertSportAlertSetting(userId: string, sport: string, alertsEnabled: boolean) {
     const existing = await this.getSportAlertSetting(userId, sport);
-    
+
     if (existing) {
       const result = await db.update(sportAlertSettings)
         .set({ alertsEnabled, updatedAt: new Date() })

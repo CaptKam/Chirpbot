@@ -1,6 +1,6 @@
 import express from 'express';
 import { db } from '../db';
-import { alerts } from '../../shared/schema';
+import { alerts, type Alert } from '../../shared/schema';
 import { desc, eq, and, count } from 'drizzle-orm';
 
 export const alertsApi = express.Router();
