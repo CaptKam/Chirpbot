@@ -76,6 +76,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Alert lookup by key
+  app.get('/api/alerts/:alertKey', async (req, res) => {
+    try {
+      const { alertKey } = req.params;
+      const alert = await storage.getAlertByKey(alertKey);
+      if (!alert) {
+        return res.status(404).json({ message: 'Alert not found' });
+      }
+      res.json(alert);
+    } catch (error) {
+      console.error('Error fetching alert:', error);
+      res.status(500).json({ message: 'Failed to fetch alert' });
+    }
+  });
+
   // Teams routes
   app.get('/api/teams', async (req, res) => {
     try {
