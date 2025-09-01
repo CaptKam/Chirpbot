@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 
@@ -441,12 +443,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/alerts/stats', async (req, res) => {
     try {
-      // Return mock stats for now
+      // Use direct SQL counts for better performance and reliability
+      const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
+      const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
+      const monitoredGames = await storage.getAllMonitoredGames();
+      
       const stats = {
-        totalAlerts: 42,
-        todayAlerts: 8,
-        liveGames: 6,
-        monitoredGames: 4
+        totalAlerts: parseInt(totalAlertsResult.rows[0]?.count || '0'),
+        todayAlerts: parseInt(todayAlertsResult.rows[0]?.count || '0'),
+        liveGames: 6, // This would need live games API integration
+        monitoredGames: monitoredGames.length
       };
       res.json(stats);
     } catch (error) {
@@ -457,8 +463,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/alerts/count', async (req, res) => {
     try {
-      const count = 42; // Mock count
-      res.json({ count });
+      const result = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
+      res.json({ count: parseInt(result.rows[0]?.count || '0') });
     } catch (error) {
       console.error('Error counting alerts:', error);
       res.status(500).json({ message: 'Failed to count alerts' });

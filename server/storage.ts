@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc, count } from "drizzle-orm";
+import { eq, and, desc, count, sql } from "drizzle-orm";
 import { users, teams, settings, userMonitoredTeams, type InsertUserMonitoredTeam } from "../shared/schema";
 
 // Complete storage interface for all operations
@@ -169,6 +169,12 @@ export const storage = {
   // Get all monitored games across all users
   async getAllMonitoredGames() {
     return await db.select().from(userMonitoredTeams);
+  },
+
+  // Alerts operations (using raw SQL since alerts table not in schema)
+  async getAllAlerts() {
+    const result = await db.execute(sql`SELECT id, created_at FROM alerts ORDER BY created_at DESC`);
+    return Array.isArray(result) ? result : (result.rows || []);
   },
 
   // User monitored teams

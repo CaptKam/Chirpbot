@@ -73,7 +73,6 @@ const teamNameToAbbr: Record<string, string> = {
   'Guardians': 'CLE',
   'Padres': 'SD',
   'Mets': 'NYM',
-  'Nationals': 'WSH',
   'Twins': 'MIN',
   'Rays': 'TB',
   
