@@ -136,16 +136,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/games/today', async (req, res) => {
     try {
       const { sport = 'MLB', date } = req.query;
+      let games = [];
       
-      if (sport === 'MLB') {
-        const { MLBApiService } = await import('./services/mlb-api');
-        const mlbService = new MLBApiService();
-        const games = await mlbService.getTodaysGames(date as string);
-        res.json({ games, date: date || new Date().toISOString().split('T')[0] });
-      } else {
-        // For other sports, return empty for now
-        res.json({ games: [], date: date || new Date().toISOString().split('T')[0] });
+      switch(sport) {
+        case 'MLB':
+          const { MLBApiService } = await import('./services/mlb-api');
+          const mlbService = new MLBApiService();
+          games = await mlbService.getTodaysGames(date as string);
+          break;
+          
+        case 'NFL':
+          const { NFLApiService } = await import('./services/nfl-api');
+          const nflService = new NFLApiService();
+          games = await nflService.getTodaysGames(date as string);
+          break;
+          
+        case 'NBA':
+          const { NBAApiService } = await import('./services/nba-api');
+          const nbaService = new NBAApiService();
+          games = await nbaService.getTodaysGames(date as string);
+          break;
+          
+        case 'NHL':
+          const { NHLApiService } = await import('./services/nhl-api');
+          const nhlService = new NHLApiService();
+          games = await nhlService.getTodaysGames(date as string);
+          break;
+          
+        case 'CFL':
+          const { CFLApiService } = await import('./services/cfl-api');
+          const cflService = new CFLApiService();
+          games = await cflService.getTodaysGames(date as string);
+          break;
+          
+        case 'NCAAF':
+          const { NCAAFApiService } = await import('./services/ncaaf-api');
+          const ncaafService = new NCAAFApiService();
+          games = await ncaafService.getTodaysGames(date as string);
+          break;
+          
+        default:
+          games = [];
       }
+      
+      res.json({ games, date: date || new Date().toISOString().split('T')[0] });
     } catch (error) {
       console.error('Error fetching games:', error);
       res.status(500).json({ message: 'Failed to fetch games' });
