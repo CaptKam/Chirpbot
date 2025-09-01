@@ -418,8 +418,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const alerts = result.rows.map(row => {
         let payload = {};
         try {
-          payload = JSON.parse(row.payload || '{}');
+          // The payload is already a JSON object, not a string
+          payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
         } catch (e) {
+          console.error('Error parsing payload:', e);
           payload = {};
         }
         
@@ -431,6 +433,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sport: row.sport || 'MLB',
           homeTeam: payload.context?.homeTeam || 'Home Team',
           awayTeam: payload.context?.awayTeam || 'Away Team',
+          homeScore: payload.context?.homeScore,
+          awayScore: payload.context?.awayScore,
           confidence: row.score || 85,
           priority: row.score || 80,
           createdAt: row.created_at
