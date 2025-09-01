@@ -57,8 +57,8 @@ export class AlertGenerator {
             awayScore: game.awayScore,
             scoreDifference: scoreDiff
           },
-          message: `${game.awayTeam} vs ${game.homeTeam} was decided by just ${scoreDiff} run${scoreDiff !== 1 ? 's' : ''}!`,
-          situation: `CLOSE_${scoreDiff}RUN_GAME`
+          message: `Close game! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - Decided by ${scoreDiff} run${scoreDiff !== 1 ? 's' : ''}`,
+          situation: `${game.awayTeam} ${game.awayScore}-${game.homeScore} ${game.homeTeam} (${scoreDiff} run game)`
         }),
         alertKey: `${game.gameId}_CLOSE_GAME`,
         state: 'NEW'
@@ -84,8 +84,8 @@ export class AlertGenerator {
             awayScore: game.awayScore,
             totalRuns: totalRuns
           },
-          message: `${game.awayTeam} vs ${game.homeTeam} featured ${totalRuns} total runs!`,
-          situation: `HIGH_SCORING_${totalRuns}RUNS`
+          message: `High-scoring game! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - ${totalRuns} total runs`,
+          situation: `${game.awayTeam} ${game.awayScore}-${game.homeScore} ${game.homeTeam} (${totalRuns} runs)`
         }),
         alertKey: `${game.gameId}_HIGH_SCORING`,
         state: 'NEW'
@@ -114,8 +114,8 @@ export class AlertGenerator {
             shutoutTeam: shutoutTeam,
             victimTeam: victimTeam
           },
-          message: `${shutoutTeam} shut out ${victimTeam}!`,
-          situation: `SHUTOUT_VICTORY`
+          message: `SHUTOUT! ${shutoutTeam} ${game.awayScore > 0 ? game.awayScore : game.homeScore}, ${victimTeam} 0`,
+          situation: `${shutoutTeam} shuts out ${victimTeam} ${Math.max(game.awayScore, game.homeScore)}-0`
         }),
         alertKey: `${game.gameId}_SHUTOUT`,
         state: 'NEW'
@@ -145,8 +145,8 @@ export class AlertGenerator {
             winner: winner,
             loser: loser
           },
-          message: `${winner} dominated ${loser} by ${scoreDiff} runs!`,
-          situation: `BLOWOUT_${scoreDiff}RUNS`
+          message: `BLOWOUT! ${winner} ${Math.max(game.awayScore, game.homeScore)}, ${loser} ${Math.min(game.awayScore, game.homeScore)} - ${scoreDiff} run difference`,
+          situation: `${winner} defeats ${loser} ${Math.max(game.awayScore, game.homeScore)}-${Math.min(game.awayScore, game.homeScore)}`
         }),
         alertKey: `${game.gameId}_BLOWOUT`,
         state: 'NEW'

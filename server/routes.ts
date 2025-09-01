@@ -426,11 +426,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           id: row.id,
           type: row.type,
-          message: payload.situation || `${row.type} alert for game ${row.game_id}`,
+          message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
           gameId: row.game_id,
           sport: row.sport || 'MLB',
-          homeTeam: payload.context?.scoreline ? `Home Team` : 'Home Team',
-          awayTeam: payload.context?.scoreline ? `Away Team` : 'Away Team',
+          homeTeam: payload.context?.homeTeam || 'Home Team',
+          awayTeam: payload.context?.awayTeam || 'Away Team',
           confidence: row.score || 85,
           priority: row.score || 80,
           createdAt: row.created_at
