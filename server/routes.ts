@@ -333,6 +333,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alerts routes
+  app.get("/api/alerts", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      // Return mock alerts for now
+      const mockAlerts = [
+        {
+          id: "alert-1",
+          type: "CLOSE_GAME", 
+          message: "Game tied 5-5 in the 8th inning!",
+          gameId: "776503",
+          sport: "MLB",
+          homeTeam: "Cincinnati Reds",
+          awayTeam: "Toronto Blue Jays",
+          confidence: 95,
+          priority: 90,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "alert-2",
+          type: "BASES_LOADED",
+          message: "Bases loaded with 2 outs for the Red Sox!",
+          gameId: "776505", 
+          sport: "MLB",
+          homeTeam: "Boston Red Sox",
+          awayTeam: "Cleveland Guardians",
+          confidence: 88,
+          priority: 85,
+          createdAt: new Date(Date.now() - 300000).toISOString()
+        }
+      ];
+
+      res.json(mockAlerts.slice(0, limit));
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  // Games routes
+  app.get("/api/games/today", async (req, res) => {
+    try {
+      const sport = req.query.sport as string || 'MLB';
+      const dateParam = req.query.date as string;
+      const targetDate = dateParam || new Date().toISOString().split('T')[0];
+      
+      // Return mock data for now - can be enhanced later with real API calls
+      const mockGames = [
+        {
+          id: "776503",
+          homeTeam: {
+            name: "Cincinnati Reds",
+            score: 0
+          },
+          awayTeam: {
+            name: "Toronto Blue Jays", 
+            score: 0
+          },
+          status: "scheduled",
+          startTime: "2025-09-01T19:10:00Z",
+          gameTime: "7:10 PM",
+          venue: "Great American Ball Park",
+          inning: null,
+          inningState: null,
+          weather: {
+            temperature: 78,
+            condition: "Clear"
+          }
+        },
+        {
+          id: "776505",
+          homeTeam: {
+            name: "Boston Red Sox",
+            score: 0
+          },
+          awayTeam: {
+            name: "Cleveland Guardians",
+            score: 0
+          },
+          status: "scheduled", 
+          startTime: "2025-09-01T19:10:00Z",
+          gameTime: "7:10 PM",
+          venue: "Fenway Park",
+          inning: null,
+          inningState: null,
+          weather: {
+            temperature: 75,
+            condition: "Partly Cloudy"
+          }
+        },
+        {
+          id: "776499",
+          homeTeam: {
+            name: "Houston Astros",
+            score: 0
+          },
+          awayTeam: {
+            name: "Los Angeles Angels",
+            score: 0
+          },
+          status: "scheduled",
+          startTime: "2025-09-01T20:10:00Z", 
+          gameTime: "8:10 PM",
+          venue: "Minute Maid Park",
+          inning: null,
+          inningState: null,
+          weather: {
+            temperature: 82,
+            condition: "Clear"
+          }
+        },
+        {
+          id: "776501",
+          homeTeam: {
+            name: "Detroit Tigers",
+            score: 0
+          },
+          awayTeam: {
+            name: "New York Mets",
+            score: 0
+          },
+          status: "scheduled",
+          startTime: "2025-09-01T19:10:00Z",
+          gameTime: "7:10 PM", 
+          venue: "Comerica Park",
+          inning: null,
+          inningState: null,
+          weather: {
+            temperature: 73,
+            condition: "Overcast"
+          }
+        }
+      ];
+
+      // Filter games by sport if needed
+      const filteredGames = sport === 'MLB' ? mockGames : [];
+      
+      res.json({
+        sport,
+        date: targetDate,
+        games: filteredGames
+      });
+    } catch (error) {
+      console.error("Error fetching games:", error);
+      res.status(500).json({ message: "Failed to fetch games" });
+    }
+  });
+
   // User monitored games endpoints
   app.get('/api/user/:userId/monitored-games', async (req, res) => {
     try {
