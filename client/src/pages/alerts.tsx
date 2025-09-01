@@ -113,57 +113,6 @@ export default function AlertsPage() {
 
       <div className="max-w-4xl mx-auto p-4 space-y-6">
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-white/5 backdrop-blur-sm border-white/10 hover:bg-white/10 transition-colors">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Activity className="h-5 w-5 text-emerald-400" />
-              <div>
-                <p className="text-xs text-slate-400">Total Alerts</p>
-                <p className="text-xl font-bold text-slate-100">{stats?.totalAlerts || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/5 backdrop-blur-sm border-white/10 hover:bg-white/10 transition-colors">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-emerald-400" />
-              <div>
-                <p className="text-xs text-slate-400">Today</p>
-                <p className="text-xl font-bold text-slate-100">{stats?.todayAlerts || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/5 backdrop-blur-sm border-white/10 hover:bg-white/10 transition-colors">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-emerald-400" />
-              <div>
-                <p className="text-xs text-slate-400">Live Games</p>
-                <p className="text-xl font-bold text-slate-100">{stats?.liveGames || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/5 backdrop-blur-sm border-white/10 hover:bg-white/10 transition-colors">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-emerald-400" />
-              <div>
-                <p className="text-xs text-slate-400">Monitored</p>
-                <p className="text-xl font-bold text-slate-100">{stats?.monitoredGames || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Filter Tabs */}
       <Tabs value={filter} onValueChange={(value) => setFilter(value as any)}>
         <TabsList className="grid w-full grid-cols-5 bg-white/5 backdrop-blur-sm border-white/10">
