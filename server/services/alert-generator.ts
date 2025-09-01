@@ -248,10 +248,18 @@ export class AlertGenerator {
     const offense = liveData?.linescore?.offense;
     if (!offense) return 0;
 
-    // Check actual base occupancy
-    const hasFirst = !!offense.first;
-    const hasSecond = !!offense.second;
-    const hasThird = !!offense.third;
+    // Check actual base occupancy with stricter validation
+    const hasFirst = !!(offense.first && offense.first.id);
+    const hasSecond = !!(offense.second && offense.second.id);
+    const hasThird = !!(offense.third && offense.third.id);
+    
+    // Debug logging to verify runner data
+    console.log(`🔍 Runner check for ${game.awayTeam} vs ${game.homeTeam}:`, {
+      hasFirst, hasSecond, hasThird,
+      firstRunner: offense.first?.fullName || 'none',
+      secondRunner: offense.second?.fullName || 'none', 
+      thirdRunner: offense.third?.fullName || 'none'
+    });
     
     const inning = liveData.linescore?.currentInning || 0;
     const outs = liveData.linescore?.outs || 0;
@@ -301,7 +309,18 @@ export class AlertGenerator {
     }
     // Runner in scoring position (2nd or 3rd base, but not bases loaded or 1st+2nd)
     else if ((hasSecond || hasThird) && !(hasFirst && hasSecond && hasThird) && !(hasFirst && hasSecond && !hasThird)) {
-      const alertKey = `${game.gameId}_RISP_${inning}_${outs}`;
+      // Include runner names in dedup key to prevent false alerts when no actual runners
+      const runnerNames = [];
+      if (hasSecond && offense.second?.fullName) runnerNames.push(offense.second.fullName);
+      if (hasThird && offense.third?.fullName) runnerNames.push(offense.third.fullName);
+      
+      // Only alert if we have actual runner names
+      if (runnerNames.length === 0) {
+        console.log(`❌ Skipping RISP alert - no actual runner names found`);
+        return alertCount;
+      }
+      
+      const alertKey = `${game.gameId}_RISP_${inning}_${outs}_${runnerNames.join('_')}`;
       const positions = [];
       if (hasSecond) positions.push('2nd');
       if (hasThird) positions.push('3rd');
@@ -316,6 +335,7 @@ export class AlertGenerator {
         strikes,
         hasSecond,
         hasThird,
+        runnerNames,
         situation: 'runner_in_scoring_position'
       }, 85);
     }
