@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count } from "drizzle-orm";
-import { users, teams, alerts, settings, userMonitoredTeams } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -33,46 +33,6 @@ export const storage = {
     return result[0];
   },
 
-  // Alert operations  
-  async createAlert(alertData: any) {
-    // SAFETY CHECK: Reject fake alerts with Unknown teams
-    if (alertData.game_info && 
-        (alertData.game_info.homeTeam === 'Unknown' || 
-         alertData.game_info.awayTeam === 'Unknown' ||
-         alertData.game_info.homeTeam?.includes('Unknown') ||
-         alertData.game_info.awayTeam?.includes('Unknown'))) {
-      console.log('🚫 STORAGE: Rejected fake alert with Unknown teams');
-      return null;
-    }
-    
-    const result = await db.insert(alerts).values(alertData).returning();
-    return result[0];
-  },
-
-  async getAllAlerts() {
-    return await db.select().from(alerts).orderBy(desc(alerts.timestamp));
-  },
-
-  async getUnseenAlertsCount() {
-    const result = await db.select({ count: count() }).from(alerts).where(eq(alerts.seen, false));
-    return result[0]?.count || 0;
-  },
-
-  async updateAlertSeen(alertId: string, seen: boolean) {
-    const result = await db.update(alerts)
-      .set({ seen })
-      .where(eq(alerts.id, alertId))
-      .returning();
-    return result[0];
-  },
-
-  async markAllAlertsSeen() {
-    await db.update(alerts).set({ seen: true }).where(eq(alerts.seen, false));
-  },
-
-  async deleteAlert(alertId: string) {
-    await db.delete(alerts).where(eq(alerts.id, alertId));
-  },
 
   // Team operations
   async getAllTeams() {
@@ -138,25 +98,6 @@ export const storage = {
     return result[0];
   },
 
-  async getAlertsBySport(sport: string) {
-    return await db.select().from(alerts).where(eq(alerts.sport, sport)).orderBy(desc(alerts.timestamp));
-  },
-
-  async getAlertsByType(type: string) {
-    return await db.select().from(alerts).where(eq(alerts.type, type)).orderBy(desc(alerts.timestamp));
-  },
-
-  async getRecentAlerts(limit: number = 50) {
-    return await db.select().from(alerts).orderBy(desc(alerts.timestamp)).limit(limit);
-  },
-
-  async markAlertAsSeen(id: string) {
-    await db.update(alerts).set({ seen: true }).where(eq(alerts.id, id));
-  },
-
-  async markAllAlertsAsSeen() {
-    await db.update(alerts).set({ seen: true }).where(eq(alerts.seen, false));
-  },
 
   async getSettingsBySport(sport: string) {
     return await db.select().from(settings).where(eq(settings.sport, sport));
@@ -166,20 +107,6 @@ export const storage = {
     return await db.select().from(settings);
   },
 
-  async getEnabledAlertKeysBySport(sport: string) {
-    // Disabled - no alert generation
-    return [];
-  },
-
-  async getMasterAlertControlsBySport(sport: string) {
-    // Disabled - no alert generation  
-    return [];
-  },
-
-  async getAllMasterAlertControls() {
-    // Disabled - no alert generation
-    return [];
-  },
 
   async createSettings(settingsData: any) {
     const result = await db.insert(settings).values(settingsData).returning();

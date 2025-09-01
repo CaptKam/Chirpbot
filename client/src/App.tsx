@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "./pages/not-found";
 import Landing from "./pages/landing";
 import Calendar from "./pages/calendar";
-import Alerts from "./pages/alerts";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
@@ -74,38 +73,8 @@ function RegularAppContent() {
   useEffect(() => {
     if (lastMessage && isAuthenticated) {
       switch (lastMessage.type) {
-        case 'new_alert':
-          const alertData = lastMessage.data as any;
-          
-          // Find the sport-specific settings
-          // Settings can be either an array of settings objects or undefined
-          const settingsArray = Array.isArray(settings) ? settings : [];
-          const sportSettings = settingsArray.find((s: any) => s.sport === alertData.sport);
-          
-          // Only show toast if push notifications are enabled
-          if (!sportSettings?.pushNotificationsEnabled) {
-            return;
-          }
-          
-          const gameInfo = alertData.gameInfo || {};
-          const score = gameInfo.score ? `${gameInfo.awayTeam} ${gameInfo.score.away} - ${gameInfo.score.home} ${gameInfo.homeTeam}` : alertData.title;
-          const inningInfo = gameInfo.inning ? `Inning ${gameInfo.inning} ${gameInfo.inningState === 'top' ? '▲' : '▼'}` : '';
-          
-          toast({
-            title: `⚡ ${alertData.type}`,
-            description: (
-              <div className="space-y-1">
-                <div className="font-semibold">{alertData.description}</div>
-                <div className="text-xs opacity-80">{score}</div>
-                {inningInfo && <div className="text-xs opacity-80">{inningInfo}</div>}
-              </div>
-            ),
-            action: (
-              <ToastAction altText="View Alerts" onClick={() => setLocation('/alerts')}>
-                View
-              </ToastAction>
-            ),
-          });
+        case 'team_monitoring_changed':
+          // Handle team monitoring changes
           break;
         case 'team_monitoring_changed':
           // Handle team monitoring changes if needed
@@ -124,7 +93,6 @@ function RegularAppContent() {
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
         <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
-        <Route path="/alerts" component={Alerts} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={Settings} />} />
         <Route component={NotFound} />
