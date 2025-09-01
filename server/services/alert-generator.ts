@@ -255,6 +255,12 @@ export class AlertGenerator {
     
     const inning = liveData.linescore?.currentInning || 0;
     const outs = liveData.linescore?.outs || 0;
+    
+    // Get current count for ball/strike display
+    const currentPlay = liveData?.plays?.currentPlay;
+    const count = currentPlay?.count;
+    const balls = count?.balls || 0;
+    const strikes = count?.strikes || 0;
 
     // Bases loaded: all three bases occupied
     if (hasFirst && hasSecond && hasThird) {
@@ -266,6 +272,8 @@ export class AlertGenerator {
         awayTeam: game.awayTeam,
         inning,
         outs,
+        balls,
+        strikes,
         first: offense.first?.fullName,
         second: offense.second?.fullName,
         third: offense.third?.fullName,
@@ -282,6 +290,8 @@ export class AlertGenerator {
         awayTeam: game.awayTeam,
         inning,
         outs,
+        balls,
+        strikes,
         first: offense.first?.fullName,
         second: offense.second?.fullName,
         hasFirst,
@@ -302,6 +312,8 @@ export class AlertGenerator {
         awayTeam: game.awayTeam,
         inning,
         outs,
+        balls,
+        strikes,
         hasSecond,
         hasThird,
         situation: 'runner_in_scoring_position'
