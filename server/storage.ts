@@ -182,7 +182,23 @@ export const storage = {
 
   // Monitored games - for alert system
   async getAllMonitoredGames() {
-    return await db.select().from(userMonitoredTeams);
+    try {
+      const monitoredGames = await db.select().from(userMonitoredTeams);
+      return monitoredGames;
+    } catch (error) {
+      console.error('Error fetching monitored games:', error);
+      return [];
+    }
+  },
+
+  async removeMonitoredGameByGameId(gameId: string) {
+    try {
+      await db.delete(userMonitoredTeams).where(eq(userMonitoredTeams.gameId, gameId));
+      console.log(`Removed monitored game: ${gameId}`);
+    } catch (error) {
+      console.error('Error removing monitored game:', error);
+      throw error;
+    }
   },
 
   // Sport alert settings operations

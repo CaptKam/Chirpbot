@@ -83,10 +83,24 @@ export class MLBFetcher {
       const response = await fetch(`${this.baseUrl}/game/${gamePk}/feed/live`);
       
       if (!response.ok) {
+        if (response.status === 404) {
+          console.log(`MLB game ${gamePk} not found (likely completed or invalid) - removing from monitoring`);
+          // Remove this game from active monitoring
+          this.activeGames.delete(gamePk);
+          return;
+        }
         throw new Error(`MLB API error: ${response.status}`);
       }
       
       const gameData: MLBGame = await response.json();
+      
+      // Check if game is final/completed
+      if (gameData.gameData?.status?.statusCode === '3' || 
+          gameData.gameData?.status?.statusCode === 'F') {
+        console.log(`MLB game ${gamePk} is final - removing from monitoring`);
+        this.activeGames.delete(gamePk);
+        return;
+      }
       
       // Transform to our format
       const transformedData = this.transformMLBData(gameData);
