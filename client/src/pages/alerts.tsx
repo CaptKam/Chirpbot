@@ -204,51 +204,43 @@ export default function AlertsPage() {
                     className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors"
                   >
                     <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-start space-x-3">
-                          <div className={`p-2 rounded-full ${getAlertColor(alert.priority)}`}>
-                            {getAlertIcon(alert.type)}
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-400">
-                                {alert.sport}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs border-slate-500 text-slate-300">
-                                {alert.type.replace('_', ' ')}
-                              </Badge>
-                            </div>
-                            
-                            <p className="text-slate-100 font-medium mb-1">{alert.message}</p>
-                            
-                            <div className="text-sm text-slate-400">
-                              {alert.homeTeam} vs {alert.awayTeam}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <p className="text-xs text-slate-400">{formatTime(alert.createdAt)}</p>
-                          <div className="flex items-center space-x-1 mt-1">
-                            <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                            <span className="text-xs text-slate-400">{alert.confidence}%</span>
-                          </div>
+                      {/* Header with type and time */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-emerald-400 text-sm font-semibold">{alert.sport}</span>
+                        <span className="text-slate-400 text-xs">{formatTime(alert.createdAt)}</span>
+                      </div>
+                      
+                      {/* Alert Type Badge */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-400">
+                          {alert.type.replace('_', ' ')}
+                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <div className="h-2 w-2 bg-emerald-500 rounded-full"></div>
+                          <span className="text-xs text-emerald-400">{alert.confidence}%</span>
                         </div>
                       </div>
                       
-                      {/* Alert Footer */}
-                      <AlertFooter
-                        inning={alert.inning}
-                        isTopInning={alert.isTopInning}
-                        balls={alert.balls || 0}
-                        strikes={alert.strikes || 0}
-                        outs={alert.outs || 0}
-                        hasFirst={!!alert.hasFirst}
-                        hasSecond={!!alert.hasSecond}
-                        hasThird={!!alert.hasThird}
-                        createdAt={alert.createdAt}
-                      />
+                      {/* Main alert message */}
+                      <h4 className="font-bold mb-1 text-slate-100">{alert.message}</h4>
+                      
+                      {/* Team matchup */}
+                      <p className="text-sm text-slate-300 mb-3">{alert.homeTeam} vs {alert.awayTeam}</p>
+                      
+                      {/* Game situation with colored background */}
+                      <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
+                        <AlertFooter
+                          inning={alert.inning}
+                          isTopInning={alert.isTopInning}
+                          balls={alert.balls || 0}
+                          strikes={alert.strikes || 0}
+                          outs={alert.outs || 0}
+                          hasFirst={!!alert.hasFirst}
+                          hasSecond={!!alert.hasSecond}
+                          hasThird={!!alert.hasThird}
+                          createdAt={alert.createdAt}
+                        />
+                      </div>
                     </div>
                   </SwipeableCard>
                 </motion.div>
