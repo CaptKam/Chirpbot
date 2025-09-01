@@ -34,10 +34,8 @@ const teamNameToAbbr: Record<string, string> = {
   'Los Angeles Angels': 'LAA',
   'Cincinnati Reds': 'CIN',
   'Arizona Diamondbacks': 'ARI',
-  'Diamondbacks': 'ARI',
   'Cleveland Guardians': 'CLE',
   'San Diego Padres': 'SD',
-  'Padres': 'SD',
   'New York Mets': 'NYM',
   'Washington Nationals': 'WSH',
   'Nationals': 'WSH',
@@ -69,9 +67,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Rockies': 'COL',
   'Angels': 'LAA',
   'Reds': 'CIN',
-  'Diamondbacks': 'ARI',
   'Guardians': 'CLE',
-  'Padres': 'SD',
   'Mets': 'NYM',
   'Twins': 'MIN',
   'Rays': 'TB',
@@ -517,7 +513,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
   }
   
   // Try to get the official team logo URL first, prioritizing MLB for sports betting app
-  const logoUrl = getTeamLogoUrl(teamAbbr, 'MLB');
+  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, 'MLB') : null;
   
   if (logoUrl) {
     // Use official team logo from ESPN
@@ -542,7 +538,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     </div>
   );
 
-  const selectedLogo = logoMap[teamAbbr];
+  const selectedLogo = teamAbbr ? logoMap[teamAbbr] : null;
   
   if (!selectedLogo) {
     console.log(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);

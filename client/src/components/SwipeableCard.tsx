@@ -6,7 +6,7 @@ import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calcula
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import AlertFooter from './AlertFooter';
+import AlertFooter from '@/components/AlertFooter';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -244,7 +244,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             </div>
 
             {/* Betting Recommendations Based on Game Situation */}
-            {(alertData.gameInfo?.v3Analysis || alertData.priority >= 80) && (
+            {(alertData.gameInfo?.v3Analysis || (alertData.priority && alertData.priority >= 80)) && (
               <div className="space-y-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
                   <div className="flex items-center space-x-2 mb-2">

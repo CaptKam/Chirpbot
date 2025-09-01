@@ -55,8 +55,8 @@ export default function AlertsPage() {
   });
 
   const filteredAlerts = filter === 'all' 
-    ? alerts 
-    : alerts.filter((alert: Alert) => alert.sport === filter);
+    ? (alerts as Alert[])
+    : (alerts as Alert[]).filter((alert: Alert) => alert.sport === filter);
 
   const getAlertIcon = (type: string) => {
     switch (type) {
