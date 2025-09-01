@@ -149,6 +149,13 @@ export const alerts = pgTable("alerts", {
   state: text("state").notNull().default("NEW"), // NEW/DELIVERED/ACKED/EXPIRED
   score: integer("score").notNull(),
   payload: jsonb("payload").notNull(),
+  // Enhanced fields from Python/Flask system
+  priority: integer("priority").notNull().default(50), // 1-100 granular priority
+  aiNote: text("ai_note"), // AI-generated contextual analysis
+  message: text("message"), // Human-readable alert message
+  dedupScope: text("dedup_scope").notNull().default("game"), // Deduplication scope level
+  dedupKey: text("dedup_key").notNull(), // Content-based deduplication key
+  realertAfter: integer("realert_after"), // Seconds after which alert can resurface
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

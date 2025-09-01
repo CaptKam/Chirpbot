@@ -30,7 +30,7 @@ export type CanonicalState = {
 export type AlertCandidate = {
   sport: Sport;
   gameId: string;
-  type: 'HIGH_SCORING_OPP'|'NINTH_TIE'|'RED_ZONE';
+  type: 'HIGH_SCORING_OPP'|'NINTH_TIE'|'RED_ZONE'|'HOME_RUN'|'TOUCHDOWN'|'CLOSE_GAME'|'BASES_LOADED'|'TWO_MINUTE_WARNING';
   phase: string;            // "T7" or "Q4_02:15"
   situation: string;        // compact code
   playerId?: string;
@@ -38,4 +38,11 @@ export type AlertCandidate = {
   ruleVersion: string;
   score: number;            // priority 0..100
   context: Record<string, unknown>;
+  // Enhanced features from Python/Flask system
+  priority: number;         // 1-100 granular priority scoring
+  aiNote?: string;          // AI-generated contextual analysis
+  dedupScope: 'plate-appearance'|'half-inning'|'full-inning'|'game'|'global'; // Deduplication scope level
+  dedupKey: string;         // Content-based deduplication key
+  realertAfter?: number;    // Seconds after which alert can resurface
+  message?: string;         // Human-readable alert message
 };
