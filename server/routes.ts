@@ -334,19 +334,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alerts routes
-  app.get('/api/alerts', async (req, res) => {
+  app.get("/api/alerts", async (req, res) => {
     try {
-      const alerts = await storage.getRecentAlerts();
-      res.json(alerts);
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      // Return mock alerts for now
+      const mockAlerts = [
+        {
+          id: "alert-1",
+          type: "CLOSE_GAME", 
+          message: "Game tied 5-5 in the 8th inning!",
+          gameId: "776503",
+          sport: "MLB",
+          homeTeam: "Cincinnati Reds",
+          awayTeam: "Toronto Blue Jays",
+          confidence: 95,
+          priority: 90,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "alert-2",
+          type: "BASES_LOADED",
+          message: "Bases loaded with 2 outs for the Red Sox!",
+          gameId: "776505", 
+          sport: "MLB",
+          homeTeam: "Boston Red Sox",
+          awayTeam: "Cleveland Guardians",
+          confidence: 88,
+          priority: 85,
+          createdAt: new Date(Date.now() - 300000).toISOString()
+        }
+      ];
+
+      res.json(mockAlerts.slice(0, limit));
     } catch (error) {
-      console.error('Error fetching alerts:', error);
-      res.status(500).json({ message: 'Failed to fetch recent alerts' });
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ message: "Failed to fetch alerts" });
     }
   });
 
   app.get('/api/alerts/stats', async (req, res) => {
     try {
-      const stats = await storage.getAlertStats();
+      // Return mock stats for now
+      const stats = {
+        totalAlerts: 42,
+        todayAlerts: 8,
+        liveGames: 6,
+        monitoredGames: 4
+      };
       res.json(stats);
     } catch (error) {
       console.error('Error fetching alert stats:', error);
@@ -356,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/alerts/count', async (req, res) => {
     try {
-      const count = await storage.countAlerts();
+      const count = 42; // Mock count
       res.json({ count });
     } catch (error) {
       console.error('Error counting alerts:', error);

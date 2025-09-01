@@ -10,7 +10,7 @@ import Calendar from "./pages/calendar";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
-import Alerts from './pages/alerts';
+import Alerts from "./pages/alerts";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
