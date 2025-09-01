@@ -9,8 +9,45 @@ import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+
+// Helper functions
+const removeCity = (teamName: string) => {
+  if (!teamName) return '';
+  // Remove city names from team names (e.g., "New York Yankees" -> "Yankees")
+  const words = teamName.split(' ');
+  return words.length > 1 ? words.slice(-1).join(' ') : teamName;
+};
+
+const extractTeamAbbreviation = (teamName: string) => {
+  if (!teamName) return '';
+  // Extract abbreviation from team name
+  const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay'];
+  let cleanName = teamName;
+  
+  // Remove city prefixes
+  for (const prefix of cityPrefixes) {
+    if (teamName.startsWith(prefix)) {
+      cleanName = teamName.replace(prefix, '').trim();
+      break;
+    }
+  }
+  
+  // Common team abbreviations
+  const abbreviations: Record<string, string> = {
+    'Yankees': 'NYY', 'Mets': 'NYM', 'Dodgers': 'LAD', 'Angels': 'LAA',
+    'Giants': 'SF', 'Athletics': 'OAK', 'Padres': 'SD', 'Cardinals': 'STL',
+    'Cubs': 'CHC', 'White Sox': 'CWS', 'Tigers': 'DET', 'Guardians': 'CLE',
+    'Twins': 'MIN', 'Royals': 'KC', 'Astros': 'HOU', 'Rangers': 'TEX',
+    'Mariners': 'SEA', 'Red Sox': 'BOS', 'Orioles': 'BAL', 'Blue Jays': 'TOR',
+    'Rays': 'TB', 'Marlins': 'MIA', 'Nationals': 'WSH', 'Phillies': 'PHI',
+    'Braves': 'ATL', 'Pirates': 'PIT', 'Reds': 'CIN', 'Brewers': 'MIL',
+    'Diamondbacks': 'ARI', 'Rockies': 'COL'
+  };
+  
+  return abbreviations[cleanName] || cleanName.slice(0, 3).toUpperCase();
+};
+
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
-import { removeCity } from "@/lib/team-utils";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
@@ -119,7 +156,7 @@ export default function Calendar() {
   });
 
   const toggleGameSelection = (gameId: string) => {
-    const game = games.find(g => g.id === gameId);
+    const game = games.find(g => g.gameId === gameId);
     if (!game) return;
 
     const newSelected = new Set(selectedGames);
@@ -133,15 +170,15 @@ export default function Calendar() {
       addMonitoringMutation.mutate({
         gameId,
         sport: activeSport,
-        homeTeamName: removeCity(game.homeTeam.name),
-        awayTeamName: removeCity(game.awayTeam.name)
+        homeTeamName: game.homeTeam,
+        awayTeamName: game.awayTeam
       });
     }
     setSelectedGames(newSelected);
   };
 
   // Calculate selected count only for current sport's games
-  const selectedCount = games.filter(game => selectedGames.has(game.id)).length;
+  const selectedCount = games.filter(game => selectedGames.has(game.gameId)).length;
 
   const getWeatherIcon = (condition: string) => {
     switch (condition.toLowerCase()) {
@@ -383,9 +420,9 @@ export default function Calendar() {
                 return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
               })
               .map((game, index) => {
-              const isSelected = selectedGames.has(game.id);
+              const isSelected = selectedGames.has(game.gameId);
               const weather = getWeatherData();
-              const startTime = new Date(game.startTime);
+              const startTime = new Date(game.gameDate);
               const formattedTime = isNaN(startTime.getTime()) 
                 ? 'TBD'
                 : startTime.toLocaleTimeString('en-US', { 
@@ -394,7 +431,7 @@ export default function Calendar() {
                   });
 
               return (
-                <div key={game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-game-${index}`} className="relative">
+                <div key={game.gameId && !game.gameId.includes('undefined') ? game.gameId : `${activeSport}-game-${index}`} className="relative">
                   <Card 
                     className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] hover:bg-white/10 ${
                       isSelected 
@@ -402,23 +439,23 @@ export default function Calendar() {
                         : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
                     }`}
                     style={{ borderRadius: '12px' }}
-                    onClick={() => toggleGameSelection(game.id)}
-                    data-testid={`game-card-${game.id}`}
+                    onClick={() => toggleGameSelection(game.gameId)}
+                    data-testid={`game-card-${game.gameId}`}
                   >
                   {/* Header with teams and selection indicator */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-3">
                         <TeamLogo
-                          teamName={removeCity(game.awayTeam.name)}
-                          abbreviation={game.awayTeam.abbreviation}
+                          teamName={removeCity(game.awayTeam)}
+                          abbreviation={extractTeamAbbreviation(game.awayTeam)}
                           size="md"
                           className="shadow-sm"
                         />
                         <span className="text-slate-300 font-bold text-lg">@</span>
                         <TeamLogo
-                          teamName={removeCity(game.homeTeam.name)}
-                          abbreviation={game.homeTeam.abbreviation}
+                          teamName={removeCity(game.homeTeam)}
+                          abbreviation={extractTeamAbbreviation(game.homeTeam)}
                           size="md"
                           className="shadow-sm"
                         />
@@ -437,8 +474,8 @@ export default function Calendar() {
 
                   {/* Team names */}
                   <div className="mb-3">
-                    <h3 className="font-bold text-slate-100 text-lg leading-tight" data-testid={`game-title-${game.id}`}>
-                      {removeCity(game.awayTeam.name)} @ {removeCity(game.homeTeam.name)}
+                    <h3 className="font-bold text-slate-100 text-lg leading-tight" data-testid={`game-title-${game.gameId}`}>
+                      {removeCity(game.awayTeam)} @ {removeCity(game.homeTeam)}
                     </h3>
                   </div>
 

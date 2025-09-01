@@ -165,8 +165,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/user/:userId/monitored-games', async (req, res) => {
     try {
       const { userId } = req.params;
-      const { gameId, sport } = req.body;
-      await storage.addUserMonitoredGame(userId, gameId);
+      const { gameId, sport, homeTeamName, awayTeamName } = req.body;
+      
+      const gameData = {
+        userId,
+        gameId,
+        sport: sport || 'MLB',
+        homeTeamName: homeTeamName || '',
+        awayTeamName: awayTeamName || '',
+        createdAt: new Date()
+      };
+      
+      await storage.addUserMonitoredGame(gameData);
       res.json({ message: 'Game monitoring enabled' });
     } catch (error) {
       console.error('Error adding monitored game:', error);
