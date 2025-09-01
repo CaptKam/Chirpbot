@@ -25,7 +25,7 @@ export class CFLApiService {
           homeScore: parseInt(homeTeam.score) || 0,
           awayScore: parseInt(awayTeam.score) || 0,
           startTime: new Date(event.date).toISOString(),
-          status: event.status.type.name,
+          status: this.mapGameStatus(event.status.type.name),
           isLive: event.status.type.state === 'in',
           isCompleted: event.status.type.state === 'post',
           venue: game.venue?.fullName || '',
@@ -37,5 +37,21 @@ export class CFLApiService {
       console.error('Error fetching CFL games:', error);
       return [];
     }
+  }
+
+  private mapGameStatus(statusName: string): string {
+    const lowerStatus = statusName.toLowerCase();
+    
+    if (lowerStatus.includes('in_progress') || lowerStatus.includes('live') || lowerStatus.includes('status_in_progress')) {
+      return 'live';
+    }
+    if (lowerStatus.includes('final') || lowerStatus.includes('status_final')) {
+      return 'final';
+    }
+    if (lowerStatus.includes('postponed') || lowerStatus.includes('delayed') || lowerStatus.includes('status_postponed')) {
+      return 'delayed';
+    }
+    
+    return 'scheduled';
   }
 }
