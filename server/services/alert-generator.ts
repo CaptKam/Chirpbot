@@ -270,8 +270,25 @@ export class AlertGenerator {
         situation: 'bases_loaded'
       }, 98);
     }
-    // Runner in scoring position (2nd or 3rd base, but not bases loaded)
-    else if ((hasSecond || hasThird) && !(hasFirst && hasSecond && hasThird)) {
+    // Runners on 1st and 2nd (prime scoring opportunity)
+    else if (hasFirst && hasSecond && !hasThird) {
+      const alertKey = `${game.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
+      const message = `💎 RUNNERS ON 1ST & 2ND! ${game.awayTeam} vs ${game.homeTeam} - Prime scoring position, ${outs} outs`;
+      
+      alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNERS_1ST_2ND', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        inning,
+        outs,
+        first: offense.first?.fullName,
+        second: offense.second?.fullName,
+        hasFirst,
+        hasSecond,
+        situation: 'runners_on_1st_and_2nd'
+      }, 88);
+    }
+    // Runner in scoring position (2nd or 3rd base, but not bases loaded or 1st+2nd)
+    else if ((hasSecond || hasThird) && !(hasFirst && hasSecond && hasThird) && !(hasFirst && hasSecond && !hasThird)) {
       const alertKey = `${game.gameId}_RISP_${inning}_${outs}`;
       const positions = [];
       if (hasSecond) positions.push('2nd');
