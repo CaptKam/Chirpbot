@@ -49,6 +49,16 @@ export const settings = pgTable("settings", {
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),
 });
 
+// Sport-specific alert settings
+export const sportAlertSettings = pgTable("sport_alert_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL, NCAAF, etc.
+  alertsEnabled: boolean("alerts_enabled").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // User monitored teams for persistent game selection
 export const userMonitoredTeams = pgTable("user_monitored_teams", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -98,6 +108,12 @@ export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTea
   createdAt: true,
 });
 
+export const insertSportAlertSettingsSchema = createInsertSchema(sportAlertSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -111,6 +127,9 @@ export type Settings = typeof settings.$inferSelect;
 
 export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
 export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
+
+export type InsertSportAlertSettings = z.infer<typeof insertSportAlertSettingsSchema>;
+export type SportAlertSettings = typeof sportAlertSettings.$inferSelect;
 
 // New alert system tables
 export const plays = pgTable("plays", {

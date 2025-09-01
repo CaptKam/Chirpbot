@@ -399,5 +399,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sport alert settings routes
+  app.get('/api/user/:userId/sport-alerts', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const settings = await storage.getUserSportAlertSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching sport alert settings:', error);
+      res.status(500).json({ message: 'Failed to fetch sport alert settings' });
+    }
+  });
+
+  app.post('/api/user/:userId/sport-alerts/:sport', async (req, res) => {
+    try {
+      const { userId, sport } = req.params;
+      const { alertsEnabled } = req.body;
+      
+      const setting = await storage.upsertSportAlertSetting(userId, sport, alertsEnabled);
+      res.json(setting);
+    } catch (error) {
+      console.error('Error updating sport alert setting:', error);
+      res.status(500).json({ message: 'Failed to update sport alert setting' });
+    }
+  });
+
   return httpServer;
 }
