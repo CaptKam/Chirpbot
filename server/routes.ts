@@ -98,6 +98,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoints
+  app.get('/api/debug/alerts-count', async (req, res) => {
+    try {
+      const count = await storage.getAlertsCount();
+      res.json({ totalAlerts: count, timestamp: new Date().toISOString() });
+    } catch (error) {
+      console.error('Error counting alerts:', error);
+      res.status(500).json({ message: 'Failed to count alerts' });
+    }
+  });
+
+  app.get('/api/debug/recent-alerts/:limit?', async (req, res) => {
+    try {
+      const limit = parseInt(req.params.limit || '10');
+      const alerts = await storage.getRecentAlerts(limit);
+      res.json({ 
+        alerts: alerts.map(a => ({
+          alertKey: a.alertKey,
+          sport: a.sport,
+          type: a.type,
+          gameId: a.gameId,
+          createdAt: a.createdAt,
+          state: a.state
+        })),
+        count: alerts.length 
+      });
+    } catch (error) {
+      console.error('Error fetching recent alerts:', error);
+      res.status(500).json({ message: 'Failed to fetch recent alerts' });
+    }
+  });
+
   // Teams routes
   app.get('/api/teams', async (req, res) => {
     try {
