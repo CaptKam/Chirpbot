@@ -170,16 +170,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/login', async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { usernameOrEmail, password } = req.body;
       
-      if (!username || !password) {
+      if (!usernameOrEmail || !password) {
         return res.status(400).json({ message: 'Username and password are required' });
       }
       
       // Find user by username or email
-      let user = await storage.getUserByUsername(username);
+      let user = await storage.getUserByUsername(usernameOrEmail);
       if (!user) {
-        user = await storage.getUserByEmail(username);
+        user = await storage.getUserByEmail(usernameOrEmail);
       }
       
       if (!user || !user.password) {
