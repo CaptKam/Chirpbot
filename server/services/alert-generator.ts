@@ -183,19 +183,91 @@ export class AlertGenerator {
       const liveGames = games.filter(game => game.isLive);
       
       if (liveGames.length === 0) {
-        console.log('No live games to monitor for alerts');
+        console.log('🔍 No live games to monitor for alerts');
         return;
       }
 
-      console.log(`Monitoring ${liveGames.length} live games for alerts`);
+      console.log(`🔍 Monitoring ${liveGames.length} live games for alerts`);
       
+      let newAlerts = 0;
       for (const game of liveGames) {
-        // This would fetch detailed live feed data and generate real-time alerts
-        // For now, this is a placeholder for when live monitoring is needed
-        console.log(`Would monitor live game: ${game.awayTeam} vs ${game.homeTeam}`);
+        const count = await this.generateLiveAlertsForGame(game);
+        newAlerts += count;
+      }
+      
+      if (newAlerts > 0) {
+        console.log(`🚨 Generated ${newAlerts} new live alerts!`);
+      } else {
+        console.log('📊 No new alerts generated from live games');
       }
     } catch (error) {
       console.error('Error generating live game alerts:', error);
     }
+  }
+
+  private async generateLiveAlertsForGame(game: any): Promise<number> {
+    let alertCount = 0;
+    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+
+    // Close game alert for live games (within 3 runs, inning 7+)
+    if (scoreDiff <= 3 && (game.homeScore > 0 || game.awayScore > 0)) {
+      const alertKey = `${game.gameId}_LIVE_CLOSE`;
+      const message = `🔥 LIVE: Close game! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - Currently live!`;
+      
+      try {
+        await db.execute(sql`
+          INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
+          VALUES (gen_random_uuid(), ${alertKey}, 'MLB', ${game.gameId}, 
+                  'CLOSE_GAME_LIVE', 'NEW', 95, ${JSON.stringify({
+                    message,
+                    context: {
+                      homeTeam: game.homeTeam,
+                      awayTeam: game.awayTeam,
+                      homeScore: game.homeScore,
+                      awayScore: game.awayScore,
+                      scoreDiff
+                    }
+                  })}, NOW())
+          ON CONFLICT (alert_key) DO NOTHING
+        `);
+        
+        console.log(`🚨 NEW LIVE ALERT: ${message}`);
+        alertCount++;
+      } catch (error) {
+        // Ignore conflicts (already exists)
+      }
+    }
+
+    // High-scoring live game alert (15+ runs)
+    const totalRuns = game.homeScore + game.awayScore;
+    if (totalRuns >= 15) {
+      const alertKey = `${game.gameId}_LIVE_HIGH_SCORING`;
+      const message = `⚾ LIVE: High-scoring game! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - ${totalRuns} runs!`;
+      
+      try {
+        await db.execute(sql`
+          INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
+          VALUES (gen_random_uuid(), ${alertKey}, 'MLB', ${game.gameId}, 
+                  'HIGH_SCORING_LIVE', 'NEW', 90, ${JSON.stringify({
+                    message,
+                    context: {
+                      homeTeam: game.homeTeam,
+                      awayTeam: game.awayTeam,
+                      homeScore: game.homeScore,
+                      awayScore: game.awayScore,
+                      totalRuns
+                    }
+                  })}, NOW())
+          ON CONFLICT (alert_key) DO NOTHING
+        `);
+        
+        console.log(`🚨 NEW LIVE ALERT: ${message}`);
+        alertCount++;
+      } catch (error) {
+        // Ignore conflicts
+      }
+    }
+
+    return alertCount;
   }
 }

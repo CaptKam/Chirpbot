@@ -482,5 +482,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
+  // Start live game monitoring every 2 minutes
+  setInterval(async () => {
+    try {
+      console.log('🔍 Checking for live game alerts...');
+      await alertGenerator.generateLiveGameAlerts();
+    } catch (error) {
+      console.error('Error in live monitoring:', error);
+    }
+  }, 120000); // Check every 2 minutes
+
   return httpServer;
 }
