@@ -437,7 +437,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           awayScore: payload.context?.awayScore,
           confidence: row.score || 85,
           priority: row.score || 80,
-          createdAt: row.created_at
+          createdAt: row.created_at,
+          // Add context data for footer
+          context: payload.context || {},
+          inning: payload.context?.inning,
+          isTopInning: payload.context?.isTopInning,
+          outs: payload.context?.outs,
+          balls: payload.context?.balls,
+          strikes: payload.context?.strikes,
+          hasFirst: payload.context?.first || payload.context?.hasFirst,
+          hasSecond: payload.context?.second || payload.context?.hasSecond,
+          hasThird: payload.context?.third || payload.context?.hasThird
         };
       });
       

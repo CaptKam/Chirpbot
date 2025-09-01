@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { AlertFooter } from '@/components/alert-footer';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,16 @@ interface Alert {
   confidence: number;
   priority: number;
   createdAt: string;
+  // Footer data
+  inning?: number;
+  isTopInning?: boolean;
+  outs?: number;
+  balls?: number;
+  strikes?: number;
+  hasFirst?: boolean;
+  hasSecond?: boolean;
+  hasThird?: boolean;
+  context?: any;
 }
 
 interface AlertStats {
@@ -181,7 +192,7 @@ export default function AlertsPage() {
                 >
                   <Card className="bg-[#1C2B5E]/20 border-slate-700 hover:border-[#2387F4]/50 transition-colors">
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex items-start space-x-3">
                           <div className={`p-2 rounded-full ${getAlertColor(alert.priority)}`}>
                             {getAlertIcon(alert.type)}
@@ -213,6 +224,19 @@ export default function AlertsPage() {
                           </div>
                         </div>
                       </div>
+                      
+                      {/* Alert Footer */}
+                      <AlertFooter
+                        inning={alert.inning}
+                        isTopInning={alert.isTopInning}
+                        balls={alert.balls || 0}
+                        strikes={alert.strikes || 0}
+                        outs={alert.outs || 0}
+                        hasFirst={!!alert.hasFirst}
+                        hasSecond={!!alert.hasSecond}
+                        hasThird={!!alert.hasThird}
+                        createdAt={alert.createdAt}
+                      />
                     </CardContent>
                   </Card>
                 </motion.div>
