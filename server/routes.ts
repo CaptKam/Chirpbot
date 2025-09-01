@@ -129,6 +129,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Games routes
+  app.get('/api/games/today', async (req, res) => {
+    try {
+      const { sport = 'MLB', date } = req.query;
+      
+      if (sport === 'MLB') {
+        const { MLBApiService } = await import('./services/mlb-api');
+        const mlbService = new MLBApiService();
+        const games = await mlbService.getTodaysGames(date as string);
+        res.json({ games, date: date || new Date().toISOString().split('T')[0] });
+      } else {
+        // For other sports, return empty for now
+        res.json({ games: [], date: date || new Date().toISOString().split('T')[0] });
+      }
+    } catch (error) {
+      console.error('Error fetching games:', error);
+      res.status(500).json({ message: 'Failed to fetch games' });
+    }
+  });
+
+  // User monitored games routes
+  app.get('/api/user/:userId/monitored-games', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { sport } = req.query;
+      const games = await storage.getUserMonitoredGames(userId);
+      res.json(games);
+    } catch (error) {
+      console.error('Error fetching monitored games:', error);
+      res.status(500).json({ message: 'Failed to fetch monitored games' });
+    }
+  });
+
+  app.post('/api/user/:userId/monitored-games', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { gameId, sport } = req.body;
+      await storage.addUserMonitoredGame(userId, gameId);
+      res.json({ message: 'Game monitoring enabled' });
+    } catch (error) {
+      console.error('Error adding monitored game:', error);
+      res.status(500).json({ message: 'Failed to enable game monitoring' });
+    }
+  });
+
+  app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
+    try {
+      const { userId, gameId } = req.params;
+      await storage.removeUserMonitoredGame(userId, gameId);
+      res.json({ message: 'Game monitoring disabled' });
+    } catch (error) {
+      console.error('Error removing monitored game:', error);
+      res.status(500).json({ message: 'Failed to disable game monitoring' });
+    }
+  });
+
   // Settings routes
   app.get('/api/settings', async (req, res) => {
     try {
