@@ -1,0 +1,880 @@
+Multi-Sport Alerts – One-Pager Build Spec
+1) Repo Layout (only these)
+client/                 # (optional UI)
+server/
+  index.ts              # HTTP + bootstrap
+  http/health.ts        # /healthz /readyz
+  api/alerts.ts         # GET /alerts (recent)
+  engines/
+    engine-coordinator.ts
+    mlb-fetcher.ts
+    ncaaf-fetcher.ts
+    normalizer.ts
+    rule-engine.ts
+    rules/
+      mlb.ts
+      ncaaf.ts
+  services/
+    redis.ts
+    db.ts
+    weather.ts
+    notifier.ts
+    feature-flags.ts
+  models/
+    contracts.ts        # TS types (below)
+    alert-key.ts
+  scheduler.ts
+scripts/
+  guard-new-files.js
+config/
+  cooldowns.json        # {"HIGH_SCORING_OPP":90,...}
+docs/
+migrations/
+.replit
+replit.nix
+package.json
+pnpm-lock.yaml
+tsconfig.json
+.gitignore
+.env.example
+
+2) Run / Toolchain
+
+.replit
+
+run = "pnpm -s dev"
+entrypoint = "server/index.ts"
+
+
+replit.nix
+
+{ pkgs }: { deps = [ pkgs.nodejs_20 pkgs.pnpm pkgs.git pkgs.postgresql ]; }
+
+
+package.json (scripts)
+
+{
+  "scripts": {
+    "prepare": "husky install || true",
+    "dev": "tsx watch server/index.ts",
+    "start": "node dist/server/index.js",
+    "build": "tsc -p tsconfig.json",
+    "migrate": "drizzle-kit migrate",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "precommit:guard": "node scripts/guard-new-files.js",
+    "precommit": "pnpm typecheck && pnpm precommit:guard"
+  }
+}
+
+
+.gitignore
+
+node_modules
+dist
+.replit-cache/
+.replit_history/
+.cache/
+.env
+*.log
+
+3) Environment
+
+.env.example
+
+DATABASE_URL=postgresql://user:pass@localhost:5432/alerts
+REDIS_URL=redis://localhost:6379
+TELEGRAM_BOT_TOKEN=xxx
+TELEGRAM_CHAT_ID=123456
+RULESET_ACTIVE=ruleset_v1
+MAINTENANCE_MODE=0
+ALERT_TTL_SEC=120
+WEATHER_REFRESH_MIN=10
+WIND_DELTA_TRIGGER=8
+
+4) Core Type Contracts (server/models/contracts.ts)
+export type Sport = 'MLB'|'NCAAF';
+
+export type GameTick = {
+  sport: Sport;
+  gameId: string;
+  ts: string;                // ISO
+  state: CanonicalState;
+  diff: Partial<CanonicalState>;
+};
+
+export type CanonicalState = {
+  status: 'SCHEDULED'|'LIVE'|'FINAL'|'DELAYED';
+  venue: { lat?: number; lon?: number; roof?: 'OPEN'|'CLOSED' };
+  score: { home: number; away: number };
+  // MLB
+  inning?: { half: 'T'|'B'; num: number };
+  outs?: 0|1|2;
+  bases?: { first: boolean; second: boolean; third: boolean };
+  batterId?: string;
+  batterStats?: { hrRate?: number; ops?: number };
+  // Football
+  clock?: { period: number; time?: string };      // period=1..4
+  fieldPos?: { yardline?: number; side?: 'HOME'|'AWAY' };
+  downDist?: { down?: 1|2|3|4; toGo?: number };
+  possession?: 'HOME'|'AWAY';
+  situationalFlags?: string[];
+  weatherBucket?: string; // e.g., OUT_TO_CF_10_15, INDOOR, CALM
+};
+
+export type AlertCandidate = {
+  sport: Sport;
+  gameId: string;
+  type: 'HIGH_SCORING_OPP'|'NINTH_TIE'|'RED_ZONE';
+  phase: string;            // "T7" or "Q4_02:15"
+  situation: string;        // compact code
+  playerId?: string;
+  weatherBucket?: string;
+  ruleVersion: string;
+  score: number;            // priority 0..100
+  context: Record<string, unknown>;
+};
+
+5) Alert Key & Idempotency (server/models/alert-key.ts)
+import { createHash } from 'crypto';
+import type { AlertCandidate } from './contracts';
+
+export function buildAlertKey(a: AlertCandidate): string {
+  const base = [
+    a.sport, a.gameId, a.phase, a.type, a.situation,
+    a.playerId ?? '', a.weatherBucket ?? '', a.ruleVersion
+  ].join('|');
+  return createHash('sha256').update(base).digest('hex').slice(0, 24);
+}
+
+6) DB Schema (migrations SQL)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE plays (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sport TEXT NOT NULL,
+  game_id TEXT NOT NULL,
+  ts TIMESTAMPTZ NOT NULL,
+  payload JSONB NOT NULL
+);
+
+CREATE TABLE alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  alert_key VARCHAR(24) NOT NULL,
+  sport TEXT NOT NULL,
+  game_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'NEW',   -- NEW/DELIVERED/ACKED/EXPIRED
+  score INT NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX ux_alerts_key ON alerts(alert_key);
+
+CREATE TABLE alert_cooldowns (
+  sport TEXT NOT NULL,
+  game_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  until TIMESTAMPTZ NOT NULL,
+  UNIQUE(sport, game_id, type)
+);
+
+7) Engine Flow
+
+server/engines/engine-coordinator.ts (skeleton)
+
+import { normalizeMLB, normalizeNCAAF } from './normalizer';
+import { runRules } from './rule-engine';
+import { savePlay, tryInsertAlert, isInCooldown, setCooldown } from '../services/db';
+import { pushAlert } from '../services/notifier';
+import { activeRuleset } from '../services/feature-flags';
+
+export async function processRawTick(sport: 'MLB'|'NCAAF', gameId: string, raw: any) {
+  const norm = sport === 'MLB' ? normalizeMLB(raw) : normalizeNCAAF(raw);
+  if (norm.state.status !== 'LIVE') return;
+
+  await savePlay(sport, gameId, norm.ts, norm.state.diffSource ?? raw); // append only
+
+  const candidates = runRules(sport, norm.state, activeRuleset());
+  for (const c of candidates) {
+    const inserted = await tryInsertAlert(c); // ON CONFLICT DO NOTHING
+    if (!inserted) continue;                  // dedup hit
+
+    const inCd = await isInCooldown(c);
+    if (inCd) continue;                       // suppressed by cooldown
+
+    await pushAlert(c);                       // Telegram/WebSocket
+    await setCooldown(c);                     // from config/cooldowns.json
+  }
+}
+
+
+server/engines/normalizer.ts (concept)
+
+import type { CanonicalState, GameTick } from '../models/contracts';
+
+export function normalizeMLB(raw: any): GameTick {
+  const cs: CanonicalState = {
+    status: mapStatus(raw),
+    score: { home: raw.homeScore ?? 0, away: raw.awayScore ?? 0 },
+    inning: raw.inning ? { half: raw.inning.half, num: raw.inning.num } : undefined,
+    outs: raw.outs ?? 0,
+    bases: { first: !!raw.on1, second: !!raw.on2, third: !!raw.on3 },
+    batterId: raw.batterId,
+    batterStats: { hrRate: raw.batterHrRate, ops: raw.batterOps },
+    venue: { lat: raw.venue?.lat, lon: raw.venue?.lon, roof: raw.venue?.roof },
+    weatherBucket: raw.weatherBucket
+  };
+  return { sport: 'MLB', gameId: String(raw.gamePk), ts: new Date().toISOString(), state: cs, diff: {} };
+}
+
+export function normalizeNCAAF(raw: any): GameTick {
+  const cs: CanonicalState = {
+    status: mapStatus(raw),
+    score: { home: raw.home, away: raw.away },
+    clock: { period: raw.period, time: raw.clock }, // "02:15"
+    possession: raw.poss,
+    fieldPos: { yardline: raw.yardline, side: raw.side },
+    downDist: { down: raw.down, toGo: raw.toGo },
+    venue: { lat: raw.venue?.lat, lon: raw.venue?.lon, roof: 'OPEN' }
+  };
+  return { sport: 'NCAAF', gameId: String(raw.id), ts: new Date().toISOString(), state: cs, diff: {} };
+}
+
+function mapStatus(r: any): CanonicalState['status'] {
+  if (r.status === 'Final') return 'FINAL';
+  if (r.status?.includes('Live')) return 'LIVE';
+  if (r.status?.includes('Delay')) return 'DELAYED';
+  return 'SCHEDULED';
+}
+
+8) Two Example Rules
+
+server/engines/rules/mlb.ts – RISP high-scoring opportunity
+
+import type { CanonicalState, AlertCandidate } from '../../models/contracts';
+import { buildAlertKey } from '../../models/alert-key';
+
+export function mlbRules_L1(state: CanonicalState, ruleVersion='ruleset_v1'): AlertCandidate[] {
+  if (!state.inning) return [];
+  const risp = (state.bases?.second || state.bases?.third) === true;
+  if (!risp) return [];
+
+  const outs = state.outs ?? 0;
+  const phase = `${state.inning.half}${state.inning.num}`; // e.g., T7
+  const runners =
+    (state.bases?.second ? '2' : '') +
+    (state.bases?.third ? '3' : '') || 'NONE';
+
+  const situation = `RISP_${runners}_${outs}OUT`; // e.g., RISP_23_1OUT
+
+  // Simple priority model: more runners + fewer outs -> higher score
+  const baseScore = (state.bases?.second?1:0) + (state.bases?.third?1:0);
+  let score = 50 + baseScore*20 - outs*10;
+
+  // Weather bump if open roof & out to CF winds bucket recognized
+  if (state.weatherBucket?.startsWith('OUT_TO_CF')) score += 10;
+
+  const alert: AlertCandidate = {
+    sport: 'MLB',
+    gameId: 'unknown', // filled by coordinator
+    type: 'HIGH_SCORING_OPP',
+    phase,
+    situation,
+    playerId: state.batterId,
+    weatherBucket: state.weatherBucket,
+    ruleVersion,
+    score,
+    context: {
+      outs, runners,
+      scoreline: state.score
+    }
+  };
+  // the coordinator will compute alert_key and insert
+  return [alert];
+}
+
+
+server/engines/rules/ncaaf.ts – Red Zone
+
+import type { CanonicalState, AlertCandidate } from '../../models/contracts';
+
+export function ncaafRules_L1(state: CanonicalState, ruleVersion='ruleset_v1'): AlertCandidate[] {
+  if (!state.clock || !state.fieldPos || !state.downDist) return [];
+  const yard = state.fieldPos.yardline ?? 99;
+  const redZone = yard <= 20;
+  if (!redZone) return [];
+
+  const phase = `Q${state.clock.period}_${state.clock.time ?? '??:??'}`;
+  const situation = `RZ_${yard}_YDS_D${state.downDist.down ?? 0}_TG${state.downDist.toGo ?? 0}`;
+  let score = 60; // base for red zone
+  if ((state.clock.period ?? 1) >= 4) score += 10;              // late game bump
+  if ((state.downDist.toGo ?? 10) <= 3) score += 10;            // short to-go bump
+
+  const alert: AlertCandidate = {
+    sport: 'NCAAF',
+    gameId: 'unknown',
+    type: 'RED_ZONE',
+    phase,
+    situation,
+    ruleVersion,
+    score,
+    context: {
+      yardline: yard,
+      down: state.downDist.down,
+      toGo: state.downDist.toGo,
+      scoreline: state.score,
+      possession: state.possession
+    }
+  };
+  return [alert];
+}
+
+
+server/engines/rule-engine.ts (registry)
+
+import type { AlertCandidate, CanonicalState } from '../models/contracts';
+import { mlbRules_L1 } from './rules/mlb';
+import { ncaafRules_L1 } from './rules/ncaaf';
+
+export function runRules(sport: 'MLB'|'NCAAF', state: CanonicalState, ruleset: string): AlertCandidate[] {
+  if (sport === 'MLB') return mlbRules_L1(state, ruleset);
+  if (sport === 'NCAAF') return ncaafRules_L1(state, ruleset);
+  return [];
+}
+
+9) Redis + Weather (server/services/weather.ts)
+
+Cache per-venue weather snapshot + bucket (OUT_TO_CF_10_15, CROSS_15_20, CALM, INDOOR).
+
+Refresh at kickoff/first pitch, then every WEATHER_REFRESH_MIN or when wind direction/speed crosses new bucket (detected from provider response).
+
+(Implementation can be a stub now; wire state.weatherBucket if available.)
+
+10) Notifier (server/services/notifier.ts)
+import type { AlertCandidate } from '../models/contracts';
+import { buildAlertKey } from '../models/alert-key';
+
+export async function pushAlert(a: AlertCandidate) {
+  const key = buildAlertKey(a);
+  // Telegram/WebSocket send; on success mark DELIVERED in DB
+  // keep payload tiny + user-readable
+}
+
+11) Cooldowns (server/services/db.ts, concept)
+import type { AlertCandidate } from '../models/contracts';
+import cooldowns from '../../config/cooldowns.json'; // e.g., {"HIGH_SCORING_OPP":90,"RED_ZONE":60}
+
+export async function tryInsertAlert(a: AlertCandidate): Promise<boolean> {
+  // INSERT ... ON CONFLICT(alert_key) DO NOTHING
+  // return true if inserted, false if duplicate hit
+  return true;
+}
+export async function isInCooldown(a: AlertCandidate): Promise<boolean> {
+  // SELECT until FROM alert_cooldowns WHERE sport,game_id,type
+  // return now() < until
+  return false;
+}
+export async function setCooldown(a: AlertCandidate): Promise<void> {
+  // UPSERT until = now() + cooldowns[a.type] seconds
+}
+
+12) Health & Ready (server/http/health.ts)
+import express from 'express';
+export const health = express.Router();
+health.get('/healthz', (_, r) => r.json({ ok: true }));
+health.get('/readyz', async (_, r) => {
+  // ping DB, Redis, maybe a data source
+  r.json({ db: 'ok', redis: 'ok', sources: 'ok' });
+});
+
+13) Build Order (do this)
+
+Create schema + migrations; run pnpm migrate.
+
+Implement normalizers (MLB, NCAAF) → push mock ticks through coordinator.
+
+Wire rules (above) → tryInsertAlert with unique index.
+
+Implement cooldowns from config/cooldowns.json.
+
+Add Telegram/WebSocket in notifier.ts.
+
+Add weather bucket stub and thread into MLB rule.
+
+Expose /alerts for client; add /healthz /readyz.
+
+If you want, I can also generate:
+
+a tiny mock feed script that emits MLB/NCAAF ticks to test end-to-end,
+
+a RUNBOOK.md (dupe storm, source outage),
+
+and the cooldowns.json starter file.
+
+You said:
+yes
+ChatGPT said:
+Thought for 4 seconds
+
+Awesome. I’ll give you three drop-in pieces:
+
+scripts/mock-feed.ts – fires simulated MLB + NCAAF ticks through your pipeline
+
+config/cooldowns.json – sane default cooldowns per alert type
+
+docs/RUNBOOK.md – what to do when things go sideways (dupes, floods, source down, weather weirdness)
+
+You can paste these files straight into your repo.
+
+1) scripts/mock-feed.ts
+
+Simulates a few high-signal situations so you can verify end-to-end: normalize → rules → dedup → cooldown → dispatch.
+
+// scripts/mock-feed.ts
+// Usage: pnpm tsx scripts/mock-feed.ts
+import { processRawTick } from '../server/engines/engine-coordinator';
+
+// --- Minimal raw shapes your normalizers expect --- //
+// Adjust fields to match your actual normalizer inputs.
+
+async function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+async function mlbDemo(gamePk = 776553) {
+  console.log('▶ MLB demo start');
+
+  // Scheduled (no processing expected)
+  await processRawTick('MLB', String(gamePk), {
+    status: 'Scheduled',
+    homeScore: 0, awayScore: 0,
+    inning: null, outs: 0,
+    on1: false, on2: false, on3: false,
+    batterId: null,
+    venue: { roof: 'OPEN' }
+  });
+
+  // Live, bases empty
+  await processRawTick('MLB', String(gamePk), {
+    status: 'Live',
+    homeScore: 1, awayScore: 1,
+    inning: { half: 'T', num: 7 },
+    outs: 1,
+    on1: false, on2: false, on3: false,
+    batterId: '12345',
+    batterHrRate: 0.065, batterOps: 0.820,
+    venue: { roof: 'OPEN' },
+    weatherBucket: 'OUT_TO_CF_10_15'
+  });
+
+  // Live, RISP (2nd + 3rd), 1 out → should trigger HIGH_SCORING_OPP once
+  await processRawTick('MLB', String(gamePk), {
+    status: 'Live',
+    homeScore: 1, awayScore: 1,
+    inning: { half: 'T', num: 7 },
+    outs: 1,
+    on1: false, on2: true, on3: true,
+    batterId: '12345',
+    batterHrRate: 0.065, batterOps: 0.820,
+    venue: { roof: 'OPEN' },
+    weatherBucket: 'OUT_TO_CF_10_15'
+  });
+
+  // Same situation again (no change) → should be deduped by alert_key
+  await processRawTick('MLB', String(gamePk), {
+    status: 'Live',
+    homeScore: 1, awayScore: 1,
+    inning: { half: 'T', num: 7 },
+    outs: 1,
+    on1: false, on2: true, on3: true,
+    batterId: '12345',
+    batterHrRate: 0.065, batterOps: 0.820,
+    venue: { roof: 'OPEN' },
+    weatherBucket: 'OUT_TO_CF_10_15'
+  });
+
+  // Change state (outs 2) → same alert type but different situation code → allowed
+  await processRawTick('MLB', String(gamePk), {
+    status: 'Live',
+    homeScore: 1, awayScore: 1,
+    inning: { half: 'T', num: 7 },
+    outs: 2,
+    on1: false, on2: true, on3: true,
+    batterId: '12345',
+    batterHrRate: 0.065, batterOps: 0.820,
+    venue: { roof: 'OPEN' },
+    weatherBucket: 'OUT_TO_CF_10_15'
+  });
+
+  console.log('✓ MLB demo done');
+}
+
+async function ncaafDemo(gameId = 99001) {
+  console.log('▶ NCAAF demo start');
+
+  // Midfield, not red zone (no alert)
+  await processRawTick('NCAAF', String(gameId), {
+    status: 'Live',
+    home: 17, away: 14,
+    period: 3, clock: '08:35',
+    poss: 'HOME',
+    yardline: 45, side: 'AWAY',
+    down: 1, toGo: 10,
+    venue: { lat: 32.7, lon: -97.0 }
+  });
+
+  // Enter red zone at 1st & 10 on the 18 → should trigger RED_ZONE once
+  await processRawTick('NCAAF', String(gameId), {
+    status: 'Live',
+    home: 17, away: 14,
+    period: 4, clock: '02:25',
+    poss: 'HOME',
+    yardline: 18, side: 'AWAY',
+    down: 1, toGo: 10,
+    venue: { lat: 32.7, lon: -97.0 }
+  });
+
+  // Same tick repeated (duplicate) → dedup / cooldown
+  await processRawTick('NCAAF', String(gameId), {
+    status: 'Live',
+    home: 17, away: 14,
+    period: 4, clock: '02:25',
+    poss: 'HOME',
+    yardline: 18, side: 'AWAY',
+    down: 1, toGo: 10,
+    venue: { lat: 32.7, lon: -97.0 }
+  });
+
+  // Progress to 2nd & Goal at the 7 (new situation, same type) → allowed
+  await processRawTick('NCAAF', String(gameId), {
+    status: 'Live',
+    home: 17, away: 14,
+    period: 4, clock: '02:01',
+    poss: 'HOME',
+    yardline: 7, side: 'AWAY',
+    down: 2, toGo: 7,
+    venue: { lat: 32.7, lon: -97.0 }
+  });
+
+  console.log('✓ NCAAF demo done');
+}
+
+(async () => {
+  await mlbDemo();
+  await sleep(500);
+  await ncaafDemo();
+  console.log('🎯 Mock feed complete.');
+})();
+
+2) config/cooldowns.json
+
+Short, readable, and easy to tweak. These windows suppress spammy repeats for the same game + type.
+
+{
+  "HIGH_SCORING_OPP": 90,
+  "NINTH_TIE": 120,
+  "RED_ZONE": 75,
+  "POWER_PLAY": 90,
+  "CLUTCH_TIME": 60,
+  "DEFAULT": 90
+}
+
+
+Notes
+
+The DB “unique index on alert_key” blocks identical situations.
+
+Cooldowns further suppress same-type re-triggers for a game when the situation hasn’t meaningfully changed.
+
+3) docs/RUNBOOK.md
+
+Practical fixes for the stuff that tends to break.
+
+# RUNBOOK – Multi-Sport Alerts
+
+## Quick Health
+- `GET /healthz` → should be `{ ok: true }`
+- `GET /readyz` → `{ db: "ok", redis: "ok", sources: "ok" }`
+
+If `readyz` not OK:
+- DB: check `DATABASE_URL`, migrations applied, network allowed.
+- Redis: check `REDIS_URL`.
+- Sources: API creds/rate limits; try primary + fallback curl.
+
+---
+
+## 1) Users report "a million alerts"
+**Symptoms:** Same alert spams Telegram/UI.
+
+**Checklist**
+1. **Maintenance switch** (halts delivery, still ingests):
+   - set `MAINTENANCE_MODE=1`, redeploy or reload env.
+2. **Check dedup**
+   - Ensure `alerts` table has `CREATE UNIQUE INDEX ux_alerts_key ON alerts(alert_key);`
+   - Confirm `buildAlertKey` uses: `sport|gameId|phase|type|situation|playerId?|weatherBucket?|ruleVersion`
+   - Look for `event="alert_deduped"` in logs (should increase).
+3. **Cooldowns**
+   - Confirm `config/cooldowns.json` loaded and `setCooldown` is called after dispatch.
+   - Query cooldowns:
+     ```sql
+     SELECT * FROM alert_cooldowns WHERE sport='MLB' AND game_id='776553';
+     ```
+4. **Rule churn**
+   - If `alerts_deduped` is high → rules fire on noisy fields.
+   - Solution: Only evaluate on relevant `diff` (e.g., bases/outs/yardline changes).
+5. **Replay**
+   - After fix: `MAINTENANCE_MODE=0`.
+   - Optionally re-emit missed alerts via `/admin/replay?gameId=…&since=…`.
+
+---
+
+## 2) No alerts at all
+**Checklist**
+1. Verify ingest emits ticks (`event="tick"` present).
+2. Normalizer maps `status='LIVE'`. If stuck as `SCHEDULED`, your mapping is wrong.
+3. Rules enabled: `RULESET_ACTIVE` points to a real ruleset.
+4. DB insert errors? Look for `dispatch_fail` or DB connection errors.
+5. Cooldown too aggressive? Temporarily set SHORT windows in `config/cooldowns.json`.
+
+---
+
+## 3) Wrong base runners / yardline
+**Checklist**
+- Log the normalized `CanonicalState` every time the specific fields change.
+- Add a **test log** at the fetcher boundary:
+  - MLB: `on1,on2,on3,outs,inning`
+  - NCAAF: `yardline, down, toGo, period, clock`
+- Cross-check the raw source vs normalized values.
+
+---
+
+## 4) Source outage / rate limit
+**Checklist**
+- Switch to fallback source (already wired in fetcher).
+- Reduce poll rate temporarily.
+- Keep app running; alerts won’t fire without fresh ticks—this is expected.
+
+---
+
+## 5) Weather looks wrong
+**Checklist**
+- Roof CLOSED? Force bucket to `INDOOR`.
+- Only store **bucket** in Redis; refresh every `WEATHER_REFRESH_MIN` or on wind bucket change.
+- If provider jitter causes bucket flapping, introduce hysteresis: require >X mph delta or stable direction for Y minutes.
+
+---
+
+## 6) Rollout / Rollback
+- Update logic in new file: `server/engines/rules/*` as `ruleset_vN`.
+- Set `RULESET_ACTIVE=ruleset_vN` to roll forward.
+- Rollback by restoring previous env value. No code revert needed.
+
+---
+
+## 7) Observability – What to watch
+- `alerts_generated`, `alerts_deduped`, `alerts_delivered`, `alerts_suppressed_cooldown`
+- Spikes in `source_errors` → data issues upstream.
+- High `deduped`/low `delivered` → noisy rules or bad keys.
+
+---
+
+## 8) Local E2E Test
+1. Run DB migrations.
+2. Start dev: `pnpm dev`
+3. In another tab: `pnpm tsx scripts/mock-feed.ts`
+4. Expect:
+   - MLB: 2–3 alerts max (RISP variants), not repeated back-to-back.
+   - NCAAF: 2 alerts (first RZ + later goal-to-go), not repeated.
+
+Quick start (commands)
+
+Install & prep hooks:
+pnpm i && pnpm prepare
+
+Run server:
+pnpm dev
+
+Fire the mock feed:
+pnpm tsx scripts/mock-feed.ts
+
+Want me to also add a tiny scripts/self-check.ts that pings /healthz, counts the last 5 minutes of alerts, and prints a pass/fail summary?
+
+You said:
+yes
+ChatGPT said:
+Thought for 5s
+
+Sweet — here’s a tiny self-check you can run anytime to see if your stack is healthy and actually producing/delivering alerts (no dup storms).
+
+1) scripts/self-check.ts
+
+Pings /healthz and /readyz
+
+Checks DB for alert activity in the last 5 minutes
+
+Prints a clean PASS/FAIL summary + hints
+
+// scripts/self-check.ts
+// Usage: BASE_URL=http://localhost:3000 pnpm tsx scripts/self-check.ts
+// Env: DATABASE_URL must be set (same as server)
+
+import { Client } from 'pg';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
+const DATABASE_URL = process.env.DATABASE_URL;
+const WINDOW_MIN = Number(process.env.SELFCHECK_WINDOW_MIN ?? 5);
+
+type Check = { name: string; ok: boolean; info?: string; error?: string };
+
+async function httpJson(path: string) {
+  const res = await fetch(`${BASE_URL}${path}`, { method: 'GET' });
+  const text = await res.text();
+  try { return { status: res.status, body: JSON.parse(text) }; }
+  catch { return { status: res.status, body: text }; }
+}
+
+async function checkHttp(): Promise<Check[]> {
+  const r1 = await httpJson('/healthz');
+  const r2 = await httpJson('/readyz');
+  const c1: Check = { name: 'healthz', ok: r1.status === 200 && r1.body?.ok === true, info: JSON.stringify(r1.body) };
+  const readyOk = r2.status === 200 && typeof r2.body === 'object';
+  const sub = readyOk ? Object.entries(r2.body).map(([k,v]) => `${k}:${v}`).join(', ') : String(r2.body);
+  const c2: Check = { name: 'readyz', ok: readyOk, info: sub };
+  return [c1, c2];
+}
+
+async function checkDb(): Promise<Check[]> {
+  if (!DATABASE_URL) {
+    return [{ name: 'db-connection', ok: false, error: 'DATABASE_URL not set' }];
+  }
+
+  const client = new Client({ connectionString: DATABASE_URL });
+  await client.connect();
+
+  const q = `
+    WITH recent AS (
+      SELECT *
+      FROM alerts
+      WHERE created_at >= now() - INTERVAL '${WINDOW_MIN} minutes'
+    )
+    SELECT
+      count(*)                         AS alerts_total,
+      count(*) FILTER (WHERE state='DELIVERED') AS alerts_delivered,
+      count(*) FILTER (WHERE state='NEW')       AS alerts_new,
+      count(*) FILTER (WHERE state='EXPIRED')   AS alerts_expired,
+      count(DISTINCT alert_key)                 AS unique_keys,
+      jsonb_agg(jsonb_build_object('type', type, 'n', cnt) ORDER BY cnt DESC) AS by_type
+    FROM (
+      SELECT type, alert_key, state, created_at, count(*) OVER (PARTITION BY type) AS cnt
+      FROM recent
+    ) t;
+  `;
+
+  const { rows } = await client.query(q);
+  await client.end();
+
+  const row = rows[0] ?? {};
+  const total = Number(row.alerts_total ?? 0);
+  const delivered = Number(row.alerts_delivered ?? 0);
+  const unique = Number(row.unique_keys ?? 0);
+
+  const checks: Check[] = [];
+
+  checks.push({
+    name: 'db-connection',
+    ok: true,
+    info: `connected`
+  });
+
+  checks.push({
+    name: 'alerts-activity',
+    ok: total >= 0, // always true, info-only
+    info: `last ${WINDOW_MIN}m → total:${total}, delivered:${delivered}, unique_keys:${unique}`
+  });
+
+  // Heuristics:
+  // - If total >> unique, likely dup churn before DB unique index (shouldn’t happen)
+  // - If many NEW and few DELIVERED, notifier may be failing or MAINTENANCE_MODE on
+  const dupRatio = unique > 0 ? (total / unique) : 1;
+  const info = `dupRatio=${dupRatio.toFixed(2)} (1.0 is ideal), by_type=${JSON.stringify(row.by_type)}`;
+
+  checks.push({
+    name: 'duplication',
+    ok: dupRatio <= 1.2, // allow slight >1 due to races or retries
+    info
+  });
+
+  return checks;
+}
+
+function printSummary(checks: Check[]) {
+  const okAll = checks.every(c => c.ok);
+  const lines = checks.map(c =>
+    `${c.ok ? '✅' : '❌'} ${c.name}${c.info ? ` — ${c.info}` : ''}${c.error ? ` — ${c.error}` : ''}`
+  );
+  console.log('\n=== Self-Check Summary ===');
+  lines.forEach(l => console.log(l));
+  console.log(`Result: ${okAll ? 'PASS' : 'FAIL'}`);
+
+  if (!okAll) {
+    console.log('\nTroubleshooting hints:');
+    for (const c of checks.filter(x => !x.ok)) {
+      if (c.name === 'readyz') {
+        console.log('- readyz failed: verify DB/Redis/env and that migrations ran.');
+      }
+      if (c.name === 'db-connection') {
+        console.log('- DB connect failed: check DATABASE_URL and network (does Replit allow external DB?).');
+      }
+      if (c.name === 'duplication') {
+        console.log('- High dupRatio: ensure alerts.alert_key unique index exists and alert_key inputs are stable.');
+        console.log('  Also ensure cooldowns are applied after dispatch.');
+      }
+    }
+  }
+}
+
+(async () => {
+  try {
+    const http = await checkHttp();
+    const db = await checkDb();
+    printSummary([...http, ...db]);
+  } catch (err: any) {
+    console.error('Self-check crashed:', err?.message ?? err);
+    process.exit(1);
+  }
+})();
+
+2) Add a script alias
+
+Drop this into your package.json:
+
+{
+  "scripts": {
+    "selfcheck": "tsx scripts/self-check.ts"
+  }
+}
+
+
+Run it:
+
+BASE_URL=http://localhost:3000 pnpm selfcheck
+
+3) Optional: quick SQL to verify the unique index exists
+
+Run once in psql (or your migration):
+
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'alerts' AND indexname = 'ux_alerts_key';
+
+
+If nothing returns, create it (again, once):
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_alerts_key ON alerts(alert_key);
+
+Expected output (example)
+=== Self-Check Summary ===
+✅ healthz — {"ok":true}
+✅ readyz — db:ok, redis:ok, sources:ok
+✅ db-connection — connected
+✅ alerts-activity — last 5m → total:3, delivered:3, unique_keys:3
+✅ duplication — dupRatio=1.00 (1.0 is ideal), by_type=[{"type":"HIGH_SCORING_OPP","n":2},{"type":"RED_ZONE","n":1}]
+Result: PASS
