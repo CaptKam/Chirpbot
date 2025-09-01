@@ -10,6 +10,7 @@ import { seedDatabase } from "./seed-database";
 import { health } from "./http/health";
 import { alertsApi } from "./api/alerts";
 import { initializeScheduler } from "./scheduler";
+import { gameMonitor } from "./engines/game-monitor";
 
 const { Pool } = pg;
 
@@ -81,6 +82,11 @@ async function initializeServer() {
     
     // Initialize scheduler for background tasks
     initializeScheduler();
+    
+    // Initialize game monitoring system
+    setTimeout(async () => {
+      await gameMonitor.startMonitoring();
+    }, 5000); // Start monitoring after 5 seconds to allow server to fully start
     
     console.log('✅ Database initialization complete');
   } catch (error) {

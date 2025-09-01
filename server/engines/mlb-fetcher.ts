@@ -103,29 +103,53 @@ export class MLBFetcher {
     const liveData = game.liveData;
     const currentPlay = liveData.plays.currentPlay;
     
+    // Parse base runners
+    const runners = liveData.plays.currentPlay?.runners || [];
+    const on1 = runners.some(r => r.movement?.end === '1B');
+    const on2 = runners.some(r => r.movement?.end === '2B');
+    const on3 = runners.some(r => r.movement?.end === '3B');
+    
     return {
       gamePk: game.gamePk,
       status: game.gameData.status.detailedState,
-      homeScore: liveData.linescore.teams.home.runs,
-      awayScore: liveData.linescore.teams.away.runs,
+      homeScore: liveData.linescore.teams.home.runs || 0,
+      awayScore: liveData.linescore.teams.away.runs || 0,
       inning: liveData.linescore.currentInning ? {
         half: liveData.linescore.inningHalf === 'top' ? 'T' : 'B',
         num: liveData.linescore.currentInning
-      } : undefined,
+      } : { half: 'T', num: 1 },
       outs: currentPlay?.count.outs || 0,
-      on1: false, // Would need to parse runner data
-      on2: false,
-      on3: false,
-      batterId: currentPlay?.matchup.batter.id,
-      batterHrRate: 0.025, // Would calculate from stats
-      batterOps: 0.750,
+      on1,
+      on2,
+      on3,
+      batterId: currentPlay?.matchup.batter.id || 'unknown',
+      batterHrRate: this.calculateHrRate(currentPlay?.matchup.batter.stats),
+      batterOps: this.calculateOps(currentPlay?.matchup.batter.stats),
       venue: {
-        lat: game.gameData.venue.location.latitude,
-        lon: game.gameData.venue.location.longitude,
-        roof: 'OPEN' // Would need venue data
+        lat: game.gameData.venue.location.latitude || 40.8296,
+        lon: game.gameData.venue.location.longitude || -73.9262,
+        roof: this.determineRoofType(game.gameData.venue.name)
       },
       weatherBucket: 'CALM' // Would get from weather service
     };
+  }
+
+  private calculateHrRate(stats: any): number {
+    if (!stats?.season?.hitting) return 0.025;
+    const atBats = stats.season.hitting.atBats || 1;
+    const homeRuns = stats.season.hitting.homeRuns || 0;
+    return homeRuns / atBats;
+  }
+
+  private calculateOps(stats: any): number {
+    if (!stats?.season?.hitting) return 0.750;
+    const { onBasePercentage = 0.300, sluggingPercentage = 0.450 } = stats.season.hitting;
+    return onBasePercentage + sluggingPercentage;
+  }
+
+  private determineRoofType(venueName: string): string {
+    const domes = ['Tropicana Field', 'Minute Maid Park', 'Rogers Centre', 'Globe Life Field', 'Marlins Park'];
+    return domes.some(dome => venueName?.includes(dome.split(' ')[0])) ? 'DOME' : 'OPEN';
   }
 
   async startMonitoring(): Promise<void> {

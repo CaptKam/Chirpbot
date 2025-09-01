@@ -121,31 +121,43 @@ export const storage = {
     return result[0];
   },
 
-  async getUserMonitoredGamesBySport(userId: string, sport: string) {
-    // Disabled - no more monitoring chaos
-    return [];
+  // User monitored games operations
+  async getUserMonitoredGames(userId: string, sport?: string) {
+    let query = db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
+    
+    if (sport) {
+      query = query.where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.sport, sport)));
+    }
+    
+    return await query;
   },
 
-  async getUserMonitoredGames(userId: string) {
-    // Disabled - no more monitoring chaos
-    return [];
-  },
-
-  async addUserMonitoredGame(gameData: any) {
-    // Disabled - no more alert generation
-    return null;
+  async addUserMonitoredGame(data: any) {
+    // Check if already exists
+    const existing = await db.select()
+      .from(userMonitoredTeams)
+      .where(and(
+        eq(userMonitoredTeams.userId, data.userId),
+        eq(userMonitoredTeams.gameId, data.gameId)
+      ));
+    
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    
+    const result = await db.insert(userMonitoredTeams).values(data).returning();
+    return result[0];
   },
 
   async removeUserMonitoredGame(userId: string, gameId: string) {
-    // Disabled - no more alert generation
-    return null;
+    await db.delete(userMonitoredTeams)
+      .where(and(
+        eq(userMonitoredTeams.userId, userId),
+        eq(userMonitoredTeams.gameId, gameId)
+      ));
   },
 
-  async isGameMonitoredByUser(userId: string, gameId: string) {
-    // Disabled - no more monitoring
-    return false;
-  },
-
+  // Telegram settings
   async updateUserTelegramSettings(userId: string, botToken: string, chatId: string, enabled: boolean) {
     const result = await db.update(users)
       .set({
@@ -158,34 +170,19 @@ export const storage = {
     return result[0];
   },
 
-  async getUser(userId: string) {
-    const result = await db.select().from(users).where(eq(users.id, userId));
-    return result[0] || null;
-  },
-
-  // Monitored games - simplified (no more engine chaos)
-  async getAllMonitoredGames() {
-    return [];
-  },
-
-  // User monitored teams
-  async getUserMonitoredTeams(userId: string) {
-    return await db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
-  },
-
-  async addUserMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
-    const result = await db.insert(userMonitoredTeams)
-      .values({ userId, gameId, sport, homeTeamName, awayTeamName })
-      .returning();
-    return result[0];
-  },
-
-  async removeUserMonitoredTeam(userId: string, gameId: string) {
-    await db.delete(userMonitoredTeams)
+  async isGameMonitoredByUser(userId: string, gameId: string) {
+    const result = await db.select()
+      .from(userMonitoredTeams)
       .where(and(
         eq(userMonitoredTeams.userId, userId),
         eq(userMonitoredTeams.gameId, gameId)
       ));
+    return result.length > 0;
+  },
+
+  // Monitored games - for alert system
+  async getAllMonitoredGames() {
+    return await db.select().from(userMonitoredTeams);
   }
 };
 

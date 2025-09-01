@@ -43,8 +43,9 @@ export class NCAAFFetcher {
 
   async fetchTodaysGames(): Promise<string[]> {
     try {
-      // ESPN API endpoint for college football
-      const response = await fetch(`${this.baseUrl}/_/format/json`);
+      // ESPN API endpoint for college football - using the events API
+      const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=${today}`);
       
       if (!response.ok) {
         throw new Error(`ESPN API error: ${response.status}`);
@@ -54,7 +55,7 @@ export class NCAAFFetcher {
       const gameIds: string[] = [];
       
       for (const event of data.events || []) {
-        if (event.status?.type?.state === 'in') { // Live games
+        if (event.status?.type?.state === 'in' || event.status?.type?.state === 'pre') {
           gameIds.push(event.id);
         }
       }
@@ -68,26 +69,55 @@ export class NCAAFFetcher {
 
   async fetchGameData(gameId: string): Promise<void> {
     try {
-      const response = await fetch(`https://sports.espn.com/college-football/game/_/gameId/${gameId}`);
+      const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event=${gameId}`);
       
       if (!response.ok) {
         throw new Error(`ESPN API error: ${response.status}`);
       }
       
-      // This would need to parse the ESPN game page or use their API
-      // For now, we'll use mock data
-      const mockGameData = this.createMockNCAAFData(gameId);
+      const gameData: ESPNGame = await response.json();
+      const transformedData = this.transformESPNData(gameData);
       
       // Process through our engine
-      await processRawTick('NCAAF', gameId, mockGameData);
+      await processRawTick('NCAAF', gameId, transformedData);
       
     } catch (error) {
       console.error(`Failed to fetch NCAAF game ${gameId}:`, error);
+      // Fallback to mock data if API fails
+      const mockGameData = this.createMockNCAAFData(gameId);
+      await processRawTick('NCAAF', gameId, mockGameData);
     }
   }
 
+  private transformESPNData(gameData: any) {
+    const competition = gameData.header?.competitions?.[0] || {};
+    const situation = competition.situation || {};
+    const competitors = competition.competitors || [];
+    const homeTeam = competitors.find((c: any) => c.homeAway === 'home') || {};
+    const awayTeam = competitors.find((c: any) => c.homeAway === 'away') || {};
+    
+    return {
+      id: gameData.header?.id || gameData.gameId,
+      status: gameData.header?.status?.type?.state === 'in' ? 'Live' : 'Scheduled',
+      home: parseInt(homeTeam.score || '0'),
+      away: parseInt(awayTeam.score || '0'),
+      period: competition.status?.period || 1,
+      clock: competition.status?.displayClock || '15:00',
+      poss: situation.possession === homeTeam.id ? 'HOME' : 'AWAY',
+      yardline: situation.yardLine || 50,
+      side: situation.possessionText?.includes(homeTeam.team?.abbreviation) ? 'HOME' : 'AWAY',
+      down: situation.down || 1,
+      toGo: situation.distance || 10,
+      venue: {
+        lat: competition.venue?.address?.latitude || 35.2078,
+        lon: competition.venue?.address?.longitude || -101.8313,
+        roof: 'OPEN'
+      }
+    };
+  }
+
   private createMockNCAAFData(gameId: string) {
-    // Mock data for demonstration
+    // Mock data for demonstration when API fails
     return {
       id: gameId,
       status: 'Live',
