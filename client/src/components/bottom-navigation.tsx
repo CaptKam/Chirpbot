@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, Settings, Bell } from "lucide-react";
+import { Calendar, Settings } from "lucide-react";
 
 export function BottomNavigation() {
   const [location] = useLocation();
@@ -7,7 +7,6 @@ export function BottomNavigation() {
 
   const navItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
-    { path: "/alerts", icon: Bell, label: "Alerts", testId: "nav-alerts" },
     { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
   ];
 

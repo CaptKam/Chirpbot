@@ -3,9 +3,8 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
-import { insertTeamSchema, insertSettingsSchema, insertUserSchema, insertUserMonitoredTeamSchema } from "@shared/schema";
+import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
-import { gamesService } from "./services/games";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -74,21 +73,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Basic health check
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  // Alert lookup by key
-  app.get('/api/alerts/:alertKey', async (req, res) => {
-    try {
-      const { alertKey } = req.params;
-      const alert = await storage.getAlertByKey(alertKey);
-      if (!alert) {
-        return res.status(404).json({ message: 'Alert not found' });
-      }
-      res.json(alert);
-    } catch (error) {
-      console.error('Error fetching alert:', error);
-      res.status(500).json({ message: 'Failed to fetch alert' });
-    }
   });
 
   // Teams routes
@@ -299,56 +283,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Games routes
-  app.get('/api/games/today', async (req, res) => {
-    try {
-      const { sport = 'MLB', date = new Date().toISOString().split('T')[0] } = req.query;
-      const gameDay = await gamesService.getGamesForDate(sport as string, date as string);
-      res.json(gameDay);
-    } catch (error) {
-      console.error('Error fetching games:', error);
-      res.status(500).json({ message: 'Failed to fetch games' });
-    }
-  });
-
-  // User monitored games routes
-  app.get('/api/user/:userId/monitored-games', async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { sport } = req.query;
-      const monitoredGames = await storage.getUserMonitoredGames(userId, sport as string);
-      res.json(monitoredGames);
-    } catch (error) {
-      console.error('Error fetching monitored games:', error);
-      res.status(500).json({ message: 'Failed to fetch monitored games' });
-    }
-  });
-
-  app.post('/api/user/:userId/monitored-games', async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const monitoredGame = await storage.addUserMonitoredGame({
-        userId,
-        ...req.body
-      });
-      res.json(monitoredGame);
-    } catch (error) {
-      console.error('Error adding monitored game:', error);
-      res.status(500).json({ message: 'Failed to add monitored game' });
-    }
-  });
-
-  app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
-    try {
-      const { userId, gameId } = req.params;
-      await storage.removeUserMonitoredGame(userId, gameId);
-      res.json({ message: 'Monitored game removed successfully' });
-    } catch (error) {
-      console.error('Error removing monitored game:', error);
-      res.status(500).json({ message: 'Failed to remove monitored game' });
-    }
-  });
-
   // Telegram settings routes
   app.get('/api/user/:userId/telegram', async (req, res) => {
     try {
@@ -396,31 +330,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error testing telegram connection:', error);
       res.status(500).json({ message: 'Failed to test telegram connection' });
-    }
-  });
-
-  // Sport alert settings routes
-  app.get('/api/user/:userId/sport-alerts', async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const settings = await storage.getUserSportAlertSettings(userId);
-      res.json(settings);
-    } catch (error) {
-      console.error('Error fetching sport alert settings:', error);
-      res.status(500).json({ message: 'Failed to fetch sport alert settings' });
-    }
-  });
-
-  app.post('/api/user/:userId/sport-alerts/:sport', async (req, res) => {
-    try {
-      const { userId, sport } = req.params;
-      const { alertsEnabled } = req.body;
-      
-      const setting = await storage.upsertSportAlertSetting(userId, sport, alertsEnabled);
-      res.json(setting);
-    } catch (error) {
-      console.error('Error updating sport alert setting:', error);
-      res.status(500).json({ message: 'Failed to update sport alert setting' });
     }
   });
 

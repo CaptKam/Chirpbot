@@ -1,40 +1,13 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Zap, LogOut, SettingsIcon, Bell, BellOff } from "lucide-react";
+import { Zap, LogOut, SettingsIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
-
-// Sports with alert systems implemented
-const SPORTS_WITH_ALERTS = {
-  "MLB": {
-    name: "Major League Baseball",
-    alerts: ["High Scoring Opportunity", "Home Run", "Hit Alerts", "Scoring Plays"]
-  },
-  "NCAAF": {
-    name: "College Football", 
-    alerts: ["Red Zone", "Touchdown", "Field Goal"]
-  },
-  "NFL": {
-    name: "National Football League",
-    alerts: ["Red Zone", "Touchdown", "Field Goal"] 
-  },
-  "NBA": {
-    name: "Basketball",
-    alerts: ["Coming Soon"]
-  },
-  "NHL": {
-    name: "Hockey",
-    alerts: ["Coming Soon"]
-  }
-};
-
-const TEST_USER_ID = "test-user-123";
 
 export default function Settings() {
   const [activeSport, setActiveSport] = useState(() => {
@@ -45,37 +18,6 @@ export default function Settings() {
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const userId = user?.id || TEST_USER_ID;
-
-  // Fetch sport alert settings
-  const { data: sportAlertSettings = [], isLoading: isLoadingSettings } = useQuery({
-    queryKey: [`/api/user/${userId}/sport-alerts`],
-    enabled: isAuthenticated,
-  });
-
-  // Mutation for updating sport alert settings
-  const updateSportAlertMutation = useMutation({
-    mutationFn: async ({ sport, alertsEnabled }: { sport: string; alertsEnabled: boolean }) => {
-      const response = await apiRequest("POST", `/api/user/${userId}/sport-alerts/${sport}`, {
-        alertsEnabled
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/sport-alerts`] });
-      toast({
-        title: "Settings Updated",
-        description: "Sport alert preferences have been saved.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update sport alert settings.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -175,82 +117,10 @@ export default function Settings() {
           </Card>
         )}
 
-        {/* Sport Alert Settings */}
-        <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-8 h-8 bg-red-500/20 ring-1 ring-red-500/30 rounded-full flex items-center justify-center">
-              <Bell className="w-4 h-4 text-red-400" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black uppercase tracking-wide text-slate-100">
-                {activeSport} Alerts
-              </h2>
-              <p className="text-sm text-slate-400">
-                {SPORTS_WITH_ALERTS[activeSport as keyof typeof SPORTS_WITH_ALERTS]?.name || activeSport}
-              </p>
-            </div>
-          </div>
-
-          {/* Alert Toggle */}
-          {SPORTS_WITH_ALERTS[activeSport as keyof typeof SPORTS_WITH_ALERTS] ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <Bell className="w-4 h-4 text-emerald-400" />
-                    <span className="font-semibold text-slate-100">Enable {activeSport} Alerts</span>
-                  </div>
-                  <p className="text-sm text-slate-400">
-                    Receive notifications for {activeSport} game events and scoring opportunities
-                  </p>
-                </div>
-                <Switch
-                  checked={sportAlertSettings.find((s: any) => s.sport === activeSport)?.alertsEnabled ?? true}
-                  onCheckedChange={(enabled) => {
-                    updateSportAlertMutation.mutate({ sport: activeSport, alertsEnabled: enabled });
-                  }}
-                  disabled={updateSportAlertMutation.isPending || isLoadingSettings}
-                  data-testid={`alert-toggle-${activeSport.toLowerCase()}`}
-                />
-              </div>
-
-              {/* Alert Types */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
-                  Alert Types Available
-                </h3>
-                <div className="grid grid-cols-1 gap-2">
-                  {SPORTS_WITH_ALERTS[activeSport as keyof typeof SPORTS_WITH_ALERTS].alerts.map((alertType) => (
-                    <div 
-                      key={alertType}
-                      className="flex items-center space-x-2 px-3 py-2 bg-white/5 rounded-md"
-                    >
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                      <span className="text-sm text-slate-300">{alertType}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-8 text-center">
-              <div>
-                <BellOff className="w-12 h-12 mx-auto mb-3 text-slate-500" />
-                <h3 className="text-lg font-semibold text-slate-300 mb-2">
-                  Alerts Coming Soon
-                </h3>
-                <p className="text-sm text-slate-400">
-                  Alert system for {activeSport} is currently in development
-                </p>
-              </div>
-            </div>
-          )}
-        </Card>
-
         {/* Selected Sport Display */}
         <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
           <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-2">
-            Current Selection
+            Selected Sport
           </h2>
           <div className="flex items-center space-x-3">
             <div className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg font-bold uppercase tracking-wide ring-1 ring-emerald-500/30">
