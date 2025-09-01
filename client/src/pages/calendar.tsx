@@ -20,8 +20,25 @@ const removeCity = (teamName: string) => {
 
 const extractTeamAbbreviation = (teamName: string) => {
   if (!teamName) return '';
+  
+  // Full team name mappings (check these first)
+  const fullTeamMappings: Record<string, string> = {
+    'San Diego Padres': 'SD',
+    'Washington Nationals': 'WSH',
+    'Oakland Athletics': 'OAK',
+    'Tampa Bay Rays': 'TB',
+    // Add college teams
+    'TCU Horned Frogs': 'TCU',
+    'North Carolina Tar Heels': 'UNC'
+  };
+  
+  // Check full team name first
+  if (fullTeamMappings[teamName]) {
+    return fullTeamMappings[teamName];
+  }
+  
   // Extract abbreviation from team name
-  const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay'];
+  const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington'];
   let cleanName = teamName;
   
   // Remove city prefixes
