@@ -9,6 +9,7 @@ import { gamesService } from "./services/games";
 import { testAlert } from "./http/test-alert";
 import { broadcastAlert, addClient } from "./services/ws-bus";
 import { status } from "./http/status";
+import { alertsApi } from "./api/alerts";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -433,6 +434,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test routes for development
   app.use(testAlert);
   app.use(status);
+  
+  // Alerts API routes
+  app.use('/api/alerts', alertsApi);
 
   // WebSocket smoke test route
   app.get('/api/admin/ws-smoke', (_, res) => {
