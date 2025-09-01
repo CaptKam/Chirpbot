@@ -452,7 +452,7 @@ export default function Settings() {
                                 </div>
                                 <div onClick={(e) => e.stopPropagation()}>
                                   <Switch
-                                    checked={!!(settings.alertTypes as any)[alertConfig.key]}
+                                    checked={!!(settings?.alertTypes as any)?.[alertConfig.key]}
                                     onCheckedChange={(enabled) => handleAlertTypeToggle(alertConfig.key, enabled)}
                                     data-testid={`toggle-${alertConfig.key}`}
                                     className="data-[state=checked]:bg-emerald-500 flex-shrink-0"

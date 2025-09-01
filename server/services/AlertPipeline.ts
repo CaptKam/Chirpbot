@@ -270,27 +270,15 @@ export class BettingInsights {
       // Try to get betbook data if service is available
       let betbookData = null;
       
-      try {
-        const { getBetbookData } = await import('./engines/betbook-engine');
-        betbookData = await getBetbookData({
-          sport: alert.sport,
-          gameId: alert.gameInfo.gameId,
-          homeTeam: alert.gameInfo.homeTeam,
-          awayTeam: alert.gameInfo.awayTeam,
-          homeScore: alert.gameInfo.score.home,
-          awayScore: alert.gameInfo.score.away,
-          probability: alert.probability
-        });
-      } catch (importError) {
-        console.log('📊 BettingInsights: Betbook service not available, using fallback');
-        // Create fallback betting data
-        betbookData = {
-          recommendation: `VALUE ALERT: ${alert.sport} betting opportunity`,
-          confidence: `${Math.round(alert.probability * 100)}% confidence`,
-          odds: alert.priority >= 90 ? "+115" : "+105",
-          reasoning: `${alert.type} situation with ${Math.round(alert.probability * 100)}% success rate`
-        };
-      }
+      // Betbook service is not available, using fallback
+      console.log('📊 BettingInsights: Betbook service not available, using fallback');
+      // Create fallback betting data
+      betbookData = {
+        recommendation: `VALUE ALERT: ${alert.sport} betting opportunity`,
+        confidence: `${Math.round(alert.probability * 100)}% confidence`,
+        odds: alert.priority >= 90 ? "+115" : "+105",
+        reasoning: `${alert.type} situation with ${Math.round(alert.probability * 100)}% success rate`
+      };
       
       console.log(`💰 BettingInsights: Attached betting data to ${alert.sport} alert`);
       return { ...alert, betbookData };

@@ -40,7 +40,7 @@ export const storage = {
   },
 
   async getAllAlerts() {
-    return await db.select().from(alerts).orderBy(desc(alerts.createdAt));
+    return await db.select().from(alerts).orderBy(desc(alerts.timestamp));
   },
 
   async getUnseenAlertsCount() {
@@ -97,7 +97,7 @@ export const storage = {
     return result[0] || null;
   },
 
-  async updateSettings(settingsData: any) {
+  async upsertSettings(settingsData: any) {
     const existing = await this.getSettings();
     if (existing) {
       const result = await db.update(settings)
@@ -129,15 +129,15 @@ export const storage = {
   },
 
   async getAlertsBySport(sport: string) {
-    return await db.select().from(alerts).where(eq(alerts.sport, sport)).orderBy(desc(alerts.createdAt));
+    return await db.select().from(alerts).where(eq(alerts.sport, sport)).orderBy(desc(alerts.timestamp));
   },
 
   async getAlertsByType(type: string) {
-    return await db.select().from(alerts).where(eq(alerts.type, type)).orderBy(desc(alerts.createdAt));
+    return await db.select().from(alerts).where(eq(alerts.type, type)).orderBy(desc(alerts.timestamp));
   },
 
   async getRecentAlerts(limit: number = 50) {
-    return await db.select().from(alerts).orderBy(desc(alerts.createdAt)).limit(limit);
+    return await db.select().from(alerts).orderBy(desc(alerts.timestamp)).limit(limit);
   },
 
   async markAlertAsSeen(id: string) {
@@ -236,18 +236,18 @@ export const storage = {
     return await db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitoredTeam(userId: string, teamId: string) {
+  async addUserMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
     const result = await db.insert(userMonitoredTeams)
-      .values({ userId, teamId })
+      .values({ userId, gameId, sport, homeTeamName, awayTeamName })
       .returning();
     return result[0];
   },
 
-  async removeUserMonitoredTeam(userId: string, teamId: string) {
+  async removeUserMonitoredTeam(userId: string, gameId: string) {
     await db.delete(userMonitoredTeams)
       .where(and(
         eq(userMonitoredTeams.userId, userId),
-        eq(userMonitoredTeams.teamId, teamId)
+        eq(userMonitoredTeams.gameId, gameId)
       ));
   }
 };
