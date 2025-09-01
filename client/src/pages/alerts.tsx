@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertFooter } from '@/components/alert-footer';
+import AlertFooter from '@/components/AlertFooter';
+import { SwipeableCard } from '@/components/SwipeableCard';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -197,8 +198,12 @@ export default function AlertsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors">
-                    <CardContent className="p-4">
+                  <SwipeableCard 
+                    alertId={alert.id}
+                    alertData={alert}
+                    className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors"
+                  >
+                    <div className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-start space-x-3">
                           <div className={`p-2 rounded-full ${getAlertColor(alert.priority)}`}>
@@ -244,8 +249,8 @@ export default function AlertsPage() {
                         hasThird={!!alert.hasThird}
                         createdAt={alert.createdAt}
                       />
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </SwipeableCard>
                 </motion.div>
               ))
             )}
