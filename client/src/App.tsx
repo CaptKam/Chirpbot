@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "./pages/not-found";
 import Landing from "./pages/landing";
 import Calendar from "./pages/calendar";
+import Alerts from "./pages/alerts";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
@@ -90,6 +91,7 @@ function RegularAppContent() {
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
         <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
+        <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={Settings} />} />
         <Route component={NotFound} />
