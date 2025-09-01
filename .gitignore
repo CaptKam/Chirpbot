@@ -1,5 +1,10 @@
 node_modules
 dist
+.replit-cache/
+.replit_history/
+.cache/
+*.log
+.env
 .DS_Store
 server/public
 vite.config.ts.*
