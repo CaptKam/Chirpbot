@@ -8,6 +8,7 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 import { gamesService } from "./services/games";
 import { testAlert } from "./http/test-alert";
 import { broadcastAlert, addClient } from "./services/ws-bus";
+import { status } from "./http/status";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -431,6 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Test routes for development
   app.use(testAlert);
+  app.use(status);
 
   // WebSocket smoke test route
   app.get('/api/admin/ws-smoke', (_, res) => {

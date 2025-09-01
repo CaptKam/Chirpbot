@@ -11,6 +11,17 @@ export async function processRawTick(sport: 'MLB'|'NCAAF', gameId: string, raw: 
   await savePlay(sport, gameId, norm.ts, raw); // append only
 
   const candidates = runRules(sport, norm.state, activeRuleset());
+  
+  // Debug logging for rule engine
+  if (candidates.length) {
+    console.log('[rule_fired]', { 
+      sport, 
+      gameId, 
+      n: candidates.length, 
+      types: candidates.map(x => x.type) 
+    });
+  }
+  
   for (const c of candidates) {
     // Fill in the gameId that was passed to us
     c.gameId = gameId;
