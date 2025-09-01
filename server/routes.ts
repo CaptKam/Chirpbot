@@ -1,9 +1,17 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import bcrypt from "bcryptjs";
 import { storage } from "./storage";
-import { insertTeamSchema, insertSettingsSchema } from "@shared/schema";
+import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
+
+// Extend session data interface
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -145,7 +153,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.get('/api/auth/user', async (req, res) => {
     try {
-      // For now, return null (not authenticated) to stop the polling loop
+      if (req.session?.userId) {
+        const user = await storage.getUserById(req.session.userId);
+        if (user) {
+          // Return user data without sensitive fields
+          const { password, ...userWithoutPassword } = user;
+          return res.json(userWithoutPassword);
+        }
+      }
       res.status(401).json({ message: 'Not authenticated' });
     } catch (error) {
       console.error('Error checking authentication:', error);
@@ -155,8 +170,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/login', async (req, res) => {
     try {
-      // Basic login placeholder - returns not implemented
-      res.status(501).json({ message: 'Login not implemented yet' });
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+      }
+      
+      // Find user by username or email
+      let user = await storage.getUserByUsername(username);
+      if (!user) {
+        user = await storage.getUserByEmail(username);
+      }
+      
+      if (!user || !user.password) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // Check password
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // Create session
+      req.session.userId = user.id;
+      
+      // Return user data without password
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ message: 'Login successful', user: userWithoutPassword });
     } catch (error) {
       console.error('Error during login:', error);
       res.status(500).json({ message: 'Login failed' });
@@ -165,8 +206,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/logout', async (req, res) => {
     try {
-      // Basic logout placeholder
-      res.json({ message: 'Logged out successfully' });
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+          return res.status(500).json({ message: 'Logout failed' });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: 'Logged out successfully' });
+      });
     } catch (error) {
       console.error('Error during logout:', error);
       res.status(500).json({ message: 'Logout failed' });
@@ -175,8 +222,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/signup', async (req, res) => {
     try {
-      // Basic signup placeholder
-      res.status(501).json({ message: 'Signup not implemented yet' });
+      const { username, email, password } = req.body;
+      
+      if (!username || !email || !password) {
+        return res.status(400).json({ message: 'Username, email, and password are required' });
+      }
+      
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+      }
+      
+      // Check if user already exists
+      const existingUserByUsername = await storage.getUserByUsername(username);
+      if (existingUserByUsername) {
+        return res.status(409).json({ message: 'Username already exists' });
+      }
+      
+      const existingUserByEmail = await storage.getUserByEmail(email);
+      if (existingUserByEmail) {
+        return res.status(409).json({ message: 'Email already exists' });
+      }
+      
+      // Hash password
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      
+      // Create user
+      const newUser = await storage.createUser({
+        username,
+        email,
+        password: hashedPassword,
+        authMethod: 'local',
+        role: 'user'
+      });
+      
+      // Create session
+      req.session.userId = newUser.id;
+      
+      // Return user data without password
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.status(201).json({ message: 'Account created successfully', user: userWithoutPassword });
     } catch (error) {
       console.error('Error during signup:', error);
       res.status(500).json({ message: 'Signup failed' });
