@@ -218,6 +218,8 @@ export class AlertGenerator {
       alertCount += await this.generateInningPressureAlerts(game, liveData);
       alertCount += await this.generateAtBatAlerts(game, liveData);
       alertCount += await this.generateScoringAlerts(game, liveData);
+      alertCount += await this.generatePowerBatterOnDeck(game, liveData);
+      alertCount += await this.generateClutchBatterOnDeck(game, liveData);
 
     } catch (error) {
       console.error(`Error fetching live data for game ${game.gameId}:`, error);
@@ -404,6 +406,75 @@ export class AlertGenerator {
         awayScore: game.awayScore,
         scoreDiff
       }, 85);
+    }
+
+    return alertCount;
+  }
+
+  private async generatePowerBatterOnDeck(game: any, liveData: any): Promise<number> {
+    let alertCount = 0;
+    const offense = liveData?.linescore?.offense ?? {};
+    const hasRunner = Boolean(offense.first || offense.second || offense.third);
+    if (!hasRunner) return 0;
+
+    const matchup = liveData?.plays?.currentPlay?.matchup;
+    const onDeck = matchup?.onDeck; // MLB feed has onDeck info
+    if (!onDeck) return 0;
+
+    // Simplified check: OPS ≥ .800 or HR ≥ 20 (you can tune)
+    const stats = onDeck?.stats?.batting;
+    if (stats?.ops && stats.ops >= 0.8 || stats?.homeRuns >= 20) {
+      const inning = liveData?.linescore?.currentInning ?? 0;
+      const tb = liveData?.linescore?.isTopInning ? 'T' : 'B';
+
+      const alertKey = `${game.gameId}_POWER_BATTER_ON_DECK_${inning}_${tb}`;
+      
+      const score = 85; // baseline
+      const message = `💥 POWER BATTER ON DECK: ${onDeck.fullName} with runners on for ${game.awayTeam} @ ${game.homeTeam}`;
+      alertCount += await this.saveRealTimeAlert(alertKey, 'POWER_BATTER_ON_DECK', game.gameId, message, { 
+        inning, 
+        tb, 
+        batter: onDeck.fullName,
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        situation: 'power_batter_on_deck'
+      }, score);
+    }
+
+    return alertCount;
+  }
+
+  private async generateClutchBatterOnDeck(game: any, liveData: any): Promise<number> {
+    let alertCount = 0;
+    const inning = liveData?.linescore?.currentInning ?? 0;
+    if (inning < 7) return 0;
+
+    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+    if (scoreDiff > 2) return 0;
+
+    const offense = liveData?.linescore?.offense ?? {};
+    const isRISP = Boolean(offense.second || offense.third);
+    if (!isRISP) return 0;
+
+    const matchup = liveData?.plays?.currentPlay?.matchup;
+    const onDeck = matchup?.onDeck;
+    if (!onDeck) return 0;
+
+    const stats = onDeck?.stats?.batting;
+    if (stats?.rbi && stats.rbi >= 60) { // or use clutch% if available
+      const tb = liveData?.linescore?.isTopInning ? 'T' : 'B';
+      const alertKey = `${game.gameId}_CLUTCH_BATTER_ON_DECK_${inning}_${tb}`;
+      
+      const score = 90;
+      const message = `🔥 CLUTCH BATTER ON DECK: ${onDeck.fullName} (RBI leader) — ${game.awayTeam} @ ${game.homeTeam}`;
+      alertCount += await this.saveRealTimeAlert(alertKey, 'CLUTCH_BATTER_ON_DECK', game.gameId, message, { 
+        inning, 
+        tb, 
+        batter: onDeck.fullName,
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        situation: 'clutch_batter_on_deck'
+      }, score);
     }
 
     return alertCount;

@@ -30,6 +30,8 @@ const ALERT_TYPE_CONFIG = {
     ],
     "At-Bat Situations": [
       { key: "FULL_COUNT", label: "Full Count (3-2)", description: "Maximum pressure at-bat situations" },
+      { key: "POWER_BATTER_ON_DECK", label: "Power Batter On Deck", description: "Known slugger (high HR/OPS) on deck with runners aboard" },
+      { key: "CLUTCH_BATTER_ON_DECK", label: "Clutch Batter On Deck", description: "High RBI hitter on deck in late innings with tying/go-ahead runs" },
     ]
   },
   NFL: {
