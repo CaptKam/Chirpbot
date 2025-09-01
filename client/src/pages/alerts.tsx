@@ -111,93 +111,100 @@ export default function AlertsPage() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
 
       {/* Filter Tabs */}
-      <Tabs value={filter} onValueChange={(value) => setFilter(value as any)}>
-        <TabsList className="grid w-full grid-cols-5 bg-white/5 backdrop-blur-sm border-white/10">
-          <TabsTrigger value="all" className="data-[state=active]:bg-emerald-500">All</TabsTrigger>
-          <TabsTrigger value="MLB" className="data-[state=active]:bg-emerald-500">MLB</TabsTrigger>
-          <TabsTrigger value="NFL" className="data-[state=active]:bg-emerald-500">NFL</TabsTrigger>
-          <TabsTrigger value="NBA" className="data-[state=active]:bg-emerald-500">NBA</TabsTrigger>
-          <TabsTrigger value="NHL" className="data-[state=active]:bg-emerald-500">NHL</TabsTrigger>
-        </TabsList>
+      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
+        <div className="flex overflow-x-auto">
+          {(['all', 'MLB', 'NFL', 'NBA', 'NHL'] as const).map((sport) => (
+            <button
+              key={sport}
+              onClick={() => setFilter(sport)}
+              className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
+                filter === sport
+                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
+                  : "border-transparent text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {sport === 'all' ? 'All' : sport}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <TabsContent value={filter} className="mt-6">
-          <div className="space-y-4">
-            {filteredAlerts.length === 0 ? (
-              <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-                <CardContent className="p-8 text-center">
-                  <Bell className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-300">No alerts for {filter === 'all' ? 'any sport' : filter}</p>
-                  <Button 
-                    onClick={() => refetchAlerts()} 
-                    variant="outline" 
-                    className="mt-4 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10"
-                  >
-                    Refresh Alerts
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredAlerts.map((alert: Alert, index: number) => (
-                <motion.div
-                  key={alert.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <SwipeableCard 
-                    alertId={alert.id}
-                    alertData={alert}
-                    className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors"
-                  >
-                    <div className="p-4">
-                      {/* Header with type and time */}
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-emerald-400 text-sm font-semibold">{alert.sport}</span>
-                        <span className="text-slate-400 text-xs">{formatTime(alert.createdAt)}</span>
-                      </div>
-                      
-                      {/* Alert Type Badge */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-400">
-                          {alert.type.replace('_', ' ')}
-                        </Badge>
-                        <div className="flex items-center gap-1">
-                          <div className="h-2 w-2 bg-emerald-500 rounded-full"></div>
-                          <span className="text-xs text-emerald-400">{alert.confidence}%</span>
-                        </div>
-                      </div>
-                      
-                      {/* Main alert message */}
-                      <h4 className="font-bold mb-1 text-slate-100">{alert.message}</h4>
-                      
-                      {/* Team matchup */}
-                      <p className="text-sm text-slate-300 mb-3">{alert.homeTeam} vs {alert.awayTeam}</p>
-                      
-                      {/* Game situation with colored background */}
-                      <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
-                        <AlertFooter
-                          inning={alert.inning}
-                          isTopInning={alert.isTopInning}
-                          balls={alert.balls || 0}
-                          strikes={alert.strikes || 0}
-                          outs={alert.outs || 0}
-                          hasFirst={!!alert.hasFirst}
-                          hasSecond={!!alert.hasSecond}
-                          hasThird={!!alert.hasThird}
-                          createdAt={alert.createdAt}
-                        />
-                      </div>
+      {/* Alerts Content */}
+      <div className="p-4 space-y-4">
+        {filteredAlerts.length === 0 ? (
+          <Card className="bg-white/5 backdrop-blur-sm border-white/10">
+            <CardContent className="p-8 text-center">
+              <Bell className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-300">No alerts for {filter === 'all' ? 'any sport' : filter}</p>
+              <Button 
+                onClick={() => refetchAlerts()} 
+                variant="outline" 
+                className="mt-4 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10"
+              >
+                Refresh Alerts
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredAlerts.map((alert: Alert, index: number) => (
+            <motion.div
+              key={alert.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <SwipeableCard 
+                alertId={alert.id}
+                alertData={alert}
+                className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors"
+              >
+                <div className="p-4">
+                  {/* Header with type and time */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-emerald-400 text-sm font-semibold">{alert.sport}</span>
+                    <span className="text-slate-400 text-xs">{formatTime(alert.createdAt)}</span>
+                  </div>
+                  
+                  {/* Alert Type Badge */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-400">
+                      {alert.type.replace('_', ' ')}
+                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <div className="h-2 w-2 bg-emerald-500 rounded-full"></div>
+                      <span className="text-xs text-emerald-400">{alert.confidence}%</span>
                     </div>
-                  </SwipeableCard>
-                </motion.div>
-              ))
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+                  </div>
+                  
+                  {/* Main alert message */}
+                  <h4 className="font-bold mb-1 text-slate-100">{alert.message}</h4>
+                  
+                  {/* Team matchup */}
+                  <p className="text-sm text-slate-300 mb-3">{alert.homeTeam} vs {alert.awayTeam}</p>
+                  
+                  {/* Game situation with colored background */}
+                  <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
+                    <AlertFooter
+                      inning={alert.inning}
+                      isTopInning={alert.isTopInning}
+                      balls={alert.balls || 0}
+                      strikes={alert.strikes || 0}
+                      outs={alert.outs || 0}
+                      hasFirst={!!alert.hasFirst}
+                      hasSecond={!!alert.hasSecond}
+                      hasThird={!!alert.hasThird}
+                      createdAt={alert.createdAt}
+                    />
+                  </div>
+                </div>
+              </SwipeableCard>
+            </motion.div>
+          ))
+        )}
+      </div>
       </div>
     </div>
   );
