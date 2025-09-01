@@ -23,6 +23,9 @@ export function useAuth() {
       return response.json();
     },
     retry: false,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   return {

@@ -142,6 +142,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Authentication routes
+  app.get('/api/auth/user', async (req, res) => {
+    try {
+      // For now, return null (not authenticated) to stop the polling loop
+      res.status(401).json({ message: 'Not authenticated' });
+    } catch (error) {
+      console.error('Error checking authentication:', error);
+      res.status(500).json({ message: 'Authentication check failed' });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      // Basic login placeholder - returns not implemented
+      res.status(501).json({ message: 'Login not implemented yet' });
+    } catch (error) {
+      console.error('Error during login:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      // Basic logout placeholder
+      res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
+  app.post('/api/auth/signup', async (req, res) => {
+    try {
+      // Basic signup placeholder
+      res.status(501).json({ message: 'Signup not implemented yet' });
+    } catch (error) {
+      console.error('Error during signup:', error);
+      res.status(500).json({ message: 'Signup failed' });
+    }
+  });
+
   // User routes (basic)
   app.get('/api/user/:userId', async (req, res) => {
     try {

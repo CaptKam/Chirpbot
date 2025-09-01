@@ -76,9 +76,6 @@ function RegularAppContent() {
         case 'team_monitoring_changed':
           // Handle team monitoring changes
           break;
-        case 'team_monitoring_changed':
-          // Handle team monitoring changes if needed
-          break;
         case 'settings_changed':
           // Handle settings changes if needed
           break;
