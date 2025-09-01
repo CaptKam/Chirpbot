@@ -7,6 +7,7 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
+import { AlertGenerator } from "./services/alert-generator";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -472,6 +473,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to count alerts' });
     }
   });
+
+  // Generate alerts from today's completed games
+  const alertGenerator = new AlertGenerator();
+  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
   return httpServer;
 }

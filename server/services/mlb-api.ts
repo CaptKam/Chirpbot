@@ -54,3 +54,6 @@ export class MLBApiService {
     return 'scheduled';
   }
 }
+
+// Export a singleton instance
+export const mlbApiService = new MLBApiService();

@@ -1,0 +1,201 @@
+import { db } from "../db";
+import { sql } from "drizzle-orm";
+import { MLBApiService } from "./mlb-api";
+
+interface AlertData {
+  type: string;
+  sport: string;
+  gameId: string;
+  score: number;
+  payload: any;
+  alertKey: string;
+  state: string;
+}
+
+export class AlertGenerator {
+  private mlbApi: MLBApiService;
+
+  constructor() {
+    this.mlbApi = new MLBApiService();
+  }
+
+  // Generate realistic alerts from today's completed games
+  async generateAlertsFromCompletedGames(): Promise<void> {
+    try {
+      const games = await this.mlbApi.getTodaysGames();
+      console.log(`Found ${games.length} games to analyze for alerts`);
+
+      for (const game of games) {
+        if (game.status === 'final' && game.homeScore && game.awayScore) {
+          await this.generateGameAlerts(game);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating alerts from completed games:', error);
+    }
+  }
+
+  private async generateGameAlerts(game: any): Promise<void> {
+    const alerts: AlertData[] = [];
+
+    // Close Game Alert - if final score difference is <= 3
+    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+    if (scoreDiff <= 3) {
+      alerts.push({
+        type: 'CLOSE_GAME',
+        sport: 'MLB',
+        gameId: game.gameId,
+        score: 90 - (scoreDiff * 10), // Higher score for closer games
+        payload: JSON.stringify({
+          type: 'CLOSE_GAME',
+          sport: 'MLB',
+          gameId: game.gameId,
+          context: {
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
+            scoreDifference: scoreDiff
+          },
+          message: `${game.awayTeam} vs ${game.homeTeam} was decided by just ${scoreDiff} run${scoreDiff !== 1 ? 's' : ''}!`,
+          situation: `CLOSE_${scoreDiff}RUN_GAME`
+        }),
+        alertKey: `${game.gameId}_CLOSE_GAME`,
+        state: 'NEW'
+      });
+    }
+
+    // High-Scoring Game Alert - if total runs >= 12
+    const totalRuns = game.homeScore + game.awayScore;
+    if (totalRuns >= 12) {
+      alerts.push({
+        type: 'HIGH_SCORING',
+        sport: 'MLB',
+        gameId: game.gameId,
+        score: Math.min(95, 60 + (totalRuns * 2)), // Cap at 95
+        payload: JSON.stringify({
+          type: 'HIGH_SCORING',
+          sport: 'MLB',
+          gameId: game.gameId,
+          context: {
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
+            totalRuns: totalRuns
+          },
+          message: `${game.awayTeam} vs ${game.homeTeam} featured ${totalRuns} total runs!`,
+          situation: `HIGH_SCORING_${totalRuns}RUNS`
+        }),
+        alertKey: `${game.gameId}_HIGH_SCORING`,
+        state: 'NEW'
+      });
+    }
+
+    // Shutout Alert - if one team scored 0
+    if (game.homeScore === 0 || game.awayScore === 0) {
+      const shutoutTeam = game.homeScore === 0 ? game.awayTeam : game.homeTeam;
+      const victimTeam = game.homeScore === 0 ? game.homeTeam : game.awayTeam;
+      
+      alerts.push({
+        type: 'SHUTOUT',
+        sport: 'MLB',
+        gameId: game.gameId,
+        score: 85,
+        payload: JSON.stringify({
+          type: 'SHUTOUT',
+          sport: 'MLB',
+          gameId: game.gameId,
+          context: {
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
+            shutoutTeam: shutoutTeam,
+            victimTeam: victimTeam
+          },
+          message: `${shutoutTeam} shut out ${victimTeam}!`,
+          situation: `SHUTOUT_VICTORY`
+        }),
+        alertKey: `${game.gameId}_SHUTOUT`,
+        state: 'NEW'
+      });
+    }
+
+    // Blowout Alert - if score difference >= 7
+    if (scoreDiff >= 7) {
+      const winner = game.homeScore > game.awayScore ? game.homeTeam : game.awayTeam;
+      const loser = game.homeScore > game.awayScore ? game.awayTeam : game.homeTeam;
+      
+      alerts.push({
+        type: 'BLOWOUT',
+        sport: 'MLB',
+        gameId: game.gameId,
+        score: 75 + Math.min(20, scoreDiff * 2), // Scale with difference
+        payload: JSON.stringify({
+          type: 'BLOWOUT',
+          sport: 'MLB',
+          gameId: game.gameId,
+          context: {
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
+            scoreDifference: scoreDiff,
+            winner: winner,
+            loser: loser
+          },
+          message: `${winner} dominated ${loser} by ${scoreDiff} runs!`,
+          situation: `BLOWOUT_${scoreDiff}RUNS`
+        }),
+        alertKey: `${game.gameId}_BLOWOUT`,
+        state: 'NEW'
+      });
+    }
+
+    // Save all alerts to database
+    for (const alert of alerts) {
+      await this.saveAlert(alert);
+    }
+
+    if (alerts.length > 0) {
+      console.log(`Generated ${alerts.length} alerts for game ${game.gameId}: ${game.awayTeam} vs ${game.homeTeam}`);
+    }
+  }
+
+  private async saveAlert(alertData: AlertData): Promise<void> {
+    try {
+      await db.execute(sql`
+        INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
+        VALUES (gen_random_uuid(), ${alertData.alertKey}, ${alertData.sport}, ${alertData.gameId}, 
+                ${alertData.type}, ${alertData.state}, ${alertData.score}, ${alertData.payload}, NOW())
+        ON CONFLICT (alert_key) DO NOTHING
+      `);
+    } catch (error) {
+      console.error('Error saving alert:', error);
+    }
+  }
+
+  // Method to generate alerts for live games (when they're happening)
+  async generateLiveGameAlerts(): Promise<void> {
+    try {
+      const games = await this.mlbApi.getTodaysGames();
+      const liveGames = games.filter(game => game.isLive);
+      
+      if (liveGames.length === 0) {
+        console.log('No live games to monitor for alerts');
+        return;
+      }
+
+      console.log(`Monitoring ${liveGames.length} live games for alerts`);
+      
+      for (const game of liveGames) {
+        // This would fetch detailed live feed data and generate real-time alerts
+        // For now, this is a placeholder for when live monitoring is needed
+        console.log(`Would monitor live game: ${game.awayTeam} vs ${game.homeTeam}`);
+      }
+    } catch (error) {
+      console.error('Error generating live game alerts:', error);
+    }
+  }
+}
