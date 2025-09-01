@@ -57,13 +57,19 @@ export default function AlertFooter({
           </span>
         </div>
 
-        {/* Base Runners */}
-        <div className="flex items-center space-x-1">
-          <div className="flex space-x-0.5">
-            <div className={`w-2 h-2 rotate-45 border ${hasSecond ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
-            <div className={`w-2 h-2 rotate-45 border ${hasThird ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
-          </div>
-          <div className={`w-2 h-2 rotate-45 border ${hasFirst ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        {/* Base Runners - Baseball Diamond Layout */}
+        <div className="relative w-6 h-6 flex-shrink-0">
+          {/* Second Base - Top */}
+          <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 rotate-45 border ${hasSecond ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+          
+          {/* Third Base - Left */}
+          <div className={`absolute top-1/2 left-0 transform -translate-y-1/2 w-1.5 h-1.5 rotate-45 border ${hasThird ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+          
+          {/* First Base - Right */}
+          <div className={`absolute top-1/2 right-0 transform -translate-y-1/2 w-1.5 h-1.5 rotate-45 border ${hasFirst ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+          
+          {/* Home Plate - Bottom */}
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-slate-600 rounded-full" />
         </div>
       </div>
 
