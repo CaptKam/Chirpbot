@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { users, teams, settings, userMonitoredTeams, alerts, plays, alertCooldowns } from "../shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, count } from "drizzle-orm";
+import { users, teams, settings, userMonitoredTeams, sportAlertSettings } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -124,11 +124,11 @@ export const storage = {
   // User monitored games operations
   async getUserMonitoredGames(userId: string, sport?: string) {
     let query = db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
-
+    
     if (sport) {
       query = query.where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.sport, sport)));
     }
-
+    
     return await query;
   },
 
@@ -140,11 +140,11 @@ export const storage = {
         eq(userMonitoredTeams.userId, data.userId),
         eq(userMonitoredTeams.gameId, data.gameId)
       ));
-
+    
     if (existing.length > 0) {
       return existing[0];
     }
-
+    
     const result = await db.insert(userMonitoredTeams).values(data).returning();
     return result[0];
   },
@@ -182,23 +182,7 @@ export const storage = {
 
   // Monitored games - for alert system
   async getAllMonitoredGames() {
-    try {
-      const monitoredGames = await db.select().from(userMonitoredTeams);
-      return monitoredGames;
-    } catch (error) {
-      console.error('Error fetching monitored games:', error);
-      return [];
-    }
-  },
-
-  async removeMonitoredGameByGameId(gameId: string) {
-    try {
-      await db.delete(userMonitoredTeams).where(eq(userMonitoredTeams.gameId, gameId));
-      console.log(`Removed monitored game: ${gameId}`);
-    } catch (error) {
-      console.error('Error removing monitored game:', error);
-      throw error;
-    }
+    return await db.select().from(userMonitoredTeams);
   },
 
   // Sport alert settings operations
@@ -215,7 +199,7 @@ export const storage = {
 
   async upsertSportAlertSetting(userId: string, sport: string, alertsEnabled: boolean) {
     const existing = await this.getSportAlertSetting(userId, sport);
-
+    
     if (existing) {
       const result = await db.update(sportAlertSettings)
         .set({ alertsEnabled, updatedAt: new Date() })
@@ -228,30 +212,6 @@ export const storage = {
         .returning();
       return result[0];
     }
-  },
-
-  // Alert operations
-  async createAlert(alertData: any) {
-    const result = await db.insert(alerts).values(alertData).returning();
-    return result[0];
-  },
-
-  async getAlertByKey(alertKey: string) {
-    const result = await db.select().from(alerts).where(eq(alerts.alertKey, alertKey));
-    return result[0] || null;
-  },
-
-  async getAllAlerts(limit: number = 50) {
-    return await db.select().from(alerts)
-      .orderBy(desc(alerts.createdAt))
-      .limit(limit);
-  },
-
-  async getAlertsBySport(sport: string, limit: number = 50) {
-    return await db.select().from(alerts)
-      .where(eq(alerts.sport, sport))
-      .orderBy(desc(alerts.createdAt))
-      .limit(limit);
   }
 };
 

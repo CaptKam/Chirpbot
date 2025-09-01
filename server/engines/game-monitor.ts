@@ -124,19 +124,8 @@ export class GameMonitor {
             // Skip invalid game IDs
             if (isNaN(gameId) || gameId <= 0) {
               console.log(`Skipping invalid MLB game ID: ${game.gameId}`);
-              await this.removeInvalidGame(game.gameId);
               return;
             }
-            
-            // Check if game still exists before fetching
-            const exists = await this.checkMLBGameExists(gameId);
-            if (!exists) {
-              console.log(`MLB game ${gameId} no longer exists - cleaning up`);
-              await this.removeInvalidGame(game.gameId);
-              this.removeGameFromMonitoring(game.gameId);
-              return;
-            }
-            
             await this.mlbFetcher.fetchGameData(gameId);
           } catch (error) {
             console.error(`MLB monitoring error for game ${game.gameId}:`, error);
@@ -145,25 +134,6 @@ export class GameMonitor {
         
         this.activeMonitoring.set(game.gameId, timer);
       }
-    }
-  }
-
-  private async checkMLBGameExists(gamePk: number): Promise<boolean> {
-    try {
-      const response = await fetch(`https://statsapi.mlb.com/api/v1/game/${gamePk}/feed/live`);
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  private async removeInvalidGame(gameId: string): Promise<void> {
-    try {
-      // Remove from database - you'll need to implement this in storage
-      console.log(`Removing invalid game ${gameId} from database`);
-      // await storage.removeMonitoredGame(gameId);
-    } catch (error) {
-      console.error(`Failed to remove invalid game ${gameId}:`, error);
     }
   }
 

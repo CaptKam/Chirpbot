@@ -6,10 +6,6 @@ import { storage } from "./storage";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema, insertUserMonitoredTeamSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { gamesService } from "./services/games";
-import { testAlert } from "./http/test-alert";
-import { broadcastAlert, addClient } from "./services/ws-bus";
-import { status } from "./http/status";
-import { alertsApi } from "./api/alerts";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -30,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   wss.on('connection', (ws: any) => {
-    addClient(ws);
+    ws.isAlive = true;
     clients.add(ws);
     console.log('WebSocket client connected');
 
@@ -75,9 +71,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Make broadcast available globally for test routes
-  (global as any).broadcastAlert = broadcastAlert;
-
   // Basic health check
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -95,38 +88,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching alert:', error);
       res.status(500).json({ message: 'Failed to fetch alert' });
-    }
-  });
-
-  // Debug endpoints
-  app.get('/api/debug/alerts-count', async (req, res) => {
-    try {
-      const count = await storage.getAlertsCount();
-      res.json({ totalAlerts: count, timestamp: new Date().toISOString() });
-    } catch (error) {
-      console.error('Error counting alerts:', error);
-      res.status(500).json({ message: 'Failed to count alerts' });
-    }
-  });
-
-  app.get('/api/debug/recent-alerts/:limit?', async (req, res) => {
-    try {
-      const limit = parseInt(req.params.limit || '10');
-      const alerts = await storage.getRecentAlerts(limit);
-      res.json({ 
-        alerts: alerts.map(a => ({
-          alertKey: a.alertKey,
-          sport: a.sport,
-          type: a.type,
-          gameId: a.gameId,
-          createdAt: a.createdAt,
-          state: a.state
-        })),
-        count: alerts.length 
-      });
-    } catch (error) {
-      console.error('Error fetching recent alerts:', error);
-      res.status(500).json({ message: 'Failed to fetch recent alerts' });
     }
   });
 
@@ -461,24 +422,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error updating sport alert setting:', error);
       res.status(500).json({ message: 'Failed to update sport alert setting' });
     }
-  });
-
-  // Test routes for development
-  app.use(testAlert);
-  app.use(status);
-  
-  // Alerts API routes
-  app.use('/api/alerts', alertsApi);
-
-  // WebSocket smoke test route
-  app.get('/api/admin/ws-smoke', (_, res) => {
-    broadcastAlert({
-      sport: 'TEST',
-      type: 'SMOKE',
-      title: 'Hello Alerts Page 🚀',
-      ts: new Date().toISOString()
-    });
-    res.json({ ok: true });
   });
 
   return httpServer;

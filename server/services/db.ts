@@ -28,14 +28,7 @@ export async function tryInsertAlert(a: AlertCandidate): Promise<boolean> {
       gameId: a.gameId,
       type: a.type,
       score: a.score,
-      payload: a,
-      // Enhanced fields
-      priority: a.priority || 50,
-      aiNote: a.aiNote || null,
-      message: a.message || null,
-      dedupScope: a.dedupScope || 'game',
-      dedupKey: a.dedupKey || `${a.sport}:${a.gameId}:${a.type}`,
-      realertAfter: a.realertAfter || null
+      payload: a
     });
     return true;
   } catch (error) {
