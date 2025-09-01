@@ -6,6 +6,8 @@ import { storage } from "./storage";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema, insertUserMonitoredTeamSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { gamesService } from "./services/games";
+import { testAlert } from "./http/test-alert";
+import { broadcastAlert, addClient } from "./services/ws-bus";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -26,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   wss.on('connection', (ws: any) => {
-    ws.isAlive = true;
+    addClient(ws);
     clients.add(ws);
     console.log('WebSocket client connected');
 
@@ -70,6 +72,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   }
+
+  // Make broadcast available globally for test routes
+  (global as any).broadcastAlert = broadcastAlert;
 
   // Basic health check
   app.get('/health', (req, res) => {
@@ -422,6 +427,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error updating sport alert setting:', error);
       res.status(500).json({ message: 'Failed to update sport alert setting' });
     }
+  });
+
+  // Test routes for development
+  app.use(testAlert);
+
+  // WebSocket smoke test route
+  app.get('/api/admin/ws-smoke', (_, res) => {
+    broadcastAlert({
+      sport: 'TEST',
+      type: 'SMOKE',
+      title: 'Hello Alerts Page 🚀',
+      ts: new Date().toISOString()
+    });
+    res.json({ ok: true });
   });
 
   return httpServer;

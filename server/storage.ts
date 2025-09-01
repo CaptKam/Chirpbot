@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, sportAlertSettings } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, sportAlertSettings, alerts } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -212,6 +212,30 @@ export const storage = {
         .returning();
       return result[0];
     }
+  },
+
+  // Alert operations
+  async createAlert(alertData: any) {
+    const result = await db.insert(alerts).values(alertData).returning();
+    return result[0];
+  },
+
+  async getAlertByKey(alertKey: string) {
+    const result = await db.select().from(alerts).where(eq(alerts.alertKey, alertKey));
+    return result[0] || null;
+  },
+
+  async getAllAlerts(limit: number = 50) {
+    return await db.select().from(alerts)
+      .orderBy(desc(alerts.createdAt))
+      .limit(limit);
+  },
+
+  async getAlertsBySport(sport: string, limit: number = 50) {
+    return await db.select().from(alerts)
+      .where(eq(alerts.sport, sport))
+      .orderBy(desc(alerts.createdAt))
+      .limit(limit);
   }
 };
 

@@ -1,0 +1,174 @@
+A) End-to-end test (recommended)
+
+Goal: verify ingest → rules → DB → notifier → UI.
+
+Start the server
+
+pnpm dev
+
+
+Fire the demo ticks (you already have this from earlier)
+
+pnpm tsx scripts/mock-feed.ts
+
+
+Open your Alerts page. You should see:
+
+2–3 MLB alerts (RISP variants, not repeated back-to-back)
+
+2 NCAAF alerts (first Red Zone, later goal-to-go)
+
+If page stays empty, run the self-check:
+
+BASE_URL=http://localhost:3000 pnpm selfcheck
+
+
+If DB shows alerts but the page is blank → UI/WS issue.
+
+If no alerts in DB → ingest/rules issue (check logs + /readyz).
+
+B) Inject a synthetic alert (fastest UI check)
+
+Goal: push a single fake alert through the same path your UI listens to.
+
+1) Add a tiny admin route
+
+server/http/test-alert.ts
+
+import express from 'express';
+import { buildAlertKey } from '../models/alert-key';
+import type { AlertCandidate } from '../models/contracts';
+import { tryInsertAlert, setCooldown } from '../services/db';
+import { pushAlert } from '../services/notifier';
+
+export const testAlert = express.Router();
+
+// GET /admin/test-alert?type=HIGH_SCORING_OPP&sport=MLB&gameId=DEMO1
+testAlert.get('/admin/test-alert', async (req, res) => {
+  const { type='HIGH_SCORING_OPP', sport='MLB', gameId='DEMO1' } = req.query as Record<string,string>;
+
+  const alert: AlertCandidate = {
+    sport: sport as any,
+    gameId,
+    type: type as any,
+    phase: 'TEST_PHASE',
+    situation: `TEST_${Date.now()}`,   // unique to bypass dedup on repeats
+    ruleVersion: 'ruleset_test',
+    score: 77,
+    context: { note: 'Synthetic test alert' }
+  };
+
+  const inserted = await tryInsertAlert(alert);
+  if (!inserted) return res.status(200).json({ ok: true, note: 'duplicate-key (expected if you re-use situation)' });
+
+  await pushAlert(alert);     // goes to Telegram/WS/webhook per your notifier
+  await setCooldown(alert);   // optional: behave like real alerts
+
+  res.json({ ok: true, alert_key: buildAlertKey(alert), alert });
+});
+
+
+Wire it in your server bootstrap (e.g., server/index.ts):
+
+import express from 'express';
+import { health } from './http/health';
+import { testAlert } from './http/test-alert';
+
+const app = express();
+app.use(health);
+app.use(testAlert);
+// ... existing routes / ws setup
+
+2) Trigger from the browser or curl
+
+Visit: http://localhost:3000/admin/test-alert
+
+Or:
+
+curl "http://localhost:3000/admin/test-alert?type=HIGH_SCORING_OPP&sport=MLB&gameId=DEMO1"
+
+
+Your Alerts page should update immediately. If it doesn’t, see “WS checks” below.
+
+C) WebSocket-only smoke (bypass DB/rules)
+
+Goal: prove the page reacts to live pushes even without the rest of the stack.
+
+1) Server broadcast helper
+
+Wherever you keep your WS server, add a tiny helper:
+
+// server/services/ws-bus.ts
+import type { WebSocket } from 'ws';
+export const wsClients = new Set<WebSocket>();
+export function broadcastAlert(payload: any) {
+  const msg = JSON.stringify({ type: 'alert', payload });
+  for (const ws of wsClients) {
+    if ((ws as any).isAlive !== false) ws.send(msg);
+  }
+}
+
+
+Hook connection (e.g., in your ws setup):
+
+wss.on('connection', (ws) => {
+  (ws as any).isAlive = true;
+  ws.on('pong', function heartbeat(){ (this as any).isAlive = true; });
+  wsClients.add(ws);
+  ws.on('close', () => wsClients.delete(ws));
+});
+
+2) One-shot tester route
+import { broadcastAlert } from '../services/ws-bus';
+app.get('/admin/ws-smoke', (_, res) => {
+  broadcastAlert({
+    sport: 'TEST',
+    type: 'SMOKE',
+    title: 'Hello Alerts Page 🚀',
+    ts: new Date().toISOString()
+  });
+  res.json({ ok: true });
+});
+
+
+Hit http://localhost:3000/admin/ws-smoke and your page should pop a card/toast.
+
+Client expectations (make sure your Alerts page does this)
+
+WebSocket listener
+
+// simple client snippet
+const ws = new WebSocket(`${location.origin.replace('http','ws')}/ws`);
+ws.onmessage = (ev) => {
+  const msg = JSON.parse(ev.data);
+  if (msg.type === 'alert') {
+    // push into your UI store/list
+    addAlert(msg.payload);
+  }
+};
+ws.onopen = () => console.log('WS connected');
+ws.onclose = () => console.log('WS closed');
+
+
+Polling fallback (optional, handy while debugging):
+
+// GET /alerts?since=ISO_5min_ago&limit=50
+setInterval(async () => {
+  const r = await fetch(`/alerts?since=${encodeURIComponent(new Date(Date.now()-5*60e3).toISOString())}&limit=50`);
+  const { items } = await r.json();
+  for (const a of items) addAlert(a);
+}, 4000);
+
+
+Expected alert payload (what your UI should render)
+
+{
+  "sport": "MLB",
+  "gameId": "776553",
+  "type": "HIGH_SCORING_OPP",
+  "phase": "T7",
+  "situation": "RISP_23_1OUT",
+  "ruleVersion": "ruleset_v1",
+  "score": 80,
+  "context": { "outs": 1, "runners": "23", "scoreline": { "home":1, "away":1 } }
+}
