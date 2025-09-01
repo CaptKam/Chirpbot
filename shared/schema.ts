@@ -112,6 +112,26 @@ export type Settings = typeof settings.$inferSelect;
 export type InsertUserMonitoredTeam = z.infer<typeof insertUserMonitoredTeamSchema>;
 export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
 
+// User alert preferences for individual alert types
+export const userAlertPreferences = pgTable("user_alert_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL
+  alertType: text("alert_type").notNull(), // RISP, CLOSE_GAME, etc.
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertUserAlertPreferencesSchema = createInsertSchema(userAlertPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserAlertPreferences = z.infer<typeof insertUserAlertPreferencesSchema>;
+export type UserAlertPreferences = typeof userAlertPreferences.$inferSelect;
+
 
 // Game types for live sports data
 export interface Game {

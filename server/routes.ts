@@ -219,6 +219,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User alert preferences routes
+  app.get('/api/user/:userId/alert-preferences', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const preferences = await storage.getUserAlertPreferences(userId);
+      res.json(preferences);
+    } catch (error) {
+      console.error('Error fetching alert preferences:', error);
+      res.status(500).json({ message: 'Failed to fetch alert preferences' });
+    }
+  });
+
+  app.get('/api/user/:userId/alert-preferences/:sport', async (req, res) => {
+    try {
+      const { userId, sport } = req.params;
+      const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toUpperCase());
+      res.json(preferences);
+    } catch (error) {
+      console.error('Error fetching alert preferences for sport:', error);
+      res.status(500).json({ message: 'Failed to fetch sport alert preferences' });
+    }
+  });
+
+  app.post('/api/user/:userId/alert-preferences', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { sport, alertType, enabled } = req.body;
+      
+      if (!sport || !alertType || typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
+      }
+      
+      const preference = await storage.setUserAlertPreference(userId, sport.toUpperCase(), alertType, enabled);
+      res.json(preference);
+    } catch (error) {
+      console.error('Error setting alert preference:', error);
+      res.status(500).json({ message: 'Failed to set alert preference' });
+    }
+  });
+
+  app.post('/api/user/:userId/alert-preferences/bulk', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { sport, preferences } = req.body;
+      
+      if (!sport || !preferences || !Array.isArray(preferences)) {
+        return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
+      }
+      
+      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
+      res.json({ message: 'Alert preferences updated successfully', count: result.length });
+    } catch (error) {
+      console.error('Error setting bulk alert preferences:', error);
+      res.status(500).json({ message: 'Failed to set bulk alert preferences' });
+    }
+  });
+
   // Authentication routes
   app.get('/api/auth/user', async (req, res) => {
     try {

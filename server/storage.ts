@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, type InsertUserMonitoredTeam } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, userAlertPreferences, type InsertUserMonitoredTeam, type InsertUserAlertPreferences } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -195,6 +195,55 @@ export const storage = {
         eq(userMonitoredTeams.userId, userId),
         eq(userMonitoredTeams.gameId, gameId)
       ));
+  },
+
+  // User alert preferences operations
+  async getUserAlertPreferences(userId: string) {
+    return await db.select().from(userAlertPreferences).where(eq(userAlertPreferences.userId, userId));
+  },
+
+  async getUserAlertPreferencesBySport(userId: string, sport: string) {
+    return await db.select().from(userAlertPreferences)
+      .where(and(
+        eq(userAlertPreferences.userId, userId),
+        eq(userAlertPreferences.sport, sport)
+      ));
+  },
+
+  async setUserAlertPreference(userId: string, sport: string, alertType: string, enabled: boolean) {
+    // Use upsert pattern - try to update first, insert if not exists
+    const existing = await db.select().from(userAlertPreferences)
+      .where(and(
+        eq(userAlertPreferences.userId, userId),
+        eq(userAlertPreferences.sport, sport),
+        eq(userAlertPreferences.alertType, alertType)
+      ));
+
+    if (existing.length > 0) {
+      const result = await db.update(userAlertPreferences)
+        .set({ enabled, updatedAt: new Date() })
+        .where(and(
+          eq(userAlertPreferences.userId, userId),
+          eq(userAlertPreferences.sport, sport),
+          eq(userAlertPreferences.alertType, alertType)
+        ))
+        .returning();
+      return result[0];
+    } else {
+      const result = await db.insert(userAlertPreferences)
+        .values({ userId, sport, alertType, enabled })
+        .returning();
+      return result[0];
+    }
+  },
+
+  async bulkSetUserAlertPreferences(userId: string, sport: string, preferences: Array<{alertType: string, enabled: boolean}>) {
+    const results = [];
+    for (const pref of preferences) {
+      const result = await this.setUserAlertPreference(userId, sport, pref.alertType, pref.enabled);
+      results.push(result);
+    }
+    return results;
   }
 };
 
