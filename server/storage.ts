@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, type InsertUserMonitoredTeam } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -122,28 +122,31 @@ export const storage = {
   },
 
   async getUserMonitoredGamesBySport(userId: string, sport: string) {
-    // Disabled - no more monitoring chaos
-    return [];
+    return await db.select().from(userMonitoredTeams)
+      .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.sport, sport)));
   },
 
   async getUserMonitoredGames(userId: string) {
-    // Disabled - no more monitoring chaos
-    return [];
+    return await db.select().from(userMonitoredTeams)
+      .where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitoredGame(gameData: any) {
-    // Disabled - no more alert generation
-    return null;
+  async addUserMonitoredGame(gameData: InsertUserMonitoredTeam) {
+    const result = await db.insert(userMonitoredTeams).values(gameData).returning();
+    return result[0];
   },
 
   async removeUserMonitoredGame(userId: string, gameId: string) {
-    // Disabled - no more alert generation
-    return null;
+    const result = await db.delete(userMonitoredTeams)
+      .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.gameId, gameId)))
+      .returning();
+    return result[0] || null;
   },
 
   async isGameMonitoredByUser(userId: string, gameId: string) {
-    // Disabled - no more monitoring
-    return false;
+    const result = await db.select().from(userMonitoredTeams)
+      .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.gameId, gameId)));
+    return result.length > 0;
   },
 
   async updateUserTelegramSettings(userId: string, botToken: string, chatId: string, enabled: boolean) {
@@ -163,9 +166,9 @@ export const storage = {
     return result[0] || null;
   },
 
-  // Monitored games - simplified (no more engine chaos)
+  // Get all monitored games across all users
   async getAllMonitoredGames() {
-    return [];
+    return await db.select().from(userMonitoredTeams);
   },
 
   // User monitored teams
