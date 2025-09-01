@@ -27,10 +27,24 @@ export class GameMonitor {
       return;
     }
 
-    console.log(`Found ${monitoredGames.length} monitored games`);
+    // Filter out invalid game IDs
+    const validGames = monitoredGames.filter(game => {
+      if (game.sport === 'MLB') {
+        const gameId = parseInt(game.gameId);
+        return !isNaN(gameId) && gameId > 0;
+      }
+      return game.gameId && game.gameId.length > 0;
+    });
+
+    console.log(`Found ${validGames.length} valid monitored games (${monitoredGames.length} total)`);
+    
+    if (validGames.length === 0) {
+      console.log('No valid games to monitor');
+      return;
+    }
     
     // Group by sport for efficient monitoring
-    const gamesBySport = this.groupGamesBySport(monitoredGames);
+    const gamesBySport = this.groupGamesBySport(validGames);
     
     // Start monitoring for each sport
     for (const [sport, games] of gamesBySport) {
@@ -106,7 +120,13 @@ export class GameMonitor {
       if (!this.activeMonitoring.has(game.gameId)) {
         const timer = setInterval(async () => {
           try {
-            await this.mlbFetcher.fetchGameData(parseInt(game.gameId));
+            const gameId = parseInt(game.gameId);
+            // Skip invalid game IDs
+            if (isNaN(gameId) || gameId <= 0) {
+              console.log(`Skipping invalid MLB game ID: ${game.gameId}`);
+              return;
+            }
+            await this.mlbFetcher.fetchGameData(gameId);
           } catch (error) {
             console.error(`MLB monitoring error for game ${game.gameId}:`, error);
           }
