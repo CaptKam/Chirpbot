@@ -241,23 +241,21 @@ export class AlertGenerator {
 
   private async generateBaseRunnerAlerts(game: any, liveData: any): Promise<number> {
     let alertCount = 0;
-    const plays = liveData?.plays;
-    if (!plays) return 0;
-
-    const currentPlay = plays.currentPlay;
-    const runners = currentPlay?.runners || [];
     
-    // Check for bases loaded situation
-    const basesOccupied = new Set();
-    runners.forEach((runner: any) => {
-      if (runner.movement?.end) {
-        basesOccupied.add(runner.movement.end);
-      }
-    });
+    // Use the offense object which shows current base situation
+    const offense = liveData?.linescore?.offense;
+    if (!offense) return 0;
 
-    if (basesOccupied.has('2B') && basesOccupied.has('3B') && basesOccupied.has('1B')) {
-      const inning = liveData.linescore?.currentInning || 0;
-      const outs = currentPlay?.count?.outs || 0;
+    // Check actual base occupancy
+    const hasFirst = !!offense.first;
+    const hasSecond = !!offense.second;
+    const hasThird = !!offense.third;
+    
+    const inning = liveData.linescore?.currentInning || 0;
+    const outs = liveData.linescore?.outs || 0;
+
+    // Bases loaded: all three bases occupied
+    if (hasFirst && hasSecond && hasThird) {
       const alertKey = `${game.gameId}_BASES_LOADED_${inning}_${outs}`;
       const message = `🔥 BASES LOADED! ${game.awayTeam} vs ${game.homeTeam} - ${outs} outs, Inning ${inning}`;
       
@@ -266,22 +264,27 @@ export class AlertGenerator {
         awayTeam: game.awayTeam,
         inning,
         outs,
+        first: offense.first?.fullName,
+        second: offense.second?.fullName,
+        third: offense.third?.fullName,
         situation: 'bases_loaded'
       }, 98);
     }
-
-    // Check for runner in scoring position (2nd or 3rd base)
-    if ((basesOccupied.has('2B') || basesOccupied.has('3B')) && !basesOccupied.has('1B')) {
-      const inning = liveData.linescore?.currentInning || 0;
-      const outs = currentPlay?.count?.outs || 0;
+    // Runner in scoring position (2nd or 3rd base, but not bases loaded)
+    else if ((hasSecond || hasThird) && !(hasFirst && hasSecond && hasThird)) {
       const alertKey = `${game.gameId}_RISP_${inning}_${outs}`;
-      const message = `⚾ RUNNER IN SCORING POSITION! ${game.awayTeam} vs ${game.homeTeam} - ${outs} outs`;
+      const positions = [];
+      if (hasSecond) positions.push('2nd');
+      if (hasThird) positions.push('3rd');
+      const message = `⚾ RUNNER IN SCORING POSITION! ${game.awayTeam} vs ${game.homeTeam} - ${positions.join(' & ')} base, ${outs} outs`;
       
       alertCount += await this.saveRealTimeAlert(alertKey, 'RISP', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
         inning,
         outs,
+        hasSecond,
+        hasThird,
         situation: 'runner_in_scoring_position'
       }, 85);
     }
