@@ -24,12 +24,14 @@ export class NBAApiService {
           awayTeam: awayTeam.team.displayName,
           homeScore: parseInt(homeTeam.score) || 0,
           awayScore: parseInt(awayTeam.score) || 0,
-          startTime: new Date(event.date).toISOString(),
+          gameDate: event.date,
           status: this.mapGameStatus(event.status.type.name),
           isLive: event.status.type.state === 'in',
           isCompleted: event.status.type.state === 'post',
           venue: game.venue?.fullName || '',
           quarter: game.status?.period || 0,
+          inning: null,
+          inningState: null,
           timeRemaining: game.status?.displayClock || ''
         };
       });
