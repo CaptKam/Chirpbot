@@ -1055,8 +1055,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!organized[config.category]) {
           organized[config.category] = {};
         }
+        let parsedValue;
+        try {
+          parsedValue = JSON.parse(config.value as string);
+        } catch (jsonError) {
+          // Handle malformed JSON by treating as string
+          console.warn(`Invalid JSON for ${config.category}.${config.key}:`, config.value);
+          parsedValue = config.value;
+        }
         organized[config.category][config.key] = {
-          value: JSON.parse(config.value as string),
+          value: parsedValue,
           description: config.description,
           updatedAt: config.updatedAt
         };
@@ -1080,8 +1088,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const result: Record<string, any> = {};
       for (const config of configurations) {
+        let parsedValue;
+        try {
+          parsedValue = JSON.parse(config.value as string);
+        } catch (jsonError) {
+          // Handle malformed JSON by treating as string
+          console.warn(`Invalid JSON for ${config.category}.${config.key}:`, config.value);
+          parsedValue = config.value;
+        }
         result[config.key] = {
-          value: JSON.parse(config.value as string),
+          value: parsedValue,
           description: config.description,
           updatedAt: config.updatedAt
         };
