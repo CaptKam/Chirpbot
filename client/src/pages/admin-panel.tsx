@@ -203,9 +203,9 @@ export default function AdminPanel() {
   };
 
   const filteredUsers = (users as User[] || []).filter(user =>
-    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.role || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (usersLoading || statsLoading) {
