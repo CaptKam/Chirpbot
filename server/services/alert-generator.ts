@@ -395,16 +395,28 @@ export class AlertGenerator {
 
     // Check recent plays for strikeouts
     const allPlays = liveData?.plays?.allPlays || [];
-    if (allPlays.length > 0) {
-      const lastPlay = allPlays[allPlays.length - 1];
-      const playEvents = lastPlay.playEvents || [];
+    if (allPlays.length >= 2) {
+      // Check the last few completed plays for strikeouts
+      const recentPlays = allPlays.slice(-3);
       
-      // Check if the last completed play was a strikeout
-      for (const event of playEvents) {
-        if (event.details?.event === 'Strikeout') {
-          const alertKey = `${game.gameId}_STRIKEOUT_${lastPlay.about?.atBatIndex}`;
-          const batter = lastPlay.matchup?.batter?.fullName || 'Unknown Batter';
-          const pitcher = lastPlay.matchup?.pitcher?.fullName || 'Unknown Pitcher';
+      for (const play of recentPlays) {
+        const result = play.result;
+        const description = result?.description || '';
+        const event = result?.event || '';
+        
+        // Multiple ways to detect strikeouts from MLB API
+        const isStrikeout = 
+          event === 'Strikeout' ||
+          event === 'Strike Out' || 
+          event.includes('strikeout') ||
+          description.toLowerCase().includes('strikes out') ||
+          description.toLowerCase().includes('struck out') ||
+          description.toLowerCase().includes('strikeout');
+          
+        if (isStrikeout) {
+          const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
+          const batter = play.matchup?.batter?.fullName || 'Unknown Batter';
+          const pitcher = play.matchup?.pitcher?.fullName || 'Unknown Pitcher';
           const message = `⚡ STRIKEOUT! ${batter} struck out by ${pitcher} - ${game.awayTeam} vs ${game.homeTeam}`;
           
           alertCount += await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
@@ -412,8 +424,8 @@ export class AlertGenerator {
             awayTeam: game.awayTeam,
             batter: batter,
             pitcher: pitcher,
-            inning: lastPlay.about?.inning,
-            outs: lastPlay.about?.o || 0,
+            inning: play.about?.inning,
+            outs: play.about?.o || 0,
             situation: 'strikeout'
           }, 75);
         }
