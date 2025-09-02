@@ -1,7 +1,7 @@
 export class NHLApiService {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      const targetDate = date || this.getEasternDate();
+      const targetDate = date || new Date().toISOString().split('T')[0];
       const formattedDate = targetDate.replace(/-/g, '');
       
       // ESPN public API for NHL scores
@@ -24,14 +24,12 @@ export class NHLApiService {
           awayTeam: awayTeam.team.displayName,
           homeScore: parseInt(homeTeam.score) || 0,
           awayScore: parseInt(awayTeam.score) || 0,
-          gameDate: event.date,
+          startTime: new Date(event.date).toISOString(),
           status: this.mapGameStatus(event.status.type.name),
           isLive: event.status.type.state === 'in',
           isCompleted: event.status.type.state === 'post',
           venue: game.venue?.fullName || '',
-          quarter: game.status?.period || 0,
-          inning: null,
-          inningState: null,
+          period: game.status?.period || 0,
           timeRemaining: game.status?.displayClock || ''
         };
       });
@@ -39,12 +37,6 @@ export class NHLApiService {
       console.error('Error fetching NHL games:', error);
       return [];
     }
-  }
-
-  private getEasternDate(): string {
-    const now = new Date();
-    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-    return easternTime.toISOString().split('T')[0];
   }
 
   private mapGameStatus(statusName: string): string {

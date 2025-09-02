@@ -1,9 +1,7 @@
 export class NCAAFApiService {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      // Get date in Eastern Time (US sports timezone) to ensure we get the correct games
-      const easternDate = this.getEasternDate();
-      const targetDate = date || easternDate;
+      const targetDate = date || new Date().toISOString().split('T')[0];
       const formattedDate = targetDate.replace(/-/g, '');
       
       // ESPN public API for NCAAF scores
@@ -29,14 +27,12 @@ export class NCAAFApiService {
           awayTeam: awayTeam.team.displayName,
           homeScore: parseInt(homeTeam.score) || 0,
           awayScore: parseInt(awayTeam.score) || 0,
-          gameDate: event.date,
+          startTime: new Date(event.date).toISOString(),
           status: this.mapGameStatus(event.status.type.name),
           isLive: event.status.type.state === 'in',
           isCompleted: event.status.type.state === 'post',
           venue: game.venue?.fullName || '',
           quarter: game.status?.period || 0,
-          inning: null,
-          inningState: null,
           timeRemaining: game.status?.displayClock || '',
           // Add ranking if available
           homeRank: homeTeam.curatedRank?.current || 0,
@@ -47,13 +43,6 @@ export class NCAAFApiService {
       console.error('Error fetching NCAAF games:', error);
       return [];
     }
-  }
-
-  private getEasternDate(): string {
-    // Create a date object for Eastern Time
-    const now = new Date();
-    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-    return easternTime.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
   }
 
   private mapGameStatus(statusName: string): string {

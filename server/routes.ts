@@ -553,7 +553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Use direct SQL counts for better performance and reliability
       const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
-      const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at AT TIME ZONE 'America/New_York') = DATE(NOW() AT TIME ZONE 'America/New_York')`);
+      const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
       const monitoredGames = await storage.getAllMonitoredGames();
       
       const stats = {
@@ -576,17 +576,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error counting alerts:', error);
       res.status(500).json({ message: 'Failed to count alerts' });
-    }
-  });
-
-  app.delete('/api/alerts/:id', async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.deleteAlert(id);
-      res.json({ message: 'Alert deleted successfully' });
-    } catch (error) {
-      console.error('Error deleting alert:', error);
-      res.status(500).json({ message: 'Failed to delete alert' });
     }
   });
 

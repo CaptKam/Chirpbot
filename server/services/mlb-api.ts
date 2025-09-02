@@ -3,11 +3,8 @@ export class MLBApiService {
 
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      // Get date in Eastern Time (MLB's timezone) to ensure we get the correct games
-      const easternDate = this.getEasternDate();
-      const targetDate = date || easternDate;
+      const targetDate = date || new Date().toISOString().split('T')[0];
       const url = `${this.baseUrl}/schedule?sportId=1&date=${targetDate}&hydrate=team,linescore,venue,game(content(summary))`;
-      console.log(`🔍 MLB API URL: ${url}`);
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -33,21 +30,12 @@ export class MLBApiService {
         venue: game.venue.name,
         inning: game.linescore?.currentInning || null,
         inningState: game.linescore?.inningState || null,
-        isLive: game.status.abstractGameState?.toLowerCase() === 'live' || 
-                game.status.detailedState?.toLowerCase().includes('progress') ||
-                game.status.detailedState?.toLowerCase().includes('inning')
+        isLive: game.status.abstractGameState === 'Live'
       }));
     } catch (error) {
       console.error('Error fetching MLB games:', error);
       return [];
     }
-  }
-
-  private getEasternDate(): string {
-    // Create a date object for Eastern Time
-    const now = new Date();
-    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-    return easternTime.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
   }
 
   private mapGameStatus(detailedState: string): string {

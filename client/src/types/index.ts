@@ -42,7 +42,6 @@ export interface Settings {
     risp?: boolean;
     basesLoaded?: boolean;
     runnersOnBase?: boolean;
-    runnerOnBase?: boolean;
     closeGame?: boolean;
     lateInning?: boolean;
     extraInnings?: boolean;
@@ -88,7 +87,6 @@ export interface Settings {
     ncaafGoalLineStand?: boolean;
     ncaafBigPlayPotential?: boolean;
     ncaafGameLive?: boolean;
-    twoMinuteWarning?: boolean;
   };
   aiEnabled: boolean;
   aiConfidenceThreshold: number;
