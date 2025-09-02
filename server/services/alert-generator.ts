@@ -268,8 +268,10 @@ export class AlertGenerator {
   private async fetchDetailedLiveData(gameId: string): Promise<any> {
     try {
       // This endpoint might need adjustment for NCAAF if different
+      console.log(`🔍 Fetching detailed live data for game ${gameId}`);
       const response = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gameId}/feed/live`);
       const data = await response.json();
+      console.log(`✅ Successfully fetched live data for game ${gameId}`);
       return data.liveData;
     } catch (error) {
       console.error(`Failed to fetch live data for game ${gameId}:`, error);
@@ -451,10 +453,13 @@ export class AlertGenerator {
     let alertCount = 0;
     const scoreDiff = Math.abs(game.homeScore - game.awayScore);
 
+    console.log(`🔍 Checking basic live alerts for ${game.homeTeam} vs ${game.awayTeam}: ${game.homeScore}-${game.awayScore} (diff: ${scoreDiff})`);
+
     if (scoreDiff <= 3 && (game.homeScore > 0 || game.awayScore > 0)) {
       const alertKey = `${game.gameId}_LIVE_CLOSE`;
       const message = `🔥 LIVE: Close game! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore}`;
 
+      console.log(`🚨 Attempting to create basic live alert: ${alertKey}`);
       alertCount += await this.saveRealTimeAlert(alertKey, 'CLOSE_GAME_LIVE', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -462,6 +467,8 @@ export class AlertGenerator {
         awayScore: game.awayScore,
         scoreDiff
       }, 85);
+    } else {
+      console.log(`❌ Basic alert conditions not met: scoreDiff=${scoreDiff}, homeScore=${game.homeScore}, awayScore=${game.awayScore}`);
     }
 
     return alertCount;
@@ -538,9 +545,11 @@ export class AlertGenerator {
   // Modified to accept sport and use it in the alert
   private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, metadata: any, confidence: number, sport: string = 'MLB'): Promise<number> {
     if (this.processedAlerts.has(alertKey)) {
+      console.log(`⏭️ Alert already processed, skipping: ${alertKey}`);
       return 0;
     }
 
+    console.log(`💾 Saving new real-time alert: ${alertKey}`);
     this.processedAlerts.add(alertKey);
 
     const alert = {
@@ -555,7 +564,7 @@ export class AlertGenerator {
     };
 
     await storage.saveAlert(alert);
-    console.log(`🚨 REAL-TIME ALERT: ${message}`);
+    console.log(`🚨 REAL-TIME ALERT SAVED: ${message}`);
     return 1;
   }
 
