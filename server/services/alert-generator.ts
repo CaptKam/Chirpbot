@@ -344,6 +344,33 @@ export class AlertGenerator {
     const balls = count?.balls || 0;
     const strikes = count?.strikes || 0;
 
+    // Check recent plays for strikeouts
+    const allPlays = liveData?.plays?.allPlays || [];
+    if (allPlays.length > 0) {
+      const lastPlay = allPlays[allPlays.length - 1];
+      const playEvents = lastPlay.playEvents || [];
+      
+      // Check if the last completed play was a strikeout
+      for (const event of playEvents) {
+        if (event.details?.event === 'Strikeout') {
+          const alertKey = `${game.gameId}_STRIKEOUT_${lastPlay.about?.atBatIndex}`;
+          const batter = lastPlay.matchup?.batter?.fullName || 'Unknown Batter';
+          const pitcher = lastPlay.matchup?.pitcher?.fullName || 'Unknown Pitcher';
+          const message = `⚡ STRIKEOUT! ${batter} struck out by ${pitcher} - ${game.awayTeam} vs ${game.homeTeam}`;
+          
+          alertCount += await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            batter: batter,
+            pitcher: pitcher,
+            inning: lastPlay.about?.inning,
+            outs: lastPlay.about?.o || 0,
+            situation: 'strikeout'
+          }, 75);
+        }
+      }
+    }
+
     // Full count situation (3-2)
     if (balls === 3 && strikes === 2) {
       const alertKey = `${game.gameId}_FULL_COUNT_${Date.now()}`;
