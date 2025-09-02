@@ -1180,16 +1180,12 @@ input:checked + .slider:before {
 }
 
 .game-card {
-    background: linear-gradient(135deg, rgba(51, 65, 85, 0.25) 0%, rgba(30, 41, 59, 0.3) 100%);
-    border: 1px solid rgba(71, 85, 105, 0.2);
-    border-radius: 1.25rem;
-    padding: 1.75rem;
+    background: linear-gradient(135deg, rgba(28, 43, 94, 0.8) 0%, rgba(15, 26, 50, 0.8) 100%);
+    border: 1px solid rgba(35, 135, 244, 0.2);
+    border-radius: 1rem;
+    padding: 1.5rem;
     position: relative;
     overflow: hidden;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
-    margin-bottom: 1.5rem;
 }
 
 .game-card::before {
@@ -1203,13 +1199,12 @@ input:checked + .slider:before {
 }
 
 .game-card.live {
-    border-color: rgba(129, 140, 248, 0.3);
-    box-shadow: 0 0 24px rgba(129, 140, 248, 0.12), 0 1px 3px rgba(0, 0, 0, 0.1);
-    background: linear-gradient(135deg, rgba(129, 140, 248, 0.08) 0%, rgba(51, 65, 85, 0.3) 100%);
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
 }
 
 .game-card.live::before {
-    background: linear-gradient(90deg, rgba(129, 140, 248, 0.6) 0%, rgba(99, 102, 241, 0.4) 100%);
+    background: linear-gradient(90deg, #EF4444 0%, #DC2626 100%);
 }
 
 .game-header {
@@ -1253,33 +1248,28 @@ input:checked + .slider:before {
 }
 
 .status-badge {
-    padding: 0.375rem 0.875rem;
-    border-radius: 0.875rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
     font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: capitalize;
-    letter-spacing: 0.01em;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
 }
 
 .status-badge.live {
-    background: linear-gradient(135deg, rgba(248, 113, 113, 0.7) 0%, rgba(239, 68, 68, 0.5) 100%);
-    color: #FEE2E2;
-    border-color: rgba(248, 113, 113, 0.3);
-    animation: soft-pulse 3s infinite;
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    color: white;
+    animation: live-pulse 2s infinite;
 }
 
 .status-badge.scheduled {
-    background: linear-gradient(135deg, rgba(147, 197, 253, 0.6) 0%, rgba(96, 165, 250, 0.4) 100%);
-    color: #DBEAFE;
-    border-color: rgba(147, 197, 253, 0.3);
+    background: rgba(100, 116, 139, 0.2);
+    color: #94A3B8;
 }
 
 .status-badge.final {
-    background: linear-gradient(135deg, rgba(134, 239, 172, 0.6) 0%, rgba(74, 222, 128, 0.4) 100%);
-    color: #DCFCE7;
-    border-color: rgba(134, 239, 172, 0.3);
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ADE80;
 }
 
 .game-inning {
@@ -1303,7 +1293,7 @@ input:checked + .slider:before {
 
 .count-display {
     display: flex;
-    gap: 1.25rem;
+    gap: 1rem;
     margin-bottom: 1rem;
 }
 
@@ -1311,26 +1301,26 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.25rem;
 }
 
 .count-label {
     font-size: 0.75rem;
-    color: #A1A1AA;
+    color: #94A3B8;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
-    font-weight: 500;
+    letter-spacing: 0.05em;
+    font-weight: 600;
 }
 
 .count-value {
-    font-size: 1.375rem;
-    font-weight: 600;
-    color: #F1F5F9;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #F8FAFC;
 }
 
-.count-value.balls { color: #86EFAC; }
-.count-value.strikes { color: #FCA5A5; }
-.count-value.outs { color: #FBBF24; }
+.count-value.balls { color: #22C55E; }
+.count-value.strikes { color: #EF4444; }
+.count-value.outs { color: #F59E0B; }
 
 /* Baseball Diamond Styles */
 .baseball-diamond {
@@ -1373,9 +1363,9 @@ input:checked + .slider:before {
 }
 
 .base.occupied {
-    background: linear-gradient(135deg, #F87171 0%, #EF4444 100%);
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
-    animation: soft-pulse 3s infinite;
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+    animation: runner-pulse 1.5s infinite;
 }
 
 .base.first {
@@ -1414,11 +1404,6 @@ input:checked + .slider:before {
 @keyframes live-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.8; }
-}
-
-@keyframes soft-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
 }
 
 .diamond-label {
@@ -1536,58 +1521,56 @@ input:checked + .slider:before {
 .games-section-header {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1.25rem 1.75rem;
-    margin: 2rem 0 1.5rem 0;
-    border-radius: 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    text-transform: none;
-    letter-spacing: 0.025em;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0 1rem 0;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     grid-column: 1 / -1;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .games-section-header.live {
-    background: linear-gradient(135deg, rgba(248, 113, 113, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
-    color: #FCA5A5;
-    border-color: rgba(248, 113, 113, 0.2);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #FEF2F2;
 }
 
 .games-section-header.live i {
-    color: #F87171;
-    animation: soft-pulse 3s infinite;
+    color: #EF4444;
+    animation: live-pulse 2s infinite;
 }
 
 .games-section-header.scheduled {
-    background: linear-gradient(135deg, rgba(147, 197, 253, 0.1) 0%, rgba(96, 165, 250, 0.05) 100%);
-    color: #BFDBFE;
-    border-color: rgba(147, 197, 253, 0.2);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #EFF6FF;
 }
 
 .games-section-header.scheduled i {
-    color: #93C5FD;
+    color: #3B82F6;
 }
 
 .games-section-header.delayed {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
-    color: #FDE68A;
-    border-color: rgba(251, 191, 36, 0.2);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.2) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #FFFBEB;
 }
 
 .games-section-header.delayed i {
-    color: #FBBF24;
+    color: #F59E0B;
 }
 
 .games-section-header.completed {
-    background: linear-gradient(135deg, rgba(134, 239, 172, 0.1) 0%, rgba(74, 222, 128, 0.05) 100%);
-    color: #BBF7D0;
-    border-color: rgba(134, 239, 172, 0.2);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.2) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #F0FDF4;
 }
 
 .games-section-header.completed i {
-    color: #86EFAC;
+    color: #22C55E;
 }
 
 /* Game Info Styling */
