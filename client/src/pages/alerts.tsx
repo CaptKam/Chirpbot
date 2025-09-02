@@ -190,14 +190,14 @@ export default function AlertsPage() {
                     <AlertFooter
                       sport={alert.sport}
                       // MLB specific
-                      inning={alert.inning}
-                      isTopInning={alert.isTopInning}
-                      balls={alert.balls || 0}
-                      strikes={alert.strikes || 0}
-                      outs={alert.outs || 0}
-                      hasFirst={!!alert.hasFirst}
-                      hasSecond={!!alert.hasSecond}
-                      hasThird={!!alert.hasThird}
+                      inning={alert.context?.inning || alert.inning}
+                      isTopInning={alert.context?.isTopInning || alert.isTopInning}
+                      balls={alert.context?.balls || alert.balls || 0}
+                      strikes={alert.context?.strikes || alert.strikes || 0}
+                      outs={alert.context?.outs || alert.outs || 0}
+                      hasFirst={!!(alert.context?.hasFirst || alert.hasFirst)}
+                      hasSecond={!!(alert.context?.hasSecond || alert.hasSecond)}
+                      hasThird={!!(alert.context?.hasThird || alert.hasThird)}
                       // Other sports specific
                       quarter={alert.context?.quarter}
                       timeRemaining={alert.context?.timeRemaining}
