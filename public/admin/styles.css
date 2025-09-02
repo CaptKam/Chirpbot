@@ -1373,7 +1373,7 @@ input:checked + .slider:before {
 }
 
 .base.occupied {
-    background: linear-gradient(135deg, #F87171 0%, #EF4444 100%);
+    background: linear-gradient(135deg, #F87171 0%, #F87171 100%);
     box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
     animation: soft-pulse 3s infinite;
 }
