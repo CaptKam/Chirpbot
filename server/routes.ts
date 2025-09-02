@@ -553,7 +553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Use direct SQL counts for better performance and reliability
       const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
-      const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
+      const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at AT TIME ZONE 'America/New_York') = DATE(NOW() AT TIME ZONE 'America/New_York')`);
       const monitoredGames = await storage.getAllMonitoredGames();
       
       const stats = {
