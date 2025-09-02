@@ -253,6 +253,13 @@ export class AlertGenerator {
     
     const inning = liveData.linescore?.currentInning || 0;
     const outs = liveData.linescore?.outs || 0;
+    const isTopInning = liveData.linescore?.isTopInning || false;
+    
+    // Extract current count (balls/strikes) from current play
+    const currentPlay = liveData?.plays?.currentPlay;
+    const count = currentPlay?.count || {};
+    const balls = count.balls || 0;
+    const strikes = count.strikes || 0;
 
     // Bases loaded: all three bases occupied
     if (hasFirst && hasSecond && hasThird) {
@@ -263,7 +270,13 @@ export class AlertGenerator {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
         inning,
+        isTopInning,
         outs,
+        balls,
+        strikes,
+        hasFirst,
+        hasSecond,
+        hasThird,
         first: offense.first?.fullName,
         second: offense.second?.fullName,
         third: offense.third?.fullName,
@@ -279,11 +292,15 @@ export class AlertGenerator {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
         inning,
+        isTopInning,
         outs,
-        first: offense.first?.fullName,
-        second: offense.second?.fullName,
+        balls,
+        strikes,
         hasFirst,
         hasSecond,
+        hasThird: false,
+        first: offense.first?.fullName,
+        second: offense.second?.fullName,
         situation: 'runners_on_1st_and_2nd'
       }, 88);
     }
@@ -299,7 +316,11 @@ export class AlertGenerator {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
         inning,
+        isTopInning,
         outs,
+        balls,
+        strikes,
+        hasFirst: hasFirst && !hasSecond, // Only first if not also second
         hasSecond,
         hasThird,
         situation: 'runner_in_scoring_position'
@@ -313,7 +334,14 @@ export class AlertGenerator {
     let alertCount = 0;
     const inning = liveData.linescore?.currentInning || 0;
     const isTopInning = liveData.linescore?.isTopInning;
+    const outs = liveData.linescore?.outs || 0;
     const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+    
+    // Extract current count (balls/strikes) from current play
+    const currentPlay = liveData?.plays?.currentPlay;
+    const count = currentPlay?.count || {};
+    const balls = count.balls || 0;
+    const strikes = count.strikes || 0;
 
     // Late inning pressure situations
     if (inning >= 8 && scoreDiff <= 2) {
@@ -328,6 +356,9 @@ export class AlertGenerator {
         awayScore: game.awayScore,
         inning,
         isTopInning,
+        outs,
+        balls,
+        strikes,
         scoreDiff
       }, 92);
     }
