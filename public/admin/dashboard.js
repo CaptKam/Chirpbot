@@ -1082,5 +1082,210 @@ function showTab(tabName) {
         loadSportAlertSettings();
     } else if (tabName === 'system') {
         loadSystemConfiguration();
+    } else if (tabName === 'live') {
+        loadLiveGames();
+    }
+}
+
+// Live Games Functionality
+let liveGamesData = [];
+let autoRefreshInterval = null;
+let isAutoRefreshEnabled = false;
+
+async function loadLiveGames() {
+    const container = document.getElementById('liveGamesContainer');
+    if (!container) return;
+    
+    try {
+        // Show loading state
+        container.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading live games...</p>
+            </div>
+        `;
+        
+        const response = await fetch('/api/games/live-detailed?sport=MLB');
+        const data = await response.json();
+        
+        if (response.ok) {
+            liveGamesData = data.liveGames || [];
+            renderLiveGames();
+        } else {
+            throw new Error(data.message || 'Failed to load live games');
+        }
+    } catch (error) {
+        console.error('Error loading live games:', error);
+        container.innerHTML = `
+            <div class="loading">
+                <i class="fas fa-exclamation-triangle" style="color: #EF4444; font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>Error loading live games</p>
+                <button class="action-btn refresh" onclick="loadLiveGames()" style="margin-top: 1rem;">
+                    <i class="fas fa-refresh"></i>
+                    Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function renderLiveGames() {
+    const container = document.getElementById('liveGamesContainer');
+    if (!container) return;
+    
+    if (liveGamesData.length === 0) {
+        container.innerHTML = `
+            <div class="loading">
+                <i class="fas fa-baseball-ball" style="color: #94A3B8; font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>No live MLB games at the moment</p>
+                <small style="color: #64748B;">Check back during game times (typically 1:00 PM - 11:00 PM PT)</small>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = liveGamesData.map(game => createGameCard(game)).join('');
+}
+
+function createGameCard(game) {
+    const runners = game.runners || { first: false, second: false, third: false };
+    const weather = game.weather || {};
+    const currentBatter = game.currentBatter || { name: 'Loading...' };
+    const currentPitcher = game.currentPitcher || { name: 'Loading...' };
+    
+    // Format inning display
+    const inningDisplay = game.inning && game.inningState ? 
+        `${game.inningState} ${game.inning}${getInningOrdinal(game.inning)}` : 'In Progress';
+    
+    return `
+        <div class="game-card ${game.isLive ? 'live' : ''}">
+            <div class="game-header">
+                <div class="game-teams">
+                    <div class="team-info">
+                        <span class="team-name">${game.awayTeam}</span>
+                        <span class="team-score">${game.awayScore || 0}</span>
+                    </div>
+                    <div class="team-info">
+                        <span class="team-name">${game.homeTeam}</span>
+                        <span class="team-score">${game.homeScore || 0}</span>
+                    </div>
+                </div>
+                <div class="game-status">
+                    <div class="status-badge ${game.status}">${game.status.toUpperCase()}</div>
+                    <div class="game-inning">${inningDisplay}</div>
+                </div>
+            </div>
+            
+            <div class="game-body">
+                <div class="game-details">
+                    <div class="count-display">
+                        <div class="count-item">
+                            <div class="count-label">Balls</div>
+                            <div class="count-value balls">${game.balls || 0}</div>
+                        </div>
+                        <div class="count-item">
+                            <div class="count-label">Strikes</div>
+                            <div class="count-value strikes">${game.strikes || 0}</div>
+                        </div>
+                        <div class="count-item">
+                            <div class="count-label">Outs</div>
+                            <div class="count-value outs">${game.outs || 0}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="batter-info">
+                        <div class="batter-current">
+                            <span class="batter-label">Batter:</span>
+                            <span class="batter-name">${currentBatter.name}</span>
+                        </div>
+                        <div class="batter-current">
+                            <span class="batter-label">Pitcher:</span>
+                            <span class="batter-name">${currentPitcher.name}</span>
+                        </div>
+                    </div>
+                    
+                    ${weather.temp || weather.condition ? `
+                        <div class="weather-info">
+                            <i class="fas fa-cloud weather-icon"></i>
+                            <span>${formatWeather(weather)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="baseball-diamond">
+                    ${createBaseballDiamond(runners)}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createBaseballDiamond(runners) {
+    return `
+        <div class="diamond-field">
+            <div class="diamond-infield"></div>
+            <div class="base home"></div>
+            <div class="base first ${runners.first ? 'occupied' : ''}"></div>
+            <div class="base second ${runners.second ? 'occupied' : ''}"></div>
+            <div class="base third ${runners.third ? 'occupied' : ''}"></div>
+            <div class="diamond-label home">H</div>
+            <div class="diamond-label first">1B</div>
+            <div class="diamond-label second">2B</div>
+            <div class="diamond-label third">3B</div>
+        </div>
+    `;
+}
+
+function getInningOrdinal(inning) {
+    if (!inning) return '';
+    const num = parseInt(inning);
+    if (num === 1) return 'st';
+    if (num === 2) return 'nd';
+    if (num === 3) return 'rd';
+    return 'th';
+}
+
+function formatWeather(weather) {
+    const parts = [];
+    if (weather.temp) parts.push(`${weather.temp}°F`);
+    if (weather.condition) parts.push(weather.condition);
+    if (weather.wind) parts.push(`Wind: ${weather.wind}`);
+    return parts.join(' • ') || 'Weather data unavailable';
+}
+
+function switchSport(sport) {
+    // Update active sport tab
+    document.querySelectorAll('.sport-tab').forEach(tab => tab.classList.remove('active'));
+    document.getElementById(sport.toLowerCase() + 'SportTab').classList.add('active');
+    
+    // Load data for selected sport
+    loadLiveGames();
+}
+
+function refreshLiveGames() {
+    loadLiveGames();
+}
+
+function toggleAutoRefresh() {
+    const btn = document.getElementById('autoRefreshBtn');
+    const indicator = document.getElementById('refreshIndicator');
+    
+    if (isAutoRefreshEnabled) {
+        // Disable auto-refresh
+        clearInterval(autoRefreshInterval);
+        isAutoRefreshEnabled = false;
+        btn.innerHTML = '<i class="fas fa-play"></i> Enable Auto-Refresh';
+        btn.classList.remove('active');
+        indicator.style.display = 'none';
+    } else {
+        // Enable auto-refresh
+        autoRefreshInterval = setInterval(() => {
+            loadLiveGames();
+        }, 15000); // Refresh every 15 seconds
+        
+        isAutoRefreshEnabled = true;
+        btn.innerHTML = '<i class="fas fa-pause"></i> Disable Auto-Refresh';
+        btn.classList.add('active');
+        indicator.style.display = 'flex';
     }
 }

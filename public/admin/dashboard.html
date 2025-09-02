@@ -54,6 +54,10 @@
                 <i class="fas fa-cog"></i>
                 System Settings
             </button>
+            <button class="nav-tab" onclick="showTab('live')" id="liveTab">
+                <i class="fas fa-broadcast-tower"></i>
+                Live
+            </button>
         </nav>
 
         <!-- Overview Tab -->
@@ -505,6 +509,52 @@
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>Loading system configuration...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Tab -->
+        <div id="liveContent" class="tab-content" style="display: none;">
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-broadcast-tower"></i>
+                        Live Game Monitoring
+                    </h2>
+                    <p class="section-subtitle">Real-time MLB game data with visual displays</p>
+                </div>
+
+                <!-- Sport Tabs -->
+                <div class="live-sport-tabs">
+                    <button class="sport-tab active" onclick="switchSport('mlb')" id="mlbSportTab">
+                        <i class="fas fa-baseball-ball"></i>
+                        MLB
+                    </button>
+                    <!-- Future sports tabs can be added here -->
+                </div>
+
+                <!-- Live Games Grid -->
+                <div id="liveGamesContainer" class="live-games-grid">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading live games...</p>
+                    </div>
+                </div>
+
+                <!-- Refresh Controls -->
+                <div class="live-controls">
+                    <button class="action-btn refresh" onclick="refreshLiveGames()">
+                        <i class="fas fa-sync"></i>
+                        Refresh Games
+                    </button>
+                    <button class="action-btn toggle" onclick="toggleAutoRefresh()" id="autoRefreshBtn">
+                        <i class="fas fa-play"></i>
+                        Enable Auto-Refresh
+                    </button>
+                    <div class="refresh-indicator" id="refreshIndicator" style="display: none;">
+                        <i class="fas fa-circle"></i>
+                        Auto-refreshing every 15s
+                    </div>
                 </div>
             </div>
         </div>

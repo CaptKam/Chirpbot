@@ -1135,3 +1135,384 @@ input:checked + .slider:before {
         justify-content: center;
     }
 }
+
+/* Live Games Page Styles */
+.live-sport-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.sport-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(35, 135, 244, 0.1);
+    border: 1px solid rgba(35, 135, 244, 0.3);
+    border-radius: 0.5rem;
+    color: #94A3B8;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sport-tab:hover {
+    background: rgba(35, 135, 244, 0.2);
+    border-color: rgba(35, 135, 244, 0.5);
+    color: #CBD5E1;
+}
+
+.sport-tab.active {
+    background: linear-gradient(135deg, #2387F4 0%, #1C6EF2 100%);
+    border-color: #2387F4;
+    color: white;
+    box-shadow: 0 4px 12px rgba(35, 135, 244, 0.3);
+}
+
+.live-games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    min-height: 400px;
+}
+
+.game-card {
+    background: linear-gradient(135deg, rgba(28, 43, 94, 0.8) 0%, rgba(15, 26, 50, 0.8) 100%);
+    border: 1px solid rgba(35, 135, 244, 0.2);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.game-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #2387F4 0%, #1C6EF2 100%);
+}
+
+.game-card.live {
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+.game-card.live::before {
+    background: linear-gradient(90deg, #EF4444 0%, #DC2626 100%);
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.game-teams {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.team-name {
+    font-weight: 600;
+    color: #F8FAFC;
+    min-width: 120px;
+}
+
+.team-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2387F4;
+    min-width: 40px;
+    text-align: center;
+}
+
+.game-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.status-badge.live {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    color: white;
+    animation: live-pulse 2s infinite;
+}
+
+.status-badge.scheduled {
+    background: rgba(100, 116, 139, 0.2);
+    color: #94A3B8;
+}
+
+.status-badge.final {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ADE80;
+}
+
+.game-inning {
+    font-size: 0.875rem;
+    color: #CBD5E1;
+    font-weight: 500;
+}
+
+.game-body {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.game-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.count-display {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.count-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.count-label {
+    font-size: 0.75rem;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.count-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #F8FAFC;
+}
+
+.count-value.balls { color: #22C55E; }
+.count-value.strikes { color: #EF4444; }
+.count-value.outs { color: #F59E0B; }
+
+/* Baseball Diamond Styles */
+.baseball-diamond {
+    width: 180px;
+    height: 180px;
+    position: relative;
+    margin: 0 auto;
+}
+
+.diamond-field {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+    transform: rotate(45deg);
+    border-radius: 12px;
+    position: relative;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.diamond-infield {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 70%;
+    height: 70%;
+    background: #A16207;
+    transform: translate(-50%, -50%);
+    border-radius: 8px;
+}
+
+.base {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #F8FAFC;
+    border-radius: 2px;
+    transform: rotate(-45deg);
+    border: 1px solid #94A3B8;
+    transition: all 0.3s ease;
+}
+
+.base.occupied {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+    animation: runner-pulse 1.5s infinite;
+}
+
+.base.first {
+    bottom: 15px;
+    right: 15px;
+}
+
+.base.second {
+    top: 15px;
+    right: 15px;
+}
+
+.base.third {
+    top: 15px;
+    left: 15px;
+}
+
+.base.home {
+    bottom: 15px;
+    left: 15px;
+    border-radius: 50%;
+    background: #1F2937;
+}
+
+@keyframes runner-pulse {
+    0%, 100% { 
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        transform: rotate(-45deg) scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
+        transform: rotate(-45deg) scale(1.1);
+    }
+}
+
+@keyframes live-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+.diamond-label {
+    position: absolute;
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: #F8FAFC;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    transform: rotate(-45deg);
+    pointer-events: none;
+}
+
+.diamond-label.first { bottom: -8px; right: -8px; }
+.diamond-label.second { top: -8px; right: -8px; }
+.diamond-label.third { top: -8px; left: -8px; }
+.diamond-label.home { bottom: -8px; left: -8px; }
+
+.batter-info {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(71, 85, 105, 0.5);
+}
+
+.batter-current {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.batter-label {
+    font-size: 0.75rem;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    min-width: 60px;
+}
+
+.batter-name {
+    font-weight: 600;
+    color: #F8FAFC;
+}
+
+.weather-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(71, 85, 105, 0.2);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #CBD5E1;
+}
+
+.weather-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+}
+
+.live-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(28, 43, 94, 0.3);
+    border-radius: 1rem;
+    border: 1px solid rgba(35, 135, 244, 0.2);
+}
+
+.refresh-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #22C55E;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.refresh-indicator i {
+    animation: live-pulse 2s infinite;
+}
+
+/* Responsive Live Games */
+@media (max-width: 768px) {
+    .live-games-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .game-card {
+        padding: 1rem;
+    }
+    
+    .game-body {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .baseball-diamond {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .live-controls {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+}

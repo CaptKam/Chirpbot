@@ -192,6 +192,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Detailed live games endpoint for admin dashboard
+  app.get('/api/games/live-detailed', async (req, res) => {
+    try {
+      const { sport = 'MLB' } = req.query;
+      let liveGames = [];
+      
+      if (sport === 'MLB') {
+        // First get basic games data
+        const { MLBApiService } = await import('./services/mlb-api');
+        const mlbService = new MLBApiService();
+        const games = await mlbService.getTodaysGames();
+        
+        // Filter to only live games and get detailed data
+        const liveBasicGames = games.filter(game => game.isLive);
+        
+        for (const game of liveBasicGames) {
+          try {
+            // Fetch detailed live feed data from MLB API
+            const liveFeedUrl = `https://statsapi.mlb.com/api/v1.1/game/${game.gameId}/feed/live`;
+            const response = await fetch(liveFeedUrl);
+            
+            if (response.ok) {
+              const liveFeedData = await response.json();
+              const gameState = extractDetailedGameState(liveFeedData, game);
+              liveGames.push(gameState);
+            } else {
+              // Fallback to basic game data if detailed feed fails
+              liveGames.push(enhanceBasicGameData(game));
+            }
+          } catch (error) {
+            console.error(`Error fetching detailed data for game ${game.gameId}:`, error);
+            liveGames.push(enhanceBasicGameData(game));
+          }
+        }
+      }
+      
+      res.json({ liveGames, sport });
+    } catch (error) {
+      console.error('Error fetching detailed live games:', error);
+      res.status(500).json({ message: 'Failed to fetch detailed live games' });
+    }
+  });
+
+  // Helper functions for detailed game state extraction
+  function extractDetailedGameState(liveFeedData: any, basicGame: any) {
+    try {
+      const gameData = liveFeedData.gameData || {};
+      const liveData = liveFeedData.liveData || {};
+      const plays = liveData.plays || {};
+      const currentPlay = plays.currentPlay || {};
+      
+      // Get current game situation
+      const linescore = liveData.linescore || {};
+      const offense = linescore.offense || {};
+      const defense = linescore.defense || {};
+      
+      // Extract runners
+      const runners = {
+        first: false,
+        second: false,
+        third: false
+      };
+      
+      if (offense.first) runners.first = true;
+      if (offense.second) runners.second = true;  
+      if (offense.third) runners.third = true;
+      
+      // Get count information
+      const count = currentPlay.count || {};
+      const balls = count.balls || 0;
+      const strikes = count.strikes || 0;
+      const outs = linescore.outs || 0;
+      
+      // Get batter information
+      const currentBatter = currentPlay.matchup?.batter || null;
+      const batterName = currentBatter ? 
+        `${currentBatter.fullName || 'Unknown Batter'}` : 'Unknown Batter';
+      
+      // Get pitcher information  
+      const currentPitcher = currentPlay.matchup?.pitcher || null;
+      const pitcherName = currentPitcher ?
+        `${currentPitcher.fullName || 'Unknown Pitcher'}` : 'Unknown Pitcher';
+      
+      // Get venue and weather
+      const venue = gameData.venue?.name || basicGame.venue || 'Unknown Venue';
+      const weather = gameData.weather || {};
+      
+      return {
+        ...basicGame,
+        runners,
+        balls,
+        strikes, 
+        outs,
+        currentBatter: {
+          name: batterName,
+          id: currentBatter?.id || null
+        },
+        currentPitcher: {
+          name: pitcherName,
+          id: currentPitcher?.id || null
+        },
+        venue,
+        weather: {
+          temp: weather.temp || null,
+          condition: weather.condition || null,
+          wind: weather.wind || null
+        },
+        lastUpdated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error extracting detailed game state:', error);
+      return enhanceBasicGameData(basicGame);
+    }
+  }
+
+  function enhanceBasicGameData(basicGame: any) {
+    return {
+      ...basicGame,
+      runners: { first: false, second: false, third: false },
+      balls: 0,
+      strikes: 0,
+      outs: 0,
+      currentBatter: { name: 'Loading...', id: null },
+      currentPitcher: { name: 'Loading...', id: null },
+      weather: { temp: null, condition: null, wind: null },
+      lastUpdated: new Date().toISOString()
+    };
+  }
+
   // User monitored games routes
   app.get('/api/user/:userId/monitored-games', async (req, res) => {
     try {
