@@ -179,7 +179,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           games = [];
       }
       
-      res.json({ games, date: date || new Date().toISOString().split('T')[0] });
+      const { getPacificDate } = await import('./utils/timezone');
+      res.json({ games, date: date || getPacificDate() });
     } catch (error) {
       console.error('Error fetching games:', error);
       res.status(500).json({ message: 'Failed to fetch games' });
@@ -579,6 +580,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Show timezone info on startup
+  const { formatPacificTime, getPacificDate } = await import('./utils/timezone');
+  console.log('🌴 ChirpBot V2 - Using Pacific Timezone (PST/PDT)');
+  console.log(`📅 Current Pacific Date: ${getPacificDate()}`);
+  console.log(`🕐 Current Pacific Time: ${formatPacificTime()}`);
+  
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);

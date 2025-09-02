@@ -1,7 +1,9 @@
+import { getPacificDate } from '../utils/timezone';
+
 export class NCAAFApiService {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      const targetDate = date || new Date().toISOString().split('T')[0];
+      const targetDate = date || getPacificDate();
       const formattedDate = targetDate.replace(/-/g, '');
       
       // ESPN public API for NCAAF scores

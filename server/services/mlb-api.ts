@@ -1,9 +1,11 @@
+import { getPacificDate } from '../utils/timezone';
+
 export class MLBApiService {
   private baseUrl = 'https://statsapi.mlb.com/api/v1';
 
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      const targetDate = date || new Date().toISOString().split('T')[0];
+      const targetDate = date || getPacificDate();
       const url = `${this.baseUrl}/schedule?sportId=1&date=${targetDate}&hydrate=team,linescore,venue,game(content(summary))`;
       
       const response = await fetch(url);
