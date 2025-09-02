@@ -178,10 +178,7 @@ export default function AlertsPage() {
                   </div>
                   
                   {/* Main alert message */}
-                  <h4 className="font-bold mb-1 text-slate-100">{alert.message}</h4>
-                  
-                  {/* Team matchup */}
-                  <p className="text-sm text-slate-300 mb-3">{alert.homeTeam} vs {alert.awayTeam}</p>
+                  <h4 className="font-bold mb-3 text-slate-100">{alert.message}</h4>
                   
                   {/* Game situation with colored background */}
                   <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
