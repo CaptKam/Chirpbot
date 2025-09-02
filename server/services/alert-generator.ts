@@ -243,6 +243,20 @@ export class AlertGenerator {
       const liveData = await this.fetchDetailedLiveData(game.gameId);
       if (!liveData) return 0;
 
+      // Debug log current play data
+      const currentPlay = liveData?.plays?.currentPlay;
+      if (currentPlay) {
+        const count = currentPlay.count;
+        console.log(`🔍 At-bat check for ${game.awayTeam} @ ${game.homeTeam}:`, {
+          balls: count?.balls || 0,
+          strikes: count?.strikes || 0,
+          batter: currentPlay.matchup?.batter?.fullName || 'Unknown',
+          atBatIndex: currentPlay.about?.atBatIndex || 0
+        });
+      } else {
+        console.log(`⚠️ No current play data for ${game.awayTeam} @ ${game.homeTeam}`);
+      }
+
       let alertCount = 0;
       alertCount += await this.generateBaseRunnerAlerts(game, liveData);
       alertCount += await this.generateInningPressureAlerts(game, liveData);
@@ -379,9 +393,15 @@ export class AlertGenerator {
     const count = currentPlay.count;
     const balls = count?.balls || 0;
     const strikes = count?.strikes || 0;
+    
+    const inning = liveData.linescore?.currentInning || 0;
+    const outs = liveData.linescore?.outs || 0;
+    const atBatIndex = currentPlay.about?.atBatIndex || 0;
+    const batter = currentPlay.matchup?.batter;
 
+    // Full Count Alert (3-2)
     if (balls === 3 && strikes === 2) {
-      const alertKey = `${game.gameId}_FULL_COUNT_${Date.now()}`;
+      const alertKey = `${game.gameId}_FULL_COUNT_${inning}_${atBatIndex}_${batter?.id || 'unknown'}`;
       const message = `⚾ FULL COUNT! ${game.awayTeam} vs ${game.homeTeam} - 3-2 count, pressure on!`;
 
       alertCount += await this.saveRealTimeAlert(alertKey, 'FULL_COUNT', game.gameId, message, {
@@ -389,8 +409,51 @@ export class AlertGenerator {
         awayTeam: game.awayTeam,
         balls,
         strikes,
+        outs,
+        inning,
+        batter: batter?.fullName || 'Unknown',
+        batterID: batter?.id,
+        atBatIndex,
         situation: 'full_count'
       }, 80);
+    }
+
+    // Two Strike Count Alert (any count with 2 strikes)
+    if (strikes === 2 && balls < 3) {
+      const alertKey = `${game.gameId}_TWO_STRIKES_${inning}_${atBatIndex}_${balls}${strikes}`;
+      const message = `🔥 TWO STRIKES! ${game.awayTeam} vs ${game.homeTeam} - ${balls}-2 count, batter in trouble!`;
+
+      alertCount += await this.saveRealTimeAlert(alertKey, 'TWO_STRIKES', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        balls,
+        strikes,
+        outs,
+        inning,
+        batter: batter?.fullName || 'Unknown',
+        batterID: batter?.id,
+        atBatIndex,
+        situation: 'two_strikes'
+      }, 75);
+    }
+
+    // Three Ball Count Alert (any count with 3 balls)
+    if (balls === 3 && strikes < 2) {
+      const alertKey = `${game.gameId}_THREE_BALLS_${inning}_${atBatIndex}_${balls}${strikes}`;
+      const message = `🎯 THREE BALLS! ${game.awayTeam} vs ${game.homeTeam} - 3-${strikes} count, walk threat!`;
+
+      alertCount += await this.saveRealTimeAlert(alertKey, 'THREE_BALLS', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        balls,
+        strikes,
+        outs,
+        inning,
+        batter: batter?.fullName || 'Unknown',
+        batterID: batter?.id,
+        atBatIndex,
+        situation: 'three_balls'
+      }, 70);
     }
 
     return alertCount;
