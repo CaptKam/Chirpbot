@@ -218,26 +218,6 @@ export default function Settings() {
 
       {/* Settings Content */}
       <div className="p-4 space-y-6">
-        {/* User Info Section */}
-        {isAuthenticated && user && (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-                <SettingsIcon className="w-6 h-6 text-emerald-400" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-100">Account Settings</h2>
-                <p className="text-sm text-slate-300">
-                  Logged in as <span className="text-emerald-400 font-medium">{user.username}</span>
-                </p>
-                {user.email && (
-                  <p className="text-xs text-slate-400">{user.email}</p>
-                )}
-              </div>
-            </div>
-          </Card>
-        )}
-
         {/* Selected Sport Display */}
         <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
           <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-2">
@@ -337,6 +317,26 @@ export default function Settings() {
                 )}
               </div>
             )}
+          </Card>
+        )}
+
+        {/* User Info Section */}
+        {isAuthenticated && user && (
+          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
+                <SettingsIcon className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Account Settings</h2>
+                <p className="text-sm text-slate-300">
+                  Logged in as <span className="text-emerald-400 font-medium">{user.username}</span>
+                </p>
+                {user.email && (
+                  <p className="text-xs text-slate-400">{user.email}</p>
+                )}
+              </div>
+            </div>
           </Card>
         )}
       </div>
