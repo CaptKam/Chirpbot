@@ -84,8 +84,6 @@ export default function Settings() {
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 30 * 1000, // 30 seconds for alert preferences to show admin changes quickly
-    refetchInterval: 60 * 1000, // Refetch every minute to catch admin changes
   });
 
   // Create a map of current preferences for easy lookup

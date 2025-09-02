@@ -606,12 +606,9 @@ async function toggleCategory(category) {
                 globalAlertSettings[key] = shouldEnable;
             });
             
-            // Automatically apply these changes to all users
-            await applyGlobalSettingsToAllUsers();
-            
             // Re-render configuration
             renderAlertConfiguration();
-            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} and applied to all users`, 'success');
+            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'}`, 'success');
         } else {
             showNotification('Failed to update category settings', 'error');
         }
@@ -639,11 +636,7 @@ async function toggleGlobalAlert(alertKey) {
         
         if (response.ok) {
             globalAlertSettings[alertKey] = isEnabled;
-            
-            // Automatically apply this change to all users
-            await applyGlobalSettingToAllUsers(alertKey, isEnabled);
-            
-            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally and applied to all users`, 'success');
+            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally`, 'success');
         } else {
             toggle.checked = !isEnabled;
             showNotification('Failed to update alert setting', 'error');
@@ -660,11 +653,6 @@ async function applyToAllUsers() {
         return;
     }
     
-    await applyGlobalSettingsToAllUsers();
-}
-
-// Helper function to apply global settings without confirmation
-async function applyGlobalSettingsToAllUsers() {
     try {
         const response = await fetch('/api/admin/apply-global-settings', {
             method: 'POST',
@@ -677,36 +665,13 @@ async function applyGlobalSettingsToAllUsers() {
         });
         
         if (response.ok) {
-            console.log('Global settings applied to all users successfully');
+            showNotification('Global settings applied to all users successfully', 'success');
         } else {
-            console.error('Failed to apply settings to all users');
+            showNotification('Failed to apply settings to all users', 'error');
         }
     } catch (error) {
         console.error('Error applying settings:', error);
-    }
-}
-
-// Helper function to apply a single setting to all users
-async function applyGlobalSettingToAllUsers(alertKey, enabled) {
-    try {
-        const singleSetting = { [alertKey]: enabled };
-        const response = await fetch('/api/admin/apply-global-settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ 
-                sport: currentSport,
-                settings: singleSetting 
-            })
-        });
-        
-        if (response.ok) {
-            console.log(`Global setting ${alertKey}=${enabled} applied to all users successfully`);
-        } else {
-            console.error(`Failed to apply setting ${alertKey}=${enabled} to all users`);
-        }
-    } catch (error) {
-        console.error('Error applying single setting:', error);
+        showNotification('Failed to apply settings to all users', 'error');
     }
 }
 
