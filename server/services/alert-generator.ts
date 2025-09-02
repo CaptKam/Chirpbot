@@ -2,6 +2,7 @@ import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
+import { weatherService } from "./weather-service";
 
 interface AlertData {
   type: string;
@@ -471,6 +472,11 @@ export class AlertGenerator {
           const alertKey = `${game.gameId}_HOME_RUN_${lastPlay.about?.atBatIndex}`;
           const message = `🏠 HOME RUN! ${game.awayTeam} vs ${game.homeTeam} - Just happened!`;
           
+          // Get weather data for home run context
+          const weather = await weatherService.getWeatherForTeam(game.homeTeam);
+          const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
+          const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+          
           alertCount += await this.saveRealTimeAlert(alertKey, 'HOME_RUN_LIVE', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
@@ -478,7 +484,13 @@ export class AlertGenerator {
             inning: lastPlay.about?.inning,
             balls: liveData?.plays?.currentPlay?.count?.balls || 0,
             strikes: liveData?.plays?.currentPlay?.count?.strikes || 0,
-            outs: lastPlay.about?.o || 0
+            outs: lastPlay.about?.o || 0,
+            weather: {
+              temperature: weather.temperature,
+              condition: weather.condition,
+              windDescription: windDesc,
+              homeRunFactor: homeRunFactor
+            }
           }, 100);
         }
       }

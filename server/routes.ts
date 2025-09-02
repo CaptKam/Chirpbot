@@ -586,6 +586,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`📅 Current Pacific Date: ${getPacificDate()}`);
   console.log(`🕐 Current Pacific Time: ${formatPacificTime()}`);
   
+  // Weather test endpoint  
+  app.get('/api/test-weather/:team', async (req, res) => {
+    try {
+      const { weatherService } = await import('./services/weather-service');
+      const weather = await weatherService.getWeatherForTeam(req.params.team);
+      const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
+      const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+      
+      res.json({
+        team: req.params.team,
+        weather,
+        analysis: {
+          homeRunFactor,
+          windDescription: windDesc,
+          weatherSource: process.env.OPENWEATHERMAP_API_KEY ? 'Live OpenWeatherMap API' : 'Fallback Data'
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
