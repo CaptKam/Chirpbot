@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
 import { weatherService } from "./weather-service";
+import { storage } from "../storage";
 
 interface AlertData {
   type: string;
@@ -21,6 +22,26 @@ export class AlertGenerator {
   constructor() {
     this.mlbApi = new MLBApiService();
     this.ncaafApi = new NCAAFApiService();
+  }
+
+  // Check if any user has enabled a specific alert type for a sport
+  private async isAlertTypeEnabled(sport: string, alertType: string): Promise<boolean> {
+    try {
+      const enabledPreferences = await db.execute(sql`
+        SELECT COUNT(*) as count 
+        FROM user_alert_preferences 
+        WHERE sport = ${sport} 
+        AND alert_type = ${alertType} 
+        AND enabled = true
+      `);
+      
+      const count = enabledPreferences[0]?.count || 0;
+      return count > 0;
+    } catch (error) {
+      console.error(`Error checking if alert type ${alertType} is enabled:`, error);
+      // Default to false to prevent unwanted alerts if there's an error
+      return false;
+    }
   }
 
   // Generate realistic alerts from today's completed games
@@ -288,46 +309,54 @@ export class AlertGenerator {
 
     // Bases loaded: all three bases occupied
     if (hasFirst && hasSecond && hasThird) {
-      const alertKey = `${game.gameId}_BASES_LOADED_${inning}_${outs}`;
-      const message = `🔥 BASES LOADED! ${game.awayTeam} vs ${game.homeTeam} - ${outs} outs, Inning ${inning}`;
-      
-      alertCount += await this.saveRealTimeAlert(alertKey, 'BASES_LOADED', game.gameId, message, {
-        homeTeam: game.homeTeam,
-        awayTeam: game.awayTeam,
-        inning,
-        isTopInning,
-        outs,
-        balls,
-        strikes,
-        hasFirst,
-        hasSecond,
-        hasThird,
-        first: offense.first?.fullName,
-        second: offense.second?.fullName,
-        third: offense.third?.fullName,
-        situation: 'bases_loaded'
-      }, 98);
+      // Check if any user has bases loaded alerts enabled before generating
+      const basesLoadedEnabled = await this.isAlertTypeEnabled('MLB', 'BASES_LOADED');
+      if (basesLoadedEnabled) {
+        const alertKey = `${game.gameId}_BASES_LOADED_${inning}_${outs}`;
+        const message = `🔥 BASES LOADED! ${game.awayTeam} vs ${game.homeTeam} - ${outs} outs, Inning ${inning}`;
+        
+        alertCount += await this.saveRealTimeAlert(alertKey, 'BASES_LOADED', game.gameId, message, {
+          homeTeam: game.homeTeam,
+          awayTeam: game.awayTeam,
+          inning,
+          isTopInning,
+          outs,
+          balls,
+          strikes,
+          hasFirst,
+          hasSecond,
+          hasThird,
+          first: offense.first?.fullName,
+          second: offense.second?.fullName,
+          third: offense.third?.fullName,
+          situation: 'bases_loaded'
+        }, 98);
+      }
     }
     // Runners on 1st and 2nd (prime scoring opportunity)
     else if (hasFirst && hasSecond && !hasThird) {
-      const alertKey = `${game.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
-      const message = `💎 RUNNERS ON 1ST & 2ND! ${game.awayTeam} vs ${game.homeTeam} - Prime scoring position, ${outs} outs`;
-      
-      alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNERS_1ST_2ND', game.gameId, message, {
-        homeTeam: game.homeTeam,
-        awayTeam: game.awayTeam,
-        inning,
-        isTopInning,
-        outs,
-        balls,
-        strikes,
-        hasFirst,
-        hasSecond,
-        hasThird: false,
-        first: offense.first?.fullName,
-        second: offense.second?.fullName,
-        situation: 'runners_on_1st_and_2nd'
-      }, 88);
+      // Check if any user has runners 1st & 2nd alerts enabled before generating
+      const runners1st2ndEnabled = await this.isAlertTypeEnabled('MLB', 'RUNNERS_1ST_2ND');
+      if (runners1st2ndEnabled) {
+        const alertKey = `${game.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
+        const message = `💎 RUNNERS ON 1ST & 2ND! ${game.awayTeam} vs ${game.homeTeam} - Prime scoring position, ${outs} outs`;
+        
+        alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNERS_1ST_2ND', game.gameId, message, {
+          homeTeam: game.homeTeam,
+          awayTeam: game.awayTeam,
+          inning,
+          isTopInning,
+          outs,
+          balls,
+          strikes,
+          hasFirst,
+          hasSecond,
+          hasThird: false,
+          first: offense.first?.fullName,
+          second: offense.second?.fullName,
+          situation: 'runners_on_1st_and_2nd'
+        }, 88);
+      }
     }
     // Runner in scoring position (2nd or 3rd base, but not bases loaded or 1st+2nd)
     else if ((hasSecond || hasThird) && !(hasFirst && hasSecond && hasThird) && !(hasFirst && hasSecond && !hasThird)) {
@@ -442,38 +471,46 @@ export class AlertGenerator {
           description.toLowerCase().includes('strikeout');
           
         if (isStrikeout) {
-          const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
-          const batter = play.matchup?.batter?.fullName || 'Unknown Batter';
-          const pitcher = play.matchup?.pitcher?.fullName || 'Unknown Pitcher';
-          const message = `⚡ STRIKEOUT! ${batter} struck out by ${pitcher} - ${game.awayTeam} vs ${game.homeTeam}`;
-          
-          alertCount += await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
-            homeTeam: game.homeTeam,
-            awayTeam: game.awayTeam,
-            batter: batter,
-            pitcher: pitcher,
-            inning: play.about?.inning,
-            outs: play.about?.outs || play.about?.o || liveData?.plays?.currentPlay?.count?.outs || 0,
-            balls,
-            strikes,
-            situation: 'strikeout'
-          }, 75);
+          // Check if any user has strikeout alerts enabled before generating
+          const strikeoutEnabled = await this.isAlertTypeEnabled('MLB', 'STRIKEOUT');
+          if (strikeoutEnabled) {
+            const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
+            const batter = play.matchup?.batter?.fullName || 'Unknown Batter';
+            const pitcher = play.matchup?.pitcher?.fullName || 'Unknown Pitcher';
+            const message = `⚡ STRIKEOUT! ${batter} struck out by ${pitcher} - ${game.awayTeam} vs ${game.homeTeam}`;
+            
+            alertCount += await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
+              homeTeam: game.homeTeam,
+              awayTeam: game.awayTeam,
+              batter: batter,
+              pitcher: pitcher,
+              inning: play.about?.inning,
+              outs: play.about?.outs || play.about?.o || liveData?.plays?.currentPlay?.count?.outs || 0,
+              balls,
+              strikes,
+              situation: 'strikeout'
+            }, 75);
+          }
         }
       }
     }
 
     // Full count situation (3-2)
     if (balls === 3 && strikes === 2) {
-      const alertKey = `${game.gameId}_FULL_COUNT_${Date.now()}`;
-      const message = `⚾ FULL COUNT! ${game.awayTeam} vs ${game.homeTeam} - 3-2 count, pressure on!`;
-      
-      alertCount += await this.saveRealTimeAlert(alertKey, 'FULL_COUNT', game.gameId, message, {
-        homeTeam: game.homeTeam,
-        awayTeam: game.awayTeam,
-        balls,
-        strikes,
-        situation: 'full_count'
-      }, 80);
+      // Check if any user has full count alerts enabled before generating
+      const fullCountEnabled = await this.isAlertTypeEnabled('MLB', 'FULL_COUNT');
+      if (fullCountEnabled) {
+        const alertKey = `${game.gameId}_FULL_COUNT_${Date.now()}`;
+        const message = `⚾ FULL COUNT! ${game.awayTeam} vs ${game.homeTeam} - 3-2 count, pressure on!`;
+        
+        alertCount += await this.saveRealTimeAlert(alertKey, 'FULL_COUNT', game.gameId, message, {
+          homeTeam: game.homeTeam,
+          awayTeam: game.awayTeam,
+          balls,
+          strikes,
+          situation: 'full_count'
+        }, 80);
+      }
     }
 
     return alertCount;
