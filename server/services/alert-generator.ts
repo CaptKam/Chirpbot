@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { MLBApiService } from "./mlb-api";
+import { NCAAFApiService } from "./ncaaf-api";
 
 interface AlertData {
   type: string;
@@ -14,9 +15,11 @@ interface AlertData {
 
 export class AlertGenerator {
   private mlbApi: MLBApiService;
+  private ncaafApi: NCAAFApiService;
 
   constructor() {
     this.mlbApi = new MLBApiService();
+    this.ncaafApi = new NCAAFApiService();
   }
 
   // Generate realistic alerts from today's completed games
@@ -179,19 +182,34 @@ export class AlertGenerator {
   // Method to generate alerts for live games (when they're happening)
   async generateLiveGameAlerts(): Promise<void> {
     try {
-      const games = await this.mlbApi.getTodaysGames();
-      const liveGames = games.filter(game => game.isLive);
+      // Get live games from both MLB and NCAAF
+      const [mlbGames, ncaafGames] = await Promise.all([
+        this.mlbApi.getTodaysGames(),
+        this.ncaafApi.getTodaysGames()
+      ]);
       
-      if (liveGames.length === 0) {
+      const liveMLBGames = mlbGames.filter(game => game.isLive);
+      const liveNCAAFGames = ncaafGames.filter(game => game.isLive);
+      const totalLiveGames = liveMLBGames.length + liveNCAAFGames.length;
+      
+      if (totalLiveGames === 0) {
         console.log('🔍 No live games to monitor for alerts');
         return;
       }
 
-      console.log(`🔍 Monitoring ${liveGames.length} live games for alerts`);
+      console.log(`🔍 Monitoring ${totalLiveGames} live games for alerts`);
       
       let newAlerts = 0;
-      for (const game of liveGames) {
+      
+      // Process MLB games
+      for (const game of liveMLBGames) {
         const count = await this.generateLiveAlertsForGame(game);
+        newAlerts += count;
+      }
+      
+      // Process NCAAF games
+      for (const game of liveNCAAFGames) {
+        const count = await this.generateNCAAFLiveAlerts(game);
         newAlerts += count;
       }
       
@@ -467,11 +485,78 @@ export class AlertGenerator {
     return alertCount;
   }
 
-  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number): Promise<number> {
+  private async generateNCAAFLiveAlerts(game: any): Promise<number> {
+    let alertCount = 0;
+    
+    try {
+      // Two-minute warning for quarters and halfs
+      alertCount += await this.generateTwoMinuteWarningAlert(game);
+      
+      // Add other NCAAF alerts here (fourth down, red zone, etc.)
+      
+    } catch (error) {
+      console.error(`Error generating NCAAF alerts for game ${game.gameId}:`, error);
+    }
+
+    return alertCount;
+  }
+
+  private async generateTwoMinuteWarningAlert(game: any): Promise<number> {
+    let alertCount = 0;
+    
+    const timeRemaining = game.timeRemaining || '';
+    const quarter = game.quarter || 0;
+    
+    // Check if we're in the final 2 minutes of any quarter
+    if (this.isWithinTwoMinutes(timeRemaining) && quarter > 0) {
+      // Determine if it's end of half (2nd or 4th quarter)
+      const isEndOfHalf = quarter === 2 || quarter === 4;
+      const periodType = isEndOfHalf ? 'half' : 'quarter';
+      
+      const alertKey = `${game.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
+      const message = `⏰ TWO MINUTE WARNING! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+      
+      alertCount += await this.saveRealTimeAlert(alertKey, 'TWO_MINUTE_WARNING', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        quarter,
+        timeRemaining,
+        isEndOfHalf,
+        periodType
+      }, 88, 'NCAAF');
+    }
+
+    return alertCount;
+  }
+
+  private isWithinTwoMinutes(timeRemaining: string): boolean {
+    if (!timeRemaining || timeRemaining === '0:00') return false;
+    
+    // Parse time format like "1:45", "0:30", etc.
+    const timeParts = timeRemaining.split(':');
+    if (timeParts.length !== 2) return false;
+    
+    const minutes = parseInt(timeParts[0]) || 0;
+    const seconds = parseInt(timeParts[1]) || 0;
+    
+    // Check if we're within 2 minutes (120 seconds)
+    const totalSeconds = (minutes * 60) + seconds;
+    return totalSeconds <= 120 && totalSeconds > 0;
+  }
+
+  private getOrdinalSuffix(num: number): string {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const remainder = num % 100;
+    return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
+  }
+
+  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number, sport: string = 'MLB'): Promise<number> {
     try {
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
-        VALUES (gen_random_uuid(), ${alertKey}, 'MLB', ${gameId}, 
+        VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
                 ${type}, 'NEW', ${priority}, ${JSON.stringify({ message, context })}, NOW())
         ON CONFLICT (alert_key) DO NOTHING
       `);

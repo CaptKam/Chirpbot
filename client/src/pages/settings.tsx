@@ -65,6 +65,7 @@ const ALERT_TYPE_CONFIG = {
     "Game Situations": [
       { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
       { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical conversion attempts" },
+      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-quarter/half pressure situations" },
     ]
   }
 };
