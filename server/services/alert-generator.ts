@@ -24,9 +24,18 @@ export class AlertGenerator {
     this.ncaafApi = new NCAAFApiService();
   }
 
-  // Check if any user has enabled a specific alert type for a sport
+  // Check if alert type is enabled globally AND has enabled users
   private async isAlertTypeEnabled(sport: string, alertType: string): Promise<boolean> {
     try {
+      // First check if the alert type is globally enabled by admin
+      const globalSettings = await storage.getGlobalAlertSettings(sport);
+      const isGloballyEnabled = globalSettings[alertType] !== false; // Default to true if not set
+      
+      if (!isGloballyEnabled) {
+        return false; // If admin disabled it globally, don't generate alerts
+      }
+      
+      // Then check if any user has this alert type enabled
       const enabledPreferences = await db.execute(sql`
         SELECT COUNT(*) as count 
         FROM user_alert_preferences 
