@@ -608,6 +608,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test NCAAF two-minute warning logic
+  app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
+    try {
+      const { AlertGenerator } = await import('./services/alert-generator');
+      const generator = new AlertGenerator();
+      
+      const testTime = req.params.time;
+      
+      // Test the two-minute detection logic
+      const isWithin2Min = (generator as any).isWithinTwoMinutes(testTime);
+      
+      // Create mock game data
+      const mockGame = {
+        gameId: 'test-game',
+        awayTeam: 'Test Team A',
+        homeTeam: 'Test Team B',
+        awayScore: 14,
+        homeScore: 21,
+        timeRemaining: testTime,
+        quarter: 4,
+        status: 'live',
+        isLive: true
+      };
+      
+      res.json({
+        inputTime: testTime,
+        isWithinTwoMinutes: isWithin2Min,
+        mockGame,
+        testResults: {
+          '1:30': (generator as any).isWithinTwoMinutes('1:30'),
+          '2:30': (generator as any).isWithinTwoMinutes('2:30'),
+          '0:45': (generator as any).isWithinTwoMinutes('0:45'),
+          '3:00': (generator as any).isWithinTwoMinutes('3:00')
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);

@@ -563,6 +563,11 @@ export class AlertGenerator {
     const timeRemaining = game.timeRemaining || '';
     const quarter = game.quarter || 0;
     
+    // Debug logging for NCAAF time detection
+    console.log(`🏈 NCAAF Debug - Game: ${game.awayTeam} vs ${game.homeTeam}`);
+    console.log(`🏈 Time Remaining: "${timeRemaining}" | Quarter: ${quarter} | Status: ${game.status}`);
+    console.log(`🏈 Is Live: ${game.isLive} | Within 2min: ${this.isWithinTwoMinutes(timeRemaining)}`);
+    
     // Check if we're in the final 2 minutes of any quarter
     if (this.isWithinTwoMinutes(timeRemaining) && quarter > 0) {
       // Determine if it's end of half (2nd or 4th quarter)
@@ -590,15 +595,34 @@ export class AlertGenerator {
   private isWithinTwoMinutes(timeRemaining: string): boolean {
     if (!timeRemaining || timeRemaining === '0:00') return false;
     
-    // Parse time format like "1:45", "0:30", etc.
-    const timeParts = timeRemaining.split(':');
-    if (timeParts.length !== 2) return false;
+    // Handle different time formats from ESPN
+    let totalSeconds = 0;
     
-    const minutes = parseInt(timeParts[0]) || 0;
-    const seconds = parseInt(timeParts[1]) || 0;
+    // Format: "1:45", "0:30", "12:30"
+    if (timeRemaining.includes(':')) {
+      const timeParts = timeRemaining.split(':');
+      if (timeParts.length === 2) {
+        const minutes = parseInt(timeParts[0]) || 0;
+        const seconds = parseInt(timeParts[1]) || 0;
+        totalSeconds = (minutes * 60) + seconds;
+      }
+    }
+    // Format: "1:45 - 4th", "0:30 4th" (with quarter info)
+    else if (timeRemaining.includes(' ')) {
+      const timeOnly = timeRemaining.split(' ')[0];
+      if (timeOnly.includes(':')) {
+        const timeParts = timeOnly.split(':');
+        if (timeParts.length === 2) {
+          const minutes = parseInt(timeParts[0]) || 0;
+          const seconds = parseInt(timeParts[1]) || 0;
+          totalSeconds = (minutes * 60) + seconds;
+        }
+      }
+    }
+    
+    console.log(`🏈 Time parsing: "${timeRemaining}" → ${totalSeconds} seconds`);
     
     // Check if we're within 2 minutes (120 seconds)
-    const totalSeconds = (minutes * 60) + seconds;
     return totalSeconds <= 120 && totalSeconds > 0;
   }
 
