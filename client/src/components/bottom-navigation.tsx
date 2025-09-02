@@ -1,15 +1,21 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, Settings, AlertTriangle } from 'lucide-react';
+import { Calendar, Settings, AlertTriangle, Shield } from 'lucide-react';
+import { useAuth } from "@/hooks/useAuth";
 
 export function BottomNavigation() {
   const [location] = useLocation();
+  const { user } = useAuth();
 
-
-  const navItems = [
+  const baseNavItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
     { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts" },
     { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
   ];
+
+  // Add admin tab if user has admin role
+  const navItems = user?.role === 'admin' 
+    ? [...baseNavItems, { path: "/admin", icon: Shield, label: "Admin", testId: "nav-admin" }]
+    : baseNavItems;
 
   return (
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50">
