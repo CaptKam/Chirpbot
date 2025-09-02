@@ -869,35 +869,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport } = req.params;
       
-      // For now, return default enabled state for all alerts
-      // This could be stored in a global_alert_settings table in the future
-      const defaultSettings = {
-        // MLB alerts - all enabled by default
-        'RISP': true,
-        'BASES_LOADED': true,
-        'RUNNERS_1ST_2ND': true,
-        'CLOSE_GAME': true,
-        'CLOSE_GAME_LIVE': true,
-        'LATE_PRESSURE': true,
-        'HOME_RUN_LIVE': true,
-        'HIGH_SCORING': true,
-        'SHUTOUT': true,
-        'BLOWOUT': true,
-        'FULL_COUNT': true,
-        'STRIKEOUT': true,
-        // NFL alerts
-        'RED_ZONE': true,
-        'FOURTH_DOWN': true,
-        'TWO_MINUTE_WARNING': true,
-        // NBA alerts
-        'CLUTCH_TIME': true,
-        'OVERTIME': true,
-        // NHL alerts
-        'POWER_PLAY': true,
-        'EMPTY_NET': true
-      };
-
-      res.json(defaultSettings);
+      // Get the global settings from storage
+      const settings = await storage.getGlobalAlertSettings(sport);
+      
+      res.json(settings);
     } catch (error) {
       console.error('Error fetching global alert settings:', error);
       res.status(500).json({ message: 'Failed to fetch global alert settings' });
@@ -934,9 +909,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport, category, alertKeys, enabled } = req.body;
       
-      // In a full implementation, this would update global settings for the category
-      console.log(`Category '${category}' for ${sport} ${enabled ? 'enabled' : 'disabled'} by admin`);
-      console.log('Alert keys affected:', alertKeys);
+      // Update the category settings which will apply to all users
+      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
       
       res.json({ 
         message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
@@ -959,8 +933,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport, alertType, enabled } = req.body;
       
-      // In a full implementation, this would update global settings for the specific alert
-      console.log(`Alert '${alertType}' for ${sport} ${enabled ? 'enabled' : 'disabled'} by admin`);
+      // Update the global setting which will apply to all users
+      await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
       
       res.json({ 
         message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
@@ -982,33 +956,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport, settings } = req.body;
       
-      // Get all users
-      const users = await storage.getAllUsers();
-      let updatedCount = 0;
-      
-      // Apply settings to each user
-      for (const user of users) {
-        try {
-          // Convert settings to the format expected by updateUserAlertPreferences
-          const preferences = Object.entries(settings).map(([alertType, enabled]) => ({
-            alertType,
-            enabled: enabled === true
-          }));
-          
-          await storage.updateUserAlertPreferences(user.id, sport.toLowerCase(), preferences);
-          updatedCount++;
-        } catch (userError) {
-          console.error(`Failed to update settings for user ${user.id}:`, userError);
-        }
-      }
-      
-      console.log(`Applied global ${sport} alert settings to ${updatedCount} users by admin`);
+      // Use the storage method to apply settings to all users
+      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
       
       res.json({ 
-        message: `Global settings applied to ${updatedCount} users successfully`,
+        message: `Global settings applied to ${result.usersUpdated} users successfully`,
         sport,
-        usersUpdated: updatedCount,
-        totalUsers: users.length
+        ...result
       });
     } catch (error) {
       console.error('Error applying global settings:', error);

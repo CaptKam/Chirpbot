@@ -60,6 +60,17 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Global alert settings for admin management
+export const globalAlertSettings = pgTable("global_alert_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL, etc.
+  alertType: text("alert_type").notNull(), // RISP, BASES_LOADED, etc.
+  enabled: boolean("enabled").notNull().default(true),
+  masterEnabled: boolean("master_enabled").notNull().default(true), // Global master switch
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: varchar("updated_by").notNull().references(() => users.id), // Admin who made the change
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -96,6 +107,11 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
 export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTeams).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertGlobalAlertSettingsSchema = createInsertSchema(globalAlertSettings).omit({
+  id: true,
+  updatedAt: true,
 });
 
 // Types
