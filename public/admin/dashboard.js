@@ -1278,8 +1278,13 @@ function createGameCard(game) {
             ${game.status === 'live' && hasRunners ? `
                 <div class="runners-section">
                     <div class="runners-label">Runners:</div>
-                    <div class="runners-badges">
-                        ${runnersBadges.map(base => `<span class="runner-badge">${base}</span>`).join('')}
+                    <div class="baseball-diamond">
+                        <div class="diamond-container">
+                            <div class="base second ${runners.second ? 'occupied' : ''}" title="2nd Base">2B</div>
+                            <div class="base third ${runners.third ? 'occupied' : ''}" title="3rd Base">3B</div>
+                            <div class="base home" title="Home Plate">H</div>
+                            <div class="base first ${runners.first ? 'occupied' : ''}" title="1st Base">1B</div>
+                        </div>
                     </div>
                 </div>
             ` : ''}
