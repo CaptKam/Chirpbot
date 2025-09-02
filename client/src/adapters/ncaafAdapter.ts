@@ -17,6 +17,9 @@ export function ncaafAdapter(alert: any): AlertUI {
   const chips: string[] = [];
   if (alert.periodLabel) chips.push(alert.periodLabel);   // "Q4 01:12"
   if (alert.yardsToGo!=null) chips.push(`${alert.yardsToGo} to go`);
+  if (alert.timeRemaining && alert.type === 'TWO_MINUTE_WARNING') {
+    chips.push(`${alert.timeRemaining} left`);
+  }
   if (alert.homeRank || alert.awayRank) {
     const rankings = [];
     if (alert.awayRank) rankings.push(`#${alert.awayRank} Away`);
