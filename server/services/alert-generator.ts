@@ -431,7 +431,7 @@ export class AlertGenerator {
             batter: batter,
             pitcher: pitcher,
             inning: play.about?.inning,
-            outs: play.about?.o || 0,
+            outs: play.about?.outs || play.about?.o || liveData?.plays?.currentPlay?.count?.outs || 0,
             balls,
             strikes,
             situation: 'strikeout'
