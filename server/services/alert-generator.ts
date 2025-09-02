@@ -432,6 +432,8 @@ export class AlertGenerator {
             pitcher: pitcher,
             inning: play.about?.inning,
             outs: play.about?.o || 0,
+            balls,
+            strikes,
             situation: 'strikeout'
           }, 75);
         }
@@ -473,7 +475,10 @@ export class AlertGenerator {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
             batter: lastPlay.matchup?.batter?.fullName,
-            inning: lastPlay.about?.inning
+            inning: lastPlay.about?.inning,
+            balls: liveData?.plays?.currentPlay?.count?.balls || 0,
+            strikes: liveData?.plays?.currentPlay?.count?.strikes || 0,
+            outs: lastPlay.about?.o || 0
           }, 100);
         }
       }
