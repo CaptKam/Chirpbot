@@ -1,7 +1,7 @@
 export class NBAApiService {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      const targetDate = date || new Date().toISOString().split('T')[0];
+      const targetDate = date || this.getEasternDate();
       const formattedDate = targetDate.replace(/-/g, '');
       
       // ESPN public API for NBA scores
@@ -39,6 +39,12 @@ export class NBAApiService {
       console.error('Error fetching NBA games:', error);
       return [];
     }
+  }
+
+  private getEasternDate(): string {
+    const now = new Date();
+    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    return easternTime.toISOString().split('T')[0];
   }
 
   private mapGameStatus(statusName: string): string {

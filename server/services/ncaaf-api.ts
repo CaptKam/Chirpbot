@@ -2,7 +2,7 @@ export class NCAAFApiService {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
       // Get date in Eastern Time (US sports timezone) to ensure we get the correct games
-      const easternDate = new Date().toLocaleString("en-CA", {timeZone: "America/New_York"}).split(" ")[0];
+      const easternDate = this.getEasternDate();
       const targetDate = date || easternDate;
       const formattedDate = targetDate.replace(/-/g, '');
       
@@ -47,6 +47,13 @@ export class NCAAFApiService {
       console.error('Error fetching NCAAF games:', error);
       return [];
     }
+  }
+
+  private getEasternDate(): string {
+    // Create a date object for Eastern Time
+    const now = new Date();
+    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    return easternTime.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
   }
 
   private mapGameStatus(statusName: string): string {
