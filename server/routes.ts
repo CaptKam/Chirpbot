@@ -1132,11 +1132,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`System config updated: ${category}.${key} = ${JSON.stringify(value)} by admin`);
       
+      let parsedValue;
+      try {
+        parsedValue = JSON.parse(result.value as string);
+      } catch (jsonError) {
+        parsedValue = result.value;
+      }
+      
       res.json({
         message: 'Configuration updated successfully',
         configuration: {
           ...result,
-          value: JSON.parse(result.value as string)
+          value: parsedValue
         }
       });
     } catch (error) {
@@ -1163,10 +1170,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         message: `${configurations.length} configurations updated successfully`,
-        results: results.map(r => ({
-          ...r,
-          value: JSON.parse(r.value as string)
-        }))
+        results: results.map(r => {
+          let parsedValue;
+          try {
+            parsedValue = JSON.parse(r.value as string);
+          } catch (jsonError) {
+            parsedValue = r.value;
+          }
+          return {
+            ...r,
+            value: parsedValue
+          };
+        })
       });
     } catch (error) {
       console.error('Error bulk updating system configuration:', error);
