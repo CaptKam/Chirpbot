@@ -2,17 +2,12 @@
 
 ChirpBot V2 is a fully functional modern sports alert application providing real-time notifications and AI-enhanced insights for sports events. Successfully deployed and tested on August 18, 2025, with major MLB alert system enhancements completed on August 22, 2025. The application monitors sports teams across multiple leagues (MLB, NFL, NBA, NHL) using authentic ESPN API data and generates intelligent alerts for high-impact game situations. Built with a React frontend, Express backend, and PostgreSQL database, the app integrates with OpenAI for contextual analysis, weather services for environmental data, and includes Telegram notification capabilities. 
 
-**Design System Updates (September 2, 2025):**
-- Enhanced alert card design with modern gradient-based visual system
-- Dynamic urgency indicators: Cards pulse and change color based on confidence levels (85%+ = red/hot, 70-84% = yellow, <70% = blue)
-- Baseball diamond visualization: Yellow gradient for occupied bases with shadow effects
-- Confidence bar visualization: Progress bar shows confidence level with color-coded gradients
-- Typography improvements: Larger text sizes (text-lg for messages), better hierarchy, bold weights
-- Interactive elements: Cards scale on hover with shadow-2xl, smooth transitions
-- Visual indicators: HOT badge for high-confidence alerts, gradient text for sport labels
-- Color-coded count pips: Blue for balls, orange for strikes, red for outs
-- Card backgrounds: Gradient overlays with backdrop blur for depth
-- Border treatments: Subtle borders with slate colors for improved definition
+**Design System Updates (August 18, 2025):**
+- Implemented modern, bold, sports-centric design with professional color palette
+- Primary colors: #F2F4F7 (background), #1C2B5E (accent), #2387F4 (CTA blue), #F02D3A (alert red)
+- Typography: Bold uppercase headings with letter spacing, Inter font family
+- UI Components: Game cards with 12px rounded corners, shadow on hover, full-width responsive design
+- Active monitoring indicated with blue border and background
 
 Features persistent team monitoring that saves user game selections to the database and restores them on page reload. Alert generation system correctly filters for live games only.
 
