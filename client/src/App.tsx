@@ -8,6 +8,7 @@ import NotFound from "./pages/not-found";
 import Landing from "./pages/landing";
 import Calendar from "./pages/calendar";
 import Settings from "./pages/settings";
+import Admin from "./pages/admin";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
@@ -93,7 +94,7 @@ function RegularAppContent() {
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route path="/admin" component={() => <ProtectedRoute component={Settings} />} />
+        <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}

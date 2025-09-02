@@ -494,6 +494,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin middleware
+  async function requireAdmin(req: any, res: any, next: any) {
+    try {
+      if (!req.session?.userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const user = await storage.getUserById(req.session.userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      req.user = user;
+      next();
+    } catch (error) {
+      console.error('Error in admin middleware:', error);
+      res.status(500).json({ message: 'Authorization check failed' });
+    }
+  }
+
+  // Admin API routes
+  app.get('/api/admin/users', requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Remove passwords from response
+      const safeUsers = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(safeUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  });
+
+  app.get('/api/admin/users/role/:role', requireAdmin, async (req, res) => {
+    try {
+      const { role } = req.params;
+      const users = await storage.getUsersByRole(role);
+      // Remove passwords from response
+      const safeUsers = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(safeUsers);
+    } catch (error) {
+      console.error('Error fetching users by role:', error);
+      res.status(500).json({ message: 'Failed to fetch users by role' });
+    }
+  });
+
+  app.put('/api/admin/users/:userId/role', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      
+      if (!role || !['admin', 'manager', 'analyst', 'user'].includes(role)) {
+        return res.status(400).json({ message: 'Invalid role. Must be admin, manager, analyst, or user' });
+      }
+      
+      const updatedUser = await storage.updateUserRole(userId, role);
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json({ message: 'User role updated successfully', user: userWithoutPassword });
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      res.status(500).json({ message: 'Failed to update user role' });
+    }
+  });
+
+  app.get('/api/admin/users/:userId/alert-preferences', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const preferences = await storage.getUserAlertPreferences(userId);
+      res.json(preferences);
+    } catch (error) {
+      console.error('Error fetching user alert preferences:', error);
+      res.status(500).json({ message: 'Failed to fetch user alert preferences' });
+    }
+  });
+
+  app.put('/api/admin/users/:userId/alert-preferences', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { sport, preferences } = req.body;
+      
+      if (!sport || !preferences || !Array.isArray(preferences)) {
+        return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
+      }
+      
+      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
+      res.json({ message: 'User alert preferences updated successfully', count: result.length });
+    } catch (error) {
+      console.error('Error updating user alert preferences:', error);
+      res.status(500).json({ message: 'Failed to update user alert preferences' });
+    }
+  });
+
+  app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const adminUsers = await storage.getUsersByRole('admin');
+      const managerUsers = await storage.getUsersByRole('manager');
+      const analystUsers = await storage.getUsersByRole('analyst');
+      const regularUsers = await storage.getUsersByRole('user');
+      
+      const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
+      const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
+      
+      res.json({
+        users: {
+          total: allUsers.length,
+          admins: adminUsers.length,
+          managers: managerUsers.length,
+          analysts: analystUsers.length,
+          regular: regularUsers.length
+        },
+        alerts: {
+          total: parseInt(totalAlertsResult.rows[0]?.count || '0'),
+          today: parseInt(todayAlertsResult.rows[0]?.count || '0')
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      res.status(500).json({ message: 'Failed to fetch admin stats' });
+    }
+  });
+
   // Alerts routes
   app.get("/api/alerts", async (req, res) => {
     try {

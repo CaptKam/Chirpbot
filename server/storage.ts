@@ -33,6 +33,23 @@ export const storage = {
     return result[0];
   },
 
+  // Admin-specific user operations
+  async getAllUsers() {
+    return await db.select().from(users);
+  },
+
+  async getUsersByRole(role: string) {
+    return await db.select().from(users).where(eq(users.role, role));
+  },
+
+  async updateUserRole(userId: string, role: string) {
+    const result = await db.update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0];
+  },
+
 
   // Team operations
   async getAllTeams() {
