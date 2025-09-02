@@ -18,19 +18,15 @@ export function BaseDiamond({ on1, on2, on3 }:{on1?:boolean; on2?:boolean; on3?:
         <div className="absolute left-0 top-1/2 w-3 h-px bg-white/20 -rotate-45 origin-left" />
       </div>
 
-      {/* Home plate (pentagon shape at bottom) */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white border border-white/50" 
-           style={{clipPath: 'polygon(0% 0%, 100% 0%, 100% 70%, 50% 100%, 0% 70%)'}} />
-      
       {/* Bases */}
       {/* 2nd base (top) */}
-      <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rotate-45 ${on2?'bg-emerald-400':'bg-white border border-white/50'}`} />
+      <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rotate-45 ${on2?'bg-emerald-400':'border border-white/50'}`} />
       
       {/* 3rd base (left) */}
-      <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rotate-45 ${on3?'bg-emerald-400':'bg-white border border-white/50'}`} />
+      <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rotate-45 ${on3?'bg-emerald-400':'border border-white/50'}`} />
       
       {/* 1st base (right) */}
-      <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rotate-45 ${on1?'bg-emerald-400':'bg-white border border-white/50'}`} />
+      <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rotate-45 ${on1?'bg-emerald-400':'border border-white/50'}`} />
     </div>
   );
 }
