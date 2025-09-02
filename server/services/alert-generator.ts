@@ -350,6 +350,33 @@ export class AlertGenerator {
         situation: 'runner_in_scoring_position'
       }, 85);
     }
+    // Runner on any base (only if not already covered by above scenarios)
+    else if ((hasFirst || hasSecond || hasThird) && 
+             !(hasFirst && hasSecond && hasThird) && // not bases loaded
+             !(hasFirst && hasSecond && !hasThird) && // not 1st+2nd
+             !((hasSecond || hasThird) && !hasFirst)) { // not RISP only
+      
+      const alertKey = `${game.gameId}_RUNNER_ON_BASE_${inning}_${outs}`;
+      const positions = [];
+      if (hasFirst) positions.push('1st');
+      if (hasSecond) positions.push('2nd');
+      if (hasThird) positions.push('3rd');
+      const message = `🏃 RUNNER ON BASE! ${game.awayTeam} vs ${game.homeTeam} - ${positions.join(' & ')} base, ${outs} outs`;
+      
+      alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNER_ON_BASE', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        inning,
+        isTopInning,
+        outs,
+        balls,
+        strikes,
+        hasFirst,
+        hasSecond,
+        hasThird,
+        situation: 'runner_on_any_base'
+      }, 70);
+    }
 
     return alertCount;
   }
@@ -530,6 +557,11 @@ export class AlertGenerator {
     const timeRemaining = game.timeRemaining || '';
     const quarter = game.quarter || 0;
     
+    // Debug logging for NCAAF games
+    console.log(`🏈 NCAAF Debug - Game: ${game.awayTeam} vs ${game.homeTeam}`);
+    console.log(`🏈 Time Remaining: "${timeRemaining}", Quarter: ${quarter}`);
+    console.log(`🏈 Is within 2 min: ${this.isWithinTwoMinutes(timeRemaining)}`);
+    
     // Check if we're in the final 2 minutes of any quarter
     if (this.isWithinTwoMinutes(timeRemaining) && quarter > 0) {
       // Determine if it's end of half (2nd or 4th quarter)
@@ -538,6 +570,8 @@ export class AlertGenerator {
       
       const alertKey = `${game.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
       const message = `⏰ TWO MINUTE WARNING! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+      
+      console.log(`🏈 GENERATING TWO MINUTE WARNING: ${message}`);
       
       alertCount += await this.saveRealTimeAlert(alertKey, 'TWO_MINUTE_WARNING', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -555,17 +589,38 @@ export class AlertGenerator {
   }
 
   private isWithinTwoMinutes(timeRemaining: string): boolean {
-    if (!timeRemaining || timeRemaining === '0:00') return false;
+    if (!timeRemaining || timeRemaining === '0:00' || timeRemaining === '00:00') return false;
     
-    // Parse time format like "1:45", "0:30", etc.
-    const timeParts = timeRemaining.split(':');
-    if (timeParts.length !== 2) return false;
+    // Handle different time formats from ESPN API
+    let totalSeconds = 0;
     
-    const minutes = parseInt(timeParts[0]) || 0;
-    const seconds = parseInt(timeParts[1]) || 0;
+    // Format: "1:45", "0:30", "12:45", etc.
+    if (timeRemaining.includes(':')) {
+      const timeParts = timeRemaining.split(':');
+      if (timeParts.length >= 2) {
+        const minutes = parseInt(timeParts[0]) || 0;
+        const seconds = parseInt(timeParts[1]) || 0;
+        totalSeconds = (minutes * 60) + seconds;
+      }
+    }
+    // Format: just seconds like "90", "45"
+    else if (/^\d+$/.test(timeRemaining)) {
+      totalSeconds = parseInt(timeRemaining) || 0;
+    }
+    // Format: "1:45.0" (with decimals)
+    else if (timeRemaining.includes('.')) {
+      const cleanTime = timeRemaining.split('.')[0];
+      const timeParts = cleanTime.split(':');
+      if (timeParts.length >= 2) {
+        const minutes = parseInt(timeParts[0]) || 0;
+        const seconds = parseInt(timeParts[1]) || 0;
+        totalSeconds = (minutes * 60) + seconds;
+      }
+    }
+    
+    console.log(`🏈 Time parse: "${timeRemaining}" -> ${totalSeconds} seconds`);
     
     // Check if we're within 2 minutes (120 seconds)
-    const totalSeconds = (minutes * 60) + seconds;
     return totalSeconds <= 120 && totalSeconds > 0;
   }
 
