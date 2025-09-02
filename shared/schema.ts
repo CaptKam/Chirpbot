@@ -167,4 +167,100 @@ export interface GameDay {
   games: Game[];
 }
 
+// Admin-specific tables for ChirpBot Back Office
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  action: text("action").notNull(), // 'RULE_UPDATE', 'ALERT_ACK', 'ALERT_MUTE', 'SETTINGS_UPDATE'
+  subjectId: varchar("subject_id"), // ID of the entity being acted upon
+  before: jsonb("before"), // State before the action
+  after: jsonb("after"), // State after the action
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  details: jsonb("details"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const healthSnapshots = pgTable("health_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  component: text("component").notNull(), // 'statsapi', 'espn', 'weather', 'telegram', 'queue', 'worker'
+  status: text("status").notNull(), // 'UP', 'DEGRADED', 'DOWN'
+  detail: jsonb("detail"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const adminActions = pgTable("admin_actions", {
+  idempotencyKey: varchar("idempotency_key").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  action: text("action").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const rules = pgTable("rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(), // 'MLB', 'NFL', 'NBA', 'NHL'
+  key: text("key").notNull().unique(), // 'RE24_L1', 'RISP', etc.
+  enabled: boolean("enabled").notNull().default(true),
+  params: jsonb("params").notNull().default({}),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Enhanced alerts table status for admin management
+export const alerts = pgTable("alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gameId: text("game_id").notNull(),
+  sport: text("sport").notNull(),
+  type: text("type").notNull(),
+  status: text("status").notNull().default("OPEN"), // 'OPEN', 'MUTED', 'ACKED', 'RESENT'
+  payload: jsonb("payload").notNull(),
+  source: text("source"), // which engine/source generated this
+  priority: integer("priority").notNull().default(50), // 0-100, higher = more important
+  confidence: integer("confidence").notNull().default(80), // AI confidence rating
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Admin schema extensions
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertHealthSnapshotSchema = createInsertSchema(healthSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAdminActionSchema = createInsertSchema(adminActions).omit({
+  createdAt: true,
+});
+
+export const insertRuleSchema = createInsertSchema(rules).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertAlertSchema = createInsertSchema(alerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Admin types
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+
+export type InsertHealthSnapshot = z.infer<typeof insertHealthSnapshotSchema>;
+export type HealthSnapshot = typeof healthSnapshots.$inferSelect;
+
+export type InsertAdminAction = z.infer<typeof insertAdminActionSchema>;
+export type AdminAction = typeof adminActions.$inferSelect;
+
+export type InsertRule = z.infer<typeof insertRuleSchema>;
+export type Rule = typeof rules.$inferSelect;
+
+export type InsertAlert = z.infer<typeof insertAlertSchema>;
+export type Alert = typeof alerts.$inferSelect;
+
 
