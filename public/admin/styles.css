@@ -660,6 +660,136 @@ body {
     100% { transform: rotate(360deg); }
 }
 
+/* Toggle Switch Styles */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(148, 163, 184, 0.3);
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: #94a3b8;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #10b981;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+    background-color: white;
+}
+
+/* Alert Configuration Styles */
+.alert-category {
+    margin-bottom: 30px;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 12px;
+    padding: 25px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.category-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.category-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+}
+
+.alert-item:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+.alert-info {
+    flex: 1;
+}
+
+.alert-title {
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 5px;
+}
+
+.alert-description {
+    font-size: 14px;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+.alert-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-count {
+    font-size: 12px;
+    color: #64748b;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 4px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     .dashboard-container {
