@@ -21,6 +21,16 @@ function Pips({ filled, total }:{filled:number; total:number}) {
   );
 }
 
+export function CountPips({ balls, strikes, outs }:{balls:number; strikes:number; outs:number}) {
+  return (
+    <div className="flex items-center gap-2 text-[10px] text-slate-300">
+      <span className="flex items-center gap-1">B<Pips filled={balls} total={3} /></span>
+      <span className="flex items-center gap-1">S<Pips filled={strikes} total={2} /></span>
+      <span className="flex items-center gap-1">O<Pips filled={outs} total={2} /></span>
+    </div>
+  );
+}
+
 export function UniversalAlertCard({ ui }: { ui: AlertUI }) {
   return (
     <div className="p-4">
@@ -33,26 +43,14 @@ export function UniversalAlertCard({ ui }: { ui: AlertUI }) {
         <span className="text-slate-400 text-[10px]">{new Date(ui.createdAtISO).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
       </div>
 
-      {/* type + confidence + quick visuals */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] rounded border border-emerald-500 text-emerald-400 px-1.5 py-0.5">{ui.typeLabel}</span>
-          {ui.confidence!=null && (
-            <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-              <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" />{ui.confidence}%
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {ui.bases && <BaseDiamond on1={ui.bases.on1} on2={ui.bases.on2} on3={ui.bases.on3} />}
-          {ui.pips && ui.pips.length>0 && (
-            <div className="flex items-center gap-3 text-[10px] text-slate-300">
-              {ui.pips.map((p,i)=>(
-                <span key={i} className="flex items-center gap-1">{p.label}<Pips filled={p.filled} total={p.total} /></span>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* type + confidence */}
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[10px] rounded border border-emerald-500 text-emerald-400 px-1.5 py-0.5">{ui.typeLabel}</span>
+        {ui.confidence!=null && (
+          <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+            <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" />{ui.confidence}%
+          </span>
+        )}
       </div>
 
       {/* message */}
@@ -67,14 +65,22 @@ export function UniversalAlertCard({ ui }: { ui: AlertUI }) {
         </div>
       ):null}
 
-      {/* footer chips */}
-      {ui.chips?.length ? (
-        <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-300">
-          {ui.chips.map((c,i)=>(
+      {/* FOOTER: sport graphics + chips (order: graphics → chips) */}
+      {(ui.footerGraphics?.length || ui.chips?.length) ? (
+        <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-300">
+          {/* graphics slot */}
+          {ui.footerGraphics?.length ? (
+            <div className="flex items-center gap-3">
+              {ui.footerGraphics.map((g, i) => <span key={i} className="flex items-center">{g}</span>)}
+            </div>
+          ) : null}
+
+          {/* chips */}
+          {ui.chips?.map((c, i) => (
             <span key={i} className="rounded-md bg-white/5 px-2 py-1">{c}</span>
           ))}
         </div>
-      ):null}
+      ) : null}
     </div>
   );
 }

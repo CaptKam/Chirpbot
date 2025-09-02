@@ -7,9 +7,8 @@ export type AlertUI = {
   confidence?: number;                 // 0–100
   message: string;                     // one-liner, ≤80 chars
 
-  // Quick-glance visuals (all optional, render if present)
-  bases?: { on1?: boolean; on2?: boolean; on3?: boolean };  // MLB only
-  pips?: { label: string; filled: number; total: number }[]; // e.g. Balls/Strikes/Outs OR Fouls/TOs
+  // Footer graphics (all sport visuals consolidated here)
+  footerGraphics?: React.ReactNode[]; // small icons/widgets per sport
 
   // Who's involved (optional)
   people?: { label: string; value: string }[]; // e.g. Batter, On-Deck, Pitcher | Shooter, QB, etc.

@@ -1,0 +1,75 @@
+NEW LAW — “All Sport Graphics Live in the Footer”
+
+Any situational graphic (MLB diamond, balls/strikes/outs pips, NFL downs, NBA foul pips, soccer cards, etc.) must render in the footer row, right next to your chips (inning/period, clock, wind).
+
+The header stays text-only; the body stays the short “why” message.
+
+Changelog (small + safe)
+1) Add a single optional field to your universal UI
+// AlertUI (add one field)
+footerGraphics?: React.ReactNode[]; // small icons/widgets per sport
+
+2) MLB adapter: push diamond + count pips into footerGraphics
+// adapters/mlbAdapter.ts (only the new part)
+const footerGraphics: React.ReactNode[] = [];
+if (alert.hasFirst || alert.hasSecond || alert.hasThird) {
+  footerGraphics.push(<BaseDiamond on1={!!alert.hasFirst} on2={!!alert.hasSecond} on3={!!alert.hasThird} />);
+}
+if (alert.balls!=null || alert.strikes!=null || alert.outs!=null) {
+  footerGraphics.push(<CountPips balls={alert.balls ?? 0} strikes={alert.strikes ?? 0} outs={alert.outs ?? 0} />);
+}
+
+return {
+  // ...existing fields
+  footerGraphics,
+};
+
+3) (Optional) NFL/NBA adapters: same idea
+
+NFL: DownPips (filled 1–4) + “to-go” chip.
+
+NBA: FoulPips (team fouls to bonus) or TimeoutPips.
+
+(You can add those later—just push their nodes into footerGraphics the same way.)
+
+4) Universal card footer: render graphics first, then chips
+
+Replace your footer block with this one small change:
+
+{/* FOOTER: sport graphics + chips (order: graphics → chips) */}
+{(ui.footerGraphics?.length || ui.chips?.length) ? (
+  <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-300">
+    {/* graphics slot */}
+    {ui.footerGraphics?.length ? (
+      <div className="flex items-center gap-3">
+        {ui.footerGraphics.map((g, i) => <span key={i} className="flex items-center">{g}</span>)}
+      </div>
+    ) : null}
+
+    {/* chips */}
+    {ui.chips?.map((c, i) => (
+      <span key={i} className="rounded-md bg-white/5 px-2 py-1">{c}</span>
+    ))}
+  </div>
+) : null}
+
+
+That’s it. No other layout changes needed.
+
+Tiny polish (baseball-specific but universal-friendly)
+
+Diamond & pips are small (6–8px) so they sit neatly with chips.
+
+Keep wind as a chip; it’s textual but useful across sports.
+
+If batter/on-deck matters, leave that in the people pills above the footer (faster eye-scan), while the situational graphics live in the footer.
+
+Result
+
+MLB: footer shows diamond + B/S/O pips + chips (Top/Bot inning, wind, venue).
+
+NBA/NFL/etc.: footer shows their own graphic pips (when present) + chips (period/clock, red zone, etc.).
+
+You’ve now got a universal card with a single place for all sport visuals—clean, fast to read, and future-proof.
+
+If you want, send one NFL/NBA alert payload and I’ll give you the 4–6 line adapter snippet that pushes the right graphics into footerGraphics using the same pattern.

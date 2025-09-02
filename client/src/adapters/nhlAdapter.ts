@@ -1,3 +1,4 @@
+import React from 'react';
 import type { AlertUI } from './types';
 
 export function nhlAdapter(alert: any): AlertUI {

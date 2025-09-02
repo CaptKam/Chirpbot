@@ -1,3 +1,4 @@
+import React from 'react';
 import type { AlertUI } from './types';
 
 export function nflAdapter(alert:any): AlertUI {
