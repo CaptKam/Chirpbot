@@ -257,60 +257,75 @@ export default function Settings() {
             ) : (
               <div className="space-y-6">
                 {ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] ? (
-                  Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).map(([category, alerts]) => (
-                    <div key={category} className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        {getCategoryIcon(category)}
-                        <h3 className="text-md font-bold text-slate-100 uppercase tracking-wide">
-                          {category}
-                        </h3>
-                      </div>
-                      <div className="space-y-3 ml-6">
-                        {alerts.map((alert) => {
-                          const isEnabled = preferenceMap.get(alert.key) ?? true; // Default to enabled
-                          return (
-                            <div 
-                              key={alert.key} 
-                              className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
-                            >
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="text-sm font-semibold text-slate-100">
-                                    {alert.label}
-                                  </h4>
-                                  {updateAlertPreferenceMutation.isPending && (
-                                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                                  )}
+                  Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).map(([category, alerts]) => {
+                    // Filter alerts to only show those that exist in the API response (i.e., globally enabled)
+                    const enabledAlerts = alerts.filter(alert => preferenceMap.has(alert.key));
+                    
+                    // Only show category if it has enabled alerts
+                    if (enabledAlerts.length === 0) return null;
+                    
+                    return (
+                      <div key={category} className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          {getCategoryIcon(category)}
+                          <h3 className="text-md font-bold text-slate-100 uppercase tracking-wide">
+                            {category}
+                          </h3>
+                        </div>
+                        <div className="space-y-3 ml-6">
+                          {enabledAlerts.map((alert) => {
+                            const isEnabled = preferenceMap.get(alert.key) ?? false; // Use API data only
+                            return (
+                              <div 
+                                key={alert.key} 
+                                className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2">
+                                    <h4 className="text-sm font-semibold text-slate-100">
+                                      {alert.label}
+                                    </h4>
+                                    {updateAlertPreferenceMutation.isPending && (
+                                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    {alert.description}
+                                  </p>
                                 </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {alert.description}
-                                </p>
+                                <Switch
+                                  checked={isEnabled}
+                                  onCheckedChange={(enabled) => handleAlertToggle(alert.key, enabled)}
+                                  disabled={updateAlertPreferenceMutation.isPending}
+                                  data-testid={`toggle-${alert.key.toLowerCase()}`}
+                                  className="data-[state=checked]:bg-emerald-500"
+                                />
                               </div>
-                              <Switch
-                                checked={isEnabled}
-                                onCheckedChange={(enabled) => handleAlertToggle(alert.key, enabled)}
-                                disabled={updateAlertPreferenceMutation.isPending}
-                                data-testid={`toggle-${alert.key.toLowerCase()}`}
-                                className="data-[state=checked]:bg-emerald-500"
-                              />
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
+                        {Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG])
+                          .filter(([_, categoryAlerts]) => categoryAlerts.some(alert => preferenceMap.has(alert.key)))
+                          .indexOf([category, enabledAlerts]) < 
+                         Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG])
+                          .filter(([_, categoryAlerts]) => categoryAlerts.some(alert => preferenceMap.has(alert.key)))
+                          .length - 1 && (
+                          <Separator className="bg-white/10 my-4" />
+                        )}
                       </div>
-                      {Object.keys(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).indexOf(category) < 
-                       Object.keys(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).length - 1 && (
-                        <Separator className="bg-white/10 my-4" />
-                      )}
-                    </div>
-                  ))
-                ) : (
+                    );
+                  }).filter(Boolean) // Remove null categories
+                ) : null}
+                
+                {/* Show message if no alerts are available (globally disabled) */}
+                {alertPreferences && alertPreferences.length === 0 && (
                   <div className="text-center py-8">
                     <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
                     <p className="text-slate-400 text-sm">
-                      No alert types configured for {activeSport} yet.
+                      No {activeSport} alerts are currently available.
                       <br />
                       <span className="text-xs text-slate-500">
-                        Alert types will appear here as they are added to the system.
+                        Alert types may be temporarily disabled by administrators.
                       </span>
                     </p>
                   </div>
