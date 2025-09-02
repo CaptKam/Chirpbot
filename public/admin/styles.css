@@ -1264,9 +1264,9 @@ input:checked + .slider:before {
 }
 
 .status-badge.live {
-    background: linear-gradient(135deg, rgba(248, 113, 113, 0.7) 0%, rgba(248, 113, 113, 0.5) 100%) !important;
-    color: #FEE2E2 !important;
-    border-color: rgba(248, 113, 113, 0.3) !important;
+    background: linear-gradient(135deg, rgba(248, 113, 113, 0.7) 0%, rgba(239, 68, 68, 0.5) 100%);
+    color: #FEE2E2;
+    border-color: rgba(248, 113, 113, 0.3);
     animation: soft-pulse 3s infinite;
 }
 
@@ -1373,8 +1373,8 @@ input:checked + .slider:before {
 }
 
 .base.occupied {
-    background: linear-gradient(135deg, #F87171 0%, #F87171 100%) !important;
-    box-shadow: 0 0 12px rgba(248, 113, 113, 0.3) !important;
+    background: linear-gradient(135deg, #F87171 0%, #EF4444 100%);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
     animation: soft-pulse 3s infinite;
 }
 
