@@ -101,11 +101,6 @@ function RegularAppContent() {
     enabled: isAuthenticated,
   });
 
-  // Show maintenance mode if enabled
-  if (systemStatus?.maintenanceMode) {
-    return <MaintenanceMode message={systemStatus.maintenanceMessage} />;
-  }
-
   useEffect(() => {
     if (lastMessage && isAuthenticated) {
       switch (lastMessage.type) {
@@ -118,6 +113,11 @@ function RegularAppContent() {
       }
     }
   }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
+
+  // Show maintenance mode if enabled (AFTER all hooks)
+  if (systemStatus?.maintenanceMode) {
+    return <MaintenanceMode message={systemStatus.maintenanceMessage} />;
+  }
 
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>

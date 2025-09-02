@@ -381,7 +381,13 @@ export const storage = {
   async getSystemConfigValue(category: string, key: string, defaultValue: any = null) {
     const config = await this.getSystemConfiguration(category, key);
     if (!config) return defaultValue;
-    return JSON.parse(config.value as string);
+    try {
+      return JSON.parse(config.value as string);
+    } catch (jsonError) {
+      // Handle malformed JSON by treating as string
+      console.warn(`Invalid JSON for ${category}.${key}:`, config.value);
+      return config.value;
+    }
   },
 
   async bulkSetSystemConfiguration(configurations: Array<{category: string, key: string, value: any, description?: string}>, adminUserId?: string) {
