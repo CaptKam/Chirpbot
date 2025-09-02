@@ -2,7 +2,7 @@ import type { AlertUI } from '../adapters/types';
 
 export function BaseDiamond({ on1, on2, on3 }:{on1?:boolean; on2?:boolean; on3?:boolean}) {
   return (
-    <div className="relative h-6 w-6 rotate-45">
+    <div className="relative h-6 w-6 -rotate-45">
       <div className="absolute inset-0 rounded-sm border border-white/30" />
       <div className={`absolute top-0 left-1/2 -translate-x-1/2 h-2 w-2 rounded-sm ${on2?'bg-emerald-400':'border border-white/30'}`} />
       <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-2 w-2 rounded-sm ${on3?'bg-emerald-400':'border border-white/30'}`} />
