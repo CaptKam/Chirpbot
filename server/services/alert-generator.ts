@@ -577,6 +577,10 @@ export class AlertGenerator {
       const alertKey = `${game.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
       const message = `⏰ TWO MINUTE WARNING! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
       
+      console.log(`🏈 GENERATING TWO-MINUTE WARNING ALERT!`);
+      console.log(`🏈 Alert Key: ${alertKey}`);
+      console.log(`🏈 Message: ${message}`);
+      
       alertCount += await this.saveRealTimeAlert(alertKey, 'TWO_MINUTE_WARNING', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -587,6 +591,10 @@ export class AlertGenerator {
         isEndOfHalf,
         periodType
       }, 88, 'NCAAF');
+      
+      console.log(`🏈 Alert generation result: ${alertCount} alerts saved`);
+    } else {
+      console.log(`🏈 Alert conditions not met - Within2Min: ${this.isWithinTwoMinutes(timeRemaining)}, Quarter > 0: ${quarter > 0}`);
     }
 
     return alertCount;
@@ -634,17 +642,25 @@ export class AlertGenerator {
 
   private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number, sport: string = 'MLB'): Promise<number> {
     try {
-      await db.execute(sql`
+      console.log(`🏈 Saving alert with key: ${alertKey}`);
+      
+      const result = await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
                 ${type}, 'NEW', ${priority}, ${JSON.stringify({ message, context })}, NOW())
         ON CONFLICT (alert_key) DO NOTHING
+        RETURNING id
       `);
       
-      console.log(`🚨 REAL-TIME ALERT: ${message}`);
-      return 1;
+      if (result.rowCount && result.rowCount > 0) {
+        console.log(`🚨 REAL-TIME ALERT: ${message}`);
+        return 1;
+      } else {
+        console.log(`🏈 Alert already exists with key: ${alertKey}`);
+        return 0;
+      }
     } catch (error) {
-      // Ignore conflicts (already exists)
+      console.log(`🏈 Alert save error: ${error}`);
       return 0;
     }
   }
