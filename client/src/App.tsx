@@ -18,6 +18,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import { Wrench, Clock } from "lucide-react";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -61,17 +62,49 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
   return <Component />;
 }
 
+function MaintenanceMode({ message }: { message: string }) {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
+      <div className="text-center max-w-md mx-auto px-6">
+        <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Wrench className="w-12 h-12 text-yellow-500" />
+        </div>
+        <h1 className="text-2xl font-bold mb-4">System Under Maintenance</h1>
+        <p className="text-slate-300 mb-6 leading-relaxed">
+          {message || "We're currently performing scheduled maintenance to improve your experience. Please check back in a few minutes."}
+        </p>
+        <div className="flex items-center justify-center text-slate-400 text-sm">
+          <Clock className="w-4 h-4 mr-2" />
+          <span>We'll be back shortly</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RegularAppContent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const { lastMessage } = useWebSocket();
 
+  // Check system status for maintenance mode
+  const { data: systemStatus } = useQuery({
+    queryKey: ['/api/system-status'],
+    refetchInterval: 30000, // Check every 30 seconds
+    staleTime: 25000,
+  });
+
   // Get settings to check if push notifications are enabled
   const { data: settings } = useQuery({
     queryKey: ['/api/settings'],
     enabled: isAuthenticated,
   });
+
+  // Show maintenance mode if enabled
+  if (systemStatus?.maintenanceMode) {
+    return <MaintenanceMode message={systemStatus.maintenanceMessage} />;
+  }
 
   useEffect(() => {
     if (lastMessage && isAuthenticated) {
