@@ -608,72 +608,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // External simulation data test endpoint
-  app.post('/api/test-simulation', async (req, res) => {
+  // Test NCAAF two-minute warning logic
+  app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
     try {
       const { AlertGenerator } = await import('./services/alert-generator');
       const generator = new AlertGenerator();
       
-      const gameData = req.body;
-      console.log('🎮 Received simulation data:', JSON.stringify(gameData, null, 2));
+      const testTime = req.params.time;
       
-      // Validate required fields
-      if (!gameData.gameId || !gameData.sport) {
-        return res.status(400).json({ error: 'gameId and sport are required' });
-      }
+      // Test the two-minute detection logic
+      const isWithin2Min = (generator as any).isWithinTwoMinutes(testTime);
       
-      let alertsGenerated = 0;
-      const alertResults = [];
-      
-      // Process different sport types
-      if (gameData.sport === 'MLB' || gameData.sport === 'mlb') {
-        alertsGenerated = await generator.generateMLBLiveAlerts(gameData);
-        alertResults.push(`Generated ${alertsGenerated} MLB alerts`);
-      } else if (gameData.sport === 'NCAAF' || gameData.sport === 'ncaaf') {
-        alertsGenerated = await generator.generateNCAAFLiveAlerts(gameData);
-        alertResults.push(`Generated ${alertsGenerated} NCAAF alerts`);
-      }
-      
-      // Test specific scenarios based on data
-      if (gameData.timeRemaining && gameData.quarter) {
-        const isWithin2Min = (generator as any).isWithinTwoMinutes(gameData.timeRemaining);
-        alertResults.push(`Two-minute check: ${gameData.timeRemaining} = ${isWithin2Min}`);
-      }
+      // Create mock game data
+      const mockGame = {
+        gameId: 'test-game',
+        awayTeam: 'Test Team A',
+        homeTeam: 'Test Team B',
+        awayScore: 14,
+        homeScore: 21,
+        timeRemaining: testTime,
+        quarter: 4,
+        status: 'live',
+        isLive: true
+      };
       
       res.json({
-        success: true,
-        alertsGenerated,
-        gameData: {
-          id: gameData.gameId,
-          sport: gameData.sport,
-          status: gameData.status || 'test',
-          teams: `${gameData.awayTeam || 'Away'} vs ${gameData.homeTeam || 'Home'}`,
-          score: `${gameData.awayScore || 0}-${gameData.homeScore || 0}`
-        },
-        results: alertResults,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error: any) {
-      console.error('🚨 Simulation test error:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Get recent simulation test results
-  app.get('/api/test-simulation/results', async (req, res) => {
-    try {
-      // Get recent test alerts
-      const recentAlerts = await db.execute(sql`
-        SELECT id, alert_key, sport, game_id, type, payload, created_at
-        FROM alerts 
-        WHERE game_id LIKE 'test-%' OR alert_key LIKE '%test%'
-        ORDER BY created_at DESC 
-        LIMIT 20
-      `);
-      
-      res.json({
-        testAlerts: recentAlerts.rows,
-        count: recentAlerts.rows.length
+        inputTime: testTime,
+        isWithinTwoMinutes: isWithin2Min,
+        mockGame,
+        testResults: {
+          '1:30': (generator as any).isWithinTwoMinutes('1:30'),
+          '2:30': (generator as any).isWithinTwoMinutes('2:30'),
+          '0:45': (generator as any).isWithinTwoMinutes('0:45'),
+          '3:00': (generator as any).isWithinTwoMinutes('3:00')
+        }
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
