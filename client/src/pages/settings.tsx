@@ -88,7 +88,7 @@ export default function Settings() {
 
   // Create a map of current preferences for easy lookup
   const preferenceMap = new Map();
-  if (alertPreferences && Array.isArray(alertPreferences)) {
+  if (alertPreferences) {
     alertPreferences.forEach((pref: any) => {
       preferenceMap.set(pref.alertType, pref.enabled);
     });
