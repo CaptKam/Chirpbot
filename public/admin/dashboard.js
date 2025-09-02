@@ -1335,7 +1335,11 @@ function switchSport(sport) {
 }
 
 function refreshLiveGames() {
-    loadLiveGames();
+    if (isAutoRefreshEnabled) {
+        updateLiveGamesSmooth();
+    } else {
+        loadLiveGames();
+    }
 }
 
 function toggleAutoRefresh() {
@@ -1352,7 +1356,7 @@ function toggleAutoRefresh() {
     } else {
         // Enable auto-refresh
         autoRefreshInterval = setInterval(() => {
-            loadLiveGames();
+            updateLiveGamesSmooth();
         }, 15000); // Refresh every 15 seconds
         
         isAutoRefreshEnabled = true;
@@ -1360,4 +1364,174 @@ function toggleAutoRefresh() {
         btn.classList.add('active');
         indicator.style.display = 'flex';
     }
+}
+
+// Smooth update function that only updates changed cards
+async function updateLiveGamesSmooth() {
+    try {
+        // Fetch both today's games and detailed live data
+        const [scheduleResponse, liveResponse] = await Promise.all([
+            fetch('/api/games/today?sport=MLB'),
+            fetch('/api/games/live-detailed?sport=MLB')
+        ]);
+        
+        if (!scheduleResponse.ok) {
+            throw new Error('Failed to load today\'s schedule');
+        }
+        
+        const scheduleData = await scheduleResponse.json();
+        const liveData = liveResponse.ok ? await liveResponse.json() : { liveGames: [] };
+        
+        // Merge schedule with live data
+        const allGames = scheduleData.games || [];
+        const liveGamesMap = new Map();
+        
+        // Create a map of live game details
+        (liveData.liveGames || []).forEach(liveGame => {
+            liveGamesMap.set(liveGame.gameId, liveGame);
+        });
+        
+        // Enhance all games with live data where available
+        const newLiveGamesData = allGames.map(game => {
+            const liveDetails = liveGamesMap.get(game.gameId);
+            if (liveDetails) {
+                return { ...game, ...liveDetails };
+            }
+            return game;
+        });
+        
+        // Update only changed cards
+        updateChangedCards(newLiveGamesData);
+        
+        // Update the global data
+        liveGamesData = newLiveGamesData;
+        
+    } catch (error) {
+        console.error('Error updating live games:', error);
+        // Fallback to full reload on error
+        loadLiveGames();
+    }
+}
+
+function updateChangedCards(newData) {
+    const container = document.getElementById('liveGamesContainer');
+    if (!container) return;
+    
+    // If container is empty or has error content, do full reload
+    if (container.innerHTML.includes('loading') || container.innerHTML.includes('Error') || !liveGamesData.length) {
+        liveGamesData = newData;
+        renderLiveGames();
+        return;
+    }
+    
+    // Create a map of existing cards
+    const existingCards = new Map();
+    container.querySelectorAll('.game-card-modern').forEach(card => {
+        const gameId = card.dataset.gameId;
+        if (gameId) {
+            existingCards.set(gameId, card);
+        }
+    });
+    
+    // Sort and group new data (same logic as renderLiveGames)
+    const sortedGames = [...newData].sort((a, b) => {
+        const statusOrder = { 'live': 0, 'scheduled': 1, 'final': 2, 'delayed': 1 };
+        return (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
+    });
+    
+    const liveGames = sortedGames.filter(game => game.status === 'live');
+    const scheduledGames = sortedGames.filter(game => game.status === 'scheduled');
+    const completedGames = sortedGames.filter(game => game.status === 'final');
+    const delayedGames = sortedGames.filter(game => game.status === 'delayed');
+    
+    // Update each section
+    updateGameSection(container, 'live', liveGames, existingCards);
+    updateGameSection(container, 'scheduled', scheduledGames, existingCards);
+    updateGameSection(container, 'delayed', delayedGames, existingCards);
+    updateGameSection(container, 'completed', completedGames, existingCards);
+}
+
+function updateGameSection(container, sectionType, games, existingCards) {
+    if (games.length === 0) return;
+    
+    // Find or create section header
+    let sectionHeader = container.querySelector(`.games-section-header.${sectionType}`);
+    
+    // Update or create section
+    const sectionHTML = createSectionHTML(sectionType, games);
+    
+    if (sectionHeader) {
+        // Update existing section
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = sectionHTML;
+        
+        // Update header count
+        const newHeader = tempDiv.querySelector('.games-section-header');
+        sectionHeader.innerHTML = newHeader.innerHTML;
+        
+        // Update cards after this header
+        let currentElement = sectionHeader.nextElementSibling;
+        const newCards = tempDiv.querySelectorAll('.game-card-modern');
+        
+        newCards.forEach((newCard, index) => {
+            if (currentElement && currentElement.classList.contains('game-card-modern')) {
+                // Update existing card
+                if (currentElement.innerHTML !== newCard.innerHTML) {
+                    currentElement.outerHTML = newCard.outerHTML;
+                }
+                currentElement = currentElement.nextElementSibling;
+            } else {
+                // Insert new card
+                sectionHeader.insertAdjacentHTML('afterend', newCard.outerHTML);
+            }
+        });
+        
+        // Remove extra cards if any
+        while (currentElement && currentElement.classList.contains('game-card-modern') && 
+               !currentElement.classList.contains('games-section-header')) {
+            const next = currentElement.nextElementSibling;
+            currentElement.remove();
+            currentElement = next;
+        }
+    } else {
+        // Add new section
+        container.insertAdjacentHTML('beforeend', sectionHTML);
+    }
+}
+
+function createSectionHTML(sectionType, games) {
+    let iconClass = '';
+    let headerText = '';
+    
+    switch(sectionType) {
+        case 'live':
+            iconClass = 'fas fa-circle';
+            headerText = `Live Games (${games.length})`;
+            break;
+        case 'scheduled':
+            iconClass = 'fas fa-clock';
+            headerText = `Scheduled Games (${games.length})`;
+            break;
+        case 'delayed':
+            iconClass = 'fas fa-pause';
+            headerText = `Delayed Games (${games.length})`;
+            break;
+        case 'completed':
+            iconClass = 'fas fa-check';
+            headerText = `Completed Games (${games.length})`;
+            break;
+    }
+    
+    const headerHTML = `<div class="games-section-header ${sectionType}">
+        <i class="${iconClass}"></i>
+        ${headerText}
+    </div>`;
+    
+    const cardsHTML = games.map(game => {
+        const cardHTML = createGameCard(game);
+        // Add game ID to card for tracking
+        return cardHTML.replace('<div class="game-card-modern', `<div class="game-card-modern" data-game-id="${game.gameId}"`);
+    }).join('');
+    
+    return headerHTML + cardsHTML;
 }
