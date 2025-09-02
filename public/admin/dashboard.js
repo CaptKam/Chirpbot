@@ -1220,6 +1220,8 @@ function renderLiveGames() {
 function createGameCard(game) {
     const runners = game.runners || { first: false, second: false, third: false };
     const hasRunners = runners.first || runners.second || runners.third;
+    const weather = game.weather || {};
+    const currentBatter = game.currentBatter || { name: 'Unknown' };
     
     // Format inning display
     let inningDisplay = 'Scheduled';
@@ -1278,6 +1280,24 @@ function createGameCard(game) {
                     <div class="runners-label">Runners:</div>
                     <div class="runners-badges">
                         ${runnersBadges.map(base => `<span class="runner-badge">${base}</span>`).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${game.status === 'live' && currentBatter.name && currentBatter.name !== 'Unknown' ? `
+                <div class="batter-section">
+                    <div class="batter-label">At Bat:</div>
+                    <div class="batter-name">${currentBatter.name}</div>
+                </div>
+            ` : ''}
+            
+            ${game.status === 'live' && (weather.temp || weather.condition) ? `
+                <div class="weather-section">
+                    <div class="weather-icon">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <div class="weather-info">
+                        ${formatWeather(weather)}
                     </div>
                 </div>
             ` : ''}
