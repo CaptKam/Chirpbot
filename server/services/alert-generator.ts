@@ -197,20 +197,26 @@ export class AlertGenerator {
         return;
       }
 
-      console.log(`🔍 Monitoring ${totalLiveGames} live games for alerts`);
+      console.log(`🔍 Monitoring ${liveMLBGames.length} MLB + ${liveNCAAFGames.length} NCAAF live games for alerts`);
       
       let newAlerts = 0;
       
       // Process MLB games
-      for (const game of liveMLBGames) {
-        const count = await this.generateLiveAlertsForGame(game);
-        newAlerts += count;
+      if (liveMLBGames.length > 0) {
+        console.log(`⚾ Processing ${liveMLBGames.length} live MLB games`);
+        for (const game of liveMLBGames) {
+          const count = await this.generateLiveAlertsForGame(game);
+          newAlerts += count;
+        }
       }
       
-      // Process NCAAF games
-      for (const game of liveNCAAFGames) {
-        const count = await this.generateNCAAFLiveAlerts(game);
-        newAlerts += count;
+      // Process NCAAF games  
+      if (liveNCAAFGames.length > 0) {
+        console.log(`🏈 Processing ${liveNCAAFGames.length} live NCAAF games`);
+        for (const game of liveNCAAFGames) {
+          const count = await this.generateNCAAFLiveAlerts(game);
+          newAlerts += count;
+        }
       }
       
       if (newAlerts > 0) {
