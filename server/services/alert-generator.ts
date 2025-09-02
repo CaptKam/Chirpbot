@@ -192,8 +192,15 @@ export class AlertGenerator {
   // Method to generate alerts for live games (when they're happening)
   async generateLiveGameAlerts(): Promise<void> {
     try {
-      const games = await this.mlbApi.getTodaysGames(); // Assuming this also fetches NCAAF games if supported by API
-      const liveGames = games.filter(game => game.isLive);
+      // Fetch both MLB and NCAAF games
+      const mlbGames = await this.mlbApi.getTodaysGames();
+      const { NCAAFApiService } = await import('./ncaaf-api');
+      const ncaafApi = new NCAAFApiService();
+      const ncaafGames = await ncaafApi.getTodaysGames();
+      
+      // Combine all games and filter for live ones
+      const allGames = [...mlbGames, ...ncaafGames];
+      const liveGames = allGames.filter(game => game.isLive);
 
       if (liveGames.length === 0) {
         console.log('🔍 No live games to monitor for alerts');

@@ -3,7 +3,9 @@ export class MLBApiService {
 
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      const targetDate = date || new Date().toISOString().split('T')[0];
+      // Get date in Eastern Time (MLB's timezone) to ensure we get the correct games
+      const easternDate = new Date().toLocaleString("en-CA", {timeZone: "America/New_York"}).split(" ")[0];
+      const targetDate = date || easternDate;
       const url = `${this.baseUrl}/schedule?sportId=1&date=${targetDate}&hydrate=team,linescore,venue,game(content(summary))`;
       
       const response = await fetch(url);
@@ -30,7 +32,9 @@ export class MLBApiService {
         venue: game.venue.name,
         inning: game.linescore?.currentInning || null,
         inningState: game.linescore?.inningState || null,
-        isLive: game.status.abstractGameState === 'Live'
+        isLive: game.status.abstractGameState?.toLowerCase() === 'live' || 
+                game.status.detailedState?.toLowerCase().includes('progress') ||
+                game.status.detailedState?.toLowerCase().includes('inning')
       }));
     } catch (error) {
       console.error('Error fetching MLB games:', error);

@@ -1,7 +1,9 @@
 export class NCAAFApiService {
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
-      const targetDate = date || new Date().toISOString().split('T')[0];
+      // Get date in Eastern Time (US sports timezone) to ensure we get the correct games
+      const easternDate = new Date().toLocaleString("en-CA", {timeZone: "America/New_York"}).split(" ")[0];
+      const targetDate = date || easternDate;
       const formattedDate = targetDate.replace(/-/g, '');
       
       // ESPN public API for NCAAF scores
