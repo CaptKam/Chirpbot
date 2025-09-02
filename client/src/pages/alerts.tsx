@@ -198,6 +198,8 @@ export default function AlertsPage() {
                       hasFirst={!!(alert.context?.hasFirst || alert.hasFirst)}
                       hasSecond={!!(alert.context?.hasSecond || alert.hasSecond)}
                       hasThird={!!(alert.context?.hasThird || alert.hasThird)}
+                      // Weather data
+                      weather={alert.context?.weather || alert.weather}
                       // Other sports specific
                       quarter={alert.context?.quarter}
                       timeRemaining={alert.context?.timeRemaining}

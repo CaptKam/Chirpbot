@@ -12,6 +12,13 @@ interface AlertFooterProps {
   hasFirst?: boolean;
   hasSecond?: boolean;
   hasThird?: boolean;
+  // Weather data
+  weather?: {
+    temperature?: number;
+    condition?: string;
+    windDescription?: string;
+    homeRunFactor?: number;
+  };
   // NFL/CFL/NCAAF specific
   quarter?: number;
   timeRemaining?: string;
@@ -34,6 +41,7 @@ export default function AlertFooter({
   hasFirst = false,
   hasSecond = false,
   hasThird = false,
+  weather,
   quarter,
   timeRemaining,
   down,
@@ -75,6 +83,20 @@ export default function AlertFooter({
                 {balls}-{strikes}, {outs} {outs === 1 ? 'out' : 'outs'}
               </span>
             </div>
+
+            {/* Weather Display for MLB */}
+            {weather && weather.temperature && (
+              <div className="flex items-center space-x-1">
+                <span className="text-cyan-400 text-xs">
+                  🌤️ {weather.temperature}°F
+                </span>
+                {weather.windDescription && (
+                  <span className="text-slate-400 text-xs">
+                    {weather.windDescription}
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Baseball Diamond */}
             <div className="relative w-6 h-6 flex-shrink-0">

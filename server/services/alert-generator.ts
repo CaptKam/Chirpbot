@@ -335,7 +335,12 @@ export class AlertGenerator {
       const positions = [];
       if (hasSecond) positions.push('2nd');
       if (hasThird) positions.push('3rd');
-      const message = `⚾ RUNNER IN SCORING POSITION! ${game.awayTeam} vs ${game.homeTeam} - ${positions.join(' & ')} base, ${outs} outs`;
+      // Get weather data for enhanced context
+      const weather = await weatherService.getWeatherForTeam(game.homeTeam);
+      const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
+      const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+      
+      const message = `⚾ RUNNER IN SCORING POSITION! ${game.awayTeam} vs ${game.homeTeam} - ${positions.join(' & ')} base, ${outs} outs. ${weather.temperature}°F, ${windDesc}`;
       
       alertCount += await this.saveRealTimeAlert(alertKey, 'RISP', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -348,7 +353,13 @@ export class AlertGenerator {
         hasFirst: hasFirst && !hasSecond, // Only first if not also second
         hasSecond,
         hasThird,
-        situation: 'runner_in_scoring_position'
+        situation: 'runner_in_scoring_position',
+        weather: {
+          temperature: weather.temperature,
+          condition: weather.condition,
+          windDescription: windDesc,
+          homeRunFactor: homeRunFactor
+        }
       }, 85);
     }
 
@@ -372,7 +383,11 @@ export class AlertGenerator {
     if (inning >= 8 && scoreDiff <= 2) {
       const alertKey = `${game.gameId}_LATE_PRESSURE_${inning}`;
       const situation = isTopInning ? 'top' : 'bottom';
-      const message = `🔥 LATE INNING PRESSURE! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - ${situation} ${inning}th`;
+      // Get weather data for late inning context
+      const weather = await weatherService.getWeatherForTeam(game.homeTeam);
+      const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+      
+      const message = `🔥 LATE INNING PRESSURE! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - ${situation} ${inning}th. ${weather.temperature}°F, ${windDesc}`;
       
       alertCount += await this.saveRealTimeAlert(alertKey, 'LATE_PRESSURE', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -384,7 +399,13 @@ export class AlertGenerator {
         outs,
         balls,
         strikes,
-        scoreDiff
+        scoreDiff,
+        weather: {
+          temperature: weather.temperature,
+          condition: weather.condition,
+          windDescription: windDesc,
+          homeRunFactor: weatherService.calculateHomeRunFactor(weather)
+        }
       }, 92);
     }
 
