@@ -1219,104 +1219,75 @@ function renderLiveGames() {
 
 function createGameCard(game) {
     const runners = game.runners || { first: false, second: false, third: false };
-    const weather = game.weather || {};
-    const currentBatter = game.currentBatter || { name: 'Loading...' };
-    const currentPitcher = game.currentPitcher || { name: 'Loading...' };
+    const hasRunners = runners.first || runners.second || runners.third;
     
     // Format inning display
     let inningDisplay = 'Scheduled';
+    let gameTime = '';
+    
     if (game.status === 'live') {
         inningDisplay = game.inning && game.inningState ? 
-            `${game.inningState} ${game.inning}${getInningOrdinal(game.inning)}` : 'In Progress';
+            `${game.inningState.charAt(0)}${game.inning}` : 'LIVE';
     } else if (game.status === 'final') {
-        inningDisplay = 'Final';
+        inningDisplay = 'FINAL';
     } else if (game.status === 'delayed') {
-        inningDisplay = 'Delayed';
+        inningDisplay = 'DELAYED';
     } else if (game.gameDate) {
-        // Format scheduled time
-        const gameTime = new Date(game.gameDate);
-        inningDisplay = gameTime.toLocaleTimeString('en-US', { 
+        const gameTimeObj = new Date(game.gameDate);
+        gameTime = gameTimeObj.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
             minute: '2-digit',
             timeZone: 'America/Los_Angeles' 
-        }) + ' PT';
+        });
+        inningDisplay = gameTime;
     }
     
+    // Create runners summary
+    const runnersBadges = [];
+    if (runners.first) runnersBadges.push('1B');
+    if (runners.second) runnersBadges.push('2B');
+    if (runners.third) runnersBadges.push('3B');
+    
     return `
-        <div class="game-card ${game.isLive || game.status === 'live' ? 'live' : ''}">
-            <div class="game-header">
-                <div class="game-teams">
-                    <div class="team-info">
-                        <span class="team-name">${game.awayTeam}</span>
-                        <span class="team-score">${game.awayScore || 0}</span>
-                    </div>
-                    <div class="team-info">
-                        <span class="team-name">${game.homeTeam}</span>
-                        <span class="team-score">${game.homeScore || 0}</span>
-                    </div>
+        <div class="game-card-modern ${game.isLive || game.status === 'live' ? 'live' : game.status}">
+            <div class="card-header">
+                <div class="status-indicator ${game.status}">
+                    ${game.status === 'live' ? '<i class="fas fa-circle"></i>' : ''}
+                    ${inningDisplay}
                 </div>
-                <div class="game-status">
-                    <div class="status-badge ${game.status}">${game.status.toUpperCase()}</div>
-                    <div class="game-inning">${inningDisplay}</div>
-                    ${game.venue ? `<div class="venue-name">${game.venue}</div>` : ''}
+                ${game.status === 'live' && (game.balls !== undefined || game.strikes !== undefined || game.outs !== undefined) ? `
+                    <div class="count-summary">
+                        ${game.balls || 0}-${game.strikes || 0}, ${game.outs || 0} out${(game.outs || 0) !== 1 ? 's' : ''}
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="teams-section">
+                <div class="team-row away">
+                    <span class="team-name">${game.awayTeam}</span>
+                    <span class="team-score">${game.awayScore || 0}</span>
+                </div>
+                <div class="team-row home">
+                    <span class="team-name">${game.homeTeam}</span>
+                    <span class="team-score">${game.homeScore || 0}</span>
                 </div>
             </div>
             
-            <div class="game-body">
-                <div class="game-details">
-                    ${game.status === 'live' ? `
-                        <div class="count-display">
-                            <div class="count-item">
-                                <div class="count-label">Balls</div>
-                                <div class="count-value balls">${game.balls || 0}</div>
-                            </div>
-                            <div class="count-item">
-                                <div class="count-label">Strikes</div>
-                                <div class="count-value strikes">${game.strikes || 0}</div>
-                            </div>
-                            <div class="count-item">
-                                <div class="count-label">Outs</div>
-                                <div class="count-value outs">${game.outs || 0}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="batter-info">
-                            <div class="batter-current">
-                                <span class="batter-label">Batter:</span>
-                                <span class="batter-name">${currentBatter.name}</span>
-                            </div>
-                            <div class="batter-current">
-                                <span class="batter-label">Pitcher:</span>
-                                <span class="batter-name">${currentPitcher.name}</span>
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="game-info">
-                            <div class="info-item">
-                                <span class="info-label">Venue:</span>
-                                <span class="info-value">${game.venue || 'TBD'}</span>
-                            </div>
-                            ${game.status === 'scheduled' ? `
-                                <div class="info-item">
-                                    <span class="info-label">Start Time:</span>
-                                    <span class="info-value">${inningDisplay}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `}
-                    
-                    ${weather.temp || weather.condition ? `
-                        <div class="weather-info">
-                            <i class="fas fa-cloud weather-icon"></i>
-                            <span>${formatWeather(weather)}</span>
-                        </div>
-                    ` : ''}
+            ${game.status === 'live' && hasRunners ? `
+                <div class="runners-section">
+                    <div class="runners-label">Runners:</div>
+                    <div class="runners-badges">
+                        ${runnersBadges.map(base => `<span class="runner-badge">${base}</span>`).join('')}
+                    </div>
                 </div>
-                
-                <div class="baseball-diamond">
-                    ${createBaseballDiamond(runners)}
+            ` : ''}
+            
+            ${game.venue && game.status !== 'live' ? `
+                <div class="venue-section">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>${game.venue}</span>
                 </div>
-            </div>
+            ` : ''}
         </div>
     `;
 }

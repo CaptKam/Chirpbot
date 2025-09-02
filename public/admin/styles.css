@@ -1173,10 +1173,42 @@ input:checked + .slider:before {
 
 .live-games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
     margin-bottom: 2rem;
-    min-height: 400px;
+    min-height: 200px;
+}
+
+.game-card-modern {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.game-card-modern:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.game-card-modern.live {
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.1);
+}
+
+.game-card-modern.live::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #EF4444, #F87171, #EF4444);
+    animation: live-pulse 3s infinite;
 }
 
 .game-card {
@@ -1604,4 +1636,141 @@ input:checked + .slider:before {
     font-size: 0.75rem;
     color: #94A3B8;
     font-weight: 500;
+}
+
+/* Modern Card Header */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-indicator.live {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #FEF2F2;
+}
+
+.status-indicator.live i {
+    color: #EF4444;
+    animation: live-pulse 2s infinite;
+}
+
+.status-indicator.scheduled {
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #EFF6FF;
+}
+
+.status-indicator.final {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: #F0FDF4;
+}
+
+.status-indicator.delayed {
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: #FFFBEB;
+}
+
+.count-summary {
+    font-size: 0.85rem;
+    color: #94A3B8;
+    font-weight: 600;
+    padding: 0.3rem 0.6rem;
+    background: rgba(71, 85, 105, 0.3);
+    border-radius: 0.4rem;
+}
+
+/* Modern Teams Section */
+.teams-section {
+    margin-bottom: 1rem;
+}
+
+.team-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.team-row:not(:last-child) {
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.team-row .team-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #F8FAFC;
+}
+
+.team-row .team-score {
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: #3B82F6;
+    min-width: 2rem;
+    text-align: center;
+}
+
+/* Modern Runners Section */
+.runners-section {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(71, 85, 105, 0.2);
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.runners-label {
+    font-size: 0.8rem;
+    color: #94A3B8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.runners-badges {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.runner-badge {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    animation: runner-pulse 2s infinite;
+}
+
+/* Modern Venue Section */
+.venue-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: #94A3B8;
+    margin-top: 0.5rem;
+}
+
+.venue-section i {
+    color: #64748B;
 }
