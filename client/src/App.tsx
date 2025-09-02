@@ -15,10 +15,10 @@ import Login from "./pages/login";
 import Alerts from "./pages/alerts";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Wrench, Clock } from "lucide-react";
+import { Wrench, Clock, Bell, X } from "lucide-react";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -62,6 +62,30 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
   return <Component />;
 }
 
+function SystemAnnouncement({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  return (
+    <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 mx-4 mt-4 rounded-lg p-4">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start space-x-3 flex-1">
+          <div className="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Bell className="w-4 h-4 text-blue-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-slate-100 text-sm mb-1">System Announcement</h3>
+            <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
+          </div>
+        </div>
+        <button 
+          onClick={onDismiss}
+          className="text-slate-400 hover:text-slate-200 ml-2 flex-shrink-0"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MaintenanceMode({ message }: { message: string }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
@@ -87,6 +111,7 @@ function RegularAppContent() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const { lastMessage } = useWebSocket();
+  const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
 
   // Check system status for maintenance mode
   const { data: systemStatus } = useQuery({
@@ -114,6 +139,11 @@ function RegularAppContent() {
     }
   }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
 
+  // Reset dismissed state when announcement changes
+  useEffect(() => {
+    setDismissedAnnouncement(false);
+  }, [systemStatus?.systemAnnouncement]);
+
   // Show maintenance mode if enabled (AFTER all hooks)
   if (systemStatus?.maintenanceMode) {
     return <MaintenanceMode message={systemStatus.maintenanceMessage} />;
@@ -121,6 +151,14 @@ function RegularAppContent() {
 
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
+      {/* System Announcement Banner */}
+      {systemStatus?.systemAnnouncement && !dismissedAnnouncement && (
+        <SystemAnnouncement 
+          message={systemStatus.systemAnnouncement} 
+          onDismiss={() => setDismissedAnnouncement(true)}
+        />
+      )}
+      
       <Switch>
         <Route path="/" component={() => <PublicRoute component={Landing} />} />
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
