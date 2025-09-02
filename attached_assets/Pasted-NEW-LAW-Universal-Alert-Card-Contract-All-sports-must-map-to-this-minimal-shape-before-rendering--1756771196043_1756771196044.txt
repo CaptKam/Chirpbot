@@ -1,0 +1,293 @@
+NEW LAW — Universal Alert Card Contract
+
+All sports must map to this minimal shape before rendering:
+
+// 1) Universal UI shape (tiny & future-proof)
+export type AlertUI = {
+  sport: string;                       // "MLB" | "NBA" | "NFL" | "NHL" | ...
+  matchup: string;                     // "Away @ Home"
+  score?: string;                      // "3–2" (optional)
+  typeLabel: string;                   // "RISP", "POWER PLAY", "RED ZONE", etc.
+  confidence?: number;                 // 0–100
+  message: string;                     // one-liner, ≤80 chars
+
+  // Quick-glance visuals (all optional, render if present)
+  bases?: { on1?: boolean; on2?: boolean; on3?: boolean };  // MLB only
+  pips?: { label: string; filled: number; total: number }[]; // e.g. Balls/Strikes/Outs OR Fouls/TOs
+
+  // Who’s involved (optional)
+  people?: { label: string; value: string }[]; // e.g. Batter, On-Deck, Pitcher | Shooter, QB, etc.
+
+  // Footer chips (universal)
+  chips?: string[];                    // e.g. ["Top 7th", "⏱ 02:18", "Wind ↑ 12 mph", "Red Zone"]
+
+  // Timestamp
+  createdAtISO: string;
+};
+
+2) Per-sport adapters (tiny functions)
+
+Each adapter takes your raw Alert (whatever per-sport fields you have) and returns AlertUI. Start with MLB and add more when ready.
+
+MLB adapter (uses runners + count pips + batter/ondeck)
+// adapters/mlbAdapter.ts
+import type { AlertUI } from './types';
+
+export function mlbAdapter(alert: any): AlertUI {
+  const matchup = `${alert.awayTeam} @ ${alert.homeTeam}`;
+  const score = (alert.awayScore!=null && alert.homeScore!=null) ? `${alert.awayScore}–${alert.homeScore}` : undefined;
+
+  const bases = (alert.hasFirst || alert.hasSecond || alert.hasThird)
+    ? { on1: !!alert.hasFirst, on2: !!alert.hasSecond, on3: !!alert.hasThird }
+    : undefined;
+
+  const pips = (alert.balls!=null || alert.strikes!=null || alert.outs!=null)
+    ? [
+        { label: 'B', filled: alert.balls ?? 0,   total: 3 },
+        { label: 'S', filled: alert.strikes ?? 0, total: 2 },
+        { label: 'O', filled: alert.outs ?? 0,    total: 2 },
+      ]
+    : undefined;
+
+  const people = [
+    alert.batterName   ? { label: 'Batter',  value: alert.batterName } : null,
+    alert.onDeckName   ? { label: 'On-Deck', value: alert.onDeckName } : null,
+    alert.pitcherName  ? { label: 'P',       value: alert.pitcherName } : null,
+  ].filter(Boolean) as {label:string; value:string}[];
+
+  const chips: string[] = [];
+  if (alert.inning!=null) chips.push(`${alert.isTopInning ? 'Top' : 'Bot'} ${alert.inning}`);
+  if (alert.clock) chips.push(`⏱ ${alert.clock}`);
+  if (alert.windMph!=null && alert.windDirDeg!=null) chips.push(`Wind ${arrow(alert.windDirDeg)} ${alert.windMph} mph`);
+  if (alert.venue) chips.push(alert.venue);
+
+  return {
+    sport: alert.sport,
+    matchup,
+    score,
+    typeLabel: (alert.type || '').replaceAll('_',' '),
+    confidence: alert.confidence,
+    message: alert.message,
+    bases,
+    pips,
+    people: people.length ? people : undefined,
+    chips,
+    createdAtISO: alert.createdAt,
+  };
+}
+
+function arrow(deg:number){ return degToArrow(Math.round(deg/45)%8); }
+function degToArrow(i:number){
+  return ['↑','↗','→','↘','↓','↙','←','↖'][i] ?? '↑';
+}
+
+NBA adapter (example: fouls/TOs as pips, shooter vs defender)
+// adapters/nbaAdapter.ts
+import type { AlertUI } from './types';
+
+export function nbaAdapter(alert: any): AlertUI {
+  const matchup = `${alert.awayTeam} @ ${alert.homeTeam}`;
+  const score = (alert.awayScore!=null && alert.homeScore!=null) ? `${alert.awayScore}–${alert.homeScore}` : undefined;
+
+  const pips = (alert.teamFouls!=null || alert.turnovers!=null)
+    ? [
+        { label: 'Fouls', filled: Math.min(alert.teamFouls ?? 0, 5), total: 5 },
+        { label: 'TO',    filled: Math.min(alert.turnovers ?? 0, 5), total: 5 },
+      ]
+    : undefined;
+
+  const people = [
+    alert.shooterName   ? { label: 'Shooter',  value: alert.shooterName } : null,
+    alert.defenderName  ? { label: 'Defender', value: alert.defenderName } : null,
+  ].filter(Boolean) as {label:string; value:string}[];
+
+  const chips: string[] = [];
+  if (alert.periodLabel) chips.push(alert.periodLabel);      // e.g., "Q4 2:18"
+  if (alert.clock) chips.push(`⏱ ${alert.clock}`);
+  if (alert.venue) chips.push(alert.venue);
+
+  return {
+    sport: alert.sport,
+    matchup,
+    score,
+    typeLabel: (alert.type || '').replaceAll('_',' '),
+    confidence: alert.confidence,
+    message: alert.message,
+    pips,
+    people: people.length ? people : undefined,
+    chips,
+    createdAtISO: alert.createdAt,
+  };
+}
+
+NFL adapter (example: red zone + downs/yards as pips)
+// adapters/nflAdapter.ts
+import type { AlertUI } from './types';
+
+export function nflAdapter(alert:any): AlertUI {
+  const matchup = `${alert.awayTeam} @ ${alert.homeTeam}`;
+  const score = (alert.awayScore!=null && alert.homeScore!=null) ? `${alert.awayScore}–${alert.homeScore}` : undefined;
+
+  const pips = (alert.down!=null)
+    ? [{ label: 'Down', filled: Math.min(alert.down ?? 0, 4), total: 4 }]
+    : undefined;
+
+  const people = [
+    alert.qbName ? { label: 'QB', value: alert.qbName } : null,
+    alert.rbName ? { label: 'RB', value: alert.rbName } : null,
+    alert.wrName ? { label: 'WR', value: alert.wrName } : null,
+  ].filter(Boolean) as {label:string; value:string}[];
+
+  const chips: string[] = [];
+  if (alert.periodLabel) chips.push(alert.periodLabel);   // "Q4 01:12"
+  if (alert.yardsToGo!=null) chips.push(`${alert.yardsToGo} to go`);
+  if (alert.redZone) chips.push('Red Zone');
+  if (alert.venue) chips.push(alert.venue);
+
+  return {
+    sport: alert.sport,
+    matchup,
+    score,
+    typeLabel: (alert.type || '').replaceAll('_',' '),
+    confidence: alert.confidence,
+    message: alert.message,
+    pips,
+    people: people.length ? people : undefined,
+    chips,
+    createdAtISO: alert.createdAt,
+  };
+}
+
+3) Adapter registry (one line per sport)
+// adapters/index.ts
+import { mlbAdapter } from './mlbAdapter';
+import { nbaAdapter } from './nbaAdapter';
+import { nflAdapter } from './nflAdapter';
+
+export const sportAdapters: Record<string,(a:any)=>AlertUI> = {
+  MLB: mlbAdapter,
+  NBA: nbaAdapter,
+  NFL: nflAdapter,
+  // NHL, NCAAF, Tennis… add later
+};
+
+export function toAlertUI(alert:any): AlertUI {
+  const fn = sportAdapters[alert.sport] || defaultAdapter;
+  return fn(alert);
+}
+
+function defaultAdapter(alert:any): AlertUI {
+  return {
+    sport: alert.sport,
+    matchup: `${alert.awayTeam ?? ''} @ ${alert.homeTeam ?? ''}`.trim(),
+    typeLabel: (alert.type || '').replaceAll('_',' '),
+    message: alert.message ?? '',
+    confidence: alert.confidence,
+    createdAtISO: alert.createdAt ?? new Date().toISOString(),
+    chips: [],
+  };
+}
+
+4) Universal card renderer (uses the normalized shape)
+
+Drop this into your alerts page with minimal change: normalize then render.
+
+// components/UniversalAlertCard.tsx
+import type { AlertUI } from '../adapters/types';
+
+export function BaseDiamond({ on1, on2, on3 }:{on1?:boolean; on2?:boolean; on3?:boolean}) {
+  return (
+    <div className="relative h-6 w-6 rotate-45">
+      <div className="absolute inset-0 rounded-sm border border-white/30" />
+      <div className={`absolute top-0 left-1/2 -translate-x-1/2 h-2 w-2 rounded-sm ${on2?'bg-emerald-400':'border border-white/30'}`} />
+      <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-2 w-2 rounded-sm ${on3?'bg-emerald-400':'border border-white/30'}`} />
+      <div className={`absolute right-0 top-1/2 -translate-y-1/2 h-2 w-2 rounded-sm ${on1?'bg-emerald-400':'border border-white/30'}`} />
+    </div>
+  );
+}
+
+function Pips({ filled, total }:{filled:number; total:number}) {
+  return (
+    <div className="flex gap-0.5">
+      {Array.from({length: total}).map((_,i)=>(
+        <span key={i} className={`h-2 w-2 rounded-full ${i<filled?'bg-emerald-400':'border border-white/30'}`} />
+      ))}
+    </div>
+  );
+}
+
+export function UniversalAlertCard({ ui }: { ui: AlertUI }) {
+  return (
+    <div className="p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
+      {/* header */}
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <span className="text-emerald-400 text-xs font-semibold">{ui.sport}</span>
+          <span className="text-slate-200 text-xs">{ui.matchup}{ui.score ? <span className="ml-2 text-slate-400">{ui.score}</span> : null}</span>
+        </div>
+        <span className="text-slate-400 text-[10px]">{new Date(ui.createdAtISO).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+      </div>
+
+      {/* type + confidence + quick visuals */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] rounded border border-emerald-500 text-emerald-400 px-1.5 py-0.5">{ui.typeLabel}</span>
+          {ui.confidence!=null && (
+            <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+              <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" />{ui.confidence}%
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {ui.bases && <BaseDiamond on1={ui.bases.on1} on2={ui.bases.on2} on3={ui.bases.on3} />}
+          {ui.pips && ui.pips.length>0 && (
+            <div className="flex items-center gap-3 text-[10px] text-slate-300">
+              {ui.pips.map((p,i)=>(
+                <span key={i} className="flex items-center gap-1">{p.label}<Pips filled={p.filled} total={p.total} /></span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* message */}
+      <h4 className="font-semibold mb-2 text-slate-100 line-clamp-2">{ui.message}</h4>
+
+      {/* people pills */}
+      {ui.people?.length ? (
+        <div className="flex flex-wrap items-center gap-2 mb-2 text-[11px]">
+          {ui.people.map((p,i)=>(
+            <span key={i} className="rounded-full bg-white/5 px-2 py-0.5 text-slate-300">{p.label}: <span className="text-slate-100">{p.value}</span></span>
+          ))}
+        </div>
+      ):null}
+
+      {/* footer chips */}
+      {ui.chips?.length ? (
+        <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-300">
+          {ui.chips.map((c,i)=>(
+            <span key={i} className="rounded-md bg-white/5 px-2 py-1">{c}</span>
+          ))}
+        </div>
+      ):null}
+    </div>
+  );
+}
+
+5) Use it in your page (two-line swap)
+
+Normalize then render—no other page logic changes.
+
+import { toAlertUI } from '../adapters';
+import { UniversalAlertCard } from '../components/UniversalAlertCard';
+
+filteredAlerts.map((alert: any, index: number) => {
+  const ui = toAlertUI(alert);
+  return (
+    <motion.div key={alert.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
+      <SwipeableCard alertId={alert.id} alertData={alert} className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors">
+        <UniversalAlertCard ui={ui} />
+      </SwipeableCard>
+    </motion.div>
+  );
+})
