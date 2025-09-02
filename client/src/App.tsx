@@ -11,6 +11,8 @@ import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
+import AdminUsers from "./pages/AdminUsers";
+import AdminLive from "./pages/AdminLive";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
@@ -93,7 +95,9 @@ function RegularAppContent() {
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route path="/admin" component={() => <ProtectedRoute component={Settings} />} />
+        <Route path="/admin" component={() => <ProtectedRoute component={AdminLive} />} />
+        <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} />} />
+        <Route path="/admin/live" component={() => <ProtectedRoute component={AdminLive} />} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}

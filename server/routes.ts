@@ -8,6 +8,7 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
+import adminRoutes from "./admin-routes";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -443,6 +444,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch user' });
     }
   });
+
+  // Admin routes (protected by role-based access control)
+  app.use('/api/admin', adminRoutes);
 
   // Telegram settings routes
   app.get('/api/user/:userId/telegram', async (req, res) => {
