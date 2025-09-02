@@ -18,6 +18,7 @@ const ALERT_TYPE_CONFIG = {
       { key: "RISP", label: "RISP (Runners in Scoring Position)", description: "Alert when runners are on 2nd or 3rd base" },
       { key: "BASES_LOADED", label: "Bases Loaded", description: "Alert when all three bases are occupied" },
       { key: "RUNNERS_1ST_2ND", label: "Runners on 1st & 2nd", description: "Prime scoring opportunity alert" },
+      { key: "RUNNER_ON_BASE", label: "Runner on Any Base", description: "Alert when any runner reaches base (1st, 2nd, or 3rd)" },
       { key: "CLOSE_GAME", label: "Close Game", description: "Games with score difference ≤ 3 runs" },
       { key: "CLOSE_GAME_LIVE", label: "Live Close Game", description: "Real-time close game situations" },
       { key: "LATE_PRESSURE", label: "Late Inning Pressure", description: "8th inning or later with close score" },

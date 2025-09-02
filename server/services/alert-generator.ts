@@ -349,6 +349,24 @@ export class AlertGenerator {
         situation: 'runner_in_scoring_position'
       }, 85);
     }
+    else if (hasFirst && !hasSecond && !hasThird) {
+      const alertKey = `${game.gameId}_RUNNER_ON_BASE_${inning}_${outs}`;
+      const message = `⚾ RUNNER ON BASE! ${game.awayTeam} vs ${game.homeTeam} - 1st base, ${outs} outs`;
+
+      alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNER_ON_BASE', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        inning,
+        outs,
+        balls,
+        strikes,
+        hasFirst,
+        hasSecond: false,
+        hasThird: false,
+        runner: offense.first?.fullName,
+        situation: 'runner_on_any_base'
+      }, 75);
+    }
 
     return alertCount;
   }

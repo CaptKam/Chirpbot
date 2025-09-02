@@ -42,6 +42,7 @@ export interface Settings {
     risp?: boolean;
     basesLoaded?: boolean;
     runnersOnBase?: boolean;
+    runnerOnBase?: boolean;
     closeGame?: boolean;
     lateInning?: boolean;
     extraInnings?: boolean;
