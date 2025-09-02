@@ -188,6 +188,8 @@ export default function AlertsPage() {
                   {/* Game situation with colored background */}
                   <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
                     <AlertFooter
+                      sport={alert.sport}
+                      // MLB specific
                       inning={alert.inning}
                       isTopInning={alert.isTopInning}
                       balls={alert.balls || 0}
@@ -196,6 +198,12 @@ export default function AlertsPage() {
                       hasFirst={!!alert.hasFirst}
                       hasSecond={!!alert.hasSecond}
                       hasThird={!!alert.hasThird}
+                      // Other sports specific
+                      quarter={alert.context?.quarter}
+                      timeRemaining={alert.context?.timeRemaining}
+                      down={alert.context?.down}
+                      yardsToGo={alert.context?.yardsToGo}
+                      period={alert.context?.period}
                       createdAt={alert.createdAt}
                     />
                   </div>
