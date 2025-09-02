@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChirpBot Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dashboard-page">
+    <header class="dashboard-header">
+        <div class="header-content">
+            <div class="header-brand">
+                <i class="fas fa-shield-alt"></i>
+                <div>
+                    <h1>ChirpBot Admin Dashboard</h1>
+                    <p>System Management & User Control</p>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <div class="admin-info">
+                    <div class="admin-avatar" id="adminAvatar">A</div>
+                    <div class="admin-details">
+                        <h3 id="adminUsername">Administrator</h3>
+                        <p>Admin Access</p>
+                    </div>
+                </div>
+                
+                <button class="logout-btn" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <nav class="dashboard-nav">
+            <button class="nav-tab active" onclick="showTab('overview')" id="overviewTab">
+                <i class="fas fa-chart-pie"></i>
+                Overview
+            </button>
+            <button class="nav-tab" onclick="showTab('users')" id="usersTab">
+                <i class="fas fa-users"></i>
+                User Management
+            </button>
+            <button class="nav-tab" onclick="showTab('alerts')" id="alertsTab">
+                <i class="fas fa-bell"></i>
+                Alert Settings
+            </button>
+            <button class="nav-tab" onclick="showTab('system')" id="systemTab">
+                <i class="fas fa-cog"></i>
+                System Settings
+            </button>
+        </nav>
+
+        <!-- Overview Tab -->
+        <div id="overviewContent" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon users">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="totalUsers">Loading...</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon admins">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="totalAdmins">Loading...</div>
+                    <div class="stat-label">Admin Users</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon alerts">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="todayAlerts">Loading...</div>
+                    <div class="stat-label">Today's Alerts</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon total">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="totalAlerts">Loading...</div>
+                    <div class="stat-label">Total Alerts</div>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-activity"></i>
+                        Recent Activity
+                    </h2>
+                </div>
+                <div id="recentActivity">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="usersContent" class="tab-content" style="display: none;">
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-users"></i>
+                        User Management
+                    </h2>
+                    <div class="search-bar">
+                        <div class="search-input">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="userSearch" placeholder="Search users..." onkeyup="filterUsers()">
+                        </div>
+                        <button class="action-btn edit" onclick="refreshUsers()">
+                            <i class="fas fa-sync"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <table class="users-table">
+                    <thead class="table-header">
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Auth Method</th>
+                            <th>Telegram</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Alerts Tab -->
+        <div id="alertsContent" class="tab-content" style="display: none;">
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-bell"></i>
+                        Alert Configuration
+                    </h2>
+                </div>
+                <div style="padding: 30px; text-align: center; color: #94a3b8;">
+                    <i class="fas fa-tools" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
+                    <h3>Alert Configuration</h3>
+                    <p>Global alert settings and configuration options will be available here.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        <div id="systemContent" class="tab-content" style="display: none;">
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-cog"></i>
+                        System Configuration
+                    </h2>
+                </div>
+                <div style="padding: 30px; text-align: center; color: #94a3b8;">
+                    <i class="fas fa-server" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
+                    <h3>System Settings</h3>
+                    <p>System configuration and maintenance tools will be available here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

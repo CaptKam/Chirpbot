@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import bcrypt from "bcryptjs";
@@ -13,6 +14,7 @@ import { AlertGenerator } from "./services/alert-generator";
 declare module 'express-session' {
   interface SessionData {
     userId?: string;
+    adminUserId?: string;
   }
 }
 
@@ -22,6 +24,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup WebSocket server with heartbeat
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const clients = new Set<WebSocket>();
+
+  // Serve admin static files
+  app.use('/admin', express.static('public/admin'));
 
   function heartbeat(this: any) { 
     this.isAlive = true; 
@@ -780,6 +785,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Admin Authentication Routes
+  app.post('/api/admin-auth/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+      }
+
+      // Find user by username
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      // Verify password
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // Store admin session
+      req.session.adminUserId = user.id;
+
+      res.json({
+        message: 'Admin login successful',
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error('Admin login error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/admin-auth/verify', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ authenticated: false });
+      }
+
+      const user = await storage.getUserById(req.session.adminUserId);
+      if (!user || user.role !== 'admin') {
+        req.session.adminUserId = undefined;
+        return res.status(401).json({ authenticated: false });
+      }
+
+      res.json({
+        authenticated: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error('Admin verify error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/admin-auth/logout', (req, res) => {
+    req.session.adminUserId = undefined;
+    res.json({ message: 'Admin logout successful' });
+  });
+
 
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
