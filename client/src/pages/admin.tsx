@@ -103,18 +103,30 @@ export default function Admin() {
   const { toast } = useToast();
   const { user: currentUser, isAuthenticated } = useAuth();
 
-  // Check if current user is admin
-  if (!isAuthenticated || !currentUser || currentUser.role !== 'admin') {
+  // Redirect to web admin panel
+  if (isAuthenticated && currentUser && currentUser.role === 'admin') {
+    window.location.href = '/admin-panel';
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
         <div className="text-center">
-          <Shield className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-100 mb-2">Access Denied</h1>
-          <p className="text-slate-400">You need admin privileges to access this page.</p>
+          <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-slate-100 mb-2">Redirecting to Admin Panel</h1>
+          <p className="text-slate-400">Please wait while we redirect you to the web admin interface...</p>
         </div>
       </div>
     );
   }
+
+  // Access denied for non-admin users
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
+      <div className="text-center">
+        <Shield className="w-16 h-16 text-red-400 mx-auto mb-4" />
+        <h1 className="text-2xl font-bold text-slate-100 mb-2">Access Denied</h1>
+        <p className="text-slate-400">You need admin privileges to access this page.</p>
+      </div>
+    </div>
+  );
 
   // Fetch users
   const { data: users, isLoading: usersLoading } = useQuery({

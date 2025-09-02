@@ -12,10 +12,8 @@ export function BottomNavigation() {
     { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
   ];
 
-  // Add admin tab for admin users
-  const navItems = user?.role === 'admin' 
-    ? [...baseNavItems, { path: "/admin", icon: Shield, label: "Admin", testId: "nav-admin" }]
-    : baseNavItems;
+  // Keep navigation clean - admin access via web panel
+  const navItems = baseNavItems;
 
   return (
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50">
