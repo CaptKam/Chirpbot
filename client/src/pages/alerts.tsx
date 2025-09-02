@@ -162,21 +162,19 @@ export default function AlertsPage() {
                 className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors"
               >
                 <div className="p-4">
-                  {/* Header with type and time */}
+                  {/* Header with sport, time, type badge, and confidence */}
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-emerald-400 text-sm font-semibold">{alert.sport}</span>
-                    <span className="text-slate-400 text-xs">{formatTime(alert.createdAt)}</span>
-                  </div>
-                  
-                  {/* Alert Type Badge */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-400">
-                      {alert.type.replace('_', ' ')}
-                    </Badge>
-                    <div className="flex items-center gap-1">
-                      <div className="h-2 w-2 bg-emerald-500 rounded-full"></div>
-                      <span className="text-xs text-emerald-400">{alert.confidence}%</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400 text-sm font-semibold">{alert.sport}</span>
+                      <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-400">
+                        {alert.type.replace('_', ' ')}
+                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <div className="h-2 w-2 bg-emerald-500 rounded-full"></div>
+                        <span className="text-xs text-emerald-400">{alert.confidence}%</span>
+                      </div>
                     </div>
+                    <span className="text-slate-400 text-xs">{formatTime(alert.createdAt)}</span>
                   </div>
                   
                   {/* Main alert message */}
