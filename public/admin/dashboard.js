@@ -436,25 +436,33 @@ async function loadSportAlertSettings() {
         // Load global settings for this sport
         const response = await fetch(`/api/admin/global-alert-settings/${currentSport}`, {
             method: 'GET',
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
         });
         
         if (response.ok) {
-            globalAlertSettings = await response.json();
+            const data = await response.json();
+            globalAlertSettings = data || {};
         } else {
+            // If not authorized or other error, use default settings
             globalAlertSettings = {};
+            console.warn('Using default settings - API returned:', response.status);
         }
         
         renderAlertConfiguration();
     } catch (error) {
         console.error('Error loading alert settings:', error);
-        alertConfigContainer.innerHTML = `
-            <div style="text-align: center; color: #ef4444; padding: 40px;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 32px; margin-bottom: 15px;"></i>
-                <h3>Error Loading Settings</h3>
-                <p>Failed to load alert configuration. Please try again.</p>
-            </div>
-        `;
+        // Use default settings on error
+        globalAlertSettings = {};
+        
+        // Still render the configuration with defaults
+        renderAlertConfiguration();
+        
+        // Show a less intrusive notification
+        showNotification('Using default alert settings', 'info');
     }
 }
 
