@@ -578,7 +578,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const preferences = await storage.getUserAlertPreferences(userId);
-      res.json(preferences);
+      
+      // Group preferences by sport for frontend
+      const groupedPreferences: Record<string, any[]> = {};
+      preferences.forEach((pref: any) => {
+        if (!groupedPreferences[pref.sport]) {
+          groupedPreferences[pref.sport] = [];
+        }
+        groupedPreferences[pref.sport].push(pref);
+      });
+      
+      res.json(groupedPreferences);
     } catch (error) {
       console.error('Error fetching user alert preferences:', error);
       res.status(500).json({ message: 'Failed to fetch user alert preferences' });
@@ -588,17 +598,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/admin/users/:userId/alert-preferences', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const { sport, preferences } = req.body;
+      const { sport, alertType, enabled } = req.body;
       
-      if (!sport || !preferences || !Array.isArray(preferences)) {
-        return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
+      if (!sport || !alertType || typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
       }
       
-      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
-      res.json({ message: 'User alert preferences updated successfully', count: result.length });
+      const result = await storage.setUserAlertPreference(userId, sport.toUpperCase(), alertType, enabled);
+      res.json({ message: 'User alert preference updated successfully', preference: result });
     } catch (error) {
-      console.error('Error updating user alert preferences:', error);
-      res.status(500).json({ message: 'Failed to update user alert preferences' });
+      console.error('Error updating user alert preference:', error);
+      res.status(500).json({ message: 'Failed to update user alert preference' });
     }
   });
 
