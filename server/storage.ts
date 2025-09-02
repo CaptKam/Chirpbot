@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, userAlertPreferences, type InsertUserMonitoredTeam, type InsertUserAlertPreferences } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, type InsertUserMonitoredTeam, type InsertUserAlertPreferences } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -261,6 +261,68 @@ export const storage = {
       results.push(result);
     }
     return results;
+  },
+
+  // Global alert settings operations (admin only)
+  async getGlobalAlertSettings(sport: string) {
+    const result = await db.select().from(globalAlertSettings).where(eq(globalAlertSettings.sport, sport));
+    // Convert array to object keyed by alertType
+    const settings: Record<string, boolean> = {};
+    result.forEach(row => {
+      settings[row.alertType] = row.enabled;
+    });
+    return settings;
+  },
+
+  async setGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, adminUserId: string) {
+    // Use upsert pattern
+    const existing = await db.select().from(globalAlertSettings)
+      .where(and(
+        eq(globalAlertSettings.sport, sport),
+        eq(globalAlertSettings.alertType, alertType)
+      ));
+
+    if (existing.length > 0) {
+      const result = await db.update(globalAlertSettings)
+        .set({ enabled, updatedAt: new Date(), updatedBy: adminUserId })
+        .where(and(
+          eq(globalAlertSettings.sport, sport),
+          eq(globalAlertSettings.alertType, alertType)
+        ))
+        .returning();
+      return result[0];
+    } else {
+      const result = await db.insert(globalAlertSettings)
+        .values({ sport, alertType, enabled, updatedBy: adminUserId })
+        .returning();
+      return result[0];
+    }
+  },
+
+  async bulkSetGlobalAlertSettings(sport: string, settings: Record<string, boolean>, adminUserId: string) {
+    const results = [];
+    for (const [alertType, enabled] of Object.entries(settings)) {
+      const result = await this.setGlobalAlertSetting(sport, alertType, enabled, adminUserId);
+      results.push(result);
+    }
+    return results;
+  },
+
+  async getAllGlobalAlertSettings() {
+    return await db.select().from(globalAlertSettings);
+  },
+
+  // Check if a specific alert is globally enabled
+  async isAlertGloballyEnabled(sport: string, alertType: string) {
+    const result = await db.select().from(globalAlertSettings)
+      .where(and(
+        eq(globalAlertSettings.sport, sport),
+        eq(globalAlertSettings.alertType, alertType)
+      ));
+    
+    // If no record exists, it's enabled by default
+    if (result.length === 0) return true;
+    return result[0].enabled;
   }
 };
 

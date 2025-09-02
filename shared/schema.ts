@@ -60,6 +60,16 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Global alert settings controlled by admin
+export const globalAlertSettings = pgTable("global_alert_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(),
+  alertType: text("alert_type").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,

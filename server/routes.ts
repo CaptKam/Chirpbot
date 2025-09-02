@@ -274,8 +274,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/user/:userId/alert-preferences/:sport', async (req, res) => {
     try {
       const { userId, sport } = req.params;
-      const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toUpperCase());
-      res.json(preferences);
+      const upperSport = sport.toUpperCase();
+      
+      // Get user preferences
+      const preferences = await storage.getUserAlertPreferencesBySport(userId, upperSport);
+      
+      // Get global alert settings
+      const globalSettings = await storage.getGlobalAlertSettings(upperSport);
+      
+      // Filter out preferences for globally disabled alerts
+      const filteredPreferences = preferences.filter(pref => {
+        // If alert is globally disabled, don't show it to the user
+        return globalSettings[pref.alertType] !== false;
+      });
+      
+      res.json(filteredPreferences);
     } catch (error) {
       console.error('Error fetching alert preferences for sport:', error);
       res.status(500).json({ message: 'Failed to fetch sport alert preferences' });
@@ -869,8 +882,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport } = req.params;
       
-      // For now, return default enabled state for all alerts
-      // This could be stored in a global_alert_settings table in the future
+      // Get settings from database
+      const dbSettings = await storage.getGlobalAlertSettings(sport);
+      
+      // Default settings for all alerts (if not in database, they're enabled by default)
       const defaultSettings = {
         // MLB alerts - all enabled by default
         'RISP': true,
@@ -897,7 +912,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'EMPTY_NET': true
       };
 
-      res.json(defaultSettings);
+      // Merge database settings with defaults
+      const mergedSettings = { ...defaultSettings, ...dbSettings };
+      
+      res.json(mergedSettings);
     } catch (error) {
       console.error('Error fetching global alert settings:', error);
       res.status(500).json({ message: 'Failed to fetch global alert settings' });
@@ -934,7 +952,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport, category, alertKeys, enabled } = req.body;
       
-      // In a full implementation, this would update global settings for the category
+      // Update each alert in the category
+      for (const alertKey of alertKeys) {
+        await storage.setGlobalAlertSetting(sport, alertKey, enabled, req.session.adminUserId);
+      }
+      
       console.log(`Category '${category}' for ${sport} ${enabled ? 'enabled' : 'disabled'} by admin`);
       console.log('Alert keys affected:', alertKeys);
       
@@ -959,7 +981,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport, alertType, enabled } = req.body;
       
-      // In a full implementation, this would update global settings for the specific alert
+      // Update in database
+      await storage.setGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
+      
       console.log(`Alert '${alertType}' for ${sport} ${enabled ? 'enabled' : 'disabled'} by admin`);
       
       res.json({ 
