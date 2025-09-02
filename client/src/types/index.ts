@@ -87,7 +87,6 @@ export interface Settings {
     ncaafGoalLineStand?: boolean;
     ncaafBigPlayPotential?: boolean;
     ncaafGameLive?: boolean;
-    twoMinuteWarning?: boolean;
   };
   aiEnabled: boolean;
   aiConfidenceThreshold: number;
