@@ -1516,3 +1516,92 @@ input:checked + .slider:before {
         gap: 0.75rem;
     }
 }
+
+/* Games Section Headers */
+.games-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0 1rem 0;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    grid-column: 1 / -1;
+}
+
+.games-section-header.live {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #FEF2F2;
+}
+
+.games-section-header.live i {
+    color: #EF4444;
+    animation: live-pulse 2s infinite;
+}
+
+.games-section-header.scheduled {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #EFF6FF;
+}
+
+.games-section-header.scheduled i {
+    color: #3B82F6;
+}
+
+.games-section-header.delayed {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.2) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #FFFBEB;
+}
+
+.games-section-header.delayed i {
+    color: #F59E0B;
+}
+
+.games-section-header.completed {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.2) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #F0FDF4;
+}
+
+.games-section-header.completed i {
+    color: #22C55E;
+}
+
+/* Game Info Styling */
+.game-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    min-width: 60px;
+}
+
+.info-value {
+    font-weight: 600;
+    color: #F8FAFC;
+}
+
+.venue-name {
+    font-size: 0.75rem;
+    color: #94A3B8;
+    font-weight: 500;
+}

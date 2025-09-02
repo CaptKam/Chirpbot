@@ -1101,25 +1101,48 @@ async function loadLiveGames() {
         container.innerHTML = `
             <div class="loading">
                 <div class="spinner"></div>
-                <p>Loading live games...</p>
+                <p>Loading today's MLB schedule...</p>
             </div>
         `;
         
-        const response = await fetch('/api/games/live-detailed?sport=MLB');
-        const data = await response.json();
+        // Fetch both today's games and detailed live data
+        const [scheduleResponse, liveResponse] = await Promise.all([
+            fetch('/api/games/today?sport=MLB'),
+            fetch('/api/games/live-detailed?sport=MLB')
+        ]);
         
-        if (response.ok) {
-            liveGamesData = data.liveGames || [];
-            renderLiveGames();
-        } else {
-            throw new Error(data.message || 'Failed to load live games');
+        if (!scheduleResponse.ok) {
+            throw new Error('Failed to load today\'s schedule');
         }
+        
+        const scheduleData = await scheduleResponse.json();
+        const liveData = liveResponse.ok ? await liveResponse.json() : { liveGames: [] };
+        
+        // Merge schedule with live data
+        const allGames = scheduleData.games || [];
+        const liveGamesMap = new Map();
+        
+        // Create a map of live game details
+        (liveData.liveGames || []).forEach(liveGame => {
+            liveGamesMap.set(liveGame.gameId, liveGame);
+        });
+        
+        // Enhance all games with live data where available
+        liveGamesData = allGames.map(game => {
+            const liveDetails = liveGamesMap.get(game.gameId);
+            if (liveDetails) {
+                return { ...game, ...liveDetails };
+            }
+            return game;
+        });
+        
+        renderLiveGames();
     } catch (error) {
-        console.error('Error loading live games:', error);
+        console.error('Error loading games:', error);
         container.innerHTML = `
             <div class="loading">
                 <i class="fas fa-exclamation-triangle" style="color: #EF4444; font-size: 2rem; margin-bottom: 1rem;"></i>
-                <p>Error loading live games</p>
+                <p>Error loading today's schedule</p>
                 <button class="action-btn refresh" onclick="loadLiveGames()" style="margin-top: 1rem;">
                     <i class="fas fa-refresh"></i>
                     Retry
@@ -1137,14 +1160,61 @@ function renderLiveGames() {
         container.innerHTML = `
             <div class="loading">
                 <i class="fas fa-baseball-ball" style="color: #94A3B8; font-size: 2rem; margin-bottom: 1rem;"></i>
-                <p>No live MLB games at the moment</p>
-                <small style="color: #64748B;">Check back during game times (typically 1:00 PM - 11:00 PM PT)</small>
+                <p>No MLB games scheduled for today</p>
+                <small style="color: #64748B;">Check back tomorrow for the next day's schedule</small>
             </div>
         `;
         return;
     }
     
-    container.innerHTML = liveGamesData.map(game => createGameCard(game)).join('');
+    // Sort games by status (live first, then scheduled, then final)
+    const sortedGames = [...liveGamesData].sort((a, b) => {
+        const statusOrder = { 'live': 0, 'scheduled': 1, 'final': 2, 'delayed': 1 };
+        return (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
+    });
+    
+    // Group games by status for better organization
+    const liveGames = sortedGames.filter(game => game.status === 'live');
+    const scheduledGames = sortedGames.filter(game => game.status === 'scheduled');
+    const completedGames = sortedGames.filter(game => game.status === 'final');
+    const delayedGames = sortedGames.filter(game => game.status === 'delayed');
+    
+    let html = '';
+    
+    // Add status section headers
+    if (liveGames.length > 0) {
+        html += `<div class="games-section-header live">
+            <i class="fas fa-circle"></i>
+            Live Games (${liveGames.length})
+        </div>`;
+        html += liveGames.map(game => createGameCard(game)).join('');
+    }
+    
+    if (scheduledGames.length > 0) {
+        html += `<div class="games-section-header scheduled">
+            <i class="fas fa-clock"></i>
+            Scheduled Games (${scheduledGames.length})
+        </div>`;
+        html += scheduledGames.map(game => createGameCard(game)).join('');
+    }
+    
+    if (delayedGames.length > 0) {
+        html += `<div class="games-section-header delayed">
+            <i class="fas fa-pause"></i>
+            Delayed Games (${delayedGames.length})
+        </div>`;
+        html += delayedGames.map(game => createGameCard(game)).join('');
+    }
+    
+    if (completedGames.length > 0) {
+        html += `<div class="games-section-header completed">
+            <i class="fas fa-check"></i>
+            Completed Games (${completedGames.length})
+        </div>`;
+        html += completedGames.map(game => createGameCard(game)).join('');
+    }
+    
+    container.innerHTML = html;
 }
 
 function createGameCard(game) {
@@ -1154,11 +1224,26 @@ function createGameCard(game) {
     const currentPitcher = game.currentPitcher || { name: 'Loading...' };
     
     // Format inning display
-    const inningDisplay = game.inning && game.inningState ? 
-        `${game.inningState} ${game.inning}${getInningOrdinal(game.inning)}` : 'In Progress';
+    let inningDisplay = 'Scheduled';
+    if (game.status === 'live') {
+        inningDisplay = game.inning && game.inningState ? 
+            `${game.inningState} ${game.inning}${getInningOrdinal(game.inning)}` : 'In Progress';
+    } else if (game.status === 'final') {
+        inningDisplay = 'Final';
+    } else if (game.status === 'delayed') {
+        inningDisplay = 'Delayed';
+    } else if (game.gameDate) {
+        // Format scheduled time
+        const gameTime = new Date(game.gameDate);
+        inningDisplay = gameTime.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            timeZone: 'America/Los_Angeles' 
+        }) + ' PT';
+    }
     
     return `
-        <div class="game-card ${game.isLive ? 'live' : ''}">
+        <div class="game-card ${game.isLive || game.status === 'live' ? 'live' : ''}">
             <div class="game-header">
                 <div class="game-teams">
                     <div class="team-info">
@@ -1173,36 +1258,52 @@ function createGameCard(game) {
                 <div class="game-status">
                     <div class="status-badge ${game.status}">${game.status.toUpperCase()}</div>
                     <div class="game-inning">${inningDisplay}</div>
+                    ${game.venue ? `<div class="venue-name">${game.venue}</div>` : ''}
                 </div>
             </div>
             
             <div class="game-body">
                 <div class="game-details">
-                    <div class="count-display">
-                        <div class="count-item">
-                            <div class="count-label">Balls</div>
-                            <div class="count-value balls">${game.balls || 0}</div>
+                    ${game.status === 'live' ? `
+                        <div class="count-display">
+                            <div class="count-item">
+                                <div class="count-label">Balls</div>
+                                <div class="count-value balls">${game.balls || 0}</div>
+                            </div>
+                            <div class="count-item">
+                                <div class="count-label">Strikes</div>
+                                <div class="count-value strikes">${game.strikes || 0}</div>
+                            </div>
+                            <div class="count-item">
+                                <div class="count-label">Outs</div>
+                                <div class="count-value outs">${game.outs || 0}</div>
+                            </div>
                         </div>
-                        <div class="count-item">
-                            <div class="count-label">Strikes</div>
-                            <div class="count-value strikes">${game.strikes || 0}</div>
+                        
+                        <div class="batter-info">
+                            <div class="batter-current">
+                                <span class="batter-label">Batter:</span>
+                                <span class="batter-name">${currentBatter.name}</span>
+                            </div>
+                            <div class="batter-current">
+                                <span class="batter-label">Pitcher:</span>
+                                <span class="batter-name">${currentPitcher.name}</span>
+                            </div>
                         </div>
-                        <div class="count-item">
-                            <div class="count-label">Outs</div>
-                            <div class="count-value outs">${game.outs || 0}</div>
+                    ` : `
+                        <div class="game-info">
+                            <div class="info-item">
+                                <span class="info-label">Venue:</span>
+                                <span class="info-value">${game.venue || 'TBD'}</span>
+                            </div>
+                            ${game.status === 'scheduled' ? `
+                                <div class="info-item">
+                                    <span class="info-label">Start Time:</span>
+                                    <span class="info-value">${inningDisplay}</span>
+                                </div>
+                            ` : ''}
                         </div>
-                    </div>
-                    
-                    <div class="batter-info">
-                        <div class="batter-current">
-                            <span class="batter-label">Batter:</span>
-                            <span class="batter-name">${currentBatter.name}</span>
-                        </div>
-                        <div class="batter-current">
-                            <span class="batter-label">Pitcher:</span>
-                            <span class="batter-name">${currentPitcher.name}</span>
-                        </div>
-                    </div>
+                    `}
                     
                     ${weather.temp || weather.condition ? `
                         <div class="weather-info">
