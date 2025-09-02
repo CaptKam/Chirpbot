@@ -1040,6 +1040,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // System Configuration Admin Routes
+  app.get('/api/admin/system-config', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const configurations = await storage.getAllSystemConfigurations();
+      
+      // Organize by category for easier frontend consumption
+      const organized: Record<string, Record<string, any>> = {};
+      for (const config of configurations) {
+        if (!organized[config.category]) {
+          organized[config.category] = {};
+        }
+        organized[config.category][config.key] = {
+          value: JSON.parse(config.value as string),
+          description: config.description,
+          updatedAt: config.updatedAt
+        };
+      }
+      
+      res.json(organized);
+    } catch (error) {
+      console.error('Error fetching system configuration:', error);
+      res.status(500).json({ message: 'Failed to fetch system configuration' });
+    }
+  });
+
+  app.get('/api/admin/system-config/:category', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { category } = req.params;
+      const configurations = await storage.getSystemConfigurationsByCategory(category);
+      
+      const result: Record<string, any> = {};
+      for (const config of configurations) {
+        result[config.key] = {
+          value: JSON.parse(config.value as string),
+          description: config.description,
+          updatedAt: config.updatedAt
+        };
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching system configuration by category:', error);
+      res.status(500).json({ message: 'Failed to fetch system configuration' });
+    }
+  });
+
+  app.put('/api/admin/system-config', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { category, key, value, description } = req.body;
+      
+      if (!category || !key || value === undefined) {
+        return res.status(400).json({ message: 'Category, key, and value are required' });
+      }
+
+      const result = await storage.setSystemConfiguration(
+        category, 
+        key, 
+        value, 
+        description,
+        req.session.adminUserId
+      );
+      
+      console.log(`System config updated: ${category}.${key} = ${JSON.stringify(value)} by admin`);
+      
+      res.json({
+        message: 'Configuration updated successfully',
+        configuration: {
+          ...result,
+          value: JSON.parse(result.value as string)
+        }
+      });
+    } catch (error) {
+      console.error('Error updating system configuration:', error);
+      res.status(500).json({ message: 'Failed to update system configuration' });
+    }
+  });
+
+  app.put('/api/admin/system-config/bulk', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { configurations } = req.body;
+      
+      if (!Array.isArray(configurations)) {
+        return res.status(400).json({ message: 'Configurations must be an array' });
+      }
+
+      const results = await storage.bulkSetSystemConfiguration(configurations, req.session.adminUserId);
+      
+      console.log(`Bulk system configuration update: ${configurations.length} settings by admin`);
+      
+      res.json({
+        message: `${configurations.length} configurations updated successfully`,
+        results: results.map(r => ({
+          ...r,
+          value: JSON.parse(r.value as string)
+        }))
+      });
+    } catch (error) {
+      console.error('Error bulk updating system configuration:', error);
+      res.status(500).json({ message: 'Failed to bulk update system configuration' });
+    }
+  });
+
+  // Specific system status endpoints for easy access
+  app.get('/api/system-status', async (req, res) => {
+    try {
+      const masterToggle = await storage.getSystemConfigValue('core', 'master_toggle', true);
+      const maintenanceMode = await storage.getSystemConfigValue('core', 'maintenance_mode', false);
+      const maintenanceMessage = await storage.getSystemConfigValue('core', 'maintenance_message', 'System is under maintenance');
+      const systemAnnouncement = await storage.getSystemConfigValue('core', 'system_announcement', '');
+      const announcementEnabled = await storage.getSystemConfigValue('core', 'announcement_enabled', false);
+      
+      res.json({
+        masterToggle,
+        maintenanceMode,
+        maintenanceMessage,
+        systemAnnouncement: announcementEnabled ? systemAnnouncement : null
+      });
+    } catch (error) {
+      console.error('Error fetching system status:', error);
+      res.status(500).json({ message: 'Failed to fetch system status' });
+    }
+  });
+
 
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();

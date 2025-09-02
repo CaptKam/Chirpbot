@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, type InsertUserMonitoredTeam, type InsertUserAlertPreferences } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, systemConfiguration, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertSystemConfiguration } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -323,6 +323,80 @@ export const storage = {
     // If no record exists, it's enabled by default
     if (result.length === 0) return true;
     return result[0].enabled;
+  },
+
+  // System Configuration operations
+  async getAllSystemConfigurations() {
+    return await db.select().from(systemConfiguration);
+  },
+
+  async getSystemConfigurationsByCategory(category: string) {
+    return await db.select().from(systemConfiguration)
+      .where(eq(systemConfiguration.category, category));
+  },
+
+  async getSystemConfiguration(category: string, key: string) {
+    const result = await db.select().from(systemConfiguration)
+      .where(and(
+        eq(systemConfiguration.category, category),
+        eq(systemConfiguration.key, key)
+      ));
+    return result[0] || null;
+  },
+
+  async setSystemConfiguration(category: string, key: string, value: any, description?: string, adminUserId?: string) {
+    // Use upsert pattern
+    const existing = await db.select().from(systemConfiguration)
+      .where(and(
+        eq(systemConfiguration.category, category),
+        eq(systemConfiguration.key, key)
+      ));
+
+    const configData = {
+      category,
+      key,
+      value: JSON.stringify(value),
+      description,
+      updatedAt: new Date(),
+      updatedBy: adminUserId
+    };
+
+    if (existing.length > 0) {
+      const result = await db.update(systemConfiguration)
+        .set(configData)
+        .where(and(
+          eq(systemConfiguration.category, category),
+          eq(systemConfiguration.key, key)
+        ))
+        .returning();
+      return result[0];
+    } else {
+      const result = await db.insert(systemConfiguration)
+        .values(configData)
+        .returning();
+      return result[0];
+    }
+  },
+
+  async getSystemConfigValue(category: string, key: string, defaultValue: any = null) {
+    const config = await this.getSystemConfiguration(category, key);
+    if (!config) return defaultValue;
+    return JSON.parse(config.value as string);
+  },
+
+  async bulkSetSystemConfiguration(configurations: Array<{category: string, key: string, value: any, description?: string}>, adminUserId?: string) {
+    const results = [];
+    for (const config of configurations) {
+      const result = await this.setSystemConfiguration(
+        config.category, 
+        config.key, 
+        config.value, 
+        config.description, 
+        adminUserId
+      );
+      results.push(result);
+    }
+    return results;
   }
 };
 

@@ -70,6 +70,17 @@ export const globalAlertSettings = pgTable("global_alert_settings", {
   updatedBy: varchar("updated_by").references(() => users.id),
 });
 
+// System configuration settings for admin control
+export const systemConfiguration = pgTable("system_configuration", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: text("category").notNull(), // 'core', 'alerts', 'api', 'users', 'monitoring'
+  key: text("key").notNull(), // 'master_toggle', 'maintenance_mode', 'alert_frequency', etc.
+  value: jsonb("value").notNull(), // Flexible JSON value storage
+  description: text("description"), // Human-readable description
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -139,8 +150,16 @@ export const insertUserAlertPreferencesSchema = createInsertSchema(userAlertPref
   updatedAt: true,
 });
 
+export const insertSystemConfigurationSchema = createInsertSchema(systemConfiguration).omit({
+  id: true,
+  updatedAt: true,
+});
+
 export type InsertUserAlertPreferences = z.infer<typeof insertUserAlertPreferencesSchema>;
 export type UserAlertPreferences = typeof userAlertPreferences.$inferSelect;
+
+export type InsertSystemConfiguration = z.infer<typeof insertSystemConfigurationSchema>;
+export type SystemConfiguration = typeof systemConfiguration.$inferSelect;
 
 
 // Game types for live sports data

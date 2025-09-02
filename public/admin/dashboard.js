@@ -727,3 +727,360 @@ function showNotification(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+
+// System Configuration Functions
+let systemConfig = {};
+
+async function loadSystemConfiguration() {
+    try {
+        const response = await fetch('/api/admin/system-config', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            systemConfig = await response.json();
+            populateSystemConfigUI();
+            showNotification('System configuration loaded', 'success');
+        } else {
+            console.error('Failed to load system configuration');
+            showNotification('Failed to load system configuration', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading system configuration:', error);
+        showNotification('Failed to load system configuration', 'error');
+    }
+}
+
+function populateSystemConfigUI() {
+    // Core System Controls
+    if (systemConfig.core) {
+        // Master Toggle
+        if (systemConfig.core.master_toggle) {
+            const toggle = document.getElementById('masterToggle');
+            const label = document.getElementById('masterToggleLabel');
+            if (toggle && label) {
+                toggle.checked = systemConfig.core.master_toggle.value;
+                label.textContent = systemConfig.core.master_toggle.value ? 'Enabled' : 'Disabled';
+            }
+        }
+        
+        // Maintenance Mode
+        if (systemConfig.core.maintenance_mode) {
+            const toggle = document.getElementById('maintenanceMode');
+            const label = document.getElementById('maintenanceModeLabel');
+            if (toggle && label) {
+                toggle.checked = systemConfig.core.maintenance_mode.value;
+                label.textContent = systemConfig.core.maintenance_mode.value ? 'Enabled' : 'Disabled';
+            }
+        }
+        
+        // Maintenance Message
+        if (systemConfig.core.maintenance_message) {
+            const input = document.getElementById('maintenanceMessage');
+            if (input) {
+                input.value = systemConfig.core.maintenance_message.value;
+            }
+        }
+        
+        // System Announcements
+        if (systemConfig.core.announcement_enabled) {
+            const toggle = document.getElementById('announcementEnabled');
+            const label = document.getElementById('announcementEnabledLabel');
+            if (toggle && label) {
+                toggle.checked = systemConfig.core.announcement_enabled.value;
+                label.textContent = systemConfig.core.announcement_enabled.value ? 'Enabled' : 'Disabled';
+            }
+        }
+        
+        if (systemConfig.core.system_announcement) {
+            const textarea = document.getElementById('systemAnnouncement');
+            if (textarea) {
+                textarea.value = systemConfig.core.system_announcement.value;
+            }
+        }
+        
+        // Session Management
+        if (systemConfig.core.session_timeout) {
+            const input = document.getElementById('sessionTimeout');
+            if (input) {
+                input.value = systemConfig.core.session_timeout.value;
+            }
+        }
+        
+        if (systemConfig.core.max_concurrent_sessions) {
+            const input = document.getElementById('maxConcurrentSessions');
+            if (input) {
+                input.value = systemConfig.core.max_concurrent_sessions.value;
+            }
+        }
+    }
+    
+    // Alert System Configuration
+    if (systemConfig.alerts) {
+        // Alert Generation Frequency
+        if (systemConfig.alerts.generation_frequency) {
+            const select = document.getElementById('alertFrequency');
+            if (select) {
+                select.value = systemConfig.alerts.generation_frequency.value;
+            }
+        }
+        
+        // Game Monitoring Windows
+        if (systemConfig.alerts.monitoring_start_hour) {
+            const input = document.getElementById('monitoringStartHour');
+            if (input) {
+                input.value = systemConfig.alerts.monitoring_start_hour.value;
+            }
+        }
+        
+        if (systemConfig.alerts.monitoring_end_hour) {
+            const input = document.getElementById('monitoringEndHour');
+            if (input) {
+                input.value = systemConfig.alerts.monitoring_end_hour.value;
+            }
+        }
+        
+        // Alert Priority Thresholds
+        if (systemConfig.alerts.minimum_confidence_score) {
+            const input = document.getElementById('minimumConfidence');
+            if (input) {
+                input.value = systemConfig.alerts.minimum_confidence_score.value;
+            }
+        }
+        
+        if (systemConfig.alerts.high_priority_threshold) {
+            const input = document.getElementById('highPriorityThreshold');
+            if (input) {
+                input.value = systemConfig.alerts.high_priority_threshold.value;
+            }
+        }
+        
+        // Cooldown Settings
+        if (systemConfig.alerts.global_cooldown_seconds) {
+            const input = document.getElementById('globalCooldown');
+            if (input) {
+                input.value = systemConfig.alerts.global_cooldown_seconds.value;
+            }
+        }
+        
+        if (systemConfig.alerts.risp_cooldown_seconds) {
+            const input = document.getElementById('rispCooldown');
+            if (input) {
+                input.value = systemConfig.alerts.risp_cooldown_seconds.value;
+            }
+        }
+    }
+}
+
+async function updateSystemConfig(category, key, value) {
+    try {
+        const response = await fetch('/api/admin/system-config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                category,
+                key,
+                value
+            })
+        });
+        
+        if (response.ok) {
+            // Update local config
+            if (!systemConfig[category]) {
+                systemConfig[category] = {};
+            }
+            systemConfig[category][key] = { value };
+            
+            // Update UI labels for toggles
+            updateToggleLabels();
+            
+            showNotification(`${key.replace(/_/g, ' ')} updated successfully`, 'success');
+        } else {
+            console.error('Failed to update system configuration');
+            showNotification('Failed to update configuration', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating system configuration:', error);
+        showNotification('Failed to update configuration', 'error');
+    }
+}
+
+function updateToggleLabels() {
+    // Update all toggle labels based on current state
+    const toggleMappings = [
+        { toggleId: 'masterToggle', labelId: 'masterToggleLabel' },
+        { toggleId: 'maintenanceMode', labelId: 'maintenanceModeLabel' },
+        { toggleId: 'announcementEnabled', labelId: 'announcementEnabledLabel' }
+    ];
+    
+    toggleMappings.forEach(({ toggleId, labelId }) => {
+        const toggle = document.getElementById(toggleId);
+        const label = document.getElementById(labelId);
+        if (toggle && label) {
+            label.textContent = toggle.checked ? 'Enabled' : 'Disabled';
+        }
+    });
+}
+
+async function saveAllConfigurations() {
+    try {
+        // Collect all current form values
+        const configurations = [];
+        
+        // Core configurations
+        const coreConfigs = [
+            { key: 'master_toggle', elementId: 'masterToggle', type: 'checkbox' },
+            { key: 'maintenance_mode', elementId: 'maintenanceMode', type: 'checkbox' },
+            { key: 'maintenance_message', elementId: 'maintenanceMessage', type: 'text' },
+            { key: 'announcement_enabled', elementId: 'announcementEnabled', type: 'checkbox' },
+            { key: 'system_announcement', elementId: 'systemAnnouncement', type: 'text' },
+            { key: 'session_timeout', elementId: 'sessionTimeout', type: 'number' },
+            { key: 'max_concurrent_sessions', elementId: 'maxConcurrentSessions', type: 'number' }
+        ];
+        
+        coreConfigs.forEach(config => {
+            const element = document.getElementById(config.elementId);
+            if (element) {
+                let value;
+                if (config.type === 'checkbox') {
+                    value = element.checked;
+                } else if (config.type === 'number') {
+                    value = parseInt(element.value) || 0;
+                } else {
+                    value = element.value;
+                }
+                
+                configurations.push({
+                    category: 'core',
+                    key: config.key,
+                    value: value
+                });
+            }
+        });
+        
+        // Alert configurations
+        const alertConfigs = [
+            { key: 'generation_frequency', elementId: 'alertFrequency', type: 'number' },
+            { key: 'monitoring_start_hour', elementId: 'monitoringStartHour', type: 'number' },
+            { key: 'monitoring_end_hour', elementId: 'monitoringEndHour', type: 'number' },
+            { key: 'minimum_confidence_score', elementId: 'minimumConfidence', type: 'number' },
+            { key: 'high_priority_threshold', elementId: 'highPriorityThreshold', type: 'number' },
+            { key: 'global_cooldown_seconds', elementId: 'globalCooldown', type: 'number' },
+            { key: 'risp_cooldown_seconds', elementId: 'rispCooldown', type: 'number' }
+        ];
+        
+        alertConfigs.forEach(config => {
+            const element = document.getElementById(config.elementId);
+            if (element) {
+                let value;
+                if (config.type === 'number') {
+                    value = parseInt(element.value) || 0;
+                } else {
+                    value = element.value;
+                }
+                
+                configurations.push({
+                    category: 'alerts',
+                    key: config.key,
+                    value: value
+                });
+            }
+        });
+        
+        const response = await fetch('/api/admin/system-config/bulk', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ configurations })
+        });
+        
+        if (response.ok) {
+            showNotification('All configurations saved successfully', 'success');
+            await loadSystemConfiguration(); // Refresh to get latest values
+        } else {
+            showNotification('Failed to save configurations', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving configurations:', error);
+        showNotification('Failed to save configurations', 'error');
+    }
+}
+
+async function resetToDefaults() {
+    if (!confirm('This will reset ALL system configuration to default values. Are you sure?')) {
+        return;
+    }
+    
+    try {
+        // Define default configurations
+        const defaultConfigurations = [
+            { category: 'core', key: 'master_toggle', value: true },
+            { category: 'core', key: 'maintenance_mode', value: false },
+            { category: 'core', key: 'maintenance_message', value: 'System is under maintenance. Please check back later.' },
+            { category: 'core', key: 'announcement_enabled', value: false },
+            { category: 'core', key: 'system_announcement', value: '' },
+            { category: 'core', key: 'session_timeout', value: 24 },
+            { category: 'core', key: 'max_concurrent_sessions', value: 5 },
+            { category: 'alerts', key: 'generation_frequency', value: 30 },
+            { category: 'alerts', key: 'monitoring_start_hour', value: 12 },
+            { category: 'alerts', key: 'monitoring_end_hour', value: 24 },
+            { category: 'alerts', key: 'minimum_confidence_score', value: 70 },
+            { category: 'alerts', key: 'high_priority_threshold', value: 90 },
+            { category: 'alerts', key: 'global_cooldown_seconds', value: 30 },
+            { category: 'alerts', key: 'risp_cooldown_seconds', value: 60 }
+        ];
+        
+        const response = await fetch('/api/admin/system-config/bulk', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ configurations: defaultConfigurations })
+        });
+        
+        if (response.ok) {
+            showNotification('Configuration reset to defaults', 'success');
+            await loadSystemConfiguration(); // Refresh to get latest values
+        } else {
+            showNotification('Failed to reset configuration', 'error');
+        }
+    } catch (error) {
+        console.error('Error resetting configuration:', error);
+        showNotification('Failed to reset configuration', 'error');
+    }
+}
+
+// Load system configuration when system tab is shown
+function showTab(tabName) {
+    // Hide all tab content
+    const allTabs = document.querySelectorAll('.tab-content');
+    allTabs.forEach(tab => tab.style.display = 'none');
+    
+    // Show selected tab
+    const selectedTab = document.getElementById(tabName + 'Content');
+    if (selectedTab) {
+        selectedTab.style.display = 'block';
+    }
+    
+    // Update nav button states
+    const allNavButtons = document.querySelectorAll('.nav-tab');
+    allNavButtons.forEach(button => button.classList.remove('active'));
+    
+    const selectedNavButton = document.getElementById(tabName + 'Tab');
+    if (selectedNavButton) {
+        selectedNavButton.classList.add('active');
+    }
+    
+    // Load data based on tab
+    if (tabName === 'overview') {
+        loadStats();
+    } else if (tabName === 'users') {
+        loadUsers();
+    } else if (tabName === 'alerts') {
+        loadSportAlertSettings();
+    } else if (tabName === 'system') {
+        loadSystemConfiguration();
+    }
+}
