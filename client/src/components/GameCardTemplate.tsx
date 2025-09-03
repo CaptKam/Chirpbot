@@ -120,15 +120,10 @@ export function GameCardTemplate({
         <div className="flex-1 flex flex-col items-center space-y-1">
           <div className="text-xs text-slate-400 font-medium">@</div>
           
-          {/* Status Badge */}
-          {(status === 'live' || status === 'final') && (
-            <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${
-              status === 'live' 
-                ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
-                : 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
-            }`}>
-              {status === 'live' && <Play className="w-3 h-3 mr-1" />}
-              {status === 'live' ? 'LIVE' : 'FINAL'}
+          {/* Status Badge - Only show FINAL */}
+          {status === 'final' && (
+            <Badge className="px-2 py-1 rounded-full text-xs font-medium bg-slate-700/50 text-slate-300 ring-1 ring-slate-600">
+              FINAL
             </Badge>
           )}
           

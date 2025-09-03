@@ -567,19 +567,32 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Enhanced Game Situation Grid - Replaces old grid */}
-              <div className="bg-slate-900/30 rounded-lg p-3 border border-slate-700/20">
-                {/* Top Row - Critical Game Data */}
-                <div className="grid grid-cols-4 gap-3 mb-3">
+              {/* Unified Game Situation Grid - Calendar Page Style */}
+              <div className="bg-gradient-to-r from-slate-800/40 to-slate-700/40 rounded-lg p-3 border border-slate-600/30">
+                {/* Main Grid - All Game Information */}
+                <div className="grid grid-cols-5 gap-3 items-center">
                   {/* MLB Specific Data */}
                   {alertData.sport === 'MLB' && (
                     <>
+                      {/* Inning with Top/Bottom */}
+                      {alertData.context?.inning && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 mb-1">INNING</div>
+                          <div className="text-sm font-bold text-white bg-slate-800/50 px-2 py-1 rounded">
+                            {alertData.context?.isTopInning ? '▲' : '▼'} {alertData.context.inning}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Outs */}
                       {alertData.context?.outs !== undefined && (
                         <div className="text-center">
                           <div className="text-xs text-slate-400 mb-1">OUTS</div>
                           <div className="text-lg font-bold text-white">{alertData.context.outs}</div>
                         </div>
                       )}
+                      
+                      {/* Ball-Strike Count */}
                       {(alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
                         <div className="text-center">
                           <div className="text-xs text-slate-400 mb-1">COUNT</div>
@@ -588,28 +601,87 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                           </div>
                         </div>
                       )}
+                      
+                      {/* Baseball Diamond - Integrated into grid */}
+                      {(alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) ? (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 mb-1">BASES</div>
+                          <div className="relative w-8 h-8 mx-auto">
+                            <div className="absolute inset-0 rotate-45 border border-slate-600 bg-slate-800/30 rounded-sm"></div>
+                            <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-600 border border-slate-500"></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 mb-1">BASES</div>
+                          <div className="text-sm text-slate-500">Empty</div>
+                        </div>
+                      )}
                     </>
                   )}
 
                   {/* Football Specific Data */}
-                  {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.down && (
+                  {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && (
+                    <>
+                      {alertData.context?.quarter && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 mb-1">QUARTER</div>
+                          <div className="text-sm font-bold text-white bg-slate-800/50 px-2 py-1 rounded">
+                            Q{alertData.context.quarter}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {alertData.context?.down && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 mb-1">DOWN</div>
+                          <div className="text-lg font-bold text-white">
+                            {alertData.context.down}&{alertData.context.yardsToGo || 10}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {alertData.context?.timeRemaining && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 mb-1">TIME</div>
+                          <div className="text-sm font-bold text-white">{alertData.context.timeRemaining}</div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Basketball Specific Data */}
+                  {alertData.sport === 'NBA' && alertData.context?.quarter && (
                     <div className="text-center">
-                      <div className="text-xs text-slate-400 mb-1">DOWN</div>
-                      <div className="text-lg font-bold text-white">
-                        {alertData.context.down}&{alertData.context.yardsToGo || 10}
+                      <div className="text-xs text-slate-400 mb-1">QUARTER</div>
+                      <div className="text-sm font-bold text-white bg-slate-800/50 px-2 py-1 rounded">
+                        Q{alertData.context.quarter}
                       </div>
                     </div>
                   )}
 
-                  {/* Universal Time */}
-                  {alertData.context?.timeRemaining && (
+                  {/* Hockey Specific Data */}
+                  {alertData.sport === 'NHL' && alertData.context?.period && (
+                    <div className="text-center">
+                      <div className="text-xs text-slate-400 mb-1">PERIOD</div>
+                      <div className="text-sm font-bold text-white bg-slate-800/50 px-2 py-1 rounded">
+                        P{alertData.context.period}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Universal Time (if not sport-specific) */}
+                  {!alertData.context?.quarter && !alertData.context?.period && !alertData.context?.inning && alertData.context?.timeRemaining && (
                     <div className="text-center">
                       <div className="text-xs text-slate-400 mb-1">TIME</div>
                       <div className="text-sm font-bold text-white">{alertData.context.timeRemaining}</div>
                     </div>
                   )}
 
-                  {/* Priority - Always show */}
+                  {/* Priority - Always show in last column */}
                   <div className="text-center">
                     <div className="text-xs text-slate-400 mb-1">PRIORITY</div>
                     <div className={`text-lg font-bold ${(alertData.priority ?? 0) >= 90 ? 'text-red-400' : (alertData.priority ?? 0) >= 80 ? 'text-orange-400' : (alertData.priority ?? 0) >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
@@ -617,22 +689,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </div>
                   </div>
                 </div>
-
-                {/* Bottom Row - Baseball Diamond for MLB only */}
-                {alertData.sport === 'MLB' && (alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) && (
-                  <div className="flex justify-center pt-3 border-t border-slate-700/30">
-                    <div className="text-center">
-                      <div className="text-xs text-slate-400 mb-2">BASE RUNNERS</div>
-                      <div className="relative w-12 h-12 mx-auto">
-                        <div className="absolute inset-0 rotate-45 border-2 border-slate-600 bg-slate-800/30 rounded-sm"></div>
-                        <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                        <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                        <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-600 border border-slate-500"></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           ) : (
