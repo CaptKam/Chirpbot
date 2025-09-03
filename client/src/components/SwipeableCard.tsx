@@ -390,7 +390,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           </div>
         ) : (
           // Fallback to original sportsbook buttons when no AI data
-          <div className="h-full flex flex-col items-center justify-center p-4 space-y-3">
+          (<div className="h-full flex flex-col items-center justify-center p-4 space-y-3">
             <h4 className="text-sm text-white/90 font-semibold tracking-wide">Sports Betting</h4>
             <div className="grid grid-cols-2 gap-3">
               {sportsbooks.map((sportsbook) => (
@@ -414,10 +414,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               ))}
             </div>
-          </div>
+          </div>)
         )}
       </div>
-
       {/* Delete Menu (Right Swipe) - Only show when swiped right */}
       <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent backdrop-blur-sm flex items-center justify-start pl-4 transition-opacity duration-300 ${
         dragX > 30 ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -435,7 +434,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           <Trash2 className={`w-5 h-5 text-red-400 ${isDeleting ? 'animate-spin' : ''}`} />
         </Button>
       </div>
-
       {/* Main Card */}
       <motion.div
         drag="x"
@@ -472,7 +470,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   >
                     {alertData.sport}
                   </Badge>
-                  <span className="text-xs text-slate-400">{alertData.type.replace(/_/g, ' ')}</span>
+                  <span className="text-slate-400 text-[13px] font-bold">{alertData.type.replace(/_/g, ' ')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="text-emerald-400 font-bold">{alertData.confidence}%</span>
