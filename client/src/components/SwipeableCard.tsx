@@ -7,12 +7,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import AlertFooter from '@/components/AlertFooter';
+import { Badge } from '@/components/ui/badge';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
 import draftkingsLogo from '@assets/draftkings.png';
 import fanaticsLogo from '@assets/fanatics.png';
 import fanduelLogo from '@assets/fanduel.png';
+
+// Assume these utility functions exist and are imported
+declare function formatTime(date: string | Date): string;
+declare function getAlertColor(priority: number): string;
 
 interface BetbookData {
   odds: {
@@ -27,28 +32,61 @@ interface BetbookData {
   }>;
 }
 
+interface Alert {
+  id: string;
+  type: string;
+  message: string;
+  sport?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  probability?: number;
+  priority?: number;
+  betbookData?: BetbookData;
+  context?: {
+    homeScore?: number;
+    awayScore?: number;
+    inning?: number;
+    isTopInning?: boolean;
+    balls?: number;
+    strikes?: number;
+    outs?: number;
+    hasFirst?: boolean;
+    hasSecond?: boolean;
+    hasThird?: boolean;
+    weather?: {
+      temperature: number;
+      condition: string;
+    };
+    quarter?: number;
+    timeRemaining?: string;
+    down?: number;
+    yardsToGo?: number;
+    period?: number;
+  };
+  createdAt: string;
+  confidence?: number;
+  homeScore?: number;
+  awayScore?: number;
+  inning?: number;
+  isTopInning?: boolean;
+  balls?: number;
+  strikes?: number;
+  outs?: number;
+  hasFirst?: boolean;
+  hasSecond?: boolean;
+  hasThird?: boolean;
+  weather?: {
+    temperature: number;
+    condition: string;
+  };
+}
+
 interface SwipeableCardProps {
   children: React.ReactNode;
   alertId: string;
   className?: string;
   onTap?: () => void;
-  alertData?: {
-    sport?: string;
-    homeTeam?: string;
-    awayTeam?: string;
-    homeScore?: number;
-    awayScore?: number;
-    probability?: number;
-    priority?: number;
-    betbookData?: BetbookData;
-    gameInfo?: {
-      v3Analysis?: {
-        tier: number;
-        probability: number;
-        reasons: string[];
-      };
-    };
-  };
+  alertData?: Alert;
   [key: string]: any;
 }
 
@@ -230,8 +268,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     if (alertData?.sport) message += ` (${alertData.sport})`;
     if (alertData?.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
     if (alertData?.priority !== undefined) message += ` - Priority: ${alertData.priority}`;
-    if (alertData?.gameInfo?.v3Analysis?.reasons) {
-      message += `\nReasons: ${alertData.gameInfo.v3Analysis.reasons.join(', ')}`;
+    if (alertData?.context?.reasons) {
+      message += `\nReasons: ${alertData.context.reasons.join(', ')}`;
     }
     if (alertData?.betbookData?.aiAdvice) {
       message += `\nAI Advice: ${alertData.betbookData.aiAdvice}`;
@@ -246,7 +284,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent backdrop-blur-sm transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
-        {alertData?.betbookData || alertData?.gameInfo?.v3Analysis ? (
+        {alertData?.betbookData || alertData?.context?.reasons ? (
           <div className="h-full flex flex-col justify-center p-4 space-y-3">
             {/* AI Insights Header */}
             <div className="flex items-center space-x-2 mb-2">
@@ -260,7 +298,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             </div>
 
             {/* Betting Recommendations Based on Game Situation */}
-            {(alertData.betbookData || alertData.gameInfo?.v3Analysis || (alertData.priority && alertData.priority >= 80)) && (
+            {(alertData.betbookData || alertData.context?.reasons || (alertData.priority && alertData.priority >= 80)) && (
               <div className="space-y-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
                   <div className="flex items-center space-x-2 mb-2">
@@ -268,13 +306,13 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
                   </div>
                   <p className="text-white text-sm font-medium">
-                    {alertData.gameInfo?.v3Analysis?.recommendation || 
+                    {alertData.context?.recommendation || 
                      alertData.betbookData?.aiAdvice || 
                      (() => {
                        const sport = alertData.sport || 'MLB';
                        const tier = Math.ceil((alertData.priority || 70) / 25);
-                       const homeScore = alertData.homeScore || 0;
-                       const awayScore = alertData.awayScore || 0;
+                       const homeScore = alertData.context?.homeScore || alertData.homeScore || 0;
+                       const awayScore = alertData.context?.awayScore || alertData.awayScore || 0;
                        const totalScore = homeScore + awayScore;
 
                        if (sport === 'MLB') {
@@ -293,17 +331,17 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
 
                 {/* AI Analysis Reasons */}
-                {alertData.gameInfo?.v3Analysis?.reasons && (
+                {alertData.context?.reasons && (
                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 ring-1 ring-white/10">
                     <div className="flex items-center space-x-2 mb-1">
                       <Brain className="w-3 h-3 text-purple-400" />
                       <span className="text-xs text-purple-200 font-medium">AI Analysis</span>
                       <span className="text-xs text-green-300 font-mono">
-                        {alertData.gameInfo.v3Analysis.confidence}% confidence
+                        {alertData.context.confidence}% confidence
                       </span>
                     </div>
                     <ul className="text-xs text-white/90 space-y-0.5">
-                      {alertData.gameInfo.v3Analysis.reasons.slice(0, 2).map((reason, idx) => (
+                      {alertData.context.reasons.slice(0, 2).map((reason, idx) => (
                         <li key={idx} className="flex items-start space-x-1">
                           <span className="text-green-400 mt-0.5">•</span>
                           <span>{reason}</span>
@@ -466,7 +504,124 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
         <Card className={className} {...props}>
-          {children}
+          {/* Render the redesigned alert card content here */}
+          {/* The actual alert content is expected to be passed as children or within alertData */}
+          {/* Assuming alertData is passed and contains the alert details */}
+          {alertData ? (
+            <div className="p-5" key={`alert-${alertData.id}-${Date.now()}`}>
+              {/* Alert Header - Type, Priority & Time */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
+                  <Badge 
+                    variant="outline" 
+                    className="px-2 py-1 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                  >
+                    {alertData.type.replace(/_/g, ' ')}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-emerald-400">{alertData.confidence}%</span>
+                  <span className="text-slate-400 text-xs">{formatTime(alertData.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* Team Matchup - Visual & Clean */}
+              <div className="bg-gradient-to-r from-slate-800/40 to-slate-700/40 rounded-lg p-4 mb-4 border border-slate-600/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-slate-300 mb-1">{alertData.awayTeam?.split(' ').pop()}</div>
+                      <div className="text-2xl font-black text-white">{alertData.context?.awayScore ?? alertData.awayScore ?? '-'}</div>
+                    </div>
+                    <div className="px-3 py-2 bg-slate-600/50 rounded-lg">
+                      <div className="text-xs text-slate-400 uppercase tracking-wider">@ </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-slate-300 mb-1">{alertData.homeTeam?.split(' ').pop()}</div>
+                      <div className="text-2xl font-black text-white">{alertData.context?.homeScore ?? alertData.homeScore ?? '-'}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-full mb-1">
+                      {alertData.sport}
+                    </div>
+                    {alertData.context?.inning && (
+                      <div className="text-xs text-slate-400">
+                        {alertData.context.isTopInning ? 'T' : 'B'}{alertData.context.inning}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Situation Info - Visual Icons */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {/* Game Situation */}
+                {alertData.context?.outs !== undefined && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">OUTS</div>
+                    <div className="text-lg font-bold text-white">{alertData.context.outs}</div>
+                  </div>
+                )}
+
+                {/* Count */}
+                {(alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">COUNT</div>
+                    <div className="text-lg font-bold text-white">
+                      {alertData.context?.balls ?? 0}-{alertData.context?.strikes ?? 0}
+                    </div>
+                  </div>
+                )}
+
+                {/* Priority Score */}
+                <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                  <div className="text-xs text-slate-400 mb-1">PRIORITY</div>
+                  <div className={`text-lg font-bold ${alertData.priority >= 90 ? 'text-red-400' : alertData.priority >= 80 ? 'text-orange-400' : alertData.priority >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                    {alertData.priority}
+                  </div>
+                </div>
+              </div>
+
+              {/* Alert Message - Clear & Prominent */}
+              <div className="bg-slate-900/50 rounded-lg p-4 mb-4 border-l-4 border-emerald-500">
+                <h3 className="text-slate-100 text-base font-medium leading-relaxed">
+                  {alertData.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
+                </h3>
+              </div>
+
+              {/* Base Runners Visual (MLB Only) */}
+              {alertData.sport === 'MLB' && (alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) && (
+                <div className="flex justify-center mb-4">
+                  <div className="relative w-24 h-24">
+                    {/* Baseball Diamond */}
+                    <div className="absolute inset-0 rotate-45 border-2 border-slate-600 bg-slate-800/30"></div>
+
+                    {/* Bases */}
+                    <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                    <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                    <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-3 h-3 rounded-full bg-slate-600 border-2 border-slate-500"></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Weather & Context (Compact) */}
+              {alertData.context?.weather && (
+                <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Weather</span>
+                    <span className="text-slate-300">
+                      {alertData.context.weather.temperature}°F, {alertData.context.weather.condition}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            children // Fallback to rendering children if alertData is not available
+          )}
         </Card>
       </motion.div>
     </div>
