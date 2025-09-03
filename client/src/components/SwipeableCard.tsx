@@ -109,7 +109,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
     // Try to open the app first, with better fallback handling
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
+
     if (isMobile) {
       // On mobile, try deep link first
       const startTime = Date.now();
@@ -119,7 +119,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Check if app opened, fallback to store if not
       setTimeout(() => {
         if (Date.now() - startTime < 1500) {
@@ -148,11 +148,11 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     setIsDeleting(true);
     try {
       await apiRequest("DELETE", `/api/alerts/${alertId}`);
-      
+
       // Invalidate and refetch alerts
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/unseen/count'] });
-      
+
       toast({
         title: "Alert deleted",
         description: "The alert has been removed from your feed.",
@@ -173,7 +173,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     if (autoReturnTimeoutRef.current) {
       clearTimeout(autoReturnTimeoutRef.current);
     }
-    
+
     // Set new timer to return to center after 3 seconds
     autoReturnTimeoutRef.current = setTimeout(() => {
       setDragX(0);
@@ -184,7 +184,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     setIsDragging(false);
     const threshold = 100; // Lowered back for better responsiveness
     const velocity = info.velocity.x;
-    
+
     // Use velocity for more natural swipe detection
     if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 500) {
       setDragX(0);
@@ -224,6 +224,22 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     };
   }, []);
 
+  // Construct a display message for sharing/copying
+  const displayMessage = React.useMemo(() => {
+    let message = `ChirpBot Alert: ${alertData?.homeTeam || ''} vs ${alertData?.awayTeam || ''}`;
+    if (alertData?.sport) message += ` (${alertData.sport})`;
+    if (alertData?.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
+    if (alertData?.priority !== undefined) message += ` - Priority: ${alertData.priority}`;
+    if (alertData?.gameInfo?.v3Analysis?.reasons) {
+      message += `\nReasons: ${alertData.gameInfo.v3Analysis.reasons.join(', ')}`;
+    }
+    if (alertData?.betbookData?.aiAdvice) {
+      message += `\nAI Advice: ${alertData.betbookData.aiAdvice}`;
+    }
+    return message;
+  }, [alertData]);
+
+
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* AI Betting Insights Panel (Left Swipe) - Only show when swiped left */}
@@ -260,7 +276,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                        const homeScore = alertData.homeScore || 0;
                        const awayScore = alertData.awayScore || 0;
                        const totalScore = homeScore + awayScore;
-                       
+
                        if (sport === 'MLB') {
                          const overLine = Math.max(totalScore + 1.5, 7.5);
                          if (tier >= 3) {
@@ -296,7 +312,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </ul>
                   </div>
                 )}
-                
+
               </div>
             )}
 
@@ -350,6 +366,36 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex gap-2 mt-3 pt-3 border-t border-slate-700/30">
+              <button 
+                className="flex-1 px-3 py-2 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(displayMessage);
+                  toast({ title: "Copied to clipboard", description: displayMessage.substring(0, 50) + "..." });
+                }}
+              >
+                📋 Copy
+              </button>
+              <button 
+                className="flex-1 px-3 py-2 text-xs font-medium bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Share alert
+                  if (navigator.share) {
+                    navigator.share({ text: displayMessage }).catch(() => {
+                      toast({ title: "Sharing failed", description: "Could not share this alert." });
+                    });
+                  } else {
+                    toast({ title: "Sharing not supported", description: "Your browser does not support sharing." });
+                  }
+                }}
+              >
+                📤 Share
+              </button>
             </div>
           </div>
         ) : (

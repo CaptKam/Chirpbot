@@ -90,6 +90,20 @@ export default function AlertsPage() {
     return <AlertLoading />;
   }
 
+  const AlertSkeleton = () => (
+    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-5 animate-pulse">
+      <div className="flex items-center justify-between mb-4">
+        <div className="h-6 bg-slate-700 rounded w-32"></div>
+        <div className="h-4 bg-slate-700 rounded w-16"></div>
+      </div>
+      <div className="h-4 bg-slate-700 rounded w-full mb-4"></div>
+      <div className="flex items-center justify-between">
+        <div className="h-6 bg-slate-700 rounded w-48"></div>
+        <div className="h-6 bg-slate-700 rounded w-12"></div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
