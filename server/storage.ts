@@ -195,7 +195,7 @@ export const storage = {
   },
 
   async deleteAlert(alertId: string) {
-    const result = await db.execute(sql`DELETE FROM alerts WHERE id = ${alertId}`);
+    const result = await db.execute(sql`DELETE FROM alerts WHERE id = ${sql.raw(`'${alertId}'`)}`);
     return result;
   },
 
