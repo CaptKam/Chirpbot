@@ -1422,14 +1422,19 @@ export class AlertGenerator {
           };
 
           try {
+            console.log(`📱 🔄 Attempting to send Telegram alert to user ${user.username} (${telegramConfig.chatId})`);
+            console.log(`📱 📋 Alert details: ${type} - ${message.substring(0, 100)}...`);
+            
             const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
             if (sent) {
-              console.log(`📱 ✅ Telegram alert sent to user ${user.username}`);
+              console.log(`📱 ✅ Telegram alert sent successfully to user ${user.username}`);
             } else {
               console.log(`📱 ❌ Failed to send Telegram alert to user ${user.username}`);
+              console.log(`📱 🔧 Bot token length: ${telegramConfig.botToken?.length || 0}, Chat ID: ${telegramConfig.chatId}`);
             }
           } catch (telegramError) {
             console.error(`📱 ❌ Telegram error for user ${user.username}:`, telegramError);
+            console.error(`📱 🔧 Config: token=${telegramConfig.botToken ? 'SET' : 'MISSING'}, chatId=${telegramConfig.chatId}`);
           }
         }
       } catch (telegramError) {
