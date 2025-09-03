@@ -444,6 +444,8 @@ export class AlertGenerator {
       alertCount += await this.saveRealTimeAlert(alertKey, 'BASES_LOADED', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
         inning,
         isTopInning,
         outs,
@@ -475,6 +477,8 @@ export class AlertGenerator {
       alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNERS_1ST_2ND', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
         inning,
         isTopInning,
         outs,
@@ -513,6 +517,8 @@ export class AlertGenerator {
       alertCount += await this.saveRealTimeAlert(alertKey, 'RISP', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
         inning,
         isTopInning,
         outs,
@@ -657,6 +663,8 @@ export class AlertGenerator {
           alertCount += await this.saveRealTimeAlert(alertKey, 'POWER_HITTER', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
             batter: batter.fullName,
             batterId: batter.id,
             seasonHomeRuns: seasonHRs,
@@ -684,6 +692,8 @@ export class AlertGenerator {
           alertCount += await this.saveRealTimeAlert(alertKey, 'HOT_HITTER', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
             batter: batter.fullName,
             batterId: batter.id,
             balls,
@@ -770,6 +780,8 @@ export class AlertGenerator {
       alertCount += await this.saveRealTimeAlert(alertKey, 'FULL_COUNT', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
         balls,
         strikes,
         situation: 'full_count'
@@ -809,6 +821,8 @@ export class AlertGenerator {
           alertCount += await this.saveRealTimeAlert(alertKey, 'HOME_RUN_LIVE', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
             batter: lastPlay.matchup?.batter?.fullName,
             inning: lastPlay.about?.inning,
             balls: liveData?.plays?.currentPlay?.count?.balls || 0,
