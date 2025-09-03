@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import AlertFooter from '@/components/AlertFooter';
-import { SwipeableCard } from '@/components/SwipeableCard';
+import AlertCard from '@/components/AlertCard';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,50 +56,6 @@ export default function AlertsPage() {
   const filteredAlerts = filter === 'all' 
     ? (alerts as Alert[])
     : (alerts as Alert[]).filter((alert: Alert) => alert.sport === filter);
-
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'RISP_CHANCE':
-      case 'SCORING_PROBABILITY':
-        return <span className="text-2xl">🔥</span>;
-      case 'BASES_LOADED':
-        return <span className="text-2xl">🚨</span>;
-      case 'WIND_JETSTREAM':
-        return <span className="text-2xl">💨</span>;
-      case 'HR_HITTER_AT_BAT':
-        return <span className="text-2xl">⚾</span>;
-      case 'LATE_PRESSURE':
-      case 'NINTH_TIE':
-        return <span className="text-2xl">⚡</span>;
-      case 'CLOSE_GAME_LATE':
-        return <span className="text-2xl">📈</span>;
-      case 'HOME_RUN':
-        return <span className="text-2xl">💥</span>;
-      default:
-        return <span className="text-2xl">🚀</span>;
-    }
-  };
-
-  const getAlertColor = (priority: number) => {
-    if (priority >= 90) return 'from-red-500 to-red-600 shadow-red-500/25';
-    if (priority >= 80) return 'from-orange-500 to-orange-600 shadow-orange-500/25';
-    if (priority >= 70) return 'from-yellow-500 to-yellow-600 shadow-yellow-500/25';
-    return 'from-blue-500 to-blue-600 shadow-blue-500/25';
-  };
-
-  const getAlertTextColor = (priority: number) => {
-    if (priority >= 90) return 'text-red-400';
-    if (priority >= 80) return 'text-orange-400';
-    if (priority >= 70) return 'text-yellow-400';
-    return 'text-blue-400';
-  };
-
-  const getPriorityLabel = (priority: number) => {
-    if (priority >= 90) return 'URGENT';
-    if (priority >= 80) return 'HIGH';
-    if (priority >= 70) return 'MEDIUM';
-    return 'NORMAL';
-  };
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], { 
@@ -180,72 +135,36 @@ export default function AlertsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <SwipeableCard 
+              <AlertCard
+                sport={alert.sport}
+                type={alert.type}
+                priority={alert.priority}
+                timeIso={alert.createdAt}
+                message={alert.message}
+                matchup={{
+                  away: alert.awayTeam,
+                  home: alert.homeTeam
+                }}
+                context={{
+                  inning: (alert.context?.inning || alert.inning) ? {
+                    number: alert.context?.inning || alert.inning,
+                    half: (alert.context?.isTopInning || alert.isTopInning) ? "Top" : "Bottom"
+                  } : undefined,
+                  outs: alert.context?.outs || alert.outs || 0,
+                  count: {
+                    b: alert.context?.balls || alert.balls || 0,
+                    s: alert.context?.strikes || alert.strikes || 0
+                  },
+                  runners: {
+                    first: !!(alert.context?.hasFirst || alert.hasFirst),
+                    second: !!(alert.context?.hasSecond || alert.hasSecond),
+                    third: !!(alert.context?.hasThird || alert.hasThird)
+                  }
+                }}
                 alertId={alert.id}
                 alertData={alert}
-                className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-lg"
-              >
-                <div className="relative overflow-hidden">
-                  {/* Priority Color Bar */}
-                  <div className={`h-1 w-full bg-gradient-to-r ${getAlertColor(alert.priority)} shadow-lg`}></div>
-                  
-                  <div className="p-4">
-                    {/* Header with icon, sport, priority, and time */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        {getAlertIcon(alert.type)}
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-bold text-sm tracking-wide">{alert.sport}</span>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs font-bold border-2 ${getAlertTextColor(alert.priority)} border-current px-2 py-1`}
-                          >
-                            {getPriorityLabel(alert.priority)}
-                          </Badge>
-                        </div>
-                      </div>
-                      <span className="text-slate-400 text-xs font-medium">{formatTime(alert.createdAt)}</span>
-                    </div>
-                    
-                    {/* Main alert message - BIG and clear */}
-                    <h3 className="text-xl font-bold mb-4 text-white leading-tight tracking-wide">
-                      {alert.message}
-                    </h3>
-                    
-                    {/* Game teams display */}
-                    <div className="mb-3 text-center">
-                      <p className="text-slate-300 font-medium text-lg">
-                        {alert.awayTeam} vs {alert.homeTeam}
-                      </p>
-                    </div>
-                    
-                    {/* Game situation with better styling */}
-                    <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-3 border border-slate-700/50">
-                      <AlertFooter
-                        sport={alert.sport}
-                        // MLB specific
-                        inning={alert.context?.inning || alert.inning}
-                        isTopInning={alert.context?.isTopInning || alert.isTopInning}
-                        balls={alert.context?.balls || alert.balls || 0}
-                        strikes={alert.context?.strikes || alert.strikes || 0}
-                        outs={alert.context?.outs || alert.outs || 0}
-                        hasFirst={!!(alert.context?.hasFirst || alert.hasFirst)}
-                        hasSecond={!!(alert.context?.hasSecond || alert.hasSecond)}
-                        hasThird={!!(alert.context?.hasThird || alert.hasThird)}
-                        // Weather data
-                        weather={alert.context?.weather || alert.weather}
-                        // Other sports specific
-                        quarter={alert.context?.quarter}
-                        timeRemaining={alert.context?.timeRemaining}
-                        down={alert.context?.down}
-                        yardsToGo={alert.context?.yardsToGo}
-                        period={alert.context?.period}
-                        createdAt={alert.createdAt}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </SwipeableCard>
+                className="bg-white/5 backdrop-blur-sm"
+              />
             </motion.div>
           ))
         )}
