@@ -546,9 +546,28 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <div className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-full mb-1">
                       {alertData.sport}
                     </div>
-                    {alertData.context?.inning && (
+                    {/* MLB: Inning Display */}
+                    {alertData.sport === 'MLB' && alertData.context?.inning && (
                       <div className="text-xs text-slate-400">
                         {alertData.context.isTopInning ? 'T' : 'B'}{alertData.context.inning}
+                      </div>
+                    )}
+                    {/* NFL/NCAAF/CFL: Quarter Display */}
+                    {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.quarter && (
+                      <div className="text-xs text-slate-400">
+                        Q{alertData.context.quarter}
+                      </div>
+                    )}
+                    {/* NBA: Quarter Display */}
+                    {alertData.sport === 'NBA' && alertData.context?.quarter && (
+                      <div className="text-xs text-slate-400">
+                        Q{alertData.context.quarter}
+                      </div>
+                    )}
+                    {/* NHL: Period Display */}
+                    {alertData.sport === 'NHL' && alertData.context?.period && (
+                      <div className="text-xs text-slate-400">
+                        P{alertData.context.period}
                       </div>
                     )}
                   </div>
@@ -557,16 +576,56 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               {/* Key Situation Info - Visual Icons */}
               <div className="grid grid-cols-3 gap-3 mb-4">
-                {/* Game Situation */}
-                {alertData.context?.outs !== undefined && (
+                {/* Game Situation - Multi-Sport */}
+                {/* MLB: Outs */}
+                {alertData.sport === 'MLB' && alertData.context?.outs !== undefined && (
                   <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
                     <div className="text-xs text-slate-400 mb-1">OUTS</div>
                     <div className="text-lg font-bold text-white">{alertData.context.outs}</div>
                   </div>
                 )}
 
-                {/* Count */}
-                {(alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
+                {/* NFL: Down & Distance */}
+                {alertData.sport === 'NFL' && alertData.context?.down !== undefined && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">DOWN</div>
+                    <div className="text-lg font-bold text-white">
+                      {alertData.context.down} & {alertData.context.yardsToGo || 10}
+                    </div>
+                  </div>
+                )}
+
+                {/* NBA: Quarter/Period */}
+                {(alertData.sport === 'NBA' || alertData.sport === 'NHL') && alertData.context?.quarter !== undefined && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">{alertData.sport === 'NBA' ? 'QTR' : 'PERIOD'}</div>
+                    <div className="text-lg font-bold text-white">{alertData.context.quarter}</div>
+                  </div>
+                )}
+
+                {/* NCAAF: Down & Distance */}
+                {alertData.sport === 'NCAAF' && alertData.context?.down !== undefined && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">DOWN</div>
+                    <div className="text-lg font-bold text-white">
+                      {alertData.context.down} & {alertData.context.yardsToGo || 10}
+                    </div>
+                  </div>
+                )}
+
+                {/* CFL: Down & Distance */}
+                {alertData.sport === 'CFL' && alertData.context?.down !== undefined && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">DOWN</div>
+                    <div className="text-lg font-bold text-white">
+                      {alertData.context.down} & {alertData.context.yardsToGo || 10}
+                    </div>
+                  </div>
+                )}
+
+                {/* Count/Time - Multi-Sport */}
+                {/* MLB: Ball-Strike Count */}
+                {alertData.sport === 'MLB' && (alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
                   <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
                     <div className="text-xs text-slate-400 mb-1">COUNT</div>
                     <div className="text-lg font-bold text-white">
@@ -575,7 +634,23 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                 )}
 
-                {/* Priority Score */}
+                {/* NFL/NCAAF/CFL: Time Remaining */}
+                {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.timeRemaining && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">TIME</div>
+                    <div className="text-lg font-bold text-white">{alertData.context.timeRemaining}</div>
+                  </div>
+                )}
+
+                {/* NBA/NHL: Time Remaining */}
+                {(alertData.sport === 'NBA' || alertData.sport === 'NHL') && alertData.context?.timeRemaining && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">TIME</div>
+                    <div className="text-lg font-bold text-white">{alertData.context.timeRemaining}</div>
+                  </div>
+                )}
+
+                {/* Priority Score - Universal */}
                 <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
                   <div className="text-xs text-slate-400 mb-1">PRIORITY</div>
                   <div className={`text-lg font-bold ${alertData.priority >= 90 ? 'text-red-400' : alertData.priority >= 80 ? 'text-orange-400' : alertData.priority >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
@@ -591,7 +666,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </h3>
               </div>
 
-              {/* Base Runners Visual (MLB Only) */}
+              {/* Field/Court Visualization - Multi-Sport */}
+              
+              {/* MLB: Base Runners Visual */}
               {alertData.sport === 'MLB' && (alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) && (
                 <div className="flex justify-center mb-4">
                   <div className="relative w-24 h-24">
@@ -603,6 +680,72 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
                     <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
                     <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-3 h-3 rounded-full bg-slate-600 border-2 border-slate-500"></div>
+                  </div>
+                </div>
+              )}
+
+              {/* NFL/NCAAF/CFL: Field Position Visual */}
+              {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.fieldPosition && (
+                <div className="flex justify-center mb-4">
+                  <div className="relative w-32 h-16 bg-green-900/30 border-2 border-slate-600 rounded-lg">
+                    {/* Yard Lines */}
+                    <div className="absolute inset-x-0 top-1/2 h-px bg-slate-500"></div>
+                    <div className="absolute left-1/4 top-0 bottom-0 w-px bg-slate-600"></div>
+                    <div className="absolute right-1/4 top-0 bottom-0 w-px bg-slate-600"></div>
+                    
+                    {/* Ball Position Indicator */}
+                    <div className="absolute top-1/2 transform -translate-y-1/2 w-2 h-2 bg-orange-400 rounded-full"
+                         style={{ left: `${Math.min(Math.max(alertData.context.fieldPosition / 100 * 100, 5), 95)}%` }}>
+                    </div>
+                    
+                    {/* Field Position Text */}
+                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-400">
+                      {alertData.context.fieldPosition} yard line
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* NBA: Court Position Visual */}
+              {alertData.sport === 'NBA' && alertData.context?.courtPosition && (
+                <div className="flex justify-center mb-4">
+                  <div className="relative w-32 h-20 bg-orange-900/20 border-2 border-slate-600 rounded-lg">
+                    {/* Court Lines */}
+                    <div className="absolute inset-x-0 top-1/2 h-px bg-slate-500"></div>
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-500"></div>
+                    
+                    {/* 3-Point Lines */}
+                    <div className="absolute left-2 right-2 top-2 bottom-2 border border-slate-600 rounded-full"></div>
+                    
+                    {/* Ball Position */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-orange-400 rounded-full"></div>
+                    
+                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-400">
+                      {alertData.context.courtPosition}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* NHL: Rink Position Visual */}
+              {alertData.sport === 'NHL' && alertData.context?.rinkPosition && (
+                <div className="flex justify-center mb-4">
+                  <div className="relative w-36 h-20 bg-blue-900/20 border-2 border-slate-600 rounded-xl">
+                    {/* Rink Lines */}
+                    <div className="absolute inset-x-0 top-1/2 h-px bg-red-500"></div>
+                    <div className="absolute left-1/3 top-0 bottom-0 w-px bg-blue-500"></div>
+                    <div className="absolute right-1/3 top-0 bottom-0 w-px bg-blue-500"></div>
+                    
+                    {/* Goal Areas */}
+                    <div className="absolute left-1 top-1/3 bottom-1/3 w-4 bg-blue-500/20 rounded-r"></div>
+                    <div className="absolute right-1 top-1/3 bottom-1/3 w-4 bg-blue-500/20 rounded-l"></div>
+                    
+                    {/* Puck Position */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-black rounded-full"></div>
+                    
+                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-400">
+                      {alertData.context.rinkPosition}
+                    </div>
                   </div>
                 </div>
               )}

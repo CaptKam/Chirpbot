@@ -166,6 +166,7 @@ export default function AlertsPage() {
               <SwipeableCard 
                 alertId={alert.id}
                 alertData={{
+                  id: alert.id,
                   sport: alert.sport,
                   homeTeam: alert.homeTeam,
                   awayTeam: alert.awayTeam,
@@ -177,7 +178,31 @@ export default function AlertsPage() {
                   type: alert.type,
                   message: alert.message,
                   createdAt: alert.createdAt,
-                  context: alert.context,
+                  context: {
+                    ...alert.context,
+                    // MLB specific
+                    inning: alert.context?.inning || alert.inning,
+                    isTopInning: alert.context?.isTopInning || alert.isTopInning,
+                    balls: alert.context?.balls || alert.balls,
+                    strikes: alert.context?.strikes || alert.strikes,
+                    outs: alert.context?.outs || alert.outs,
+                    hasFirst: alert.context?.hasFirst || alert.hasFirst,
+                    hasSecond: alert.context?.hasSecond || alert.hasSecond,
+                    hasThird: alert.context?.hasThird || alert.hasThird,
+                    // Football specific (NFL, NCAAF, CFL)
+                    quarter: alert.context?.quarter,
+                    down: alert.context?.down,
+                    yardsToGo: alert.context?.yardsToGo,
+                    timeRemaining: alert.context?.timeRemaining,
+                    fieldPosition: alert.context?.fieldPosition,
+                    // Basketball specific (NBA)
+                    courtPosition: alert.context?.courtPosition,
+                    // Hockey specific (NHL)
+                    period: alert.context?.period,
+                    rinkPosition: alert.context?.rinkPosition,
+                    // Weather (all sports)
+                    weather: alert.context?.weather || alert.weather
+                  },
                   betbookData: alert.context?.betbookData,
                   gameInfo: alert.context?.gameInfo
                 }}
