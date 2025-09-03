@@ -113,6 +113,22 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
+  // Debug score data
+  React.useEffect(() => {
+    if (alertData) {
+      console.log('🔍 SwipeableCard Score Debug:', {
+        alertId: alertData.id,
+        homeScore: alertData.homeScore,
+        awayScore: alertData.awayScore,
+        contextHomeScore: alertData.context?.homeScore,
+        contextAwayScore: alertData.context?.awayScore,
+        contextScores: alertData.context?.scores,
+        homeTeam: alertData.homeTeam,
+        awayTeam: alertData.awayTeam
+      });
+    }
+  }, [alertData]);
+
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
     // Try to open the app first, with better fallback handling
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -497,7 +513,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-slate-200">
-                        {alertData.context?.awayScore ?? alertData.awayScore ?? 0}
+                        {alertData.context?.awayScore ?? alertData.awayScore ?? alertData.context?.scores?.away ?? 0}
                       </div>
                     </div>
                   </div>
@@ -527,7 +543,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   <div className="flex items-center space-x-3">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-slate-200">
-                        {alertData.context?.homeScore ?? alertData.homeScore ?? 0}
+                        {alertData.context?.homeScore ?? alertData.homeScore ?? alertData.context?.scores?.home ?? 0}
                       </div>
                     </div>
                     <div className="text-center">
