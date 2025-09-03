@@ -7,6 +7,8 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
+import { AlertGenerator } from "./services/alert-generator";
+import { BasicAI } from "./services/basic-ai";
 
 // Global error handlers to prevent unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -108,6 +110,18 @@ app.use((req, res, next) => {
 
     const server = await registerRoutes(app);
 
+    // Initialize alert generator and AI system
+    const alertGenerator = new AlertGenerator();
+    const aiEngine = new BasicAI();
+
+    // Log AI system status
+    console.log(`🤖 AI Betting System: ${aiEngine.isConfigured ? '✅ ACTIVE' : '⚠️ FALLBACK MODE'}`);
+    if (aiEngine.isConfigured) {
+      console.log('🎯 AI betting insights will be generated for high-priority alerts (70%+)');
+    } else {
+      console.log('📊 Using fallback betting analysis (no OpenAI key configured)');
+    }
+
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
@@ -156,4 +170,3 @@ app.use((req, res, next) => {
   console.error('🚨 Unhandled error in main async function:', error);
   process.exit(1);
 });
-

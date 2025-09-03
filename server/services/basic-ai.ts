@@ -21,12 +21,22 @@ interface AIEnhancement {
   enhanced: boolean;
 }
 
+// Placeholder for betting insights structure, assuming it's defined elsewhere
+interface BettingInsights {
+  insights: string;
+  recommendation: string;
+  confidence: number;
+}
+
 export class BasicAI {
   private apiKey: string;
   private baseUrl = 'https://api.openai.com/v1/chat/completions';
-  
+  private isConfigured = false; // Assume configuration check happens elsewhere
+
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
+    // In a real scenario, you'd check if the API key is valid or if other configs are present
+    this.isConfigured = !!this.apiKey;
   }
 
   // Simple AI enhancement for high-value alerts
@@ -54,7 +64,7 @@ export class BasicAI {
     try {
       const prompt = this.buildPrompt(context);
       const response = await this.callOpenAI(prompt);
-      
+
       return {
         confidence: Math.min(context.probability + 10, 95), // AI boost
         insights: response.insights,
@@ -122,7 +132,7 @@ Keep response under 100 words. Focus on immediate betting value.
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content || '';
-    
+
     // Parse response into structured format
     const lines = content.split('\n').filter(line => line.trim());
     return {
@@ -134,13 +144,13 @@ Keep response under 100 words. Focus on immediate betting value.
   // Quick confidence boost for RE24-enhanced alerts
   calculateAIConfidence(baseConfidence: number, situation: string): number {
     let boost = 0;
-    
+
     // Situational boosts
     if (situation.includes('bases loaded')) boost += 15;
     if (situation.includes('2 outs')) boost += 10;
     if (situation.includes('late inning')) boost += 10;
     if (situation.includes('close game')) boost += 5;
-    
+
     return Math.min(baseConfidence + boost, 95);
   }
 
@@ -150,5 +160,42 @@ Keep response under 100 words. Focus on immediate betting value.
     if (probability >= 80) return true;
     if (probability >= 70 && ['RISP', 'BASES_LOADED', 'CLOSE_GAME'].includes(alertType)) return true;
     return false;
+  }
+
+  // Fallback insights when AI is not configured or fails
+  private getFallbackInsights(context: AlertContext): BettingInsights {
+    return {
+      insights: 'AI insights unavailable. Monitor game closely.',
+      recommendation: 'HOLD',
+      confidence: context.probability // Fallback to original probability
+    };
+  }
+
+  // Function to generate betting insights using AI
+  async generateBettingInsights(context: AlertContext): Promise<BettingInsights> {
+    if (!this.isConfigured) {
+      return this.getFallbackInsights(context);
+    }
+
+    // Check if this alert type should get AI enhancement
+    if (!this.shouldEnhance(context.probability, context.type)) {
+      return this.getFallbackInsights(context);
+    }
+
+    try {
+      console.log(`🤖 AI: Generating betting insights for ${context.type} alert with ${context.probability}% probability`);
+      const prompt = this.buildPrompt(context);
+      const aiResponse = await this.callOpenAI(prompt);
+
+      console.log(`✅ AI: Generated betting insights - ${aiResponse.insights}`);
+      return {
+        insights: aiResponse.insights,
+        recommendation: aiResponse.recommendation,
+        confidence: this.calculateAIConfidence(context.probability, context.situation)
+      };
+    } catch (error) {
+      console.error('❌ AI betting insights failed:', error);
+      return this.getFallbackInsights(context);
+    }
   }
 }

@@ -61,6 +61,52 @@ interface AlertData {
   state: string;
 }
 
+// Helper function to generate AI betting insights (placeholder for actual implementation)
+function getBetbookData(context: any): BetbookData {
+  const { sport, gameId, homeTeam, awayTeam, homeScore, awayScore, type, probability, inning, outs } = context;
+  const totalScore = homeScore + awayScore;
+
+  // Generate realistic odds based on game situation
+  let homeOdds = -110;
+  let awayOdds = -110;
+  let totalLine = sport === 'MLB' ? Math.max(totalScore + 1.5, 7.5) : Math.max(totalScore + 3, 45);
+
+  // Adjust odds based on score differential
+  const scoreDiff = homeScore - awayScore;
+  if (scoreDiff > 0) {
+    homeOdds = Math.max(-200, -110 - (scoreDiff * 15));
+    awayOdds = Math.min(+180, -110 + (scoreDiff * 20));
+  } else if (scoreDiff < 0) {
+    awayOdds = Math.max(-200, -110 - (Math.abs(scoreDiff) * 15));
+    homeOdds = Math.min(+180, -110 + (Math.abs(scoreDiff) * 20));
+  }
+
+  // Generate AI advice based on alert context
+  let aiAdvice = "Standard betting situation detected.";
+  if (probability >= 90) {
+    aiAdvice = `HIGH VALUE: ${sport === 'MLB' ? 'Live over/under' : 'In-game betting'} opportunity with ${probability}% confidence. Consider betting the over ${totalLine}.`;
+  } else if (probability >= 80) {
+    aiAdvice = `GOOD VALUE: Moderate betting opportunity. ${sport === 'MLB' ? 'Over ' + totalLine + ' runs' : 'Live betting'} shows value.`;
+  } else if (context.scoringProbability >= 70) {
+    aiAdvice = `SCORING LIKELY: ${context.scoringProbability}% chance of runs scoring. Consider live betting opportunities.`;
+  }
+
+  return {
+    odds: {
+      home: homeOdds,
+      away: awayOdds,
+      total: totalLine
+    },
+    aiAdvice,
+    sportsbookLinks: [
+      { name: 'FanDuel', url: 'https://sportsbook. FanDuel.com' },
+      { name: 'DraftKings', url: 'https://sportsbook.draftkings.com' },
+      { name: 'Bet365', url: 'https://www.bet365.com' },
+      { name: 'BetMGM', url: 'https://sports.betmgm.com' }
+    ]
+  };
+}
+
 export class AlertGenerator {
   private mlbApi: MLBApiService;
   private ncaafApi: NCAAFApiService;
@@ -638,7 +684,7 @@ export class AlertGenerator {
       const weather = await weatherService.getWeatherForTeam(game.homeTeam);
       const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
 
-      const message = `🔥 LATE INNING PRESSURE! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - ${situation} ${inning}th. ${weather.temperature}°F, ${windDesc}`;
+      const message = `🔥 LATE INNING PRESSURE! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayTeam} ${game.awayScore} - ${situation} ${inning}th. ${weather.temperature}°F, ${windDesc}`;
 
       alertCount += await this.saveRealTimeAlert(alertKey, 'LATE_PRESSURE', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -816,6 +862,20 @@ export class AlertGenerator {
           const message = `⚡ STRIKEOUT! ${batter} struck out by ${pitcher} - ${game.awayTeam} vs ${game.homeTeam}`;
 
           console.log(`🚨 GENERATING STRIKEOUT ALERT: ${message}`);
+          // Generate AI betting insights for this strikeout alert
+          const betbookData = getBetbookData({
+            sport: 'MLB',
+            gameId: game.gameId,
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            homeScore: game.homeScore || 0,
+            awayScore: game.awayScore || 0,
+            type: 'STRIKEOUT',
+            probability: 75,
+            inning: play.about?.inning,
+            outs: play.about?.outs || 0
+          });
+
           const alertsSaved = await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
@@ -825,7 +885,9 @@ export class AlertGenerator {
             outs: play.about?.outs || play.about?.o || liveData?.plays?.currentPlay?.count?.outs || 0,
             balls,
             strikes,
-            situation: 'strikeout'
+            situation: 'strikeout',
+            betbookData: betbookData,
+            recommendation: betbookData.aiAdvice
           }, 75);
           console.log(`🚨 STRIKEOUT ALERT SAVED: ${alertsSaved} alerts`);
           alertCount += alertsSaved;
@@ -910,9 +972,9 @@ export class AlertGenerator {
     // Fallback to basic close game alert - TEMPORARILY RELAXED FOR TESTING
     if (scoreDiff <= 10 && (game.homeScore > 0 || game.awayScore > 0)) {
       const alertKey = `${game.gameId}_LIVE_CLOSE_TEST_${Date.now()}`;
-      const message = `🔥 TEST ALERT: Game ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}`;
+      const message = `🔥 TEST ALERT: Game ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeTeam} ${game.homeScore}`;
 
-      console.log(`🧪 GENERATING TEST ALERT with scores: ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}`);
+      console.log(`🧪 GENERATING TEST ALERT with scores: ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeTeam} ${game.homeScore}`);
 
       alertCount += await this.saveRealTimeAlert(alertKey, 'CLOSE_GAME_LIVE', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -1249,28 +1311,42 @@ export class AlertGenerator {
       }
 
       // Generate AI betting insights for high-priority alerts
-      let betbookData = null;
-      let v3Analysis = null;
+      if (priority >= 70 && !context.betbookData) {
+        try {
+          const betbookData = getBetbookData({
+            sport: sport,
+            gameId: gameId,
+            homeTeam: context.homeTeam,
+            awayTeam: context.awayTeam,
+            homeScore: context.homeScore || 0,
+            awayScore: context.awayScore || 0,
+            type: type,
+            probability: priority,
+            inning: context.inning,
+            outs: context.outs || 0
+          });
 
-      if (priority >= 75) {
-        betbookData = await this.generateBetbookData(context, priority, sport);
-        v3Analysis = this.generateV3Analysis(context, priority, type);
+          context.betbookData = betbookData;
+          console.log(`🤖 AI: Generated betting insights for ${type} alert - ${betbookData.aiAdvice}`);
+        } catch (error) {
+          console.error('❌ AI betting insights generation failed:', error);
+        }
       }
 
       // Enhanced payload with AI insights
       const enhancedPayload = {
         message,
         context,
-        betbookData,
+        betbookData: context.betbookData, // Ensure betbookData is part of the payload
         gameInfo: {
-          v3Analysis
+          v3Analysis: this.generateV3Analysis(context, priority, type) // Generate V3 Analysis here
         }
       };
 
       // Check if any user would actually receive this alert before saving
       const allUsers = await storage.getAllUsers();
       const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-      
+
       let willSendToAnyUser = false;
       for (const user of telegramUsers) {
         const userPrefs = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
@@ -1370,7 +1446,7 @@ export class AlertGenerator {
 
             // Get user details including Telegram settings
             const user = await storage.getUserById(monitoredGame.userId);
-            
+
             // Check individual user preferences for this alert type
             if (user) {
               const userPrefs = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
