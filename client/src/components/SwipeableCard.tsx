@@ -522,8 +522,15 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Compact Game Situation */}
-              <div className="grid grid-cols-4 gap-2 mb-2">
+              {/* Compact Alert Message - Moved under Team Matchup */}
+              <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500 mb-2">
+                <p className="text-slate-100 text-sm leading-snug">
+                  {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
+                </p>
+              </div>
+
+              {/* Compact Game Situation with Baseball Diamond Integration */}
+              <div className="grid grid-cols-5 gap-2 mb-2">
                 {/* MLB Specific */}
                 {alertData.sport === 'MLB' && alertData.context?.outs !== undefined && (
                   <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
@@ -566,27 +573,21 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     {alertData.priority ?? 0}
                   </div>
                 </div>
-              </div>
 
-              {/* Compact Alert Message */}
-              <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500">
-                <p className="text-slate-100 text-sm leading-snug">
-                  {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
-                </p>
-              </div>
-
-              {/* Compact Base Runners (MLB only) */}
-              {alertData.sport === 'MLB' && (alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) && (
-                <div className="flex justify-center mt-2">
-                  <div className="relative w-16 h-16">
-                    <div className="absolute inset-0 rotate-45 border border-slate-600 bg-slate-800/30"></div>
-                    <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-slate-600 border border-slate-500"></div>
+                {/* Baseball Diamond Integration - Only for MLB with base runners */}
+                {alertData.sport === 'MLB' && (alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) && (
+                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1">BASES</div>
+                    <div className="relative w-8 h-8 mx-auto">
+                      <div className="absolute inset-0 rotate-45 border border-slate-600 bg-slate-800/30"></div>
+                      <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                      <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                      <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-600 border border-slate-500"></div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ) : (
             children // Fallback to rendering children if alertData is not available
