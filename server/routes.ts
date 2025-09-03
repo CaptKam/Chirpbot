@@ -1031,7 +1031,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'SHUTOUT': true,
         'BLOWOUT': true,
         'FULL_COUNT': true,
-        'STRIKEOUT': false,
         // NFL alerts
         'RED_ZONE': true,
         'FOURTH_DOWN': true,

@@ -459,50 +459,7 @@ export class AlertGenerator {
     const balls = count?.balls || 0;
     const strikes = count?.strikes || 0;
 
-    // Check recent plays for strikeouts
-    const allPlays = liveData?.plays?.allPlays || [];
-    if (allPlays.length >= 2) {
-      // Check the last few completed plays for strikeouts
-      const recentPlays = allPlays.slice(-3);
-      
-      for (const play of recentPlays) {
-        const result = play.result;
-        const description = result?.description || '';
-        const event = result?.event || '';
-        
-        // Multiple ways to detect strikeouts from MLB API
-        const isStrikeout = 
-          event === 'Strikeout' ||
-          event === 'Strike Out' || 
-          event.includes('strikeout') ||
-          description.toLowerCase().includes('strikes out') ||
-          description.toLowerCase().includes('struck out') ||
-          description.toLowerCase().includes('strikeout');
-          
-        if (isStrikeout) {
-          // Check if any user has strikeout alerts enabled before generating
-          const strikeoutEnabled = await this.isAlertTypeEnabled('MLB', 'STRIKEOUT');
-          if (strikeoutEnabled) {
-            const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
-            const batter = play.matchup?.batter?.fullName || 'Unknown Batter';
-            const pitcher = play.matchup?.pitcher?.fullName || 'Unknown Pitcher';
-            const message = `⚡ STRIKEOUT! ${batter} struck out by ${pitcher} - ${game.awayTeam} vs ${game.homeTeam}`;
-            
-            alertCount += await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
-              homeTeam: game.homeTeam,
-              awayTeam: game.awayTeam,
-              batter: batter,
-              pitcher: pitcher,
-              inning: play.about?.inning,
-              outs: play.about?.outs || play.about?.o || liveData?.plays?.currentPlay?.count?.outs || 0,
-              balls,
-              strikes,
-              situation: 'strikeout'
-            }, 75);
-          }
-        }
-      }
-    }
+    // Strikeout alerts have been completely removed from the system
 
     // Full count situation (3-2)
     if (balls === 3 && strikes === 2) {
