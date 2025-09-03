@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { gameId } = req.params;
       const { MLBApiService } = await import('./services/mlb-api');
       const mlbService = new MLBApiService();
-      const enhancedData = await mlbService.getEnhancedGameState(gameId);
+      const enhancedData = await mlbService.getEnhancedGameData(gameId);
       res.json(enhancedData);
     } catch (error) {
       console.error('Error fetching enhanced game data:', error);
