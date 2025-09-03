@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Clock, TrendingUp, Users, Bell, Activity } from 'lucide-react';
+import { AlertLoading } from '@/components/sports-loading';
 
 interface Alert {
   id: string;
@@ -86,14 +87,7 @@ export default function AlertsPage() {
   };
 
   if (alertsLoading || statsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-300">Loading alerts...</p>
-        </div>
-      </div>
-    );
+    return <AlertLoading />;
   }
 
   return (

@@ -18,19 +18,13 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import { AuthLoading } from "@/components/sports-loading";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-300">Loading...</p>
-        </div>
-      </div>
-    );
+    return <AuthLoading />;
   }
 
   if (!isAuthenticated) {
@@ -44,14 +38,7 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-300">Loading...</p>
-        </div>
-      </div>
-    );
+    return <AuthLoading />;
   }
 
   if (isAuthenticated) {

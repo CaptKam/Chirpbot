@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 
 // Alert configuration from settings.tsx
 const ALERT_TYPE_CONFIG = {
@@ -233,14 +234,7 @@ export default function Admin() {
   };
 
   if (usersLoading || statsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-300">Loading admin dashboard...</p>
-        </div>
-      </div>
-    );
+    return <StatsLoading message="Loading admin dashboard..." />;
   }
 
   return (

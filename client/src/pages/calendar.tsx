@@ -65,6 +65,7 @@ const extractTeamAbbreviation = (teamName: string) => {
 };
 
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
+import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
@@ -384,37 +385,9 @@ export default function Calendar() {
 
         {isLoading ? (
           <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6 min-h-[140px] animate-pulse">
-                {/* Header skeleton */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-slate-700 rounded-full"></div>
-                      <div className="w-4 h-4 bg-slate-700 rounded"></div>
-                      <div className="w-12 h-12 bg-slate-700 rounded-full"></div>
-                    </div>
-                  </div>
-                  <div className="w-16 h-6 bg-slate-700 rounded-full"></div>
-                </div>
-                
-                {/* Team names skeleton */}
-                <div className="mb-3">
-                  <div className="h-5 bg-slate-700 rounded w-48 mb-1"></div>
-                </div>
-                
-                {/* Bottom info skeleton */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-20 h-7 bg-slate-700 rounded-full"></div>
-                    <div className="w-16 h-7 bg-slate-700 rounded-full"></div>
-                  </div>
-                  <div className="text-right">
-                    <div className="h-5 bg-slate-700 rounded w-16 mb-1"></div>
-                    <div className="h-4 bg-slate-700 rounded w-24"></div>
-                  </div>
-                </div>
-              </div>
+            <SportsLoading sport={activeSport} message={`Loading ${activeSport} games...`} size="lg" />
+            {[...Array(2)].map((_, i) => (
+              <GameCardLoading key={i} sport={activeSport} />
             ))}
           </div>
         ) : games.length === 0 ? (

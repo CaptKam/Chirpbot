@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 
@@ -268,14 +269,7 @@ export default function Settings() {
   };
 
   if (isAuthLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-300">Loading...</p>
-        </div>
-      </div>
-    );
+    return <AuthLoading />;
   }
 
   return (
