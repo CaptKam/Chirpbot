@@ -15,8 +15,14 @@ export interface Alert {
   title: string;
   description: string;
   message?: string;
+  aiEnhancedMessage?: string;
   aiContext?: string | null;
   aiConfidence?: number | null;
+  aiInsights?: {
+    reasons?: string[];
+    recommendation?: string;
+    confidence?: number;
+  };
   confidence?: number;
   priority?: number;
   probability?: number;

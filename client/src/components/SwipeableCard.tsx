@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import AlertFooter from '@/components/AlertFooter';
+import { LiveSportDataFooter } from '@/components/LiveSportDataFooter';
 import { Badge } from '@/components/ui/badge';
 import { Alert } from '@/types';
 
@@ -524,51 +525,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Compact Game Situation */}
-              <div className="grid grid-cols-4 gap-2 mb-2">
-                {/* MLB Specific */}
-                {alertData.sport === 'MLB' && alertData.context?.outs !== undefined && (
-                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400">OUTS</div>
-                    <div className="text-sm font-bold text-white">{alertData.context.outs}</div>
-                  </div>
-                )}
-
-                {alertData.sport === 'MLB' && (alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
-                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400">COUNT</div>
-                    <div className="text-sm font-bold text-white">
-                      {alertData.context?.balls ?? 0}-{alertData.context?.strikes ?? 0}
-                    </div>
-                  </div>
-                )}
-
-                {/* Football Specific */}
-                {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.down && (
-                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400">DOWN</div>
-                    <div className="text-sm font-bold text-white">
-                      {alertData.context.down}&{alertData.context.yardsToGo || 10}
-                    </div>
-                  </div>
-                )}
-
-                {/* Universal Time */}
-                {alertData.context?.timeRemaining && (
-                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400">TIME</div>
-                    <div className="text-sm font-bold text-white">{alertData.context.timeRemaining}</div>
-                  </div>
-                )}
-
-                {/* Priority */}
-                <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                  <div className="text-xs text-slate-400">PRI</div>
-                  <div className={`text-sm font-bold ${(alertData.priority ?? 0) >= 90 ? 'text-red-400' : (alertData.priority ?? 0) >= 80 ? 'text-orange-400' : (alertData.priority ?? 0) >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
-                    {alertData.priority ?? 0}
-                  </div>
-                </div>
-              </div>
+              {/* Live Sport Data Footer */}
+              <LiveSportDataFooter
+                sport={alertData.sport}
+                context={alertData.context}
+                priority={alertData.priority}
+              />
 
               {/* Alert Message - Shows AI Enhancement Flow */}
               <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500">
@@ -596,18 +558,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 )}
               </div>
 
-              {/* Compact Base Runners (MLB only) */}
-              {alertData.sport === 'MLB' && (alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) && (
-                <div className="flex justify-center mt-2">
-                  <div className="relative w-16 h-16">
-                    <div className="absolute inset-0 rotate-45 border border-slate-600 bg-slate-800/30"></div>
-                    <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-slate-600 border border-slate-500"></div>
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             children // Fallback to rendering children if alertData is not available
