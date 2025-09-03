@@ -54,6 +54,7 @@ export interface Settings {
     inningChange?: boolean;
     
     // MLB Alert Types - Player Performance  
+    strikeouts?: boolean;
     powerHitter?: boolean;
     powerHitterOnDeck?: boolean;
     starBatter?: boolean;

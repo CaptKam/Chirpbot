@@ -15,10 +15,9 @@ import Login from "./pages/login";
 import Alerts from "./pages/alerts";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Wrench, Clock, Bell, X } from "lucide-react";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -62,63 +61,11 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
   return <Component />;
 }
 
-function SystemAnnouncement({ message, onDismiss }: { message: string; onDismiss: () => void }) {
-  return (
-    <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 mx-4 mt-4 rounded-lg p-4">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-3 flex-1">
-          <div className="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Bell className="w-4 h-4 text-blue-400" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-slate-100 text-sm mb-1">System Announcement</h3>
-            <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
-          </div>
-        </div>
-        <button 
-          onClick={onDismiss}
-          className="text-slate-400 hover:text-slate-200 ml-2 flex-shrink-0"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function MaintenanceMode({ message }: { message: string }) {
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
-      <div className="text-center max-w-md mx-auto px-6">
-        <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Wrench className="w-12 h-12 text-yellow-500" />
-        </div>
-        <h1 className="text-2xl font-bold mb-4">System Under Maintenance</h1>
-        <p className="text-slate-300 mb-6 leading-relaxed">
-          {message || "We're currently performing scheduled maintenance to improve your experience. Please check back in a few minutes."}
-        </p>
-        <div className="flex items-center justify-center text-slate-400 text-sm">
-          <Clock className="w-4 h-4 mr-2" />
-          <span>We'll be back shortly</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function RegularAppContent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const { lastMessage } = useWebSocket();
-  const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
-
-  // Check system status for maintenance mode
-  const { data: systemStatus } = useQuery({
-    queryKey: ['/api/system-status'],
-    refetchInterval: 30000, // Check every 30 seconds
-    staleTime: 25000,
-  });
 
   // Get settings to check if push notifications are enabled
   const { data: settings } = useQuery({
@@ -139,26 +86,8 @@ function RegularAppContent() {
     }
   }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
 
-  // Reset dismissed state when announcement changes
-  useEffect(() => {
-    setDismissedAnnouncement(false);
-  }, [systemStatus?.systemAnnouncement]);
-
-  // Show maintenance mode if enabled (AFTER all hooks)
-  if (systemStatus?.maintenanceMode) {
-    return <MaintenanceMode message={systemStatus.maintenanceMessage} />;
-  }
-
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
-      {/* System Announcement Banner */}
-      {systemStatus?.systemAnnouncement && !dismissedAnnouncement && (
-        <SystemAnnouncement 
-          message={systemStatus.systemAnnouncement} 
-          onDismiss={() => setDismissedAnnouncement(true)}
-        />
-      )}
-      
       <Switch>
         <Route path="/" component={() => <PublicRoute component={Landing} />} />
         <Route path="/login" component={() => <PublicRoute component={Login} />} />

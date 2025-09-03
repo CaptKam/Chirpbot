@@ -60,51 +60,15 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Alerts table for tracking sports alerts with OpenAI live monitoring (existing structure)
-export const alerts = pgTable("alerts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  alertKey: varchar("alert_key").notNull(), // Keep existing structure
-  sport: text("sport").notNull(),
-  gameId: text("game_id").notNull(),
-  type: text("type").notNull(),
-  state: text("state").notNull().default('NEW'),
-  score: integer("score").notNull(),
-  payload: jsonb("payload").$type<{
-    message?: string;
-    team?: string;
-    confidence?: number;
-    gamePk?: string;
-    inning?: number;
-    outs?: number;
-    baseRunners?: { first?: boolean; second?: boolean; third?: boolean };
-    openaiEnhanced?: boolean;
-    originalMessage?: string;
-    status?: 'LIVE' | 'UPDATED' | 'EXPIRED';
-    originalAlertId?: string;
-    openaiMonitored?: boolean;
-  }>().notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-// Global alert settings controlled by admin
+// Global alert settings for admin management
 export const globalAlertSettings = pgTable("global_alert_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  sport: text("sport").notNull(),
-  alertType: text("alert_type").notNull(),
+  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL, etc.
+  alertType: text("alert_type").notNull(), // RISP, BASES_LOADED, etc.
   enabled: boolean("enabled").notNull().default(true),
+  masterEnabled: boolean("master_enabled").notNull().default(true), // Global master switch
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  updatedBy: varchar("updated_by").references(() => users.id),
-});
-
-// System configuration settings for admin control
-export const systemConfiguration = pgTable("system_configuration", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  category: text("category").notNull(), // 'core', 'alerts', 'api', 'users', 'monitoring'
-  key: text("key").notNull(), // 'master_toggle', 'maintenance_mode', 'alert_frequency', etc.
-  value: jsonb("value").notNull(), // Flexible JSON value storage
-  description: text("description"), // Human-readable description
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  updatedBy: varchar("updated_by").references(() => users.id),
+  updatedBy: varchar("updated_by").notNull().references(() => users.id), // Admin who made the change
 });
 
 // Insert schemas
@@ -145,6 +109,11 @@ export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTea
   createdAt: true,
 });
 
+export const insertGlobalAlertSettingsSchema = createInsertSchema(globalAlertSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -176,24 +145,8 @@ export const insertUserAlertPreferencesSchema = createInsertSchema(userAlertPref
   updatedAt: true,
 });
 
-export const insertSystemConfigurationSchema = createInsertSchema(systemConfiguration).omit({
-  id: true,
-  updatedAt: true,
-});
-
 export type InsertUserAlertPreferences = z.infer<typeof insertUserAlertPreferencesSchema>;
 export type UserAlertPreferences = typeof userAlertPreferences.$inferSelect;
-
-export type InsertSystemConfiguration = z.infer<typeof insertSystemConfigurationSchema>;
-export type SystemConfiguration = typeof systemConfiguration.$inferSelect;
-
-export const insertAlertSchema = createInsertSchema(alerts).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertAlert = z.infer<typeof insertAlertSchema>;
-export type Alert = typeof alerts.$inferSelect;
 
 
 // Game types for live sports data

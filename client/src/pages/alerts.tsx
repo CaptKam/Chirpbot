@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import AlertCard from '@/components/AlertCard';
+import AlertFooter from '@/components/AlertFooter';
+import { SwipeableCard } from '@/components/SwipeableCard';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,6 @@ interface Alert {
   confidence: number;
   priority: number;
   createdAt: string;
-  state?: string; // NEW: For detecting LIVE/UPDATED/EXPIRED status
   // Footer data
   inning?: number;
   isTopInning?: boolean;
@@ -30,12 +30,6 @@ interface Alert {
   hasSecond?: boolean;
   hasThird?: boolean;
   context?: any;
-  // NEW: OpenAI enhancement data
-  payload?: {
-    openaiEnhanced?: boolean;
-    status?: 'LIVE' | 'UPDATED' | 'EXPIRED';
-    openaiMonitored?: boolean;
-  };
 }
 
 interface AlertStats {
@@ -63,6 +57,26 @@ export default function AlertsPage() {
   const filteredAlerts = filter === 'all' 
     ? (alerts as Alert[])
     : (alerts as Alert[]).filter((alert: Alert) => alert.sport === filter);
+
+  const getAlertIcon = (type: string) => {
+    switch (type) {
+      case 'CLOSE_GAME':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'BASES_LOADED':
+        return <Users className="h-4 w-4" />;
+      case 'HOME_RUN':
+        return <TrendingUp className="h-4 w-4" />;
+      default:
+        return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const getAlertColor = (priority: number) => {
+    if (priority >= 90) return 'bg-red-500';
+    if (priority >= 80) return 'bg-orange-500';
+    if (priority >= 70) return 'bg-yellow-500';
+    return 'bg-blue-500';
+  };
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], { 
@@ -142,39 +156,61 @@ export default function AlertsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <AlertCard
-                sport={alert.sport}
-                type={alert.type}
-                priority={alert.priority}
-                timeIso={alert.createdAt}
-                message={alert.message}
-                matchup={{
-                  away: alert.awayTeam,
-                  home: alert.homeTeam
-                }}
-                context={{
-                  inning: (alert.context?.inning || alert.inning) ? {
-                    number: alert.context?.inning || alert.inning,
-                    half: (alert.context?.isTopInning || alert.isTopInning) ? "Top" : "Bottom"
-                  } : undefined,
-                  outs: alert.context?.outs || alert.outs || 0,
-                  count: {
-                    b: alert.context?.balls || alert.balls || 0,
-                    s: alert.context?.strikes || alert.strikes || 0
-                  },
-                  runners: {
-                    first: !!(alert.context?.hasFirst || alert.hasFirst),
-                    second: !!(alert.context?.hasSecond || alert.hasSecond),
-                    third: !!(alert.context?.hasThird || alert.hasThird)
-                  }
-                }}
+              <SwipeableCard 
                 alertId={alert.id}
                 alertData={alert}
-                className="bg-white/5 backdrop-blur-sm"
-                // NEW: Live status props
-                liveStatus={alert.payload?.status || (alert.state === 'LIVE' ? 'LIVE' : alert.state === 'UPDATED' ? 'UPDATED' : alert.state === 'EXPIRED' ? 'EXPIRED' : undefined)}
-                openaiEnhanced={alert.payload?.openaiEnhanced}
-              />
+                className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors"
+              >
+                <div className="p-4">
+                  {/* Header with type and time */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-emerald-400 text-sm font-semibold">{alert.sport}</span>
+                    <span className="text-slate-400 text-xs">{formatTime(alert.createdAt)}</span>
+                  </div>
+                  
+                  {/* Alert Type Badge */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-400">
+                      {alert.type.replace('_', ' ')}
+                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <div className="h-2 w-2 bg-emerald-500 rounded-full"></div>
+                      <span className="text-xs text-emerald-400">{alert.confidence}%</span>
+                    </div>
+                  </div>
+                  
+                  {/* Main alert message */}
+                  <h4 className="font-bold mb-1 text-slate-100">{alert.message}</h4>
+                  
+                  {/* Team matchup */}
+                  <p className="text-sm text-slate-300 mb-3">{alert.homeTeam} vs {alert.awayTeam}</p>
+                  
+                  {/* Game situation with colored background */}
+                  <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
+                    <AlertFooter
+                      sport={alert.sport}
+                      // MLB specific
+                      inning={alert.context?.inning || alert.inning}
+                      isTopInning={alert.context?.isTopInning || alert.isTopInning}
+                      balls={alert.context?.balls || alert.balls || 0}
+                      strikes={alert.context?.strikes || alert.strikes || 0}
+                      outs={alert.context?.outs || alert.outs || 0}
+                      hasFirst={!!(alert.context?.hasFirst || alert.hasFirst)}
+                      hasSecond={!!(alert.context?.hasSecond || alert.hasSecond)}
+                      hasThird={!!(alert.context?.hasThird || alert.hasThird)}
+                      // Weather data
+                      weather={alert.context?.weather || alert.weather}
+                      // Other sports specific
+                      quarter={alert.context?.quarter}
+                      timeRemaining={alert.context?.timeRemaining}
+                      down={alert.context?.down}
+                      yardsToGo={alert.context?.yardsToGo}
+                      period={alert.context?.period}
+                      createdAt={alert.createdAt}
+                    />
+                  </div>
+                </div>
+              </SwipeableCard>
             </motion.div>
           ))
         )}

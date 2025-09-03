@@ -363,23 +363,13 @@ async function handleLogout() {
 // Alert Configuration Functions
 const ALERT_TYPE_CONFIG = {
     MLB: {
-        "Probability Engine": [
-            { key: "RISP_CHANCE", label: "RISP Probability", description: "Advanced RISP scoring probability with RE24 calculations" },
-            { key: "SCORING_PROBABILITY", label: "High Scoring Probability", description: "Situations with 100%+ run expectancy" },
-            { key: "CLOSE_GAME_LATE", label: "Close Game Late", description: "7th inning+ within one run (probability-based)" },
-            { key: "LATE_PRESSURE", label: "Late Pressure", description: "8th+ inning pressure situations (RE24 enhanced)" },
-            { key: "NINTH_TIE", label: "Ninth Inning Tie", description: "Maximum pressure tie games in 9th+ innings" },
-        ],
-        "Weather & Power": [
-            { key: "WIND_JETSTREAM", label: "Wind Assist", description: "Tailwind conditions favoring home runs" },
-            { key: "HR_HITTER_AT_BAT", label: "Power Hitter Up", description: "High-power batter with HR potential" },
-        ],
-        "Legacy Alerts": [
-            { key: "RISP", label: "RISP (Legacy)", description: "Basic runners in scoring position alerts" },
-            { key: "BASES_LOADED", label: "Bases Loaded (Legacy)", description: "Simple bases loaded detection" },
-            { key: "RUNNERS_1ST_2ND", label: "Runners 1st & 2nd (Legacy)", description: "Basic 1st & 2nd base alerts" },
-            { key: "CLOSE_GAME", label: "Close Game (Legacy)", description: "Basic close game detection" },
-            { key: "CLOSE_GAME_LIVE", label: "Live Close Game (Legacy)", description: "Basic real-time close games" },
+        "Game Situations": [
+            { key: "RISP", label: "RISP (Runners in Scoring Position)", description: "Alert when runners are on 2nd or 3rd base" },
+            { key: "BASES_LOADED", label: "Bases Loaded", description: "Alert when all three bases are occupied" },
+            { key: "RUNNERS_1ST_2ND", label: "Runners on 1st & 2nd", description: "Prime scoring opportunity alert" },
+            { key: "CLOSE_GAME", label: "Close Game", description: "Games with score difference ≤ 3 runs" },
+            { key: "CLOSE_GAME_LIVE", label: "Live Close Game", description: "Real-time close game situations" },
+            { key: "LATE_PRESSURE", label: "Late Inning Pressure", description: "8th inning or later with close score" },
         ],
         "Scoring Events": [
             { key: "HOME_RUN_LIVE", label: "Home Run (Live)", description: "Real-time home run alerts as they happen" },
@@ -389,6 +379,7 @@ const ALERT_TYPE_CONFIG = {
         ],
         "At-Bat Situations": [
             { key: "FULL_COUNT", label: "Full Count (3-2)", description: "Maximum pressure at-bat situations" },
+            { key: "STRIKEOUT", label: "Strikeout Alert", description: "Real-time strikeout notifications" },
         ]
     },
     NFL: {
@@ -615,9 +606,12 @@ async function toggleCategory(category) {
                 globalAlertSettings[key] = shouldEnable;
             });
             
+            // Automatically apply these changes to all users
+            await applyGlobalSettingsToAllUsers();
+            
             // Re-render configuration
             renderAlertConfiguration();
-            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'}`, 'success');
+            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} and applied to all users`, 'success');
         } else {
             showNotification('Failed to update category settings', 'error');
         }
@@ -645,7 +639,11 @@ async function toggleGlobalAlert(alertKey) {
         
         if (response.ok) {
             globalAlertSettings[alertKey] = isEnabled;
-            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally`, 'success');
+            
+            // Automatically apply this change to all users
+            await applyGlobalSettingToAllUsers(alertKey, isEnabled);
+            
+            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally and applied to all users`, 'success');
         } else {
             toggle.checked = !isEnabled;
             showNotification('Failed to update alert setting', 'error');
@@ -662,6 +660,11 @@ async function applyToAllUsers() {
         return;
     }
     
+    await applyGlobalSettingsToAllUsers();
+}
+
+// Helper function to apply global settings without confirmation
+async function applyGlobalSettingsToAllUsers() {
     try {
         const response = await fetch('/api/admin/apply-global-settings', {
             method: 'POST',
@@ -674,13 +677,36 @@ async function applyToAllUsers() {
         });
         
         if (response.ok) {
-            showNotification('Global settings applied to all users successfully', 'success');
+            console.log('Global settings applied to all users successfully');
         } else {
-            showNotification('Failed to apply settings to all users', 'error');
+            console.error('Failed to apply settings to all users');
         }
     } catch (error) {
         console.error('Error applying settings:', error);
-        showNotification('Failed to apply settings to all users', 'error');
+    }
+}
+
+// Helper function to apply a single setting to all users
+async function applyGlobalSettingToAllUsers(alertKey, enabled) {
+    try {
+        const singleSetting = { [alertKey]: enabled };
+        const response = await fetch('/api/admin/apply-global-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ 
+                sport: currentSport,
+                settings: singleSetting 
+            })
+        });
+        
+        if (response.ok) {
+            console.log(`Global setting ${alertKey}=${enabled} applied to all users successfully`);
+        } else {
+            console.error(`Failed to apply setting ${alertKey}=${enabled} to all users`);
+        }
+    } catch (error) {
+        console.error('Error applying single setting:', error);
     }
 }
 
@@ -735,832 +761,4 @@ function showNotification(message, type = 'info') {
             }
         }, 300);
     }, 3000);
-}
-
-// System Configuration Functions
-let systemConfig = {};
-
-async function loadSystemConfiguration() {
-    try {
-        const response = await fetch('/api/admin/system-config', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            systemConfig = await response.json();
-            populateSystemConfigUI();
-            showNotification('System configuration loaded', 'success');
-        } else {
-            console.error('Failed to load system configuration');
-            showNotification('Failed to load system configuration', 'error');
-        }
-    } catch (error) {
-        console.error('Error loading system configuration:', error);
-        showNotification('Failed to load system configuration', 'error');
-    }
-}
-
-function populateSystemConfigUI() {
-    // Core System Controls
-    if (systemConfig.core) {
-        // Master Toggle
-        if (systemConfig.core.master_toggle) {
-            const toggle = document.getElementById('masterToggle');
-            const label = document.getElementById('masterToggleLabel');
-            if (toggle && label) {
-                toggle.checked = systemConfig.core.master_toggle.value;
-                label.textContent = systemConfig.core.master_toggle.value ? 'Enabled' : 'Disabled';
-            }
-        }
-        
-        // Maintenance Mode
-        if (systemConfig.core.maintenance_mode) {
-            const toggle = document.getElementById('maintenanceMode');
-            const label = document.getElementById('maintenanceModeLabel');
-            if (toggle && label) {
-                toggle.checked = systemConfig.core.maintenance_mode.value;
-                label.textContent = systemConfig.core.maintenance_mode.value ? 'Enabled' : 'Disabled';
-            }
-        }
-        
-        // Maintenance Message
-        if (systemConfig.core.maintenance_message) {
-            const input = document.getElementById('maintenanceMessage');
-            if (input) {
-                input.value = systemConfig.core.maintenance_message.value;
-            }
-        }
-        
-        // System Announcements
-        if (systemConfig.core.announcement_enabled) {
-            const toggle = document.getElementById('announcementEnabled');
-            const label = document.getElementById('announcementEnabledLabel');
-            if (toggle && label) {
-                toggle.checked = systemConfig.core.announcement_enabled.value;
-                label.textContent = systemConfig.core.announcement_enabled.value ? 'Enabled' : 'Disabled';
-            }
-        }
-        
-        if (systemConfig.core.system_announcement) {
-            const textarea = document.getElementById('systemAnnouncement');
-            if (textarea) {
-                textarea.value = systemConfig.core.system_announcement.value;
-            }
-        }
-        
-        // Session Management
-        if (systemConfig.core.session_timeout) {
-            const input = document.getElementById('sessionTimeout');
-            if (input) {
-                input.value = systemConfig.core.session_timeout.value;
-            }
-        }
-        
-        if (systemConfig.core.max_concurrent_sessions) {
-            const input = document.getElementById('maxConcurrentSessions');
-            if (input) {
-                input.value = systemConfig.core.max_concurrent_sessions.value;
-            }
-        }
-    }
-    
-    // Alert System Configuration
-    if (systemConfig.alerts) {
-        // Alert Generation Frequency
-        if (systemConfig.alerts.generation_frequency) {
-            const select = document.getElementById('alertFrequency');
-            if (select) {
-                select.value = systemConfig.alerts.generation_frequency.value;
-            }
-        }
-        
-        // Game Monitoring Windows
-        if (systemConfig.alerts.monitoring_start_hour) {
-            const input = document.getElementById('monitoringStartHour');
-            if (input) {
-                input.value = systemConfig.alerts.monitoring_start_hour.value;
-            }
-        }
-        
-        if (systemConfig.alerts.monitoring_end_hour) {
-            const input = document.getElementById('monitoringEndHour');
-            if (input) {
-                input.value = systemConfig.alerts.monitoring_end_hour.value;
-            }
-        }
-        
-        // Alert Priority Thresholds
-        if (systemConfig.alerts.minimum_confidence_score) {
-            const input = document.getElementById('minimumConfidence');
-            if (input) {
-                input.value = systemConfig.alerts.minimum_confidence_score.value;
-            }
-        }
-        
-        if (systemConfig.alerts.high_priority_threshold) {
-            const input = document.getElementById('highPriorityThreshold');
-            if (input) {
-                input.value = systemConfig.alerts.high_priority_threshold.value;
-            }
-        }
-        
-        // Cooldown Settings
-        if (systemConfig.alerts.global_cooldown_seconds) {
-            const input = document.getElementById('globalCooldown');
-            if (input) {
-                input.value = systemConfig.alerts.global_cooldown_seconds.value;
-            }
-        }
-        
-        if (systemConfig.alerts.risp_cooldown_seconds) {
-            const input = document.getElementById('rispCooldown');
-            if (input) {
-                input.value = systemConfig.alerts.risp_cooldown_seconds.value;
-            }
-        }
-    }
-}
-
-async function updateSystemConfig(category, key, value) {
-    try {
-        const response = await fetch('/api/admin/system-config', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                category,
-                key,
-                value
-            })
-        });
-        
-        if (response.ok) {
-            // Update local config
-            if (!systemConfig[category]) {
-                systemConfig[category] = {};
-            }
-            systemConfig[category][key] = { value };
-            
-            // Update UI labels for toggles
-            updateToggleLabels();
-            
-            showNotification(`${key.replace(/_/g, ' ')} updated successfully`, 'success');
-        } else {
-            console.error('Failed to update system configuration');
-            showNotification('Failed to update configuration', 'error');
-        }
-    } catch (error) {
-        console.error('Error updating system configuration:', error);
-        showNotification('Failed to update configuration', 'error');
-    }
-}
-
-function updateToggleLabels() {
-    // Update all toggle labels based on current state
-    const toggleMappings = [
-        { toggleId: 'masterToggle', labelId: 'masterToggleLabel' },
-        { toggleId: 'maintenanceMode', labelId: 'maintenanceModeLabel' },
-        { toggleId: 'announcementEnabled', labelId: 'announcementEnabledLabel' }
-    ];
-    
-    toggleMappings.forEach(({ toggleId, labelId }) => {
-        const toggle = document.getElementById(toggleId);
-        const label = document.getElementById(labelId);
-        if (toggle && label) {
-            label.textContent = toggle.checked ? 'Enabled' : 'Disabled';
-        }
-    });
-}
-
-async function saveAllConfigurations() {
-    try {
-        // Collect all current form values
-        const configurations = [];
-        
-        // Core configurations
-        const coreConfigs = [
-            { key: 'master_toggle', elementId: 'masterToggle', type: 'checkbox' },
-            { key: 'maintenance_mode', elementId: 'maintenanceMode', type: 'checkbox' },
-            { key: 'maintenance_message', elementId: 'maintenanceMessage', type: 'text' },
-            { key: 'announcement_enabled', elementId: 'announcementEnabled', type: 'checkbox' },
-            { key: 'system_announcement', elementId: 'systemAnnouncement', type: 'text' },
-            { key: 'session_timeout', elementId: 'sessionTimeout', type: 'number' },
-            { key: 'max_concurrent_sessions', elementId: 'maxConcurrentSessions', type: 'number' }
-        ];
-        
-        coreConfigs.forEach(config => {
-            const element = document.getElementById(config.elementId);
-            if (element) {
-                let value;
-                if (config.type === 'checkbox') {
-                    value = element.checked;
-                } else if (config.type === 'number') {
-                    value = parseInt(element.value) || 0;
-                } else {
-                    value = element.value;
-                }
-                
-                configurations.push({
-                    category: 'core',
-                    key: config.key,
-                    value: value
-                });
-            }
-        });
-        
-        // Alert configurations
-        const alertConfigs = [
-            { key: 'generation_frequency', elementId: 'alertFrequency', type: 'number' },
-            { key: 'monitoring_start_hour', elementId: 'monitoringStartHour', type: 'number' },
-            { key: 'monitoring_end_hour', elementId: 'monitoringEndHour', type: 'number' },
-            { key: 'minimum_confidence_score', elementId: 'minimumConfidence', type: 'number' },
-            { key: 'high_priority_threshold', elementId: 'highPriorityThreshold', type: 'number' },
-            { key: 'global_cooldown_seconds', elementId: 'globalCooldown', type: 'number' },
-            { key: 'risp_cooldown_seconds', elementId: 'rispCooldown', type: 'number' }
-        ];
-        
-        alertConfigs.forEach(config => {
-            const element = document.getElementById(config.elementId);
-            if (element) {
-                let value;
-                if (config.type === 'number') {
-                    value = parseInt(element.value) || 0;
-                } else {
-                    value = element.value;
-                }
-                
-                configurations.push({
-                    category: 'alerts',
-                    key: config.key,
-                    value: value
-                });
-            }
-        });
-        
-        const response = await fetch('/api/admin/system-config/bulk', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ configurations })
-        });
-        
-        if (response.ok) {
-            showNotification('All configurations saved successfully', 'success');
-            await loadSystemConfiguration(); // Refresh to get latest values
-        } else {
-            showNotification('Failed to save configurations', 'error');
-        }
-    } catch (error) {
-        console.error('Error saving configurations:', error);
-        showNotification('Failed to save configurations', 'error');
-    }
-}
-
-async function resetToDefaults() {
-    if (!confirm('This will reset ALL system configuration to default values. Are you sure?')) {
-        return;
-    }
-    
-    try {
-        // Define default configurations
-        const defaultConfigurations = [
-            { category: 'core', key: 'master_toggle', value: true },
-            { category: 'core', key: 'maintenance_mode', value: false },
-            { category: 'core', key: 'maintenance_message', value: 'System is under maintenance. Please check back later.' },
-            { category: 'core', key: 'announcement_enabled', value: false },
-            { category: 'core', key: 'system_announcement', value: '' },
-            { category: 'core', key: 'session_timeout', value: 24 },
-            { category: 'core', key: 'max_concurrent_sessions', value: 5 },
-            { category: 'alerts', key: 'generation_frequency', value: 30 },
-            { category: 'alerts', key: 'monitoring_start_hour', value: 12 },
-            { category: 'alerts', key: 'monitoring_end_hour', value: 24 },
-            { category: 'alerts', key: 'minimum_confidence_score', value: 70 },
-            { category: 'alerts', key: 'high_priority_threshold', value: 90 },
-            { category: 'alerts', key: 'global_cooldown_seconds', value: 30 },
-            { category: 'alerts', key: 'risp_cooldown_seconds', value: 60 }
-        ];
-        
-        const response = await fetch('/api/admin/system-config/bulk', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ configurations: defaultConfigurations })
-        });
-        
-        if (response.ok) {
-            showNotification('Configuration reset to defaults', 'success');
-            await loadSystemConfiguration(); // Refresh to get latest values
-        } else {
-            showNotification('Failed to reset configuration', 'error');
-        }
-    } catch (error) {
-        console.error('Error resetting configuration:', error);
-        showNotification('Failed to reset configuration', 'error');
-    }
-}
-
-// Load system configuration when system tab is shown
-function showTab(tabName) {
-    // Hide all tab content
-    const allTabs = document.querySelectorAll('.tab-content');
-    allTabs.forEach(tab => tab.style.display = 'none');
-    
-    // Show selected tab
-    const selectedTab = document.getElementById(tabName + 'Content');
-    if (selectedTab) {
-        selectedTab.style.display = 'block';
-    }
-    
-    // Update nav button states
-    const allNavButtons = document.querySelectorAll('.nav-tab');
-    allNavButtons.forEach(button => button.classList.remove('active'));
-    
-    const selectedNavButton = document.getElementById(tabName + 'Tab');
-    if (selectedNavButton) {
-        selectedNavButton.classList.add('active');
-    }
-    
-    // Load data based on tab
-    if (tabName === 'overview') {
-        loadStats();
-    } else if (tabName === 'users') {
-        loadUsers();
-    } else if (tabName === 'alerts') {
-        loadSportAlertSettings();
-    } else if (tabName === 'system') {
-        loadSystemConfiguration();
-    } else if (tabName === 'live') {
-        loadLiveGames();
-    }
-}
-
-// Live Games Functionality
-let liveGamesData = [];
-let autoRefreshInterval = null;
-let isAutoRefreshEnabled = false;
-
-async function loadLiveGames() {
-    const container = document.getElementById('liveGamesContainer');
-    if (!container) return;
-    
-    try {
-        // Show loading state
-        container.innerHTML = `
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Loading today's MLB schedule...</p>
-            </div>
-        `;
-        
-        // Fetch both today's games and detailed live data
-        const [scheduleResponse, liveResponse] = await Promise.all([
-            fetch('/api/games/today?sport=MLB'),
-            fetch('/api/games/live-detailed?sport=MLB')
-        ]);
-        
-        if (!scheduleResponse.ok) {
-            throw new Error('Failed to load today\'s schedule');
-        }
-        
-        const scheduleData = await scheduleResponse.json();
-        const liveData = liveResponse.ok ? await liveResponse.json() : { liveGames: [] };
-        
-        // Merge schedule with live data
-        const allGames = scheduleData.games || [];
-        const liveGamesMap = new Map();
-        
-        // Create a map of live game details
-        (liveData.liveGames || []).forEach(liveGame => {
-            liveGamesMap.set(liveGame.gameId, liveGame);
-        });
-        
-        // Enhance all games with live data where available
-        liveGamesData = allGames.map(game => {
-            const liveDetails = liveGamesMap.get(game.gameId);
-            if (liveDetails) {
-                return { ...game, ...liveDetails };
-            }
-            return game;
-        });
-        
-        renderLiveGames();
-    } catch (error) {
-        console.error('Error loading games:', error);
-        container.innerHTML = `
-            <div class="loading">
-                <i class="fas fa-exclamation-triangle" style="color: #EF4444; font-size: 2rem; margin-bottom: 1rem;"></i>
-                <p>Error loading today's schedule</p>
-                <button class="action-btn refresh" onclick="loadLiveGames()" style="margin-top: 1rem;">
-                    <i class="fas fa-refresh"></i>
-                    Retry
-                </button>
-            </div>
-        `;
-    }
-}
-
-function renderLiveGames() {
-    const container = document.getElementById('liveGamesContainer');
-    if (!container) return;
-    
-    if (liveGamesData.length === 0) {
-        container.innerHTML = `
-            <div class="loading">
-                <i class="fas fa-baseball-ball" style="color: #94A3B8; font-size: 2rem; margin-bottom: 1rem;"></i>
-                <p>No MLB games scheduled for today</p>
-                <small style="color: #64748B;">Check back tomorrow for the next day's schedule</small>
-            </div>
-        `;
-        return;
-    }
-    
-    // Sort games by status (live first, then scheduled, then final)
-    const sortedGames = [...liveGamesData].sort((a, b) => {
-        const statusOrder = { 'live': 0, 'scheduled': 1, 'final': 2, 'delayed': 1 };
-        return (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
-    });
-    
-    // Group games by status for better organization
-    const liveGames = sortedGames.filter(game => game.status === 'live');
-    const scheduledGames = sortedGames.filter(game => game.status === 'scheduled');
-    const completedGames = sortedGames.filter(game => game.status === 'final');
-    const delayedGames = sortedGames.filter(game => game.status === 'delayed');
-    
-    let html = '';
-    
-    // Add status section headers
-    if (liveGames.length > 0) {
-        html += `<div class="games-section-header live">
-            <i class="fas fa-circle"></i>
-            Live Games (${liveGames.length})
-        </div>`;
-        html += liveGames.map(game => createGameCard(game)).join('');
-    }
-    
-    if (scheduledGames.length > 0) {
-        html += `<div class="games-section-header scheduled">
-            <i class="fas fa-clock"></i>
-            Scheduled Games (${scheduledGames.length})
-        </div>`;
-        html += scheduledGames.map(game => createGameCard(game)).join('');
-    }
-    
-    if (delayedGames.length > 0) {
-        html += `<div class="games-section-header delayed">
-            <i class="fas fa-pause"></i>
-            Delayed Games (${delayedGames.length})
-        </div>`;
-        html += delayedGames.map(game => createGameCard(game)).join('');
-    }
-    
-    if (completedGames.length > 0) {
-        html += `<div class="games-section-header completed">
-            <i class="fas fa-check"></i>
-            Completed Games (${completedGames.length})
-        </div>`;
-        html += completedGames.map(game => createGameCard(game)).join('');
-    }
-    
-    container.innerHTML = html;
-}
-
-function createGameCard(game) {
-    const runners = game.runners || { first: false, second: false, third: false };
-    const hasRunners = runners.first || runners.second || runners.third;
-    const weather = game.weather || {};
-    const currentBatter = game.currentBatter || { name: 'Unknown' };
-    
-    // Format inning display
-    let inningDisplay = 'Scheduled';
-    let gameTime = '';
-    
-    if (game.status === 'live') {
-        inningDisplay = game.inning && game.inningState ? 
-            `${game.inningState.charAt(0)}${game.inning}` : 'LIVE';
-    } else if (game.status === 'final') {
-        inningDisplay = 'FINAL';
-    } else if (game.status === 'delayed') {
-        inningDisplay = 'DELAYED';
-    } else if (game.gameDate) {
-        const gameTimeObj = new Date(game.gameDate);
-        gameTime = gameTimeObj.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit',
-            timeZone: 'America/Los_Angeles' 
-        });
-        inningDisplay = gameTime;
-    }
-    
-    // Create runners summary
-    const runnersBadges = [];
-    if (runners.first) runnersBadges.push('1B');
-    if (runners.second) runnersBadges.push('2B');
-    if (runners.third) runnersBadges.push('3B');
-    
-    return `
-        <div class="game-card-modern ${game.isLive || game.status === 'live' ? 'live' : game.status}">
-            <div class="card-header">
-                <div class="status-indicator ${game.status}">
-                    ${game.status === 'live' ? '<i class="fas fa-circle"></i>' : ''}
-                    ${inningDisplay}
-                </div>
-                ${game.status === 'live' && (game.balls !== undefined || game.strikes !== undefined || game.outs !== undefined) ? `
-                    <div class="count-summary">
-                        ${game.balls || 0}-${game.strikes || 0}, ${game.outs || 0} out${(game.outs || 0) !== 1 ? 's' : ''}
-                    </div>
-                ` : ''}
-            </div>
-            
-            <div class="teams-section">
-                <div class="team-row away">
-                    <span class="team-name">${game.awayTeam}</span>
-                    <span class="team-score">${game.awayScore || 0}</span>
-                </div>
-                <div class="team-row home">
-                    <span class="team-name">${game.homeTeam}</span>
-                    <span class="team-score">${game.homeScore || 0}</span>
-                </div>
-            </div>
-            
-            ${game.status === 'live' && hasRunners ? `
-                <div class="runners-section">
-                    <div class="runners-label">Runners:</div>
-                    <div class="runners-badges">
-                        ${runnersBadges.map(base => `<span class="runner-badge">${base}</span>`).join('')}
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${game.status === 'live' && currentBatter.name && currentBatter.name !== 'Unknown' ? `
-                <div class="batter-section">
-                    <div class="batter-label">At Bat:</div>
-                    <div class="batter-name">${currentBatter.name}</div>
-                </div>
-            ` : ''}
-            
-            ${game.status === 'live' && (weather.temp || weather.condition) ? `
-                <div class="weather-section">
-                    <div class="weather-icon">
-                        <i class="fas fa-cloud"></i>
-                    </div>
-                    <div class="weather-info">
-                        ${formatWeather(weather)}
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${game.venue && game.status !== 'live' ? `
-                <div class="venue-section">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>${game.venue}</span>
-                </div>
-            ` : ''}
-        </div>
-    `;
-}
-
-function createBaseballDiamond(runners) {
-    return `
-        <div class="diamond-field">
-            <div class="diamond-infield"></div>
-            <div class="base home"></div>
-            <div class="base first ${runners.first ? 'occupied' : ''}"></div>
-            <div class="base second ${runners.second ? 'occupied' : ''}"></div>
-            <div class="base third ${runners.third ? 'occupied' : ''}"></div>
-            <div class="diamond-label home">H</div>
-            <div class="diamond-label first">1B</div>
-            <div class="diamond-label second">2B</div>
-            <div class="diamond-label third">3B</div>
-        </div>
-    `;
-}
-
-function getInningOrdinal(inning) {
-    if (!inning) return '';
-    const num = parseInt(inning);
-    if (num === 1) return 'st';
-    if (num === 2) return 'nd';
-    if (num === 3) return 'rd';
-    return 'th';
-}
-
-function formatWeather(weather) {
-    const parts = [];
-    if (weather.temp) parts.push(`${weather.temp}°F`);
-    if (weather.condition) parts.push(weather.condition);
-    if (weather.wind) parts.push(`Wind: ${weather.wind}`);
-    return parts.join(' • ') || 'Weather data unavailable';
-}
-
-function switchSport(sport) {
-    // Update active sport tab
-    document.querySelectorAll('.sport-tab').forEach(tab => tab.classList.remove('active'));
-    document.getElementById(sport.toLowerCase() + 'SportTab').classList.add('active');
-    
-    // Load data for selected sport
-    loadLiveGames();
-}
-
-function refreshLiveGames() {
-    if (isAutoRefreshEnabled) {
-        updateLiveGamesSmooth();
-    } else {
-        loadLiveGames();
-    }
-}
-
-function toggleAutoRefresh() {
-    const btn = document.getElementById('autoRefreshBtn');
-    const indicator = document.getElementById('refreshIndicator');
-    
-    if (isAutoRefreshEnabled) {
-        // Disable auto-refresh
-        clearInterval(autoRefreshInterval);
-        isAutoRefreshEnabled = false;
-        btn.innerHTML = '<i class="fas fa-play"></i> Enable Auto-Refresh';
-        btn.classList.remove('active');
-        indicator.style.display = 'none';
-    } else {
-        // Enable auto-refresh
-        autoRefreshInterval = setInterval(() => {
-            updateLiveGamesSmooth();
-        }, 15000); // Refresh every 15 seconds
-        
-        isAutoRefreshEnabled = true;
-        btn.innerHTML = '<i class="fas fa-pause"></i> Disable Auto-Refresh';
-        btn.classList.add('active');
-        indicator.style.display = 'flex';
-    }
-}
-
-// Smooth update function that only updates changed cards
-async function updateLiveGamesSmooth() {
-    try {
-        // Fetch both today's games and detailed live data
-        const [scheduleResponse, liveResponse] = await Promise.all([
-            fetch('/api/games/today?sport=MLB'),
-            fetch('/api/games/live-detailed?sport=MLB')
-        ]);
-        
-        if (!scheduleResponse.ok) {
-            throw new Error('Failed to load today\'s schedule');
-        }
-        
-        const scheduleData = await scheduleResponse.json();
-        const liveData = liveResponse.ok ? await liveResponse.json() : { liveGames: [] };
-        
-        // Merge schedule with live data
-        const allGames = scheduleData.games || [];
-        const liveGamesMap = new Map();
-        
-        // Create a map of live game details
-        (liveData.liveGames || []).forEach(liveGame => {
-            liveGamesMap.set(liveGame.gameId, liveGame);
-        });
-        
-        // Enhance all games with live data where available
-        const newLiveGamesData = allGames.map(game => {
-            const liveDetails = liveGamesMap.get(game.gameId);
-            if (liveDetails) {
-                return { ...game, ...liveDetails };
-            }
-            return game;
-        });
-        
-        // Update only changed cards
-        updateChangedCards(newLiveGamesData);
-        
-        // Update the global data
-        liveGamesData = newLiveGamesData;
-        
-    } catch (error) {
-        console.error('Error updating live games:', error);
-        // Fallback to full reload on error
-        loadLiveGames();
-    }
-}
-
-function updateChangedCards(newData) {
-    const container = document.getElementById('liveGamesContainer');
-    if (!container) return;
-    
-    // If container is empty or has error content, do full reload
-    if (container.innerHTML.includes('loading') || container.innerHTML.includes('Error') || !liveGamesData.length) {
-        liveGamesData = newData;
-        renderLiveGames();
-        return;
-    }
-    
-    // Create a map of existing cards
-    const existingCards = new Map();
-    container.querySelectorAll('.game-card-modern').forEach(card => {
-        const gameId = card.dataset.gameId;
-        if (gameId) {
-            existingCards.set(gameId, card);
-        }
-    });
-    
-    // Sort and group new data (same logic as renderLiveGames)
-    const sortedGames = [...newData].sort((a, b) => {
-        const statusOrder = { 'live': 0, 'scheduled': 1, 'final': 2, 'delayed': 1 };
-        return (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
-    });
-    
-    const liveGames = sortedGames.filter(game => game.status === 'live');
-    const scheduledGames = sortedGames.filter(game => game.status === 'scheduled');
-    const completedGames = sortedGames.filter(game => game.status === 'final');
-    const delayedGames = sortedGames.filter(game => game.status === 'delayed');
-    
-    // Update each section
-    updateGameSection(container, 'live', liveGames, existingCards);
-    updateGameSection(container, 'scheduled', scheduledGames, existingCards);
-    updateGameSection(container, 'delayed', delayedGames, existingCards);
-    updateGameSection(container, 'completed', completedGames, existingCards);
-}
-
-function updateGameSection(container, sectionType, games, existingCards) {
-    if (games.length === 0) return;
-    
-    // Find or create section header
-    let sectionHeader = container.querySelector(`.games-section-header.${sectionType}`);
-    
-    // Update or create section
-    const sectionHTML = createSectionHTML(sectionType, games);
-    
-    if (sectionHeader) {
-        // Update existing section
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = sectionHTML;
-        
-        // Update header count
-        const newHeader = tempDiv.querySelector('.games-section-header');
-        sectionHeader.innerHTML = newHeader.innerHTML;
-        
-        // Update cards after this header
-        let currentElement = sectionHeader.nextElementSibling;
-        const newCards = tempDiv.querySelectorAll('.game-card-modern');
-        
-        newCards.forEach((newCard, index) => {
-            if (currentElement && currentElement.classList.contains('game-card-modern')) {
-                // Update existing card
-                if (currentElement.innerHTML !== newCard.innerHTML) {
-                    currentElement.outerHTML = newCard.outerHTML;
-                }
-                currentElement = currentElement.nextElementSibling;
-            } else {
-                // Insert new card
-                sectionHeader.insertAdjacentHTML('afterend', newCard.outerHTML);
-            }
-        });
-        
-        // Remove extra cards if any
-        while (currentElement && currentElement.classList.contains('game-card-modern') && 
-               !currentElement.classList.contains('games-section-header')) {
-            const next = currentElement.nextElementSibling;
-            currentElement.remove();
-            currentElement = next;
-        }
-    } else {
-        // Add new section
-        container.insertAdjacentHTML('beforeend', sectionHTML);
-    }
-}
-
-function createSectionHTML(sectionType, games) {
-    let iconClass = '';
-    let headerText = '';
-    
-    switch(sectionType) {
-        case 'live':
-            iconClass = 'fas fa-circle';
-            headerText = `Live Games (${games.length})`;
-            break;
-        case 'scheduled':
-            iconClass = 'fas fa-clock';
-            headerText = `Scheduled Games (${games.length})`;
-            break;
-        case 'delayed':
-            iconClass = 'fas fa-pause';
-            headerText = `Delayed Games (${games.length})`;
-            break;
-        case 'completed':
-            iconClass = 'fas fa-check';
-            headerText = `Completed Games (${games.length})`;
-            break;
-    }
-    
-    const headerHTML = `<div class="games-section-header ${sectionType}">
-        <i class="${iconClass}"></i>
-        ${headerText}
-    </div>`;
-    
-    const cardsHTML = games.map(game => {
-        const cardHTML = createGameCard(game);
-        // Add game ID to card for tracking
-        return cardHTML.replace('<div class="game-card-modern', `<div class="game-card-modern" data-game-id="${game.gameId}"`);
-    }).join('');
-    
-    return headerHTML + cardsHTML;
 }

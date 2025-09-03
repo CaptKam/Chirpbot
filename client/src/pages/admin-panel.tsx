@@ -45,6 +45,7 @@ const ALERT_TYPE_CONFIG = {
     ],
     "At-Bat Situations": [
       { key: "FULL_COUNT", label: "Full Count (3-2)", description: "Maximum pressure at-bat situations" },
+      { key: "STRIKEOUT", label: "Strikeout Alert", description: "Real-time strikeout notifications" },
     ]
   },
   NFL: {

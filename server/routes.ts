@@ -9,8 +9,6 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
-import { openaiEnhancer } from "./services/openai-alert-enhancer";
-import { MLBApiService } from "./services/mlb-api";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -194,135 +192,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Detailed live games endpoint for admin dashboard
-  app.get('/api/games/live-detailed', async (req, res) => {
-    try {
-      const { sport = 'MLB' } = req.query;
-      let liveGames = [];
-      
-      if (sport === 'MLB') {
-        // First get basic games data
-        const { MLBApiService } = await import('./services/mlb-api');
-        const mlbService = new MLBApiService();
-        const games = await mlbService.getTodaysGames();
-        
-        // Filter to only live games and get detailed data
-        const liveBasicGames = games.filter(game => game.isLive);
-        
-        for (const game of liveBasicGames) {
-          try {
-            // Fetch detailed live feed data from MLB API
-            const liveFeedUrl = `https://statsapi.mlb.com/api/v1.1/game/${game.gameId}/feed/live`;
-            const response = await fetch(liveFeedUrl);
-            
-            if (response.ok) {
-              const liveFeedData = await response.json();
-              const gameState = extractDetailedGameState(liveFeedData, game);
-              liveGames.push(gameState);
-            } else {
-              // Fallback to basic game data if detailed feed fails
-              liveGames.push(enhanceBasicGameData(game));
-            }
-          } catch (error) {
-            console.error(`Error fetching detailed data for game ${game.gameId}:`, error);
-            liveGames.push(enhanceBasicGameData(game));
-          }
-        }
-      }
-      
-      res.json({ liveGames, sport });
-    } catch (error) {
-      console.error('Error fetching detailed live games:', error);
-      res.status(500).json({ message: 'Failed to fetch detailed live games' });
-    }
-  });
-
-  // Helper functions for detailed game state extraction
-  function extractDetailedGameState(liveFeedData: any, basicGame: any) {
-    try {
-      const gameData = liveFeedData.gameData || {};
-      const liveData = liveFeedData.liveData || {};
-      const plays = liveData.plays || {};
-      const currentPlay = plays.currentPlay || {};
-      
-      // Get current game situation
-      const linescore = liveData.linescore || {};
-      const offense = linescore.offense || {};
-      const defense = linescore.defense || {};
-      
-      // Extract runners
-      const runners = {
-        first: false,
-        second: false,
-        third: false
-      };
-      
-      if (offense.first) runners.first = true;
-      if (offense.second) runners.second = true;  
-      if (offense.third) runners.third = true;
-      
-      // Get count information
-      const count = currentPlay.count || {};
-      const balls = count.balls || 0;
-      const strikes = count.strikes || 0;
-      const outs = linescore.outs || 0;
-      
-      // Get batter information
-      const currentBatter = currentPlay.matchup?.batter || null;
-      const batterName = currentBatter ? 
-        `${currentBatter.fullName || 'Unknown Batter'}` : 'Unknown Batter';
-      
-      // Get pitcher information  
-      const currentPitcher = currentPlay.matchup?.pitcher || null;
-      const pitcherName = currentPitcher ?
-        `${currentPitcher.fullName || 'Unknown Pitcher'}` : 'Unknown Pitcher';
-      
-      // Get venue and weather
-      const venue = gameData.venue?.name || basicGame.venue || 'Unknown Venue';
-      const weather = gameData.weather || {};
-      
-      return {
-        ...basicGame,
-        runners,
-        balls,
-        strikes, 
-        outs,
-        currentBatter: {
-          name: batterName,
-          id: currentBatter?.id || null
-        },
-        currentPitcher: {
-          name: pitcherName,
-          id: currentPitcher?.id || null
-        },
-        venue,
-        weather: {
-          temp: weather.temp || null,
-          condition: weather.condition || null,
-          wind: weather.wind || null
-        },
-        lastUpdated: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error('Error extracting detailed game state:', error);
-      return enhanceBasicGameData(basicGame);
-    }
-  }
-
-  function enhanceBasicGameData(basicGame: any) {
-    return {
-      ...basicGame,
-      runners: { first: false, second: false, third: false },
-      balls: 0,
-      strikes: 0,
-      outs: 0,
-      currentBatter: { name: 'Loading...', id: null },
-      currentPitcher: { name: 'Loading...', id: null },
-      weather: { temp: null, condition: null, wind: null },
-      lastUpdated: new Date().toISOString()
-    };
-  }
-
   // User monitored games routes
   app.get('/api/user/:userId/monitored-games', async (req, res) => {
     try {
@@ -405,21 +274,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/user/:userId/alert-preferences/:sport', async (req, res) => {
     try {
       const { userId, sport } = req.params;
-      const upperSport = sport.toUpperCase();
-      
-      // Get user preferences
-      const preferences = await storage.getUserAlertPreferencesBySport(userId, upperSport);
-      
-      // Get global alert settings
-      const globalSettings = await storage.getGlobalAlertSettings(upperSport);
-      
-      // Filter out preferences for globally disabled alerts
-      const filteredPreferences = preferences.filter(pref => {
-        // If alert is globally disabled, don't show it to the user
-        return globalSettings[pref.alertType] !== false;
-      });
-      
-      res.json(filteredPreferences);
+      const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toUpperCase());
+      res.json(preferences);
     } catch (error) {
       console.error('Error fetching alert preferences for sport:', error);
       res.status(500).json({ message: 'Failed to fetch sport alert preferences' });
@@ -793,7 +649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let payload: any = {};
         try {
           // The payload is already a JSON object, not a string
-          payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+          payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
         } catch (e) {
           console.error('Error parsing payload:', e);
           payload = {};
@@ -954,6 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user.password) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
+      
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         return res.status(401).json({ message: 'Invalid credentials' });
@@ -1016,48 +873,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport } = req.params;
       
-      // Get settings from database
-      const dbSettings = await storage.getGlobalAlertSettings(sport);
+      // Get the global settings from storage
+      const settings = await storage.getGlobalAlertSettings(sport);
       
-      // Default settings for all alerts (if not in database, they're enabled by default)
-      const defaultSettings = {
-        // MLB alerts - all enabled by default
-        // Probability Engine Alerts (enabled by default)
-        'RISP_CHANCE': true,
-        'SCORING_PROBABILITY': true,
-        'CLOSE_GAME_LATE': true,
-        'LATE_PRESSURE': true,
-        'NINTH_TIE': true,
-        // Weather & Power Alerts (enabled by default)
-        'WIND_JETSTREAM': true,
-        'HR_HITTER_AT_BAT': true,
-        // Legacy Alerts (kept for backward compatibility)
-        'RISP': true,
-        'BASES_LOADED': true,
-        'RUNNERS_1ST_2ND': true,
-        'CLOSE_GAME': true,
-        'CLOSE_GAME_LIVE': true,
-        'HOME_RUN_LIVE': true,
-        'HIGH_SCORING': true,
-        'SHUTOUT': true,
-        'BLOWOUT': true,
-        'FULL_COUNT': true,
-        // NFL alerts
-        'RED_ZONE': true,
-        'FOURTH_DOWN': true,
-        'TWO_MINUTE_WARNING': true,
-        // NBA alerts
-        'CLUTCH_TIME': true,
-        'OVERTIME': true,
-        // NHL alerts
-        'POWER_PLAY': true,
-        'EMPTY_NET': true
-      };
-
-      // Merge database settings with defaults
-      const mergedSettings = { ...defaultSettings, ...dbSettings };
-      
-      res.json(mergedSettings);
+      res.json(settings);
     } catch (error) {
       console.error('Error fetching global alert settings:', error);
       res.status(500).json({ message: 'Failed to fetch global alert settings' });
@@ -1094,13 +913,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport, category, alertKeys, enabled } = req.body;
       
-      // Update each alert in the category
-      for (const alertKey of alertKeys) {
-        await storage.setGlobalAlertSetting(sport, alertKey, enabled, req.session.adminUserId);
-      }
-      
-      console.log(`Category '${category}' for ${sport} ${enabled ? 'enabled' : 'disabled'} by admin`);
-      console.log('Alert keys affected:', alertKeys);
+      // Update the category settings which will apply to all users
+      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
       
       res.json({ 
         message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
@@ -1123,10 +937,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport, alertType, enabled } = req.body;
       
-      // Update in database
-      await storage.setGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
-      
-      console.log(`Alert '${alertType}' for ${sport} ${enabled ? 'enabled' : 'disabled'} by admin`);
+      // Update the global setting which will apply to all users
+      await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
       
       res.json({ 
         message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
@@ -1148,207 +960,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { sport, settings } = req.body;
       
-      // Get all users
-      const users = await storage.getAllUsers();
-      let updatedCount = 0;
-      
-      // Apply settings to each user
-      for (const user of users) {
-        try {
-          // Convert settings to the format expected by updateUserAlertPreferences
-          const preferences = Object.entries(settings).map(([alertType, enabled]) => ({
-            alertType,
-            enabled: enabled === true
-          }));
-          
-          await storage.updateUserAlertPreferences(user.id, sport.toLowerCase(), preferences);
-          updatedCount++;
-        } catch (userError) {
-          console.error(`Failed to update settings for user ${user.id}:`, userError);
-        }
-      }
-      
-      console.log(`Applied global ${sport} alert settings to ${updatedCount} users by admin`);
+      // Use the storage method to apply settings to all users
+      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
       
       res.json({ 
-        message: `Global settings applied to ${updatedCount} users successfully`,
+        message: `Global settings applied to ${result.usersUpdated} users successfully`,
         sport,
-        usersUpdated: updatedCount,
-        totalUsers: users.length
+        ...result
       });
     } catch (error) {
       console.error('Error applying global settings:', error);
       res.status(500).json({ message: 'Failed to apply global settings' });
-    }
-  });
-
-  // System Configuration Admin Routes
-  app.get('/api/admin/system-config', async (req, res) => {
-    try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
-      const configurations = await storage.getAllSystemConfigurations();
-      
-      // Organize by category for easier frontend consumption
-      const organized: Record<string, Record<string, any>> = {};
-      for (const config of configurations) {
-        if (!organized[config.category]) {
-          organized[config.category] = {};
-        }
-        let parsedValue;
-        try {
-          parsedValue = JSON.parse(config.value as string);
-        } catch (jsonError) {
-          // Handle malformed JSON by treating as string
-          console.warn(`Invalid JSON for ${config.category}.${config.key}:`, config.value);
-          parsedValue = config.value;
-        }
-        organized[config.category][config.key] = {
-          value: parsedValue,
-          description: config.description,
-          updatedAt: config.updatedAt
-        };
-      }
-      
-      res.json(organized);
-    } catch (error) {
-      console.error('Error fetching system configuration:', error);
-      res.status(500).json({ message: 'Failed to fetch system configuration' });
-    }
-  });
-
-  app.get('/api/admin/system-config/:category', async (req, res) => {
-    try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
-      const { category } = req.params;
-      const configurations = await storage.getSystemConfigurationsByCategory(category);
-      
-      const result: Record<string, any> = {};
-      for (const config of configurations) {
-        let parsedValue;
-        try {
-          parsedValue = JSON.parse(config.value as string);
-        } catch (jsonError) {
-          // Handle malformed JSON by treating as string
-          console.warn(`Invalid JSON for ${config.category}.${config.key}:`, config.value);
-          parsedValue = config.value;
-        }
-        result[config.key] = {
-          value: parsedValue,
-          description: config.description,
-          updatedAt: config.updatedAt
-        };
-      }
-      
-      res.json(result);
-    } catch (error) {
-      console.error('Error fetching system configuration by category:', error);
-      res.status(500).json({ message: 'Failed to fetch system configuration' });
-    }
-  });
-
-  app.put('/api/admin/system-config', async (req, res) => {
-    try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
-      const { category, key, value, description } = req.body;
-      
-      if (!category || !key || value === undefined) {
-        return res.status(400).json({ message: 'Category, key, and value are required' });
-      }
-
-      const result = await storage.setSystemConfiguration(
-        category, 
-        key, 
-        value, 
-        description,
-        req.session.adminUserId
-      );
-      
-      console.log(`System config updated: ${category}.${key} = ${JSON.stringify(value)} by admin`);
-      
-      let parsedValue;
-      try {
-        parsedValue = JSON.parse(result.value as string);
-      } catch (jsonError) {
-        parsedValue = result.value;
-      }
-      
-      res.json({
-        message: 'Configuration updated successfully',
-        configuration: {
-          ...result,
-          value: parsedValue
-        }
-      });
-    } catch (error) {
-      console.error('Error updating system configuration:', error);
-      res.status(500).json({ message: 'Failed to update system configuration' });
-    }
-  });
-
-  app.put('/api/admin/system-config/bulk', async (req, res) => {
-    try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
-      const { configurations } = req.body;
-      
-      if (!Array.isArray(configurations)) {
-        return res.status(400).json({ message: 'Configurations must be an array' });
-      }
-
-      const results = await storage.bulkSetSystemConfiguration(configurations, req.session.adminUserId);
-      
-      console.log(`Bulk system configuration update: ${configurations.length} settings by admin`);
-      
-      res.json({
-        message: `${configurations.length} configurations updated successfully`,
-        results: results.map(r => {
-          let parsedValue;
-          try {
-            parsedValue = JSON.parse(r.value as string);
-          } catch (jsonError) {
-            parsedValue = r.value;
-          }
-          return {
-            ...r,
-            value: parsedValue
-          };
-        })
-      });
-    } catch (error) {
-      console.error('Error bulk updating system configuration:', error);
-      res.status(500).json({ message: 'Failed to bulk update system configuration' });
-    }
-  });
-
-  // Specific system status endpoints for easy access
-  app.get('/api/system-status', async (req, res) => {
-    try {
-      const masterToggle = await storage.getSystemConfigValue('core', 'master_toggle', true);
-      const maintenanceMode = await storage.getSystemConfigValue('core', 'maintenance_mode', false);
-      const maintenanceMessage = await storage.getSystemConfigValue('core', 'maintenance_message', 'System is under maintenance');
-      const systemAnnouncement = await storage.getSystemConfigValue('core', 'system_announcement', '');
-      const announcementEnabled = await storage.getSystemConfigValue('core', 'announcement_enabled', false);
-      
-      res.json({
-        masterToggle,
-        maintenanceMode,
-        maintenanceMessage,
-        systemAnnouncement: announcementEnabled ? systemAnnouncement : null
-      });
-    } catch (error) {
-      console.error('Error fetching system status:', error);
-      res.status(500).json({ message: 'Failed to fetch system status' });
     }
   });
 
@@ -1357,86 +979,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
-  // Start live game monitoring every 15 seconds for real-time alerts + OpenAI monitoring
+  // Start live game monitoring every 15 seconds for real-time alerts
   setInterval(async () => {
     try {
       console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-      await alertGenerator.checkLiveGamesForAlerts();
-      
-      // STEP 4: Check for OpenAI live alert updates
-      try {
-        const currentGameStates = new Map();
-        const mlbApi = new MLBApiService();
-        const allGames = await mlbApi.getTodaysGames();
-        const liveGames = allGames.filter(game => game.isLive);
-        
-        for (const game of liveGames) {
-          currentGameStates.set(game.gameId.toString(), game);
-        }
-        
-        const updatedAlerts = await openaiEnhancer.monitorLiveAlerts(currentGameStates);
-        
-        if (updatedAlerts.length > 0) {
-          console.log(`🤖 OpenAI generated ${updatedAlerts.length} alert updates`);
-          
-          // Save updated alerts to database
-          for (const alert of updatedAlerts) {
-            try {
-              await db.execute(sql`
-                INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
-                VALUES (gen_random_uuid(), ${alert.alertKey}, ${alert.sport}, ${alert.gameId}, 
-                        ${alert.type}, ${alert.state}, ${alert.score}, ${JSON.stringify(alert.payload)}, NOW())
-              `);
-            } catch (saveError) {
-              console.error('Failed to save updated alert:', saveError);
-            }
-          }
-        }
-      } catch (aiError) {
-        console.error('OpenAI monitoring error:', aiError);
-      }
+      await alertGenerator.generateLiveGameAlerts();
     } catch (error) {
       console.error('Error in live monitoring:', error);
     }
   }, 15000); // Check every 15 seconds for real-time updates
-
-  // TEST ROUTE: Manually trigger OpenAI enhancement
-  app.post('/api/test-openai-enhancement', async (req, res) => {
-    try {
-      console.log('🧪 TESTING OPENAI ENHANCEMENT...');
-      
-      // Create a test alert
-      const testAlert = {
-        id: `test-${Date.now()}`,
-        alertKey: `test_risp_${Date.now()}`,
-        sport: 'MLB',
-        gameId: '776490',
-        type: 'RISP',
-        state: 'NEW',
-        score: 85,
-        payload: {
-          message: 'RUNNER IN SCORING POSITION! Mets vs Tigers - 2nd base, 1 out',
-          team: 'New York Mets',
-          confidence: 85,
-          gamePk: '776490'
-        },
-        createdAt: new Date()
-      };
-
-      // Enhance with OpenAI
-      const enhanced = await openaiEnhancer.enhanceAlert(testAlert);
-      
-      res.json({ 
-        success: true, 
-        original: testAlert.payload.message,
-        enhanced: enhanced.payload.message 
-      });
-      
-    } catch (error) {
-      console.error('Test OpenAI enhancement failed:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
 
   return httpServer;
 }

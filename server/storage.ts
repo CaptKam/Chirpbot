@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, systemConfiguration, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertSystemConfiguration } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, userAlertPreferences, type InsertUserMonitoredTeam, type InsertUserAlertPreferences } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -263,162 +263,132 @@ export const storage = {
     return results;
   },
 
-  // Alias for compatibility with routes.ts
-  async updateUserAlertPreferences(userId: string, sport: string, preferences: Array<{alertType: string, enabled: boolean}>) {
-    return await this.bulkSetUserAlertPreferences(userId, sport, preferences);
-  },
-
-  // Global alert settings operations (admin only)
+  // Global alert settings for admin management  
   async getGlobalAlertSettings(sport: string) {
-    const result = await db.select().from(globalAlertSettings).where(eq(globalAlertSettings.sport, sport));
-    // Convert array to object keyed by alertType
-    const settings: Record<string, boolean> = {};
-    result.forEach(row => {
-      settings[row.alertType] = row.enabled;
-    });
-    return settings;
-  },
-
-  async setGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, adminUserId: string) {
-    // Use upsert pattern
-    const existing = await db.select().from(globalAlertSettings)
-      .where(and(
-        eq(globalAlertSettings.sport, sport),
-        eq(globalAlertSettings.alertType, alertType)
-      ));
-
-    if (existing.length > 0) {
-      const result = await db.update(globalAlertSettings)
-        .set({ enabled, updatedAt: new Date(), updatedBy: adminUserId })
-        .where(and(
-          eq(globalAlertSettings.sport, sport),
-          eq(globalAlertSettings.alertType, alertType)
-        ))
-        .returning();
-      return result[0];
-    } else {
-      const result = await db.insert(globalAlertSettings)
-        .values({ sport, alertType, enabled, updatedBy: adminUserId })
-        .returning();
-      return result[0];
-    }
-  },
-
-  async bulkSetGlobalAlertSettings(sport: string, settings: Record<string, boolean>, adminUserId: string) {
-    const results = [];
-    for (const [alertType, enabled] of Object.entries(settings)) {
-      const result = await this.setGlobalAlertSetting(sport, alertType, enabled, adminUserId);
-      results.push(result);
-    }
-    return results;
-  },
-
-  async getAllGlobalAlertSettings() {
-    return await db.select().from(globalAlertSettings);
-  },
-
-  // Check if a specific alert is globally enabled
-  async isAlertGloballyEnabled(sport: string, alertType: string) {
-    const result = await db.select().from(globalAlertSettings)
-      .where(and(
-        eq(globalAlertSettings.sport, sport),
-        eq(globalAlertSettings.alertType, alertType)
-      ));
-    
-    // If no record exists, it's enabled by default
-    if (result.length === 0) return true;
-    return result[0].enabled;
-  },
-
-  // System Configuration operations
-  async getAllSystemConfigurations() {
-    return await db.select().from(systemConfiguration);
-  },
-
-  async getSystemConfigurationsByCategory(category: string) {
-    return await db.select().from(systemConfiguration)
-      .where(eq(systemConfiguration.category, category));
-  },
-
-  async getSystemConfiguration(category: string, key: string) {
-    const result = await db.select().from(systemConfiguration)
-      .where(and(
-        eq(systemConfiguration.category, category),
-        eq(systemConfiguration.key, key)
-      ));
-    return result[0] || null;
-  },
-
-  async setSystemConfiguration(category: string, key: string, value: any, description?: string, adminUserId?: string) {
-    // Use upsert pattern
-    const existing = await db.select().from(systemConfiguration)
-      .where(and(
-        eq(systemConfiguration.category, category),
-        eq(systemConfiguration.key, key)
-      ));
-
-    // Store value directly if it's a simple type, otherwise JSON stringify
-    const storedValue = (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') 
-      ? value 
-      : JSON.stringify(value);
-
-    const configData = {
-      category,
-      key,
-      value: storedValue,
-      description,
-      updatedAt: new Date(),
-      updatedBy: adminUserId
-    };
-
-    if (existing.length > 0) {
-      const result = await db.update(systemConfiguration)
-        .set(configData)
-        .where(and(
-          eq(systemConfiguration.category, category),
-          eq(systemConfiguration.key, key)
-        ))
-        .returning();
-      return result[0];
-    } else {
-      const result = await db.insert(systemConfiguration)
-        .values(configData)
-        .returning();
-      return result[0];
-    }
-  },
-
-  async getSystemConfigValue(category: string, key: string, defaultValue: any = null) {
-    const config = await this.getSystemConfiguration(category, key);
-    if (!config) return defaultValue;
-    
-    // Handle different value types
-    const value = config.value;
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-      return value;
-    }
-    
     try {
-      return JSON.parse(value as string);
-    } catch (jsonError) {
-      // Return the raw value if JSON parsing fails
-      return value;
+      // Return default settings since we're using this as the canonical source
+      const defaultSettings = {
+        // MLB alerts - all enabled by default
+        'RISP': true,
+        'BASES_LOADED': true,
+        'RUNNERS_1ST_2ND': true,
+        'CLOSE_GAME': true,
+        'CLOSE_GAME_LIVE': true,
+        'LATE_PRESSURE': true,
+        'HOME_RUN_LIVE': true,
+        'HIGH_SCORING': true,
+        'SHUTOUT': true,
+        'BLOWOUT': true,
+        'FULL_COUNT': true,
+        'STRIKEOUT': true,
+        // NFL alerts
+        'RED_ZONE': true,
+        'FOURTH_DOWN': true,
+        'TWO_MINUTE_WARNING': true,
+        // NBA alerts
+        'CLUTCH_TIME': true,
+        'OVERTIME': true,
+        // NHL alerts
+        'POWER_PLAY': true,
+        'EMPTY_NET': true
+      };
+
+      return defaultSettings;
+    } catch (error) {
+      console.error('Error getting global alert settings:', error);
+      return {};
     }
   },
 
-  async bulkSetSystemConfiguration(configurations: Array<{category: string, key: string, value: any, description?: string}>, adminUserId?: string) {
-    const results = [];
-    for (const config of configurations) {
-      const result = await this.setSystemConfiguration(
-        config.category, 
-        config.key, 
-        config.value, 
-        config.description, 
-        adminUserId
-      );
-      results.push(result);
+  async updateGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy: string) {
+    try {
+      console.log(`Global alert setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
+      
+      // When admin changes global settings, apply to all users
+      const users = await this.getAllUsers();
+      
+      for (const user of users) {
+        try {
+          await this.setUserAlertPreference(user.id, sport.toLowerCase(), alertType, enabled);
+        } catch (userError) {
+          console.error(`Failed to update ${alertType} for user ${user.id}:`, userError);
+        }
+      }
+      
+      return;
+    } catch (error) {
+      console.error('Error updating global alert setting:', error);
+      throw error;
     }
-    return results;
+  },
+
+  async updateGlobalAlertCategory(sport: string, alertKeys: string[], enabled: boolean, updatedBy: string) {
+    try {
+      console.log(`Global alert category updated: ${sport} [${alertKeys.join(',')}] = ${enabled} by admin ${updatedBy}`);
+      
+      // Apply each alert key change
+      for (const alertKey of alertKeys) {
+        await this.updateGlobalAlertSetting(sport, alertKey, enabled, updatedBy);
+      }
+      
+      return;
+    } catch (error) {
+      console.error('Error updating global alert category:', error);
+      throw error;
+    }
+  },
+
+  async applyGlobalSettingsToAllUsers(sport: string, settings: Record<string, boolean>, updatedBy: string) {
+    try {
+      const users = await this.getAllUsers();
+      let updatedCount = 0;
+      
+      for (const user of users) {
+        try {
+          // Convert settings to preferences format
+          const preferences = Object.entries(settings).map(([alertType, enabled]) => ({
+            alertType,
+            enabled: enabled === true
+          }));
+          
+          // Apply each preference
+          for (const pref of preferences) {
+            await this.setUserAlertPreference(user.id, sport.toLowerCase(), pref.alertType, pref.enabled);
+          }
+          
+          updatedCount++;
+        } catch (userError) {
+          console.error(`Failed to update settings for user ${user.id}:`, userError);
+        }
+      }
+      
+      console.log(`Applied global ${sport} alert settings to ${updatedCount} users by admin ${updatedBy}`);
+      return { usersUpdated: updatedCount, totalUsers: users.length };
+    } catch (error) {
+      console.error('Error applying global settings to all users:', error);
+      throw error;
+    }
+  },
+
+  async getMasterAlertEnabled() {
+    try {
+      // For now, return true by default
+      return true;
+    } catch (error) {
+      console.error('Error getting master alert enabled:', error);
+      return true;
+    }
+  },
+
+  async setMasterAlertEnabled(enabled: boolean, updatedBy: string) {
+    try {
+      console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin ${updatedBy}`);
+      // For now, just log the change. In a full implementation, this would update the database
+      return;
+    } catch (error) {
+      console.error('Error setting master alert enabled:', error);
+      throw error;
+    }
   }
 };
 

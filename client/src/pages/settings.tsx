@@ -14,23 +14,13 @@ const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 // Comprehensive alert configuration for all sports
 const ALERT_TYPE_CONFIG = {
   MLB: {
-    "Probability Engine": [
-      { key: "RISP_CHANCE", label: "RISP Probability", description: "Advanced RISP scoring probability with RE24 calculations" },
-      { key: "SCORING_PROBABILITY", label: "High Scoring Probability", description: "Situations with 100%+ run expectancy" },
-      { key: "CLOSE_GAME_LATE", label: "Close Game Late", description: "7th inning+ within one run (probability-based)" },
-      { key: "LATE_PRESSURE", label: "Late Pressure", description: "8th+ inning pressure situations (RE24 enhanced)" },
-      { key: "NINTH_TIE", label: "Ninth Inning Tie", description: "Maximum pressure tie games in 9th+ innings" },
-    ],
-    "Weather & Power": [
-      { key: "WIND_JETSTREAM", label: "Wind Assist", description: "Tailwind conditions favoring home runs" },
-      { key: "HR_HITTER_AT_BAT", label: "Power Hitter Up", description: "High-power batter with HR potential" },
-    ],
-    "Legacy Alerts": [
-      { key: "RISP", label: "RISP (Legacy)", description: "Basic runners in scoring position alerts" },
-      { key: "BASES_LOADED", label: "Bases Loaded (Legacy)", description: "Simple bases loaded detection" },
-      { key: "RUNNERS_1ST_2ND", label: "Runners 1st & 2nd (Legacy)", description: "Basic 1st & 2nd base alerts" },
-      { key: "CLOSE_GAME", label: "Close Game (Legacy)", description: "Basic close game detection" },
-      { key: "CLOSE_GAME_LIVE", label: "Live Close Game (Legacy)", description: "Basic real-time close games" },
+    "Game Situations": [
+      { key: "RISP", label: "RISP (Runners in Scoring Position)", description: "Alert when runners are on 2nd or 3rd base" },
+      { key: "BASES_LOADED", label: "Bases Loaded", description: "Alert when all three bases are occupied" },
+      { key: "RUNNERS_1ST_2ND", label: "Runners on 1st & 2nd", description: "Prime scoring opportunity alert" },
+      { key: "CLOSE_GAME", label: "Close Game", description: "Games with score difference ≤ 3 runs" },
+      { key: "CLOSE_GAME_LIVE", label: "Live Close Game", description: "Real-time close game situations" },
+      { key: "LATE_PRESSURE", label: "Late Inning Pressure", description: "8th inning or later with close score" },
     ],
     "Scoring Events": [
       { key: "HOME_RUN_LIVE", label: "Home Run (Live)", description: "Real-time home run alerts as they happen" },
@@ -40,6 +30,7 @@ const ALERT_TYPE_CONFIG = {
     ],
     "At-Bat Situations": [
       { key: "FULL_COUNT", label: "Full Count (3-2)", description: "Maximum pressure at-bat situations" },
+      { key: "STRIKEOUT", label: "Strikeout Alert", description: "Real-time strikeout notifications" },
     ]
   },
   NFL: {
@@ -93,12 +84,8 @@ export default function Settings() {
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
-  });
-
-  // Fetch global admin settings to know which alert types are available
-  const { data: globalSettings, isLoading: globalSettingsLoading } = useQuery({
-    queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
-    enabled: !!isAuthenticated,
+    staleTime: 30 * 1000, // 30 seconds for alert preferences to show admin changes quickly
+    refetchInterval: 60 * 1000, // Refetch every minute to catch admin changes
   });
 
   // Create a map of current preferences for easy lookup
@@ -265,82 +252,67 @@ export default function Settings() {
               </div>
             </div>
 
-            {preferencesLoading || globalSettingsLoading ? (
+            {preferencesLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
               <div className="space-y-6">
                 {ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] ? (
-                  Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).map(([category, alerts]) => {
-                    // Filter alerts to only show those that are globally enabled by admin
-                    const enabledAlerts = alerts.filter(alert => globalSettings?.[alert.key] !== false);
-                    
-                    // Only show category if it has enabled alerts
-                    if (enabledAlerts.length === 0) return null;
-                    
-                    return (
-                      <div key={category} className="space-y-4">
-                        <div className="flex items-center space-x-2">
-                          {getCategoryIcon(category)}
-                          <h3 className="text-md font-bold text-slate-100 uppercase tracking-wide">
-                            {category}
-                          </h3>
-                        </div>
-                        <div className="space-y-3 ml-6">
-                          {enabledAlerts.map((alert) => {
-                            const isEnabled = preferenceMap.get(alert.key) ?? false; // Use API data only
-                            return (
-                              <div 
-                                key={alert.key} 
-                                className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
-                              >
-                                <div className="flex-1">
-                                  <div className="flex items-center space-x-2">
-                                    <h4 className="text-sm font-semibold text-slate-100">
-                                      {alert.label}
-                                    </h4>
-                                    {updateAlertPreferenceMutation.isPending && (
-                                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-slate-400 mt-1">
-                                    {alert.description}
-                                  </p>
-                                </div>
-                                <Switch
-                                  checked={isEnabled}
-                                  onCheckedChange={(enabled) => handleAlertToggle(alert.key, enabled)}
-                                  disabled={updateAlertPreferenceMutation.isPending}
-                                  data-testid={`toggle-${alert.key.toLowerCase()}`}
-                                  className="data-[state=checked]:bg-emerald-500"
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG])
-                          .filter(([_, categoryAlerts]) => categoryAlerts.some(alert => globalSettings?.[alert.key] !== false))
-                          .indexOf([category, enabledAlerts]) < 
-                         Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG])
-                          .filter(([_, categoryAlerts]) => categoryAlerts.some(alert => globalSettings?.[alert.key] !== false))
-                          .length - 1 && (
-                          <Separator className="bg-white/10 my-4" />
-                        )}
+                  Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).map(([category, alerts]) => (
+                    <div key={category} className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        {getCategoryIcon(category)}
+                        <h3 className="text-md font-bold text-slate-100 uppercase tracking-wide">
+                          {category}
+                        </h3>
                       </div>
-                    );
-                  }).filter(Boolean) // Remove null categories
-                ) : null}
-                
-                {/* Show message if no alerts are available (globally disabled) */}
-                {alertPreferences && alertPreferences.length === 0 && (
+                      <div className="space-y-3 ml-6">
+                        {alerts.map((alert) => {
+                          const isEnabled = preferenceMap.get(alert.key) ?? true; // Default to enabled
+                          return (
+                            <div 
+                              key={alert.key} 
+                              className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <h4 className="text-sm font-semibold text-slate-100">
+                                    {alert.label}
+                                  </h4>
+                                  {updateAlertPreferenceMutation.isPending && (
+                                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  {alert.description}
+                                </p>
+                              </div>
+                              <Switch
+                                checked={isEnabled}
+                                onCheckedChange={(enabled) => handleAlertToggle(alert.key, enabled)}
+                                disabled={updateAlertPreferenceMutation.isPending}
+                                data-testid={`toggle-${alert.key.toLowerCase()}`}
+                                className="data-[state=checked]:bg-emerald-500"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {Object.keys(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).indexOf(category) < 
+                       Object.keys(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).length - 1 && (
+                        <Separator className="bg-white/10 my-4" />
+                      )}
+                    </div>
+                  ))
+                ) : (
                   <div className="text-center py-8">
                     <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
                     <p className="text-slate-400 text-sm">
-                      No {activeSport} alerts are currently available.
+                      No alert types configured for {activeSport} yet.
                       <br />
                       <span className="text-xs text-slate-500">
-                        Alert types may be temporarily disabled by administrators.
+                        Alert types will appear here as they are added to the system.
                       </span>
                     </p>
                   </div>
