@@ -39,6 +39,11 @@ export class BasicAI {
     this.isConfigured = !!this.apiKey;
   }
 
+  // Public getter for isConfigured
+  get configured(): boolean {
+    return this.isConfigured;
+  }
+
   // Simple AI enhancement for high-value alerts
   async enhanceAlert(context: AlertContext): Promise<AIEnhancement> {
     // Only enhance high-probability alerts to save API costs
@@ -134,7 +139,7 @@ Keep response under 100 words. Focus on immediate betting value.
     const content = data.choices[0]?.message?.content || '';
 
     // Parse response into structured format
-    const lines = content.split('\n').filter(line => line.trim());
+    const lines = content.split('\n').filter((line: string) => line.trim());
     return {
       insights: lines[0] || 'High-value betting opportunity',
       recommendation: lines[1] || 'Monitor closely'

@@ -115,8 +115,8 @@ app.use((req, res, next) => {
     const aiEngine = new BasicAI();
 
     // Log AI system status
-    console.log(`🤖 AI Betting System: ${aiEngine.isConfigured ? '✅ ACTIVE' : '⚠️ FALLBACK MODE'}`);
-    if (aiEngine.isConfigured) {
+    console.log(`🤖 AI Betting System: ${aiEngine.configured ? '✅ ACTIVE' : '⚠️ FALLBACK MODE'}`);
+    if (aiEngine.configured) {
       console.log('🎯 AI betting insights will be generated for high-priority alerts (70%+)');
     } else {
       console.log('📊 Using fallback betting analysis (no OpenAI key configured)');

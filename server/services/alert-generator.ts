@@ -1352,7 +1352,7 @@ export class AlertGenerator {
 
       let willSendToAnyUser = false;
       for (const user of telegramUsers) {
-        const userPrefs = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
+        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
         const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
         if (userHasThisAlertEnabled) {
           willSendToAnyUser = true;
@@ -1398,7 +1398,7 @@ export class AlertGenerator {
             }
 
             // Check individual user preferences for this alert type
-            const userPrefs = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
+            const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
             const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
             if (!userHasThisAlertEnabled) {
               console.log(`⛔ Telegram alert blocked - User ${user.username} has ${type} disabled`);
@@ -1452,7 +1452,7 @@ export class AlertGenerator {
 
             // Check individual user preferences for this alert type
             if (user) {
-              const userPrefs = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
+              const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
               const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
               if (!userHasThisAlertEnabled) {
                 console.log(`⛔ Telegram alert blocked - User ${user.username} has ${type} disabled in preferences`);

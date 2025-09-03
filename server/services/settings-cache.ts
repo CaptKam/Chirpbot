@@ -107,7 +107,7 @@ export class SettingsCache {
       entries: [] as any[]
     };
 
-    for (const [sport, entry] of this.cache) {
+    for (const [sport, entry] of Array.from(this.cache.entries())) {
       stats.entries.push({
         sport,
         age: Math.round((now - entry.timestamp) / 1000) + 's',
