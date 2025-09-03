@@ -517,13 +517,18 @@ export default function Calendar() {
                     <div className="flex items-center justify-between mb-4">
                       {/* Away Team - Left Side */}
                       <div className="flex items-center space-x-3">
-                        <TeamLogo
-                          teamName={removeCity(awayTeamName)}
-                          abbreviation={awayTeamAbbr}
-                          sport={activeSport}
-                          size="lg"
-                          className="shadow-sm"
-                        />
+                        <div className="text-center">
+                          <TeamLogo
+                            teamName={removeCity(awayTeamName)}
+                            abbreviation={awayTeamAbbr}
+                            sport={activeSport}
+                            size="lg"
+                            className="shadow-sm"
+                          />
+                          <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
+                            {removeCity(awayTeamName)}
+                          </div>
+                        </div>
                         {(game.status === 'live' || game.status === 'final') && (
                           <div className="text-center">
                             <div className="text-2xl font-bold text-slate-200">
@@ -580,13 +585,18 @@ export default function Calendar() {
                             </div>
                           </div>
                         )}
-                        <TeamLogo
-                          teamName={removeCity(homeTeamName)}
-                          abbreviation={homeTeamAbbr}
-                          sport={activeSport}
-                          size="lg"
-                          className="shadow-sm"
-                        />
+                        <div className="text-center">
+                          <TeamLogo
+                            teamName={removeCity(homeTeamName)}
+                            abbreviation={homeTeamAbbr}
+                            sport={activeSport}
+                            size="lg"
+                            className="shadow-sm"
+                          />
+                          <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
+                            {removeCity(homeTeamName)}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
