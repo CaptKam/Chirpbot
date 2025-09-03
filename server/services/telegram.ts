@@ -7,7 +7,8 @@ export interface TelegramConfig {
 
 // Escape Telegram MarkdownV2 special characters
 function escapeMd(s: string): string {
-  return s.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+  // Escape all special markdown characters including hyphen
+  return s.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
 }
 
 export async function sendTelegramAlert(
@@ -30,7 +31,7 @@ export async function sendTelegramAlert(
     }
 
     // Build rich notification message with escaped markdown
-    let message = `🚨 *${escapeMd(alert.type.toUpperCase())} ALERT*\n\n*${escapeMd(alert.title)}*\n\n${escapeMd(alert.description)}\n\n`;
+    let message = `🚨 *${escapeMd(alert.type.replace(/_/g, ' ').toUpperCase())} ALERT*\n\n*${escapeMd(alert.title)}*\n\n${escapeMd(alert.description)}\n\n`;
 
     // Game situation section
     message += `🎮 *GAME SITUATION*\n`;
