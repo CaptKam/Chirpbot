@@ -478,41 +478,66 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Compact Team Matchup */}
-              <div className="bg-gradient-to-r from-slate-800/40 to-slate-700/40 rounded-lg p-2 mb-2 border border-slate-600/30">
+              {/* Team Matchup Box - Calendar Style */}
+              <div className="bg-gradient-to-r from-slate-800/40 to-slate-700/40 rounded-lg p-3 mb-2 border border-slate-600/30">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  {/* Away Team - Left Side */}
+                  <div className="flex items-center space-x-3">
                     <div className="text-center">
-                      <div className="text-xs font-medium text-slate-300">{alertData.awayTeam?.split(' ').pop()}</div>
-                      <div className="text-lg font-black text-white">
+                      <div className="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center mb-1">
+                        <span className="text-xs font-bold text-white">
+                          {alertData.awayTeam?.split(' ').slice(-1)[0]?.substring(0, 3).toUpperCase() || 'TBD'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-300 font-medium max-w-[60px] truncate">
+                        {alertData.awayTeam?.split(' ').slice(-1)[0] || 'TBD'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-slate-200">
                         {alertData.context?.awayScore ?? alertData.awayScore ?? 0}
                       </div>
                     </div>
-                    <div className="text-xs text-slate-400">@</div>
-                    <div className="text-center">
-                      <div className="text-xs font-medium text-slate-300">{alertData.homeTeam?.split(' ').pop()}</div>
-                      <div className="text-lg font-black text-white">
-                        {alertData.context?.homeScore ?? alertData.homeScore ?? 0}
-                      </div>
-                    </div>
                   </div>
-                  <div className="text-right">
-                    {/* Game State Indicator - Non-MLB sports only */}
+
+                  {/* Center - Game State */}
+                  <div className="flex-1 flex flex-col items-center space-y-1">
+                    <div className="text-xs text-slate-400 font-medium">@</div>
+                    {/* Game State Indicators */}
                     {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.quarter && (
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
                         Q{alertData.context.quarter}
                       </div>
                     )}
                     {alertData.sport === 'NBA' && alertData.context?.quarter && (
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
                         Q{alertData.context.quarter}
                       </div>
                     )}
                     {alertData.sport === 'NHL' && alertData.context?.period && (
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
                         P{alertData.context.period}
                       </div>
                     )}
+                  </div>
+
+                  {/* Home Team - Right Side */}
+                  <div className="flex items-center space-x-3">
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-slate-200">
+                        {alertData.context?.homeScore ?? alertData.homeScore ?? 0}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center mb-1">
+                        <span className="text-xs font-bold text-white">
+                          {alertData.homeTeam?.split(' ').slice(-1)[0]?.substring(0, 3).toUpperCase() || 'TBD'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-300 font-medium max-w-[60px] truncate">
+                        {alertData.homeTeam?.split(' ').slice(-1)[0] || 'TBD'}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
