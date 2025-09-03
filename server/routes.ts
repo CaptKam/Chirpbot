@@ -9,8 +9,6 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
-import { Router } from 'express'; // Import Router
-
 // Extend session data interface
 declare module 'express-session' {
   interface SessionData {
@@ -18,9 +16,6 @@ declare module 'express-session' {
     adminUserId?: string;
   }
 }
-
-// Create a new router instance
-const router = Router();
 
 // Middleware to ensure user is authenticated
 async function requireAuthentication(req: any, res: any, next: any) {
@@ -37,6 +32,14 @@ async function requireAuthentication(req: any, res: any, next: any) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+
+  // Add route debugging middleware
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
+    }
+    next();
+  });
 
   // Setup WebSocket server with heartbeat
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -1621,9 +1624,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error in live monitoring:', error);
     }
   }, 15000); // Check every 15 seconds for real-time updates
-
-  // Mount the router
-  app.use('/api', router);
 
   return httpServer;
 }
