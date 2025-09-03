@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import AlertFooter from '@/components/AlertFooter';
 import { SwipeableCard } from '@/components/SwipeableCard';
+import { SimpleAlertCard } from '@/components/SimpleAlertCard';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +87,31 @@ export default function AlertsPage() {
     });
   };
 
+  // Determine which alert types should use the simple card
+  const shouldUseSimpleCard = (alertType: string) => {
+    const simpleAlertTypes = [
+      // Game Events
+      'TWO_MINUTE_WARNING',
+      'NCAAF_KICKOFF', 
+      'NCAAF_HALFTIME',
+      'GAME_START',
+      'GAME_END',
+      // Final Game Results
+      'HIGH_SCORING',
+      'SHUTOUT',
+      'BLOWOUT',
+      'CLOSE_GAME',
+      // Time-based
+      'OVERTIME',
+      'FINAL_DRIVE',
+      // Simple milestones
+      'TOUCHDOWN',
+      'FIELD_GOAL',
+      'SAFETY'
+    ];
+    return simpleAlertTypes.includes(alertType);
+  };
+
   if (alertsLoading || statsLoading) {
     return <AlertLoading />;
   }
@@ -163,51 +189,71 @@ export default function AlertsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <SwipeableCard 
-                alertId={alert.id}
-                alertData={{
-                  id: alert.id,
-                  sport: alert.sport,
-                  homeTeam: alert.homeTeam,
-                  awayTeam: alert.awayTeam,
-                  homeScore: alert.context?.homeScore,
-                  awayScore: alert.context?.awayScore,
-                  probability: alert.confidence,
-                  priority: alert.priority,
-                  confidence: alert.confidence,
-                  type: alert.type,
-                  message: alert.message,
-                  createdAt: alert.createdAt,
-                  context: {
-                    ...alert.context,
-                    // MLB specific
-                    inning: alert.context?.inning || alert.inning,
-                    isTopInning: alert.context?.isTopInning || alert.isTopInning,
-                    balls: alert.context?.balls || alert.balls,
-                    strikes: alert.context?.strikes || alert.strikes,
-                    outs: alert.context?.outs || alert.outs,
-                    hasFirst: alert.context?.hasFirst || alert.hasFirst,
-                    hasSecond: alert.context?.hasSecond || alert.hasSecond,
-                    hasThird: alert.context?.hasThird || alert.hasThird,
-                    // Football specific (NFL, NCAAF, CFL)
-                    quarter: alert.context?.quarter,
-                    down: alert.context?.down,
-                    yardsToGo: alert.context?.yardsToGo,
-                    timeRemaining: alert.context?.timeRemaining,
-                    fieldPosition: alert.context?.fieldPosition,
-                    // Basketball specific (NBA)
-                    courtPosition: alert.context?.courtPosition,
-                    // Hockey specific (NHL)
-                    period: alert.context?.period,
-                    rinkPosition: alert.context?.rinkPosition,
-                    // Weather (all sports)
-                    weather: alert.context?.weather || alert.weather
-                  },
-                  betbookData: alert.context?.betbookData,
-                  gameInfo: alert.context?.gameInfo
-                }}
-                className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
-              />
+              {shouldUseSimpleCard(alert.type) ? (
+                // Use Simple Card for basic alerts
+                <SimpleAlertCard 
+                  alert={{
+                    id: alert.id,
+                    type: alert.type,
+                    message: alert.message,
+                    sport: alert.sport,
+                    homeTeam: alert.homeTeam,
+                    awayTeam: alert.awayTeam,
+                    priority: alert.priority,
+                    confidence: alert.confidence,
+                    createdAt: alert.createdAt,
+                    context: alert.context
+                  }}
+                  className="hover:border-emerald-500/30 transition-all duration-200"
+                />
+              ) : (
+                // Use Complex Card for detailed game state alerts
+                <SwipeableCard 
+                  alertId={alert.id}
+                  alertData={{
+                    id: alert.id,
+                    sport: alert.sport,
+                    homeTeam: alert.homeTeam,
+                    awayTeam: alert.awayTeam,
+                    homeScore: alert.context?.homeScore,
+                    awayScore: alert.context?.awayScore,
+                    probability: alert.confidence,
+                    priority: alert.priority,
+                    confidence: alert.confidence,
+                    type: alert.type,
+                    message: alert.message,
+                    createdAt: alert.createdAt,
+                    context: {
+                      ...alert.context,
+                      // MLB specific
+                      inning: alert.context?.inning || alert.inning,
+                      isTopInning: alert.context?.isTopInning || alert.isTopInning,
+                      balls: alert.context?.balls || alert.balls,
+                      strikes: alert.context?.strikes || alert.strikes,
+                      outs: alert.context?.outs || alert.outs,
+                      hasFirst: alert.context?.hasFirst || alert.hasFirst,
+                      hasSecond: alert.context?.hasSecond || alert.hasSecond,
+                      hasThird: alert.context?.hasThird || alert.hasThird,
+                      // Football specific (NFL, NCAAF, CFL)
+                      quarter: alert.context?.quarter,
+                      down: alert.context?.down,
+                      yardsToGo: alert.context?.yardsToGo,
+                      timeRemaining: alert.context?.timeRemaining,
+                      fieldPosition: alert.context?.fieldPosition,
+                      // Basketball specific (NBA)
+                      courtPosition: alert.context?.courtPosition,
+                      // Hockey specific (NHL)
+                      period: alert.context?.period,
+                      rinkPosition: alert.context?.rinkPosition,
+                      // Weather (all sports)
+                      weather: alert.context?.weather || alert.weather
+                    },
+                    betbookData: alert.context?.betbookData,
+                    gameInfo: alert.context?.gameInfo
+                  }}
+                  className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
+                />
+              )}
             </motion.div>
           ))
         )}
