@@ -62,117 +62,14 @@ export function BaseballDiamond({
         </div>
       )}
 
-      {/* Diamond */}
-      <div className={`relative ${diamond} mx-auto`}>
-        {/* Diamond background */}
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-          {/* Infield diamond */}
-          <path
-            d="M50 15 L85 50 L50 85 L15 50 Z"
-            fill="rgba(34, 139, 34, 0.1)"
-            stroke="rgba(34, 139, 34, 0.4)"
-            strokeWidth="1"
-          />
-          {/* Pitcher's mound */}
-          <circle
-            cx="50"
-            cy="50"
-            r="3"
-            fill="rgba(139, 69, 19, 0.6)"
-            stroke="rgba(139, 69, 19, 0.8)"
-            strokeWidth="0.5"
-          />
-        </svg>
-
-        {/* First Base - Larger and more visible */}
-        <motion.div
-          className={`absolute rounded-full border-2`}
-          style={{ 
-            top: '45%', 
-            right: '5%', 
-            transform: 'translate(50%, -50%)',
-            width: size === 'sm' ? '20px' : '28px',
-            height: size === 'sm' ? '20px' : '28px'
-          }}
-          animate={{
-            backgroundColor: runners.first ? '#10B981' : 'rgba(255, 255, 255, 0.8)',
-            borderColor: runners.first ? '#10B981' : '#64748B',
-            scale: runners.first ? 1.2 : 1,
-            boxShadow: runners.first ? '0 0 8px #10B981' : '0 0 0px transparent'
-          }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-        >
-          {runners.first && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.2 }}
-            >
-              <div className="text-white text-xs font-bold">1</div>
-            </motion.div>
-          )}
-        </motion.div>
-
-        {/* Second Base - Larger and more visible */}
-        <motion.div
-          className={`absolute rounded-full border-2`}
-          style={{ 
-            top: '5%', 
-            left: '50%', 
-            transform: 'translate(-50%, 50%)',
-            width: size === 'sm' ? '20px' : '28px',
-            height: size === 'sm' ? '20px' : '28px'
-          }}
-          animate={{
-            backgroundColor: runners.second ? '#10B981' : 'rgba(255, 255, 255, 0.8)',
-            borderColor: runners.second ? '#10B981' : '#64748B',
-            scale: runners.second ? 1.2 : 1,
-            boxShadow: runners.second ? '0 0 8px #10B981' : '0 0 0px transparent'
-          }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-        >
-          {runners.second && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.2 }}
-            >
-              <div className="text-white text-xs font-bold">2</div>
-            </motion.div>
-          )}
-        </motion.div>
-
-        {/* Third Base - Larger and more visible */}
-        <motion.div
-          className={`absolute rounded-full border-2`}
-          style={{ 
-            top: '45%', 
-            left: '5%', 
-            transform: 'translate(-50%, -50%)',
-            width: size === 'sm' ? '20px' : '28px',
-            height: size === 'sm' ? '20px' : '28px'
-          }}
-          animate={{
-            backgroundColor: runners.third ? '#10B981' : 'rgba(255, 255, 255, 0.8)',
-            borderColor: runners.third ? '#10B981' : '#64748B',
-            scale: runners.third ? 1.2 : 1,
-            boxShadow: runners.third ? '0 0 8px #10B981' : '0 0 0px transparent'
-          }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-        >
-          {runners.third && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.2 }}
-            >
-              <div className="text-white text-xs font-bold">3</div>
-            </motion.div>
-          )}
-        </motion.div>
+      {/* Simple Baseball Diamond - Same as alerts page but bigger */}
+      <div className={`relative ${size === 'sm' ? 'w-10 h-10' : 'w-16 h-16'} mx-auto flex-shrink-0`}>
+        {/* Second Base */}
+        <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.second ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        {/* Third Base */}
+        <div className={`absolute top-1/2 left-0 transform -translate-y-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.third ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        {/* First Base */}
+        <div className={`absolute top-1/2 right-0 transform -translate-y-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.first ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
       </div>
 
       {/* Base status text */}
