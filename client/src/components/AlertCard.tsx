@@ -156,16 +156,27 @@ function ContextFooter({
   }
 
   return (
-    <div className="bg-slate-800/30 rounded-xl p-3 border border-slate-700/50">
-      <div className="flex items-center gap-3">
+    <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50 mt-2">
+      <div className="flex items-center gap-4">
         <BaseballDiamond runners={context?.runners} />
-        <div className="grid grid-cols-3 gap-2 text-sm text-slate-200">
-          <div className="col-span-3 font-medium">
+        <div className="flex-1 space-y-2">
+          <div className="text-sm font-medium text-slate-200 mb-2">
             {context?.inning ? `${context.inning.half} ${context.inning.number}` : "Inning —"}
           </div>
-          <div className="">Outs: <span className="font-semibold">{context?.outs ?? "-"}</span></div>
-          <div className="">Count: <span className="font-semibold">{context?.count ? `${context.count.b}-${context.count.s}` : "-"}</span></div>
-          <div className="">RISP: <span className="font-semibold">{context?.runners?.second || context?.runners?.third ? "Yes" : "No"}</span></div>
+          <div className="grid grid-cols-3 gap-3 text-sm text-slate-300">
+            <div>
+              <span className="text-slate-400">Outs:</span>
+              <div className="font-semibold text-white">{context?.outs ?? "-"}</div>
+            </div>
+            <div>
+              <span className="text-slate-400">Count:</span>
+              <div className="font-semibold text-white">{context?.count ? `${context.count.b}-${context.count.s}` : "-"}</div>
+            </div>
+            <div>
+              <span className="text-slate-400">RISP:</span>
+              <div className="font-semibold text-white">{context?.runners?.second || context?.runners?.third ? "Yes" : "No"}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -240,10 +251,10 @@ export default function AlertCard({
           </div>
 
           {/* Message */}
-          <h3 className="text-xl font-bold mb-3 text-white leading-tight tracking-wide">{message}</h3>
+          <h3 className="text-xl font-bold mb-4 text-white leading-tight tracking-wide">{message}</h3>
 
           {/* Matchup */}
-          <div className="mb-3 text-center">
+          <div className="mb-4 text-center">
             <p className="text-slate-300 font-medium text-lg">{matchup.away} <span className="opacity-70">vs</span> {matchup.home}</p>
           </div>
 
