@@ -86,6 +86,12 @@ export default function Settings() {
     enabled: !!user?.id && isAuthenticated,
   });
 
+  // Fetch global admin settings to know which alert types are available
+  const { data: globalSettings, isLoading: globalSettingsLoading } = useQuery({
+    queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
+    enabled: !!isAuthenticated,
+  });
+
   // Create a map of current preferences for easy lookup
   const preferenceMap = new Map();
   if (alertPreferences) {
@@ -250,7 +256,7 @@ export default function Settings() {
               </div>
             </div>
 
-            {preferencesLoading ? (
+            {preferencesLoading || globalSettingsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
@@ -258,8 +264,8 @@ export default function Settings() {
               <div className="space-y-6">
                 {ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] ? (
                   Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).map(([category, alerts]) => {
-                    // Filter alerts to only show those that exist in the API response (i.e., globally enabled)
-                    const enabledAlerts = alerts.filter(alert => preferenceMap.has(alert.key));
+                    // Filter alerts to only show those that are globally enabled by admin
+                    const enabledAlerts = alerts.filter(alert => globalSettings?.[alert.key] !== false);
                     
                     // Only show category if it has enabled alerts
                     if (enabledAlerts.length === 0) return null;
@@ -305,10 +311,10 @@ export default function Settings() {
                           })}
                         </div>
                         {Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG])
-                          .filter(([_, categoryAlerts]) => categoryAlerts.some(alert => preferenceMap.has(alert.key)))
+                          .filter(([_, categoryAlerts]) => categoryAlerts.some(alert => globalSettings?.[alert.key] !== false))
                           .indexOf([category, enabledAlerts]) < 
                          Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG])
-                          .filter(([_, categoryAlerts]) => categoryAlerts.some(alert => preferenceMap.has(alert.key)))
+                          .filter(([_, categoryAlerts]) => categoryAlerts.some(alert => globalSettings?.[alert.key] !== false))
                           .length - 1 && (
                           <Separator className="bg-white/10 my-4" />
                         )}
