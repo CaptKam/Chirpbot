@@ -43,7 +43,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Oakland Athletics': 'OAK',
   'Minnesota Twins': 'MIN',
   'Tampa Bay Rays': 'TB',
-  
+
   // Common shortened names that MLB API might return
   'Dodgers': 'LAD',
   'Giants': 'SF',
@@ -71,7 +71,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Mets': 'NYM',
   'Twins': 'MIN',
   'Rays': 'TB',
-  
+
   // NFL Teams
   'Kansas City Chiefs': 'KC',
   'Buffalo Bills': 'BUF',
@@ -94,7 +94,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Atlanta Falcons': 'ATL',
   'Chicago Bears': 'CHI',
   'Minnesota Vikings': 'MIN',
-  
+
   // NBA Teams  
   'Los Angeles Lakers': 'LAL',
   'Boston Celtics': 'CEL',
@@ -104,7 +104,7 @@ const teamNameToAbbr: Record<string, string> = {
   'New York Knicks': 'NYK',
   'Brooklyn Nets': 'BKN',
   'Philadelphia 76ers': 'PHI',
-  
+
   // NHL Teams
   'Los Angeles Kings': 'LAK',
   'Anaheim Ducks': 'ANA',
@@ -181,14 +181,14 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
   if (sport && espnLogos[sport] && espnLogos[sport][teamAbbr]) {
     return espnLogos[sport][teamAbbr];
   }
-  
+
   // Fallback: try to find logo in any sport (for backwards compatibility)
   for (const [sportKey, logos] of Object.entries(espnLogos)) {
     if (logos[teamAbbr]) {
       return logos[teamAbbr];
     }
   }
-  
+
   return null;
 };
 
@@ -198,6 +198,26 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     md: 'w-12 h-12',
     lg: 'w-16 h-16'
   };
+
+  const dimensions = sizeClasses[size];
+
+  // Handle fallback cases
+  if (!teamName && !abbreviation) {
+    return (
+      <div className={`${dimensions} rounded-full bg-slate-700 flex items-center justify-center ${className}`}>
+        <span className="text-slate-400 text-xs font-bold">TBD</span>
+      </div>
+    );
+  }
+
+  if (teamName === 'TBD' || abbreviation === 'TBD') {
+    return (
+      <div className={`${dimensions} rounded-full bg-slate-700 flex items-center justify-center ${className}`}>
+        <span className="text-slate-400 text-xs font-bold">TBD</span>
+      </div>
+    );
+  }
+
 
   const logoMap: Record<string, JSX.Element> = {
     // MLB Teams
@@ -495,11 +515,11 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
   // Get abbreviation from prop or lookup from team name
   let teamAbbr = abbreviation;
-  
+
   if (!teamAbbr && teamName) {
     // First try direct match
     teamAbbr = teamNameToAbbr[teamName];
-    
+
     // If no direct match, try partial matching
     if (!teamAbbr) {
       const partialMatch = Object.keys(teamNameToAbbr).find(fullName => 
@@ -511,10 +531,10 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
       }
     }
   }
-  
+
   // Try to get the official team logo URL first, prioritizing MLB for sports betting app
   const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, 'MLB') : null;
-  
+
   if (logoUrl) {
     // Use official team logo from ESPN
     return (
@@ -530,7 +550,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
       />
     );
   }
-  
+
   // Generic fallback logo with better styling
   const defaultLogo = (
     <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
@@ -539,11 +559,14 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
   );
 
   const selectedLogo = teamAbbr ? logoMap[teamAbbr] : null;
-  
+
   if (!selectedLogo) {
-    console.log(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
+    // Only log warnings for actual team names, not fallback cases
+    if (teamName !== 'TBD' && abbreviation !== 'TBD') {
+      console.warn(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
+    }
     return defaultLogo;
   }
-  
+
   return selectedLogo;
 }

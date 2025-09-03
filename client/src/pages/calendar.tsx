@@ -19,7 +19,7 @@ const removeCity = (teamName: string) => {
 };
 
 const extractTeamAbbreviation = (teamName: string) => {
-  if (!teamName) return '';
+  if (!teamName || teamName.trim() === '') return 'TBD';
   
   // Full team name mappings (check these first)
   const fullTeamMappings: Record<string, string> = {
@@ -27,6 +27,9 @@ const extractTeamAbbreviation = (teamName: string) => {
     'Washington Nationals': 'WSH',
     'Oakland Athletics': 'OAK',
     'Tampa Bay Rays': 'TB',
+    'Kansas City Royals': 'KC',
+    'Kansas City': 'KC',
+    'Royals': 'KC',
     // Add college teams
     'TCU Horned Frogs': 'TCU',
     'North Carolina Tar Heels': 'UNC'
@@ -38,7 +41,7 @@ const extractTeamAbbreviation = (teamName: string) => {
   }
   
   // Extract abbreviation from team name
-  const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington'];
+  const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington', 'Kansas City'];
   let cleanName = teamName;
   
   // Remove city prefixes
@@ -454,8 +457,15 @@ export default function Calendar() {
                     minute: '2-digit' 
                   });
 
+              // Validate game data before rendering
+              const gameId = game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-game-${index}`;
+              const awayTeamName = game.awayTeam?.name || 'TBD';
+              const homeTeamName = game.homeTeam?.name || 'TBD';
+              const awayTeamAbbr = extractTeamAbbreviation(awayTeamName);
+              const homeTeamAbbr = extractTeamAbbreviation(homeTeamName);
+
               return (
-                <div key={game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-game-${index}`} className="relative">
+                <div key={gameId} className="relative">
                   <Card 
                     className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 min-h-[160px] hover:bg-white/10 ${
                       isSelected 
@@ -471,8 +481,8 @@ export default function Calendar() {
                       {/* Away Team - Left Side */}
                       <div className="flex items-center space-x-3">
                         <TeamLogo
-                          teamName={removeCity(game.awayTeam.name)}
-                          abbreviation={extractTeamAbbreviation(game.awayTeam.name)}
+                          teamName={removeCity(awayTeamName)}
+                          abbreviation={awayTeamAbbr}
                           sport={activeSport}
                           size="lg"
                           className="shadow-sm"
@@ -480,17 +490,17 @@ export default function Calendar() {
                         {(game.status === 'live' || game.status === 'final') && (
                           <div className="text-center">
                             <div className="text-2xl font-bold text-slate-200">
-                              {game.awayTeam.score || 0}
+                              {game.awayTeam?.score || 0}
                             </div>
                             <div className="text-xs text-slate-400 uppercase tracking-wider">
-                              {removeCity(game.awayTeam.name).substring(0, 8)}
+                              {removeCity(awayTeamName).substring(0, 8)}
                             </div>
                           </div>
                         )}
                         {game.status === 'scheduled' && (
                           <div className="text-center">
                             <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
-                              {removeCity(game.awayTeam.name).substring(0, 8)}
+                              {removeCity(awayTeamName).substring(0, 8)}
                             </div>
                           </div>
                         )}
@@ -517,7 +527,7 @@ export default function Calendar() {
                         </div>
                         
                         {/* Baseball Diamond for Live/Final MLB Games */}
-                        {activeSport === 'MLB' && (game.status === 'live' || game.status === 'final') && (
+                        {activeSport === 'MLB' && (game.status === 'live' || game.status === 'final') && game.id && (
                           <EnhancedGameDisplay 
                             gameId={game.id}
                             inning={game.inning || 1}
@@ -546,23 +556,23 @@ export default function Calendar() {
                         {(game.status === 'live' || game.status === 'final') && (
                           <div className="text-center">
                             <div className="text-2xl font-bold text-slate-200">
-                              {game.homeTeam.score || 0}
+                              {game.homeTeam?.score || 0}
                             </div>
                             <div className="text-xs text-slate-400 uppercase tracking-wider">
-                              {removeCity(game.homeTeam.name).substring(0, 8)}
+                              {removeCity(homeTeamName).substring(0, 8)}
                             </div>
                           </div>
                         )}
                         {game.status === 'scheduled' && (
                           <div className="text-center">
                             <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
-                              {removeCity(game.homeTeam.name).substring(0, 8)}
+                              {removeCity(homeTeamName).substring(0, 8)}
                             </div>
                           </div>
                         )}
                         <TeamLogo
-                          teamName={removeCity(game.homeTeam.name)}
-                          abbreviation={extractTeamAbbreviation(game.homeTeam.name)}
+                          teamName={removeCity(homeTeamName)}
+                          abbreviation={homeTeamAbbr}
                           sport={activeSport}
                           size="lg"
                           className="shadow-sm"
