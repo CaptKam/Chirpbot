@@ -155,11 +155,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     try {
       await apiRequest("DELETE", `/api/alerts/${alertId}`);
 
-      // Invalidate and refetch all alerts queries
+      // Invalidate and refetch alerts
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/alerts', { limit: "10" }] });
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/unseen/count'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/alerts/stats'] });
 
       toast({
         title: "Alert deleted",

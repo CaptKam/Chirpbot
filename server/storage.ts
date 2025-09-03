@@ -194,11 +194,6 @@ export const storage = {
     return Array.isArray(result) ? result : (result.rows || []);
   },
 
-  async deleteAlert(alertId: string) {
-    const result = await db.execute(sql`DELETE FROM alerts WHERE id = ${sql.raw(`'${alertId}'`)}`);
-    return result;
-  },
-
   // User monitored teams
   async getUserMonitoredTeams(userId: string) {
     return await db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
