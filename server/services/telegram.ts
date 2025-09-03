@@ -5,10 +5,15 @@ export interface TelegramConfig {
   chatId: string;
 }
 
-// Escape Telegram MarkdownV2 special characters
-function escapeMd(s: string): string {
-  // Escape all special markdown characters including hyphen
-  return s.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
+// Escape Telegram MarkdownV2 special characters properly
+function escapeMd(s: string | undefined | null): string {
+  if (!s) return '';
+  // Convert to string and escape ALL special markdown characters
+  const str = String(s);
+  // Order matters: escape backslash first, then other chars
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
 
 export async function sendTelegramAlert(
@@ -35,7 +40,7 @@ export async function sendTelegramAlert(
 
     // Game situation section
     message += `🎮 *GAME SITUATION*\n`;
-    message += `${alert.gameInfo.awayTeam} ${alert.gameInfo.score?.away || 0} @ ${alert.gameInfo.homeTeam} ${alert.gameInfo.score?.home || 0}\n`;
+    message += `${escapeMd(alert.gameInfo.awayTeam)} ${alert.gameInfo.score?.away || 0} @ ${escapeMd(alert.gameInfo.homeTeam)} ${alert.gameInfo.score?.home || 0}\n`;
 
     if (alert.gameInfo.inning && alert.gameInfo.inningState) {
       message += `📍 ${alert.gameInfo.inningState.charAt(0).toUpperCase() + alert.gameInfo.inningState.slice(1)} ${alert.gameInfo.inning}th`;
@@ -45,7 +50,7 @@ export async function sendTelegramAlert(
       }
 
       if (alert.gameInfo.balls !== undefined && alert.gameInfo.strikes !== undefined) {
-        message += ` • ${alert.gameInfo.balls}-${alert.gameInfo.strikes} count`;
+        message += ` • ${alert.gameInfo.balls}\\-${alert.gameInfo.strikes} count`;
       }
 
       message += `\n`;
@@ -73,19 +78,19 @@ export async function sendTelegramAlert(
 
       if (alert.gameInfo.currentBatter) {
         const batter = alert.gameInfo.currentBatter;
-        message += `🏏 Batter: ${batter.name} (${batter.batSide})\n`;
+        message += `🏏 Batter: ${escapeMd(batter.name)} \\(${escapeMd(batter.batSide)}\\)\n`;
         message += `   Stats: ${batter.stats.avg.toFixed(3)} AVG, ${batter.stats.hr} HR, ${batter.stats.rbi} RBI, ${batter.stats.ops.toFixed(3)} OPS\n`;
       }
 
       if (alert.gameInfo.currentPitcher) {
         const pitcher = alert.gameInfo.currentPitcher;
-        message += `⚾ Pitcher: ${pitcher.name} (${pitcher.throwHand})\n`;
-        message += `   Stats: ${pitcher.stats.era.toFixed(2)} ERA, ${pitcher.stats.whip.toFixed(2)} WHIP, ${pitcher.stats.strikeOuts} K, ${pitcher.stats.wins}-${pitcher.stats.losses} W-L\n`;
+        message += `⚾ Pitcher: ${escapeMd(pitcher.name)} \\(${escapeMd(pitcher.throwHand)}\\)\n`;
+        message += `   Stats: ${pitcher.stats.era.toFixed(2)} ERA, ${pitcher.stats.whip.toFixed(2)} WHIP, ${pitcher.stats.strikeOuts} K, ${pitcher.stats.wins}\\-${pitcher.stats.losses} W\\-L\n`;
       }
     }
 
     if (alert.aiContext) {
-      message += `\n🤖 *AI ANALYSIS:*\n${alert.aiContext}\n`;
+      message += `\n🤖 *AI ANALYSIS:*\n${escapeMd(alert.aiContext)}\n`;
     }
 
     // Add clickable link to view alert details
