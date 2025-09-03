@@ -1058,6 +1058,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global settings endpoint for user settings page  
+  app.get('/api/admin/global-settings', async (req, res) => {
+    try {
+      // This endpoint should return the same data as the sport-specific endpoint
+      // but for all sports. For now, return MLB settings since that's what's being used
+      const mlbSettings = await storage.getGlobalAlertSettings('MLB');
+      res.json(mlbSettings);
+    } catch (error) {
+      console.error('Error fetching global settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global settings' });
+    }
+  });
+
   // Quick fix endpoint to enable critical MLB alerts
   app.post('/api/admin/quick-enable-mlb', async (req, res) => {
     try {

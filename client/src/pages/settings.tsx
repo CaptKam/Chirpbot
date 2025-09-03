@@ -80,7 +80,7 @@ export default function Settings() {
 
   // Global settings query to check admin-disabled alerts
   const { data: globalSettings } = useQuery({
-    queryKey: ["/api/admin/global-settings"],
+    queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
   });
 

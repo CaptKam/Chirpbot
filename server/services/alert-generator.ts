@@ -119,7 +119,7 @@ export class AlertGenerator {
             scoreDifference: scoreDiff
           },
           message: `Close game! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - Decided by ${scoreDiff} run${scoreDiff !== 1 ? 's' : ''}`,
-          situation: `${game.awayTeam} ${game.awayScore}-${game.homeScore} ${game.homeTeam} (${scoreDiff} run game)`
+          situation: `${game.awayTeam} ${game.awayScore}-${game.homeTeam} ${game.homeTeam} (${scoreDiff} run game)`
         }),
         alertKey: `${game.gameId}_CLOSE_GAME`,
         state: 'NEW'
@@ -146,7 +146,7 @@ export class AlertGenerator {
             totalRuns: totalRuns
           },
           message: `High-scoring game! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - ${totalRuns} total runs`,
-          situation: `${game.awayTeam} ${game.awayScore}-${game.homeScore} ${game.homeTeam} (${totalRuns} runs)`
+          situation: `${game.awayTeam} ${game.awayScore}-${game.homeTeam} ${game.homeTeam} (${totalRuns} runs)`
         }),
         alertKey: `${game.gameId}_HIGH_SCORING`,
         state: 'NEW'
@@ -395,7 +395,7 @@ export class AlertGenerator {
       venue: { name: liveData.venue?.venueName }, // Assuming venue name is available
       batter: { seasonHomeRuns: 0 } // Placeholder, will be populated if batter is analyzed
     };
-    
+
     // Get current batter stats if available to calculate power hitter probability
     const currentPlayForBatter = liveData?.plays?.currentPlay;
     if (currentPlayForBatter && currentPlayForBatter.matchup?.batter?.id) {
@@ -913,7 +913,7 @@ export class AlertGenerator {
     try {
       // Clean the time string - remove extra spaces and non-time characters
       let cleanTime = timeRemaining.trim();
-      
+
       // Extract just the time portion if it contains extra info
       // Formats: "1:45", "0:30", "12:30", "1:45 - 4th", "0:30 4th", "2:00 4TH"
       if (cleanTime.includes(' ')) {
@@ -929,7 +929,7 @@ export class AlertGenerator {
         if (timeParts.length === 2) {
           const minutes = parseInt(timeParts[0]) || 0;
           const seconds = parseInt(timeParts[1]) || 0;
-          
+
           // Validate reasonable time values
           if (minutes >= 0 && minutes <= 15 && seconds >= 0 && seconds <= 59) {
             totalSeconds = (minutes * 60) + seconds;
@@ -948,7 +948,7 @@ export class AlertGenerator {
 
       // Check if we're within 2 minutes (120 seconds)
       return totalSeconds <= 120 && totalSeconds > 0;
-      
+
     } catch (error) {
       console.error(`🏈 Error parsing time "${timeRemaining}":`, error);
       return false;
@@ -965,7 +965,7 @@ export class AlertGenerator {
 
     const quarter = game.quarter || 0;
     const timeRemaining = game.timeRemaining || '';
-    
+
     // Detect game start (1st quarter, full time)
     if (quarter === 1 && (timeRemaining === '15:00' || timeRemaining === '15:00 - 1st')) {
       const alertKey = `${game.gameId}_KICKOFF_START`;
@@ -983,11 +983,11 @@ export class AlertGenerator {
         awayRank: game.awayRank || 0
       }, 85, 'NCAAF');
     }
-    
+
     // Detect second half kickoff (3rd quarter, full time)
     if (quarter === 3 && (timeRemaining === '15:00' || timeRemaining === '15:00 - 3rd')) {
       const alertKey = `${game.gameId}_KICKOFF_2ND_HALF`;
-      const message = `🏈 2ND HALF KICKOFF! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - Second half underway!`;
+      const message = `🏈 2ND HALF KICKOFF! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeTeam} ${game.homeScore} - Second half underway!`;
 
       return await this.saveRealTimeAlert(alertKey, 'NCAAF_KICKOFF', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -1015,14 +1015,14 @@ export class AlertGenerator {
 
     const quarter = game.quarter || 0;
     const timeRemaining = game.timeRemaining || '';
-    
+
     // Detect halftime (transition from 2nd to 3rd quarter or explicit halftime status)
     if (quarter === 2 && timeRemaining === '0:00') {
       const alertKey = `${game.gameId}_HALFTIME`;
       const scoreDiff = Math.abs(game.homeScore - game.awayScore);
       const leader = game.homeScore > game.awayScore ? game.homeTeam : 
                    game.awayScore > game.homeScore ? game.awayTeam : 'Tied';
-      
+
       let message = `⏸️ HALFTIME! `;
       if (leader === 'Tied') {
         message += `${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - All tied up!`;
@@ -1060,12 +1060,12 @@ export class AlertGenerator {
     const homeScore = context.homeScore || 0;
     const awayScore = context.awayScore || 0;
     const totalScore = homeScore + awayScore;
-    
+
     // Generate realistic odds based on game situation
     let homeOdds = -110;
     let awayOdds = -110;
     let totalLine = sport === 'MLB' ? Math.max(totalScore + 1.5, 7.5) : Math.max(totalScore + 3, 45);
-    
+
     // Adjust odds based on score differential
     const scoreDiff = homeScore - awayScore;
     if (scoreDiff > 0) {
@@ -1094,7 +1094,7 @@ export class AlertGenerator {
       },
       aiAdvice,
       sportsbookLinks: [
-        { name: 'FanDuel', url: 'https://sportsbook.fanduel.com' },
+        { name: 'FanDuel', url: 'https://sportsbook. FanDuel.com' },
         { name: 'DraftKings', url: 'https://sportsbook.draftkings.com' },
         { name: 'Bet365', url: 'https://www.bet365.com' },
         { name: 'BetMGM', url: 'https://sports.betmgm.com' }
@@ -1106,7 +1106,7 @@ export class AlertGenerator {
   private generateV3Analysis(context: any, priority: number, type: string): V3Analysis {
     const tier = Math.ceil(priority / 25); // 1-4 tier system
     const probability = context.scoringProbability || Math.min(95, priority);
-    
+
     const reasons = [];
     let recommendation = "Monitor situation";
     let confidence = priority;
@@ -1174,7 +1174,7 @@ export class AlertGenerator {
       // Generate AI betting insights for high-priority alerts
       let betbookData = null;
       let v3Analysis = null;
-      
+
       if (priority >= 75) {
         betbookData = await this.generateBetbookData(context, priority, sport);
         v3Analysis = this.generateV3Analysis(context, priority, type);
