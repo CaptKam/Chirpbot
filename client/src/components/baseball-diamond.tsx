@@ -95,6 +95,7 @@ interface WeatherDisplayProps {
   windSpeed?: number;
   windDirection?: string;
   temperature?: number;
+  windGust?: number;
   size?: 'sm' | 'md';
 }
 
@@ -102,44 +103,57 @@ export function WeatherDisplay({
   windSpeed = 0,
   windDirection = 'N',
   temperature,
+  windGust,
   size = 'sm'
 }: WeatherDisplayProps) {
-  const getWindIcon = (direction: string) => {
-    const directions: Record<string, string> = {
-      'N': '↑', 'S': '↓', 'E': '→', 'W': '←',
-      'NE': '↗', 'NW': '↖', 'SE': '↘', 'SW': '↙'
+  const getOutfieldWindEffect = (direction: string, speed: number) => {
+    // Convert direction to degrees for calculation
+    const directionMap: Record<string, number> = {
+      'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5,
+      'E': 90, 'ESE': 112.5, 'SE': 135, 'SSE': 157.5,
+      'S': 180, 'SSW': 202.5, 'SW': 225, 'WSW': 247.5,
+      'W': 270, 'WNW': 292.5, 'NW': 315, 'NNW': 337.5
     };
-    return directions[direction.toUpperCase()] || '○';
+
+    const degrees = directionMap[direction.toUpperCase()] || 0;
+
+    // Assume outfield is roughly 180-360 degrees (S to N through W)
+    // Tailwind (helping ball carry): 135-225 degrees
+    // Headwind (hurting ball carry): 315-45 degrees
+    // Crosswind: 45-135 or 225-315 degrees
+
+    if (degrees >= 135 && degrees <= 225) {
+      return { effect: 'Tailwind', color: 'text-green-400', icon: '🏃‍♂️' };
+    } else if ((degrees >= 315 && degrees <= 360) || (degrees >= 0 && degrees <= 45)) {
+      return { effect: 'Headwind', color: 'text-red-400', icon: '🛑' };
+    } else {
+      return { effect: 'Crosswind', color: 'text-yellow-400', icon: '↔️' };
+    }
   };
 
-  const getWindColor = (speed: number) => {
-    if (speed >= 15) return 'text-red-400';
-    if (speed >= 10) return 'text-yellow-400';
-    if (speed >= 5) return 'text-green-400';
-    return 'text-slate-400';
-  };
-
+  const windEffect = getOutfieldWindEffect(windDirection, windSpeed);
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
 
   return (
-    <div className={`flex items-center space-x-1 ${textSize}`}>
-      <motion.span
-        className={`${getWindColor(windSpeed)} font-mono`}
-        animate={{ rotate: windSpeed > 10 ? 360 : 0 }}
-        transition={{ duration: windSpeed > 10 ? 2 : 0, repeat: windSpeed > 10 ? Infinity : 0, ease: 'linear' }}
-      >
-        {getWindIcon(windDirection)}
-      </motion.span>
-      <span className="text-slate-300 font-medium">
-        {windSpeed}mph
-      </span>
-      {temperature && (
-        <>
-          <span className="text-slate-500">•</span>
-          <span className="text-slate-300">
-            {temperature}°F
+    <div className={`flex items-center space-x-2 ${textSize}`}>
+      <div className="flex items-center space-x-1">
+        <span className={`${windEffect.color} font-medium`}>
+          {windEffect.icon}
+        </span>
+        <span className="text-slate-300 font-medium">
+          {windSpeed}mph
+        </span>
+        <span className={`${windEffect.color} font-medium`}>
+          {windEffect.effect}
+        </span>
+      </div>
+
+      {windGust && windGust > windSpeed && (
+        <div className="flex items-center space-x-1">
+          <span className="text-orange-400 text-xs">
+            G{windGust}
           </span>
-        </>
+        </div>
       )}
     </div>
   );

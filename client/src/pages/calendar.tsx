@@ -128,6 +128,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
       <WeatherDisplay 
         windSpeed={5}
         windDirection="N"
+        windGust={undefined}
         size={size}
       />
     );
@@ -144,6 +145,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
     <WeatherDisplay 
       windSpeed={weather.windSpeed}
       windDirection={getCardinalDirection(weather.windDirection)}
+      windGust={weather.windGust}
       size={size}
     />
   );
