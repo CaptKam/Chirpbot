@@ -99,6 +99,9 @@ export async function sendTelegramAlert(
 
     message += `\n\n${escapeMd('#ChirpBot')} ${escapeMd('#' + alert.type.replace(/\s+/g, ''))}`;
 
+    console.log(`📱 Sending Telegram message to chat ${chatId}`);
+    console.log(`📱 Message preview: ${message.substring(0, 100)}...`);
+
     try {
       const result = await fetchJson<any>(
         `https://api.telegram.org/bot${botToken}/sendMessage`,
@@ -117,16 +120,26 @@ export async function sendTelegramAlert(
         }
       );
 
-      return result.ok === true;
+      console.log(`📱 Telegram API response:`, result);
+      
+      if (result.ok === true) {
+        console.log(`📱 ✅ Successfully sent Telegram message`);
+        return true;
+      } else {
+        console.error(`📱 ❌ Telegram API error:`, result);
+        return false;
+      }
     } catch (fetchError: any) {
+      console.error(`📱 ❌ Telegram network error:`, fetchError);
+      
       // Handle rate limiting
       if (fetchError.message?.includes('429')) {
-        console.warn('Telegram rate limit hit, dropping alert');
+        console.warn('📱 ⚠️ Telegram rate limit hit, dropping alert');
       } else if (fetchError.message?.includes('404')) {
         // Invalid bot token - disable future attempts
-        console.warn('⚠️ Invalid Telegram bot token detected. Please update TELEGRAM_BOT_TOKEN in environment settings.');
+        console.warn('📱 ⚠️ Invalid Telegram bot token detected. Please update TELEGRAM_BOT_TOKEN in environment settings.');
       } else {
-        console.error('Telegram send error:', fetchError.message);
+        console.error('📱 ❌ Telegram send error:', fetchError.message);
       }
       return false;
     }

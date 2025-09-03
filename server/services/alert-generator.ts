@@ -1346,24 +1346,8 @@ export class AlertGenerator {
         }
       };
 
-      // Check if any user would actually receive this alert before saving
-      const allUsers = await storage.getAllUsers();
-      const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-
-      let willSendToAnyUser = false;
-      for (const user of telegramUsers) {
-        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
-        const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
-        if (userHasThisAlertEnabled) {
-          willSendToAnyUser = true;
-          break;
-        }
-      }
-
-      if (!willSendToAnyUser) {
-        console.log(`⛔ Alert not saved - No users have ${type} enabled in their preferences`);
-        return 0;
-      }
+      // Always save alerts - let Telegram sending handle user preferences
+      console.log(`💾 Saving alert: ${type} for game ${gameId}`);
 
       // Insert new alert
       await db.execute(sql`
@@ -1382,118 +1366,70 @@ export class AlertGenerator {
 
         console.log(`📡 DEBUG: Found ${allMonitoredGames.length} total monitored games, ${usersMonitoringGame.length} for gameId ${gameId}`);
 
-        // If no users monitoring this specific game, send to ALL users with Telegram (fallback)
-        if (usersMonitoringGame.length === 0) {
-          console.log(`🔄 FALLBACK: No specific monitors for game ${gameId}, sending to all Telegram users`);
-          const allUsers = await storage.getAllUsers();
-          const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-          console.log(`📡 FALLBACK: Found ${telegramUsers.length} users with Telegram configured`);
+        // Send to ALL users with Telegram configured (simplified approach)
+        console.log(`📡 Sending Telegram alerts to all configured users for ${type}`);
+        const allUsers = await storage.getAllUsers();
+        const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
+        console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
 
-          for (const user of telegramUsers) {
-            // Double-check global settings before sending to Telegram
-            const isStillEnabled = await this.isAlertGloballyEnabled(sport, type);
-            if (!isStillEnabled) {
-              console.log(`⛔ Telegram alert blocked - ${type} globally disabled during send`);
-              continue;
-            }
+        for (const user of telegramUsers) {
+          // Check if globally enabled
+          const isStillEnabled = await this.isAlertGloballyEnabled(sport, type);
+          if (!isStillEnabled) {
+            console.log(`⛔ Telegram alert blocked - ${type} globally disabled`);
+            continue;
+          }
 
-            // Check individual user preferences for this alert type
+          // Check user preferences - default to enabled if not set
+          try {
             const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
-            const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
-            if (!userHasThisAlertEnabled) {
-              console.log(`⛔ Telegram alert blocked - User ${user.username} has ${type} disabled`);
+            const userPref = userPrefs.find(p => p.alertType === type);
+            const userHasEnabled = userPref ? userPref.enabled : true; // Default to enabled
+            
+            if (!userHasEnabled) {
+              console.log(`⛔ User ${user.username} has ${type} disabled in preferences`);
               continue;
             }
+          } catch (prefError) {
+            console.log(`⚠️ Could not check preferences for ${user.username}, defaulting to enabled`);
+          }
 
-            const telegramConfig: TelegramConfig = {
-              botToken: user.telegramBotToken || '',
-              chatId: user.telegramChatId || ''
-            };
+          const telegramConfig: TelegramConfig = {
+            botToken: user.telegramBotToken,
+            chatId: user.telegramChatId
+          };
 
-            const telegramAlert = {
-              type,
-              title: `${type.replace('_', ' ')} Alert`,
-              description: message,
-              gameInfo: {
-                homeTeam: context.homeTeam,
-                awayTeam: context.awayTeam,
-                score: { home: context.homeScore, away: context.awayScore },
-                inning: context.inning,
-                inningState: context.isTopInning ? 'top' : 'bottom',
-                outs: context.outs,
-                balls: context.balls,
-                strikes: context.strikes,
-                runners: {
-                  first: context.hasFirst,
-                  second: context.hasSecond,
-                  third: context.hasThird
-                },
-                weather: context.weather
-              }
-            };
+          const telegramAlert = {
+            type,
+            title: `${type.replace('_', ' ')} Alert`,
+            description: message,
+            gameInfo: {
+              homeTeam: context.homeTeam,
+              awayTeam: context.awayTeam,
+              score: { home: context.homeScore, away: context.awayScore },
+              inning: context.inning,
+              inningState: context.isTopInning ? 'top' : 'bottom',
+              outs: context.outs,
+              balls: context.balls,
+              strikes: context.strikes,
+              runners: {
+                first: context.hasFirst,
+                second: context.hasSecond,
+                third: context.hasThird
+              },
+              weather: context.weather
+            }
+          };
 
+          try {
             const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
             if (sent) {
-              console.log(`📱 FALLBACK: Telegram alert sent to user ${user.username}`);
+              console.log(`📱 ✅ Telegram alert sent to user ${user.username}`);
+            } else {
+              console.log(`📱 ❌ Failed to send Telegram alert to user ${user.username}`);
             }
-          }
-        } else {
-          // Original logic for specific game monitors
-          for (const monitoredGame of usersMonitoringGame) {
-            // Double-check global settings before sending to Telegram
-            const isStillEnabled = await this.isAlertGloballyEnabled(sport, type);
-            if (!isStillEnabled) {
-              console.log(`⛔ Telegram alert blocked - ${type} globally disabled during send`);
-              continue;
-            }
-
-            // Get user details including Telegram settings
-            const user = await storage.getUserById(monitoredGame.userId);
-
-            // Check individual user preferences for this alert type
-            if (user) {
-              const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
-              const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
-              if (!userHasThisAlertEnabled) {
-                console.log(`⛔ Telegram alert blocked - User ${user.username} has ${type} disabled in preferences`);
-                continue;
-              }
-            }
-            console.log(`📱 DEBUG: User ${user?.username || 'unknown'} - Telegram enabled: ${user?.telegramEnabled}, hasToken: ${!!user?.telegramBotToken}, hasChatId: ${!!user?.telegramChatId}`);
-
-            if (user && user.telegramEnabled && user.telegramBotToken && user.telegramChatId) {
-              const telegramConfig: TelegramConfig = {
-                botToken: user.telegramBotToken,
-                chatId: user.telegramChatId
-              };
-
-              const telegramAlert = {
-                type,
-                title: `${type.replace('_', ' ')} Alert`,
-                description: message,
-                gameInfo: {
-                  homeTeam: context.homeTeam,
-                  awayTeam: context.awayTeam,
-                  score: { home: context.homeScore, away: context.awayScore },
-                  inning: context.inning,
-                  inningState: context.isTopInning ? 'top' : 'bottom',
-                  outs: context.outs,
-                  balls: context.balls,
-                  strikes: context.strikes,
-                  runners: {
-                    first: context.hasFirst,
-                    second: context.hasSecond,
-                    third: context.hasThird
-                  },
-                  weather: context.weather
-                }
-              };
-
-              const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
-              if (sent) {
-                console.log(`📱 Telegram alert sent to user ${user.username}`);
-              }
-            }
+          } catch (telegramError) {
+            console.error(`📱 ❌ Telegram error for user ${user.username}:`, telegramError);
           }
         }
       } catch (telegramError) {
