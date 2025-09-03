@@ -5,6 +5,7 @@ import { NCAAFApiService } from "./ncaaf-api";
 import { weatherService } from "./weather-service";
 import { storage } from "../storage";
 import { AlertDeduplication } from "./alert-deduplication";
+import { sendTelegramAlert, type TelegramConfig } from "./telegram";
 
 interface AlertData {
   type: string;
@@ -700,17 +701,74 @@ export class AlertGenerator {
 
   private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number, sport: string = 'MLB'): Promise<number> {
     try {
+      // Check if alert already exists (conflict check)
+      const existingAlert = await db.execute(sql`
+        SELECT 1 FROM alerts WHERE alert_key = ${alertKey}
+      `);
+      
+      if (existingAlert.rows.length > 0) {
+        return 0; // Alert already exists
+      }
+
+      // Insert new alert
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
                 ${type}, 'NEW', ${priority}, ${JSON.stringify({ message, context })}, NOW())
-        ON CONFLICT (alert_key) DO NOTHING
       `);
       
       console.log(`🚨 REAL-TIME ALERT: ${message}`);
+
+      // Send to Telegram for users monitoring this game
+      try {
+        // Get all monitored games and filter by this gameId
+        const allMonitoredGames = await storage.getAllMonitoredGames();
+        const usersMonitoringGame = allMonitoredGames.filter(mg => mg.gameId === gameId);
+        
+        for (const monitoredGame of usersMonitoringGame) {
+          // Get user details including Telegram settings
+          const user = await storage.getUserById(monitoredGame.userId);
+          if (user && user.telegramEnabled && user.telegramBotToken && user.telegramChatId) {
+            const telegramConfig: TelegramConfig = {
+              botToken: user.telegramBotToken,
+              chatId: user.telegramChatId
+            };
+
+            const telegramAlert = {
+              type,
+              title: `${type.replace('_', ' ')} Alert`,
+              description: message,
+              gameInfo: {
+                homeTeam: context.homeTeam,
+                awayTeam: context.awayTeam,
+                score: { home: context.homeScore, away: context.awayScore },
+                inning: context.inning,
+                inningState: context.isTopInning ? 'top' : 'bottom',
+                outs: context.outs,
+                balls: context.balls,
+                strikes: context.strikes,
+                runners: {
+                  first: context.hasFirst,
+                  second: context.hasSecond,
+                  third: context.hasThird
+                },
+                weather: context.weather
+              }
+            };
+
+            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
+            if (sent) {
+              console.log(`📱 Telegram alert sent to user ${user.username}`);
+            }
+          }
+        }
+      } catch (telegramError) {
+        console.error('Error sending Telegram alerts:', telegramError);
+      }
+
       return 1;
     } catch (error) {
-      // Ignore conflicts (already exists)
+      console.error('Error saving real-time alert:', error);
       return 0;
     }
   }
