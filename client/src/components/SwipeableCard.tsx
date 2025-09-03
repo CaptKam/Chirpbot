@@ -501,12 +501,18 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   <div className="flex items-center gap-2">
                     <div className="text-center">
                       <div className="text-xs font-medium text-slate-300">{alertData.awayTeam?.split(' ').pop()}</div>
-                      <div className="text-lg font-black text-white">{alertData.context?.awayScore ?? alertData.awayScore ?? '-'}</div>
+                      <div className="text-lg font-black text-white">
+                        {alertData.context?.awayScore !== undefined ? alertData.context.awayScore : 
+                         alertData.awayScore !== undefined ? alertData.awayScore : '-'}
+                      </div>
                     </div>
                     <div className="text-xs text-slate-400">@</div>
                     <div className="text-center">
                       <div className="text-xs font-medium text-slate-300">{alertData.homeTeam?.split(' ').pop()}</div>
-                      <div className="text-lg font-black text-white">{alertData.context?.homeScore ?? alertData.homeScore ?? '-'}</div>
+                      <div className="text-lg font-black text-white">
+                        {alertData.context?.homeScore !== undefined ? alertData.context.homeScore : 
+                         alertData.homeScore !== undefined ? alertData.homeScore : '-'}
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
