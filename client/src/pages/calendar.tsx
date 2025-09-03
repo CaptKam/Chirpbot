@@ -540,17 +540,16 @@ export default function Calendar() {
                       <div className="flex-1 flex flex-col items-center space-y-3">
                         {/* Status & Selection Indicator */}
                         <div className="flex items-center space-x-2">
-                          <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                            game.status === 'live' 
-                              ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
-                              : game.status === 'final'
-                              ? 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
-                              : 'bg-slate-600/50 text-slate-300 ring-1 ring-slate-500'
-                          }`}>
-                            {game.status === 'live' && <Play className="w-3 h-3 mr-1" />}
-                            {game.status === 'scheduled' && <Clock className="w-3 h-3 mr-1" />}
-                            {game.status === 'live' ? 'LIVE' : game.status.toUpperCase()}
-                          </Badge>
+                          {(game.status === 'live' || game.status === 'final') && (
+                            <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                              game.status === 'live' 
+                                ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
+                                : 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
+                            }`}>
+                              {game.status === 'live' && <Play className="w-3 h-3 mr-1" />}
+                              {game.status === 'live' ? 'LIVE' : 'FINAL'}
+                            </Badge>
+                          )}
                           {isSelected && (
                             <CheckCircle className="w-5 h-5 text-emerald-400" data-testid={`game-selected-${game.id}`} />
                           )}
