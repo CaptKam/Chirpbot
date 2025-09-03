@@ -107,6 +107,50 @@ function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
   );
 }
 
+// Weather Display Wrapper with real API data
+function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?: 'sm' | 'md' }) {
+  const { data: weather } = useQuery({
+    queryKey: ['weather', teamName],
+    queryFn: async () => {
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(teamName)}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Weather fetch failed');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1
+  });
+
+  if (!weather) {
+    // Show loading state with fallback data
+    return (
+      <WeatherDisplay 
+        windSpeed={5}
+        windDirection="N"
+        temperature={72}
+        size={size}
+      />
+    );
+  }
+
+  // Convert wind direction degrees to cardinal direction
+  const getCardinalDirection = (degrees: number) => {
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const index = Math.round(degrees / 22.5) % 16;
+    return directions[index];
+  };
+
+  return (
+    <WeatherDisplay 
+      windSpeed={weather.windSpeed}
+      windDirection={getCardinalDirection(weather.windDirection)}
+      temperature={weather.temperature}
+      size={size}
+    />
+  );
+}
+
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
@@ -251,10 +295,6 @@ export default function Calendar() {
     }
   };
 
-  const getWeatherData = () => {
-    // Fallback weather data - real weather fetched from server via Weather-engine
-    return { temperature: 72, condition: "Clear" };
-  };
 
   return (
     <>
@@ -448,7 +488,6 @@ export default function Calendar() {
               })
               .map((game, index) => {
               const isSelected = selectedGames.has(game.id);
-              const weather = getWeatherData();
               const startTime = new Date(game.startTime);
               const formattedTime = isNaN(startTime.getTime()) 
                 ? 'TBD'
@@ -582,10 +621,8 @@ export default function Calendar() {
 
                     {/* Bottom Row - Weather & Venue Info */}
                     <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                      <WeatherDisplay 
-                        windSpeed={Math.floor(Math.random() * 20) + 5}
-                        windDirection={['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'][Math.floor(Math.random() * 8)]}
-                        temperature={weather.temperature}
+                      <GameWeatherDisplay 
+                        teamName={homeTeamName}
                         size="sm"
                       />
                       
