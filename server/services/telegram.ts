@@ -30,8 +30,12 @@ export async function sendTelegramAlert(
   try {
     const { botToken, chatId } = config;
 
-    if (!botToken || !chatId || botToken === "default_key") {
-      console.log("Telegram credentials not configured, skipping notification");
+    console.log(`📱 [TELEGRAM DEBUG] Attempting to send ${alert.type} alert`);
+    console.log(`📱 [TELEGRAM DEBUG] Bot token present: ${!!botToken && botToken !== "default_key"}`);
+    console.log(`📱 [TELEGRAM DEBUG] Chat ID present: ${!!chatId && chatId !== "default_key"}`);
+
+    if (!botToken || !chatId || botToken === "default_key" || chatId === "default_key") {
+      console.log("📱 [TELEGRAM DEBUG] Telegram credentials not configured, skipping notification");
       return false;
     }
 
@@ -100,6 +104,8 @@ export async function sendTelegramAlert(
     message += `\n\n#ChirpBot #${alert.type.replace(/\s+/g, '')}`;
 
     try {
+      console.log(`📱 [TELEGRAM DEBUG] Sending to chat ID: ${chatId}`);
+      
       const result = await fetchJson<any>(
         `https://api.telegram.org/bot${botToken}/sendMessage`,
         {
@@ -116,6 +122,11 @@ export async function sendTelegramAlert(
           timeoutMs: 8000
         }
       );
+
+      console.log(`📱 [TELEGRAM DEBUG] API response ok: ${result.ok}`);
+      if (!result.ok) {
+        console.log(`📱 [TELEGRAM DEBUG] API error:`, result);
+      }
 
       return result.ok === true;
     } catch (fetchError: any) {

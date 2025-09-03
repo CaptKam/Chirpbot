@@ -764,6 +764,13 @@ export class AlertGenerator {
 
     // Full count situation (3-2)
     if (balls === 3 && strikes === 2) {
+      // Check if FULL_COUNT alerts are globally enabled
+      const fullCountEnabled = await this.isAlertGloballyEnabled('MLB', 'FULL_COUNT');
+      if (!fullCountEnabled) {
+        console.log(`⛔ FULL_COUNT alert blocked - globally disabled`);
+        return alertCount;
+      }
+
       const alertKey = `${game.gameId}_FULL_COUNT_${Date.now()}`;
       const message = `⚾ FULL COUNT! ${game.awayTeam} vs ${game.homeTeam} - 3-2 count, pressure on!`;
 
@@ -1209,6 +1216,28 @@ export class AlertGenerator {
           // Get user details including Telegram settings
           const user = await storage.getUserById(monitoredGame.userId);
           if (user && user.telegramEnabled && user.telegramBotToken && user.telegramChatId) {
+            
+            // Check if this user has this specific alert type enabled
+            try {
+              const userPreferences = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
+              const userPrefMap = new Map();
+              userPreferences.forEach((pref: any) => {
+                userPrefMap.set(pref.alertType, pref.enabled);
+              });
+              
+              // Check if user has this alert type enabled (default to true if not set)
+              const userHasAlertEnabled = userPrefMap.get(type) !== false;
+              
+              if (!userHasAlertEnabled) {
+                console.log(`📱 Skipping Telegram alert for user ${user.username} - alert type ${type} disabled in user preferences`);
+                continue;
+              }
+              
+            } catch (prefError) {
+              console.error(`Error checking user preferences for ${user.username}:`, prefError);
+              // Default to sending if we can't check preferences
+            }
+
             const telegramConfig: TelegramConfig = {
               botToken: user.telegramBotToken,
               chatId: user.telegramChatId
@@ -1238,8 +1267,12 @@ export class AlertGenerator {
 
             const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
             if (sent) {
-              console.log(`📱 Telegram alert sent to user ${user.username}`);
+              console.log(`📱 Telegram alert sent to user ${user.username} for ${type}`);
+            } else {
+              console.log(`📱 Failed to send Telegram alert to user ${user.username} for ${type}`);
             }
+          } else {
+            console.log(`📱 Skipping user ${monitoredGame.userId} - Telegram not configured or disabled`);
           }
         }
       } catch (telegramError) {
