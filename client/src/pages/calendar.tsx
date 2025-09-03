@@ -534,6 +534,13 @@ export default function Calendar() {
                             </div>
                           </div>
                         )}
+                        {game.status === 'scheduled' && (
+                          <div className="text-center">
+                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
+                              {removeCity(awayTeamName).substring(0, 8)}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Center - Baseball Diamond & Game Info */}
@@ -566,14 +573,7 @@ export default function Calendar() {
                           />
                         )}
                         
-                        {/* Game Info for Non-MLB or Scheduled Games */}
-                        {(activeSport !== 'MLB' || game.status === 'scheduled') && game.venue && (
-                          <div className="text-center">
-                            <div className="text-xs text-slate-400">
-                              {game.venue.length > 15 ? `${game.venue.substring(0, 15)}...` : game.venue}
-                            </div>
-                          </div>
-                        )}
+                        {/* Game Info for Non-MLB or Scheduled Games - Venue removed to avoid duplication */}
                       </div>
 
                       {/* Home Team - Right Side */}
@@ -584,6 +584,13 @@ export default function Calendar() {
                               {game.homeTeam?.score || 0}
                             </div>
                             <div className="text-xs text-slate-400 uppercase tracking-wider">
+                              {removeCity(homeTeamName).substring(0, 8)}
+                            </div>
+                          </div>
+                        )}
+                        {game.status === 'scheduled' && (
+                          <div className="text-center">
+                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
                               {removeCity(homeTeamName).substring(0, 8)}
                             </div>
                           </div>
@@ -607,8 +614,11 @@ export default function Calendar() {
                       
                       <div className="flex items-center space-x-3">
                         {game.status === 'scheduled' && (
-                          <div className="text-sm text-slate-300 font-medium">
-                            {formattedTime}
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span className="text-sm text-slate-300 font-medium">
+                              {formattedTime}
+                            </span>
                           </div>
                         )}
                         
