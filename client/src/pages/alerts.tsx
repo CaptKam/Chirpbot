@@ -159,34 +159,45 @@ export default function AlertsPage() {
               <SwipeableCard 
                 alertId={alert.id}
                 alertData={alert}
-                className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/50 transition-colors"
+                className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
               >
-                <div className="p-4">
-                  {/* Header with type and time */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-emerald-400 text-sm font-semibold">{alert.sport}</span>
-                    <span className="text-slate-400 text-xs">{formatTime(alert.createdAt)}</span>
-                  </div>
-                  
-                  {/* Alert Type Badge */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-400">
-                      {alert.type.replace('_', ' ')}
-                    </Badge>
-                    <div className="flex items-center gap-1">
-                      <div className="h-2 w-2 bg-emerald-500 rounded-full"></div>
-                      <span className="text-xs text-emerald-400">{alert.confidence}%</span>
+                <div className="p-5">
+                  {/* Clean header: Alert type + Confidence + Time */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <Badge 
+                        variant="outline" 
+                        className="px-3 py-1 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                      >
+                        {alert.type.replace('_', ' ')}
+                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-medium text-emerald-400">{alert.confidence}%</span>
+                      </div>
                     </div>
+                    <span className="text-slate-400 text-xs font-medium">{formatTime(alert.createdAt)}</span>
                   </div>
                   
-                  {/* Main alert message */}
-                  <h4 className="font-bold mb-1 text-slate-100">{alert.message}</h4>
+                  {/* Main alert message - larger, more prominent */}
+                  <h3 className="text-lg font-bold text-slate-100 leading-tight mb-3">
+                    {alert.message}
+                  </h3>
                   
-                  {/* Team matchup */}
-                  <p className="text-sm text-slate-300 mb-3">{alert.homeTeam} vs {alert.awayTeam}</p>
+                  {/* Team matchup - clean, single display */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-slate-200">{alert.homeTeam}</span>
+                      <span className="text-slate-400 text-xs font-bold">VS</span>
+                      <span className="text-sm font-semibold text-slate-200">{alert.awayTeam}</span>
+                    </div>
+                    <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
+                      {alert.sport}
+                    </span>
+                  </div>
                   
-                  {/* Game situation with colored background */}
-                  <div className="bg-slate-800/50 rounded-lg p-3 mb-2">
+                  {/* Game situation - streamlined */}
+                  <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
                     <AlertFooter
                       sport={alert.sport}
                       // MLB specific
