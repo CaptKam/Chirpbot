@@ -8,6 +8,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import AlertFooter from '@/components/AlertFooter';
 import { Badge } from '@/components/ui/badge';
+import { TeamLogo } from '@/components/team-logo';
 import { Alert } from '@/types';
 
 // Import sportsbook logos
@@ -484,17 +485,18 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   {/* Away Team - Left Side */}
                   <div className="flex items-center space-x-3">
                     <div className="text-center">
-                      <div className="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center mb-1">
-                        <span className="text-xs font-bold text-white">
-                          {alertData.awayTeam?.split(' ').slice(-1)[0]?.substring(0, 3).toUpperCase() || 'TBD'}
-                        </span>
-                      </div>
+                      <TeamLogo
+                        teamName={alertData.awayTeam || 'TBD'}
+                        sport={alertData.sport}
+                        size="md"
+                        className="shadow-sm mb-1"
+                      />
                       <div className="text-xs text-slate-300 font-medium max-w-[60px] truncate">
                         {alertData.awayTeam?.split(' ').slice(-1)[0] || 'TBD'}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xl font-bold text-slate-200">
+                      <div className="text-2xl font-bold text-slate-200">
                         {alertData.context?.awayScore ?? alertData.awayScore ?? 0}
                       </div>
                     </div>
@@ -524,16 +526,17 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   {/* Home Team - Right Side */}
                   <div className="flex items-center space-x-3">
                     <div className="text-center">
-                      <div className="text-xl font-bold text-slate-200">
+                      <div className="text-2xl font-bold text-slate-200">
                         {alertData.context?.homeScore ?? alertData.homeScore ?? 0}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center mb-1">
-                        <span className="text-xs font-bold text-white">
-                          {alertData.homeTeam?.split(' ').slice(-1)[0]?.substring(0, 3).toUpperCase() || 'TBD'}
-                        </span>
-                      </div>
+                      <TeamLogo
+                        teamName={alertData.homeTeam || 'TBD'}
+                        sport={alertData.sport}
+                        size="md"
+                        className="shadow-sm mb-1"
+                      />
                       <div className="text-xs text-slate-300 font-medium max-w-[60px] truncate">
                         {alertData.homeTeam?.split(' ').slice(-1)[0] || 'TBD'}
                       </div>
