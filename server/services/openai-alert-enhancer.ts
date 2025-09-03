@@ -80,7 +80,7 @@ Respond with ONLY the enhanced message, nothing else.`;
       const response = await openai.chat.completions.create({
         model: "gpt-5",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 50,
+        max_completion_tokens: 50,
         temperature: 0.7
       });
 
@@ -203,7 +203,7 @@ Respond with ONLY the updated message.`;
       const response = await openai.chat.completions.create({
         model: "gpt-5",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 50,
+        max_completion_tokens: 50,
         temperature: 0.8
       });
 

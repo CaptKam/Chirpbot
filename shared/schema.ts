@@ -76,7 +76,7 @@ export const alerts = pgTable("alerts", {
     gamePk?: string;
     inning?: number;
     outs?: number;
-    baseRunners?: { first: boolean; second: boolean; third: boolean };
+    baseRunners?: { first?: boolean; second?: boolean; third?: boolean };
     openaiEnhanced?: boolean;
     originalMessage?: string;
     status?: 'LIVE' | 'UPDATED' | 'EXPIRED';
@@ -189,7 +189,7 @@ export type SystemConfiguration = typeof systemConfiguration.$inferSelect;
 
 export const insertAlertSchema = createInsertSchema(alerts).omit({
   id: true,
-  timestamp: true,
+  createdAt: true,
 });
 
 export type InsertAlert = z.infer<typeof insertAlertSchema>;

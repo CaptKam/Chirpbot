@@ -46,7 +46,8 @@ export class AlertGenerator {
         AND enabled = true
       `);
       
-      const count = enabledPreferences[0]?.count || 0;
+      const result = enabledPreferences.rows?.[0] as any;
+      const count = Number(result?.count) || 0;
       return count > 0;
     } catch (error) {
       console.error(`Error checking if alert type ${alertType} is enabled:`, error);
@@ -750,7 +751,7 @@ export class AlertGenerator {
       // STEP 3: Start OpenAI live monitoring for this alert
       if (sport === 'MLB') {
         try {
-          const gameData = await this.mlbApi.getGameData(gameId);
+          const gameData = await this.mlbApi.getTodaysGames();
           await openaiEnhancer.startLiveMonitoring(enhancedAlert, gameData);
           console.log(`🎯 OpenAI monitoring started for alert: ${alertKey}`);
         } catch (monitorError) {

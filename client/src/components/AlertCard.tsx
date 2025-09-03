@@ -196,7 +196,7 @@ export default function AlertCard({
   return (
     <SwipeableCard 
       className={clsx("border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-lg", className)}
-      alertId={alertId}
+      alertId={alertId || ''}
       alertData={alertData}
     >
       <div className="relative overflow-hidden">

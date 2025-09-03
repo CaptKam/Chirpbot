@@ -1400,5 +1400,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 15000); // Check every 15 seconds for real-time updates
 
+  // TEST ROUTE: Manually trigger OpenAI enhancement
+  app.post('/api/test-openai-enhancement', async (req, res) => {
+    try {
+      console.log('🧪 TESTING OPENAI ENHANCEMENT...');
+      
+      // Create a test alert
+      const testAlert = {
+        id: `test-${Date.now()}`,
+        alertKey: `test_risp_${Date.now()}`,
+        sport: 'MLB',
+        gameId: '776490',
+        type: 'RISP',
+        state: 'NEW',
+        score: 85,
+        payload: {
+          message: 'RUNNER IN SCORING POSITION! Mets vs Tigers - 2nd base, 1 out',
+          team: 'New York Mets',
+          confidence: 85,
+          gamePk: '776490'
+        },
+        createdAt: new Date()
+      };
+
+      // Enhance with OpenAI
+      const enhanced = await openaiEnhancer.enhanceAlert(testAlert);
+      
+      res.json({ 
+        success: true, 
+        original: testAlert.payload.message,
+        enhanced: enhanced.payload.message 
+      });
+      
+    } catch (error) {
+      console.error('Test OpenAI enhancement failed:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
