@@ -40,6 +40,98 @@ export class MLBApiService {
     }
   }
 
+  async getLiveFeed(gameId: string): Promise<any> {
+    try {
+      const url = `${this.baseUrl}/game/${gameId}/feed/live`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`MLB Live Feed API error: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching live feed:', error);
+      return null;
+    }
+  }
+
+  async getEnhancedGameState(gameId: string): Promise<any> {
+    try {
+      const liveFeed = await this.getLiveFeed(gameId);
+      if (!liveFeed) return null;
+
+      const liveData = liveFeed.liveData || {};
+      const gameData = liveFeed.gameData || {};
+      const linescore = liveData.linescore || {};
+      const currentPlay = liveData.plays?.currentPlay;
+
+      // Extract base runner information
+      const runners = { first: false, second: false, third: false };
+      
+      // Check offense data for runners
+      const offense = linescore.offense;
+      if (offense) {
+        if (offense.first) runners.first = true;
+        if (offense.second) runners.second = true;
+        if (offense.third) runners.third = true;
+      }
+
+      // Get count and outs
+      const count = currentPlay?.count || {};
+      const balls = count.balls || 0;
+      const strikes = count.strikes || 0;
+      const outs = linescore.outs || 0;
+
+      // Get inning information
+      const inning = linescore.currentInning || 1;
+      const isTopInning = linescore.inningState === 'Top';
+
+      // Get weather from game data
+      const weather = gameData.weather || {};
+      const wind = weather.wind || '';
+      const temperature = weather.temp || null;
+      
+      // Parse wind (e.g., "9 mph, In From LF")
+      let windSpeed = 0;
+      let windDirection = 'N';
+      if (wind) {
+        const windMatch = wind.match(/(\d+)\s*mph/i);
+        if (windMatch) windSpeed = parseInt(windMatch[1]);
+        
+        const directionMap: Record<string, string> = {
+          'RF': 'E', 'LF': 'W', 'CF': 'N',
+          'Right': 'E', 'Left': 'W', 'Center': 'N',
+          'In': 'N', 'Out': 'S'
+        };
+        
+        for (const [key, value] of Object.entries(directionMap)) {
+          if (wind.includes(key)) {
+            windDirection = value;
+            break;
+          }
+        }
+      }
+
+      return {
+        gameId,
+        inning,
+        isTopInning,
+        outs,
+        balls,
+        strikes,
+        runners,
+        weather: {
+          temperature: temperature ? parseInt(temperature) : null,
+          windSpeed,
+          windDirection,
+          condition: weather.condition || 'Clear'
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching enhanced game state:', error);
+      return null;
+    }
+  }
+
   private mapGameStatus(detailedState: string): string {
     const lowerState = detailedState.toLowerCase();
     

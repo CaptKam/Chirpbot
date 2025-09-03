@@ -192,6 +192,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced live game data route
+  app.get('/api/games/:gameId/enhanced', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { MLBApiService } = await import('./services/mlb-api');
+      const mlbService = new MLBApiService();
+      const enhancedData = await mlbService.getEnhancedGameState(gameId);
+      res.json(enhancedData);
+    } catch (error) {
+      console.error('Error fetching enhanced game data:', error);
+      res.status(500).json({ message: 'Failed to fetch enhanced game data' });
+    }
+  });
+
   // User monitored games routes
   app.get('/api/user/:userId/monitored-games', async (req, res) => {
     try {

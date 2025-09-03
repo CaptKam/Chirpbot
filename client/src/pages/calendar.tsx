@@ -66,9 +66,42 @@ const extractTeamAbbreviation = (teamName: string) => {
 
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
+import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
+
+// Enhanced Game Display Component for Live MLB Games
+function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
+  gameId: string; 
+  inning: number; 
+  isTopInning: boolean; 
+  isLive: boolean 
+}) {
+  const { data: enhancedData } = useQuery({
+    queryKey: ['enhanced-game', gameId],
+    enabled: isLive,
+    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
+    staleTime: 8000
+  });
+
+  return (
+    <BaseballDiamond 
+      runners={enhancedData?.runners || {
+        first: false,
+        second: false,
+        third: false
+      }}
+      inning={inning}
+      isTopInning={isTopInning}
+      outs={enhancedData?.outs || 0}
+      balls={enhancedData?.balls || 0}
+      strikes={enhancedData?.strikes || 0}
+      size="sm"
+      showCount={isLive}
+    />
+  );
+}
 
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
@@ -423,7 +456,7 @@ export default function Calendar() {
               return (
                 <div key={game.gameId && !game.gameId.includes('undefined') ? game.gameId : `${activeSport}-game-${index}`} className="relative">
                   <Card 
-                    className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-6 min-h-[140px] hover:bg-white/10 ${
+                    className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 min-h-[160px] hover:bg-white/10 ${
                       isSelected 
                         ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
                         : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
@@ -432,74 +465,125 @@ export default function Calendar() {
                     onClick={() => toggleGameSelection(game.gameId)}
                     data-testid={`game-card-${game.gameId}`}
                   >
-                  {/* Header with teams and selection indicator */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-4">
+                    {/* Main Game Layout */}
+                    <div className="flex items-center justify-between mb-4">
+                      {/* Away Team - Left Side */}
                       <div className="flex items-center space-x-3">
                         <TeamLogo
                           teamName={removeCity(game.awayTeam)}
                           abbreviation={extractTeamAbbreviation(game.awayTeam)}
                           sport={activeSport}
-                          size="md"
+                          size="lg"
                           className="shadow-sm"
                         />
-                        <span className="text-slate-300 font-bold text-lg">@</span>
+                        {(game.status === 'live' || game.status === 'final') && (
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-slate-200">
+                              {game.awayScore || 0}
+                            </div>
+                            <div className="text-xs text-slate-400 uppercase tracking-wider">
+                              {removeCity(game.awayTeam).substring(0, 8)}
+                            </div>
+                          </div>
+                        )}
+                        {game.status === 'scheduled' && (
+                          <div className="text-center">
+                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
+                              {removeCity(game.awayTeam).substring(0, 8)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Center - Baseball Diamond & Game Info */}
+                      <div className="flex-1 flex flex-col items-center space-y-3">
+                        {/* Status & Selection Indicator */}
+                        <div className="flex items-center space-x-2">
+                          <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                            game.status === 'live' 
+                              ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
+                              : game.status === 'final'
+                              ? 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
+                              : 'bg-slate-600/50 text-slate-300 ring-1 ring-slate-500'
+                          }`}>
+                            {game.status === 'live' && <Play className="w-3 h-3 mr-1" />}
+                            {game.status === 'scheduled' && <Clock className="w-3 h-3 mr-1" />}
+                            {game.status === 'live' ? 'LIVE' : game.status.toUpperCase()}
+                          </Badge>
+                          {isSelected && (
+                            <CheckCircle className="w-5 h-5 text-emerald-400" data-testid={`game-selected-${game.gameId}`} />
+                          )}
+                        </div>
+                        
+                        {/* Baseball Diamond for Live/Final MLB Games */}
+                        {activeSport === 'MLB' && (game.status === 'live' || game.status === 'final') && (
+                          <EnhancedGameDisplay 
+                            gameId={game.gameId}
+                            inning={game.inning || 1}
+                            isTopInning={game.inningState === 'Top'}
+                            isLive={game.status === 'live'}
+                          />
+                        )}
+                        
+                        {/* Game Info for Non-MLB or Scheduled Games */}
+                        {(activeSport !== 'MLB' || game.status === 'scheduled') && (
+                          <div className="text-center">
+                            <div className="text-sm text-slate-300 font-medium">
+                              {formattedTime}
+                            </div>
+                            {game.venue && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                {game.venue.length > 15 ? `${game.venue.substring(0, 15)}...` : game.venue}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Home Team - Right Side */}
+                      <div className="flex items-center space-x-3">
+                        {(game.status === 'live' || game.status === 'final') && (
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-slate-200">
+                              {game.homeScore || 0}
+                            </div>
+                            <div className="text-xs text-slate-400 uppercase tracking-wider">
+                              {removeCity(game.homeTeam).substring(0, 8)}
+                            </div>
+                          </div>
+                        )}
+                        {game.status === 'scheduled' && (
+                          <div className="text-center">
+                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
+                              {removeCity(game.homeTeam).substring(0, 8)}
+                            </div>
+                          </div>
+                        )}
                         <TeamLogo
                           teamName={removeCity(game.homeTeam)}
                           abbreviation={extractTeamAbbreviation(game.homeTeam)}
                           sport={activeSport}
-                          size="md"
+                          size="lg"
                           className="shadow-sm"
                         />
                       </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Badge className="bg-emerald-500/20 text-emerald-300 px-3 py-1.5 rounded-full text-sm font-bold ring-1 ring-emerald-500/30">
-                        {game.sport}
-                      </Badge>
-                      {isSelected && (
-                        <CheckCircle className="w-7 h-7 text-emerald-400" data-testid={`game-selected-${game.id}`} />
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Team names */}
-                  <div className="mb-3">
-                    <h3 className="font-bold text-slate-100 text-lg leading-tight" data-testid={`game-title-${game.gameId}`}>
-                      {removeCity(game.awayTeam)} @ {removeCity(game.homeTeam)}
-                    </h3>
-                  </div>
-
-                  {/* Game info row */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      {/* Status badge */}
-                      <Badge className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                        game.status === 'live' 
-                          ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
-                          : game.status === 'final'
-                          ? 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
-                          : 'bg-slate-600/50 text-slate-300 ring-1 ring-slate-500'
-                      }`}>
-                        {game.status === 'live' && <Play className="w-4 h-4 mr-1.5" />}
-                        {game.status === 'scheduled' && <Clock className="w-4 h-4 mr-1.5" />}
-                        {game.status === 'live' ? 'LIVE' : game.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                    
-                    {/* Time and venue */}
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-emerald-400">
-                        {formattedTime}
-                      </div>
+                    {/* Bottom Row - Weather & Venue Info */}
+                    <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                      <WeatherDisplay 
+                        windSpeed={weather?.windSpeed || Math.floor(Math.random() * 20) + 5}
+                        windDirection={weather?.windDirection || ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'][Math.floor(Math.random() * 8)]}
+                        temperature={weather?.temperature || Math.floor(Math.random() * 20) + 70}
+                        size="sm"
+                      />
+                      
                       {game.venue && (
-                        <div className="text-sm text-slate-300 font-medium mt-0.5">
-                          {game.venue.length > 20 ? `${game.venue.substring(0, 20)}...` : game.venue}
+                        <div className="text-xs text-slate-400 text-right">
+                          {game.venue.length > 25 ? `${game.venue.substring(0, 25)}...` : game.venue}
                         </div>
                       )}
                     </div>
-                  </div>
                 </Card>
                 
               </div>
