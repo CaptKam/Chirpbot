@@ -78,7 +78,13 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Alert preferences state and queries
+  // Global settings query to check admin-disabled alerts
+  const { data: globalSettings } = useQuery({
+    queryKey: ["/api/admin/global-settings"],
+    enabled: !!user?.id && isAuthenticated,
+  });
+
+  // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
@@ -103,6 +109,12 @@ export default function Settings() {
   // Helper to get alert preference, defaulting to true if not found or not loaded
   const getAlertPreference = (sport: string, alertType: string): boolean => {
     if (preferencesLoading) return true; // Default to true while loading to avoid brief disablings
+
+    // Check if the alert is globally disabled by admin
+    if (globalSettings && globalSettings[alertType] === false) {
+      return false;
+    }
+
     return preferenceMap.get(alertType) ?? true;
   };
 
@@ -364,7 +376,10 @@ export default function Settings() {
 
                 <TabsContent value="MLB" className="space-y-4">
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['MLB']?.map((alertType) => {
+                    {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
+                      // Only show alerts that are not globally disabled by admin
+                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                    }).map((alertType) => {
                       const isEnabled = getAlertPreference('MLB', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -391,12 +406,23 @@ export default function Settings() {
                         </div>
                       );
                     })}
+
+                    {/* Show message when all alerts are disabled */}
+                    {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
+                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                    }).length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-slate-400">All MLB alert types have been disabled by your administrator.</p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
                 <TabsContent value="NCAAF" className="space-y-4">
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NCAAF']?.map((alertType) => {
+                    {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
+                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                    }).map((alertType) => {
                       const isEnabled = getAlertPreference('NCAAF', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -423,12 +449,22 @@ export default function Settings() {
                         </div>
                       );
                     })}
+
+                    {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
+                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                    }).length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-slate-400">All NCAAF alert types have been disabled by your administrator.</p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
                 <TabsContent value="NFL" className="space-y-4">
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NFL']?.map((alertType) => {
+                    {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
+                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                    }).map((alertType) => {
                       const isEnabled = getAlertPreference('NFL', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -455,6 +491,14 @@ export default function Settings() {
                         </div>
                       );
                     })}
+
+                    {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
+                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                    }).length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-slate-400">All NFL alert types have been disabled by your administrator.</p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
