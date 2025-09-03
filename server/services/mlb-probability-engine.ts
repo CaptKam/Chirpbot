@@ -98,7 +98,7 @@ export function evaluateGameForAlerts(game: MLBGameState): ProbabilityAlert[] {
       type: 'RISP_CHANCE',
       gameId: game.gameId,
       sport: 'MLB',
-      message: `🎯 RISP OPPORTUNITY — ${positions.join(" & ")} base, ${outs} outs. Scoring probability ${Math.round(pRun * 100)}%.`,
+      message: `🔥 BIG SCORING CHANCE! Runners on ${positions.join(" & ")} base ready to score!`,
       score,
       createdAt: nowIso,
       payload: { 
@@ -121,7 +121,7 @@ export function evaluateGameForAlerts(game: MLBGameState): ProbabilityAlert[] {
       type: 'BASES_LOADED',
       gameId: game.gameId,
       sport: 'MLB',
-      message: `🔥 BASES LOADED — Maximum pressure situation, ${outs} outs.`,
+      message: `🚨 BASES LOADED! Every base has a runner - huge scoring chance!`,
       score,
       createdAt: nowIso,
       payload: { 
@@ -143,7 +143,7 @@ export function evaluateGameForAlerts(game: MLBGameState): ProbabilityAlert[] {
       type: 'SCORING_PROBABILITY',
       gameId: game.gameId,
       sport: 'MLB',
-      message: `📊 HIGH SCORING CHANCE — ${Math.round(pRun * 100)}% probability this half-inning.`,
+      message: `⚡ RUNS COMING! Perfect situation for big scoring plays!`,
       score,
       createdAt: nowIso,
       payload: { 
@@ -173,7 +173,7 @@ export function evaluateGameForAlerts(game: MLBGameState): ProbabilityAlert[] {
       type: 'WIND_JETSTREAM',
       gameId: game.gameId,
       sport: 'MLB',
-      message: `💨 WIND ASSIST — Tailwind ${game.weather?.windMph ?? 0} mph, roof ${game.weather?.roofOpen ? 'open' : 'closed'}.`,
+      message: `💨 PERFECT WIND! ${game.weather?.windMph ?? 0} mph helping home runs fly further!`,
       score,
       createdAt: nowIso,
       payload: { 
@@ -195,7 +195,7 @@ export function evaluateGameForAlerts(game: MLBGameState): ProbabilityAlert[] {
       type: 'HR_HITTER_AT_BAT',
       gameId: game.gameId,
       sport: 'MLB',
-      message: `⚾ POWER HITTER UP — ${game.batter?.name ?? 'Batter'}. HR potential ${Math.round(hrBias * 100)}%.`,
+      message: `⚾ POWER HITTER UP! ${game.batter?.name ?? 'This batter'} hits home runs!`,
       score,
       createdAt: nowIso,
       payload: { 
@@ -220,7 +220,7 @@ export function evaluateGameForAlerts(game: MLBGameState): ProbabilityAlert[] {
       type: 'LATE_PRESSURE',
       gameId: game.gameId,
       sport: 'MLB',
-      message: `🔥 LATE PRESSURE — ${half} ${inningNum}, one-run game.`,
+      message: `🔥 CRUNCH TIME! ${half} ${inningNum}th inning, super close game!`,
       score,
       createdAt: nowIso,
       payload: { 
@@ -241,7 +241,7 @@ export function evaluateGameForAlerts(game: MLBGameState): ProbabilityAlert[] {
       type: 'NINTH_TIE',
       gameId: game.gameId,
       sport: 'MLB',
-      message: `⚡ NINTH-INNING TIE — ${game.away} ${game.awayScore ?? 0} • ${game.home} ${game.homeScore ?? 0}.`,
+      message: `⚡ TIE GAME! 9th inning, anyone can win right now!`,
       score,
       createdAt: nowIso,
       payload: { 
@@ -262,7 +262,7 @@ export function evaluateGameForAlerts(game: MLBGameState): ProbabilityAlert[] {
       type: 'CLOSE_GAME_LATE',
       gameId: game.gameId,
       sport: 'MLB',
-      message: `📈 CLOSE GAME — Late innings within one run.`,
+      message: `📈 NAIL-BITER! Super close game, every play matters!`,
       score,
       createdAt: nowIso,
       payload: { 
