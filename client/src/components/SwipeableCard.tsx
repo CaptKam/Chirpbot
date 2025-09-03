@@ -233,94 +233,56 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         {alertData?.betbookData || alertData?.gameInfo?.v3Analysis ? (
           <div className="h-full flex flex-col justify-center p-4 space-y-3">
             {/* AI Insights Header */}
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <Brain className="w-4 h-4 text-white" />
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <Brain className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-bold text-sm">AI Betting Insights</h3>
-                <p className="text-blue-200 text-xs">ChirpBot v3 Analysis</p>
+                <h3 className="text-white font-semibold text-base">AI Betting Insights</h3>
+                <p className="text-emerald-200 text-sm">ChirpBot Analysis</p>
               </div>
             </div>
 
-            {/* Betting Recommendations Based on Game Situation */}
+            {/* Simple Betting Recommendation */}
             {(alertData.betbookData || alertData.gameInfo?.v3Analysis || (alertData.priority && alertData.priority >= 80)) && (
-              <div className="space-y-2">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Target className="w-4 h-4 text-green-400" />
-                    <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
+              <div className="space-y-3">
+                <div className="bg-emerald-500/20 backdrop-blur-sm rounded-xl p-4 border border-emerald-400/30">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Target className="w-5 h-5 text-emerald-400" />
+                    <span className="text-sm text-emerald-200 font-medium">Best Bet</span>
                   </div>
-                  <p className="text-white text-sm font-medium">
+                  <p className="text-white text-base font-medium leading-relaxed">
                     {alertData.gameInfo?.v3Analysis?.recommendation || 
                      alertData.betbookData?.aiAdvice || 
                      (() => {
                        const sport = alertData.sport || 'MLB';
-                       const tier = Math.ceil((alertData.priority || 70) / 25);
                        const homeScore = alertData.homeScore || 0;
                        const awayScore = alertData.awayScore || 0;
                        const totalScore = homeScore + awayScore;
                        
                        if (sport === 'MLB') {
                          const overLine = Math.max(totalScore + 1.5, 7.5);
-                         if (tier >= 3) {
-                           return `Bet Over ${overLine} runs - High-tier scoring opportunity`;
-                         } else {
-                           return `Bet Over ${overLine} runs - Live betting situation`;
-                         }
+                         return `Bet Over ${overLine} runs`;
                        } else {
-                         return "Live bet recommended - High-value situation detected";
+                         return "Live betting opportunity";
                        }
                      })()
                     }
                   </p>
                 </div>
 
-                {/* AI Analysis Reasons */}
-                {alertData.gameInfo?.v3Analysis?.reasons && (
-                  <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 ring-1 ring-white/10">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Brain className="w-3 h-3 text-purple-400" />
-                      <span className="text-xs text-purple-200 font-medium">AI Analysis</span>
-                      <span className="text-xs text-green-300 font-mono">
-                        {alertData.gameInfo.v3Analysis.confidence}% confidence
+                {/* Simple Confidence Display */}
+                {alertData.gameInfo?.v3Analysis?.confidence && (
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white text-sm font-medium">Confidence</span>
+                      <span className="text-emerald-400 text-lg font-bold">
+                        {alertData.gameInfo.v3Analysis.confidence}%
                       </span>
                     </div>
-                    <ul className="text-xs text-white/90 space-y-0.5">
-                      {alertData.gameInfo.v3Analysis.reasons.slice(0, 2).map((reason, idx) => (
-                        <li key={idx} className="flex items-start space-x-1">
-                          <span className="text-green-400 mt-0.5">•</span>
-                          <span>{reason}</span>
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                 )}
                 
-              </div>
-            )}
-
-            {/* Live Odds Display */}
-            {alertData?.betbookData?.odds && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <TrendingUp className="w-4 h-4 text-green-400" />
-                  <span className="text-xs text-green-200 font-semibold">Live Odds</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="text-center">
-                    <div className="text-slate-300">{alertData.homeTeam?.split(' ').pop()}</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.home > 0 ? '+' : ''}{alertData.betbookData.odds.home}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-slate-300">O/U</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.total}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-slate-300">{alertData.awayTeam?.split(' ').pop()}</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.away > 0 ? '+' : ''}{alertData.betbookData.odds.away}</div>
-                  </div>
-                </div>
               </div>
             )}
 
