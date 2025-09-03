@@ -753,7 +753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alerts routes
   app.get("/api/alerts", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 50;
 
       // Get alerts from database
       const result = await db.execute(sql`

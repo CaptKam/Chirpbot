@@ -290,24 +290,41 @@ export class AlertGenerator {
   private async generateLiveAlertsForGame(game: any): Promise<number> {
     let alertCount = 0;
 
+    // Extract game data properly to avoid [object Object] issues
+    const gameId = game.gameId || game.id;
+    const homeTeam = typeof game.homeTeam === 'string' ? game.homeTeam : game.homeTeam?.displayName || game.homeTeam?.name || 'Home';
+    const awayTeam = typeof game.awayTeam === 'string' ? game.awayTeam : game.awayTeam?.displayName || game.awayTeam?.name || 'Away';
+    const homeScore = typeof game.homeScore === 'number' ? game.homeScore : (game.homeScore?.score || 0);
+    const awayScore = typeof game.awayScore === 'number' ? game.awayScore : (game.awayScore?.score || 0);
+
     // Debug: Log game scores to verify they're available
-    console.log(`🔧 DEBUG: Processing game ${game.gameId} - ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}`);
+    console.log(`🔧 DEBUG: Processing game ${gameId} - ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`);
+
+    // Create normalized game object
+    const normalizedGame = {
+      ...game,
+      gameId,
+      homeTeam,
+      awayTeam,
+      homeScore,
+      awayScore
+    };
 
     // Fetch detailed live feed data for granular alerts
     try {
-      const liveData = await this.fetchDetailedLiveData(game.gameId);
+      const liveData = await this.fetchDetailedLiveData(gameId);
       if (!liveData) return 0;
 
       // Generate alerts based on detailed game state
-      alertCount += await this.generateBaseRunnerAlerts(game, liveData);
-      alertCount += await this.generateInningPressureAlerts(game, liveData);
-      alertCount += await this.generateAtBatAlerts(game, liveData);
-      alertCount += await this.generateScoringAlerts(game, liveData);
+      alertCount += await this.generateBaseRunnerAlerts(normalizedGame, liveData);
+      alertCount += await this.generateInningPressureAlerts(normalizedGame, liveData);
+      alertCount += await this.generateAtBatAlerts(normalizedGame, liveData);
+      alertCount += await this.generateScoringAlerts(normalizedGame, liveData);
 
     } catch (error) {
-      console.error(`Error fetching live data for game ${game.gameId}:`, error);
+      console.error(`Error fetching live data for game ${gameId}:`, error);
       // Fallback to basic alerts
-      alertCount += await this.generateBasicLiveAlerts(game);
+      alertCount += await this.generateBasicLiveAlerts(normalizedGame);
     }
 
     return alertCount;
