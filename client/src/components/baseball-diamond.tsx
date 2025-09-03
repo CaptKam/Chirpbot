@@ -82,22 +82,23 @@ export function BaseballDiamond({
             stroke="rgba(139, 69, 19, 0.8)"
             strokeWidth="0.5"
           />
-          {/* Home plate */}
-          <path
-            d="M50 82 L47 79 L47 76 L53 76 L53 79 Z"
-            fill="white"
-            stroke="#ccc"
-            strokeWidth="0.5"
-          />
         </svg>
 
-        {/* First Base */}
+        {/* First Base - Larger and more visible */}
         <motion.div
-          className={`absolute ${base} bg-white rounded-sm border`}
-          style={{ top: '45%', right: '8%', transform: 'translate(50%, -50%) rotate(45deg)' }}
+          className={`absolute rounded-full border-2`}
+          style={{ 
+            top: '45%', 
+            right: '5%', 
+            transform: 'translate(50%, -50%)',
+            width: size === 'sm' ? '12px' : '16px',
+            height: size === 'sm' ? '12px' : '16px'
+          }}
           animate={{
-            backgroundColor: runners.first ? '#10B981' : '#ffffff',
-            scale: runners.first ? 1.3 : 1,
+            backgroundColor: runners.first ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
+            borderColor: runners.first ? '#10B981' : '#64748B',
+            scale: runners.first ? 1.2 : 1,
+            boxShadow: runners.first ? '0 0 8px #10B981' : '0 0 0px transparent'
           }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
@@ -108,18 +109,26 @@ export function BaseballDiamond({
               animate={{ scale: 1 }}
               transition={{ delay: 0.1, duration: 0.2 }}
             >
-              <div className="w-1 h-1 bg-white rounded-full"></div>
+              <div className="text-white text-xs font-bold">1</div>
             </motion.div>
           )}
         </motion.div>
 
-        {/* Second Base */}
+        {/* Second Base - Larger and more visible */}
         <motion.div
-          className={`absolute ${base} bg-white rounded-sm border`}
-          style={{ top: '8%', left: '50%', transform: 'translate(-50%, 50%) rotate(45deg)' }}
+          className={`absolute rounded-full border-2`}
+          style={{ 
+            top: '5%', 
+            left: '50%', 
+            transform: 'translate(-50%, 50%)',
+            width: size === 'sm' ? '12px' : '16px',
+            height: size === 'sm' ? '12px' : '16px'
+          }}
           animate={{
-            backgroundColor: runners.second ? '#10B981' : '#ffffff',
-            scale: runners.second ? 1.3 : 1,
+            backgroundColor: runners.second ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
+            borderColor: runners.second ? '#10B981' : '#64748B',
+            scale: runners.second ? 1.2 : 1,
+            boxShadow: runners.second ? '0 0 8px #10B981' : '0 0 0px transparent'
           }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
@@ -130,18 +139,26 @@ export function BaseballDiamond({
               animate={{ scale: 1 }}
               transition={{ delay: 0.1, duration: 0.2 }}
             >
-              <div className="w-1 h-1 bg-white rounded-full"></div>
+              <div className="text-white text-xs font-bold">2</div>
             </motion.div>
           )}
         </motion.div>
 
-        {/* Third Base */}
+        {/* Third Base - Larger and more visible */}
         <motion.div
-          className={`absolute ${base} bg-white rounded-sm border`}
-          style={{ top: '45%', left: '8%', transform: 'translate(-50%, -50%) rotate(45deg)' }}
+          className={`absolute rounded-full border-2`}
+          style={{ 
+            top: '45%', 
+            left: '5%', 
+            transform: 'translate(-50%, -50%)',
+            width: size === 'sm' ? '12px' : '16px',
+            height: size === 'sm' ? '12px' : '16px'
+          }}
           animate={{
-            backgroundColor: runners.third ? '#10B981' : '#ffffff',
-            scale: runners.third ? 1.3 : 1,
+            backgroundColor: runners.third ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
+            borderColor: runners.third ? '#10B981' : '#64748B',
+            scale: runners.third ? 1.2 : 1,
+            boxShadow: runners.third ? '0 0 8px #10B981' : '0 0 0px transparent'
           }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
@@ -152,7 +169,7 @@ export function BaseballDiamond({
               animate={{ scale: 1 }}
               transition={{ delay: 0.1, duration: 0.2 }}
             >
-              <div className="w-1 h-1 bg-white rounded-full"></div>
+              <div className="text-white text-xs font-bold">3</div>
             </motion.div>
           )}
         </motion.div>
