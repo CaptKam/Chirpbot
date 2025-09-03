@@ -290,6 +290,9 @@ export class AlertGenerator {
   private async generateLiveAlertsForGame(game: any): Promise<number> {
     let alertCount = 0;
 
+    // Debug: Log game scores to verify they're available
+    console.log(`🔧 DEBUG: Processing game ${game.gameId} - ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}`);
+
     // Fetch detailed live feed data for granular alerts
     try {
       const liveData = await this.fetchDetailedLiveData(game.gameId);
