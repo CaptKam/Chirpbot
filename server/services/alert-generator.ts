@@ -359,7 +359,9 @@ export class AlertGenerator {
     // Context-aware adjustments
     if (gameState) {
       // Weather adjustments for home run probability
-      if (gameState.weather?.windSpeed > 10 && gameState.weather?.windDirection?.includes('Out')) {
+      if (gameState.weather?.windSpeed > 10 && 
+          typeof gameState.weather?.windDirection === 'string' && 
+          gameState.weather?.windDirection?.includes('Out')) {
         probability += 5; // Favorable wind conditions
       }
 
