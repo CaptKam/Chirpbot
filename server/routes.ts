@@ -47,6 +47,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('error', (error: Error) => {
       console.error('WebSocket error:', error);
       clients.delete(ws);
+
+
+  // Wind speed test for specific stadiums
+  app.get('/api/test-wind-speeds', async (req, res) => {
+    try {
+      const { weatherService } = await import('./services/weather-service');
+      
+      // Test a few different stadiums
+      const testStadiums = [
+        'Boston Red Sox',
+        'Chicago Cubs', 
+        'San Francisco Giants',
+        'Colorado Rockies',
+        'Houston Astros'
+      ];
+      
+      const windData = [];
+      
+      for (const team of testStadiums) {
+        const weather = await weatherService.getWeatherForTeam(team);
+        const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
+        const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+        
+        windData.push({
+          team,
+          stadium: team === 'Boston Red Sox' ? 'Fenway Park' : 
+                  team === 'Chicago Cubs' ? 'Wrigley Field' :
+                  team === 'San Francisco Giants' ? 'Oracle Park' :
+                  team === 'Colorado Rockies' ? 'Coors Field' : 'Minute Maid Park',
+          windSpeed: weather.windSpeed,
+          windDirection: weather.windDirection,
+          windDescription: windDesc,
+          temperature: weather.temperature,
+          homeRunFactor: homeRunFactor,
+          weatherImpact: homeRunFactor > 1.1 ? 'Favorable for HRs' : 
+                        homeRunFactor < 0.9 ? 'Hurts HR distance' : 'Neutral'
+        });
+      }
+      
+      res.json({
+        timestamp: new Date().toISOString(),
+        source: process.env.OPENWEATHERMAP_API_KEY ? 'Live OpenWeatherMap API' : 'Fallback Data',
+        stadiumWindData: windData
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
     });
   });
 
