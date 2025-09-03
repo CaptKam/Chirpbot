@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { gameId } = req.params;
       const { MLBApiService } = await import('./services/mlb-api');
       const mlbService = new MLBApiService();
-      const enhancedData = await mlbService.getEnhancedGameData(gameId);
+      const enhancedData = await mlbService.getEnhancedGameState(gameId);
       res.json(enhancedData);
     } catch (error) {
       console.error('Error fetching enhanced game data:', error);
@@ -1058,7 +1058,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/apply-global-settings', async (req, res) => {
+  // Quick fix endpoint to enable critical MLB alerts
+  app.post('/api/admin/quick-enable-mlb', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const criticalAlerts = [
+        'BASES_LOADED',
+        'HOME_RUN_LIVE',
+        'HIGH_SCORING',
+        'SHUTOUT',
+        'BLOWOUT'
+      ];
+
+      const results = [];
+      for (const alertType of criticalAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'Critical MLB alerts enabled successfully',
+        enabledAlerts: results,
+        nextStep: 'Alerts should start generating within 15 seconds'
+      });
+    } catch (error) {
+      console.error('Error enabling critical alerts:', error);
+      res.status(500).json({ message: 'Failed to enable critical alerts' });
+    }
+  });
+
+  app.put('/api/admin/apply-global-settings', async (req, res) => {
     try {
       if (!req.session.adminUserId) {
         return res.status(401).json({ message: 'Admin authentication required' });
