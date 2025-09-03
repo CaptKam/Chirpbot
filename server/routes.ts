@@ -760,6 +760,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Weather endpoint for calendar games
+  app.get('/api/weather/team/:teamName', async (req, res) => {
+    try {
+      const { weatherService } = await import('./services/weather-service');
+      const teamName = decodeURIComponent(req.params.teamName);
+      const weather = await weatherService.getWeatherForTeam(teamName);
+      const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
+      const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+      
+      res.json({
+        temperature: weather.temperature,
+        condition: weather.condition,
+        windSpeed: weather.windSpeed,
+        windDirection: weather.windDirection,
+        windDescription: windDesc,
+        homeRunFactor,
+        humidity: weather.humidity,
+        pressure: weather.pressure,
+        timestamp: weather.timestamp
+      });
+    } catch (error: any) {
+      console.error(`Weather API error for team ${req.params.teamName}:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Test NCAAF two-minute warning logic
   app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
     try {
