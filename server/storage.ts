@@ -263,6 +263,11 @@ export const storage = {
     return results;
   },
 
+  // Alias for compatibility with routes.ts
+  async updateUserAlertPreferences(userId: string, sport: string, preferences: Array<{alertType: string, enabled: boolean}>) {
+    return await this.bulkSetUserAlertPreferences(userId, sport, preferences);
+  },
+
   // Global alert settings operations (admin only)
   async getGlobalAlertSettings(sport: string) {
     const result = await db.select().from(globalAlertSettings).where(eq(globalAlertSettings.sport, sport));

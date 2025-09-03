@@ -764,8 +764,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           regular: regularUsers.length
         },
         alerts: {
-          total: parseInt(totalAlertsResult.rows[0]?.count || '0'),
-          today: parseInt(todayAlertsResult.rows[0]?.count || '0')
+          total: parseInt(String(totalAlertsResult.rows[0]?.count || '0')),
+          today: parseInt(String(todayAlertsResult.rows[0]?.count || '0'))
         }
       });
     } catch (error) {
@@ -788,7 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `);
       
       const alerts = result.rows.map(row => {
-        let payload = {};
+        let payload: any = {};
         try {
           // The payload is already a JSON object, not a string
           payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
@@ -838,8 +838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const monitoredGames = await storage.getAllMonitoredGames();
       
       const stats = {
-        totalAlerts: parseInt(totalAlertsResult.rows[0]?.count || '0'),
-        todayAlerts: parseInt(todayAlertsResult.rows[0]?.count || '0'),
+        totalAlerts: parseInt(String(totalAlertsResult.rows[0]?.count || '0')),
+        todayAlerts: parseInt(String(todayAlertsResult.rows[0]?.count || '0')),
         liveGames: 6, // This would need live games API integration
         monitoredGames: monitoredGames.length
       };
@@ -853,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/alerts/count', async (req, res) => {
     try {
       const result = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
-      res.json({ count: parseInt(result.rows[0]?.count || '0') });
+      res.json({ count: parseInt(String(result.rows[0]?.count || '0')) });
     } catch (error) {
       console.error('Error counting alerts:', error);
       res.status(500).json({ message: 'Failed to count alerts' });
@@ -949,6 +949,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify password
+      if (!user.password) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         return res.status(401).json({ message: 'Invalid credentials' });
