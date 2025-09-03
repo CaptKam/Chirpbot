@@ -40,38 +40,17 @@ export class AlertDeduplication {
     return `${alert.gameId}:${alert.type}:${alert.inning}:${alert.half}:${alert.outs}:${basesHash}:${alert.batter}:${alert.paId}`;
   }
 
-  // Check if alert should be sent
+  // Check if alert should be sent - REAL-TIME MODE (no delays)
   shouldSendAlert(alertKey: AlertKey, tier: 'plate-appearance' | 'half-inning' | 'full-inning' | 'game' = 'plate-appearance'): boolean {
     const key = this.buildDedupKey(alertKey);
     const now = Date.now();
     const cached = this.recentAlerts.get(key);
 
-    // Define timeframes based on tier and type - MUCH more permissive
-    const getTimeframe = (type: string, tier: string): { initial: number; realert: number } => {
-      switch (type) {
-        case 'STRIKEOUT':
-          return { initial: 5000, realert: 30000 }; // 5s / 30s - Allow more strikeouts
-        case 'FULL_COUNT':
-          return { initial: 10000, realert: 60000 }; // 10s / 1 min
-        case 'HOME_RUN_LIVE':
-          return { initial: 0, realert: 0 }; // Always allow
-        case 'RISP':
-        case 'RUNNERS_1ST_2ND':
-          return { initial: 30000, realert: 120000 }; // 30s / 2 min
-        case 'BASES_LOADED':
-          return { initial: 45000, realert: 180000 }; // 45s / 3 min
-        case 'CLOSE_GAME':
-        case 'CLOSE_GAME_LIVE':
-          return { initial: 60000, realert: 300000 }; // 1 min / 5 min
-        default:
-          return { initial: 20000, realert: 120000 }; // 20s / 2 min - Much more permissive
-      }
-    };
-
-    const timeframe = getTimeframe(alertKey.type, tier);
-
+    // For real-time sports alerts, we only prevent EXACT duplicates
+    // Different plate appearances, different batters, etc. should always go through
+    
     if (!cached) {
-      // First occurrence - allow
+      // First occurrence - always allow
       console.log(`🟢 DEDUP: Allowing first occurrence of ${alertKey.type} for game ${alertKey.gameId}`);
       this.recentAlerts.set(key, {
         timestamp: now,
@@ -82,13 +61,18 @@ export class AlertDeduplication {
       return true;
     }
 
-    const timeSinceFirst = now - cached.timestamp;
-    
-    console.log(`🔍 DEDUP: ${alertKey.type} - Time since first: ${timeSinceFirst}ms, Initial: ${timeframe.initial}ms, Realert: ${timeframe.realert}ms`);
-    
-    // Check if enough time has passed for realert
-    if (timeSinceFirst >= timeframe.realert) {
-      console.log(`🟢 DEDUP: Allowing realert for ${alertKey.type} after ${timeSinceFirst}ms`);
+    // Check if this is truly the same event (same PA, same context)
+    const isDuplicateEvent = (
+      cached.lastContext.paId === alertKey.paId &&
+      cached.lastContext.batter === alertKey.batter &&
+      cached.lastContext.inning === alertKey.inning &&
+      cached.lastContext.half === alertKey.half &&
+      cached.lastContext.outs === alertKey.outs
+    );
+
+    if (!isDuplicateEvent) {
+      // Different context - allow immediately
+      console.log(`🟢 DEDUP: Allowing ${alertKey.type} - different context (new PA/batter)`);
       this.recentAlerts.set(key, {
         timestamp: now,
         count: cached.count + 1,
@@ -98,21 +82,28 @@ export class AlertDeduplication {
       return true;
     }
 
-    // Within initial timeframe - block
-    if (timeSinceFirst < timeframe.initial) {
-      console.log(`🔴 DEDUP: Blocking ${alertKey.type} - too soon (${timeSinceFirst}ms < ${timeframe.initial}ms)`);
+    // Same event within 2 seconds = true duplicate, block it
+    const timeSinceFirst = now - cached.timestamp;
+    if (timeSinceFirst < 2000) {
+      console.log(`🔴 DEDUP: Blocking duplicate ${alertKey.type} - same event within 2s`);
       return false;
     }
 
-    // Between initial and realert - allow (this was missing!)
-    console.log(`🟢 DEDUP: Allowing ${alertKey.type} - between timeframes`);
+    // After 2 seconds, even same event is allowed (data might have updated)
+    console.log(`🟢 DEDUP: Allowing ${alertKey.type} - same event but >2s later`);
+    this.recentAlerts.set(key, {
+      timestamp: now,
+      count: cached.count + 1,
+      tier,
+      lastContext: alertKey
+    });
     return true;
   }
 
-  // Clean up old entries
+  // Clean up old entries - more aggressive for real-time
   private cleanup(): void {
     const now = Date.now();
-    const maxAge = 600000; // 10 minutes
+    const maxAge = 30000; // 30 seconds only - we want fresh data
     
     for (const [key, alert] of Array.from(this.recentAlerts.entries())) {
       if (now - alert.timestamp > maxAge) {
