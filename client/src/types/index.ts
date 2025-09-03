@@ -14,9 +14,62 @@ export interface Alert {
   sport: string;
   title: string;
   description: string;
+  message?: string;
   aiContext?: string | null;
   aiConfidence?: number | null;
-  gameInfo: {
+  confidence?: number;
+  priority?: number;
+  probability?: number;
+  homeTeam?: string;
+  awayTeam?: string;
+  homeScore?: number;
+  awayScore?: number;
+  inning?: number;
+  isTopInning?: boolean;
+  balls?: number;
+  strikes?: number;
+  outs?: number;
+  hasFirst?: boolean;
+  hasSecond?: boolean;
+  hasThird?: boolean;
+  weather?: {
+    temperature: number;
+    condition: string;
+    windSpeed?: number;
+    windDirection?: string;
+  };
+  context?: {
+    homeScore?: number;
+    awayScore?: number;
+    inning?: number;
+    isTopInning?: boolean;
+    balls?: number;
+    strikes?: number;
+    outs?: number;
+    hasFirst?: boolean;
+    hasSecond?: boolean;
+    hasThird?: boolean;
+    weather?: {
+      temperature: number;
+      condition: string;
+      windSpeed?: number;
+      windDirection?: string;
+    };
+    quarter?: number;
+    timeRemaining?: string;
+    down?: number;
+    yardsToGo?: number;
+    fieldPosition?: string;
+    courtPosition?: string;
+    period?: number;
+    rinkPosition?: string;
+    betbookData?: any;
+    gameInfo?: any;
+    reasons?: string[];
+    recommendation?: string;
+    confidence?: number;
+  };
+  gameInfo?: {
     homeTeam: string;
     awayTeam: string;
     quarter?: string;
@@ -31,7 +84,9 @@ export interface Alert {
     windDirection?: string;
   } | null;
   timestamp: string;
+  createdAt?: string;
   sentToTelegram: boolean;
+  betbookData?: any;
 }
 
 export interface Settings {

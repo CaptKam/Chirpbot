@@ -8,6 +8,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import AlertFooter from '@/components/AlertFooter';
 import { Badge } from '@/components/ui/badge';
+import { Alert } from '@/types';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -47,54 +48,6 @@ interface BetbookData {
   }>;
 }
 
-interface Alert {
-  id: string;
-  type: string;
-  message: string;
-  sport?: string;
-  homeTeam?: string;
-  awayTeam?: string;
-  probability?: number;
-  priority?: number;
-  betbookData?: BetbookData;
-  context?: {
-    homeScore?: number;
-    awayScore?: number;
-    inning?: number;
-    isTopInning?: boolean;
-    balls?: number;
-    strikes?: number;
-    outs?: number;
-    hasFirst?: boolean;
-    hasSecond?: boolean;
-    hasThird?: boolean;
-    weather?: {
-      temperature: number;
-      condition: string;
-    };
-    quarter?: number;
-    timeRemaining?: string;
-    down?: number;
-    yardsToGo?: number;
-    period?: number;
-  };
-  createdAt: string;
-  confidence?: number;
-  homeScore?: number;
-  awayScore?: number;
-  inning?: number;
-  isTopInning?: boolean;
-  balls?: number;
-  strikes?: number;
-  outs?: number;
-  hasFirst?: boolean;
-  hasSecond?: boolean;
-  hasThird?: boolean;
-  weather?: {
-    temperature: number;
-    condition: string;
-  };
-}
 
 interface SwipeableCardProps {
   children: React.ReactNode;

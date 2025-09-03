@@ -212,7 +212,10 @@ export default function AlertsPage() {
                   alertId={alert.id}
                   alertData={{
                     id: alert.id,
+                    type: alert.type,
                     sport: alert.sport,
+                    title: alert.title || '',
+                    description: alert.description || '',
                     homeTeam: alert.homeTeam,
                     awayTeam: alert.awayTeam,
                     homeScore: alert.context?.homeScore,
@@ -220,9 +223,10 @@ export default function AlertsPage() {
                     probability: alert.confidence,
                     priority: alert.priority,
                     confidence: alert.confidence,
-                    type: alert.type,
                     message: alert.message,
                     createdAt: alert.createdAt,
+                    timestamp: alert.timestamp || alert.createdAt || new Date().toISOString(),
+                    sentToTelegram: alert.sentToTelegram || false,
                     context: {
                       ...alert.context,
                       // MLB specific
@@ -246,7 +250,7 @@ export default function AlertsPage() {
                       period: alert.context?.period,
                       rinkPosition: alert.context?.rinkPosition,
                       // Weather (all sports)
-                      weather: alert.context?.weather || alert.weather
+                      weather: alert.context?.weather || alert.weather || alert.weatherData
                     },
                     betbookData: alert.context?.betbookData,
                     gameInfo: alert.context?.gameInfo
