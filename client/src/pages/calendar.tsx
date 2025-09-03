@@ -84,7 +84,7 @@ function SimpleBaseballDiamond({ gameId, inning, isTopInning, isLive }: {
 }) {
   // Get base runner data from recent alerts for this game
   const { data: alerts } = useQuery({
-    queryKey: ["/api/alerts", { limit: "20" }],
+    queryKey: ["/api/alerts", { limit: "50" }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
       const searchParams = new URLSearchParams(params as Record<string, string>);
@@ -94,26 +94,54 @@ function SimpleBaseballDiamond({ gameId, inning, isTopInning, isLive }: {
       if (!response.ok) throw new Error("Failed to fetch alerts");
       return response.json();
     },
-    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
-    staleTime: 8000
+    refetchInterval: isLive ? 5000 : false, // Refresh every 5s for live games
+    staleTime: 4000
   });
 
   // Find the most recent alert for this game that has base runner data
-  const gameAlert = alerts?.filter((alert: any) => 
-    alert.gameId === gameId && (
+  const gameAlerts = alerts?.filter((alert: any) => alert.gameId === gameId) || [];
+  
+  // Look for alerts with base runner information
+  const baseRunnerAlert = gameAlerts
+    .filter((alert: any) => 
       alert.hasFirst || alert.hasSecond || alert.hasThird || 
+      alert.context?.hasFirst || alert.context?.hasSecond || alert.context?.hasThird ||
       alert.context?.first || alert.context?.second || alert.context?.third ||
-      alert.type === 'BASES_LOADED' || alert.type === 'RISP'
+      alert.type === 'BASES_LOADED' || alert.type === 'RISP' || alert.type === 'RUNNERS_1ST_2ND'
     )
-  ).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+  // Get count/outs data from most recent alert
+  const recentAlert = gameAlerts
+    .filter((alert: any) => alert.outs !== undefined || alert.balls !== undefined || alert.strikes !== undefined)
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
   // Get base runner data from different possible sources
-  const hasFirst = gameAlert?.hasFirst || !!gameAlert?.context?.first || false;
-  const hasSecond = gameAlert?.hasSecond || !!gameAlert?.context?.second || false;
-  const hasThird = gameAlert?.hasThird || !!gameAlert?.context?.third || false;
-  const outs = gameAlert?.outs || 0;
-  const balls = gameAlert?.balls || 0;
-  const strikes = gameAlert?.strikes || 0;
+  const hasFirst = baseRunnerAlert?.hasFirst || 
+                   !!baseRunnerAlert?.context?.hasFirst || 
+                   !!baseRunnerAlert?.context?.first || 
+                   baseRunnerAlert?.type === 'BASES_LOADED' ||
+                   baseRunnerAlert?.type === 'RUNNERS_1ST_2ND' ||
+                   false;
+                   
+  const hasSecond = baseRunnerAlert?.hasSecond || 
+                    !!baseRunnerAlert?.context?.hasSecond || 
+                    !!baseRunnerAlert?.context?.second ||
+                    baseRunnerAlert?.type === 'BASES_LOADED' ||
+                    baseRunnerAlert?.type === 'RUNNERS_1ST_2ND' ||
+                    baseRunnerAlert?.type === 'RISP' ||
+                    false;
+                    
+  const hasThird = baseRunnerAlert?.hasThird || 
+                   !!baseRunnerAlert?.context?.hasThird || 
+                   !!baseRunnerAlert?.context?.third ||
+                   baseRunnerAlert?.type === 'BASES_LOADED' ||
+                   baseRunnerAlert?.type === 'RISP' ||
+                   false;
+
+  const outs = recentAlert?.outs || baseRunnerAlert?.outs || 0;
+  const balls = recentAlert?.balls || baseRunnerAlert?.balls || 0;
+  const strikes = recentAlert?.strikes || baseRunnerAlert?.strikes || 0;
 
   return (
     <div className="flex flex-col items-center space-y-2">
@@ -138,21 +166,39 @@ function SimpleBaseballDiamond({ gameId, inning, isTopInning, isLive }: {
         </div>
       )}
 
-      {/* Baseball Diamond - Same as AlertFooter */}
-      <div className="relative w-6 h-6 flex-shrink-0">
+      {/* Baseball Diamond - Enhanced visibility */}
+      <div className="relative w-8 h-8 flex-shrink-0">
+        {/* Diamond outline */}
+        <div className="absolute inset-0 border border-slate-600 rotate-45 bg-slate-800/20"></div>
+        
         {/* Second Base */}
-        <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 rotate-45 border ${hasSecond ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rotate-45 border-2 transition-all duration-300 ${
+          hasSecond 
+            ? 'bg-emerald-400 border-emerald-400 shadow-sm shadow-emerald-400/50' 
+            : 'bg-slate-700 border-slate-600'
+        }`} />
+        
         {/* Third Base */}
-        <div className={`absolute top-1/2 left-0 transform -translate-y-1/2 w-1.5 h-1.5 rotate-45 border ${hasThird ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        <div className={`absolute top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rotate-45 border-2 transition-all duration-300 ${
+          hasThird 
+            ? 'bg-emerald-400 border-emerald-400 shadow-sm shadow-emerald-400/50' 
+            : 'bg-slate-700 border-slate-600'
+        }`} />
+        
         {/* First Base */}
-        <div className={`absolute top-1/2 right-0 transform -translate-y-1/2 w-1.5 h-1.5 rotate-45 border ${hasFirst ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        <div className={`absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rotate-45 border-2 transition-all duration-300 ${
+          hasFirst 
+            ? 'bg-emerald-400 border-emerald-400 shadow-sm shadow-emerald-400/50' 
+            : 'bg-slate-700 border-slate-600'
+        }`} />
+        
         {/* Home Plate */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-slate-600 rounded-full" />
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-slate-600 border border-slate-500 rounded-full" />
       </div>
 
       {/* Base status text */}
       {(hasFirst || hasSecond || hasThird) && (
-        <div className="text-xs text-emerald-400 font-medium text-center">
+        <div className="text-xs text-emerald-400 font-bold text-center animate-pulse">
           {[
             hasFirst && '1st',
             hasSecond && '2nd', 
