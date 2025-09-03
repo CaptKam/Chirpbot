@@ -434,7 +434,7 @@ export class AlertGenerator {
       const basesLoadedEnabled = await this.isAlertGloballyEnabled('MLB', 'BASES_LOADED');
       if (!basesLoadedEnabled) {
         console.log(`⛔ BASES_LOADED alert blocked - globally disabled`);
-        return alertCount;
+        return alertCount; // Exit early since no more base alerts after this
       }
 
       const alertKey = `${game.gameId}_BASES_LOADED_${inning}_${outs}`;
@@ -465,7 +465,7 @@ export class AlertGenerator {
       const runners1st2ndEnabled = await this.isAlertGloballyEnabled('MLB', 'RUNNERS_1ST_2ND');
       if (!runners1st2ndEnabled) {
         console.log(`⛔ RUNNERS_1ST_2ND alert blocked - globally disabled`);
-        return alertCount;
+        return alertCount; // Exit early since no more base alerts after this
       }
 
       const alertKey = `${game.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
@@ -495,7 +495,7 @@ export class AlertGenerator {
       const rispEnabled = await this.isAlertGloballyEnabled('MLB', 'RISP');
       if (!rispEnabled) {
         console.log(`⛔ RISP alert blocked - globally disabled`);
-        return alertCount;
+        return alertCount; // Exit early since no more base alerts after this
       }
 
       const alertKey = `${game.gameId}_RISP_${inning}_${outs}`;
@@ -768,7 +768,7 @@ export class AlertGenerator {
       const fullCountEnabled = await this.isAlertGloballyEnabled('MLB', 'FULL_COUNT');
       if (!fullCountEnabled) {
         console.log(`⛔ FULL_COUNT alert blocked - globally disabled`);
-        return alertCount;
+        return alertCount; // This is OK since it's the last check in the function
       }
 
       const alertKey = `${game.gameId}_FULL_COUNT_${Date.now()}`;
