@@ -849,6 +849,10 @@ export class AlertGenerator {
       // Two-minute warning for quarters and halfs
       alertCount += await this.generateTwoMinuteWarningAlert(game);
 
+      // Kickoff and halftime alerts
+      alertCount += await this.generateKickoffAlert(game);
+      alertCount += await this.generateHalftimeAlert(game);
+
       // Add other NCAAF alerts here (fourth down, red zone, etc.)
 
     } catch (error) {
@@ -942,6 +946,100 @@ export class AlertGenerator {
       console.error(`🏈 Error parsing time "${timeRemaining}":`, error);
       return false;
     }
+  }
+
+  private async generateKickoffAlert(game: any): Promise<number> {
+    // Check if NCAAF_KICKOFF alerts are globally enabled
+    const kickoffEnabled = await this.isAlertGloballyEnabled('NCAAF', 'NCAAF_KICKOFF');
+    if (!kickoffEnabled) {
+      console.log(`⛔ NCAAF_KICKOFF alert blocked - globally disabled`);
+      return 0;
+    }
+
+    const quarter = game.quarter || 0;
+    const timeRemaining = game.timeRemaining || '';
+    
+    // Detect game start (1st quarter, full time)
+    if (quarter === 1 && (timeRemaining === '15:00' || timeRemaining === '15:00 - 1st')) {
+      const alertKey = `${game.gameId}_KICKOFF_START`;
+      const message = `🏈 KICKOFF! ${game.awayTeam} vs ${game.homeTeam} - Game is starting!`;
+
+      return await this.saveRealTimeAlert(alertKey, 'NCAAF_KICKOFF', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        quarter,
+        timeRemaining,
+        kickoffType: 'game_start',
+        homeRank: game.homeRank || 0,
+        awayRank: game.awayRank || 0
+      }, 85, 'NCAAF');
+    }
+    
+    // Detect second half kickoff (3rd quarter, full time)
+    if (quarter === 3 && (timeRemaining === '15:00' || timeRemaining === '15:00 - 3rd')) {
+      const alertKey = `${game.gameId}_KICKOFF_2ND_HALF`;
+      const message = `🏈 2ND HALF KICKOFF! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - Second half underway!`;
+
+      return await this.saveRealTimeAlert(alertKey, 'NCAAF_KICKOFF', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        quarter,
+        timeRemaining,
+        kickoffType: 'second_half',
+        homeRank: game.homeRank || 0,
+        awayRank: game.awayRank || 0
+      }, 88, 'NCAAF');
+    }
+
+    return 0;
+  }
+
+  private async generateHalftimeAlert(game: any): Promise<number> {
+    // Check if NCAAF_HALFTIME alerts are globally enabled
+    const halftimeEnabled = await this.isAlertGloballyEnabled('NCAAF', 'NCAAF_HALFTIME');
+    if (!halftimeEnabled) {
+      console.log(`⛔ NCAAF_HALFTIME alert blocked - globally disabled`);
+      return 0;
+    }
+
+    const quarter = game.quarter || 0;
+    const timeRemaining = game.timeRemaining || '';
+    
+    // Detect halftime (transition from 2nd to 3rd quarter or explicit halftime status)
+    if (quarter === 2 && timeRemaining === '0:00') {
+      const alertKey = `${game.gameId}_HALFTIME`;
+      const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+      const leader = game.homeScore > game.awayScore ? game.homeTeam : 
+                   game.awayScore > game.homeScore ? game.awayTeam : 'Tied';
+      
+      let message = `⏸️ HALFTIME! `;
+      if (leader === 'Tied') {
+        message += `${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - All tied up!`;
+      } else {
+        message += `${leader} leads ${Math.max(game.homeScore, game.awayScore)}-${Math.min(game.homeScore, game.awayScore)}`;
+        if (scoreDiff >= 14) message += ` - Big lead!`;
+        else if (scoreDiff <= 3) message += ` - Close game!`;
+      }
+
+      return await this.saveRealTimeAlert(alertKey, 'NCAAF_HALFTIME', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        quarter,
+        timeRemaining,
+        scoreDiff,
+        leader,
+        homeRank: game.homeRank || 0,
+        awayRank: game.awayRank || 0
+      }, scoreDiff <= 3 ? 90 : 82, 'NCAAF');
+    }
+
+    return 0;
   }
 
   private getOrdinalSuffix(num: number): string {

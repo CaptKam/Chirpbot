@@ -297,6 +297,10 @@ export const storage = {
           'RED_ZONE': true,
           'FOURTH_DOWN': true,
           'TWO_MINUTE_WARNING': true,
+          // NCAAF alerts
+          'NCAAF_KICKOFF': true,
+          'NCAAF_HALFTIME': true,
+          'TWO_MINUTE_WARNING': true,
           // NBA alerts
           'CLUTCH_TIME': true,
           'OVERTIME': true,

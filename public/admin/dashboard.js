@@ -7,12 +7,18 @@ let globalAlertSettings = {};
 document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
     checkAuthentication();
-    
+
     // Initialize dashboard
     initializeDashboard();
-    
+
     // Load initial data
     loadDashboardData();
+
+    // Update sport selector with NCAAF
+    const sportSelector = document.getElementById('sportSelector');
+    if (sportSelector) {
+        loadSportAlertSettings(); // Load settings for the default sport on load
+    }
 });
 
 async function checkAuthentication() {
@@ -50,11 +56,11 @@ function redirectToLogin() {
 function updateAdminInfo(user) {
     const adminUsername = document.getElementById('adminUsername');
     const adminAvatar = document.getElementById('adminAvatar');
-    
+
     if (adminUsername && user.username) {
         adminUsername.textContent = user.username;
     }
-    
+
     if (adminAvatar && user.username) {
         adminAvatar.textContent = user.username.charAt(0).toUpperCase();
     }
@@ -200,10 +206,10 @@ async function updateUserRole(userId, newRole) {
                 currentUsers[userIndex].role = newRole;
                 updateUsersTable();
             }
-            
+
             // Reload stats to reflect changes
             await loadStats();
-            
+
             showNotification('User role updated successfully', 'success');
         } else {
             const error = await response.json();
@@ -302,12 +308,12 @@ async function refreshUsers() {
     }
 
     await loadUsers();
-    
+
     if (refreshBtn) {
         refreshBtn.innerHTML = '<i class="fas fa-sync"></i> Refresh';
         refreshBtn.disabled = false;
     }
-    
+
     showNotification('User data refreshed', 'success');
 }
 
@@ -315,23 +321,23 @@ function showTab(tabName) {
     // Hide all tab contents
     const contents = document.querySelectorAll('.tab-content');
     contents.forEach(content => content.style.display = 'none');
-    
+
     // Remove active class from all tabs
     const tabs = document.querySelectorAll('.nav-tab');
     tabs.forEach(tab => tab.classList.remove('active'));
-    
+
     // Show selected tab content
     const targetContent = document.getElementById(tabName + 'Content');
     if (targetContent) {
         targetContent.style.display = 'block';
     }
-    
+
     // Add active class to clicked tab
     const targetTab = document.getElementById(tabName + 'Tab');
     if (targetTab) {
         targetTab.classList.add('active');
     }
-    
+
     // Load alert settings when alerts tab is opened
     if (tabName === 'alerts') {
         loadSportAlertSettings();
@@ -348,7 +354,7 @@ async function handleLogout() {
         // Clear local storage regardless of response
         localStorage.removeItem('adminLoggedIn');
         localStorage.removeItem('adminUser');
-        
+
         // Redirect to login
         window.location.href = '/admin/login.html';
     } catch (error) {
@@ -362,59 +368,38 @@ async function handleLogout() {
 
 // Alert Configuration Functions
 const ALERT_TYPE_CONFIG = {
-    MLB: {
-        "Game Situations": [
-            { key: "RISP", label: "RISP (Runners in Scoring Position)", description: "Alert when runners are on 2nd or 3rd base" },
-            { key: "BASES_LOADED", label: "Bases Loaded", description: "Alert when all three bases are occupied" },
-            { key: "RUNNERS_1ST_2ND", label: "Runners on 1st & 2nd", description: "Prime scoring opportunity alert" },
-            { key: "CLOSE_GAME", label: "Close Game", description: "Games with score difference ≤ 3 runs" },
-            { key: "CLOSE_GAME_LIVE", label: "Live Close Game", description: "Real-time close game situations" },
-            { key: "LATE_PRESSURE", label: "Late Inning Pressure", description: "8th inning or later with close score" },
+    'MLB': {
+        'Game Situations': [
+            { key: 'RISP', name: 'Runner in Scoring Position', description: 'Runner on 2nd or 3rd base' },
+            { key: 'BASES_LOADED', name: 'Bases Loaded', description: 'All three bases occupied' },
+            { key: 'RUNNERS_1ST_2ND', name: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity' },
+            { key: 'LATE_PRESSURE', name: 'Late Inning Pressure', description: '8th+ inning, close game' }
         ],
-        "Scoring Events": [
-            { key: "HOME_RUN_LIVE", label: "Home Run (Live)", description: "Real-time home run alerts as they happen" },
-            { key: "HIGH_SCORING", label: "High-Scoring Game", description: "Games with 12+ total runs" },
-            { key: "SHUTOUT", label: "Shutout Alert", description: "When a team gets shut out (0 runs)" },
-            { key: "BLOWOUT", label: "Blowout Game", description: "Games with 7+ run difference" },
+        'Scoring Events': [
+            { key: 'HOME_RUN_LIVE', name: 'Home Run (Live)', description: 'Live home run alerts' },
+            { key: 'CLOSE_GAME_LIVE', name: 'Close Game (Live)', description: 'Live close game updates' },
+            { key: 'HIGH_SCORING', name: 'High Scoring Game', description: '12+ total runs' },
+            { key: 'SHUTOUT', name: 'Shutout', description: 'One team held scoreless' },
+            { key: 'BLOWOUT', name: 'Blowout', description: '7+ run difference' },
+            { key: 'CLOSE_GAME', name: 'Close Game (Final)', description: '≤3 run difference final' }
         ],
-        "At-Bat Situations": [
-            { key: "FULL_COUNT", label: "Full Count (3-2)", description: "Maximum pressure at-bat situations" },
-            { key: "STRIKEOUT", label: "Strikeout Alert", description: "Real-time strikeout notifications" },
+        'At-Bat Situations': [
+            { key: 'FULL_COUNT', name: 'Full Count', description: '3-2 count pressure' },
+            { key: 'STRIKEOUT', name: 'Strikeout', description: 'Batter struck out' },
+            { key: 'POWER_HITTER', name: 'Power Hitter', description: '20+ HR batter at plate' },
+            { key: 'HOT_HITTER', name: 'Hot Hitter', description: 'Already homered today' }
         ]
     },
-    NFL: {
-        "Game Situations": [
-            { key: "RED_ZONE", label: "Red Zone Situations", description: "Team inside the 20-yard line" },
-            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-            { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical 4th down conversion attempts" },
-            { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-half pressure situations" },
-        ]
-    },
-    NBA: {
-        "Game Situations": [
-            { key: "CLUTCH_TIME", label: "Clutch Time", description: "Final 5 minutes with close score" },
-            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-            { key: "OVERTIME", label: "Overtime", description: "Games going to overtime" },
-        ]
-    },
-    NHL: {
-        "Game Situations": [
-            { key: "POWER_PLAY", label: "Power Play", description: "Man advantage situations" },
-            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-            { key: "EMPTY_NET", label: "Empty Net", description: "Goalie pulled situations" },
-        ]
-    },
-    CFL: {
-        "Game Situations": [
-            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-            { key: "FOURTH_DOWN", label: "Third Down (CFL)", description: "Critical down conversion attempts" },
-        ]
-    },
-    NCAAF: {
-        "Game Situations": [
-            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-            { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical conversion attempts" },
-            { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-quarter/half pressure situations" },
+    'NCAAF': {
+        'Game Flow': [
+            { key: 'NCAAF_KICKOFF', name: 'Kickoff', description: 'Game start and 2nd half kickoffs' },
+            { key: 'NCAAF_HALFTIME', name: 'Halftime', description: 'End of 2nd quarter, score update' },
+            { key: 'TWO_MINUTE_WARNING', name: 'Two Minute Warning', description: 'Final 2 minutes of any quarter' }
+        ],
+        'Critical Moments': [
+            { key: 'FOURTH_DOWN', name: 'Fourth Down', description: 'Make-or-break plays' },
+            { key: 'RED_ZONE', name: 'Red Zone', description: 'Inside the 20-yard line' },
+            { key: 'OVERTIME', name: 'Overtime', description: 'Extra period alerts' }
         ]
     }
 };
@@ -423,15 +408,15 @@ async function loadSportAlertSettings() {
     const sportSelector = document.getElementById('sportSelector');
     const sportTitle = document.getElementById('sportTitle');
     const alertConfigContainer = document.getElementById('alertConfigContainer');
-    
+
     currentSport = sportSelector.value;
     if (sportTitle) {
         sportTitle.textContent = currentSport;
     }
-    
+
     // Show loading
     alertConfigContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    
+
     try {
         // Load global settings for this sport
         const response = await fetch(`/api/admin/global-alert-settings/${currentSport}`, {
@@ -442,7 +427,7 @@ async function loadSportAlertSettings() {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             globalAlertSettings = data || {};
@@ -451,16 +436,16 @@ async function loadSportAlertSettings() {
             globalAlertSettings = {};
             console.warn('Using default settings - API returned:', response.status);
         }
-        
+
         renderAlertConfiguration();
     } catch (error) {
         console.error('Error loading alert settings:', error);
         // Use default settings on error
         globalAlertSettings = {};
-        
+
         // Still render the configuration with defaults
         renderAlertConfiguration();
-        
+
         // Show a less intrusive notification
         showNotification('Using default alert settings', 'info');
     }
@@ -469,7 +454,7 @@ async function loadSportAlertSettings() {
 function renderAlertConfiguration() {
     const alertConfigContainer = document.getElementById('alertConfigContainer');
     const sportConfig = ALERT_TYPE_CONFIG[currentSport];
-    
+
     if (!sportConfig) {
         alertConfigContainer.innerHTML = `
             <div style="text-align: center; color: #94a3b8; padding: 40px;">
@@ -480,9 +465,9 @@ function renderAlertConfiguration() {
         `;
         return;
     }
-    
+
     let html = '';
-    
+
     Object.entries(sportConfig).forEach(([category, alerts]) => {
         html += `
             <div class="alert-category">
@@ -523,7 +508,7 @@ function renderAlertConfiguration() {
             </div>
         `;
     });
-    
+
     alertConfigContainer.innerHTML = html;
 }
 
@@ -532,6 +517,8 @@ function getCategoryIcon(category) {
         case "Game Situations": return "fas fa-gamepad text-emerald-400";
         case "Scoring Events": return "fas fa-trophy text-yellow-400";
         case "At-Bat Situations": return "fas fa-clock text-blue-400";
+        case "Game Flow": return "fas fa-random text-teal-400";
+        case "Critical Moments": return "fas fa-exclamation-triangle text-red-400";
         default: return "fas fa-bell text-slate-400";
     }
 }
@@ -539,7 +526,7 @@ function getCategoryIcon(category) {
 function isCategoryEnabled(category) {
     const sportConfig = ALERT_TYPE_CONFIG[currentSport];
     if (!sportConfig || !sportConfig[category]) return false;
-    
+
     return sportConfig[category].every(alert => 
         isAlertGloballyEnabled(alert.key)
     );
@@ -558,7 +545,7 @@ function getUserCountForAlert(alertKey) {
 async function toggleMasterAlerts() {
     const toggle = document.getElementById('masterAlertToggle');
     const isEnabled = toggle.checked;
-    
+
     try {
         const response = await fetch('/api/admin/master-alerts', {
             method: 'PUT',
@@ -566,7 +553,7 @@ async function toggleMasterAlerts() {
             credentials: 'include',
             body: JSON.stringify({ enabled: isEnabled })
         });
-        
+
         if (response.ok) {
             showNotification(`Master alerts ${isEnabled ? 'enabled' : 'disabled'}`, 'success');
         } else {
@@ -583,10 +570,10 @@ async function toggleMasterAlerts() {
 async function toggleCategory(category) {
     const sportConfig = ALERT_TYPE_CONFIG[currentSport];
     if (!sportConfig || !sportConfig[category]) return;
-    
+
     const shouldEnable = !isCategoryEnabled(category);
     const alertKeys = sportConfig[category].map(alert => alert.key);
-    
+
     try {
         const response = await fetch('/api/admin/global-alert-category', {
             method: 'PUT',
@@ -599,16 +586,16 @@ async function toggleCategory(category) {
                 enabled: shouldEnable 
             })
         });
-        
+
         if (response.ok) {
             // Update local state
             alertKeys.forEach(key => {
                 globalAlertSettings[key] = shouldEnable;
             });
-            
+
             // Automatically apply these changes to all users
             await applyGlobalSettingsToAllUsers();
-            
+
             // Re-render configuration
             renderAlertConfiguration();
             showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} and applied to all users`, 'success');
@@ -624,7 +611,7 @@ async function toggleCategory(category) {
 async function toggleGlobalAlert(alertKey) {
     const toggle = document.getElementById(`alert-${alertKey}`);
     const isEnabled = toggle.checked;
-    
+
     try {
         const response = await fetch('/api/admin/global-alert-setting', {
             method: 'PUT',
@@ -636,13 +623,13 @@ async function toggleGlobalAlert(alertKey) {
                 enabled: isEnabled 
             })
         });
-        
+
         if (response.ok) {
             globalAlertSettings[alertKey] = isEnabled;
-            
+
             // Automatically apply this change to all users
             await applyGlobalSettingToAllUsers(alertKey, isEnabled);
-            
+
             showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally and applied to all users`, 'success');
         } else {
             toggle.checked = !isEnabled;
@@ -659,7 +646,7 @@ async function applyToAllUsers() {
     if (!confirm('This will apply the current global alert settings to ALL users. Are you sure?')) {
         return;
     }
-    
+
     await applyGlobalSettingsToAllUsers();
 }
 
@@ -675,7 +662,7 @@ async function applyGlobalSettingsToAllUsers() {
                 settings: globalAlertSettings 
             })
         });
-        
+
         if (response.ok) {
             console.log('Global settings applied to all users successfully');
         } else {
@@ -699,7 +686,7 @@ async function applyGlobalSettingToAllUsers(alertKey, enabled) {
                 settings: singleSetting 
             })
         });
-        
+
         if (response.ok) {
             console.log(`Global setting ${alertKey}=${enabled} applied to all users successfully`);
         } else {
@@ -761,4 +748,18 @@ function showNotification(message, type = 'info') {
             }
         }, 300);
     }, 3000);
+}
+
+// Function to switch sport and load settings
+function switchSport(sport) {
+    currentSport = sport;
+    loadSportAlertSettings();
+}
+
+// Add event listener for sport selector change
+const sportSelector = document.getElementById('sportSelector');
+if (sportSelector) {
+    sportSelector.addEventListener('change', function() {
+        switchSport(this.value);
+    });
 }

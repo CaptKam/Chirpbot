@@ -11,66 +11,50 @@ import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Use
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 
 // Comprehensive alert configuration for all sports
 const ALERT_TYPE_CONFIG = {
-  MLB: {
-    "Game Situations": [
-      { key: "RISP", label: "RISP (Runners in Scoring Position)", description: "Alert when runners are on 2nd or 3rd base" },
-      { key: "BASES_LOADED", label: "Bases Loaded", description: "Alert when all three bases are occupied" },
-      { key: "RUNNERS_1ST_2ND", label: "Runners on 1st & 2nd", description: "Prime scoring opportunity alert" },
-      { key: "CLOSE_GAME", label: "Close Game", description: "Games with score difference ≤ 3 runs" },
-      { key: "CLOSE_GAME_LIVE", label: "Live Close Game", description: "Real-time close game situations" },
-      { key: "LATE_PRESSURE", label: "Late Inning Pressure", description: "8th inning or later with close score" },
-    ],
-    "Scoring Events": [
-      { key: "HOME_RUN_LIVE", label: "Home Run (Live)", description: "Real-time home run alerts as they happen" },
-      { key: "HIGH_SCORING", label: "High-Scoring Game", description: "Games with 12+ total runs" },
-      { key: "SHUTOUT", label: "Shutout Alert", description: "When a team gets shut out (0 runs)" },
-      { key: "BLOWOUT", label: "Blowout Game", description: "Games with 7+ run difference" },
-    ],
-    "At-Bat Situations": [
-      { key: "FULL_COUNT", label: "Full Count (3-2)", description: "Maximum pressure at-bat situations" },
-      { key: "STRIKEOUT", label: "Strikeout Alert", description: "Real-time strikeout notifications" },
-    ]
-  },
-  NFL: {
-    "Game Situations": [
-      { key: "RED_ZONE", label: "Red Zone Situations", description: "Team inside the 20-yard line" },
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical 4th down conversion attempts" },
-      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-half pressure situations" },
-    ]
-  },
-  NBA: {
-    "Game Situations": [
+  MLB: [
+    { key: 'RISP', label: 'Runner in Scoring Position', description: 'Alerts when a runner reaches 2nd or 3rd base' },
+    { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases are occupied' },
+    { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity setup' },
+    { key: 'CLOSE_GAME_LIVE', label: 'Close Game (Live)', description: 'Live updates for games within 3 runs' },
+    { key: 'LATE_PRESSURE', label: 'Late Inning Pressure', description: '8th+ inning in close games' },
+    { key: 'HOME_RUN_LIVE', label: 'Home Run (Live)', description: 'Real-time home run alerts' },
+    { key: 'FULL_COUNT', label: 'Full Count', description: '3-2 count pressure situations' },
+    { key: 'STRIKEOUT', label: 'Strikeout', description: 'Batter struck out' },
+    { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at bat' },
+    { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' }
+  ],
+  NCAAF: [
+    { key: 'NCAAF_KICKOFF', label: 'Kickoff', description: 'Game start and 2nd half kickoffs' },
+    { key: 'NCAAF_HALFTIME', label: 'Halftime', description: 'End of 2nd quarter with score updates' },
+    { key: 'TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Final 2 minutes of any quarter' },
+    { key: 'FOURTH_DOWN', label: 'Fourth Down', description: 'Critical conversion attempts' },
+    { key: 'RED_ZONE', label: 'Red Zone', description: 'Inside the 20-yard line' }
+  ],
+  NFL: [
+    { key: 'RED_ZONE', label: 'Red Zone', description: 'Team inside 20-yard line' },
+    { key: 'FOURTH_DOWN', label: 'Fourth Down', description: 'Critical conversion attempts' },
+    { key: 'TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'End of half situations' }
+  ],
+  NBA: [
       { key: "CLUTCH_TIME", label: "Clutch Time", description: "Final 5 minutes with close score" },
       { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
       { key: "OVERTIME", label: "Overtime", description: "Games going to overtime" },
-    ]
-  },
-  NHL: {
-    "Game Situations": [
+    ],
+    NHL: [
       { key: "POWER_PLAY", label: "Power Play", description: "Man advantage situations" },
       { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
       { key: "EMPTY_NET", label: "Empty Net", description: "Goalie pulled situations" },
-    ]
-  },
-  CFL: {
-    "Game Situations": [
+    ],
+    CFL: [
       { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
       { key: "FOURTH_DOWN", label: "Third Down (CFL)", description: "Critical down conversion attempts" },
     ]
-  },
-  NCAAF: {
-    "Game Situations": [
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical conversion attempts" },
-      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-quarter/half pressure situations" },
-    ]
-  }
 };
 
 export default function Settings() {
@@ -111,6 +95,12 @@ export default function Settings() {
       preferenceMap.set(pref.alertType, pref.enabled);
     });
   }
+
+  // Helper to get alert preference, defaulting to true if not found or not loaded
+  const getAlertPreference = (sport: string, alertType: string): boolean => {
+    if (preferencesLoading) return true; // Default to true while loading to avoid brief disablings
+    return preferenceMap.get(alertType) ?? true;
+  };
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -199,7 +189,7 @@ export default function Settings() {
         chatId: telegramChatId
       });
       const result = await response.json();
-      
+
       if (response.ok && result) {
         setConnectionTestResult('success');
         toast({
@@ -361,67 +351,109 @@ export default function Settings() {
                 <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
-              <div className="space-y-6">
-                {ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG] ? (
-                  Object.entries(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).map(([category, alerts]) => (
-                    <div key={category} className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        {getCategoryIcon(category)}
-                        <h3 className="text-md font-bold text-slate-100 uppercase tracking-wide">
-                          {category}
-                        </h3>
-                      </div>
-                      <div className="space-y-3 ml-6">
-                        {alerts.map((alert) => {
-                          const isEnabled = preferenceMap.get(alert.key) ?? true; // Default to enabled
-                          return (
-                            <div 
-                              key={alert.key} 
-                              className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
-                            >
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="text-sm font-semibold text-slate-100">
-                                    {alert.label}
-                                  </h4>
-                                  {updateAlertPreferenceMutation.isPending && (
-                                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                                  )}
-                                </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {alert.description}
-                                </p>
-                              </div>
-                              <Switch
-                                checked={isEnabled}
-                                onCheckedChange={(enabled) => handleAlertToggle(alert.key, enabled)}
-                                disabled={updateAlertPreferenceMutation.isPending}
-                                data-testid={`toggle-${alert.key.toLowerCase()}`}
-                                className="data-[state=checked]:bg-emerald-500"
-                              />
+              <Tabs value={activeSport} onValueChange={setActiveSport} className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="MLB">⚾ MLB</TabsTrigger>
+                  <TabsTrigger value="NCAAF">🏈 NCAAF</TabsTrigger>
+                  <TabsTrigger value="NFL">🏈 NFL</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="MLB" className="space-y-4">
+                  <div className="space-y-4">
+                    {ALERT_TYPE_CONFIG['MLB']?.map((alertType) => {
+                      const isEnabled = getAlertPreference('MLB', alertType.key);
+                      return (
+                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="text-sm font-semibold text-slate-100">
+                                {alertType.label}
+                              </h4>
+                              {updateAlertPreferenceMutation.isPending && (
+                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
-                      {Object.keys(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).indexOf(category) < 
-                       Object.keys(ALERT_TYPE_CONFIG[activeSport as keyof typeof ALERT_TYPE_CONFIG]).length - 1 && (
-                        <Separator className="bg-white/10 my-4" />
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-                    <p className="text-slate-400 text-sm">
-                      No alert types configured for {activeSport} yet.
-                      <br />
-                      <span className="text-xs text-slate-500">
-                        Alert types will appear here as they are added to the system.
-                      </span>
-                    </p>
+                            <p className="text-xs text-slate-400 mt-1">
+                              {alertType.description}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
+                            disabled={updateAlertPreferenceMutation.isPending}
+                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
+                            className="data-[state=checked]:bg-emerald-500"
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
+                </TabsContent>
+
+                <TabsContent value="NCAAF" className="space-y-4">
+                  <div className="space-y-4">
+                    {ALERT_TYPE_CONFIG['NCAAF']?.map((alertType) => {
+                      const isEnabled = getAlertPreference('NCAAF', alertType.key);
+                      return (
+                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="text-sm font-semibold text-slate-100">
+                                {alertType.label}
+                              </h4>
+                              {updateAlertPreferenceMutation.isPending && (
+                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-1">
+                              {alertType.description}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
+                            disabled={updateAlertPreferenceMutation.isPending}
+                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
+                            className="data-[state=checked]:bg-emerald-500"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="NFL" className="space-y-4">
+                  <div className="space-y-4">
+                    {ALERT_TYPE_CONFIG['NFL']?.map((alertType) => {
+                      const isEnabled = getAlertPreference('NFL', alertType.key);
+                      return (
+                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="text-sm font-semibold text-slate-100">
+                                {alertType.label}
+                              </h4>
+                              {updateAlertPreferenceMutation.isPending && (
+                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-1">
+                              {alertType.description}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
+                            disabled={updateAlertPreferenceMutation.isPending}
+                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
+                            className="data-[state=checked]:bg-emerald-500"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+              </Tabs>
             )}
           </Card>
         )}
