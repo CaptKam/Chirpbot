@@ -18,8 +18,10 @@ app.use(helmet({
   contentSecurityPolicy: false, // Disabled for Vite dev mode
 }));
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || true,
-  credentials: true
+  origin: true, // Allow all origins in development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
 // Body parsing with size limits

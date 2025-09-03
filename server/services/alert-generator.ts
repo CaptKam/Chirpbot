@@ -4,6 +4,7 @@ import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
 import { weatherService } from "./weather-service";
 import { storage } from "../storage";
+import { AlertDeduplication } from "./alert-deduplication";
 
 interface AlertData {
   type: string;
@@ -18,10 +19,12 @@ interface AlertData {
 export class AlertGenerator {
   private mlbApi: MLBApiService;
   private ncaafApi: NCAAFApiService;
+  private deduplication: AlertDeduplication;
 
   constructor() {
     this.mlbApi = new MLBApiService();
     this.ncaafApi = new NCAAFApiService();
+    this.deduplication = new AlertDeduplication();
   }
 
   // Check if a specific alert type is globally enabled
@@ -488,6 +491,22 @@ export class AlertGenerator {
             continue; // Skip this alert
           }
           console.log(`✅ STRIKEOUT alert proceeding - globally enabled`);
+          
+          // 🛡️ DEDUPLICATION CHECK
+          const dedupKey = {
+            gameId: game.gameId,
+            type: 'STRIKEOUT',
+            inning: play.about?.inning,
+            half: play.about?.halfInning,
+            outs: play.about?.outs,
+            batter: play.matchup?.batter?.fullName,
+            paId: `${play.about?.atBatIndex}`
+          };
+          
+          if (!this.deduplication.shouldSendAlert(dedupKey, 'plate-appearance')) {
+            console.log(`🚫 STRIKEOUT alert blocked - deduplication filter`);
+            continue; // Skip this duplicate alert
+          }
           
           const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
           const batter = play.matchup?.batter?.fullName || 'Unknown Batter';
