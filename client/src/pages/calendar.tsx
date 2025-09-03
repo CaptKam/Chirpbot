@@ -543,9 +543,6 @@ export default function Calendar() {
                             <div className="text-2xl font-bold text-slate-200">
                               {game.awayTeam?.score || 0}
                             </div>
-                            <div className="text-xs text-slate-400 uppercase tracking-wider">
-                              {removeCity(awayTeamName).substring(0, 8)}
-                            </div>
                           </div>
                         )}
                       </div>
@@ -588,9 +585,6 @@ export default function Calendar() {
                           <div className="text-center">
                             <div className="text-2xl font-bold text-slate-200">
                               {game.homeTeam?.score || 0}
-                            </div>
-                            <div className="text-xs text-slate-400 uppercase tracking-wider">
-                              {removeCity(homeTeamName).substring(0, 8)}
                             </div>
                           </div>
                         )}
