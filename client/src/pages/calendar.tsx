@@ -534,13 +534,6 @@ export default function Calendar() {
                             </div>
                           </div>
                         )}
-                        {game.status === 'scheduled' && (
-                          <div className="text-center">
-                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
-                              {removeCity(awayTeamName).substring(0, 8)}
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                       {/* Center - Baseball Diamond & Game Info */}
@@ -595,13 +588,6 @@ export default function Calendar() {
                             </div>
                           </div>
                         )}
-                        {game.status === 'scheduled' && (
-                          <div className="text-center">
-                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
-                              {removeCity(homeTeamName).substring(0, 8)}
-                            </div>
-                          </div>
-                        )}
                         <TeamLogo
                           teamName={removeCity(homeTeamName)}
                           abbreviation={homeTeamAbbr}
@@ -621,11 +607,8 @@ export default function Calendar() {
                       
                       <div className="flex items-center space-x-3">
                         {game.status === 'scheduled' && (
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span className="text-sm text-slate-300 font-medium">
-                              {formattedTime}
-                            </span>
+                          <div className="text-sm text-slate-300 font-medium">
+                            {formattedTime}
                           </div>
                         )}
                         
