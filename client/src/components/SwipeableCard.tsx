@@ -570,11 +570,30 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Compact Alert Message */}
+              {/* Alert Message - Shows AI Enhancement Flow */}
               <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500">
-                <p className="text-slate-100 text-sm leading-snug">
-                  {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
+                {/* Primary: AI Enhanced Message */}
+                <p className="text-slate-100 text-sm leading-snug font-medium">
+                  {alertData.aiEnhancedMessage || alertData.message || 'Alert detected'}
                 </p>
+                
+                {/* Secondary: Clean Math (if AI enhanced) */}
+                {alertData.aiEnhancedMessage && alertData.message && alertData.aiEnhancedMessage !== alertData.message && (
+                  <div className="mt-1 pt-1 border-t border-slate-700/30">
+                    <p className="text-slate-400 text-xs leading-tight">
+                      <span className="text-emerald-400 font-medium">Math:</span> {alertData.message}
+                    </p>
+                  </div>
+                )}
+                
+                {/* AI Insights (if available) */}
+                {alertData.aiInsights && alertData.aiInsights.reasons && alertData.aiInsights.reasons.length > 0 && (
+                  <div className="mt-1 pt-1 border-t border-slate-700/30">
+                    <p className="text-blue-300 text-xs">
+                      <span className="text-blue-400 font-medium">AI:</span> {alertData.aiInsights.reasons[0]}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Compact Base Runners (MLB only) */}

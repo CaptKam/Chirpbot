@@ -339,11 +339,18 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
               )}
             </div>
 
-            {/* Alert Message - Clean & Simple */}
+            {/* Alert Message - AI Enhanced or Clean Math */}
             <div className="bg-slate-900/50 rounded-lg p-3 border-l-2 border-emerald-500">
               <p className="text-slate-100 text-sm font-medium leading-relaxed">
-                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').trim()}
+                {/* Use AI enhanced message if available, otherwise use clean message */}
+                {alert.aiEnhancedMessage || alert.message || 'Alert detected'}
               </p>
+              {/* Show clean math message as secondary info if AI enhanced */}
+              {alert.aiEnhancedMessage && alert.message && alert.aiEnhancedMessage !== alert.message && (
+                <p className="text-slate-400 text-xs mt-1 opacity-75">
+                  Math: {alert.message}
+                </p>
+              )}
             </div>
 
             {/* Basic Game Context - Minimal */}
