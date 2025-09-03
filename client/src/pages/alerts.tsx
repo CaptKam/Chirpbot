@@ -224,8 +224,6 @@ export default function AlertsPage() {
                     priority: alert.priority,
                     confidence: alert.confidence,
                     message: alert.message,
-                    aiEnhancedMessage: alert.aiEnhancedMessage,
-                    aiInsights: alert.aiInsights,
                     createdAt: alert.createdAt,
                     timestamp: alert.timestamp || alert.createdAt || new Date().toISOString(),
                     sentToTelegram: alert.sentToTelegram || false,

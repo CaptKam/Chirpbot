@@ -1244,175 +1244,6 @@ export class AlertGenerator {
     };
   }
 
-  // STEP 1: Generate clean mathematical alert messages
-  private generateCleanMathMessage(type: string, context: any, sport: string): string {
-    const homeTeam = context.homeTeam?.split(' ').pop() || 'Home';
-    const awayTeam = context.awayTeam?.split(' ').pop() || 'Away';
-    const homeScore = context.homeScore || 0;
-    const awayScore = context.awayScore || 0;
-
-    switch (type) {
-      case 'BASES_LOADED':
-        const basesLoadedProb = context.scoringProbability || 0;
-        return `Bases loaded. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}. Scoring probability: ${basesLoadedProb}%`;
-
-      case 'RISP':
-        const positions = [];
-        if (context.hasSecond) positions.push('2nd');
-        if (context.hasThird) positions.push('3rd');
-        return `Runner in scoring position (${positions.join(', ')}). ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'RUNNERS_1ST_2ND':
-        const prob = context.scoringProbability || 0;
-        return `Runners on 1st and 2nd. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}. Scoring probability: ${prob}%`;
-
-      case 'POWER_HITTER':
-        const hrs = context.seasonHomeRuns || 0;
-        return `Power hitter at bat (${hrs} HRs). ${context.batter}. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'HOT_HITTER':
-        return `Hot hitter at bat (homered today). ${context.batter}. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'STRIKEOUT':
-        return `Strikeout. ${context.batter} struck out by ${context.pitcher}. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'FULL_COUNT':
-        return `Full count (3-2). ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'LATE_PRESSURE':
-        return `Late inning pressure situation. Inning ${context.inning}. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'HOME_RUN_LIVE':
-        return `Home run. ${context.batter}. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'CLOSE_GAME_LIVE':
-        const diff = Math.abs(homeScore - awayScore);
-        return `Close game (${diff} run difference). ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      // NCAAF alerts
-      case 'TWO_MINUTE_WARNING':
-        return `Two minute warning. Q${context.quarter}. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'NCAAF_KICKOFF':
-        return `Kickoff. ${awayTeam} vs ${homeTeam}`;
-
-      case 'NCAAF_HALFTIME':
-        return `Halftime. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      default:
-        return `${type.replace('_', ' ')}. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-    }
-  }
-
-  // STEP 2: AI Enhancement Layer (separate from math)
-  private async generateAIEnhancements(type: string, context: any, priority: number, sport: string, gameId: string) {
-    // Generate betting insights
-    const betbookData = getBetbookData({
-      sport: sport,
-      gameId: gameId,
-      homeTeam: context.homeTeam,
-      awayTeam: context.awayTeam,
-      homeScore: context.homeScore || 0,
-      awayScore: context.awayScore || 0,
-      type: type,
-      probability: priority,
-      inning: context.inning,
-      outs: context.outs || 0
-    });
-
-    // Generate AI-enhanced message with context and personality
-    const enhancedMessage = await this.enhanceMessageWithAI(type, context, priority);
-
-    // Generate AI insights
-    const insights = this.generateAIInsights(type, context, priority);
-
-    return {
-      enhancedMessage,
-      betbookData,
-      insights
-    };
-  }
-
-  // AI message enhancement with context and personality
-  private async enhanceMessageWithAI(type: string, context: any, priority: number): Promise<string> {
-    const homeTeam = context.homeTeam?.split(' ').pop() || 'Home';
-    const awayTeam = context.awayTeam?.split(' ').pop() || 'Away';
-    const homeScore = context.homeScore || 0;
-    const awayScore = context.awayScore || 0;
-
-    // Add AI personality and context to the clean math message
-    switch (type) {
-      case 'BASES_LOADED':
-        const emojis = ['🔥', '💎', '⚡'];
-        const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-        return `${emoji} BASES LOADED! Maximum scoring opportunity detected. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore} - ${context.scoringProbability}% chance of runs scoring!`;
-
-      case 'RISP':
-        return `⚾ SCORING POSITION! Runner ready to score from ${context.hasSecond ? '2nd' : ''}${context.hasSecond && context.hasThird ? ' & ' : ''}${context.hasThird ? '3rd' : ''} base. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'POWER_HITTER':
-        return `💪 POWER THREAT! ${context.batter} (${context.seasonHomeRuns} HRs) steps into the box. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}${context.hasRunners ? ' - runners on base!' : ''}`;
-
-      case 'HOT_HITTER':
-        return `🔥 HOT HITTER! ${context.batter} already went deep today and is back at the plate. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'STRIKEOUT':
-        return `⚡ STRIKEOUT! ${context.batter} goes down swinging against ${context.pitcher}. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      case 'LATE_PRESSURE':
-        return `🔥 CRUNCH TIME! Late inning pressure in the ${context.inning}th. ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore} - every pitch matters!`;
-
-      case 'HOME_RUN_LIVE':
-        return `🎆 GONE! ${context.batter} launches one out of the park! ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-
-      default:
-        return `🚨 ${type.replace('_', ' ')} Alert! ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`;
-    }
-  }
-
-  // Generate AI insights for the alert
-  private generateAIInsights(type: string, context: any, priority: number) {
-    const reasons = [];
-    let confidence = priority;
-    let recommendation = "Monitor situation";
-
-    // Build contextual AI insights
-    if (context.hasFirst && context.hasSecond && context.hasThird) {
-      reasons.push("Bases loaded - maximum scoring potential");
-      recommendation = "Strong Over bet opportunity";
-      confidence = Math.min(95, confidence + 15);
-    } else if (context.hasSecond || context.hasThird) {
-      reasons.push("Runner in scoring position");
-      recommendation = "Consider Over bet";
-    }
-
-    if (context.outs <= 1) {
-      reasons.push(`Only ${context.outs} out - high leverage situation`);
-      confidence += 5;
-    }
-
-    if (context.weather?.homeRunFactor > 1.2) {
-      reasons.push("Favorable wind conditions for offense");
-      confidence += 8;
-    }
-
-    if (context.seasonHomeRuns >= 20) {
-      reasons.push("Elite power hitter at the plate");
-      confidence += 7;
-    }
-
-    if (context.inning >= 7) {
-      reasons.push("Late inning - increased pressure");
-      confidence += 5;
-    }
-
-    return {
-      confidence: Math.min(95, Math.max(25, confidence)),
-      reasons: reasons.slice(0, 3),
-      recommendation
-    };
-  }
-
   // Generate V3 AI Analysis
   private generateV3Analysis(context: any, priority: number, type: string): V3Analysis {
     const tier = Math.ceil(priority / 25); // 1-4 tier system
@@ -1482,31 +1313,38 @@ export class AlertGenerator {
         return 0; // Alert already exists
       }
 
-      // STEP 1: Create pure mathematical alert with clean message
-      const cleanMathMessage = this.generateCleanMathMessage(type, context, sport);
-      
-      // STEP 2: Enhanced payload with separate AI enhancement
-      const basePayload = {
-        message: cleanMathMessage, // Clean mathematical message
-        originalMessage: message, // Keep original for reference
-        context,
-        gameInfo: {
-          v3Analysis: this.generateV3Analysis(context, priority, type)
-        }
-      };
-
-      // STEP 3: AI Enhancement Layer (separate from core logic)
-      if (priority >= 70) {
+      // Generate AI betting insights for high-priority alerts
+      if (priority >= 70 && !context.betbookData) {
         try {
-          const aiEnhancements = await this.generateAIEnhancements(type, context, priority, sport, gameId);
-          basePayload.aiEnhancedMessage = aiEnhancements.enhancedMessage;
-          basePayload.betbookData = aiEnhancements.betbookData;
-          basePayload.aiInsights = aiEnhancements.insights;
-          console.log(`🤖 AI: Enhanced ${type} alert with AI insights`);
+          const betbookData = getBetbookData({
+            sport: sport,
+            gameId: gameId,
+            homeTeam: context.homeTeam,
+            awayTeam: context.awayTeam,
+            homeScore: context.homeScore || 0,
+            awayScore: context.awayScore || 0,
+            type: type,
+            probability: priority,
+            inning: context.inning,
+            outs: context.outs || 0
+          });
+
+          context.betbookData = betbookData;
+          console.log(`🤖 AI: Generated betting insights for ${type} alert - ${betbookData.aiAdvice}`);
         } catch (error) {
-          console.error('❌ AI enhancement failed, using clean math message:', error);
+          console.error('❌ AI betting insights generation failed:', error);
         }
       }
+
+      // Enhanced payload with AI insights
+      const enhancedPayload = {
+        message,
+        context,
+        betbookData: context.betbookData, // Ensure betbookData is part of the payload
+        gameInfo: {
+          v3Analysis: this.generateV3Analysis(context, priority, type) // Generate V3 Analysis here
+        }
+      };
 
       // Check if any user would actually receive this alert before saving
       const allUsers = await storage.getAllUsers();
@@ -1527,16 +1365,14 @@ export class AlertGenerator {
         return 0;
       }
 
-      // Insert new alert with enhanced payload
+      // Insert new alert
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
-                ${type}, 'NEW', ${priority}, ${JSON.stringify(basePayload)}, NOW())
+                ${type}, 'NEW', ${priority}, ${JSON.stringify(enhancedPayload)}, NOW())
       `);
 
-      // Log the appropriate message based on AI enhancement
-      const displayMessage = basePayload.aiEnhancedMessage || basePayload.message;
-      console.log(`🚨 REAL-TIME ALERT: ${displayMessage}`);
+      console.log(`🚨 REAL-TIME ALERT: ${message}`);
 
       // Send to Telegram for users monitoring this game
       try {
