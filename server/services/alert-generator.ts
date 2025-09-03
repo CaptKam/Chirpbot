@@ -894,37 +894,54 @@ export class AlertGenerator {
   }
 
   private isWithinTwoMinutes(timeRemaining: string): boolean {
-    if (!timeRemaining || timeRemaining === '0:00') return false;
+    if (!timeRemaining || timeRemaining === '0:00' || timeRemaining === '00:00') return false;
 
     // Handle different time formats from ESPN
     let totalSeconds = 0;
 
-    // Format: "1:45", "0:30", "12:30"
-    if (timeRemaining.includes(':')) {
-      const timeParts = timeRemaining.split(':');
-      if (timeParts.length === 2) {
-        const minutes = parseInt(timeParts[0]) || 0;
-        const seconds = parseInt(timeParts[1]) || 0;
-        totalSeconds = (minutes * 60) + seconds;
+    try {
+      // Clean the time string - remove extra spaces and non-time characters
+      let cleanTime = timeRemaining.trim();
+      
+      // Extract just the time portion if it contains extra info
+      // Formats: "1:45", "0:30", "12:30", "1:45 - 4th", "0:30 4th", "2:00 4TH"
+      if (cleanTime.includes(' ')) {
+        cleanTime = cleanTime.split(' ')[0];
       }
-    }
-    // Format: "1:45 - 4th", "0:30 4th" (with quarter info)
-    else if (timeRemaining.includes(' ')) {
-      const timeOnly = timeRemaining.split(' ')[0];
-      if (timeOnly.includes(':')) {
-        const timeParts = timeOnly.split(':');
+      if (cleanTime.includes('-')) {
+        cleanTime = cleanTime.split('-')[0].trim();
+      }
+
+      // Now parse MM:SS or M:SS format
+      if (cleanTime.includes(':')) {
+        const timeParts = cleanTime.split(':');
         if (timeParts.length === 2) {
           const minutes = parseInt(timeParts[0]) || 0;
           const seconds = parseInt(timeParts[1]) || 0;
-          totalSeconds = (minutes * 60) + seconds;
+          
+          // Validate reasonable time values
+          if (minutes >= 0 && minutes <= 15 && seconds >= 0 && seconds <= 59) {
+            totalSeconds = (minutes * 60) + seconds;
+          }
         }
       }
+      // Handle edge case of seconds-only format like "45" or "90"
+      else if (/^\d+$/.test(cleanTime)) {
+        const secondsOnly = parseInt(cleanTime);
+        if (secondsOnly >= 0 && secondsOnly <= 900) { // Max 15 minutes
+          totalSeconds = secondsOnly;
+        }
+      }
+
+      console.log(`🏈 Time parsing: "${timeRemaining}" → cleaned: "${cleanTime}" → ${totalSeconds} seconds`);
+
+      // Check if we're within 2 minutes (120 seconds)
+      return totalSeconds <= 120 && totalSeconds > 0;
+      
+    } catch (error) {
+      console.error(`🏈 Error parsing time "${timeRemaining}":`, error);
+      return false;
     }
-
-    console.log(`🏈 Time parsing: "${timeRemaining}" → ${totalSeconds} seconds`);
-
-    // Check if we're within 2 minutes (120 seconds)
-    return totalSeconds <= 120 && totalSeconds > 0;
   }
 
   private getOrdinalSuffix(num: number): string {
