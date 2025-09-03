@@ -5,7 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -80,12 +82,25 @@ export default function Settings() {
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
+  // Telegram settings state
+  const [telegramBotToken, setTelegramBotToken] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
+
   // Alert preferences state and queries
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 30 * 1000, // 30 seconds for alert preferences to show admin changes quickly
     refetchInterval: 60 * 1000, // Refetch every minute to catch admin changes
+  });
+
+  // Telegram settings query
+  const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
+    queryKey: [`/api/user/${user?.id}/telegram`],
+    enabled: !!user?.id && isAuthenticated,
   });
 
   // Create a map of current preferences for easy lookup
@@ -135,12 +150,107 @@ export default function Settings() {
     },
   });
 
+  // Telegram settings mutation
+  const updateTelegramMutation = useMutation({
+    mutationFn: async ({ botToken, chatId, enabled }: { botToken: string; chatId: string; enabled: boolean }) => {
+      const response = await apiRequest("POST", `/api/user/${user?.id}/telegram`, {
+        botToken,
+        chatId,
+        enabled
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [`/api/user/${user?.id}/telegram`]
+      });
+      toast({
+        title: "Telegram settings updated",
+        description: "Your Telegram configuration has been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update Telegram settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Test Telegram connection
+  const testTelegramConnection = async () => {
+    if (!telegramBotToken || !telegramChatId) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both bot token and chat ID before testing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+
+    try {
+      const response = await apiRequest("POST", "/api/telegram/test", {
+        botToken: telegramBotToken,
+        chatId: telegramChatId
+      });
+      const result = await response.json();
+      
+      if (response.ok && result) {
+        setConnectionTestResult('success');
+        toast({
+          title: "Connection Successful",
+          description: "Your Telegram bot is working correctly!",
+        });
+      } else {
+        setConnectionTestResult('error');
+        toast({
+          title: "Connection Failed",
+          description: "Please check your bot token and chat ID.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setConnectionTestResult('error');
+      toast({
+        title: "Connection Failed",
+        description: "Please check your bot token and chat ID.",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   const handleLogout = () => {
     logoutMutation.mutate();
   };
 
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
     updateAlertPreferenceMutation.mutate({ alertType, enabled });
+  };
+
+  // Populate Telegram settings from query data
+  useEffect(() => {
+    if (telegramSettings) {
+      setTelegramEnabled(telegramSettings.telegramEnabled || false);
+      setTelegramChatId(telegramSettings.telegramChatId || "");
+      // Don't populate token for security (backend returns "***")
+      if (telegramSettings.telegramBotToken && telegramSettings.telegramBotToken !== "***") {
+        setTelegramBotToken(telegramSettings.telegramBotToken);
+      }
+    }
+  }, [telegramSettings]);
+
+  const handleTelegramSave = () => {
+    updateTelegramMutation.mutate({
+      botToken: telegramBotToken,
+      chatId: telegramChatId,
+      enabled: telegramEnabled
+    });
   };
 
   // Helper function to get category icon
@@ -339,6 +449,136 @@ export default function Settings() {
                 )}
               </div>
             </div>
+          </Card>
+        )}
+
+        {/* Telegram Configuration Section */}
+        {isAuthenticated && user && (
+          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="w-12 h-12 bg-blue-500/20 ring-1 ring-blue-500/30 rounded-full flex items-center justify-center">
+                <Send className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Telegram Notifications</h2>
+                <p className="text-sm text-slate-300">
+                  Configure your personal Telegram bot for alert notifications
+                </p>
+              </div>
+            </div>
+
+            {telegramLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Enable/Disable Toggle */}
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-100">Enable Telegram Notifications</h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Receive real-time alerts via your personal Telegram bot
+                    </p>
+                  </div>
+                  <Switch
+                    checked={telegramEnabled}
+                    onCheckedChange={setTelegramEnabled}
+                    data-testid="toggle-telegram-enabled"
+                    className="data-[state=checked]:bg-blue-500"
+                  />
+                </div>
+
+                {/* Bot Configuration */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="bot-token" className="text-sm font-medium text-slate-200">
+                      Bot Token
+                    </Label>
+                    <Input
+                      id="bot-token"
+                      type="password"
+                      placeholder="Enter your Telegram bot token"
+                      value={telegramBotToken}
+                      onChange={(e) => setTelegramBotToken(e.target.value)}
+                      data-testid="input-telegram-bot-token"
+                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-blue-500"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">
+                      Get this from @BotFather on Telegram
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="chat-id" className="text-sm font-medium text-slate-200">
+                      Chat ID
+                    </Label>
+                    <Input
+                      id="chat-id"
+                      placeholder="Enter your Telegram chat ID"
+                      value={telegramChatId}
+                      onChange={(e) => setTelegramChatId(e.target.value)}
+                      data-testid="input-telegram-chat-id"
+                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-blue-500"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">
+                      Send /start to your bot, then message @userinfobot to get your chat ID
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3">
+                  <Button
+                    onClick={testTelegramConnection}
+                    disabled={testingConnection || !telegramBotToken || !telegramChatId}
+                    variant="outline"
+                    size="sm"
+                    data-testid="button-test-telegram"
+                    className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                  >
+                    {testingConnection ? (
+                      <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mr-2" />
+                    ) : connectionTestResult === 'success' ? (
+                      <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
+                    ) : connectionTestResult === 'error' ? (
+                      <XCircle className="w-4 h-4 mr-2 text-red-400" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    Test Connection
+                  </Button>
+
+                  <Button
+                    onClick={handleTelegramSave}
+                    disabled={updateTelegramMutation.isPending}
+                    size="sm"
+                    data-testid="button-save-telegram"
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    {updateTelegramMutation.isPending ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Save Settings
+                  </Button>
+                </div>
+
+                {/* Help Text */}
+                <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <h4 className="text-sm font-semibold text-blue-300 mb-2">How to Set Up Your Telegram Bot:</h4>
+                  <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
+                    <li>Open Telegram and search for @BotFather</li>
+                    <li>Send /newbot and follow the instructions to create your bot</li>
+                    <li>Copy the bot token provided by BotFather</li>
+                    <li>Send /start to your new bot to activate it</li>
+                    <li>Message @userinfobot to get your chat ID</li>
+                    <li>Enter both values above and test the connection</li>
+                  </ol>
+                </div>
+              </div>
+            )}
           </Card>
         )}
       </div>
