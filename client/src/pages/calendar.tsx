@@ -98,16 +98,19 @@ function SimpleBaseballDiamond({ gameId, inning, isTopInning, isLive }: {
     staleTime: 8000
   });
 
-  // Find the most recent alert for this game to get base runner data
-  const gameAlert = alerts?.find((alert: any) => 
-    alert.gameInfo?.homeTeam?.includes(gameId.substring(0, 6)) || 
-    alert.gameInfo?.awayTeam?.includes(gameId.substring(0, 6)) ||
-    alert.description?.includes(gameId)
-  );
+  // Find the most recent alert for this game that has base runner data
+  const gameAlert = alerts?.filter((alert: any) => 
+    alert.gameId === gameId && (
+      alert.hasFirst || alert.hasSecond || alert.hasThird || 
+      alert.context?.first || alert.context?.second || alert.context?.third ||
+      alert.type === 'BASES_LOADED' || alert.type === 'RISP'
+    )
+  ).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
-  const hasFirst = gameAlert?.hasFirst || false;
-  const hasSecond = gameAlert?.hasSecond || false;
-  const hasThird = gameAlert?.hasThird || false;
+  // Get base runner data from different possible sources
+  const hasFirst = gameAlert?.hasFirst || !!gameAlert?.context?.first || false;
+  const hasSecond = gameAlert?.hasSecond || !!gameAlert?.context?.second || false;
+  const hasThird = gameAlert?.hasThird || !!gameAlert?.context?.third || false;
   const outs = gameAlert?.outs || 0;
   const balls = gameAlert?.balls || 0;
   const strikes = gameAlert?.strikes || 0;
