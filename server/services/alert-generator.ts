@@ -7,6 +7,7 @@ import { AlertDeduplication } from "./alert-deduplication";
 import { sendTelegramAlert, type TelegramConfig } from "./telegram";
 import { SettingsCache } from "./settings-cache";
 import { BasicAI } from "./basic-ai";
+import { AIEnhancementService, GameContext } from './ai-enhancements';
 
 // Import weather service properly
 const weatherService = {
@@ -113,6 +114,7 @@ export class AlertGenerator {
   private deduplication: AlertDeduplication;
   private settingsCache: SettingsCache;
   private ai: BasicAI;
+  private aiEnhancementService: AIEnhancementService;
 
   // V2 RE24-Based Probability System
   private readonly RE24: Record<string, number> = {
@@ -136,6 +138,7 @@ export class AlertGenerator {
     this.deduplication = new AlertDeduplication();
     this.settingsCache = new SettingsCache(storage);
     this.ai = new BasicAI();
+    this.aiEnhancementService = new AIEnhancementService();
   }
 
   // Check if a specific alert type is globally enabled (CACHED - No DB spam!)

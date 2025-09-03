@@ -388,6 +388,14 @@ const ALERT_TYPE_CONFIG = {
             { key: 'STRIKEOUT', label: 'Strikeout', description: 'Batter struck out' },
             { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at plate' },
             { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' }
+        ],
+        'AI Enhancements': [
+            { key: 'AI_ENHANCED_MESSAGES', label: 'AI-Enhanced Messages', description: 'AI adds context and insights to alerts' },
+            { key: 'AI_PREDICTIVE_AT_BAT', label: 'Predictive At-Bat Analysis', description: 'AI predicts contact probability and outcomes' },
+            { key: 'AI_SCORING_PROBABILITY', label: 'Real-Time Scoring Probability', description: 'AI calculates scoring chances' },
+            { key: 'AI_SITUATION_ANALYSIS', label: 'Game Situation Analysis', description: 'AI analyzes pressure situations' },
+            { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes game developments' },
+            { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting insights and ROI analysis' }
         ]
     },
     'NCAAF': {

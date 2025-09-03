@@ -268,7 +268,7 @@ export const storage = {
     try {
       // Check admin user preferences to get current global state
       const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
-      
+
       if (adminUsers.length > 0) {
         const firstAdmin = adminUsers[0];
         const adminPrefs = await db.select()
@@ -277,7 +277,7 @@ export const storage = {
             eq(userAlertPreferences.userId, firstAdmin.id),
             eq(userAlertPreferences.sport, sport.toLowerCase())
           ));
-        
+
         // Start with defaults
         const defaultSettings: Record<string, boolean> = {
           // MLB alerts - all enabled by default
@@ -293,6 +293,15 @@ export const storage = {
           'BLOWOUT': true,
           'FULL_COUNT': true,
           'STRIKEOUT': true,
+          'POWER_HITTER': true,
+          'HOT_HITTER': true,
+          // AI Enhancement Features
+          'AI_ENHANCED_MESSAGES': true,
+          'AI_PREDICTIVE_AT_BAT': true,
+          'AI_SCORING_PROBABILITY': true,
+          'AI_SITUATION_ANALYSIS': true,
+          'AI_EVENT_SUMMARIES': true,
+          'AI_ROI_ALERTS': true,
           // NFL alerts
           'RED_ZONE': true,
           'FOURTH_DOWN': true,
@@ -323,6 +332,13 @@ export const storage = {
         'RISP': true, 'BASES_LOADED': true, 'RUNNERS_1ST_2ND': true, 'CLOSE_GAME': true,
         'CLOSE_GAME_LIVE': true, 'LATE_PRESSURE': true, 'HOME_RUN_LIVE': true,
         'HIGH_SCORING': true, 'SHUTOUT': true, 'BLOWOUT': true, 'FULL_COUNT': true, 'STRIKEOUT': true,
+        'POWER_HITTER': true, 'HOT_HITTER': true,
+        'AI_ENHANCED_MESSAGES': true,
+        'AI_PREDICTIVE_AT_BAT': true,
+        'AI_SCORING_PROBABILITY': true,
+        'AI_SITUATION_ANALYSIS': true,
+        'AI_EVENT_SUMMARIES': true,
+        'AI_ROI_ALERTS': true,
         'RED_ZONE': true, 'FOURTH_DOWN': true, 'TWO_MINUTE_WARNING': true,
         'CLUTCH_TIME': true, 'OVERTIME': true, 'POWER_PLAY': true, 'EMPTY_NET': true
       };
@@ -335,10 +351,10 @@ export const storage = {
   async updateGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy: string) {
     try {
       console.log(`Global alert setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
-      
+
       // When admin changes global settings, apply to all users (including admin)
       const users = await this.getAllUsers();
-      
+
       for (const user of users) {
         try {
           await this.setUserAlertPreference(user.id, sport.toLowerCase(), alertType, enabled);
@@ -346,7 +362,7 @@ export const storage = {
           console.error(`Failed to update ${alertType} for user ${user.id}:`, userError);
         }
       }
-      
+
       console.log(`✅ Successfully updated ${sport}.${alertType} = ${enabled} for all ${users.length} users`);
       return;
     } catch (error) {
@@ -358,12 +374,12 @@ export const storage = {
   async updateGlobalAlertCategory(sport: string, alertKeys: string[], enabled: boolean, updatedBy: string) {
     try {
       console.log(`Global alert category updated: ${sport} [${alertKeys.join(',')}] = ${enabled} by admin ${updatedBy}`);
-      
+
       // Apply each alert key change
       for (const alertKey of alertKeys) {
         await this.updateGlobalAlertSetting(sport, alertKey, enabled, updatedBy);
       }
-      
+
       return;
     } catch (error) {
       console.error('Error updating global alert category:', error);
@@ -375,7 +391,7 @@ export const storage = {
     try {
       const users = await this.getAllUsers();
       let updatedCount = 0;
-      
+
       for (const user of users) {
         try {
           // Convert settings to preferences format
@@ -383,18 +399,18 @@ export const storage = {
             alertType,
             enabled: enabled === true
           }));
-          
+
           // Apply each preference
           for (const pref of preferences) {
             await this.setUserAlertPreference(user.id, sport.toLowerCase(), pref.alertType, pref.enabled);
           }
-          
+
           updatedCount++;
         } catch (userError) {
           console.error(`Failed to update settings for user ${user.id}:`, userError);
         }
       }
-      
+
       console.log(`Applied global ${sport} alert settings to ${updatedCount} users by admin ${updatedBy}`);
       return { usersUpdated: updatedCount, totalUsers: users.length };
     } catch (error) {
@@ -421,6 +437,56 @@ export const storage = {
     } catch (error) {
       console.error('Error setting master alert enabled:', error);
       throw error;
+    }
+  },
+
+  // Get user's AI enhancement preferences
+  async getUserAIPreferences(userId: string): Promise<any> {
+    try {
+      const preferences = await db.select()
+        .from(userAlertPreferences)
+        .where(and(
+          eq(userAlertPreferences.userId, userId),
+          eq(userAlertPreferences.sport, 'mlb')
+        ));
+
+      const aiPrefs = {
+        AI_ENHANCED_MESSAGES: false,
+        AI_PREDICTIVE_AT_BAT: false,
+        AI_SCORING_PROBABILITY: false,
+        AI_SITUATION_ANALYSIS: false,
+        AI_EVENT_SUMMARIES: false,
+        AI_ROI_ALERTS: false
+      };
+
+      preferences.forEach(pref => {
+        if (pref.alertType.startsWith('AI_')) {
+          aiPrefs[pref.alertType as keyof typeof aiPrefs] = pref.enabled;
+        }
+      });
+
+      return aiPrefs;
+    } catch (error) {
+      console.error('Error getting user AI preferences:', error);
+      return {
+        AI_ENHANCED_MESSAGES: false,
+        AI_PREDICTIVE_AT_BAT: false,
+        AI_SCORING_PROBABILITY: false,
+        AI_SITUATION_ANALYSIS: false,
+        AI_EVENT_SUMMARIES: false,
+        AI_ROI_ALERTS: false
+      };
+    }
+  },
+
+  // Check if alert is globally enabled by admin
+  async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
+    try {
+      const globalSettings = await this.getGlobalAlertSettings(sport);
+      return globalSettings[alertType] === true;
+    } catch (error) {
+      console.error(`Error checking if alert ${alertType} is globally enabled for ${sport}:`, error);
+      return false; // Default to false if error occurs
     }
   }
 };
