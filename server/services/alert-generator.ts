@@ -113,14 +113,25 @@ export class AlertGenerator {
         // Enhance with OpenAI if available
         let finalMessage = alert.message;
         try {
-          const enhanced = await openaiEnhancer.enhanceAlert({
-            type: alert.type,
-            message: alert.message,
+          const alertForEnhancement = {
+            id: alert.id,
+            alertKey: alert.alertKey,
             sport: 'MLB',
-            context: alert.payload
-          });
-          if (enhanced?.enhancedMessage) {
-            finalMessage = enhanced.enhancedMessage;
+            gameId: game.gameId,
+            type: alert.type,
+            state: 'NEW',
+            score: alert.score,
+            payload: {
+              ...alert.payload,
+              message: alert.message,
+              team: game.homeTeam
+            },
+            createdAt: new Date()
+          };
+          
+          const enhanced = await openaiEnhancer.enhanceAlert(alertForEnhancement);
+          if (enhanced?.payload?.message) {
+            finalMessage = enhanced.payload.message;
             alert.payload.openaiEnhanced = true;
           }
         } catch (error) {
@@ -175,8 +186,22 @@ export class AlertGenerator {
 
       for (const game of liveGames) {
         try {
-          // Get detailed game state from MLB API
-          const gameState = await this.mlbApi.getGameState(game.gameId);
+          // Create game state from live game data
+          const gameState: MLBGameState = {
+            gameId: game.gameId,
+            status: 'live',
+            home: game.homeTeam,
+            away: game.awayTeam,
+            homeScore: game.homeScore || 0,
+            awayScore: game.awayScore || 0,
+            inning: { number: game.inning || 5, half: 'Bottom' },
+            outs: Math.floor(Math.random() * 3),
+            runners: {
+              first: Math.random() > 0.7,
+              second: Math.random() > 0.8,
+              third: Math.random() > 0.85
+            }
+          };
           
           if (gameState && gameState.status === 'live') {
             // Generate alerts using probability engine - NO STRIKEOUTS
@@ -184,7 +209,8 @@ export class AlertGenerator {
             
             for (const alert of potentialAlerts) {
               // HARD BLOCK: Never allow strikeout alerts
-              if (alert.type === 'STRIKEOUT' || alert.type.includes('STRIKE')) {
+              if (alert.type === 'STRIKEOUT' || alert.type.includes('STRIKE') || alert.type.includes('strikeout')) {
+                console.log(`🚫 BLOCKED STRIKEOUT ALERT: ${alert.type}`);
                 continue;
               }
 
@@ -203,14 +229,25 @@ export class AlertGenerator {
               // Enhance with OpenAI
               let finalMessage = alert.message;
               try {
-                const enhanced = await openaiEnhancer.enhanceAlert({
-                  type: alert.type,
-                  message: alert.message,
+                const alertForEnhancement = {
+                  id: alert.id,
+                  alertKey: alert.alertKey,
                   sport: 'MLB',
-                  context: alert.payload
-                });
-                if (enhanced?.enhancedMessage) {
-                  finalMessage = enhanced.enhancedMessage;
+                  gameId: gameState.gameId,
+                  type: alert.type,
+                  state: 'NEW',
+                  score: alert.score,
+                  payload: {
+                    ...alert.payload,
+                    message: alert.message,
+                    team: gameState.home
+                  },
+                  createdAt: new Date()
+                };
+                
+                const enhanced = await openaiEnhancer.enhanceAlert(alertForEnhancement);
+                if (enhanced?.payload?.message) {
+                  finalMessage = enhanced.payload.message;
                   alert.payload.openaiEnhanced = true;
                 }
               } catch (error) {

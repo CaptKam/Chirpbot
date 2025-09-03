@@ -1361,7 +1361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setInterval(async () => {
     try {
       console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-      await alertGenerator.generateLiveGameAlerts();
+      await alertGenerator.checkLiveGamesForAlerts();
       
       // STEP 4: Check for OpenAI live alert updates
       try {
