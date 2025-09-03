@@ -84,23 +84,32 @@ function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
 }) {
   const { data: enhancedData } = useQuery({
     queryKey: ['enhanced-game', gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/${gameId}/live`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch live game data");
+      return response.json();
+    },
     enabled: isLive,
     refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
-    staleTime: 8000
+    staleTime: 8000,
+    retry: 3,
+    retryDelay: 1000
   });
 
   return (
     <BaseballDiamond 
-      runners={(enhancedData as any)?.runners || {
+      runners={enhancedData?.runners || {
         first: false,
         second: false,
         third: false
       }}
-      inning={inning}
-      isTopInning={isTopInning}
-      outs={(enhancedData as any)?.outs || 0}
-      balls={(enhancedData as any)?.balls || 0}
-      strikes={(enhancedData as any)?.strikes || 0}
+      inning={enhancedData?.inning || inning}
+      isTopInning={enhancedData?.isTopInning ?? isTopInning}
+      outs={enhancedData?.outs || 0}
+      balls={enhancedData?.balls || 0}
+      strikes={enhancedData?.strikes || 0}
       size="sm"
       showCount={isLive}
     />

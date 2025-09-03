@@ -7,20 +7,20 @@ export class MLBApiService {
     try {
       const targetDate = date || getPacificDate();
       const url = `${this.baseUrl}/schedule?sportId=1&date=${targetDate}&hydrate=team,linescore,venue,game(content(summary))`;
-      
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`MLB API error: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (!data.dates || data.dates.length === 0) {
         return [];
       }
 
       const games = data.dates[0].games || [];
-      
+
       return games.map((game: any) => ({
         id: game.gamePk.toString(),
         homeTeam: { id: game.teams.home.team.id.toString(), name: game.teams.home.team.name, abbreviation: game.teams.home.team.abbreviation, score: game.teams.home.score || 0 },
@@ -52,20 +52,35 @@ export class MLBApiService {
     }
   }
 
-  async getEnhancedGameState(gameId: string): Promise<any> {
+  async getEnhancedGameData(gameId: string): Promise<any> {
     try {
-      const liveFeed = await this.getLiveFeed(gameId);
-      if (!liveFeed) return null;
+      const response = await fetch(
+        `https://statsapi.mlb.com/api/v1.1/game/${gameId}/feed/live`
+      );
 
-      const liveData = liveFeed.liveData || {};
-      const gameData = liveFeed.gameData || {};
+      if (!response.ok) {
+        throw new Error(`MLB API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const liveData = data.liveData || {};
+      const gameData = data.gameData || {};
       const linescore = liveData.linescore || {};
       const currentPlay = liveData.plays?.currentPlay;
 
-      // Extract base runner information
+      // Extract base runner information from current play or linescore
       const runners = { first: false, second: false, third: false };
-      
-      // Check offense data for runners
+
+      // First try current play runners
+      if (currentPlay?.runners) {
+        currentPlay.runners.forEach((runner: any) => {
+          if (runner.movement?.end === '1B') runners.first = true;
+          if (runner.movement?.end === '2B') runners.second = true;
+          if (runner.movement?.end === '3B') runners.third = true;
+        });
+      }
+
+      // Also check offense data for runners
       const offense = linescore.offense;
       if (offense) {
         if (offense.first) runners.first = true;
@@ -83,56 +98,37 @@ export class MLBApiService {
       const inning = linescore.currentInning || 1;
       const isTopInning = linescore.inningState === 'Top';
 
-      // Get weather from game data
-      const weather = gameData.weather || {};
-      const wind = weather.wind || '';
-      const temperature = weather.temp || null;
-      
-      // Parse wind (e.g., "9 mph, In From LF")
-      let windSpeed = 0;
-      let windDirection = 'N';
-      if (wind) {
-        const windMatch = wind.match(/(\d+)\s*mph/i);
-        if (windMatch) windSpeed = parseInt(windMatch[1]);
-        
-        const directionMap: Record<string, string> = {
-          'RF': 'E', 'LF': 'W', 'CF': 'N',
-          'Right': 'E', 'Left': 'W', 'Center': 'N',
-          'In': 'N', 'Out': 'S'
-        };
-        
-        for (const [key, value] of Object.entries(directionMap)) {
-          if (wind.includes(key)) {
-            windDirection = value;
-            break;
-          }
-        }
-      }
+      console.log(`🔍 Live data for game ${gameId}:`, {
+        runners, balls, strikes, outs, inning, isTopInning
+      });
 
       return {
-        id: gameId,
-        inning,
-        isTopInning,
-        outs,
+        runners,
         balls,
         strikes,
-        runners,
-        weather: {
-          temperature: temperature ? parseInt(temperature) : null,
-          windSpeed,
-          windDirection,
-          condition: weather.condition || 'Clear'
-        }
+        outs,
+        inning,
+        isTopInning,
+        gameState: liveData.gameState,
+        lastUpdated: new Date().toISOString()
       };
     } catch (error) {
-      console.error('Error fetching enhanced game state:', error);
-      return null;
+      console.error('Error fetching enhanced game data:', error);
+      return {
+        runners: { first: false, second: false, third: false },
+        balls: 0,
+        strikes: 0,
+        outs: 0,
+        inning: 1,
+        isTopInning: true,
+        error: 'Failed to fetch live data'
+      };
     }
   }
 
   private mapGameStatus(detailedState: string): string {
     const lowerState = detailedState.toLowerCase();
-    
+
     if (lowerState.includes('progress') || lowerState.includes('live') || lowerState.includes('inning')) {
       return 'live';
     }
@@ -142,7 +138,7 @@ export class MLBApiService {
     if (lowerState.includes('delayed') || lowerState.includes('postponed')) {
       return 'delayed';
     }
-    
+
     return 'scheduled';
   }
 }

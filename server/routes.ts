@@ -28,8 +28,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
 
-  function heartbeat(this: any) { 
-    this.isAlive = true; 
+  function heartbeat(this: any) {
+    this.isAlive = true;
   }
 
   wss.on('connection', (ws: any) => {
@@ -53,26 +53,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/test-wind-speeds', async (req, res) => {
     try {
       const { weatherService } = await import('./services/weather-service');
-      
+
       // Test a few different stadiums
       const testStadiums = [
         'Boston Red Sox',
-        'Chicago Cubs', 
+        'Chicago Cubs',
         'San Francisco Giants',
         'Colorado Rockies',
         'Houston Astros'
       ];
-      
+
       const windData = [];
-      
+
       for (const team of testStadiums) {
         const weather = await weatherService.getWeatherForTeam(team);
         const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
         const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-        
+
         windData.push({
           team,
-          stadium: team === 'Boston Red Sox' ? 'Fenway Park' : 
+          stadium: team === 'Boston Red Sox' ? 'Fenway Park' :
                   team === 'Chicago Cubs' ? 'Wrigley Field' :
                   team === 'San Francisco Giants' ? 'Oracle Park' :
                   team === 'Colorado Rockies' ? 'Coors Field' : 'Minute Maid Park',
@@ -81,11 +81,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           windDescription: windDesc,
           temperature: weather.temperature,
           homeRunFactor: homeRunFactor,
-          weatherImpact: homeRunFactor > 1.1 ? 'Favorable for HRs' : 
+          weatherImpact: homeRunFactor > 1.1 ? 'Favorable for HRs' :
                         homeRunFactor < 0.9 ? 'Hurts HR distance' : 'Neutral'
         });
       }
-      
+
       res.json({
         timestamp: new Date().toISOString(),
         source: process.env.OPENWEATHERMAP_API_KEY ? 'Live OpenWeatherMap API' : 'Fallback Data',
@@ -252,6 +252,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching enhanced game data:', error);
       res.status(500).json({ message: 'Failed to fetch enhanced game data' });
+    }
+  });
+
+  // Get enhanced live game data for baseball diamond display
+  app.get("/api/games/:gameId/live", async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { MLBApiService } = await import('./services/mlb-api');
+      const mlbService = new MLBApiService();
+      const liveData = await mlbService.getEnhancedGameData(gameId);
+      res.json(liveData);
+    } catch (error) {
+      console.error('Error fetching live game data:', error);
+      res.status(500).json({ error: 'Failed to fetch live game data' });
     }
   });
 
@@ -702,9 +716,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get real alerts from database
       const result = await db.execute(sql`
-        SELECT id, type, game_id, sport, score, payload, created_at 
-        FROM alerts 
-        ORDER BY created_at DESC 
+        SELECT id, type, game_id, sport, score, payload, created_at
+        FROM alerts
+        ORDER BY created_at DESC
         LIMIT ${limit}
       `);
 
@@ -790,7 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`📅 Current Pacific Date: ${getPacificDate()}`);
   console.log(`🕐 Current Pacific Time: ${formatPacificTime()}`);
 
-  // Weather test endpoint  
+  // Weather test endpoint
   app.get('/api/test-weather/:team', async (req, res) => {
     try {
       const { weatherService } = await import('./services/weather-service');
@@ -987,9 +1001,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For now, we'll just acknowledge the request
       console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin`);
 
-      res.json({ 
+      res.json({
         message: `Master alerts ${enabled ? 'enabled' : 'disabled'} successfully`,
-        enabled 
+        enabled
       });
     } catch (error) {
       console.error('Error updating master alerts:', error);
@@ -1008,12 +1022,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the category settings which will apply to all users
       await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
 
-      res.json({ 
+      res.json({
         message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
         sport,
         category,
         alertKeys,
-        enabled 
+        enabled
       });
     } catch (error) {
       console.error('Error updating category settings:', error);
@@ -1032,11 +1046,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the global setting which will apply to all users
       await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
 
-      res.json({ 
+      res.json({
         message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
         sport,
         alertType,
-        enabled 
+        enabled
       });
     } catch (error) {
       console.error('Error updating alert setting:', error);
@@ -1055,7 +1069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the storage method to apply settings to all users
       const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
 
-      res.json({ 
+      res.json({
         message: `Global settings applied to ${result.usersUpdated} users successfully`,
         sport,
         ...result
