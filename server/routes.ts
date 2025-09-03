@@ -1020,12 +1020,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Default settings for all alerts (if not in database, they're enabled by default)
       const defaultSettings = {
         // MLB alerts - all enabled by default
+        // Probability Engine Alerts (enabled by default)
+        'RISP_CHANCE': true,
+        'SCORING_PROBABILITY': true,
+        'CLOSE_GAME_LATE': true,
+        'LATE_PRESSURE': true,
+        'NINTH_TIE': true,
+        // Weather & Power Alerts (enabled by default)
+        'WIND_JETSTREAM': true,
+        'HR_HITTER_AT_BAT': true,
+        // Legacy Alerts (kept for backward compatibility)
         'RISP': true,
         'BASES_LOADED': true,
         'RUNNERS_1ST_2ND': true,
         'CLOSE_GAME': true,
         'CLOSE_GAME_LIVE': true,
-        'LATE_PRESSURE': true,
         'HOME_RUN_LIVE': true,
         'HIGH_SCORING': true,
         'SHUTOUT': true,

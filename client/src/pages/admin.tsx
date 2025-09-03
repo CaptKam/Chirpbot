@@ -30,13 +30,23 @@ import { useAuth } from "@/hooks/useAuth";
 // Alert configuration from settings.tsx
 const ALERT_TYPE_CONFIG = {
   MLB: {
-    "Game Situations": [
-      { key: "RISP", label: "RISP (Runners in Scoring Position)", description: "Alert when runners are on 2nd or 3rd base" },
-      { key: "BASES_LOADED", label: "Bases Loaded", description: "Alert when all three bases are occupied" },
-      { key: "RUNNERS_1ST_2ND", label: "Runners on 1st & 2nd", description: "Prime scoring opportunity alert" },
-      { key: "CLOSE_GAME", label: "Close Game", description: "Games with score difference ≤ 3 runs" },
-      { key: "CLOSE_GAME_LIVE", label: "Live Close Game", description: "Real-time close game situations" },
-      { key: "LATE_PRESSURE", label: "Late Inning Pressure", description: "8th inning or later with close score" },
+    "Probability Engine": [
+      { key: "RISP_CHANCE", label: "RISP Probability", description: "Advanced RISP scoring probability with RE24 calculations" },
+      { key: "SCORING_PROBABILITY", label: "High Scoring Probability", description: "Situations with 100%+ run expectancy" },
+      { key: "CLOSE_GAME_LATE", label: "Close Game Late", description: "7th inning+ within one run (probability-based)" },
+      { key: "LATE_PRESSURE", label: "Late Pressure", description: "8th+ inning pressure situations (RE24 enhanced)" },
+      { key: "NINTH_TIE", label: "Ninth Inning Tie", description: "Maximum pressure tie games in 9th+ innings" },
+    ],
+    "Weather & Power": [
+      { key: "WIND_JETSTREAM", label: "Wind Assist", description: "Tailwind conditions favoring home runs" },
+      { key: "HR_HITTER_AT_BAT", label: "Power Hitter Up", description: "High-power batter with HR potential" },
+    ],
+    "Legacy Alerts": [
+      { key: "RISP", label: "RISP (Legacy)", description: "Basic runners in scoring position alerts" },
+      { key: "BASES_LOADED", label: "Bases Loaded (Legacy)", description: "Simple bases loaded detection" },
+      { key: "RUNNERS_1ST_2ND", label: "Runners 1st & 2nd (Legacy)", description: "Basic 1st & 2nd base alerts" },
+      { key: "CLOSE_GAME", label: "Close Game (Legacy)", description: "Basic close game detection" },
+      { key: "CLOSE_GAME_LIVE", label: "Live Close Game (Legacy)", description: "Basic real-time close games" },
     ],
     "Scoring Events": [
       { key: "HOME_RUN_LIVE", label: "Home Run (Live)", description: "Real-time home run alerts as they happen" },

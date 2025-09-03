@@ -4,6 +4,7 @@ import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
 import { weatherService } from "./weather-service";
 import { storage } from "../storage";
+import { evaluateGameForAlerts, type MLBGameState } from "./mlb-probability-engine";
 
 interface AlertData {
   type: string;
@@ -268,14 +269,33 @@ export class AlertGenerator {
       const liveData = await this.fetchDetailedLiveData(game.gameId);
       if (!liveData) return 0;
 
-      // Generate alerts based on detailed game state
-      alertCount += await this.generateBaseRunnerAlerts(game, liveData);
-      alertCount += await this.generateInningPressureAlerts(game, liveData);
-      alertCount += await this.generateAtBatAlerts(game, liveData);
+      // Transform game data to MLBGameState format for probability engine
+      const gameState = await this.transformToMLBGameState(game, liveData);
+      
+      // Use the advanced probability engine for sophisticated alert generation
+      const probabilityAlerts = evaluateGameForAlerts(gameState);
+      
+      // Process and save each probability alert
+      for (const alert of probabilityAlerts) {
+        // Check if this alert type is enabled before saving
+        const isEnabled = await this.isAlertTypeEnabled('MLB', alert.type);
+        if (isEnabled) {
+          alertCount += await this.saveRealTimeAlert(
+            alert.alertKey,
+            alert.type,
+            alert.gameId,
+            alert.message,
+            alert.payload,
+            alert.score
+          );
+        }
+      }
+
+      // Fallback: Keep existing home run detection for immediate events
       alertCount += await this.generateScoringAlerts(game, liveData);
 
     } catch (error) {
-      console.error(`Error fetching live data for game ${game.gameId}:`, error);
+      console.error(`Error in probability engine for game ${game.gameId}:`, error);
       // Fallback to basic alerts
       alertCount += await this.generateBasicLiveAlerts(game);
     }
@@ -292,6 +312,60 @@ export class AlertGenerator {
       console.error(`Failed to fetch live data for game ${gameId}:`, error);
       return null;
     }
+  }
+
+  private async transformToMLBGameState(game: any, liveData: any): Promise<MLBGameState> {
+    // Extract basic game info
+    const offense = liveData?.linescore?.offense || {};
+    const inning = liveData?.linescore?.currentInning || 1;
+    const isTopInning = liveData?.linescore?.isTopInning;
+    const outs = liveData?.linescore?.outs || 0;
+    
+    // Extract runner information
+    const runners = {
+      first: !!offense.first,
+      second: !!offense.second,
+      third: !!offense.third
+    };
+
+    // Extract current batter info if available
+    const currentPlay = liveData?.plays?.currentPlay;
+    const batter = currentPlay?.matchup?.batter;
+    const batterStats = batter?.stats?.batting?.statGroup || {};
+    
+    // Get weather for this game
+    const weather = await weatherService.getWeatherForTeam(game.homeTeam);
+    
+    // Transform to MLBGameState format
+    const gameState: MLBGameState = {
+      gameId: game.gameId,
+      status: 'LIVE',
+      home: game.homeTeam,
+      away: game.awayTeam,
+      homeScore: game.homeScore || 0,
+      awayScore: game.awayScore || 0,
+      inning: {
+        number: inning,
+        half: isTopInning ? 'Top' : 'Bottom'
+      },
+      outs: outs,
+      runners: runners,
+      batter: batter ? {
+        name: batter.fullName || 'Unknown',
+        hr: parseInt(batterStats.homeRuns) || 0,
+        pa: parseInt(batterStats.plateAppearances) || 0,
+        iso: parseFloat(batterStats.iso) || 0.15, // Default ISO if not available
+        slg: parseFloat(batterStats.sluggingPercentage) || 0.400
+      } : undefined,
+      weather: {
+        roofOpen: weather.condition !== 'indoor', // Assume outdoor unless explicitly indoor
+        windOutToOutfield: weather.windDirection ? 
+          ['N', 'NE', 'E', 'SE', 'S'].includes(weather.windDirection) : false,
+        windMph: weather.windSpeed || 0
+      }
+    };
+
+    return gameState;
   }
 
   private async generateBaseRunnerAlerts(game: any, liveData: any): Promise<number> {
