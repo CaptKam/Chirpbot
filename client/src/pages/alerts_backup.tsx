@@ -161,8 +161,8 @@ export default function AlertsPage() {
                 alertData={alert}
                 className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
               >
-                <div className="p-5" key={`alert-${alert.id}-${Date.now()}`}>
-                  {/* ✨ REDESIGNED: Clean header with Alert type + Confidence + Time */}
+                <div className="p-5">
+                  {/* Clean header: Alert type + Confidence + Time */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <Badge 
@@ -179,19 +179,19 @@ export default function AlertsPage() {
                     <span className="text-slate-400 text-xs font-medium">{formatTime(alert.createdAt)}</span>
                   </div>
                   
-                  {/* ✨ REDESIGNED: Main alert message - larger, more prominent */}
-                  <h3 className="text-xl font-black text-slate-100 leading-tight mb-4">
+                  {/* Main alert message - larger, more prominent */}
+                  <h3 className="text-lg font-bold text-slate-100 leading-tight mb-3">
                     {alert.message}
                   </h3>
                   
-                  {/* ✨ REDESIGNED: Team matchup - clean, single display (no duplicates) */}
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-4">
-                      <span className="text-base font-bold text-slate-200 tracking-wide">{alert.homeTeam}</span>
-                      <span className="text-slate-400 text-sm font-black bg-slate-700/40 px-2 py-1 rounded">VS</span>
-                      <span className="text-base font-bold text-slate-200 tracking-wide">{alert.awayTeam}</span>
+                  {/* Team matchup - clean, single display */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-slate-200">{alert.homeTeam}</span>
+                      <span className="text-slate-400 text-xs font-bold">VS</span>
+                      <span className="text-sm font-semibold text-slate-200">{alert.awayTeam}</span>
                     </div>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full tracking-wider">
+                    <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
                       {alert.sport}
                     </span>
                   </div>
