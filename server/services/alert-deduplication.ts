@@ -46,24 +46,25 @@ export class AlertDeduplication {
     const now = Date.now();
     const cached = this.recentAlerts.get(key);
 
-    // Define timeframes based on tier and type
+    // Define timeframes based on tier and type - MUCH more permissive
     const getTimeframe = (type: string, tier: string): { initial: number; realert: number } => {
       switch (type) {
-        case 'RISP':
-        case 'RUNNERS_1ST_2ND':
-          return { initial: 60000, realert: 180000 }; // 1 min / 3 min
-        case 'BASES_LOADED':
-          return { initial: 90000, realert: 300000 }; // 1.5 min / 5 min
-        case 'CLOSE_GAME':
-        case 'CLOSE_GAME_LIVE':
-          return { initial: 180000, realert: 600000 }; // 3 min / 10 min
         case 'STRIKEOUT':
+          return { initial: 5000, realert: 30000 }; // 5s / 30s - Allow more strikeouts
         case 'FULL_COUNT':
-          return { initial: 30000, realert: 120000 }; // 30s / 2 min
+          return { initial: 10000, realert: 60000 }; // 10s / 1 min
         case 'HOME_RUN_LIVE':
           return { initial: 0, realert: 0 }; // Always allow
-        default:
+        case 'RISP':
+        case 'RUNNERS_1ST_2ND':
+          return { initial: 30000, realert: 120000 }; // 30s / 2 min
+        case 'BASES_LOADED':
+          return { initial: 45000, realert: 180000 }; // 45s / 3 min
+        case 'CLOSE_GAME':
+        case 'CLOSE_GAME_LIVE':
           return { initial: 60000, realert: 300000 }; // 1 min / 5 min
+        default:
+          return { initial: 20000, realert: 120000 }; // 20s / 2 min - Much more permissive
       }
     };
 
@@ -71,6 +72,7 @@ export class AlertDeduplication {
 
     if (!cached) {
       // First occurrence - allow
+      console.log(`🟢 DEDUP: Allowing first occurrence of ${alertKey.type} for game ${alertKey.gameId}`);
       this.recentAlerts.set(key, {
         timestamp: now,
         count: 1,
@@ -82,9 +84,11 @@ export class AlertDeduplication {
 
     const timeSinceFirst = now - cached.timestamp;
     
+    console.log(`🔍 DEDUP: ${alertKey.type} - Time since first: ${timeSinceFirst}ms, Initial: ${timeframe.initial}ms, Realert: ${timeframe.realert}ms`);
+    
     // Check if enough time has passed for realert
     if (timeSinceFirst >= timeframe.realert) {
-      // Update cache for realert
+      console.log(`🟢 DEDUP: Allowing realert for ${alertKey.type} after ${timeSinceFirst}ms`);
       this.recentAlerts.set(key, {
         timestamp: now,
         count: cached.count + 1,
@@ -96,10 +100,13 @@ export class AlertDeduplication {
 
     // Within initial timeframe - block
     if (timeSinceFirst < timeframe.initial) {
+      console.log(`🔴 DEDUP: Blocking ${alertKey.type} - too soon (${timeSinceFirst}ms < ${timeframe.initial}ms)`);
       return false;
     }
 
-    return false; // Default to blocking
+    // Between initial and realert - allow (this was missing!)
+    console.log(`🟢 DEDUP: Allowing ${alertKey.type} - between timeframes`);
+    return true;
   }
 
   // Clean up old entries
