@@ -523,63 +523,56 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-5" key={`alert-${alertData.id}-${Date.now()}`}>
-              {/* Alert Header - Type, Priority & Time */}
-              <div className="flex items-center justify-between mb-3">
+            <div className="p-3" key={`alert-${alertData.id}-${Date.now()}`}>
+              {/* Compact Header */}
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
+                  <div className={`w-2 h-2 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
                   <Badge 
                     variant="outline" 
-                    className="px-2 py-1 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                    className="px-1.5 py-0.5 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
                   >
-                    {alertData.type.replace(/_/g, ' ')}
+                    {alertData.sport}
                   </Badge>
+                  <span className="text-xs text-slate-400">{alertData.type.replace(/_/g, ' ')}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-emerald-400">{alertData.confidence}%</span>
-                  <span className="text-slate-400 text-xs">{formatTime(alertData.createdAt)}</span>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-emerald-400 font-bold">{alertData.confidence}%</span>
+                  <span className="text-slate-400">{formatTime(alertData.createdAt)}</span>
                 </div>
               </div>
 
-              {/* Team Matchup - Visual & Clean */}
-              <div className="bg-gradient-to-r from-slate-800/40 to-slate-700/40 rounded-lg p-4 mb-4 border border-slate-600/30">
+              {/* Compact Team Matchup */}
+              <div className="bg-gradient-to-r from-slate-800/40 to-slate-700/40 rounded-lg p-2 mb-2 border border-slate-600/30">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <div className="text-center">
-                      <div className="text-sm font-bold text-slate-300 mb-1">{alertData.awayTeam?.split(' ').pop()}</div>
-                      <div className="text-2xl font-black text-white">{alertData.context?.awayScore ?? alertData.awayScore ?? '-'}</div>
+                      <div className="text-xs font-medium text-slate-300">{alertData.awayTeam?.split(' ').pop()}</div>
+                      <div className="text-lg font-black text-white">{alertData.context?.awayScore ?? alertData.awayScore ?? '-'}</div>
                     </div>
-                    <div className="px-3 py-2 bg-slate-600/50 rounded-lg">
-                      <div className="text-xs text-slate-400 uppercase tracking-wider">@ </div>
-                    </div>
+                    <div className="text-xs text-slate-400">@</div>
                     <div className="text-center">
-                      <div className="text-sm font-bold text-slate-300 mb-1">{alertData.homeTeam?.split(' ').pop()}</div>
-                      <div className="text-2xl font-black text-white">{alertData.context?.homeScore ?? alertData.homeScore ?? '-'}</div>
+                      <div className="text-xs font-medium text-slate-300">{alertData.homeTeam?.split(' ').pop()}</div>
+                      <div className="text-lg font-black text-white">{alertData.context?.homeScore ?? alertData.homeScore ?? '-'}</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-full mb-1">
-                      {alertData.sport}
-                    </div>
-                    {/* MLB: Inning Display */}
+                    {/* Game State Indicator */}
                     {alertData.sport === 'MLB' && alertData.context?.inning && (
                       <div className="text-xs text-slate-400">
                         {alertData.context.isTopInning ? 'T' : 'B'}{alertData.context.inning}
                       </div>
                     )}
-                    {/* NFL/NCAAF/CFL: Quarter Display */}
                     {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.quarter && (
                       <div className="text-xs text-slate-400">
                         Q{alertData.context.quarter}
                       </div>
                     )}
-                    {/* NBA: Quarter Display */}
                     {alertData.sport === 'NBA' && alertData.context?.quarter && (
                       <div className="text-xs text-slate-400">
                         Q{alertData.context.quarter}
                       </div>
                     )}
-                    {/* NHL: Period Display */}
                     {alertData.sport === 'NHL' && alertData.context?.period && (
                       <div className="text-xs text-slate-400">
                         P{alertData.context.period}
@@ -589,190 +582,68 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Key Situation Info - Visual Icons */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {/* Game Situation - Multi-Sport */}
-                {/* MLB: Outs */}
+              {/* Compact Game Situation */}
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {/* MLB Specific */}
                 {alertData.sport === 'MLB' && alertData.context?.outs !== undefined && (
-                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400 mb-1">OUTS</div>
-                    <div className="text-lg font-bold text-white">{alertData.context.outs}</div>
+                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400">OUTS</div>
+                    <div className="text-sm font-bold text-white">{alertData.context.outs}</div>
                   </div>
                 )}
 
-                {/* NFL: Down & Distance */}
-                {alertData.sport === 'NFL' && alertData.context?.down !== undefined && (
-                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400 mb-1">DOWN</div>
-                    <div className="text-lg font-bold text-white">
-                      {alertData.context.down} & {alertData.context.yardsToGo || 10}
-                    </div>
-                  </div>
-                )}
-
-                {/* NBA: Quarter/Period */}
-                {(alertData.sport === 'NBA' || alertData.sport === 'NHL') && alertData.context?.quarter !== undefined && (
-                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400 mb-1">{alertData.sport === 'NBA' ? 'QTR' : 'PERIOD'}</div>
-                    <div className="text-lg font-bold text-white">{alertData.context.quarter}</div>
-                  </div>
-                )}
-
-                {/* NCAAF: Down & Distance */}
-                {alertData.sport === 'NCAAF' && alertData.context?.down !== undefined && (
-                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400 mb-1">DOWN</div>
-                    <div className="text-lg font-bold text-white">
-                      {alertData.context.down} & {alertData.context.yardsToGo || 10}
-                    </div>
-                  </div>
-                )}
-
-                {/* CFL: Down & Distance */}
-                {alertData.sport === 'CFL' && alertData.context?.down !== undefined && (
-                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400 mb-1">DOWN</div>
-                    <div className="text-lg font-bold text-white">
-                      {alertData.context.down} & {alertData.context.yardsToGo || 10}
-                    </div>
-                  </div>
-                )}
-
-                {/* Count/Time - Multi-Sport */}
-                {/* MLB: Ball-Strike Count */}
                 {alertData.sport === 'MLB' && (alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
-                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400 mb-1">COUNT</div>
-                    <div className="text-lg font-bold text-white">
+                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400">COUNT</div>
+                    <div className="text-sm font-bold text-white">
                       {alertData.context?.balls ?? 0}-{alertData.context?.strikes ?? 0}
                     </div>
                   </div>
                 )}
 
-                {/* NFL/NCAAF/CFL: Time Remaining */}
-                {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.timeRemaining && (
-                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400 mb-1">TIME</div>
-                    <div className="text-lg font-bold text-white">{alertData.context.timeRemaining}</div>
+                {/* Football Specific */}
+                {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.down && (
+                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400">DOWN</div>
+                    <div className="text-sm font-bold text-white">
+                      {alertData.context.down}&{alertData.context.yardsToGo || 10}
+                    </div>
                   </div>
                 )}
 
-                {/* NBA/NHL: Time Remaining */}
-                {(alertData.sport === 'NBA' || alertData.sport === 'NHL') && alertData.context?.timeRemaining && (
-                  <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400 mb-1">TIME</div>
-                    <div className="text-lg font-bold text-white">{alertData.context.timeRemaining}</div>
+                {/* Universal Time */}
+                {alertData.context?.timeRemaining && (
+                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400">TIME</div>
+                    <div className="text-sm font-bold text-white">{alertData.context.timeRemaining}</div>
                   </div>
                 )}
 
-                {/* Priority Score - Universal */}
-                <div className="bg-slate-800/50 rounded-lg p-3 text-center border border-slate-700/30">
-                  <div className="text-xs text-slate-400 mb-1">PRIORITY</div>
-                  <div className={`text-lg font-bold ${alertData.priority >= 90 ? 'text-red-400' : alertData.priority >= 80 ? 'text-orange-400' : alertData.priority >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                {/* Priority */}
+                <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
+                  <div className="text-xs text-slate-400">PRI</div>
+                  <div className={`text-sm font-bold ${alertData.priority >= 90 ? 'text-red-400' : alertData.priority >= 80 ? 'text-orange-400' : alertData.priority >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
                     {alertData.priority}
                   </div>
                 </div>
               </div>
 
-              {/* Alert Message - Clear & Prominent */}
-              <div className="bg-slate-900/50 rounded-lg p-4 mb-4 border-l-4 border-emerald-500">
-                <h3 className="text-slate-100 text-base font-medium leading-relaxed">
+              {/* Compact Alert Message */}
+              <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500">
+                <p className="text-slate-100 text-sm leading-snug">
                   {alertData.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
-                </h3>
+                </p>
               </div>
 
-              {/* Field/Court Visualization - Multi-Sport */}
-              
-              {/* MLB: Base Runners Visual */}
+              {/* Compact Base Runners (MLB only) */}
               {alertData.sport === 'MLB' && (alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) && (
-                <div className="flex justify-center mb-4">
-                  <div className="relative w-24 h-24">
-                    {/* Baseball Diamond */}
-                    <div className="absolute inset-0 rotate-45 border-2 border-slate-600 bg-slate-800/30"></div>
-
-                    {/* Bases */}
-                    <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-3 h-3 rounded-full bg-slate-600 border-2 border-slate-500"></div>
-                  </div>
-                </div>
-              )}
-
-              {/* NFL/NCAAF/CFL: Field Position Visual */}
-              {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.fieldPosition && (
-                <div className="flex justify-center mb-4">
-                  <div className="relative w-32 h-16 bg-green-900/30 border-2 border-slate-600 rounded-lg">
-                    {/* Yard Lines */}
-                    <div className="absolute inset-x-0 top-1/2 h-px bg-slate-500"></div>
-                    <div className="absolute left-1/4 top-0 bottom-0 w-px bg-slate-600"></div>
-                    <div className="absolute right-1/4 top-0 bottom-0 w-px bg-slate-600"></div>
-                    
-                    {/* Ball Position Indicator */}
-                    <div className="absolute top-1/2 transform -translate-y-1/2 w-2 h-2 bg-orange-400 rounded-full"
-                         style={{ left: `${Math.min(Math.max(alertData.context.fieldPosition / 100 * 100, 5), 95)}%` }}>
-                    </div>
-                    
-                    {/* Field Position Text */}
-                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-400">
-                      {alertData.context.fieldPosition} yard line
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* NBA: Court Position Visual */}
-              {alertData.sport === 'NBA' && alertData.context?.courtPosition && (
-                <div className="flex justify-center mb-4">
-                  <div className="relative w-32 h-20 bg-orange-900/20 border-2 border-slate-600 rounded-lg">
-                    {/* Court Lines */}
-                    <div className="absolute inset-x-0 top-1/2 h-px bg-slate-500"></div>
-                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-500"></div>
-                    
-                    {/* 3-Point Lines */}
-                    <div className="absolute left-2 right-2 top-2 bottom-2 border border-slate-600 rounded-full"></div>
-                    
-                    {/* Ball Position */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-orange-400 rounded-full"></div>
-                    
-                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-400">
-                      {alertData.context.courtPosition}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* NHL: Rink Position Visual */}
-              {alertData.sport === 'NHL' && alertData.context?.rinkPosition && (
-                <div className="flex justify-center mb-4">
-                  <div className="relative w-36 h-20 bg-blue-900/20 border-2 border-slate-600 rounded-xl">
-                    {/* Rink Lines */}
-                    <div className="absolute inset-x-0 top-1/2 h-px bg-red-500"></div>
-                    <div className="absolute left-1/3 top-0 bottom-0 w-px bg-blue-500"></div>
-                    <div className="absolute right-1/3 top-0 bottom-0 w-px bg-blue-500"></div>
-                    
-                    {/* Goal Areas */}
-                    <div className="absolute left-1 top-1/3 bottom-1/3 w-4 bg-blue-500/20 rounded-r"></div>
-                    <div className="absolute right-1 top-1/3 bottom-1/3 w-4 bg-blue-500/20 rounded-l"></div>
-                    
-                    {/* Puck Position */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-black rounded-full"></div>
-                    
-                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-400">
-                      {alertData.context.rinkPosition}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Weather & Context (Compact) */}
-              {alertData.context?.weather && (
-                <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Weather</span>
-                    <span className="text-slate-300">
-                      {alertData.context.weather.temperature}°F, {alertData.context.weather.condition}
-                    </span>
+                <div className="flex justify-center mt-2">
+                  <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 rotate-45 border border-slate-600 bg-slate-800/30"></div>
+                    <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                    <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                    <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-slate-600 border border-slate-500"></div>
                   </div>
                 </div>
               )}
