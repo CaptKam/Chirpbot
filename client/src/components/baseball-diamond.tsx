@@ -91,11 +91,11 @@ export function BaseballDiamond({
             top: '45%', 
             right: '5%', 
             transform: 'translate(50%, -50%)',
-            width: size === 'sm' ? '12px' : '16px',
-            height: size === 'sm' ? '12px' : '16px'
+            width: size === 'sm' ? '20px' : '28px',
+            height: size === 'sm' ? '20px' : '28px'
           }}
           animate={{
-            backgroundColor: runners.first ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
+            backgroundColor: runners.first ? '#10B981' : 'rgba(255, 255, 255, 0.8)',
             borderColor: runners.first ? '#10B981' : '#64748B',
             scale: runners.first ? 1.2 : 1,
             boxShadow: runners.first ? '0 0 8px #10B981' : '0 0 0px transparent'
@@ -121,11 +121,11 @@ export function BaseballDiamond({
             top: '5%', 
             left: '50%', 
             transform: 'translate(-50%, 50%)',
-            width: size === 'sm' ? '12px' : '16px',
-            height: size === 'sm' ? '12px' : '16px'
+            width: size === 'sm' ? '20px' : '28px',
+            height: size === 'sm' ? '20px' : '28px'
           }}
           animate={{
-            backgroundColor: runners.second ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
+            backgroundColor: runners.second ? '#10B981' : 'rgba(255, 255, 255, 0.8)',
             borderColor: runners.second ? '#10B981' : '#64748B',
             scale: runners.second ? 1.2 : 1,
             boxShadow: runners.second ? '0 0 8px #10B981' : '0 0 0px transparent'
@@ -151,11 +151,11 @@ export function BaseballDiamond({
             top: '45%', 
             left: '5%', 
             transform: 'translate(-50%, -50%)',
-            width: size === 'sm' ? '12px' : '16px',
-            height: size === 'sm' ? '12px' : '16px'
+            width: size === 'sm' ? '20px' : '28px',
+            height: size === 'sm' ? '20px' : '28px'
           }}
           animate={{
-            backgroundColor: runners.third ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
+            backgroundColor: runners.third ? '#10B981' : 'rgba(255, 255, 255, 0.8)',
             borderColor: runners.third ? '#10B981' : '#64748B',
             scale: runners.third ? 1.2 : 1,
             boxShadow: runners.third ? '0 0 8px #10B981' : '0 0 0px transparent'
