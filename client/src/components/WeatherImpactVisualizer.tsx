@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Wind, Thermometer, Cloud, Sun, CloudRain } from 'lucide-react';
 
@@ -22,13 +21,13 @@ export function WeatherImpactVisualizer({
   useEffect(() => {
     // Calculate weather impact on game
     let impact = 'low';
-    
+
     if (windSpeed > 15 || temperature < 50 || temperature > 90) {
       impact = 'high';
     } else if (windSpeed > 10 || temperature < 60 || temperature > 85) {
       impact = 'medium';
     }
-    
+
     setImpactLevel(impact as 'low' | 'medium' | 'high');
   }, [temperature, windSpeed]);
 

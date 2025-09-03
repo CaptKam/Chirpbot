@@ -18,15 +18,15 @@ interface BaseballDiamondProps {
   showCount?: boolean;
 }
 
-export function BaseballDiamond({ 
-  runners = {}, 
-  inning, 
-  isTopInning, 
-  outs = 0, 
-  balls = 0, 
-  strikes = 0, 
+export function BaseballDiamond({
+  runners = {},
+  inning,
+  isTopInning,
+  outs = 0,
+  balls = 0,
+  strikes = 0,
   size = 'md',
-  showCount = true 
+  showCount = true
 }: BaseballDiamondProps) {
 
   const getSizeClasses = () => {
@@ -82,7 +82,7 @@ export function BaseballDiamond({
         >
           {[
             runners.first && '1st',
-            runners.second && '2nd', 
+            runners.second && '2nd',
             runners.third && '3rd'
           ].filter(Boolean).join(' & ')}
         </motion.div>
@@ -98,11 +98,11 @@ interface WeatherDisplayProps {
   size?: 'sm' | 'md';
 }
 
-export function WeatherDisplay({ 
-  windSpeed = 0, 
-  windDirection = 'N', 
+export function WeatherDisplay({
+  windSpeed = 0,
+  windDirection = 'N',
   temperature,
-  size = 'sm' 
+  size = 'sm'
 }: WeatherDisplayProps) {
   const getWindIcon = (direction: string) => {
     const directions: Record<string, string> = {
@@ -123,7 +123,7 @@ export function WeatherDisplay({
 
   return (
     <div className={`flex items-center space-x-1 ${textSize}`}>
-      <motion.span 
+      <motion.span
         className={`${getWindColor(windSpeed)} font-mono`}
         animate={{ rotate: windSpeed > 10 ? 360 : 0 }}
         transition={{ duration: windSpeed > 10 ? 2 : 0, repeat: windSpeed > 10 ? Infinity : 0, ease: 'linear' }}
@@ -145,4 +145,5 @@ export function WeatherDisplay({
   );
 }
 
+export { BaseballDiamond, WeatherDisplay };
 export { default as WeatherImpactVisualizer } from './WeatherImpactVisualizer';

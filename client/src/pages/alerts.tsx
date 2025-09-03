@@ -56,8 +56,8 @@ export default function AlertsPage() {
   });
 
   const filteredAlerts = filter === 'all' 
-    ? (alerts as Alert[])
-    : (alerts as Alert[]).filter((alert: Alert) => alert.sport === filter);
+    ? (alerts as Alert[] || [])
+    : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -195,13 +195,13 @@ export default function AlertsPage() {
                       sport={alert.sport}
                       // MLB specific
                       inning={alert.context?.inning || alert.inning}
-                      isTopInning={alert.context?.isTopInning || alert.isTopInning}
-                      balls={alert.context?.balls || alert.balls || 0}
-                      strikes={alert.context?.strikes || alert.strikes || 0}
-                      outs={alert.context?.outs || alert.outs || 0}
-                      hasFirst={!!(alert.context?.hasFirst || alert.hasFirst)}
-                      hasSecond={!!(alert.context?.hasSecond || alert.hasSecond)}
-                      hasThird={!!(alert.context?.hasThird || alert.hasThird)}
+                      isTopInning={alert.context?.isTopInning ?? alert.isTopInning}
+                      balls={alert.context?.balls ?? alert.balls ?? 0}
+                      strikes={alert.context?.strikes ?? alert.strikes ?? 0}
+                      outs={alert.context?.outs ?? alert.outs ?? 0}
+                      hasFirst={!!(alert.context?.hasFirst ?? alert.hasFirst)}
+                      hasSecond={!!(alert.context?.hasSecond ?? alert.hasSecond)}
+                      hasThird={!!(alert.context?.hasThird ?? alert.hasThird)}
                       // Weather data
                       weather={alert.context?.weather || alert.weather}
                       // Other sports specific
