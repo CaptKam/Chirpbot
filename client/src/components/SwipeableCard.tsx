@@ -497,12 +497,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </div>
                   </div>
                   <div className="text-right">
-                    {/* Game State Indicator */}
-                    {alertData.sport === 'MLB' && alertData.context?.inning && (
-                      <div className="text-xs text-slate-400">
-                        {alertData.context.isTopInning ? 'T' : 'B'}{alertData.context.inning}
-                      </div>
-                    )}
+                    {/* Game State Indicator - Non-MLB sports only */}
                     {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.quarter && (
                       <div className="text-xs text-slate-400">
                         Q{alertData.context.quarter}
@@ -579,6 +574,19 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               {/* Compact Game Situation with Baseball Diamond Integration */}
               <div className="grid grid-cols-5 gap-2 mb-2">
+                {/* MLB Inning - First position on left */}
+                {alertData.sport === 'MLB' && alertData.context?.inning && (
+                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
+                    <div className="text-xs text-slate-400">INNING</div>
+                    <div className="flex items-center justify-center space-x-1">
+                      <div className={`text-sm font-bold ${alertData.context.isTopInning ? 'text-emerald-400' : 'text-white'}`}>
+                        {alertData.context.isTopInning ? '▲' : '▼'}
+                      </div>
+                      <div className="text-sm font-bold text-white">{alertData.context.inning}</div>
+                    </div>
+                  </div>
+                )}
+
                 {/* MLB Specific */}
                 {alertData.sport === 'MLB' && alertData.context?.outs !== undefined && (
                   <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
