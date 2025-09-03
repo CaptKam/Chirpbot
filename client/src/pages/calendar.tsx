@@ -116,27 +116,23 @@ function SimpleBaseballDiamond({ gameId, inning, isTopInning, isLive }: {
     .filter((alert: any) => alert.outs !== undefined || alert.balls !== undefined || alert.strikes !== undefined)
     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
-  // Get base runner data from different possible sources
-  const hasFirst = baseRunnerAlert?.hasFirst || 
-                   !!baseRunnerAlert?.context?.hasFirst || 
-                   !!baseRunnerAlert?.context?.first || 
-                   baseRunnerAlert?.type === 'BASES_LOADED' ||
-                   baseRunnerAlert?.type === 'RUNNERS_1ST_2ND' ||
+  // Get base runner data from different possible sources (handle both boolean and string formats)
+  const hasFirst = (baseRunnerAlert?.hasFirst === true) ||
+                   (typeof baseRunnerAlert?.hasFirst === 'string' && baseRunnerAlert?.hasFirst !== '') ||
+                   (baseRunnerAlert?.context?.hasFirst === true) ||
+                   !!baseRunnerAlert?.context?.first ||
                    false;
                    
-  const hasSecond = baseRunnerAlert?.hasSecond || 
-                    !!baseRunnerAlert?.context?.hasSecond || 
+  const hasSecond = (baseRunnerAlert?.hasSecond === true) ||
+                    (typeof baseRunnerAlert?.hasSecond === 'string' && baseRunnerAlert?.hasSecond !== '') ||
+                    (baseRunnerAlert?.context?.hasSecond === true) ||
                     !!baseRunnerAlert?.context?.second ||
-                    baseRunnerAlert?.type === 'BASES_LOADED' ||
-                    baseRunnerAlert?.type === 'RUNNERS_1ST_2ND' ||
-                    baseRunnerAlert?.type === 'RISP' ||
                     false;
                     
-  const hasThird = baseRunnerAlert?.hasThird || 
-                   !!baseRunnerAlert?.context?.hasThird || 
+  const hasThird = (baseRunnerAlert?.hasThird === true) ||
+                   (typeof baseRunnerAlert?.hasThird === 'string' && baseRunnerAlert?.hasThird !== '') ||
+                   (baseRunnerAlert?.context?.hasThird === true) ||
                    !!baseRunnerAlert?.context?.third ||
-                   baseRunnerAlert?.type === 'BASES_LOADED' ||
-                   baseRunnerAlert?.type === 'RISP' ||
                    false;
 
   const outs = recentAlert?.outs || baseRunnerAlert?.outs || 0;
