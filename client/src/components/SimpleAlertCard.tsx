@@ -15,8 +15,24 @@ import draftkingsLogo from '@assets/draftkings.png';
 import fanaticsLogo from '@assets/fanatics.png';
 import fanduelLogo from '@assets/fanduel.png';
 
-declare function formatTime(date: string | Date): string;
-declare function getAlertColor(priority: number): string;
+// Utility functions
+function formatTime(date: string | Date): string {
+  const alertTime = new Date(date);
+  const now = new Date();
+  const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
+  
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
+  return alertTime.toLocaleDateString();
+}
+
+function getAlertColor(priority: number): string {
+  if (priority >= 90) return 'bg-red-400';
+  if (priority >= 80) return 'bg-orange-400';
+  if (priority >= 70) return 'bg-yellow-400';
+  return 'bg-blue-400';
+}
 
 interface SimpleAlert {
   id: string;
