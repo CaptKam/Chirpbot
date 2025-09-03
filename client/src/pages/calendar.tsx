@@ -75,78 +75,57 @@ import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
-// Simple Baseball Diamond using alerts data like the alerts page
+// Simple Baseball Diamond using live MLB API data
 function SimpleBaseballDiamond({ gameId, inning, isTopInning, isLive }: { 
   gameId: string; 
   inning: number; 
   isTopInning: boolean; 
   isLive: boolean 
 }) {
-  // Get base runner data from recent alerts for this game
-  const { data: alerts } = useQuery({
-    queryKey: ["/api/alerts", { limit: "50" }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
+  // Get live game data directly from MLB API
+  const { data: liveGameData } = useQuery({
+    queryKey: ["/api/mlb/live-game", gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/mlb/live-game/${gameId}`, {
         credentials: "include",
       });
-      if (!response.ok) throw new Error("Failed to fetch alerts");
+      if (!response.ok) throw new Error("Failed to fetch live game data");
       return response.json();
     },
     refetchInterval: isLive ? 5000 : false, // Refresh every 5s for live games
-    staleTime: 4000
+    staleTime: 4000,
+    enabled: !!gameId && gameId !== 'undefined'
   });
 
-  // Find the most recent alert for this game that has base runner data
-  const gameAlerts = alerts?.filter((alert: any) => alert.gameId === gameId) || [];
+  // Extract live game state data
+  const liveData = liveGameData?.liveData;
+  const currentPlay = liveData?.plays?.currentPlay;
+  const lineScore = liveData?.linescore;
   
-  // Look for alerts with base runner information
-  const baseRunnerAlert = gameAlerts
-    .filter((alert: any) => 
-      alert.hasFirst || alert.hasSecond || alert.hasThird || 
-      alert.context?.hasFirst || alert.context?.hasSecond || alert.context?.hasThird ||
-      alert.context?.first || alert.context?.second || alert.context?.third ||
-      alert.type === 'BASES_LOADED' || alert.type === 'RISP' || alert.type === 'RUNNERS_1ST_2ND'
-    )
-    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  // Get base runner data from live MLB API
+  const offense = currentPlay?.matchup?.offense;
+  const hasFirst = !!offense?.first;
+  const hasSecond = !!offense?.second; 
+  const hasThird = !!offense?.third;
 
-  // Get count/outs data from most recent alert
-  const recentAlert = gameAlerts
-    .filter((alert: any) => alert.outs !== undefined || alert.balls !== undefined || alert.strikes !== undefined)
-    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  // Get count data from live MLB API
+  const count = currentPlay?.count;
+  const outs = lineScore?.outs || 0;
+  const balls = count?.balls || 0;
+  const strikes = count?.strikes || 0;
 
-  // Get base runner data from different possible sources (handle both boolean and string formats)
-  const hasFirst = (baseRunnerAlert?.hasFirst === true) ||
-                   (typeof baseRunnerAlert?.hasFirst === 'string' && baseRunnerAlert?.hasFirst !== '') ||
-                   (baseRunnerAlert?.context?.hasFirst === true) ||
-                   !!baseRunnerAlert?.context?.first ||
-                   false;
-                   
-  const hasSecond = (baseRunnerAlert?.hasSecond === true) ||
-                    (typeof baseRunnerAlert?.hasSecond === 'string' && baseRunnerAlert?.hasSecond !== '') ||
-                    (baseRunnerAlert?.context?.hasSecond === true) ||
-                    !!baseRunnerAlert?.context?.second ||
-                    false;
-                    
-  const hasThird = (baseRunnerAlert?.hasThird === true) ||
-                   (typeof baseRunnerAlert?.hasThird === 'string' && baseRunnerAlert?.hasThird !== '') ||
-                   (baseRunnerAlert?.context?.hasThird === true) ||
-                   !!baseRunnerAlert?.context?.third ||
-                   false;
-
-  const outs = recentAlert?.outs || baseRunnerAlert?.outs || 0;
-  const balls = recentAlert?.balls || baseRunnerAlert?.balls || 0;
-  const strikes = recentAlert?.strikes || baseRunnerAlert?.strikes || 0;
+  // Get current inning from live data
+  const currentInning = lineScore?.currentInning || inning;
+  const currentInningHalf = lineScore?.inningHalf || (isTopInning ? 'Top' : 'Bottom');
 
   return (
     <div className="flex flex-col items-center space-y-2">
-      {/* Count and Inning Info */}
-      {isLive && (inning || outs || balls || strikes) && (
+      {/* Count and Inning Info - Live Data */}
+      {isLive && (currentInning || outs !== undefined || balls || strikes) && (
         <div className="text-center space-y-1">
-          {inning && (
+          {currentInning && (
             <div className="text-xs text-slate-300 font-bold">
-              {isTopInning ? '↑' : '↓'} {inning}th
+              {currentInningHalf === 'Top' ? '↑' : '↓'} {currentInning}{currentInning === 1 ? 'st' : currentInning === 2 ? 'nd' : currentInning === 3 ? 'rd' : 'th'}
             </div>
           )}
           <div className="flex items-center justify-center space-x-3">

@@ -7,20 +7,20 @@ export class MLBApiService {
     try {
       const targetDate = date || getPacificDate();
       const url = `${this.baseUrl}/schedule?sportId=1&date=${targetDate}&hydrate=team,linescore,venue,game(content(summary))`;
-      
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`MLB API error: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (!data.dates || data.dates.length === 0) {
         return [];
       }
 
       const games = data.dates[0].games || [];
-      
+
       return games.map((game: any) => ({
         id: game.gamePk.toString(),
         homeTeam: { id: game.teams.home.team.id.toString(), name: game.teams.home.team.name, abbreviation: game.teams.home.team.abbreviation, score: game.teams.home.score || 0 },
@@ -64,7 +64,7 @@ export class MLBApiService {
 
       // Extract base runner information
       const runners = { first: false, second: false, third: false };
-      
+
       // Check offense data for runners
       const offense = linescore.offense;
       if (offense) {
@@ -87,20 +87,20 @@ export class MLBApiService {
       const weather = gameData.weather || {};
       const wind = weather.wind || '';
       const temperature = weather.temp || null;
-      
+
       // Parse wind (e.g., "9 mph, In From LF")
       let windSpeed = 0;
       let windDirection = 'N';
       if (wind) {
         const windMatch = wind.match(/(\d+)\s*mph/i);
         if (windMatch) windSpeed = parseInt(windMatch[1]);
-        
+
         const directionMap: Record<string, string> = {
           'RF': 'E', 'LF': 'W', 'CF': 'N',
           'Right': 'E', 'Left': 'W', 'Center': 'N',
           'In': 'N', 'Out': 'S'
         };
-        
+
         for (const [key, value] of Object.entries(directionMap)) {
           if (wind.includes(key)) {
             windDirection = value;
@@ -130,20 +130,31 @@ export class MLBApiService {
     }
   }
 
-  private mapGameStatus(detailedState: string): string {
-    const lowerState = detailedState.toLowerCase();
-    
-    if (lowerState.includes('progress') || lowerState.includes('live') || lowerState.includes('inning')) {
-      return 'live';
+  private mapGameStatus(statusCode: string): string {
+    const statusMap: Record<string, string> = {
+      'S': 'scheduled',
+      'P': 'scheduled', // Pre-game
+      'I': 'live',     // In progress
+      'F': 'final',    // Final
+      'FT': 'final',   // Final (tied)
+      'FR': 'final',   // Final (rain)
+      'D': 'postponed',
+      'T': 'postponed'
+    };
+    return statusMap[statusCode] || 'unknown';
+  }
+
+  async getLiveGameData(gameId: string): Promise<any> {
+    try {
+      const response = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gameId}/feed/live`);
+      if (!response.ok) throw new Error(`MLB API error: ${response.status}`);
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching live MLB game data:', error);
+      throw error;
     }
-    if (lowerState.includes('final') || lowerState.includes('completed')) {
-      return 'final';
-    }
-    if (lowerState.includes('delayed') || lowerState.includes('postponed')) {
-      return 'delayed';
-    }
-    
-    return 'scheduled';
   }
 }
 
