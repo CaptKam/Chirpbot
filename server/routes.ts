@@ -20,7 +20,7 @@ declare module 'express-session' {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
-  
+
   // Setup WebSocket server with heartbeat
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const clients = new Set<WebSocket>();
@@ -142,48 +142,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sport = 'MLB', date } = req.query;
       let games = [];
-      
+
       switch(sport) {
         case 'MLB':
           const { MLBApiService } = await import('./services/mlb-api');
           const mlbService = new MLBApiService();
           games = await mlbService.getTodaysGames(date as string);
           break;
-          
+
         case 'NFL':
           const { NFLApiService } = await import('./services/nfl-api');
           const nflService = new NFLApiService();
           games = await nflService.getTodaysGames(date as string);
           break;
-          
+
         case 'NBA':
           const { NBAApiService } = await import('./services/nba-api');
           const nbaService = new NBAApiService();
           games = await nbaService.getTodaysGames(date as string);
           break;
-          
+
         case 'NHL':
           const { NHLApiService } = await import('./services/nhl-api');
           const nhlService = new NHLApiService();
           games = await nhlService.getTodaysGames(date as string);
           break;
-          
+
         case 'CFL':
           const { CFLApiService } = await import('./services/cfl-api');
           const cflService = new CFLApiService();
           games = await cflService.getTodaysGames(date as string);
           break;
-          
+
         case 'NCAAF':
           const { NCAAFApiService } = await import('./services/ncaaf-api');
           const ncaafService = new NCAAFApiService();
           games = await ncaafService.getTodaysGames(date as string);
           break;
-          
+
         default:
           games = [];
       }
-      
+
       const { getPacificDate } = await import('./utils/timezone');
       res.json({ games, date: date || getPacificDate() });
     } catch (error) {
@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { gameId, sport, homeTeamName, awayTeamName } = req.body;
-      
+
       const gameData = {
         userId,
         gameId,
@@ -232,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         awayTeamName: awayTeamName || '',
         createdAt: new Date()
       };
-      
+
       await storage.addUserMonitoredGame(gameData);
       res.json({ message: 'Game monitoring enabled' });
     } catch (error) {
@@ -300,11 +300,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport, alertType, enabled } = req.body;
-      
+
       if (!sport || !alertType || typeof enabled !== 'boolean') {
         return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
       }
-      
+
       const preference = await storage.setUserAlertPreference(userId, sport.toUpperCase(), alertType, enabled);
       res.json(preference);
     } catch (error) {
@@ -317,11 +317,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport, preferences } = req.body;
-      
+
       if (!sport || !preferences || !Array.isArray(preferences)) {
         return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
       }
-      
+
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
       res.json({ message: 'Alert preferences updated successfully', count: result.length });
     } catch (error) {
@@ -351,30 +351,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { usernameOrEmail, password } = req.body;
-      
+
       if (!usernameOrEmail || !password) {
         return res.status(400).json({ message: 'Username and password are required' });
       }
-      
+
       // Find user by username or email
       let user = await storage.getUserByUsername(usernameOrEmail);
       if (!user) {
         user = await storage.getUserByEmail(usernameOrEmail);
       }
-      
+
       if (!user || !user.password) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
-      
+
       // Check password
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
-      
+
       // Create session
       req.session.userId = user.id;
-      
+
       // Return user data without password
       const { password: _, ...userWithoutPassword } = user;
       res.json({ message: 'Login successful', user: userWithoutPassword });
@@ -403,30 +403,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/signup', async (req, res) => {
     try {
       const { username, email, password } = req.body;
-      
+
       if (!username || !email || !password) {
         return res.status(400).json({ message: 'Username, email, and password are required' });
       }
-      
+
       if (password.length < 6) {
         return res.status(400).json({ message: 'Password must be at least 6 characters long' });
       }
-      
+
       // Check if user already exists
       const existingUserByUsername = await storage.getUserByUsername(username);
       if (existingUserByUsername) {
         return res.status(409).json({ message: 'Username already exists' });
       }
-      
+
       const existingUserByEmail = await storage.getUserByEmail(email);
       if (existingUserByEmail) {
         return res.status(409).json({ message: 'Email already exists' });
       }
-      
+
       // Hash password
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
-      
+
       // Create user
       const newUser = await storage.createUser({
         username,
@@ -435,10 +435,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authMethod: 'local',
         role: 'user'
       });
-      
+
       // Create session
       req.session.userId = newUser.id;
-      
+
       // Return user data without password
       const { password: _, ...userWithoutPassword } = newUser;
       res.status(201).json({ message: 'Account created successfully', user: userWithoutPassword });
@@ -486,7 +486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { botToken, chatId, enabled } = req.body;
-      
+
       await storage.updateUserTelegramSettings(userId, botToken, chatId, enabled);
       res.json({ message: 'Telegram settings updated successfully' });
     } catch (error) {
@@ -498,14 +498,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/telegram/test', async (req, res) => {
     try {
       const { botToken, chatId } = req.body;
-      
+
       if (!botToken || !chatId) {
         return res.status(400).json({ message: 'Bot token and chat ID are required' });
       }
 
       const config: TelegramConfig = { botToken, chatId };
       const result = await testTelegramConnection(config);
-      
+
       res.json(result);
     } catch (error) {
       console.error('Error testing telegram connection:', error);
@@ -519,12 +519,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
-      
+
       const user = await storage.getUserById(req.session.userId);
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Admin access required' });
       }
-      
+
       req.user = user;
       next();
     } catch (error) {
@@ -569,16 +569,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { role } = req.body;
-      
+
       if (!role || !['admin', 'manager', 'analyst', 'user'].includes(role)) {
         return res.status(400).json({ message: 'Invalid role. Must be admin, manager, analyst, or user' });
       }
-      
+
       const updatedUser = await storage.updateUserRole(userId, role);
       if (!updatedUser) {
         return res.status(404).json({ message: 'User not found' });
       }
-      
+
       // Remove password from response
       const { password, ...userWithoutPassword } = updatedUser;
       res.json({ message: 'User role updated successfully', user: userWithoutPassword });
@@ -603,11 +603,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport, preferences } = req.body;
-      
+
       if (!sport || !preferences || !Array.isArray(preferences)) {
         return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
       }
-      
+
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
       res.json({ message: 'User alert preferences updated successfully', count: result.length });
     } catch (error) {
@@ -623,10 +623,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const managerUsers = await storage.getUsersByRole('manager');
       const analystUsers = await storage.getUsersByRole('analyst');
       const regularUsers = await storage.getUsersByRole('user');
-      
+
       const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
       const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
-      
+
       res.json({
         users: {
           total: allUsers.length,
@@ -650,7 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/alerts", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      
+
       // Get real alerts from database
       const result = await db.execute(sql`
         SELECT id, type, game_id, sport, score, payload, created_at 
@@ -658,7 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ORDER BY created_at DESC 
         LIMIT ${limit}
       `);
-      
+
       const alerts = result.rows.map(row => {
         let payload: any = {};
         try {
@@ -668,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Error parsing payload:', e);
           payload = {};
         }
-        
+
         return {
           id: row.id,
           type: row.type,
@@ -691,10 +691,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           strikes: payload.context?.strikes,
           hasFirst: payload.context?.first || payload.context?.hasFirst,
           hasSecond: payload.context?.second || payload.context?.hasSecond,
-          hasThird: payload.context?.third || payload.context?.hasThird
+          hasThird: payload.context?.third || payload.context?.hasThird,
+          // Include AI data
+          betbookData: payload.betbookData || null,
+          gameInfo: payload.gameInfo || null
         };
       });
-      
+
       res.json(alerts);
     } catch (error) {
       console.error("Error fetching alerts:", error);
@@ -708,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
       const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
       const monitoredGames = await storage.getAllMonitoredGames();
-      
+
       const stats = {
         totalAlerts: parseInt(String(totalAlertsResult.rows[0]?.count || '0')),
         todayAlerts: parseInt(String(todayAlertsResult.rows[0]?.count || '0')),
@@ -737,7 +740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('🌴 ChirpBot V2 - Using Pacific Timezone (PST/PDT)');
   console.log(`📅 Current Pacific Date: ${getPacificDate()}`);
   console.log(`🕐 Current Pacific Time: ${formatPacificTime()}`);
-  
+
   // Weather test endpoint  
   app.get('/api/test-weather/:team', async (req, res) => {
     try {
@@ -745,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weather = await weatherService.getWeatherForTeam(req.params.team);
       const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
       const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-      
+
       res.json({
         team: req.params.team,
         weather,
@@ -768,7 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weather = await weatherService.getWeatherForTeam(teamName);
       const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
       const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-      
+
       res.json({
         temperature: weather.temperature,
         condition: weather.condition,
@@ -791,12 +794,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { AlertGenerator } = await import('./services/alert-generator');
       const generator = new AlertGenerator();
-      
+
       const testTime = req.params.time;
-      
+
       // Test the two-minute detection logic
       const isWithin2Min = (generator as any).isWithinTwoMinutes(testTime);
-      
+
       // Create mock game data
       const mockGame = {
         gameId: 'test-game',
@@ -809,7 +812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'live',
         isLive: true
       };
-      
+
       res.json({
         inputTime: testTime,
         isWithinTwoMinutes: isWithin2Min,
@@ -850,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user.password) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
-      
+
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         return res.status(401).json({ message: 'Invalid credentials' });
@@ -912,10 +915,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { sport } = req.params;
-      
+
       // Get the global settings from storage
       const settings = await storage.getGlobalAlertSettings(sport);
-      
+
       res.json(settings);
     } catch (error) {
       console.error('Error fetching global alert settings:', error);
@@ -930,11 +933,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { enabled } = req.body;
-      
+
       // In a full implementation, this would update a global master switch in the database
       // For now, we'll just acknowledge the request
       console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin`);
-      
+
       res.json({ 
         message: `Master alerts ${enabled ? 'enabled' : 'disabled'} successfully`,
         enabled 
@@ -952,10 +955,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { sport, category, alertKeys, enabled } = req.body;
-      
+
       // Update the category settings which will apply to all users
       await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
-      
+
       res.json({ 
         message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
         sport,
@@ -976,10 +979,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { sport, alertType, enabled } = req.body;
-      
+
       // Update the global setting which will apply to all users
       await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
-      
+
       res.json({ 
         message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
         sport,
@@ -999,10 +1002,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { sport, settings } = req.body;
-      
+
       // Use the storage method to apply settings to all users
       const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
-      
+
       res.json({ 
         message: `Global settings applied to ${result.usersUpdated} users successfully`,
         sport,

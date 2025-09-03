@@ -244,7 +244,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             </div>
 
             {/* Betting Recommendations Based on Game Situation */}
-            {(alertData.gameInfo?.v3Analysis || (alertData.priority && alertData.priority >= 80)) && (
+            {(alertData.betbookData || alertData.gameInfo?.v3Analysis || (alertData.priority && alertData.priority >= 80)) && (
               <div className="space-y-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
                   <div className="flex items-center space-x-2 mb-2">
@@ -252,26 +252,50 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
                   </div>
                   <p className="text-white text-sm font-medium">
-                    {(() => {
-                      const sport = alertData.sport || 'MLB';
-                      const tier = alertData.gameInfo?.v3Analysis?.tier || Math.ceil((alertData.priority || 70) / 25);
-                      const homeScore = alertData.homeScore || 0;
-                      const awayScore = alertData.awayScore || 0;
-                      const totalScore = homeScore + awayScore;
-                      
-                      if (sport === 'MLB') {
-                        const overLine = Math.max(totalScore + 1.5, 7.5);
-                        if (tier >= 3) {
-                          return `Bet Over ${overLine} runs - High-tier scoring opportunity`;
-                        } else {
-                          return `Bet Over ${overLine} runs - Live betting situation`;
-                        }
-                      } else {
-                        return "Live bet recommended - High-value situation detected";
-                      }
-                    })()}
+                    {alertData.gameInfo?.v3Analysis?.recommendation || 
+                     alertData.betbookData?.aiAdvice || 
+                     (() => {
+                       const sport = alertData.sport || 'MLB';
+                       const tier = Math.ceil((alertData.priority || 70) / 25);
+                       const homeScore = alertData.homeScore || 0;
+                       const awayScore = alertData.awayScore || 0;
+                       const totalScore = homeScore + awayScore;
+                       
+                       if (sport === 'MLB') {
+                         const overLine = Math.max(totalScore + 1.5, 7.5);
+                         if (tier >= 3) {
+                           return `Bet Over ${overLine} runs - High-tier scoring opportunity`;
+                         } else {
+                           return `Bet Over ${overLine} runs - Live betting situation`;
+                         }
+                       } else {
+                         return "Live bet recommended - High-value situation detected";
+                       }
+                     })()
+                    }
                   </p>
                 </div>
+
+                {/* AI Analysis Reasons */}
+                {alertData.gameInfo?.v3Analysis?.reasons && (
+                  <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 ring-1 ring-white/10">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Brain className="w-3 h-3 text-purple-400" />
+                      <span className="text-xs text-purple-200 font-medium">AI Analysis</span>
+                      <span className="text-xs text-green-300 font-mono">
+                        {alertData.gameInfo.v3Analysis.confidence}% confidence
+                      </span>
+                    </div>
+                    <ul className="text-xs text-white/90 space-y-0.5">
+                      {alertData.gameInfo.v3Analysis.reasons.slice(0, 2).map((reason, idx) => (
+                        <li key={idx} className="flex items-start space-x-1">
+                          <span className="text-green-400 mt-0.5">•</span>
+                          <span>{reason}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 
               </div>
             )}
