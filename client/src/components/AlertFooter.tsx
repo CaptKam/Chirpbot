@@ -85,16 +85,11 @@ export default function AlertFooter({
             </div>
 
             {/* Weather Display for MLB */}
-            {weather && weather.temperature && (
+            {weather && weather.windDescription && (
               <div className="flex items-center space-x-1">
-                <span className="text-cyan-400 text-xs">
-                  🌤️ {weather.temperature}°F
+                <span className="text-slate-400 text-xs">
+                  {weather.windDescription}
                 </span>
-                {weather.windDescription && (
-                  <span className="text-slate-400 text-xs">
-                    {weather.windDescription}
-                  </span>
-                )}
               </div>
             )}
 
