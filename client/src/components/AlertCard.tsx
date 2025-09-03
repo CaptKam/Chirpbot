@@ -1,94 +1,91 @@
+import { clsx } from "clsx";
 import React from "react";
-import clsx from "clsx";
-import { SwipeableCard } from "./SwipeableCard";
 
-/**
- * Redesigned Alert Card (drop‑in)
- * - Dynamic priority color bar & badge
- * - Icon by alert type
- * - Clear hierarchy: type → message → matchup → context footer
- * - Optional action buttons (ACK / MUTE / RESEND)
- * - Works standalone (uses simple <Badge/> + <SwipeableCard/> fallbacks)
- */
-
-// ---------------- Types ----------------
-export type AlertType =
-  | "RISP_CHANCE"
-  | "SCORING_PROBABILITY"
-  | "BASES_LOADED"
-  | "WIND_JETSTREAM"
-  | "HR_HITTER_AT_BAT"
-  | "LATE_PRESSURE"
-  | "NINTH_TIE"
-  | "CLOSE_GAME_LATE"
-  | "HOME_RUN";
-
-export type InningHalf = "Top" | "Bottom";
-
-export type AlertCardProps = {
-  sport: "MLB" | "NFL" | "NBA" | string;
-  type: AlertType | string;
-  priority: number; // 0‑100
+export interface AlertCardProps {
+  sport: string;
+  type: string;
+  priority: number;
   timeIso?: string;
   message: string;
-  matchup: { away: string; home: string };
+  matchup: { home: string; away: string };
   context?: {
-    inning?: { number: number; half: InningHalf };
-    timeLeft?: string; // for non‑MLB
-    outs?: number; // 0..2
+    inning?: { number: number; half: string };
+    outs?: number;
     count?: { b: number; s: number };
-    runners?: { first: boolean; second: boolean; third: boolean };
+    runners?: { first?: boolean; second?: boolean; third?: boolean };
+    timeLeft?: string;
   };
-  // Action handlers (optional)
   onAck?: () => void;
   onMute?: () => void;
   onResend?: () => void;
   className?: string;
   alertId?: string;
   alertData?: any;
-  // NEW: OpenAI live status
   liveStatus?: 'LIVE' | 'UPDATED' | 'EXPIRED';
   openaiEnhanced?: boolean;
-};
+}
 
-// --------------- Helpers ---------------
+// Swipeable card wrapper
+function SwipeableCard({ 
+  children, 
+  className, 
+  alertId, 
+  alertData 
+}: { 
+  children: React.ReactNode; 
+  className?: string; 
+  alertId: string; 
+  alertData?: any; 
+}) {
+  return (
+    <div className={clsx(
+      "rounded-lg border text-card-foreground shadow-sm",
+      "bg-white/5 backdrop-blur-sm transition-all duration-300",
+      className
+    )}>
+      {children}
+    </div>
+  );
+}
+
+// Alert type icons
 const getAlertIcon = (type: string) => {
   switch (type) {
-    case "RISP_CHANCE":
-    case "SCORING_PROBABILITY":
-      return <span className="text-2xl">🔥</span>;
+    case "RISP":
+    case "RUNNERS_1ST_2ND": 
     case "BASES_LOADED":
-      return <span className="text-2xl">🚨</span>;
-    case "WIND_JETSTREAM":
-      return <span className="text-2xl">💨</span>;
-    case "HR_HITTER_AT_BAT":
       return <span className="text-2xl">⚾</span>;
     case "LATE_PRESSURE":
     case "NINTH_TIE":
       return <span className="text-2xl">⚡</span>;
     case "CLOSE_GAME_LATE":
+    case "CLOSE_GAME":
       return <span className="text-2xl">📈</span>;
     case "HOME_RUN":
       return <span className="text-2xl">💥</span>;
+    case "HIGH_SCORING":
+      return <span className="text-2xl">🔥</span>;
     default:
       return <span className="text-2xl">🚀</span>;
   }
 };
 
+// Priority styling
 const getPriorityGradient = (priority: number) => {
-  if (priority >= 90) return "from-red-500 to-red-600 shadow-red-500/25";
-  if (priority >= 80) return "from-orange-500 to-orange-600 shadow-orange-500/25";
-  if (priority >= 70) return "from-yellow-500 to-yellow-600 shadow-yellow-500/25";
-  return "from-blue-500 to-blue-600 shadow-blue-500/25";
+  if (priority >= 90) return "from-red-500 to-red-600";
+  if (priority >= 80) return "from-orange-500 to-orange-600";
+  if (priority >= 70) return "from-yellow-500 to-yellow-600";
+  return "from-blue-500 to-blue-600";
 };
 
-const getPriorityText = (priority: number) => {
-  if (priority >= 90) return { label: "URGENT", text: "text-red-400", ring: "ring-red-300/40" };
-  if (priority >= 80) return { label: "HIGH", text: "text-orange-400", ring: "ring-orange-300/40" };
-  if (priority >= 70) return { label: "MEDIUM", text: "text-yellow-400", ring: "ring-yellow-300/40" };
-  return { label: "NORMAL", text: "text-blue-400", ring: "ring-blue-300/40" };
+const getPriorityBadge = (priority: number) => {
+  if (priority >= 90) return { label: "URGENT", color: "bg-red-500/20 text-red-300 border-red-500" };
+  if (priority >= 80) return { label: "HIGH", color: "bg-orange-500/20 text-orange-300 border-orange-500" };
+  if (priority >= 70) return { label: "MEDIUM", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500" };
+  return { label: "NORMAL", color: "bg-blue-500/20 text-blue-300 border-blue-500" };
 };
 
+// Time formatting
 const timeAgo = (iso?: string) => {
   if (!iso) return "";
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -100,81 +97,111 @@ const timeAgo = (iso?: string) => {
   return `${hr}h ago`;
 };
 
-// --------------- Fallback UI atoms ---------------
-export function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
+// Badge component
+function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <span className={clsx("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold", className)}>
+    <span className={clsx(
+      "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold",
+      className
+    )}>
       {children}
     </span>
   );
 }
 
-// --------------- Baseball Diamond (MLB) ---------------
+// Baseball Diamond Visual
 function BaseballDiamond({
   runners = { first: false, second: false, third: false },
-  size = 56,
+  size = 60,
 }: {
-  runners?: { first: boolean; second: boolean; third: boolean };
+  runners?: { first?: boolean; second?: boolean; third?: boolean };
   size?: number;
 }) {
   const s = size;
-  const cx = s / 2, cy = s / 2, off = s * 0.35, base = s * 0.18;
+  const cx = s / 2, cy = s / 2, offset = s * 0.3, baseSize = s * 0.15;
+  
   const bases = [
-    { x: cx, y: cy - off, occ: runners.second }, // 2nd
-    { x: cx + off, y: cy, occ: runners.first },  // 1st
-    { x: cx, y: cy + off, occ: runners.third },  // 3rd
-    { x: cx - off, y: cy, occ: false },          // home (display only)
+    { x: cx, y: cy - offset, occupied: runners.second, label: '2nd' },
+    { x: cx + offset, y: cy, occupied: runners.first, label: '1st' },
+    { x: cx, y: cy + offset, occupied: runners.third, label: '3rd' },
+    { x: cx - offset, y: cy, occupied: false, label: 'Home' },
   ];
+
   return (
-    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className="shrink-0">
-      <polygon points={`${cx},${cy - off} ${cx + off},${cy} ${cx},${cy + off} ${cx - off},${cy}`} fill="#0b1220" stroke="#1f2937" strokeWidth={2} />
-      {bases.map((b, i) => (
-        <g key={i} transform={`translate(${b.x - base / 2}, ${b.y - base / 2}) rotate(45 ${base / 2} ${base / 2})`}>
-          <rect width={base} height={base} rx={2} fill={b.occ ? "#16a34a" : "#0b1220"} stroke="#64748b" strokeWidth={2} />
-        </g>
-      ))}
-    </svg>
+    <div className="flex-shrink-0">
+      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className="drop-shadow-sm">
+        {/* Diamond outline */}
+        <polygon 
+          points={`${cx},${cy - offset} ${cx + offset},${cy} ${cx},${cy + offset} ${cx - offset},${cy}`} 
+          fill="rgba(15, 23, 42, 0.8)" 
+          stroke="rgba(100, 116, 139, 0.6)" 
+          strokeWidth="2" 
+        />
+        
+        {/* Bases */}
+        {bases.map((base, i) => (
+          <g key={i} transform={`translate(${base.x - baseSize/2}, ${base.y - baseSize/2}) rotate(45 ${baseSize/2} ${baseSize/2})`}>
+            <rect 
+              width={baseSize} 
+              height={baseSize} 
+              rx="2" 
+              fill={base.occupied ? "#22c55e" : "rgba(15, 23, 42, 0.8)"} 
+              stroke={base.occupied ? "#16a34a" : "rgba(100, 116, 139, 0.6)"} 
+              strokeWidth="2"
+              className="transition-all duration-300"
+            />
+          </g>
+        ))}
+      </svg>
+    </div>
   );
 }
 
-// --------------- Context Footer ---------------
-function ContextFooter({
-  sport,
-  context,
-}: {
-  sport: string;
-  context?: AlertCardProps["context"];
-}) {
+// Game Context Display
+function GameContext({ sport, context }: { sport: string; context?: AlertCardProps["context"] }) {
   if (sport !== "MLB") {
     return (
-      <div className="bg-slate-800/30 rounded-xl p-3 border border-slate-700/50 text-slate-200 text-sm">
-        <div className="flex items-center justify-between">
-          <span>Game time: {context?.timeLeft ?? "—"}</span>
+      <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700/30">
+        <div className="text-sm text-slate-300">
+          Game Time: <span className="font-semibold text-white">{context?.timeLeft || "—"}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50 mt-2">
+    <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/30">
       <div className="flex items-center gap-4">
         <BaseballDiamond runners={context?.runners} />
-        <div className="flex-1 space-y-2">
-          <div className="text-sm font-medium text-slate-200 mb-2">
-            {context?.inning ? `${context.inning.half} ${context.inning.number}` : "Inning —"}
+        
+        <div className="flex-1">
+          {/* Inning */}
+          <div className="text-sm font-medium text-slate-200 mb-3">
+            {context?.inning ? `${context.inning.half} ${context.inning.number}` : "Inning TBD"}
           </div>
-          <div className="grid grid-cols-3 gap-3 text-sm text-slate-300">
-            <div>
-              <span className="text-slate-400">Outs:</span>
-              <div className="font-semibold text-white">{context?.outs ?? "-"}</div>
+          
+          {/* Game Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-xs text-slate-400 mb-1">Outs</div>
+              <div className="text-lg font-bold text-white">{context?.outs ?? "—"}</div>
             </div>
-            <div>
-              <span className="text-slate-400">Count:</span>
-              <div className="font-semibold text-white">{context?.count ? `${context.count.b}-${context.count.s}` : "-"}</div>
+            <div className="text-center">
+              <div className="text-xs text-slate-400 mb-1">Count</div>
+              <div className="text-lg font-bold text-white">
+                {context?.count ? `${context.count.b}-${context.count.s}` : "—"}
+              </div>
             </div>
-            <div>
-              <span className="text-slate-400">RISP:</span>
-              <div className="font-semibold text-white">{context?.runners?.second || context?.runners?.third ? "Yes" : "No"}</div>
+            <div className="text-center">
+              <div className="text-xs text-slate-400 mb-1">RISP</div>
+              <div className={clsx(
+                "text-lg font-bold",
+                (context?.runners?.second || context?.runners?.third) 
+                  ? "text-green-400" 
+                  : "text-slate-400"
+              )}>
+                {(context?.runners?.second || context?.runners?.third) ? "YES" : "NO"}
+              </div>
             </div>
           </div>
         </div>
@@ -183,101 +210,129 @@ function ContextFooter({
   );
 }
 
-// --------------- Main Card ---------------
-export default function AlertCard({ 
-  sport, 
-  type, 
-  priority, 
-  timeIso, 
-  message, 
-  matchup, 
-  context, 
-  onAck, 
-  onMute, 
-  onResend, 
-  className,
-  alertId,
-  alertData,
-  liveStatus,
-  openaiEnhanced
-}: AlertCardProps) {
-  const grad = getPriorityGradient(priority);
-  const { label, text, ring } = getPriorityText(priority);
+// Main Alert Card Component
+export default function AlertCard(props: AlertCardProps) {
+  const {
+    sport,
+    type,
+    priority,
+    timeIso,
+    message,
+    matchup,
+    context,
+    onAck,
+    onMute,
+    onResend,
+    className,
+    alertId,
+    alertData,
+    liveStatus,
+    openaiEnhanced
+  } = props;
+
+  const priorityGrad = getPriorityGradient(priority);
+  const priorityBadge = getPriorityBadge(priority);
 
   return (
     <SwipeableCard 
-      className={clsx("border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-lg", className)}
+      className={clsx("border-white/10 hover:border-white/20", className)}
       alertId={alertId || ''}
       alertData={alertData}
     >
-      <div className="relative overflow-hidden">
-        {/* Priority bar */}
-        <div className={clsx("h-1 w-full bg-gradient-to-r shadow-lg", grad)} />
-
-        <div className="p-4">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              {getAlertIcon(type)}
-              <div className="flex items-center gap-2">
-                <span className="text-white font-bold text-sm tracking-wide">{sport}</span>
-                <Badge className={clsx("border-2 px-2 py-0.5", text, ring)}>{label}</Badge>
-              </div>
-            </div>
+      {/* Priority Header Bar */}
+      <div className={clsx("h-1 w-full bg-gradient-to-r", priorityGrad)} />
+      
+      <div className="p-6 space-y-6">
+        {/* Header Row */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            {getAlertIcon(type)}
             <div className="flex items-center gap-2">
-              {/* Live Status Badge */}
-              {liveStatus && (
-                <Badge 
-                  className={clsx(
-                    "text-xs font-bold px-2 py-0.5 border-2",
-                    liveStatus === 'LIVE' && "bg-green-500/20 text-green-300 border-green-500",
-                    liveStatus === 'UPDATED' && "bg-blue-500/20 text-blue-300 border-blue-500",
-                    liveStatus === 'EXPIRED' && "bg-gray-500/20 text-gray-300 border-gray-500"
-                  )}
-                >
-                  {liveStatus === 'LIVE' && '🔴 LIVE'}
-                  {liveStatus === 'UPDATED' && '🔄 UPDATED'} 
-                  {liveStatus === 'EXPIRED' && '⏰ EXPIRED'}
-                </Badge>
-              )}
-              {/* OpenAI Enhancement Indicator */}
-              {openaiEnhanced && (
-                <Badge className="bg-purple-500/20 text-purple-300 border-purple-500 text-xs px-1.5 py-0.5">
-                  🤖 AI
-                </Badge>
-              )}
-              <span className="text-slate-400 text-xs font-medium">{timeAgo(timeIso)}</span>
+              <span className="text-white font-bold text-sm tracking-wider">{sport}</span>
+              <Badge className={clsx("border font-bold px-2 py-1", priorityBadge.color)}>
+                {priorityBadge.label}
+              </Badge>
             </div>
           </div>
-
-          {/* Message */}
-          <h3 className="text-xl font-bold mb-4 text-white leading-tight tracking-wide">{message}</h3>
-
-          {/* Matchup */}
-          <div className="mb-4 text-center">
-            <p className="text-slate-300 font-medium text-lg">{matchup.away} <span className="opacity-70">vs</span> {matchup.home}</p>
+          
+          <div className="flex items-center gap-2">
+            {/* Live Status */}
+            {liveStatus && (
+              <Badge className={clsx(
+                "font-bold border",
+                liveStatus === 'LIVE' && "bg-green-500/20 text-green-300 border-green-500",
+                liveStatus === 'UPDATED' && "bg-blue-500/20 text-blue-300 border-blue-500",
+                liveStatus === 'EXPIRED' && "bg-gray-500/20 text-gray-300 border-gray-500"
+              )}>
+                {liveStatus === 'LIVE' && '🔴 LIVE'}
+                {liveStatus === 'UPDATED' && '🔄 UPDATED'}
+                {liveStatus === 'EXPIRED' && '⏰ EXPIRED'}
+              </Badge>
+            )}
+            
+            {/* OpenAI Enhanced */}
+            {openaiEnhanced && (
+              <Badge className="bg-purple-500/20 text-purple-300 border-purple-500 font-bold">
+                🤖 AI
+              </Badge>
+            )}
+            
+            <span className="text-slate-400 text-xs font-medium">{timeAgo(timeIso)}</span>
           </div>
+        </div>
 
-          {/* Context footer */}
-          <ContextFooter sport={sport} context={context} />
+        {/* Alert Message */}
+        <div>
+          <h3 className="text-2xl font-bold text-white leading-tight mb-2">
+            {message}
+          </h3>
+        </div>
 
-          {/* Actions (optional) */}
-          {(onAck || onMute || onResend) && (
-            <div className="mt-3 flex items-center gap-2">
+        {/* Team Matchup */}
+        <div className="text-center py-2">
+          <p className="text-slate-300 font-semibold text-lg">
+            {matchup.away} <span className="text-slate-500 mx-2">vs</span> {matchup.home}
+          </p>
+        </div>
+
+        {/* Game Context */}
+        <GameContext sport={sport} context={context} />
+
+        {/* Action Buttons */}
+        {(onAck || onMute || onResend) && (
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex gap-2">
               {onAck && (
-                <button onClick={onAck} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700">ACK</button>
+                <button 
+                  onClick={onAck}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-colors"
+                >
+                  Acknowledge
+                </button>
               )}
               {onMute && (
-                <button onClick={onMute} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700">MUTE</button>
+                <button 
+                  onClick={onMute}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-colors"
+                >
+                  Mute
+                </button>
               )}
               {onResend && (
-                <button onClick={onResend} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700">RESEND</button>
+                <button 
+                  onClick={onResend}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-colors"
+                >
+                  Resend
+                </button>
               )}
-              {/* Priority chip on the right */}
-              <div className="ml-auto text-xs text-slate-400">Priority: <span className="font-semibold text-slate-200">{priority}</span></div>
             </div>
-          )}
-        </div>
+            
+            <div className="text-xs text-slate-500">
+              Priority: <span className="font-semibold text-slate-300">{priority}</span>
+            </div>
+          </div>
+        )}
       </div>
     </SwipeableCard>
   );
