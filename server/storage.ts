@@ -357,10 +357,15 @@ export const storage = {
         eq(systemConfiguration.key, key)
       ));
 
+    // Store value directly if it's a simple type, otherwise JSON stringify
+    const storedValue = (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') 
+      ? value 
+      : JSON.stringify(value);
+
     const configData = {
       category,
       key,
-      value: JSON.stringify(value),
+      value: storedValue,
       description,
       updatedAt: new Date(),
       updatedBy: adminUserId
@@ -386,12 +391,18 @@ export const storage = {
   async getSystemConfigValue(category: string, key: string, defaultValue: any = null) {
     const config = await this.getSystemConfiguration(category, key);
     if (!config) return defaultValue;
+    
+    // Handle different value types
+    const value = config.value;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return value;
+    }
+    
     try {
-      return JSON.parse(config.value as string);
+      return JSON.parse(value as string);
     } catch (jsonError) {
-      // Handle malformed JSON by treating as string
-      console.warn(`Invalid JSON for ${category}.${key}:`, config.value);
-      return config.value;
+      // Return the raw value if JSON parsing fails
+      return value;
     }
   },
 
