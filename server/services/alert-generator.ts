@@ -1265,6 +1265,25 @@ export class AlertGenerator {
         }
       };
 
+      // Check if any user would actually receive this alert before saving
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
+      
+      let willSendToAnyUser = false;
+      for (const user of telegramUsers) {
+        const userPrefs = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
+        const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
+        if (userHasThisAlertEnabled) {
+          willSendToAnyUser = true;
+          break;
+        }
+      }
+
+      if (!willSendToAnyUser) {
+        console.log(`⛔ Alert not saved - No users have ${type} enabled in their preferences`);
+        return 0;
+      }
+
       // Insert new alert
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
@@ -1294,6 +1313,14 @@ export class AlertGenerator {
             const isStillEnabled = await this.isAlertGloballyEnabled(sport, type);
             if (!isStillEnabled) {
               console.log(`⛔ Telegram alert blocked - ${type} globally disabled during send`);
+              continue;
+            }
+
+            // Check individual user preferences for this alert type
+            const userPrefs = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
+            const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
+            if (!userHasThisAlertEnabled) {
+              console.log(`⛔ Telegram alert blocked - User ${user.username} has ${type} disabled`);
               continue;
             }
 
@@ -1341,6 +1368,16 @@ export class AlertGenerator {
 
             // Get user details including Telegram settings
             const user = await storage.getUserById(monitoredGame.userId);
+            
+            // Check individual user preferences for this alert type
+            if (user) {
+              const userPrefs = await storage.getUserAlertPreferences(user.id, sport.toLowerCase());
+              const userHasThisAlertEnabled = userPrefs.find(p => p.alertType === type && p.enabled);
+              if (!userHasThisAlertEnabled) {
+                console.log(`⛔ Telegram alert blocked - User ${user.username} has ${type} disabled in preferences`);
+                continue;
+              }
+            }
             console.log(`📱 DEBUG: User ${user?.username || 'unknown'} - Telegram enabled: ${user?.telegramEnabled}, hasToken: ${!!user?.telegramBotToken}, hasChatId: ${!!user?.telegramChatId}`);
 
             if (user && user.telegramEnabled && user.telegramBotToken && user.telegramChatId) {
