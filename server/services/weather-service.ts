@@ -4,8 +4,7 @@ interface WeatherData {
   temperature: number;
   condition: string;
   windSpeed: number;
-  windDirection: number; // degrees
-  windGust?: number;
+  windDirection: number;
   humidity: number;
   pressure: number;
   timestamp: string;
@@ -64,7 +63,7 @@ export class WeatherService {
 
   async getWeatherForTeam(teamName: string): Promise<WeatherData> {
     const stadium = STADIUMS[teamName];
-
+    
     if (!stadium) {
       console.warn(`🌤️ No stadium coordinates found for ${teamName}, using fallback`);
       return this.getFallbackWeather();
@@ -84,13 +83,12 @@ export class WeatherService {
       }
 
       const data = await response.json();
-
+      
       return {
         temperature: Math.round(data.main.temp),
         condition: data.weather[0].main,
         windSpeed: Math.round(data.wind?.speed || 0),
         windDirection: data.wind?.deg || 0,
-        windGust: data.wind?.gust ? Math.round(data.wind.gust) : undefined,
         humidity: data.main.humidity,
         pressure: data.main.pressure,
         timestamp: new Date().toISOString()
@@ -142,25 +140,14 @@ export class WeatherService {
     return Math.max(0.7, Math.min(1.4, factor)); // Clamp between 0.7 and 1.4
   }
 
-  getWindDescription(windSpeed: number, windDirection: number, windGust?: number): string {
+  getWindDescription(windSpeed: number, windDirection: number): string {
     const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
     const directionIndex = Math.round(windDirection / 22.5) % 16;
     const direction = directions[directionIndex];
-
-    let description = '';
-    if (windSpeed < 5) {
-      description = 'Light winds';
-    } else if (windSpeed < 15) {
-      description = `${windSpeed}mph ${direction}`;
-    } else {
-      description = `Strong ${windSpeed}mph ${direction} winds`;
-    }
-
-    if (windGust && windGust > windSpeed) {
-      description += ` (Gusts ${windGust}mph)`;
-    }
-
-    return description;
+    
+    if (windSpeed < 5) return 'Light winds';
+    if (windSpeed < 15) return `${windSpeed}mph ${direction}`;
+    return `Strong ${windSpeed}mph ${direction} winds`;
   }
 }
 
