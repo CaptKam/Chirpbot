@@ -29,9 +29,10 @@ export class AlertGenerator {
     try {
       // First check if the alert type is globally enabled by admin
       const globalSettings = await storage.getGlobalAlertSettings(sport);
-      const isGloballyEnabled = globalSettings[alertType] !== false; // Default to true if not set
+      const isGloballyEnabled = globalSettings[alertType] === true; // Explicit check - must be true
       
       if (!isGloballyEnabled) {
+        console.log(`Alert '${alertType}' for ${sport} disabled by admin`);
         return false; // If admin disabled it globally, don't generate alerts
       }
       
