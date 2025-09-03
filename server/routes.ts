@@ -727,13 +727,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const alerts = [];
 
       for (const row of result.rows) {
-        const sport = row.sport || 'MLB';
-        const alertType = row.type;
+        const sport = String(row.sport || 'MLB');
+        const alertType = String(row.type || '');
 
         // Check if this alert type is globally enabled
         try {
-          const globalSettings = await storage.getGlobalAlertSettings(sport);
-          const isEnabled = globalSettings[alertType] !== false;
+          const globalSettings: Record<string, boolean> = await storage.getGlobalAlertSettings(sport);
+          const isEnabled = alertType && globalSettings[alertType] !== false;
 
           if (isEnabled) {
             let payload: any = {};

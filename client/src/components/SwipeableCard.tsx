@@ -491,7 +491,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="text-emerald-400 font-bold">{alertData.confidence}%</span>
-                  <span className="text-slate-400">{formatTime(alertData.createdAt)}</span>
+                  <span className="text-slate-400">{formatTime(alertData.createdAt || '')}</span>
                 </div>
               </div>
 
@@ -575,8 +575,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 {/* Priority */}
                 <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
                   <div className="text-xs text-slate-400">PRI</div>
-                  <div className={`text-sm font-bold ${alertData.priority >= 90 ? 'text-red-400' : alertData.priority >= 80 ? 'text-orange-400' : alertData.priority >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
-                    {alertData.priority}
+                  <div className={`text-sm font-bold ${(alertData.priority ?? 0) >= 90 ? 'text-red-400' : (alertData.priority ?? 0) >= 80 ? 'text-orange-400' : (alertData.priority ?? 0) >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                    {alertData.priority ?? 0}
                   </div>
                 </div>
               </div>
@@ -584,7 +584,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* Compact Alert Message */}
               <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500">
                 <p className="text-slate-100 text-sm leading-snug">
-                  {alertData.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
+                  {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                 </p>
               </div>
 

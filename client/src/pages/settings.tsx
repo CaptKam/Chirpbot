@@ -100,7 +100,7 @@ export default function Settings() {
 
   // Create a map of current preferences for easy lookup
   const preferenceMap = new Map();
-  if (alertPreferences) {
+  if (alertPreferences && Array.isArray(alertPreferences)) {
     alertPreferences.forEach((pref: any) => {
       preferenceMap.set(pref.alertType, pref.enabled);
     });
@@ -111,7 +111,7 @@ export default function Settings() {
     if (preferencesLoading) return true; // Default to true while loading to avoid brief disablings
 
     // Check if the alert is globally disabled by admin
-    if (globalSettings && globalSettings[alertType] === false) {
+    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
       return false;
     }
 
@@ -242,12 +242,13 @@ export default function Settings() {
 
   // Populate Telegram settings from query data
   useEffect(() => {
-    if (telegramSettings) {
-      setTelegramEnabled(telegramSettings.telegramEnabled || false);
-      setTelegramChatId(telegramSettings.telegramChatId || "");
+    if (telegramSettings && typeof telegramSettings === 'object') {
+      const settings = telegramSettings as any;
+      setTelegramEnabled(settings.telegramEnabled || false);
+      setTelegramChatId(settings.telegramChatId || "");
       // Don't populate token for security (backend returns "***")
-      if (telegramSettings.telegramBotToken && telegramSettings.telegramBotToken !== "***") {
-        setTelegramBotToken(telegramSettings.telegramBotToken);
+      if (settings.telegramBotToken && settings.telegramBotToken !== "***") {
+        setTelegramBotToken(settings.telegramBotToken);
       }
     }
   }, [telegramSettings]);
@@ -378,7 +379,7 @@ export default function Settings() {
                   <div className="space-y-4">
                     {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
                       // Only show alerts that are not globally disabled by admin
-                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
                       const isEnabled = getAlertPreference('MLB', alertType.key);
                       return (
@@ -409,7 +410,7 @@ export default function Settings() {
 
                     {/* Show message when all alerts are disabled */}
                     {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
-                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All MLB alert types have been disabled by your administrator.</p>
@@ -421,7 +422,7 @@ export default function Settings() {
                 <TabsContent value="NCAAF" className="space-y-4">
                   <div className="space-y-4">
                     {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
-                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
                       const isEnabled = getAlertPreference('NCAAF', alertType.key);
                       return (
@@ -451,7 +452,7 @@ export default function Settings() {
                     })}
 
                     {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
-                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All NCAAF alert types have been disabled by your administrator.</p>
@@ -463,7 +464,7 @@ export default function Settings() {
                 <TabsContent value="NFL" className="space-y-4">
                   <div className="space-y-4">
                     {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
-                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
                       const isEnabled = getAlertPreference('NFL', alertType.key);
                       return (
@@ -493,7 +494,7 @@ export default function Settings() {
                     })}
 
                     {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
-                      return globalSettings ? globalSettings[alertType.key] !== false : true;
+                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All NFL alert types have been disabled by your administrator.</p>
