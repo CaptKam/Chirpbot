@@ -381,14 +381,9 @@ export default function Settings() {
                 <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
-              <Tabs value={activeSport} onValueChange={setActiveSport} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="MLB">⚾ MLB</TabsTrigger>
-                  <TabsTrigger value="NCAAF">🏈 NCAAF</TabsTrigger>
-                  <TabsTrigger value="NFL">🏈 NFL</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="MLB" className="space-y-4">
+              <div className="w-full">
+                {/* MLB Section */}
+                {activeSport === 'MLB' && (
                   <div className="space-y-6">
                     {/* MLB Core Alerts */}
                     <div className="space-y-3">
@@ -475,9 +470,10 @@ export default function Settings() {
                       </div>
                     )}
                   </div>
-                </TabsContent>
+                )}
 
-                <TabsContent value="NCAAF" className="space-y-4">
+                {/* NCAAF Section */}
+                {activeSport === 'NCAAF' && (
                   <div className="space-y-4">
                     {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
@@ -517,9 +513,10 @@ export default function Settings() {
                       </div>
                     )}
                   </div>
-                </TabsContent>
+                )}
 
-                <TabsContent value="NFL" className="space-y-4">
+                {/* NFL Section */}
+                {activeSport === 'NFL' && (
                   <div className="space-y-4">
                     {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
@@ -559,8 +556,8 @@ export default function Settings() {
                       </div>
                     )}
                   </div>
-                </TabsContent>
-              </Tabs>
+                )}
+              </div>
             )}
           </Card>
         )}
