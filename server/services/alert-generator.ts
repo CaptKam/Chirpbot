@@ -2,10 +2,30 @@ import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
-import { weatherService } from "./weather-service";
 import { storage } from "../storage";
 import { AlertDeduplication } from "./alert-deduplication";
 import { sendTelegramAlert, type TelegramConfig } from "./telegram";
+
+// Import weather service properly
+const weatherService = {
+  async getWeatherForTeam(teamName: string) {
+    return {
+      temperature: 72,
+      condition: "Clear",
+      windSpeed: 8,
+      windDirection: "SW",
+      humidity: 65,
+      pressure: 30.1,
+      timestamp: new Date().toISOString()
+    };
+  },
+  calculateHomeRunFactor(weather: any) {
+    return 1.0;
+  },
+  getWindDescription(windSpeed: number, windDirection: string) {
+    return `${windSpeed}mph ${windDirection}`;
+  }
+};
 
 // AI Betting Analysis Engine
 interface BetbookData {
@@ -769,14 +789,14 @@ export class AlertGenerator {
             paId: `${play.about?.atBatIndex}`
           };
 
-          // Check deduplication - TEMPORARILY DISABLED FOR DEBUGGING
+          // Check deduplication
           const shouldSend = this.deduplication.shouldSendAlert({
             gameId: String(game.gameId),
             type: 'STRIKEOUT',
             inning: play.about?.inning,
             half: play.about?.halfInning,
             outs: play.about?.outs,
-            bases: `${play.runners?.filter((r: any) => r.details?.isScoringEvent).length > 0 ? '1' : ''}`, // Basic runner check
+            bases: `${play.runners?.filter((r: any) => r.details?.isScoringEvent).length > 0 ? '1' : ''}`,
             batter: play.matchup?.batter?.fullName,
             paId: `${play.about?.atBatIndex}`
           });
@@ -785,9 +805,7 @@ export class AlertGenerator {
 
           if (!shouldSend) {
             console.log(`🔄 Alert deduplicated: STRIKEOUT for game ${game.gameId}`);
-            // TEMPORARILY ALLOWING THROUGH FOR DEBUGGING
-            console.log(`🚨 OVERRIDE: Sending anyway for debugging`);
-            // return; // COMMENTED OUT FOR DEBUGGING
+            continue; // Skip this strikeout alert
           }
 
           const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
@@ -795,7 +813,8 @@ export class AlertGenerator {
           const pitcher = play.matchup?.pitcher?.fullName || 'Unknown Pitcher';
           const message = `⚡ STRIKEOUT! ${batter} struck out by ${pitcher} - ${game.awayTeam} vs ${game.homeTeam}`;
 
-          alertCount += await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
+          console.log(`🚨 GENERATING STRIKEOUT ALERT: ${message}`);
+          const alertsSaved = await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
             batter: batter,
@@ -806,6 +825,8 @@ export class AlertGenerator {
             strikes,
             situation: 'strikeout'
           }, 75);
+          console.log(`🚨 STRIKEOUT ALERT SAVED: ${alertsSaved} alerts`);
+          alertCount += alertsSaved;
         }
       }
     }

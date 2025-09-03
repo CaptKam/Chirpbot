@@ -617,6 +617,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Force send test Telegram alert
+  app.post('/api/telegram/force-test', async (req, res) => {
+    try {
+      console.log('🧪 FORCING TEST TELEGRAM ALERT');
+      
+      // Get all users with Telegram
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
+      
+      console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
+      
+      for (const user of telegramUsers) {
+        const config: TelegramConfig = {
+          botToken: user.telegramBotToken || '',
+          chatId: user.telegramChatId || ''
+        };
+
+        const testAlert = {
+          type: 'TEST_STRIKEOUT',
+          title: 'Test Strikeout Alert',
+          description: '⚡ TEST STRIKEOUT! Test Batter struck out by Test Pitcher - Test Team vs Test Team',
+          gameInfo: {
+            homeTeam: 'Test Home',
+            awayTeam: 'Test Away',
+            score: { home: 0, away: 0 },
+            inning: 5,
+            inningState: 'top',
+            outs: 2,
+            balls: 1,
+            strikes: 2,
+            runners: {
+              first: false,
+              second: true,
+              third: false
+            }
+          }
+        };
+
+        const sent = await sendTelegramAlert(config, testAlert);
+        console.log(`📱 Test alert sent to ${user.username}: ${sent}`);
+      }
+
+      res.json({ 
+        message: 'Test alerts sent',
+        userCount: telegramUsers.length 
+      });
+    } catch (error) {
+      console.error('Error sending test alerts:', error);
+      res.status(500).json({ error: 'Failed to send test alerts' });
+    }
+  });
+
   // Admin middleware
   async function requireAdmin(req: any, res: any, next: any) {
     try {
