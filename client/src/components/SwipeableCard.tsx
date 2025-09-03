@@ -329,29 +329,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
             )}
 
-            {/* Live Odds Display */}
-            {alertData?.betbookData?.odds && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <TrendingUp className="w-4 h-4 text-green-400" />
-                  <span className="text-xs text-green-200 font-semibold">Live Odds</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="text-center">
-                    <div className="text-slate-300">{alertData.homeTeam?.split(' ').pop()}</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.home > 0 ? '+' : ''}{alertData.betbookData.odds.home}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-slate-300">O/U</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.total}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-slate-300">{alertData.awayTeam?.split(' ').pop()}</div>
-                    <div className="text-white font-mono">{alertData.betbookData.odds.away > 0 ? '+' : ''}{alertData.betbookData.odds.away}</div>
-                  </div>
-                </div>
-              </div>
-            )}
 
 
             {/* Quick Sportsbook Access */}
