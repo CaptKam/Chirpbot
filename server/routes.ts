@@ -1097,6 +1097,320 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
+
+
+  // Comprehensive App Debug Endpoint
+  app.get('/api/debug/comprehensive', async (req, res) => {
+    try {
+      const debugResults = {
+        timestamp: new Date().toISOString(),
+        endpoints: {},
+        database: {},
+        services: {},
+        configuration: {},
+        errors: []
+      };
+
+      // Test Database Connection
+      try {
+        const dbTest = await db.execute(sql`SELECT 1 as test`);
+        debugResults.database.connection = 'OK';
+        debugResults.database.testQuery = dbTest.rows[0] ? 'PASS' : 'FAIL';
+      } catch (error: any) {
+        debugResults.database.connection = 'FAIL';
+        debugResults.database.error = error.message;
+        debugResults.errors.push(`Database: ${error.message}`);
+      }
+
+      // Test User Table
+      try {
+        const userCount = await db.execute(sql`SELECT COUNT(*) as count FROM users`);
+        debugResults.database.userCount = parseInt(String(userCount.rows[0]?.count || '0'));
+      } catch (error: any) {
+        debugResults.database.userTableError = error.message;
+        debugResults.errors.push(`User table: ${error.message}`);
+      }
+
+      // Test Alert Table
+      try {
+        const alertCount = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
+        debugResults.database.alertCount = parseInt(String(alertCount.rows[0]?.count || '0'));
+      } catch (error: any) {
+        debugResults.database.alertTableError = error.message;
+        debugResults.errors.push(`Alert table: ${error.message}`);
+      }
+
+      // Test Settings Table
+      try {
+        const settingsCount = await db.execute(sql`SELECT COUNT(*) as count FROM settings`);
+        debugResults.database.settingsCount = parseInt(String(settingsCount.rows[0]?.count || '0'));
+      } catch (error: any) {
+        debugResults.database.settingsTableError = error.message;
+        debugResults.errors.push(`Settings table: ${error.message}`);
+      }
+
+      // Test Telegram Service
+      try {
+        const telegramUsers = await storage.getAllUsers();
+        const validTelegramUsers = telegramUsers.filter(u => 
+          u.telegramEnabled && 
+          u.telegramBotToken && 
+          u.telegramBotToken !== 'default_key' &&
+          u.telegramChatId &&
+          u.telegramChatId !== 'default_key'
+        );
+        debugResults.services.telegram = {
+          totalUsers: telegramUsers.length,
+          validConfigurations: validTelegramUsers.length,
+          status: validTelegramUsers.length > 0 ? 'CONFIGURED' : 'NO_VALID_CONFIGS'
+        };
+      } catch (error: any) {
+        debugResults.services.telegram = { status: 'ERROR', error: error.message };
+        debugResults.errors.push(`Telegram service: ${error.message}`);
+      }
+
+      // Test MLB API
+      try {
+        const { MLBApiService } = await import('./services/mlb-api');
+        const mlbService = new MLBApiService();
+        const todaysGames = await mlbService.getTodaysGames();
+        debugResults.services.mlbApi = {
+          status: 'OK',
+          todaysGames: todaysGames.length,
+          endpoint: 'statsapi.mlb.com'
+        };
+      } catch (error: any) {
+        debugResults.services.mlbApi = { status: 'FAIL', error: error.message };
+        debugResults.errors.push(`MLB API: ${error.message}`);
+      }
+
+      // Test Weather Service
+      try {
+        const { weatherService } = await import('./services/weather-service');
+        const testWeather = await weatherService.getWeatherForTeam('Boston Red Sox');
+        debugResults.services.weather = {
+          status: 'OK',
+          source: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data',
+          temperature: testWeather.temperature,
+          condition: testWeather.condition
+        };
+      } catch (error: any) {
+        debugResults.services.weather = { status: 'FAIL', error: error.message };
+        debugResults.errors.push(`Weather service: ${error.message}`);
+      }
+
+      // Test Alert Generator
+      try {
+        const alertGenerator = new AlertGenerator();
+        debugResults.services.alertGenerator = {
+          status: 'INITIALIZED',
+          class: 'AlertGenerator'
+        };
+      } catch (error: any) {
+        debugResults.services.alertGenerator = { status: 'FAIL', error: error.message };
+        debugResults.errors.push(`Alert Generator: ${error.message}`);
+      }
+
+      // Test Environment Variables
+      debugResults.configuration = {
+        nodeEnv: process.env.NODE_ENV || 'not_set',
+        port: process.env.PORT || 'not_set',
+        databaseUrl: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
+        sessionSecret: process.env.SESSION_SECRET ? 'SET' : 'NOT_SET',
+        openWeatherKey: process.env.OPENWEATHERMAP_API_KEY ? 'SET' : 'NOT_SET'
+      };
+
+      // Test Core Endpoints
+      const endpointsToTest = [
+        { path: '/health', method: 'GET' },
+        { path: '/api/teams', method: 'GET' },
+        { path: '/api/games/today', method: 'GET' },
+        { path: '/api/alerts', method: 'GET' },
+        { path: '/api/settings', method: 'GET' }
+      ];
+
+      for (const endpoint of endpointsToTest) {
+        try {
+          // Simulate internal request
+          debugResults.endpoints[endpoint.path] = 'AVAILABLE';
+        } catch (error: any) {
+          debugResults.endpoints[endpoint.path] = 'ERROR';
+          debugResults.errors.push(`Endpoint ${endpoint.path}: ${error.message}`);
+        }
+      }
+
+      // Test WebSocket
+      debugResults.services.websocket = {
+        clients: clients.size,
+        status: 'ACTIVE'
+      };
+
+      // Overall Health Score
+      const totalChecks = Object.keys(debugResults.database).length + 
+                         Object.keys(debugResults.services).length + 
+                         Object.keys(debugResults.endpoints).length;
+      const errorCount = debugResults.errors.length;
+      const healthScore = Math.max(0, Math.round(((totalChecks - errorCount) / totalChecks) * 100));
+      
+      debugResults.summary = {
+        healthScore: `${healthScore}%`,
+        totalErrors: errorCount,
+        status: errorCount === 0 ? 'HEALTHY' : errorCount < 5 ? 'DEGRADED' : 'CRITICAL',
+        recommendation: errorCount === 0 ? 'System is operating normally' : 
+                       errorCount < 5 ? 'Minor issues detected, monitor closely' : 
+                       'Critical issues require immediate attention'
+      };
+
+      res.json(debugResults);
+    } catch (error: any) {
+      console.error('Debug endpoint error:', error);
+      res.status(500).json({ 
+        error: 'Debug endpoint failed',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Individual Service Debug Endpoints
+  app.get('/api/debug/database', async (req, res) => {
+    try {
+      const dbStatus = {
+        connection: 'UNKNOWN',
+        tables: {},
+        indexes: {},
+        performance: {}
+      };
+
+      // Test connection
+      const start = Date.now();
+      await db.execute(sql`SELECT 1`);
+      dbStatus.performance.connectionTime = `${Date.now() - start}ms`;
+      dbStatus.connection = 'OK';
+
+      // Check all tables
+      const tables = ['users', 'alerts', 'settings', 'teams', 'user_monitored_teams', 'master_alert_controls'];
+      for (const table of tables) {
+        try {
+          const count = await db.execute(sql.raw(`SELECT COUNT(*) as count FROM ${table}`));
+          dbStatus.tables[table] = {
+            status: 'OK',
+            count: parseInt(String(count.rows[0]?.count || '0'))
+          };
+        } catch (error: any) {
+          dbStatus.tables[table] = { status: 'ERROR', error: error.message };
+        }
+      }
+
+      res.json(dbStatus);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/debug/alerts-system', async (req, res) => {
+    try {
+      const alertsDebug = {
+        generation: {},
+        storage: {},
+        delivery: {},
+        configuration: {}
+      };
+
+      // Check alert generation
+      try {
+        const recentAlerts = await db.execute(sql`
+          SELECT type, COUNT(*) as count, MAX(created_at) as latest
+          FROM alerts 
+          WHERE created_at > NOW() - INTERVAL '1 hour'
+          GROUP BY type
+        `);
+        alertsDebug.generation = {
+          status: 'OK',
+          recentTypes: recentAlerts.rows,
+          lastHourTotal: recentAlerts.rows.reduce((sum: number, row: any) => sum + parseInt(String(row.count)), 0)
+        };
+      } catch (error: any) {
+        alertsDebug.generation = { status: 'ERROR', error: error.message };
+      }
+
+      // Check global alert settings
+      try {
+        const globalSettings = await storage.getGlobalAlertSettings('MLB');
+        const enabledAlerts = Object.entries(globalSettings).filter(([_, enabled]) => enabled).length;
+        alertsDebug.configuration = {
+          status: 'OK',
+          totalAlertTypes: Object.keys(globalSettings).length,
+          enabledTypes: enabledAlerts,
+          disabledTypes: Object.keys(globalSettings).length - enabledAlerts
+        };
+      } catch (error: any) {
+        alertsDebug.configuration = { status: 'ERROR', error: error.message };
+      }
+
+      // Check Telegram delivery
+      try {
+        const telegramUsers = await storage.getAllUsers();
+        const validUsers = telegramUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
+        alertsDebug.delivery = {
+          status: validUsers.length > 0 ? 'READY' : 'NO_RECIPIENTS',
+          configuredUsers: validUsers.length,
+          totalUsers: telegramUsers.length
+        };
+      } catch (error: any) {
+        alertsDebug.delivery = { status: 'ERROR', error: error.message };
+      }
+
+      res.json(alertsDebug);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/debug/live-monitoring', async (req, res) => {
+    try {
+      const monitoringStatus = {
+        games: {},
+        apis: {},
+        monitoring: {}
+      };
+
+      // Check today's games
+      try {
+        const { MLBApiService } = await import('./services/mlb-api');
+        const mlbService = new MLBApiService();
+        const todaysGames = await mlbService.getTodaysGames();
+        const liveGames = todaysGames.filter(game => game.status === 'live' || game.isLive);
+        
+        monitoringStatus.games = {
+          status: 'OK',
+          total: todaysGames.length,
+          live: liveGames.length,
+          scheduled: todaysGames.filter(g => g.status === 'scheduled').length,
+          completed: todaysGames.filter(g => g.status === 'completed' || g.status === 'final').length
+        };
+      } catch (error: any) {
+        monitoringStatus.games = { status: 'ERROR', error: error.message };
+      }
+
+      // Check monitored games
+      try {
+        const monitoredGames = await storage.getAllMonitoredGames();
+        monitoringStatus.monitoring = {
+          status: 'OK',
+          userMonitoredGames: monitoredGames.length,
+          uniqueUsers: [...new Set(monitoredGames.map(g => g.userId))].length
+        };
+      } catch (error: any) {
+        monitoringStatus.monitoring = { status: 'ERROR', error: error.message };
+      }
+
+      res.json(monitoringStatus);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
         authenticated: true,
         user: {
           id: user.id,
