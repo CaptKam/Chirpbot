@@ -22,6 +22,22 @@ export class AlertGenerator {
   private ncaafApi: NCAAFApiService;
   private deduplication: AlertDeduplication;
 
+  // V2 RE24-Based Probability System
+  private readonly RE24: Record<string, number> = {
+    // No outs
+    "000-0": 0.50, "100-0": 0.90, "010-0": 1.13, "001-0": 1.35,
+    "110-0": 1.50, "101-0": 1.78, "011-0": 1.98, "111-0": 2.29,
+
+    // One out  
+    "000-1": 0.27, "100-1": 0.54, "010-1": 0.69, "001-1": 0.98,
+    "110-1": 0.94, "101-1": 1.20, "011-1": 1.45, "111-1": 1.65,
+
+    // Two outs
+    "000-2": 0.11, "100-2": 0.25, "010-2": 0.35, "001-2": 0.37,
+    "110-2": 0.47, "101-2": 0.50, "011-2": 0.63, "111-2": 0.82
+  };
+
+
   constructor() {
     this.mlbApi = new MLBApiService();
     this.ncaafApi = new NCAAFApiService();
@@ -119,7 +135,7 @@ export class AlertGenerator {
     if (game.homeScore === 0 || game.awayScore === 0) {
       const shutoutTeam = game.homeScore === 0 ? game.awayTeam : game.homeTeam;
       const victimTeam = game.homeScore === 0 ? game.homeTeam : game.awayTeam;
-      
+
       alerts.push({
         type: 'SHUTOUT',
         sport: 'MLB',
@@ -149,7 +165,7 @@ export class AlertGenerator {
     if (scoreDiff >= 7) {
       const winner = game.homeScore > game.awayScore ? game.homeTeam : game.awayTeam;
       const loser = game.homeScore > game.awayScore ? game.awayTeam : game.homeTeam;
-      
+
       alerts.push({
         type: 'BLOWOUT',
         sport: 'MLB',
@@ -207,20 +223,20 @@ export class AlertGenerator {
         this.mlbApi.getTodaysGames(),
         this.ncaafApi.getTodaysGames()
       ]);
-      
+
       const liveMLBGames = mlbGames.filter(game => game.isLive);
       const liveNCAAFGames = ncaafGames.filter(game => game.isLive);
       const totalLiveGames = liveMLBGames.length + liveNCAAFGames.length;
-      
+
       if (totalLiveGames === 0) {
         console.log('🔍 No live games to monitor for alerts');
         return;
       }
 
       console.log(`🔍 Monitoring ${liveMLBGames.length} MLB + ${liveNCAAFGames.length} NCAAF live games for alerts`);
-      
+
       let newAlerts = 0;
-      
+
       // Process MLB games
       if (liveMLBGames.length > 0) {
         console.log(`⚾ Processing ${liveMLBGames.length} live MLB games`);
@@ -229,7 +245,7 @@ export class AlertGenerator {
           newAlerts += count;
         }
       }
-      
+
       // Process NCAAF games  
       if (liveNCAAFGames.length > 0) {
         console.log(`🏈 Processing ${liveNCAAFGames.length} live NCAAF games`);
@@ -238,7 +254,7 @@ export class AlertGenerator {
           newAlerts += count;
         }
       }
-      
+
       if (newAlerts > 0) {
         console.log(`🚨 Generated ${newAlerts} new live alerts!`);
       } else {
@@ -251,7 +267,7 @@ export class AlertGenerator {
 
   private async generateLiveAlertsForGame(game: any): Promise<number> {
     let alertCount = 0;
-    
+
     // Fetch detailed live feed data for granular alerts
     try {
       const liveData = await this.fetchDetailedLiveData(game.gameId);
@@ -284,50 +300,71 @@ export class AlertGenerator {
   }
 
   // Calculate empirical scoring probability based on MLB statistics
-  private calculateScoringProbability(hasFirst: boolean, hasSecond: boolean, hasThird: boolean, outs: number): number {
-    // Based on decades of MLB statistical analysis - real historical data
-    if (hasFirst && hasSecond && hasThird) {
-      if (outs === 0) return 85;  // Bases loaded, no outs: 85% scoring chance
-      if (outs === 1) return 70;  // Bases loaded, one out: 70% scoring chance
-      if (outs === 2) return 35;  // Bases loaded, two outs: 35% scoring chance
+  // V2 RE24-Based Probability System
+  private readonly RE24: Record<string, number> = {
+    // No outs
+    "000-0": 0.50, "100-0": 0.90, "010-0": 1.13, "001-0": 1.35,
+    "110-0": 1.50, "101-0": 1.78, "011-0": 1.98, "111-0": 2.29,
+
+    // One out  
+    "000-1": 0.27, "100-1": 0.54, "010-1": 0.69, "001-1": 0.98,
+    "110-1": 0.94, "101-1": 1.20, "011-1": 1.45, "111-1": 1.65,
+
+    // Two outs
+    "000-2": 0.11, "100-2": 0.25, "010-2": 0.35, "001-2": 0.37,
+    "110-2": 0.47, "101-2": 0.50, "011-2": 0.63, "111-2": 0.82
+  };
+
+  private calculateScoringProbability(hasFirst: boolean, hasSecond: boolean, hasThird: boolean, outs: number, gameState?: any): number {
+    // Build state key for RE24 lookup
+    const firstBase = hasFirst ? "1" : "0";
+    const secondBase = hasSecond ? "1" : "0"; 
+    const thirdBase = hasThird ? "1" : "0";
+    const stateKey = `${firstBase}${secondBase}${thirdBase}-${outs}`;
+
+    // Get base run expectancy
+    const baseExpectancy = this.RE24[stateKey] || 0.11;
+
+    // Convert run expectancy to scoring probability using sigmoid function
+    // RE of 2.0+ = ~90% probability, RE of 0.5 = ~50% probability
+    let probability = Math.round((1 / (1 + Math.exp(-2.5 * (baseExpectancy - 0.8)))) * 100);
+
+    // Context-aware adjustments
+    if (gameState) {
+      // Weather adjustments for home run probability
+      if (gameState.weather?.windSpeed > 10 && gameState.weather?.windDirection?.includes('Out')) {
+        probability += 5; // Favorable wind conditions
+      }
+
+      // Power hitter adjustment
+      if (gameState.batter?.seasonHomeRuns >= 20) {
+        probability += 3;
+      }
+
+      // Ballpark factors (hitter-friendly parks)
+      const hitterFriendlyParks = ['Coors Field', 'Great American Ball Park', 'Yankee Stadium'];
+      if (hitterFriendlyParks.some(park => gameState.venue?.name?.includes(park))) {
+        probability += 2;
+      }
+
+      // Late inning pressure situations
+      if (gameState.inning >= 7) {
+        probability += 2;
+      }
+
+      // Close game situations (within 3 runs)
+      if (Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0)) <= 3) {
+        probability += 3;
+      }
     }
-    
-    if (hasSecond && hasThird && !hasFirst) {
-      if (outs === 0) return 87;  // Runners 2nd & 3rd, no outs: 87% scoring chance
-      if (outs === 1) return 65;  // Runners 2nd & 3rd, one out: 65% scoring chance
-      if (outs === 2) return 30;  // Runners 2nd & 3rd, two outs: 30% scoring chance
-    }
-    
-    if (hasThird && !hasFirst && !hasSecond) {
-      if (outs === 0) return 75;  // Runner 3rd only, no outs: 75% scoring chance
-      if (outs === 1) return 55;  // Runner 3rd only, one out: 55% scoring chance
-      if (outs === 2) return 25;  // Runner 3rd only, two outs: 25% scoring chance
-    }
-    
-    if (hasFirst && hasThird && !hasSecond) {
-      if (outs === 0) return 70;  // Runners 1st & 3rd, no outs: 70% scoring chance
-      if (outs === 1) return 55;  // Runners 1st & 3rd, one out: 55% scoring chance
-      if (outs === 2) return 27;  // Runners 1st & 3rd, two outs: 27% scoring chance
-    }
-    
-    if (hasFirst && hasSecond && !hasThird) {
-      if (outs === 0) return 60;  // Runners 1st & 2nd, no outs: 60% scoring chance
-      if (outs === 1) return 45;  // Runners 1st & 2nd, one out: 45% scoring chance
-      if (outs === 2) return 22;  // Runners 1st & 2nd, two outs: 22% scoring chance
-    }
-    
-    if (hasSecond && !hasFirst && !hasThird) {
-      if (outs === 0) return 60;  // Runner 2nd only, no outs: 60% scoring chance
-      if (outs === 1) return 40;  // Runner 2nd only, one out: 40% scoring chance
-      if (outs === 2) return 20;  // Runner 2nd only, two outs: 20% scoring chance
-    }
-    
-    return 0;
+
+    // Ensure probability stays within realistic bounds
+    return Math.min(Math.max(probability, 5), 95);
   }
 
   private async generateBaseRunnerAlerts(game: any, liveData: any): Promise<number> {
     let alertCount = 0;
-    
+
     // Use the offense object which shows current base situation
     const offense = liveData?.linescore?.offense;
     if (!offense) return 0;
@@ -336,14 +373,48 @@ export class AlertGenerator {
     const hasFirst = !!offense.first;
     const hasSecond = !!offense.second;
     const hasThird = !!offense.third;
-    
+
     const inning = liveData.linescore?.currentInning || 0;
     const outs = liveData.linescore?.outs || 0;
     const isTopInning = liveData.linescore?.isTopInning || false;
-    
+
     // Calculate scoring probability
-    const scoringProbability = this.calculateScoringProbability(hasFirst, hasSecond, hasThird, outs);
+    const gameState = {
+      inning: inning,
+      isTopInning: isTopInning,
+      outs: outs,
+      homeScore: game.homeScore,
+      awayScore: game.awayScore,
+      venue: { name: liveData.venue?.venueName }, // Assuming venue name is available
+      batter: { seasonHomeRuns: 0 } // Placeholder, will be populated if batter is analyzed
+    };
     
+    // Get current batter stats if available to calculate power hitter probability
+    const currentPlayForBatter = liveData?.plays?.currentPlay;
+    if (currentPlayForBatter && currentPlayForBatter.matchup?.batter?.id) {
+      try {
+        const batterStats = await this.fetchBatterStats(currentPlayForBatter.matchup.batter.id);
+        if (batterStats && batterStats.stats && batterStats.stats[0] && batterStats.stats[0].stats) {
+          gameState.batter.seasonHomeRuns = batterStats.stats[0].stats.homeRuns || 0;
+        }
+      } catch (error) {
+        console.error(`Failed to fetch batter stats for probability calculation: ${error}`);
+      }
+    }
+
+    // Get weather data for enhanced context
+    const weather = await weatherService.getWeatherForTeam(game.homeTeam);
+    gameState.weather = {
+      temperature: weather.temperature,
+      condition: weather.condition,
+      windSpeed: weather.windSpeed,
+      windDirection: weather.windDirection,
+      homeRunFactor: weatherService.calculateHomeRunFactor(weather)
+    };
+
+    const scoringProbability = this.calculateScoringProbability(hasFirst, hasSecond, hasThird, outs, gameState);
+
+
     // Extract current count (balls/strikes) from current play
     const currentPlay = liveData?.plays?.currentPlay;
     const count = currentPlay?.count || {};
@@ -358,11 +429,11 @@ export class AlertGenerator {
         console.log(`⛔ BASES_LOADED alert blocked - globally disabled`);
         return alertCount;
       }
-      
+
       const alertKey = `${game.gameId}_BASES_LOADED_${inning}_${outs}`;
       const outsText = outs === 1 ? '1 out' : `${outs} outs`;
       const message = `🔥 BASES LOADED! (${scoringProbability}% scoring chance) ${game.awayTeam} vs ${game.homeTeam} - ${outsText} in the ${isTopInning ? 'Top' : 'Bottom'} of ${inning}`;
-      
+
       alertCount += await this.saveRealTimeAlert(alertKey, 'BASES_LOADED', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -389,11 +460,11 @@ export class AlertGenerator {
         console.log(`⛔ RUNNERS_1ST_2ND alert blocked - globally disabled`);
         return alertCount;
       }
-      
+
       const alertKey = `${game.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
       const outsText = outs === 1 ? '1 out' : `${outs} outs`;
       const message = `💎 Runners on 1st & 2nd (${scoringProbability}% scoring chance) ${game.awayTeam} vs ${game.homeTeam} - ${outsText}`;
-      
+
       alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNERS_1ST_2ND', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -419,7 +490,7 @@ export class AlertGenerator {
         console.log(`⛔ RISP alert blocked - globally disabled`);
         return alertCount;
       }
-      
+
       const alertKey = `${game.gameId}_RISP_${inning}_${outs}`;
       const positions = [];
       if (hasSecond) positions.push('2nd');
@@ -428,10 +499,10 @@ export class AlertGenerator {
       const weather = await weatherService.getWeatherForTeam(game.homeTeam);
       const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
       const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-      
+
       const outsText = outs === 1 ? '1 out' : `${outs} outs`;
       const message = `⚾ SCORING POSITION (${scoringProbability}% chance) ${game.awayTeam} vs ${game.homeTeam} - Runner on ${positions.join(' & ')}, ${outsText}. ${weather.temperature}°F, ${windDesc}`;
-      
+
       alertCount += await this.saveRealTimeAlert(alertKey, 'RISP', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -456,19 +527,30 @@ export class AlertGenerator {
     return alertCount;
   }
 
+  // Fetch batter stats for power analysis
+  private async fetchBatterStats(batterId: string): Promise<any> {
+    try {
+      const response = await fetch(`https://statsapi.mlb.com/api/v1/people/${batterId}/stats?stats=season,career&group=hitting&season=2025`);
+      return await response.json();
+    } catch (error) {
+      console.error(`Failed to fetch batter stats for ID ${batterId}:`, error);
+      return null;
+    }
+  }
+
   // Check if batter is a power hitter (20+ HRs)
   private isPowerHitter(batterStats: any): boolean {
     const seasonHRs = batterStats?.stats?.[0]?.stats?.homeRuns || 0;
     const careerHRs = batterStats?.stats?.[1]?.stats?.homeRuns || 0;
-    
+
     // Elite power threshold: 20+ HRs in season or 150+ career
     return seasonHRs >= 20 || careerHRs >= 150;
   }
-  
+
   // Check if batter is hot (already homered today)
   private isHotHitter(batterName: string, todayPlays: any[]): boolean {
     if (!batterName) return false;
-    
+
     for (const play of todayPlays) {
       if (play.result?.event === 'Home Run' && 
           play.matchup?.batter?.fullName === batterName) {
@@ -484,7 +566,7 @@ export class AlertGenerator {
     const isTopInning = liveData.linescore?.isTopInning;
     const outs = liveData.linescore?.outs || 0;
     const scoreDiff = Math.abs(game.homeScore - game.awayScore);
-    
+
     // Extract current count (balls/strikes) from current play
     const currentPlay = liveData?.plays?.currentPlay;
     const count = currentPlay?.count || {};
@@ -498,9 +580,9 @@ export class AlertGenerator {
       // Get weather data for late inning context
       const weather = await weatherService.getWeatherForTeam(game.homeTeam);
       const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-      
+
       const message = `🔥 LATE INNING PRESSURE! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore} - ${situation} ${inning}th. ${weather.temperature}°F, ${windDesc}`;
-      
+
       alertCount += await this.saveRealTimeAlert(alertKey, 'LATE_PRESSURE', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -528,13 +610,13 @@ export class AlertGenerator {
     let alertCount = 0;
     const currentPlay = liveData?.plays?.currentPlay;
     if (!currentPlay) return 0;
-    
+
     console.log(`🔧 DEBUG: generateAtBatAlerts called for game ${game.gameId}`);
 
     const count = currentPlay.count;
     const balls = count?.balls || 0;
     const strikes = count?.strikes || 0;
-    
+
     // Check for power hitter at bat
     const batter = currentPlay?.matchup?.batter;
     if (batter && batter.id) {
@@ -542,29 +624,29 @@ export class AlertGenerator {
         // Fetch batter stats for power analysis
         const statsResponse = await fetch(`https://statsapi.mlb.com/api/v1/people/${batter.id}/stats?stats=season,career&group=hitting&season=2025`);
         const batterData = await statsResponse.json();
-        
+
         if (this.isPowerHitter(batterData)) {
           const offense = liveData?.linescore?.offense;
           const hasRunners = !!(offense?.first || offense?.second || offense?.third);
           const inning = liveData.linescore?.currentInning || 0;
           const outs = liveData.linescore?.outs || 0;
           const seasonHRs = batterData?.stats?.[0]?.stats?.homeRuns || 0;
-          
+
           // Get weather for home run probability
           const weather = await weatherService.getWeatherForTeam(game.homeTeam);
           const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
           const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-          
+
           // Calculate power score (0-100)
           let powerScore = 50; // Base score
           if (seasonHRs >= 30) powerScore = 75; // Elite slugger
           else if (seasonHRs >= 20) powerScore = 65; // Strong power
           if (hasRunners) powerScore += 10; // Runners on base bonus
           if (homeRunFactor > 1.2) powerScore += 10; // Weather bonus
-          
+
           const alertKey = `${game.gameId}_POWER_HITTER_${batter.id}_${inning}_${outs}`;
           const message = `💪 POWER HITTER! ${batter.fullName} (${seasonHRs} HRs) at bat - ${game.awayTeam} vs ${game.homeTeam}${hasRunners ? ', runners on!' : ''}. Wind: ${windDesc}`;
-          
+
           alertCount += await this.saveRealTimeAlert(alertKey, 'POWER_HITTER', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
@@ -585,13 +667,13 @@ export class AlertGenerator {
             }
           }, powerScore);
         }
-        
+
         // Check if hot hitter (already homered today)
         const allPlays = liveData?.plays?.allPlays || [];
         if (this.isHotHitter(batter.fullName, allPlays)) {
           const alertKey = `${game.gameId}_HOT_HITTER_${batter.id}_${Date.now()}`;
           const message = `🔥 HOT HITTER! ${batter.fullName} already homered today - ${game.awayTeam} vs ${game.homeTeam}`;
-          
+
           alertCount += await this.saveRealTimeAlert(alertKey, 'HOT_HITTER', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
@@ -612,12 +694,12 @@ export class AlertGenerator {
     if (allPlays.length >= 2) {
       // Check the last few completed plays for strikeouts
       const recentPlays = allPlays.slice(-3);
-      
+
       for (const play of recentPlays) {
         const result = play.result;
         const description = result?.description || '';
         const event = result?.event || '';
-        
+
         // Multiple ways to detect strikeouts from MLB API
         const isStrikeout = 
           event === 'Strikeout' ||
@@ -626,7 +708,7 @@ export class AlertGenerator {
           description.toLowerCase().includes('strikes out') ||
           description.toLowerCase().includes('struck out') ||
           description.toLowerCase().includes('strikeout');
-          
+
         if (isStrikeout) {
           console.log(`🔧 DEBUG: Found strikeout event for game ${game.gameId}`);
           // Check if STRIKEOUT alerts are globally enabled
@@ -636,7 +718,7 @@ export class AlertGenerator {
             continue; // Skip this alert
           }
           console.log(`✅ STRIKEOUT alert proceeding - globally enabled`);
-          
+
           // 🛡️ DEDUPLICATION CHECK
           const dedupKey = {
             gameId: game.gameId,
@@ -647,17 +729,17 @@ export class AlertGenerator {
             batter: play.matchup?.batter?.fullName,
             paId: `${play.about?.atBatIndex}`
           };
-          
+
           if (!this.deduplication.shouldSendAlert(dedupKey, 'plate-appearance')) {
             console.log(`🚫 STRIKEOUT alert blocked - deduplication filter`);
             continue; // Skip this duplicate alert
           }
-          
+
           const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
           const batter = play.matchup?.batter?.fullName || 'Unknown Batter';
           const pitcher = play.matchup?.pitcher?.fullName || 'Unknown Pitcher';
           const message = `⚡ STRIKEOUT! ${batter} struck out by ${pitcher} - ${game.awayTeam} vs ${game.homeTeam}`;
-          
+
           alertCount += await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
@@ -677,7 +759,7 @@ export class AlertGenerator {
     if (balls === 3 && strikes === 2) {
       const alertKey = `${game.gameId}_FULL_COUNT_${Date.now()}`;
       const message = `⚾ FULL COUNT! ${game.awayTeam} vs ${game.homeTeam} - 3-2 count, pressure on!`;
-      
+
       alertCount += await this.saveRealTimeAlert(alertKey, 'FULL_COUNT', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -693,30 +775,30 @@ export class AlertGenerator {
   private async generateScoringAlerts(game: any, liveData: any): Promise<number> {
     let alertCount = 0;
     const allPlays = liveData?.plays?.allPlays || [];
-    
+
     // Check the most recent play for scoring
     if (allPlays.length > 0) {
       const lastPlay = allPlays[allPlays.length - 1];
       const playEvents = lastPlay.playEvents || [];
-      
+
       for (const event of playEvents) {
         if (event.details?.event === 'Home Run') {
           // Check for Grand Slam by looking at runners
           const runners = lastPlay.runners || [];
           const runsScored = runners.filter(r => r.details?.isScoringEvent).length;
           const isGrandSlam = runsScored >= 4;
-          
+
           const alertKey = `${game.gameId}_HOME_RUN_${lastPlay.about?.atBatIndex}`;
           const batter = lastPlay.matchup?.batter?.fullName || 'Unknown';
           const message = isGrandSlam ? 
             `🎆 GRAND SLAM!!! ${batter} clears the bases! ${game.awayTeam} vs ${game.homeTeam} - 4 runs score!` :
             `🏠 HOME RUN! ${batter} goes deep! ${game.awayTeam} vs ${game.homeTeam}${runsScored > 1 ? ` - ${runsScored} runs score!` : ''}`;
-          
+
           // Get weather data for home run context
           const weather = await weatherService.getWeatherForTeam(game.homeTeam);
           const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
           const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-          
+
           alertCount += await this.saveRealTimeAlert(alertKey, 'HOME_RUN_LIVE', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
@@ -747,7 +829,7 @@ export class AlertGenerator {
     if (scoreDiff <= 3 && (game.homeScore > 0 || game.awayScore > 0)) {
       const alertKey = `${game.gameId}_LIVE_CLOSE`;
       const message = `🔥 LIVE: Close game! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore}`;
-      
+
       alertCount += await this.saveRealTimeAlert(alertKey, 'CLOSE_GAME_LIVE', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -762,13 +844,13 @@ export class AlertGenerator {
 
   private async generateNCAAFLiveAlerts(game: any): Promise<number> {
     let alertCount = 0;
-    
+
     try {
       // Two-minute warning for quarters and halfs
       alertCount += await this.generateTwoMinuteWarningAlert(game);
-      
+
       // Add other NCAAF alerts here (fourth down, red zone, etc.)
-      
+
     } catch (error) {
       console.error(`Error generating NCAAF alerts for game ${game.gameId}:`, error);
     }
@@ -778,24 +860,24 @@ export class AlertGenerator {
 
   private async generateTwoMinuteWarningAlert(game: any): Promise<number> {
     let alertCount = 0;
-    
+
     const timeRemaining = game.timeRemaining || '';
     const quarter = game.quarter || 0;
-    
+
     // Debug logging for NCAAF time detection
     console.log(`🏈 NCAAF Debug - Game: ${game.awayTeam} vs ${game.homeTeam}`);
     console.log(`🏈 Time Remaining: "${timeRemaining}" | Quarter: ${quarter} | Status: ${game.status}`);
     console.log(`🏈 Is Live: ${game.isLive} | Within 2min: ${this.isWithinTwoMinutes(timeRemaining)}`);
-    
+
     // Check if we're in the final 2 minutes of any quarter
     if (this.isWithinTwoMinutes(timeRemaining) && quarter > 0) {
       // Determine if it's end of half (2nd or 4th quarter)
       const isEndOfHalf = quarter === 2 || quarter === 4;
       const periodType = isEndOfHalf ? 'half' : 'quarter';
-      
+
       const alertKey = `${game.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
       const message = `⏰ TWO MINUTE WARNING! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
-      
+
       alertCount += await this.saveRealTimeAlert(alertKey, 'TWO_MINUTE_WARNING', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
@@ -813,10 +895,10 @@ export class AlertGenerator {
 
   private isWithinTwoMinutes(timeRemaining: string): boolean {
     if (!timeRemaining || timeRemaining === '0:00') return false;
-    
+
     // Handle different time formats from ESPN
     let totalSeconds = 0;
-    
+
     // Format: "1:45", "0:30", "12:30"
     if (timeRemaining.includes(':')) {
       const timeParts = timeRemaining.split(':');
@@ -838,9 +920,9 @@ export class AlertGenerator {
         }
       }
     }
-    
+
     console.log(`🏈 Time parsing: "${timeRemaining}" → ${totalSeconds} seconds`);
-    
+
     // Check if we're within 2 minutes (120 seconds)
     return totalSeconds <= 120 && totalSeconds > 0;
   }
@@ -857,7 +939,7 @@ export class AlertGenerator {
       const existingAlert = await db.execute(sql`
         SELECT 1 FROM alerts WHERE alert_key = ${alertKey}
       `);
-      
+
       if (existingAlert.rows.length > 0) {
         return 0; // Alert already exists
       }
@@ -868,7 +950,7 @@ export class AlertGenerator {
         VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
                 ${type}, 'NEW', ${priority}, ${JSON.stringify({ message, context })}, NOW())
       `);
-      
+
       console.log(`🚨 REAL-TIME ALERT: ${message}`);
 
       // Send to Telegram for users monitoring this game
@@ -876,7 +958,7 @@ export class AlertGenerator {
         // Get all monitored games and filter by this gameId
         const allMonitoredGames = await storage.getAllMonitoredGames();
         const usersMonitoringGame = allMonitoredGames.filter(mg => mg.gameId === gameId);
-        
+
         for (const monitoredGame of usersMonitoringGame) {
           // Get user details including Telegram settings
           const user = await storage.getUserById(monitoredGame.userId);
