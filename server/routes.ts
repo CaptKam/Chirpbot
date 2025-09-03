@@ -9,6 +9,7 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
+import { weatherService } from "./services/weather-service";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -282,6 +283,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching alert preferences:', error);
       res.status(500).json({ message: 'Failed to fetch alert preferences' });
+    }
+  });
+
+  // Weather data endpoint  
+  app.get("/api/weather/:teamName", async (req, res) => {
+    try {
+      const { teamName } = req.params;
+      const decodedTeamName = decodeURIComponent(teamName);
+      
+      const weatherData = await weatherService.getWeatherForTeam(decodedTeamName);
+      
+      res.json(weatherData);
+    } catch (error) {
+      console.error("Weather fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch weather data" });
     }
   });
 
