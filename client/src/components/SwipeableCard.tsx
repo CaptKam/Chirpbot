@@ -522,11 +522,59 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Compact Alert Message - Moved under Team Matchup */}
+              {/* AI-Enhanced Alert Message - Moved under Team Matchup */}
               <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500 mb-2">
-                <p className="text-slate-100 text-sm leading-snug">
-                  {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
-                </p>
+                <div className="flex items-start space-x-2">
+                  {/* AI Enhancement Indicator */}
+                  {alertData.context?.aiEnhanced && (
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Brain className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                  
+                  <div className="flex-1">
+                    {/* Enhanced Message Display */}
+                    <p className="text-slate-100 text-sm leading-snug">
+                      {alertData.context?.aiEnhancedMessage ? (
+                        // Show AI-enhanced message if available
+                        <span>
+                          {alertData.context.aiEnhancedMessage}
+                          {alertData.context?.aiInsight && (
+                            <span className="block mt-1 text-xs text-blue-300 italic">
+                              🤖 {alertData.context.aiInsight}
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        // Fallback to cleaned original message
+                        (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()
+                      )}
+                    </p>
+
+                    {/* AI Prediction if available */}
+                    {alertData.context?.aiPrediction && (
+                      <div className="mt-2 p-2 bg-blue-500/10 rounded border border-blue-500/20">
+                        <div className="flex items-center space-x-1 mb-1">
+                          <Target className="w-3 h-3 text-blue-400" />
+                          <span className="text-xs text-blue-300 font-medium">AI Prediction</span>
+                        </div>
+                        <p className="text-xs text-blue-200">{alertData.context.aiPrediction}</p>
+                      </div>
+                    )}
+
+                    {/* Scoring Probability */}
+                    {alertData.context?.scoringProbability && (
+                      <div className="mt-1 flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
+                          <Activity className="w-3 h-3 text-green-400" />
+                          <span className="text-xs text-green-300">
+                            {alertData.context.scoringProbability} scoring chance
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Compact Game Situation with Baseball Diamond Integration */}

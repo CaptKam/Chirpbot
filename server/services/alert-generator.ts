@@ -1506,4 +1506,62 @@ export class AlertGenerator {
       return 0;
     }
   }
+
+  private async generateSituationInsight(gameContext: any): Promise<string | null> {
+    try {
+      const scoreDiff = Math.abs(gameContext.score.home - gameContext.score.away);
+      const isLateInning = gameContext.inning >= 7;
+      const isCloseGame = scoreDiff <= 2;
+
+      if (isLateInning && isCloseGame && gameContext.baseRunners.length > 0) {
+        return 'High-leverage situation with scoring opportunity';
+      } else if (gameContext.baseRunners.length >= 2) {
+        return 'Multiple runners in scoring position';
+      } else if (gameContext.outs === 2) {
+        return 'Two-out pressure situation';
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async generatePrediction(gameContext: any): Promise<string | null> {
+    try {
+      if (!gameContext.batter) return null;
+
+      const runnerCount = gameContext.baseRunners.length;
+      const outs = gameContext.outs;
+
+      if (runnerCount > 0 && outs < 2) {
+        return `${Math.round(60 - (outs * 15))}% chance of scoring this inning`;
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async calculateScoringProb(gameContext: any): Promise<string | null> {
+    try {
+      let baseProb = 0;
+      if (gameContext.baseRunners.includes('3B')) baseProb += 60;
+      if (gameContext.baseRunners.includes('2B')) baseProb += 40;
+      if (gameContext.baseRunners.includes('1B')) baseProb += 20;
+
+      // Adjust for outs
+      baseProb = baseProb * (3 - gameContext.outs) / 3;
+
+      const probability = Math.min(85, Math.max(15, baseProb));
+      return `${probability}%`;
+    } catch {
+      return null;
+    }
+  }
+
+  async destroy() {
+    this.deduplication.destroy();
+  }
 }
