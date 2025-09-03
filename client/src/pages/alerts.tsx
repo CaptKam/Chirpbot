@@ -110,7 +110,6 @@ export default function AlertsPage() {
           </div>
         </div>
       </header>
-
       <div className="max-w-4xl mx-auto space-y-6">
 
       {/* Filter Tabs */}
@@ -180,7 +179,7 @@ export default function AlertsPage() {
                   </div>
                   
                   {/* ✨ REDESIGNED: Main alert message - larger, more prominent */}
-                  <h3 className="text-xl font-black text-slate-100 leading-tight mb-4">
+                  <h3 className="text-slate-100 mb-4 text-[16px] font-normal">
                     {alert.message}
                   </h3>
                   
