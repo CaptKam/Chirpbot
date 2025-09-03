@@ -66,9 +66,8 @@ export const globalAlertSettings = pgTable("global_alert_settings", {
   sport: text("sport").notNull(), // MLB, NFL, NBA, NHL, etc.
   alertType: text("alert_type").notNull(), // RISP, BASES_LOADED, etc.
   enabled: boolean("enabled").notNull().default(true),
-  masterEnabled: boolean("master_enabled").notNull().default(true), // Global master switch
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  updatedBy: varchar("updated_by").notNull().references(() => users.id), // Admin who made the change
+  updatedBy: varchar("updated_by").references(() => users.id), // Admin who made the change
 });
 
 // Insert schemas

@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
 import { weatherService } from "./weather-service";
+import { storage } from "../storage";
 
 interface AlertData {
   type: string;
@@ -21,6 +22,20 @@ export class AlertGenerator {
   constructor() {
     this.mlbApi = new MLBApiService();
     this.ncaafApi = new NCAAFApiService();
+  }
+
+  // Check if a specific alert type is globally enabled
+  private async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
+    try {
+      console.log(`🔍 Checking global settings for ${sport}.${alertType}`);
+      const globalSettings: Record<string, boolean> = await storage.getGlobalAlertSettings(sport);
+      const isEnabled = globalSettings[alertType] !== false;
+      console.log(`🔍 Global ${sport}.${alertType} setting: ${isEnabled} (raw: ${globalSettings[alertType]})`);
+      return isEnabled;
+    } catch (error) {
+      console.error(`Error checking global settings for ${sport}.${alertType}:`, error);
+      return true; // Default to enabled if can't check
+    }
   }
 
   // Generate realistic alerts from today's completed games
@@ -288,6 +303,13 @@ export class AlertGenerator {
 
     // Bases loaded: all three bases occupied
     if (hasFirst && hasSecond && hasThird) {
+      // Check if BASES_LOADED alerts are globally enabled
+      const basesLoadedEnabled = await this.isAlertGloballyEnabled('MLB', 'BASES_LOADED');
+      if (!basesLoadedEnabled) {
+        console.log(`⛔ BASES_LOADED alert blocked - globally disabled`);
+        return alertCount;
+      }
+      
       const alertKey = `${game.gameId}_BASES_LOADED_${inning}_${outs}`;
       const message = `🔥 BASES LOADED! ${game.awayTeam} vs ${game.homeTeam} - ${outs} outs, Inning ${inning}`;
       
@@ -310,6 +332,13 @@ export class AlertGenerator {
     }
     // Runners on 1st and 2nd (prime scoring opportunity)
     else if (hasFirst && hasSecond && !hasThird) {
+      // Check if RUNNERS_1ST_2ND alerts are globally enabled
+      const runners1st2ndEnabled = await this.isAlertGloballyEnabled('MLB', 'RUNNERS_1ST_2ND');
+      if (!runners1st2ndEnabled) {
+        console.log(`⛔ RUNNERS_1ST_2ND alert blocked - globally disabled`);
+        return alertCount;
+      }
+      
       const alertKey = `${game.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
       const message = `💎 RUNNERS ON 1ST & 2ND! ${game.awayTeam} vs ${game.homeTeam} - Prime scoring position, ${outs} outs`;
       
@@ -331,6 +360,13 @@ export class AlertGenerator {
     }
     // Runner in scoring position (2nd or 3rd base, but not bases loaded or 1st+2nd)
     else if ((hasSecond || hasThird) && !(hasFirst && hasSecond && hasThird) && !(hasFirst && hasSecond && !hasThird)) {
+      // Check if RISP alerts are globally enabled
+      const rispEnabled = await this.isAlertGloballyEnabled('MLB', 'RISP');
+      if (!rispEnabled) {
+        console.log(`⛔ RISP alert blocked - globally disabled`);
+        return alertCount;
+      }
+      
       const alertKey = `${game.gameId}_RISP_${inning}_${outs}`;
       const positions = [];
       if (hasSecond) positions.push('2nd');
@@ -416,6 +452,8 @@ export class AlertGenerator {
     let alertCount = 0;
     const currentPlay = liveData?.plays?.currentPlay;
     if (!currentPlay) return 0;
+    
+    console.log(`🔧 DEBUG: generateAtBatAlerts called for game ${game.gameId}`);
 
     const count = currentPlay.count;
     const balls = count?.balls || 0;
@@ -442,6 +480,15 @@ export class AlertGenerator {
           description.toLowerCase().includes('strikeout');
           
         if (isStrikeout) {
+          console.log(`🔧 DEBUG: Found strikeout event for game ${game.gameId}`);
+          // Check if STRIKEOUT alerts are globally enabled
+          const strikeoutEnabled = await this.isAlertGloballyEnabled('MLB', 'STRIKEOUT');
+          if (!strikeoutEnabled) {
+            console.log(`⛔ STRIKEOUT alert blocked - globally disabled`);
+            continue; // Skip this alert
+          }
+          console.log(`✅ STRIKEOUT alert proceeding - globally enabled`);
+          
           const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
           const batter = play.matchup?.batter?.fullName || 'Unknown Batter';
           const pitcher = play.matchup?.pitcher?.fullName || 'Unknown Pitcher';

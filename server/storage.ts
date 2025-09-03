@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, userAlertPreferences, type InsertUserMonitoredTeam, type InsertUserAlertPreferences } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, type InsertUserMonitoredTeam, type InsertUserAlertPreferences } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -266,34 +266,62 @@ export const storage = {
   // Global alert settings for admin management  
   async getGlobalAlertSettings(sport: string) {
     try {
-      // Return default settings since we're using this as the canonical source
-      const defaultSettings = {
-        // MLB alerts - all enabled by default
-        'RISP': true,
-        'BASES_LOADED': true,
-        'RUNNERS_1ST_2ND': true,
-        'CLOSE_GAME': true,
-        'CLOSE_GAME_LIVE': true,
-        'LATE_PRESSURE': true,
-        'HOME_RUN_LIVE': true,
-        'HIGH_SCORING': true,
-        'SHUTOUT': true,
-        'BLOWOUT': true,
-        'FULL_COUNT': true,
-        'STRIKEOUT': true,
-        // NFL alerts
-        'RED_ZONE': true,
-        'FOURTH_DOWN': true,
-        'TWO_MINUTE_WARNING': true,
-        // NBA alerts
-        'CLUTCH_TIME': true,
-        'OVERTIME': true,
-        // NHL alerts
-        'POWER_PLAY': true,
-        'EMPTY_NET': true
-      };
+      // Check admin user preferences to get current global state
+      const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
+      
+      if (adminUsers.length > 0) {
+        const firstAdmin = adminUsers[0];
+        const adminPrefs = await db.select()
+          .from(userAlertPreferences)
+          .where(and(
+            eq(userAlertPreferences.userId, firstAdmin.id),
+            eq(userAlertPreferences.sport, sport.toLowerCase())
+          ));
+        
+        // Start with defaults
+        const defaultSettings = {
+          // MLB alerts - all enabled by default
+          'RISP': true,
+          'BASES_LOADED': true,
+          'RUNNERS_1ST_2ND': true,
+          'CLOSE_GAME': true,
+          'CLOSE_GAME_LIVE': true,
+          'LATE_PRESSURE': true,
+          'HOME_RUN_LIVE': true,
+          'HIGH_SCORING': true,
+          'SHUTOUT': true,
+          'BLOWOUT': true,
+          'FULL_COUNT': true,
+          'STRIKEOUT': true,
+          // NFL alerts
+          'RED_ZONE': true,
+          'FOURTH_DOWN': true,
+          'TWO_MINUTE_WARNING': true,
+          // NBA alerts
+          'CLUTCH_TIME': true,
+          'OVERTIME': true,
+          // NHL alerts
+          'POWER_PLAY': true,
+          'EMPTY_NET': true
+        };
 
-      return defaultSettings;
+        // Apply admin's preferences as global settings
+        adminPrefs.forEach(pref => {
+          defaultSettings[pref.alertType] = pref.enabled;
+        });
+
+        console.log(`🔧 DEBUG: Global settings for ${sport} loaded from admin preferences:`, defaultSettings);
+        return defaultSettings;
+      }
+
+      // Fallback to defaults if no admin found
+      return {
+        'RISP': true, 'BASES_LOADED': true, 'RUNNERS_1ST_2ND': true, 'CLOSE_GAME': true,
+        'CLOSE_GAME_LIVE': true, 'LATE_PRESSURE': true, 'HOME_RUN_LIVE': true,
+        'HIGH_SCORING': true, 'SHUTOUT': true, 'BLOWOUT': true, 'FULL_COUNT': true, 'STRIKEOUT': true,
+        'RED_ZONE': true, 'FOURTH_DOWN': true, 'TWO_MINUTE_WARNING': true,
+        'CLUTCH_TIME': true, 'OVERTIME': true, 'POWER_PLAY': true, 'EMPTY_NET': true
+      };
     } catch (error) {
       console.error('Error getting global alert settings:', error);
       return {};
@@ -304,7 +332,7 @@ export const storage = {
     try {
       console.log(`Global alert setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
       
-      // When admin changes global settings, apply to all users
+      // When admin changes global settings, apply to all users (including admin)
       const users = await this.getAllUsers();
       
       for (const user of users) {
@@ -315,6 +343,7 @@ export const storage = {
         }
       }
       
+      console.log(`✅ Successfully updated ${sport}.${alertType} = ${enabled} for all ${users.length} users`);
       return;
     } catch (error) {
       console.error('Error updating global alert setting:', error);
