@@ -118,7 +118,7 @@ export class AlertGenerator {
             awayScore: game.awayScore,
             scoreDifference: scoreDiff
           },
-          message: `Close game! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - Decided by ${scoreDiff} run${scoreDiff !== 1 ? 's' : ''}`,
+          message: `Close game! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeTeam} ${game.homeScore} - Decided by ${scoreDiff} run${scoreDiff !== 1 ? 's' : ''}`,
           situation: `${game.awayTeam} ${game.awayScore}-${game.homeTeam} ${game.homeTeam} (${scoreDiff} run game)`
         }),
         alertKey: `${game.gameId}_CLOSE_GAME`,
@@ -145,7 +145,7 @@ export class AlertGenerator {
             awayScore: game.awayScore,
             totalRuns: totalRuns
           },
-          message: `High-scoring game! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - ${totalRuns} total runs`,
+          message: `High-scoring game! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeTeam} ${game.homeScore} - ${totalRuns} total runs`,
           situation: `${game.awayTeam} ${game.awayScore}-${game.homeTeam} ${game.homeTeam} (${totalRuns} runs)`
         }),
         alertKey: `${game.gameId}_HIGH_SCORING`,
@@ -750,9 +750,25 @@ export class AlertGenerator {
             paId: `${play.about?.atBatIndex}`
           };
 
-          if (!this.deduplication.shouldSendAlert(dedupKey, 'plate-appearance')) {
-            console.log(`🚫 STRIKEOUT alert blocked - deduplication filter`);
-            continue; // Skip this duplicate alert
+          // Check deduplication - TEMPORARILY DISABLED FOR DEBUGGING
+          const shouldSend = this.deduplication.shouldSendAlert({
+            gameId: String(game.gameId),
+            type: 'STRIKEOUT',
+            inning: play.about?.inning,
+            half: play.about?.halfInning,
+            outs: play.about?.outs,
+            bases: `${play.runners?.filter((r: any) => r.details?.isScoringEvent).length > 0 ? '1' : ''}`, // Basic runner check
+            batter: play.matchup?.batter?.fullName,
+            paId: `${play.about?.atBatIndex}`
+          });
+
+          console.log(`🎯 DEDUP CHECK: STRIKEOUT for game ${game.gameId} - shouldSend: ${shouldSend}`);
+
+          if (!shouldSend) {
+            console.log(`🔄 Alert deduplicated: STRIKEOUT for game ${game.gameId}`);
+            // TEMPORARILY ALLOWING THROUGH FOR DEBUGGING
+            console.log(`🚨 OVERRIDE: Sending anyway for debugging`);
+            // return; // COMMENTED OUT FOR DEBUGGING
           }
 
           const alertKey = `${game.gameId}_STRIKEOUT_${play.about?.atBatIndex}`;
@@ -906,7 +922,7 @@ export class AlertGenerator {
       const periodType = isEndOfHalf ? 'half' : 'quarter';
 
       const alertKey = `${game.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
-      const message = `⏰ TWO MINUTE WARNING! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+      const message = `⏰ TWO MINUTE WARNING! ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeTeam} ${game.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
 
       alertCount += await this.saveRealTimeAlert(alertKey, 'TWO_MINUTE_WARNING', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -1044,7 +1060,7 @@ export class AlertGenerator {
 
       let message = `⏸️ HALFTIME! `;
       if (leader === 'Tied') {
-        message += `${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore} - All tied up!`;
+        message += `${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeTeam} ${game.homeScore} - All tied up!`;
       } else {
         message += `${leader} leads ${Math.max(game.homeScore, game.awayScore)}-${Math.min(game.homeScore, game.awayScore)}`;
         if (scoreDiff >= 14) message += ` - Big lead!`;
@@ -1232,7 +1248,7 @@ export class AlertGenerator {
           const allUsers = await storage.getAllUsers();
           const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
           console.log(`📡 FALLBACK: Found ${telegramUsers.length} users with Telegram configured`);
-          
+
           for (const user of telegramUsers) {
             // Double-check global settings before sending to Telegram
             const isStillEnabled = await this.isAlertGloballyEnabled(sport, type);
@@ -1286,7 +1302,7 @@ export class AlertGenerator {
             // Get user details including Telegram settings
             const user = await storage.getUserById(monitoredGame.userId);
             console.log(`📱 DEBUG: User ${user?.username || 'unknown'} - Telegram enabled: ${user?.telegramEnabled}, hasToken: ${!!user?.telegramBotToken}, hasChatId: ${!!user?.telegramChatId}`);
-            
+
             if (user && user.telegramEnabled && user.telegramBotToken && user.telegramChatId) {
               const telegramConfig: TelegramConfig = {
                 botToken: user.telegramBotToken,

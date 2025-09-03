@@ -22,6 +22,19 @@ declare module 'express-session' {
 // Create a new router instance
 const router = Router();
 
+// Middleware to ensure user is authenticated
+async function requireAuthentication(req: any, res: any, next: any) {
+  if (req.session?.userId) {
+    const user = await storage.getUserById(req.session.userId);
+    if (user) {
+      req.user = user; // Attach user to request for convenience
+      return next();
+    }
+  }
+  res.status(401).json({ message: 'Authentication required' });
+}
+
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
@@ -560,7 +573,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/telegram/test', async (req, res) => {
+  // Debug all Telegram configurations
+  app.get('/api/telegram/debug', requireAuthentication, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const telegramDebug = allUsers.map(user => ({
+        username: user.username,
+        id: user.id,
+        telegramEnabled: user.telegramEnabled,
+        hasToken: !!user.telegramBotToken && user.telegramBotToken !== 'default_key',
+        tokenLength: user.telegramBotToken?.length || 0,
+        hasChatId: !!user.telegramChatId && user.telegramChatId !== 'default_key',
+        chatId: user.telegramChatId || 'MISSING'
+      }));
+
+      res.json({
+        totalUsers: allUsers.length,
+        validTelegramUsers: telegramDebug.filter(u => u.telegramEnabled && u.hasToken && u.hasChatId).length,
+        users: telegramDebug
+      });
+    } catch (error) {
+      console.error('Error debugging Telegram:', error);
+      res.status(500).json({ error: 'Failed to debug Telegram configurations' });
+    }
+  });
+
+  // Test Telegram connection
+  app.post('/api/telegram/test', requireAuthentication, async (req, res) => {
     try {
       const { botToken, chatId } = req.body;
 
