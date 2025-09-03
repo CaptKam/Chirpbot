@@ -300,7 +300,6 @@ export const storage = {
           // NCAAF alerts
           'NCAAF_KICKOFF': true,
           'NCAAF_HALFTIME': true,
-          'TWO_MINUTE_WARNING': true,
           // NBA alerts
           'CLUTCH_TIME': true,
           'OVERTIME': true,

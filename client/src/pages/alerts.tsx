@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bell, Activity, Zap, Clock, TrendingUp, Users } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
 import { removeCity } from '@/lib/team-utils';
 
 interface Alert {
@@ -41,15 +40,13 @@ interface Alert {
 function AlertsPage() {
   const [selectedTab, setSelectedTab] = useState("all");
 
-  const { data: alerts = [], isLoading, refetch } = useQuery({
+  const { data: alerts = [], isLoading, refetch } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
-    queryFn: () => apiRequest('GET', '/api/alerts'),
     refetchInterval: 5000
   });
 
   const { data: alertStats } = useQuery({
     queryKey: ['/api/alerts/stats'],
-    queryFn: () => apiRequest('GET', '/api/alerts/stats'),
     refetchInterval: 10000
   });
 
@@ -66,7 +63,7 @@ function AlertsPage() {
   };
 
   // Filter alerts based on selected tab
-  const filteredAlerts = alerts.filter((alert: Alert) => {
+  const filteredAlerts = (Array.isArray(alerts) ? alerts : []).filter((alert: Alert) => {
     if (selectedTab === "all") return true;
     if (selectedTab === "high") return alert.priority >= 85;
     if (selectedTab === "live") return alert.type.includes('LIVE') || alert.type === 'RISP' || alert.type === 'BASES_LOADED';
@@ -114,12 +111,12 @@ function AlertsPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white">Live Alerts</h1>
-                <p className="text-sm text-slate-400">{filteredAlerts.length} active alerts</p>
+                <p className="text-sm text-slate-400">{filteredAlerts?.length || 0} active alerts</p>
               </div>
             </div>
-            {alertStats && (
+            {alertStats && typeof alertStats === 'object' && 'liveGames' in alertStats && (
               <div className="text-right">
-                <div className="text-sm font-semibold text-emerald-400">{alertStats.liveGames} Live</div>
+                <div className="text-sm font-semibold text-emerald-400">{(alertStats as any).liveGames || 0} Live</div>
                 <div className="text-xs text-slate-400">games</div>
               </div>
             )}
@@ -227,6 +224,7 @@ function AlertsPage() {
                       sport={alert.sport}
                       quarter={context.quarter}
                       timeRemaining={context.timeRemaining}
+                      createdAt={alert.createdAt}
                     />
                   </CardContent>
                 </SwipeableCard>
