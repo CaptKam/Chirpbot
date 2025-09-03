@@ -28,7 +28,7 @@ export function BaseballDiamond({
   size = 'md',
   showCount = true 
 }: BaseballDiamondProps) {
-  
+
   const getSizeClasses = () => {
     switch (size) {
       case 'sm': return { diamond: 'w-16 h-16', base: 'w-2 h-2', text: 'text-xs' };
@@ -144,3 +144,6 @@ export function WeatherDisplay({
     </div>
   );
 }
+
+export { BaseballDiamond, WeatherDisplay };
+export { default as WeatherImpactVisualizer } from './WeatherImpactVisualizer';
