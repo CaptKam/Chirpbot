@@ -477,60 +477,64 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-3" key={`alert-${alertData.id}-${Date.now()}`}>
-              {/* Compact Header */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
+            <div className="p-6" key={`alert-${alertData.id}-${Date.now()}`}>
+              {/* Clean Header - Calendar Page Style */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-4">
+                  <div className={`w-3 h-3 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
                   <Badge 
                     variant="outline" 
-                    className="px-1.5 py-0.5 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                    className="px-3 py-1.5 text-sm font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10 rounded-full"
                   >
                     {alertData.sport}
                   </Badge>
-                  <span className="text-slate-400 text-[13px] font-bold">{alertData.type.replace(/_/g, ' ')}</span>
+                  <span className="text-slate-300 text-sm font-semibold uppercase tracking-wider">
+                    {alertData.type.replace(/_/g, ' ')}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center space-x-4 text-sm">
                   <span className="text-emerald-400 font-bold">{alertData.confidence}%</span>
-                  <span className="text-slate-400">{formatTime(alertData.createdAt || '')}</span>
+                  <span className="text-slate-400 font-medium">{formatTime(alertData.createdAt || '')}</span>
                 </div>
               </div>
 
-              {/* Game Card Template - Replaces Team Matchup Box */}
-              <GameCardTemplate
-                homeTeam={alertData.homeTeam || 'TBD'}
-                awayTeam={alertData.awayTeam || 'TBD'}
-                homeScore={alertData.context?.homeScore ?? alertData.homeScore ?? alertData.context?.scores?.home ?? 0}
-                awayScore={alertData.context?.awayScore ?? alertData.awayScore ?? alertData.context?.scores?.away ?? 0}
-                sport={alertData.sport}
-                status="live"
-                inning={alertData.context?.inning}
-                quarter={alertData.context?.quarter}
-                period={alertData.context?.period}
-                isTopInning={alertData.context?.isTopInning}
-                size="md"
-                className="mb-2"
-              />
+              {/* Game Card Template - Calendar Page Style */}
+              <div className="mb-6">
+                <GameCardTemplate
+                  homeTeam={alertData.homeTeam || 'TBD'}
+                  awayTeam={alertData.awayTeam || 'TBD'}
+                  homeScore={alertData.context?.homeScore ?? alertData.homeScore ?? alertData.context?.scores?.home ?? 0}
+                  awayScore={alertData.context?.awayScore ?? alertData.awayScore ?? alertData.context?.scores?.away ?? 0}
+                  sport={alertData.sport}
+                  status="live"
+                  inning={alertData.context?.inning}
+                  quarter={alertData.context?.quarter}
+                  period={alertData.context?.period}
+                  isTopInning={alertData.context?.isTopInning}
+                  size="lg"
+                  className="shadow-lg"
+                />
+              </div>
 
-              {/* AI-Enhanced Alert Message - Moved under Team Matchup */}
-              <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500 mb-2">
-                <div className="flex items-start space-x-2">
+              {/* AI-Enhanced Alert Message - Clean Layout */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 mb-6">
+                <div className="flex items-start space-x-3">
                   {/* AI Enhancement Indicator */}
                   {alertData.context?.aiEnhanced && (
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Brain className="w-3 h-3 text-white" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Brain className="w-4 h-4 text-white" />
                     </div>
                   )}
                   
                   <div className="flex-1">
                     {/* Enhanced Message Display */}
-                    <p className="text-slate-100 text-sm leading-snug">
+                    <p className="text-slate-100 text-base leading-relaxed font-medium">
                       {alertData.context?.aiEnhancedMessage ? (
                         // Show AI-enhanced message if available
                         <span>
                           {alertData.context.aiEnhancedMessage}
                           {alertData.context?.aiInsight && (
-                            <span className="block mt-1 text-xs text-blue-300 italic">
+                            <span className="block mt-3 text-sm text-blue-300 italic bg-blue-500/10 p-3 rounded-lg">
                               🤖 {alertData.context.aiInsight}
                             </span>
                           )}
@@ -543,21 +547,21 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
                     {/* AI Prediction if available */}
                     {alertData.context?.aiPrediction && (
-                      <div className="mt-2 p-2 bg-blue-500/10 rounded border border-blue-500/20">
-                        <div className="flex items-center space-x-1 mb-1">
-                          <Target className="w-3 h-3 text-blue-400" />
-                          <span className="text-xs text-blue-300 font-medium">AI Prediction</span>
+                      <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Target className="w-4 h-4 text-blue-400" />
+                          <span className="text-sm text-blue-300 font-semibold">AI Prediction</span>
                         </div>
-                        <p className="text-xs text-blue-200">{alertData.context.aiPrediction}</p>
+                        <p className="text-sm text-blue-200">{alertData.context.aiPrediction}</p>
                       </div>
                     )}
 
                     {/* Scoring Probability */}
                     {alertData.context?.scoringProbability && (
-                      <div className="mt-1 flex items-center space-x-2">
-                        <div className="flex items-center space-x-1">
-                          <Activity className="w-3 h-3 text-green-400" />
-                          <span className="text-xs text-green-300">
+                      <div className="mt-3 flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
+                          <Activity className="w-4 h-4 text-green-400" />
+                          <span className="text-sm text-green-300 font-medium">
                             {alertData.context.scoringProbability} scoring chance
                           </span>
                         </div>
@@ -567,18 +571,17 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Unified Game Situation Grid - Calendar Page Style */}
-              <div className="bg-gradient-to-r from-slate-800/40 to-slate-700/40 rounded-lg p-3 border border-slate-600/30">
-                {/* Main Grid - All Game Information */}
-                <div className="grid grid-cols-5 gap-3 items-center">
+              {/* Game Situation Grid - Calendar Page Clean Style */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10">
+                <div className="grid grid-cols-5 gap-6 items-center">
                   {/* MLB Specific Data */}
                   {alertData.sport === 'MLB' && (
                     <>
                       {/* Inning with Top/Bottom */}
                       {alertData.context?.inning && (
                         <div className="text-center">
-                          <div className="text-xs text-slate-400 mb-1">INNING</div>
-                          <div className="text-sm font-bold text-white bg-slate-800/50 px-2 py-1 rounded">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">INNING</div>
+                          <div className="text-lg font-bold text-white bg-slate-800/50 px-3 py-2 rounded-lg shadow-sm">
                             {alertData.context?.isTopInning ? '▲' : '▼'} {alertData.context.inning}
                           </div>
                         </div>
@@ -587,37 +590,37 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       {/* Outs */}
                       {alertData.context?.outs !== undefined && (
                         <div className="text-center">
-                          <div className="text-xs text-slate-400 mb-1">OUTS</div>
-                          <div className="text-lg font-bold text-white">{alertData.context.outs}</div>
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">OUTS</div>
+                          <div className="text-2xl font-bold text-white">{alertData.context.outs}</div>
                         </div>
                       )}
                       
                       {/* Ball-Strike Count */}
                       {(alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
                         <div className="text-center">
-                          <div className="text-xs text-slate-400 mb-1">COUNT</div>
-                          <div className="text-lg font-bold text-white">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">COUNT</div>
+                          <div className="text-xl font-bold text-white">
                             {alertData.context?.balls ?? 0}-{alertData.context?.strikes ?? 0}
                           </div>
                         </div>
                       )}
                       
-                      {/* Baseball Diamond - Integrated into grid */}
+                      {/* Baseball Diamond - Enhanced */}
                       {(alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) ? (
                         <div className="text-center">
-                          <div className="text-xs text-slate-400 mb-1">BASES</div>
-                          <div className="relative w-8 h-8 mx-auto">
-                            <div className="absolute inset-0 rotate-45 border border-slate-600 bg-slate-800/30 rounded-sm"></div>
-                            <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                            <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                            <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-600 border border-slate-500"></div>
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">BASES</div>
+                          <div className="relative w-10 h-10 mx-auto">
+                            <div className="absolute inset-0 rotate-45 border-2 border-slate-600 bg-slate-800/30 rounded-lg shadow-sm"></div>
+                            <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-slate-600 border-2 border-slate-500"></div>
                           </div>
                         </div>
                       ) : (
                         <div className="text-center">
-                          <div className="text-xs text-slate-400 mb-1">BASES</div>
-                          <div className="text-sm text-slate-500">Empty</div>
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">BASES</div>
+                          <div className="text-sm text-slate-500 font-medium">Empty</div>
                         </div>
                       )}
                     </>
@@ -628,8 +631,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <>
                       {alertData.context?.quarter && (
                         <div className="text-center">
-                          <div className="text-xs text-slate-400 mb-1">QUARTER</div>
-                          <div className="text-sm font-bold text-white bg-slate-800/50 px-2 py-1 rounded">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">QUARTER</div>
+                          <div className="text-lg font-bold text-white bg-slate-800/50 px-3 py-2 rounded-lg shadow-sm">
                             Q{alertData.context.quarter}
                           </div>
                         </div>
@@ -637,8 +640,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       
                       {alertData.context?.down && (
                         <div className="text-center">
-                          <div className="text-xs text-slate-400 mb-1">DOWN</div>
-                          <div className="text-lg font-bold text-white">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">DOWN</div>
+                          <div className="text-xl font-bold text-white">
                             {alertData.context.down}&{alertData.context.yardsToGo || 10}
                           </div>
                         </div>
@@ -646,8 +649,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       
                       {alertData.context?.timeRemaining && (
                         <div className="text-center">
-                          <div className="text-xs text-slate-400 mb-1">TIME</div>
-                          <div className="text-sm font-bold text-white">{alertData.context.timeRemaining}</div>
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">TIME</div>
+                          <div className="text-lg font-bold text-white">{alertData.context.timeRemaining}</div>
                         </div>
                       )}
                     </>
@@ -656,8 +659,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   {/* Basketball Specific Data */}
                   {alertData.sport === 'NBA' && alertData.context?.quarter && (
                     <div className="text-center">
-                      <div className="text-xs text-slate-400 mb-1">QUARTER</div>
-                      <div className="text-sm font-bold text-white bg-slate-800/50 px-2 py-1 rounded">
+                      <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">QUARTER</div>
+                      <div className="text-lg font-bold text-white bg-slate-800/50 px-3 py-2 rounded-lg shadow-sm">
                         Q{alertData.context.quarter}
                       </div>
                     </div>
@@ -666,8 +669,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   {/* Hockey Specific Data */}
                   {alertData.sport === 'NHL' && alertData.context?.period && (
                     <div className="text-center">
-                      <div className="text-xs text-slate-400 mb-1">PERIOD</div>
-                      <div className="text-sm font-bold text-white bg-slate-800/50 px-2 py-1 rounded">
+                      <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">PERIOD</div>
+                      <div className="text-lg font-bold text-white bg-slate-800/50 px-3 py-2 rounded-lg shadow-sm">
                         P{alertData.context.period}
                       </div>
                     </div>
@@ -676,15 +679,15 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   {/* Universal Time (if not sport-specific) */}
                   {!alertData.context?.quarter && !alertData.context?.period && !alertData.context?.inning && alertData.context?.timeRemaining && (
                     <div className="text-center">
-                      <div className="text-xs text-slate-400 mb-1">TIME</div>
-                      <div className="text-sm font-bold text-white">{alertData.context.timeRemaining}</div>
+                      <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">TIME</div>
+                      <div className="text-lg font-bold text-white">{alertData.context.timeRemaining}</div>
                     </div>
                   )}
 
                   {/* Priority - Always show in last column */}
                   <div className="text-center">
-                    <div className="text-xs text-slate-400 mb-1">PRIORITY</div>
-                    <div className={`text-lg font-bold ${(alertData.priority ?? 0) >= 90 ? 'text-red-400' : (alertData.priority ?? 0) >= 80 ? 'text-orange-400' : (alertData.priority ?? 0) >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                    <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">PRIORITY</div>
+                    <div className={`text-2xl font-bold ${(alertData.priority ?? 0) >= 90 ? 'text-red-400' : (alertData.priority ?? 0) >= 80 ? 'text-orange-400' : (alertData.priority ?? 0) >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
                       {alertData.priority ?? 0}%
                     </div>
                   </div>
