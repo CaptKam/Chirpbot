@@ -84,13 +84,6 @@ function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
 }) {
   const { data: enhancedData } = useQuery({
     queryKey: ['enhanced-game', gameId],
-    queryFn: async () => {
-      const response = await fetch(`/api/games/${gameId}/enhanced`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Enhanced game data fetch failed');
-      return response.json();
-    },
     enabled: isLive,
     refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
     staleTime: 8000
