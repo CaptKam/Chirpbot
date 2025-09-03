@@ -11,7 +11,7 @@ import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Use
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "@/components/ui/tabs";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 
@@ -367,14 +367,9 @@ export default function Settings() {
                 <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
-              <Tabs value={activeSport} onValueChange={setActiveSport} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="MLB">⚾ MLB</TabsTrigger>
-                  <TabsTrigger value="NCAAF">🏈 NCAAF</TabsTrigger>
-                  <TabsTrigger value="NFL">🏈 NFL</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="MLB" className="space-y-4">
+              <div className="w-full">
+                {/* MLB Alert Types */}
+                {activeSport === "MLB" && (
                   <div className="space-y-4">
                     {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
                       // Only show alerts that are not globally disabled by admin
@@ -416,9 +411,10 @@ export default function Settings() {
                       </div>
                     )}
                   </div>
-                </TabsContent>
+                )}
 
-                <TabsContent value="NCAAF" className="space-y-4">
+                {/* NCAAF Alert Types */}
+                {activeSport === "NCAAF" && (
                   <div className="space-y-4">
                     {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
                       return globalSettings ? globalSettings[alertType.key] !== false : true;
@@ -458,9 +454,10 @@ export default function Settings() {
                       </div>
                     )}
                   </div>
-                </TabsContent>
+                )}
 
-                <TabsContent value="NFL" className="space-y-4">
+                {/* NFL Alert Types */}
+                {activeSport === "NFL" && (
                   <div className="space-y-4">
                     {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
                       return globalSettings ? globalSettings[alertType.key] !== false : true;
@@ -500,8 +497,8 @@ export default function Settings() {
                       </div>
                     )}
                   </div>
-                </TabsContent>
-              </Tabs>
+                )}
+              </div>
             )}
           </Card>
         )}
