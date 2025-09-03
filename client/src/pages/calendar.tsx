@@ -534,13 +534,6 @@ export default function Calendar() {
                             </div>
                           </div>
                         )}
-                        {game.status === 'scheduled' && (
-                          <div className="text-center">
-                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
-                              {removeCity(awayTeamName).substring(0, 8)}
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                       {/* Center - Baseball Diamond & Game Info */}
@@ -584,13 +577,6 @@ export default function Calendar() {
                               {game.homeTeam?.score || 0}
                             </div>
                             <div className="text-xs text-slate-400 uppercase tracking-wider">
-                              {removeCity(homeTeamName).substring(0, 8)}
-                            </div>
-                          </div>
-                        )}
-                        {game.status === 'scheduled' && (
-                          <div className="text-center">
-                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
                               {removeCity(homeTeamName).substring(0, 8)}
                             </div>
                           </div>
