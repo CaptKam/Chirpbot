@@ -75,113 +75,42 @@ import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
-// Simple Baseball Diamond using live MLB API data
-function SimpleBaseballDiamond({ gameId, inning, isTopInning, isLive }: { 
+// Enhanced Game Display Component for Live MLB Games
+function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
   gameId: string; 
   inning: number; 
   isTopInning: boolean; 
   isLive: boolean 
 }) {
-  // Get live game data directly from MLB API
-  const { data: liveGameData } = useQuery({
-    queryKey: ["/api/mlb/live-game", gameId],
+  const { data: enhancedData } = useQuery({
+    queryKey: ['enhanced-game', gameId],
     queryFn: async () => {
-      const response = await fetch(`/api/mlb/live-game/${gameId}`, {
-        credentials: "include",
+      const response = await fetch(`/api/games/${gameId}/enhanced`, {
+        credentials: 'include'
       });
-      if (!response.ok) throw new Error("Failed to fetch live game data");
+      if (!response.ok) throw new Error('Enhanced game data fetch failed');
       return response.json();
     },
-    refetchInterval: isLive ? 5000 : false, // Refresh every 5s for live games
-    staleTime: 4000,
-    enabled: !!gameId && gameId !== 'undefined'
+    enabled: isLive,
+    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
+    staleTime: 8000
   });
 
-  // Extract live game state data
-  const liveData = liveGameData?.liveData;
-  const currentPlay = liveData?.plays?.currentPlay;
-  const lineScore = liveData?.linescore;
-  
-  // Get base runner data from live MLB API
-  const offense = currentPlay?.matchup?.offense;
-  const hasFirst = !!offense?.first;
-  const hasSecond = !!offense?.second; 
-  const hasThird = !!offense?.third;
-
-  // Get count data from live MLB API
-  const count = currentPlay?.count;
-  const outs = lineScore?.outs || 0;
-  const balls = count?.balls || 0;
-  const strikes = count?.strikes || 0;
-
-  // Get current inning from live data
-  const currentInning = lineScore?.currentInning || inning;
-  const currentInningHalf = lineScore?.inningHalf || (isTopInning ? 'Top' : 'Bottom');
-
   return (
-    <div className="flex flex-col items-center space-y-2">
-      {/* Count and Inning Info - Live Data */}
-      {isLive && (currentInning || outs !== undefined || balls || strikes) && (
-        <div className="text-center space-y-1">
-          {currentInning && (
-            <div className="text-xs text-slate-300 font-bold">
-              {currentInningHalf === 'Top' ? '↑' : '↓'} {currentInning}{currentInning === 1 ? 'st' : currentInning === 2 ? 'nd' : currentInning === 3 ? 'rd' : 'th'}
-            </div>
-          )}
-          <div className="flex items-center justify-center space-x-3">
-            {(balls > 0 || strikes > 0) && (
-              <div className="text-xs text-emerald-400 font-mono">
-                {balls}-{strikes}
-              </div>
-            )}
-            <div className="text-xs text-slate-400">
-              {outs} out{outs !== 1 ? 's' : ''}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Baseball Diamond - Enhanced visibility */}
-      <div className="relative w-8 h-8 flex-shrink-0">
-        {/* Diamond outline */}
-        <div className="absolute inset-0 border border-slate-600 rotate-45 bg-slate-800/20"></div>
-        
-        {/* Second Base */}
-        <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rotate-45 border-2 transition-all duration-300 ${
-          hasSecond 
-            ? 'bg-emerald-400 border-emerald-400 shadow-sm shadow-emerald-400/50' 
-            : 'bg-slate-700 border-slate-600'
-        }`} />
-        
-        {/* Third Base */}
-        <div className={`absolute top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rotate-45 border-2 transition-all duration-300 ${
-          hasThird 
-            ? 'bg-emerald-400 border-emerald-400 shadow-sm shadow-emerald-400/50' 
-            : 'bg-slate-700 border-slate-600'
-        }`} />
-        
-        {/* First Base */}
-        <div className={`absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rotate-45 border-2 transition-all duration-300 ${
-          hasFirst 
-            ? 'bg-emerald-400 border-emerald-400 shadow-sm shadow-emerald-400/50' 
-            : 'bg-slate-700 border-slate-600'
-        }`} />
-        
-        {/* Home Plate */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-slate-600 border border-slate-500 rounded-full" />
-      </div>
-
-      {/* Base status text */}
-      {(hasFirst || hasSecond || hasThird) && (
-        <div className="text-xs text-emerald-400 font-bold text-center animate-pulse">
-          {[
-            hasFirst && '1st',
-            hasSecond && '2nd', 
-            hasThird && '3rd'
-          ].filter(Boolean).join(' & ')}
-        </div>
-      )}
-    </div>
+    <BaseballDiamond 
+      runners={(enhancedData as any)?.runners || {
+        first: false,
+        second: false,
+        third: false
+      }}
+      inning={inning}
+      isTopInning={isTopInning}
+      outs={(enhancedData as any)?.outs || 0}
+      balls={(enhancedData as any)?.balls || 0}
+      strikes={(enhancedData as any)?.strikes || 0}
+      size="sm"
+      showCount={isLive}
+    />
   );
 }
 
@@ -640,7 +569,7 @@ export default function Calendar() {
                         
                         {/* Baseball Diamond for Live/Final MLB Games */}
                         {activeSport === 'MLB' && (game.status === 'live' || game.status === 'final') && game.id && (
-                          <SimpleBaseballDiamond 
+                          <EnhancedGameDisplay 
                             gameId={game.id}
                             inning={game.inning || 1}
                             isTopInning={game.inningState === 'Top'}

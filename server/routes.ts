@@ -9,9 +9,6 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
-import { apiRequest } from "../lib/queryClient";
-import { CFLApiService } from "./services/cfl-api";
-import { MLBApiService } from "./services/mlb-api";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -56,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/test-wind-speeds', async (req, res) => {
     try {
       const { weatherService } = await import('./services/weather-service');
-
+      
       // Test a few different stadiums
       const testStadiums = [
         'Boston Red Sox',
@@ -65,14 +62,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Colorado Rockies',
         'Houston Astros'
       ];
-
+      
       const windData = [];
-
+      
       for (const team of testStadiums) {
         const weather = await weatherService.getWeatherForTeam(team);
         const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
         const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-
+        
         windData.push({
           team,
           stadium: team === 'Boston Red Sox' ? 'Fenway Park' : 
@@ -88,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         homeRunFactor < 0.9 ? 'Hurts HR distance' : 'Neutral'
         });
       }
-
+      
       res.json({
         timestamp: new Date().toISOString(),
         source: process.env.OPENWEATHERMAP_API_KEY ? 'Live OpenWeatherMap API' : 'Fallback Data',
@@ -1069,18 +1066,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get live MLB game data
-  app.get("/api/mlb/live-game/:gameId", async (req, res) => {
-    try {
-      const { gameId } = req.params;
-      const mlbService = new MLBApiService();
-      const liveData = await mlbService.getLiveGameData(gameId);
-      res.json(liveData);
-    } catch (error) {
-      console.error('Live MLB game data error:', error);
-      res.status(500).json({ error: 'Failed to fetch live game data' });
-    }
-  });
 
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
