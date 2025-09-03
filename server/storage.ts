@@ -279,7 +279,7 @@ export const storage = {
           ));
         
         // Start with defaults
-        const defaultSettings = {
+        const defaultSettings: Record<string, boolean> = {
           // MLB alerts - all enabled by default
           'RISP': true,
           'BASES_LOADED': true,
