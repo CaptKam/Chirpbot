@@ -370,24 +370,24 @@ async function handleLogout() {
 const ALERT_TYPE_CONFIG = {
     'MLB': {
         'Game Situations': [
-            { key: 'RISP', name: 'Runner in Scoring Position', description: 'Runner on 2nd or 3rd base' },
-            { key: 'BASES_LOADED', name: 'Bases Loaded', description: 'All three bases occupied' },
-            { key: 'RUNNERS_1ST_2ND', name: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity' },
-            { key: 'LATE_PRESSURE', name: 'Late Inning Pressure', description: '8th+ inning, close game' }
+            { key: 'RISP', label: 'Runner in Scoring Position', description: 'Runner on 2nd or 3rd base' },
+            { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases occupied' },
+            { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity' },
+            { key: 'LATE_PRESSURE', label: 'Late Inning Pressure', description: '8th+ inning, close game' }
         ],
         'Scoring Events': [
-            { key: 'HOME_RUN_LIVE', name: 'Home Run (Live)', description: 'Live home run alerts' },
-            { key: 'CLOSE_GAME_LIVE', name: 'Close Game (Live)', description: 'Live close game updates' },
-            { key: 'HIGH_SCORING', name: 'High Scoring Game', description: '12+ total runs' },
-            { key: 'SHUTOUT', name: 'Shutout', description: 'One team held scoreless' },
-            { key: 'BLOWOUT', name: 'Blowout', description: '7+ run difference' },
-            { key: 'CLOSE_GAME', name: 'Close Game (Final)', description: '≤3 run difference final' }
+            { key: 'HOME_RUN_LIVE', label: 'Home Run (Live)', description: 'Live home run alerts' },
+            { key: 'CLOSE_GAME_LIVE', label: 'Close Game (Live)', description: 'Live close game updates' },
+            { key: 'HIGH_SCORING', label: 'High Scoring Game', description: '12+ total runs' },
+            { key: 'SHUTOUT', label: 'Shutout', description: 'One team held scoreless' },
+            { key: 'BLOWOUT', label: 'Blowout', description: '7+ run difference' },
+            { key: 'CLOSE_GAME', label: 'Close Game (Final)', description: '≤3 run difference final' }
         ],
         'At-Bat Situations': [
-            { key: 'FULL_COUNT', name: 'Full Count', description: '3-2 count pressure' },
-            { key: 'STRIKEOUT', name: 'Strikeout', description: 'Batter struck out' },
-            { key: 'POWER_HITTER', name: 'Power Hitter', description: '20+ HR batter at plate' },
-            { key: 'HOT_HITTER', name: 'Hot Hitter', description: 'Already homered today' }
+            { key: 'FULL_COUNT', label: 'Full Count', description: '3-2 count pressure' },
+            { key: 'STRIKEOUT', label: 'Strikeout', description: 'Batter struck out' },
+            { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at plate' },
+            { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' }
         ]
     },
     'NCAAF': {
