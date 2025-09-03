@@ -5,6 +5,8 @@ import { NCAAFApiService } from "./ncaaf-api";
 import { storage } from "../storage";
 import { AlertDeduplication } from "./alert-deduplication";
 import { sendTelegramAlert, type TelegramConfig } from "./telegram";
+import { SettingsCache } from "./settings-cache";
+import { BasicAI } from "./basic-ai";
 
 // Import weather service properly
 const weatherService = {
@@ -63,6 +65,8 @@ export class AlertGenerator {
   private mlbApi: MLBApiService;
   private ncaafApi: NCAAFApiService;
   private deduplication: AlertDeduplication;
+  private settingsCache: SettingsCache;
+  private ai: BasicAI;
 
   // V2 RE24-Based Probability System
   private readonly RE24: Record<string, number> = {
@@ -84,18 +88,16 @@ export class AlertGenerator {
     this.mlbApi = new MLBApiService();
     this.ncaafApi = new NCAAFApiService();
     this.deduplication = new AlertDeduplication();
+    this.settingsCache = new SettingsCache(storage);
+    this.ai = new BasicAI();
   }
 
-  // Check if a specific alert type is globally enabled
+  // Check if a specific alert type is globally enabled (CACHED - No DB spam!)
   private async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
     try {
-      console.log(`🔍 Checking global settings for ${sport}.${alertType}`);
-      const globalSettings: Record<string, boolean> = await storage.getGlobalAlertSettings(sport);
-      const isEnabled = globalSettings[alertType] !== false;
-      console.log(`🔍 Global ${sport}.${alertType} setting: ${isEnabled} (raw: ${globalSettings[alertType]})`);
-      return isEnabled;
+      return await this.settingsCache.isAlertEnabled(sport, alertType);
     } catch (error) {
-      console.error(`Error checking global settings for ${sport}.${alertType}:`, error);
+      console.error(`Settings cache error for ${sport}.${alertType}:`, error);
       return true; // Default to enabled if can't check
     }
   }
