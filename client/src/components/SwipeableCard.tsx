@@ -21,7 +21,7 @@ function formatTime(date: string | Date): string {
   const alertTime = new Date(date);
   const now = new Date();
   const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
-  
+
   if (diffMinutes < 1) return 'Just now';
   if (diffMinutes < 60) return `${diffMinutes}m ago`;
   if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
@@ -153,9 +153,15 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const handleDeleteAlert = async () => {
     setIsDeleting(true);
     try {
-      await apiRequest("DELETE", `/api/alerts/${alertId}`);
+      const response = await apiRequest("DELETE", `/api/alerts/${alertId}`);
 
-      // Invalidate and refetch alerts
+      // Immediately update the query cache to remove the deleted alert
+      queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
+        if (!oldData) return [];
+        return oldData.filter((alert: any) => alert.id !== alertId);
+      });
+
+      // Invalidate queries to refresh from server
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/unseen/count'] });
 
@@ -163,10 +169,11 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         title: "Alert deleted",
         description: "The alert has been removed from your feed.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Delete alert error:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete alert. Please try again.",
+        title: "Error", 
+        description: error?.message || "Failed to delete alert. Please try again.",
         variant: "destructive",
       });
     } finally {

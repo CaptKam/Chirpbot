@@ -943,6 +943,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/alerts/:alertId', async (req, res) => {
+    try {
+      const { alertId } = req.params;
+      
+      if (!alertId) {
+        return res.status(400).json({ message: 'Alert ID is required' });
+      }
+
+      // Delete the alert from database
+      const result = await db.execute(sql`
+        DELETE FROM alerts 
+        WHERE id = ${alertId}
+      `);
+
+      if (result.rowsAffected === 0) {
+        return res.status(404).json({ message: 'Alert not found' });
+      }
+
+      res.json({ message: 'Alert deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      res.status(500).json({ message: 'Failed to delete alert' });
+    }
+  });
+
   // Show timezone info on startup
   const { formatPacificTime, getPacificDate } = await import('./utils/timezone');
   console.log('🌴 ChirpBot V2 - Using Pacific Timezone (PST/PDT)');

@@ -162,16 +162,26 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
     setIsDeleting(true);
     try {
       await apiRequest("DELETE", `/api/alerts/${alert.id}`);
+      
+      // Immediately update the query cache to remove the deleted alert
+      queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
+        if (!oldData) return [];
+        return oldData.filter((a: any) => a.id !== alert.id);
+      });
+      
+      // Invalidate queries to refresh from server
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/unseen/count'] });
+      
       toast({
         title: "Alert deleted",
         description: "The alert has been removed from your feed.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Delete alert error:', error);
       toast({
         title: "Error",
-        description: "Failed to delete alert. Please try again.",
+        description: error?.message || "Failed to delete alert. Please try again.",
         variant: "destructive",
       });
     } finally {
