@@ -123,35 +123,87 @@ export function WeatherDisplay({
     // Crosswind: 45-135 or 225-315 degrees
 
     if (degrees >= 135 && degrees <= 225) {
-      return { effect: 'Tailwind', color: 'text-green-400', icon: '🏃‍♂️' };
+      return { 
+        effect: 'Tailwind', 
+        color: 'text-green-400', 
+        bgColor: 'bg-green-400/20',
+        icon: '➡️',
+        description: 'Helping carries'
+      };
     } else if ((degrees >= 315 && degrees <= 360) || (degrees >= 0 && degrees <= 45)) {
-      return { effect: 'Headwind', color: 'text-red-400', icon: '🛑' };
+      return { 
+        effect: 'Headwind', 
+        color: 'text-red-400', 
+        bgColor: 'bg-red-400/20',
+        icon: '⬅️',
+        description: 'Hurting carries'
+      };
     } else {
-      return { effect: 'Crosswind', color: 'text-yellow-400', icon: '↔️' };
+      return { 
+        effect: 'Crosswind', 
+        color: 'text-yellow-400', 
+        bgColor: 'bg-yellow-400/20',
+        icon: '↕️',
+        description: 'Side movement'
+      };
     }
   };
 
+  const getWindIntensity = (speed: number) => {
+    if (speed >= 20) return { level: 'Very Strong', bars: 4, color: 'bg-red-500' };
+    if (speed >= 15) return { level: 'Strong', bars: 3, color: 'bg-orange-500' };
+    if (speed >= 10) return { level: 'Moderate', bars: 2, color: 'bg-yellow-500' };
+    if (speed >= 5) return { level: 'Light', bars: 1, color: 'bg-green-500' };
+    return { level: 'Calm', bars: 0, color: 'bg-slate-500' };
+  };
+
   const windEffect = getOutfieldWindEffect(windDirection, windSpeed);
+  const windIntensity = getWindIntensity(windSpeed);
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
 
   return (
-    <div className={`flex items-center space-x-2 ${textSize}`}>
-      <div className="flex items-center space-x-1">
-        <span className={`${windEffect.color} font-medium`}>
+    <div className={`flex items-center space-x-3 ${textSize}`}>
+      {/* Wind Direction & Effect */}
+      <div className={`flex items-center space-x-2 px-2 py-1 rounded-md ${windEffect.bgColor}`}>
+        <span className="text-lg">
           {windEffect.icon}
         </span>
-        <span className="text-slate-300 font-medium">
-          {windSpeed}mph
-        </span>
-        <span className={`${windEffect.color} font-medium`}>
-          {windEffect.effect}
-        </span>
+        <div className="flex flex-col">
+          <span className={`${windEffect.color} font-bold text-xs`}>
+            {windEffect.effect}
+          </span>
+          <span className="text-slate-400 text-xs">
+            {windEffect.description}
+          </span>
+        </div>
       </div>
 
+      {/* Wind Speed with Visual Bars */}
+      <div className="flex items-center space-x-2">
+        <span className="text-slate-300 font-mono font-bold">
+          {windSpeed}mph
+        </span>
+        
+        {/* Wind Intensity Bars */}
+        <div className="flex items-end space-x-0.5">
+          {[1, 2, 3, 4].map((bar) => (
+            <div
+              key={bar}
+              className={`w-1 ${
+                bar <= windIntensity.bars ? windIntensity.color : 'bg-slate-600'
+              } ${
+                bar === 1 ? 'h-1' : bar === 2 ? 'h-2' : bar === 3 ? 'h-3' : 'h-4'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Gust Indicator */}
       {windGust && windGust > windSpeed && (
-        <div className="flex items-center space-x-1">
-          <span className="text-orange-400 text-xs">
-            G{windGust}
+        <div className="flex items-center space-x-1 px-1 py-0.5 bg-orange-400/20 rounded">
+          <span className="text-orange-400 text-xs font-bold">
+            ⚡G{windGust}
           </span>
         </div>
       )}
