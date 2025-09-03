@@ -321,21 +321,6 @@ export class AlertGenerator {
     }
   }
 
-  // Calculate empirical scoring probability based on MLB statistics
-  // V2 RE24-Based Probability System
-  private readonly RE24: Record<string, number> = {
-    // No outs
-    "000-0": 0.50, "100-0": 0.90, "010-0": 1.13, "001-0": 1.35,
-    "110-0": 1.50, "101-0": 1.78, "011-0": 1.98, "111-0": 2.29,
-
-    // One out  
-    "000-1": 0.27, "100-1": 0.54, "010-1": 0.69, "001-1": 0.98,
-    "110-1": 0.94, "101-1": 1.20, "011-1": 1.45, "111-1": 1.65,
-
-    // Two outs
-    "000-2": 0.11, "100-2": 0.25, "010-2": 0.35, "001-2": 0.37,
-    "110-2": 0.47, "101-2": 0.50, "011-2": 0.63, "111-2": 0.82
-  };
 
   private calculateScoringProbability(hasFirst: boolean, hasSecond: boolean, hasThird: boolean, outs: number, gameState?: any): number {
     // Build state key for RE24 lookup
@@ -401,7 +386,7 @@ export class AlertGenerator {
     const isTopInning = liveData.linescore?.isTopInning || false;
 
     // Calculate scoring probability
-    const gameState = {
+    const gameState: any = {
       inning: inning,
       isTopInning: isTopInning,
       outs: outs,
@@ -807,7 +792,7 @@ export class AlertGenerator {
         if (event.details?.event === 'Home Run') {
           // Check for Grand Slam by looking at runners
           const runners = lastPlay.runners || [];
-          const runsScored = runners.filter(r => r.details?.isScoringEvent).length;
+          const runsScored = runners.filter((r: any) => r.details?.isScoringEvent).length;
           const isGrandSlam = runsScored >= 4;
 
           const alertKey = `${game.gameId}_HOME_RUN_${lastPlay.about?.atBatIndex}`;
