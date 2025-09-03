@@ -188,17 +188,17 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     setIsDragging(false);
-    const threshold = 100; // Lowered back for better responsiveness
+    const threshold = 80; // Lower threshold for better responsiveness
     const velocity = info.velocity.x;
 
     // Use velocity for more natural swipe detection
-    if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 500) {
+    if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 300) {
       setDragX(0);
-    } else if (info.offset.x > threshold || velocity > 500) {
+    } else if (info.offset.x > threshold || velocity > 300) {
       // Swiped right - show delete
       setDragX(120);
       startAutoReturnTimer();
-    } else if (info.offset.x < -threshold || velocity < -500) {
+    } else if (info.offset.x < -threshold || velocity < -300) {
       // Swiped left - show sportsbooks
       setDragX(-360);
       startAutoReturnTimer();
@@ -436,36 +436,37 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
       {/* Delete Menu (Right Swipe) - Only show when swiped right */}
       <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent backdrop-blur-sm flex items-center justify-start pl-4 transition-opacity duration-300 ${
-        dragX > 50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        dragX > 30 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         <Button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             handleDeleteAlert();
             setDragX(0); // Return to center after click
           }}
           disabled={isDeleting}
-          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm ring-1 ring-red-500/30 transition-all"
+          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm ring-1 ring-red-500/30 transition-all hover:scale-110 active:scale-95"
           data-testid={`delete-alert-${alertId}`}
         >
-          <Trash2 className="w-5 h-5 text-red-400" />
+          <Trash2 className={`w-5 h-5 text-red-400 ${isDeleting ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
       {/* Main Card */}
       <motion.div
         drag="x"
-        dragConstraints={{ left: -400, right: 140 }}
-        dragElastic={0.1}
-        dragMomentum={false}
+        dragConstraints={{ left: -400, right: 150 }}
+        dragElastic={0.15}
+        dragMomentum={true}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onTap={handleTap}
         animate={{ x: dragX }}
         transition={{ 
           type: "spring", 
-          damping: 25, 
-          stiffness: 300,
-          mass: 0.8
+          damping: 20, 
+          stiffness: 250,
+          mass: 0.6
         }}
         className="relative z-10"
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
