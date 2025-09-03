@@ -1097,7 +1097,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
-
+        authenticated: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error('Admin verify error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
 
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
@@ -1408,19 +1419,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(monitoringStatus);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
-    }
-  });
-
-        authenticated: true,
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role
-        }
-      });
-    } catch (error) {
-      console.error('Admin verify error:', error);
-      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
