@@ -145,5 +145,4 @@ export function WeatherDisplay({
   );
 }
 
-export { BaseballDiamond, WeatherDisplay };
 export { default as WeatherImpactVisualizer } from './WeatherImpactVisualizer';
