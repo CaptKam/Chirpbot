@@ -95,7 +95,7 @@ export async function sendTelegramAlert(
 
     // Add clickable link to view alert details
     const appUrl = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.replit.app` : 'https://chirpbot.replit.app';
-    message += `\n🔗 [View Full Details](${appUrl}/alerts${alert.id ? `#${alert.id}` : ''})`;
+    message += `\n🔗 [View Full Details](${appUrl}/alerts${alert.id ? `\\#${alert.id}` : ''})`;
 
     message += `\n\n${escapeMd('#ChirpBot')} ${escapeMd('#' + alert.type.replace(/\s+/g, ''))}`;
 
