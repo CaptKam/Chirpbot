@@ -46,6 +46,9 @@ export type AlertCardProps = {
   className?: string;
   alertId?: string;
   alertData?: any;
+  // NEW: OpenAI live status
+  liveStatus?: 'LIVE' | 'UPDATED' | 'EXPIRED';
+  openaiEnhanced?: boolean;
 };
 
 // --------------- Helpers ---------------
@@ -183,7 +186,9 @@ export default function AlertCard({
   onResend, 
   className,
   alertId,
-  alertData
+  alertData,
+  liveStatus,
+  openaiEnhanced
 }: AlertCardProps) {
   const grad = getPriorityGradient(priority);
   const { label, text, ring } = getPriorityText(priority);
@@ -208,7 +213,30 @@ export default function AlertCard({
                 <Badge className={clsx("border-2 px-2 py-0.5", text, ring)}>{label}</Badge>
               </div>
             </div>
-            <span className="text-slate-400 text-xs font-medium">{timeAgo(timeIso)}</span>
+            <div className="flex items-center gap-2">
+              {/* Live Status Badge */}
+              {liveStatus && (
+                <Badge 
+                  className={clsx(
+                    "text-xs font-bold px-2 py-0.5 border-2",
+                    liveStatus === 'LIVE' && "bg-green-500/20 text-green-300 border-green-500",
+                    liveStatus === 'UPDATED' && "bg-blue-500/20 text-blue-300 border-blue-500",
+                    liveStatus === 'EXPIRED' && "bg-gray-500/20 text-gray-300 border-gray-500"
+                  )}
+                >
+                  {liveStatus === 'LIVE' && '🔴 LIVE'}
+                  {liveStatus === 'UPDATED' && '🔄 UPDATED'} 
+                  {liveStatus === 'EXPIRED' && '⏰ EXPIRED'}
+                </Badge>
+              )}
+              {/* OpenAI Enhancement Indicator */}
+              {openaiEnhanced && (
+                <Badge className="bg-purple-500/20 text-purple-300 border-purple-500 text-xs px-1.5 py-0.5">
+                  🤖 AI
+                </Badge>
+              )}
+              <span className="text-slate-400 text-xs font-medium">{timeAgo(timeIso)}</span>
+            </div>
           </div>
 
           {/* Message */}

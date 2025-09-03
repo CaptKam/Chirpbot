@@ -5,6 +5,7 @@ import { NCAAFApiService } from "./ncaaf-api";
 import { weatherService } from "./weather-service";
 import { storage } from "../storage";
 import { evaluateGameForAlerts, type MLBGameState } from "./mlb-probability-engine";
+import { openaiEnhancer } from "./openai-alert-enhancer";
 
 interface AlertData {
   type: string;
@@ -711,17 +712,57 @@ export class AlertGenerator {
 
   private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number, sport: string = 'MLB'): Promise<number> {
     try {
+      // Create temporary alert object for OpenAI enhancement
+      const tempAlert = {
+        id: `temp-${Date.now()}`,
+        alertKey: alertKey,
+        sport: sport,
+        gameId: gameId,
+        type: type,
+        state: 'NEW',
+        score: priority,
+        payload: {
+          message: message,
+          team: context?.team || '',
+          confidence: priority,
+          gamePk: gameId,
+          ...context
+        },
+        createdAt: new Date()
+      };
+
+      console.log(`🤖 ENHANCING: "${message}"`);
+      
+      // STEP 1: Enhance alert with OpenAI
+      const enhancedAlert = await openaiEnhancer.enhanceAlert(tempAlert);
+      const finalMessage = enhancedAlert.payload.message || message;
+      
+      console.log(`🚀 ENHANCED: "${finalMessage}"`);
+      
+      // STEP 2: Save enhanced alert to database
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
-                ${type}, 'NEW', ${priority}, ${JSON.stringify({ message, context })}, NOW())
+                ${type}, 'LIVE', ${priority}, ${JSON.stringify(enhancedAlert.payload)}, NOW())
         ON CONFLICT (alert_key) DO NOTHING
       `);
       
-      console.log(`🚨 REAL-TIME ALERT: ${message}`);
+      // STEP 3: Start OpenAI live monitoring for this alert
+      if (sport === 'MLB') {
+        try {
+          const gameData = await this.mlbApi.getGameData(gameId);
+          await openaiEnhancer.startLiveMonitoring(enhancedAlert, gameData);
+          console.log(`🎯 OpenAI monitoring started for alert: ${alertKey}`);
+        } catch (monitorError) {
+          console.error('Failed to start live monitoring:', monitorError);
+        }
+      }
+      
+      console.log(`🚨 REAL-TIME ALERT: ${finalMessage}`);
       return 1;
     } catch (error) {
-      // Ignore conflicts (already exists)
+      // Ignore conflicts (already exists) or OpenAI failures
+      console.error('Alert save/enhance error:', error);
       return 0;
     }
   }

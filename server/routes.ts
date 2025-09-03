@@ -9,6 +9,8 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
+import { openaiEnhancer } from "./services/openai-alert-enhancer";
+import { MLBApiService } from "./services/mlb-api";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -1355,11 +1357,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
-  // Start live game monitoring every 15 seconds for real-time alerts
+  // Start live game monitoring every 15 seconds for real-time alerts + OpenAI monitoring
   setInterval(async () => {
     try {
       console.log('⚡ Real-time monitoring: Checking for live game alerts...');
       await alertGenerator.generateLiveGameAlerts();
+      
+      // STEP 4: Check for OpenAI live alert updates
+      try {
+        const currentGameStates = new Map();
+        const mlbApi = new MLBApiService();
+        const allGames = await mlbApi.getTodaysGames();
+        const liveGames = allGames.filter(game => game.isLive);
+        
+        for (const game of liveGames) {
+          currentGameStates.set(game.gameId.toString(), game);
+        }
+        
+        const updatedAlerts = await openaiEnhancer.monitorLiveAlerts(currentGameStates);
+        
+        if (updatedAlerts.length > 0) {
+          console.log(`🤖 OpenAI generated ${updatedAlerts.length} alert updates`);
+          
+          // Save updated alerts to database
+          for (const alert of updatedAlerts) {
+            try {
+              await db.execute(sql`
+                INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
+                VALUES (gen_random_uuid(), ${alert.alertKey}, ${alert.sport}, ${alert.gameId}, 
+                        ${alert.type}, ${alert.state}, ${alert.score}, ${JSON.stringify(alert.payload)}, NOW())
+              `);
+            } catch (saveError) {
+              console.error('Failed to save updated alert:', saveError);
+            }
+          }
+        }
+      } catch (aiError) {
+        console.error('OpenAI monitoring error:', aiError);
+      }
     } catch (error) {
       console.error('Error in live monitoring:', error);
     }

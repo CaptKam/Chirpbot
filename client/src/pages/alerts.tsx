@@ -19,6 +19,7 @@ interface Alert {
   confidence: number;
   priority: number;
   createdAt: string;
+  state?: string; // NEW: For detecting LIVE/UPDATED/EXPIRED status
   // Footer data
   inning?: number;
   isTopInning?: boolean;
@@ -29,6 +30,12 @@ interface Alert {
   hasSecond?: boolean;
   hasThird?: boolean;
   context?: any;
+  // NEW: OpenAI enhancement data
+  payload?: {
+    openaiEnhanced?: boolean;
+    status?: 'LIVE' | 'UPDATED' | 'EXPIRED';
+    openaiMonitored?: boolean;
+  };
 }
 
 interface AlertStats {
@@ -164,6 +171,9 @@ export default function AlertsPage() {
                 alertId={alert.id}
                 alertData={alert}
                 className="bg-white/5 backdrop-blur-sm"
+                // NEW: Live status props
+                liveStatus={alert.payload?.status || (alert.state === 'LIVE' ? 'LIVE' : alert.state === 'UPDATED' ? 'UPDATED' : alert.state === 'EXPIRED' ? 'EXPIRED' : undefined)}
+                openaiEnhanced={alert.payload?.openaiEnhanced}
               />
             </motion.div>
           ))

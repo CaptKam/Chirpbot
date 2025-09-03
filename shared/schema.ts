@@ -60,6 +60,32 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Alerts table for tracking sports alerts with OpenAI live monitoring (existing structure)
+export const alerts = pgTable("alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertKey: varchar("alert_key").notNull(), // Keep existing structure
+  sport: text("sport").notNull(),
+  gameId: text("game_id").notNull(),
+  type: text("type").notNull(),
+  state: text("state").notNull().default('NEW'),
+  score: integer("score").notNull(),
+  payload: jsonb("payload").$type<{
+    message?: string;
+    team?: string;
+    confidence?: number;
+    gamePk?: string;
+    inning?: number;
+    outs?: number;
+    baseRunners?: { first: boolean; second: boolean; third: boolean };
+    openaiEnhanced?: boolean;
+    originalMessage?: string;
+    status?: 'LIVE' | 'UPDATED' | 'EXPIRED';
+    originalAlertId?: string;
+    openaiMonitored?: boolean;
+  }>().notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Global alert settings controlled by admin
 export const globalAlertSettings = pgTable("global_alert_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -160,6 +186,14 @@ export type UserAlertPreferences = typeof userAlertPreferences.$inferSelect;
 
 export type InsertSystemConfiguration = z.infer<typeof insertSystemConfigurationSchema>;
 export type SystemConfiguration = typeof systemConfiguration.$inferSelect;
+
+export const insertAlertSchema = createInsertSchema(alerts).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertAlert = z.infer<typeof insertAlertSchema>;
+export type Alert = typeof alerts.$inferSelect;
 
 
 // Game types for live sports data
