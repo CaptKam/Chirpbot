@@ -9,6 +9,7 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
+import { Router } from 'express'; // Import Router
 
 // Extend session data interface
 declare module 'express-session' {
@@ -17,6 +18,9 @@ declare module 'express-session' {
     adminUserId?: string;
   }
 }
+
+// Create a new router instance
+const router = Router();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -47,7 +51,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('error', (error: Error) => {
       console.error('WebSocket error:', error);
       clients.delete(ws);
-
+    });
+  });
 
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
@@ -94,9 +99,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
-
-    });
   });
 
   // Heartbeat interval to detect zombie connections
@@ -714,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
 
-      // Get real alerts from database
+      // Get alerts from database
       const result = await db.execute(sql`
         SELECT id, type, game_id, sport, score, payload, created_at
         FROM alerts
@@ -722,44 +724,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT ${limit}
       `);
 
-      const alerts = result.rows.map(row => {
-        let payload: any = {};
-        try {
-          // The payload is already a JSON object, not a string
-          payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
-        } catch (e) {
-          console.error('Error parsing payload:', e);
-          payload = {};
-        }
+      const alerts = [];
 
-        return {
-          id: row.id,
-          type: row.type,
-          message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
-          gameId: row.game_id,
-          sport: row.sport || 'MLB',
-          homeTeam: payload.context?.homeTeam || 'Home Team',
-          awayTeam: payload.context?.awayTeam || 'Away Team',
-          homeScore: payload.context?.homeScore,
-          awayScore: payload.context?.awayScore,
-          confidence: row.score || 85,
-          priority: row.score || 80,
-          createdAt: row.created_at,
-          // Add context data for footer
-          context: payload.context || {},
-          inning: payload.context?.inning,
-          isTopInning: payload.context?.isTopInning,
-          outs: payload.context?.outs,
-          balls: payload.context?.balls,
-          strikes: payload.context?.strikes,
-          hasFirst: payload.context?.first || payload.context?.hasFirst,
-          hasSecond: payload.context?.second || payload.context?.hasSecond,
-          hasThird: payload.context?.third || payload.context?.hasThird,
-          // Include AI data
-          betbookData: payload.betbookData || null,
-          gameInfo: payload.gameInfo || null
-        };
-      });
+      for (const row of result.rows) {
+        const sport = row.sport || 'MLB';
+        const alertType = row.type;
+
+        // Check if this alert type is globally enabled
+        try {
+          const globalSettings = await storage.getGlobalAlertSettings(sport);
+          const isEnabled = globalSettings[alertType] !== false;
+
+          if (isEnabled) {
+            let payload: any = {};
+            try {
+              // The payload is already a JSON object, not a string
+              payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
+            } catch (e) {
+              console.error('Error parsing payload:', e);
+              payload = {};
+            }
+
+            alerts.push({
+              id: row.id,
+              type: row.type,
+              message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
+              gameId: row.game_id,
+              sport: row.sport || 'MLB',
+              homeTeam: payload.context?.homeTeam || 'Home Team',
+              awayTeam: payload.context?.awayTeam || 'Away Team',
+              homeScore: payload.context?.homeScore,
+              awayScore: payload.context?.awayScore,
+              confidence: row.score || 85,
+              priority: row.score || 80,
+              createdAt: row.created_at,
+              // Add context data for footer
+              context: payload.context || {},
+              inning: payload.context?.inning,
+              isTopInning: payload.context?.isTopInning,
+              outs: payload.context?.outs,
+              balls: payload.context?.balls,
+              strikes: payload.context?.strikes,
+              hasFirst: payload.context?.first || payload.context?.hasFirst,
+              hasSecond: payload.context?.second || payload.context?.hasSecond,
+              hasThird: payload.context?.third || payload.context?.hasThird,
+              // Include AI data
+              betbookData: payload.betbookData || null,
+              gameInfo: payload.gameInfo || null
+            });
+          } else {
+            console.log(`🚫 Filtered out ${alertType} alert (globally disabled)`);
+          }
+        } catch (error) {
+          // If we can't check global settings, include the alert (fail-safe)
+          console.error(`Error checking global settings for ${sport}:${alertType}`, error);
+          let payload: any = {};
+          try {
+            payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
+          } catch (e) {
+            console.error('Error parsing payload:', e);
+            payload = {};
+          }
+          alerts.push({
+            id: row.id,
+            type: row.type,
+            message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
+            gameId: row.game_id,
+            sport: row.sport || 'MLB',
+            homeTeam: payload.context?.homeTeam || 'Home Team',
+            awayTeam: payload.context?.awayTeam || 'Away Team',
+            homeScore: payload.context?.homeScore,
+            awayScore: payload.context?.awayScore,
+            confidence: row.score || 85,
+            priority: row.score || 80,
+            createdAt: row.created_at,
+            // Add context data for footer
+            context: payload.context || {},
+            inning: payload.context?.inning,
+            isTopInning: payload.context?.isTopInning,
+            outs: payload.context?.outs,
+            balls: payload.context?.balls,
+            strikes: payload.context?.strikes,
+            hasFirst: payload.context?.first || payload.context?.hasFirst,
+            hasSecond: payload.context?.second || payload.context?.hasSecond,
+            hasThird: payload.context?.third || payload.context?.hasThird,
+            // Include AI data
+            betbookData: payload.betbookData || null,
+            gameInfo: payload.gameInfo || null
+          });
+        }
+      }
 
       res.json(alerts);
     } catch (error) {
@@ -1058,7 +1112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Global settings endpoint for user settings page  
+  // Global settings endpoint for user settings page
   app.get('/api/admin/global-settings', async (req, res) => {
     try {
       // This endpoint should return the same data as the sport-specific endpoint
@@ -1139,6 +1193,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error in live monitoring:', error);
     }
   }, 15000); // Check every 15 seconds for real-time updates
+
+  // Mount the router
+  app.use('/api', router);
 
   return httpServer;
 }
