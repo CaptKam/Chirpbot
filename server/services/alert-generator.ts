@@ -290,19 +290,25 @@ export class AlertGenerator {
   private async generateLiveAlertsForGame(game: any): Promise<number> {
     let alertCount = 0;
 
-    // Debug: Log game scores to verify they're available
-    console.log(`🔧 DEBUG: Processing game ${game.gameId} - ${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}`);
+    // Normalize game object structure for alert generation
+    const normalizedGame = {
+      gameId: game.id || game.gameId,
+      homeTeam: game.homeTeam?.name || game.homeTeam,
+      awayTeam: game.awayTeam?.name || game.awayTeam,
+      homeScore: game.homeTeam?.score || game.homeScore || 0,
+      awayScore: game.awayTeam?.score || game.awayScore || 0
+    };
 
     // Fetch detailed live feed data for granular alerts
     try {
-      const liveData = await this.fetchDetailedLiveData(game.gameId);
+      const liveData = await this.fetchDetailedLiveData(normalizedGame.gameId);
       if (!liveData) return 0;
 
       // Generate alerts based on detailed game state
-      alertCount += await this.generateBaseRunnerAlerts(game, liveData);
-      alertCount += await this.generateInningPressureAlerts(game, liveData);
-      alertCount += await this.generateAtBatAlerts(game, liveData);
-      alertCount += await this.generateScoringAlerts(game, liveData);
+      alertCount += await this.generateBaseRunnerAlerts(normalizedGame, liveData);
+      alertCount += await this.generateInningPressureAlerts(normalizedGame, liveData);
+      alertCount += await this.generateAtBatAlerts(normalizedGame, liveData);
+      alertCount += await this.generateScoringAlerts(normalizedGame, liveData);
 
     } catch (error) {
       console.error(`Error fetching live data for game ${game.gameId}:`, error);
@@ -849,7 +855,7 @@ export class AlertGenerator {
     let alertCount = 0;
     const scoreDiff = Math.abs(game.homeScore - game.awayScore);
 
-    // Fallback to basic close game alert
+    // Fallback to basic close game alert  
     if (scoreDiff <= 3 && (game.homeScore > 0 || game.awayScore > 0)) {
       const alertKey = `${game.gameId}_LIVE_CLOSE`;
       const message = `🔥 LIVE: Close game! ${game.homeTeam} ${game.homeScore}, ${game.awayTeam} ${game.awayScore}`;
