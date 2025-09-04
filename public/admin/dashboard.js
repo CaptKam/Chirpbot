@@ -398,18 +398,30 @@ const ALERT_TYPE_CONFIG = {
             { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
         ]
     },
-    'NCAAF': {
-        'Game Flow': [
-            { key: 'NCAAF_KICKOFF', name: 'Kickoff', description: 'Game start and 2nd half kickoffs' },
-            { key: 'NCAAF_HALFTIME', name: 'Halftime', description: 'End of 2nd quarter, score update' },
-            { key: 'TWO_MINUTE_WARNING', name: 'Two Minute Warning', description: 'Final 2 minutes of any quarter' }
-        ],
-        'Critical Moments': [
-            { key: 'FOURTH_DOWN', name: 'Fourth Down', description: 'Make-or-break plays' },
-            { key: 'RED_ZONE', name: 'Red Zone', description: 'Inside the 20-yard line' },
-            { key: 'OVERTIME', name: 'Overtime', description: 'Extra period alerts' }
+    NCAAF: {
+        "Game Flow": [
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
+            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
+            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" },
+            { key: "NCAAF_KICKOFF", label: "Game Start & Second Half", description: "Kickoffs for game start and second half" },
+            { key: "NCAAF_HALFTIME", label: "Halftime Score", description: "Score updates at halftime" },
+            { key: "NCAAF_TWO_MINUTE_WARNING", label: "Late Game Pressure", description: "Critical final minutes" },
+            { key: "CLUTCH_TIME", label: "Clutch Time Situations", description: "High-pressure game moments" },
+            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
         ]
-    }
+    },
+    WNBA: {
+        "Critical Moments": [
+            { key: "WNBA_FOURTH_QUARTER", label: "Fourth Quarter Crunch Time", description: "Close games in final 5 minutes of 4th quarter" },
+            { key: "WNBA_CLOSE_GAME", label: "Close Games", description: "Games within 5 points in 3rd or 4th quarter" },
+            { key: "WNBA_OVERTIME", label: "Overtime Games", description: "Games entering overtime period" }
+        ],
+        "Scoring Events": [
+            { key: "WNBA_HIGH_SCORING", label: "High-Scoring Games", description: "Games with 160+ combined points" },
+            { key: "WNBA_COMEBACK", label: "Comeback Alerts", description: "Teams erasing large deficits" },
+            { key: "WNBA_CLUTCH_PERFORMANCE", label: "Clutch Performances", description: "Outstanding individual performances in critical moments" }
+        ]
+    },
 };
 
 async function loadSportAlertSettings() {

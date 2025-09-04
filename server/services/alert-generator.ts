@@ -111,6 +111,7 @@ function getBetbookData(context: any): BetbookData {
 export class AlertGenerator {
   private mlbApi: MLBApiService;
   private ncaafApi: NCAAFApiService;
+  private wnbaApi: any; // Will be initialized dynamically
   private deduplication: AlertDeduplication;
   private settingsCache: SettingsCache;
   private ai: BasicAI;
@@ -311,22 +312,24 @@ export class AlertGenerator {
   // Method to generate alerts for live games (when they're happening)
   async generateLiveGameAlerts(): Promise<void> {
     try {
-      // Get live games from both MLB and NCAAF
-      const [mlbGames, ncaafGames] = await Promise.all([
+      // Get live games from MLB, NCAAF, and WNBA
+      const [mlbGames, ncaafGames, wnbaGames] = await Promise.all([
         this.mlbApi.getTodaysGames(),
-        this.ncaafApi.getTodaysGames()
+        this.ncaafApi.getTodaysGames(),
+        this.getWNBAGames()
       ]);
 
       const liveMLBGames = mlbGames.filter(game => game.isLive);
       const liveNCAAFGames = ncaafGames.filter(game => game.isLive);
-      const totalLiveGames = liveMLBGames.length + liveNCAAFGames.length;
+      const liveWNBAGames = wnbaGames.filter(game => game.isLive);
+      const totalLiveGames = liveMLBGames.length + liveNCAAFGames.length + liveWNBAGames.length;
 
       if (totalLiveGames === 0) {
         console.log('🔍 No live games to monitor for alerts');
         return;
       }
 
-      console.log(`🔍 Monitoring ${liveMLBGames.length} MLB + ${liveNCAAFGames.length} NCAAF live games for alerts`);
+      console.log(`🔍 Monitoring ${liveMLBGames.length} MLB + ${liveNCAAFGames.length} NCAAF + ${liveWNBAGames.length} WNBA live games for alerts`);
 
       let newAlerts = 0;
 
@@ -344,6 +347,15 @@ export class AlertGenerator {
         console.log(`🏈 Processing ${liveNCAAFGames.length} live NCAAF games`);
         for (const game of liveNCAAFGames) {
           const count = await this.generateNCAAFLiveAlerts(game);
+          newAlerts += count;
+        }
+      }
+
+      // Process WNBA games
+      if (liveWNBAGames.length > 0) {
+        console.log(`🏀 Processing ${liveWNBAGames.length} live WNBA games`);
+        for (const game of liveWNBAGames) {
+          const count = await this.generateWNBALiveAlerts(game);
           newAlerts += count;
         }
       }
@@ -1244,6 +1256,162 @@ export class AlertGenerator {
     const suffixes = ['th', 'st', 'nd', 'rd'];
     const remainder = num % 100;
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
+  }
+
+  // Helper method to get WNBA games
+  private async getWNBAGames(): Promise<any[]> {
+    try {
+      if (!this.wnbaApi) {
+        const { WNBAApiService } = await import('./wnba-api');
+        this.wnbaApi = new WNBAApiService();
+      }
+      return await this.wnbaApi.getTodaysGames();
+    } catch (error) {
+      console.error('Error fetching WNBA games:', error);
+      return [];
+    }
+  }
+
+  // Generate WNBA-specific live alerts
+  private async generateWNBALiveAlerts(game: any): Promise<number> {
+    let alertCount = 0;
+
+    try {
+      // Fourth Quarter alerts
+      alertCount += await this.generateWNBAFourthQuarterAlert(game);
+
+      // Close game alerts
+      alertCount += await this.generateWNBACloseGameAlert(game);
+
+      // Overtime alerts
+      alertCount += await this.generateWNBAOvertimeAlert(game);
+
+      // High-scoring game alerts
+      alertCount += await this.generateWNBAHighScoringAlert(game);
+
+    } catch (error) {
+      console.error(`Error generating WNBA alerts for game ${game.gameId}:`, error);
+    }
+
+    return alertCount;
+  }
+
+  private async generateWNBAFourthQuarterAlert(game: any): Promise<number> {
+    const quarter = game.quarter || 0;
+    const timeRemaining = game.timeRemaining || '';
+    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+
+    // Fourth quarter with less than 5 minutes remaining and close score
+    if (quarter === 4 && this.isWithinMinutes(timeRemaining, 5) && scoreDiff <= 10) {
+      const alertKey = `${game.gameId}_WNBA_FOURTH_QUARTER_${timeRemaining.replace(/[:\s]/g, '')}`;
+      const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore} - ${timeRemaining} left`;
+
+      return await this.saveRealTimeAlert(alertKey, 'WNBA_FOURTH_QUARTER', game.gameId, message, {
+        homeTeam: game.homeTeam.name,
+        awayTeam: game.awayTeam.name,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        quarter,
+        timeRemaining,
+        scoreDiff
+      }, scoreDiff <= 5 ? 95 : 88, 'WNBA');
+    }
+
+    return 0;
+  }
+
+  private async generateWNBACloseGameAlert(game: any): Promise<number> {
+    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+    const quarter = game.quarter || 0;
+
+    // Close game in 3rd or 4th quarter
+    if ((quarter >= 3) && scoreDiff <= 5 && (game.homeScore > 0 || game.awayScore > 0)) {
+      const alertKey = `${game.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
+      const message = `🔥 CLOSE WNBA GAME! ${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+
+      return await this.saveRealTimeAlert(alertKey, 'WNBA_CLOSE_GAME', game.gameId, message, {
+        homeTeam: game.homeTeam.name,
+        awayTeam: game.awayTeam.name,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        quarter,
+        scoreDiff
+      }, 90, 'WNBA');
+    }
+
+    return 0;
+  }
+
+  private async generateWNBAOvertimeAlert(game: any): Promise<number> {
+    const quarter = game.quarter || 0;
+
+    // Overtime detection (period 5+)
+    if (quarter >= 5) {
+      const overtimePeriod = quarter - 4;
+      const alertKey = `${game.gameId}_WNBA_OVERTIME_${quarter}`;
+      const message = `⚡ WNBA OVERTIME! ${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore} - ${overtimePeriod}${overtimePeriod > 1 ? `${this.getOrdinalSuffix(overtimePeriod)} OT` : 'ST OT'}`;
+
+      return await this.saveRealTimeAlert(alertKey, 'WNBA_OVERTIME', game.gameId, message, {
+        homeTeam: game.homeTeam.name,
+        awayTeam: game.awayTeam.name,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        quarter,
+        overtimePeriod
+      }, 100, 'WNBA');
+    }
+
+    return 0;
+  }
+
+  private async generateWNBAHighScoringAlert(game: any): Promise<number> {
+    const totalScore = game.homeScore + game.awayScore;
+    const quarter = game.quarter || 0;
+
+    // High-scoring game (over 160 combined points)
+    if (totalScore >= 160 && quarter >= 3) {
+      const alertKey = `${game.gameId}_WNBA_HIGH_SCORING`;
+      const message = `🎯 HIGH-SCORING WNBA GAME! ${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore} - ${totalScore} combined points`;
+
+      return await this.saveRealTimeAlert(alertKey, 'WNBA_HIGH_SCORING', game.gameId, message, {
+        homeTeam: game.homeTeam.name,
+        awayTeam: game.awayTeam.name,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        totalScore,
+        quarter
+      }, 85, 'WNBA');
+    }
+
+    return 0;
+  }
+
+  // Helper method for WNBA time parsing
+  private isWithinMinutes(timeRemaining: string, minutes: number): boolean {
+    if (!timeRemaining || timeRemaining === '0:00' || timeRemaining === '00:00') return false;
+
+    try {
+      let cleanTime = timeRemaining.trim();
+      
+      if (cleanTime.includes(' ')) {
+        cleanTime = cleanTime.split(' ')[0];
+      }
+
+      if (cleanTime.includes(':')) {
+        const timeParts = cleanTime.split(':');
+        if (timeParts.length === 2) {
+          const mins = parseInt(timeParts[0]) || 0;
+          const secs = parseInt(timeParts[1]) || 0;
+          const totalSeconds = (mins * 60) + secs;
+          return totalSeconds <= (minutes * 60) && totalSeconds > 0;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error(`Error parsing WNBA time "${timeRemaining}":`, error);
+      return false;
+    }
   }
 
   // Generate AI betting insights for alerts

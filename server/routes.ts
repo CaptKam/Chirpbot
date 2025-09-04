@@ -210,6 +210,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sport = 'MLB', date } = req.query;
       let games = [];
 
+      const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+
       switch(sport) {
         case 'MLB':
           const { MLBApiService } = await import('./services/mlb-api');
@@ -245,6 +247,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { NCAAFApiService } = await import('./services/ncaaf-api');
           const ncaafService = new NCAAFApiService();
           games = await ncaafService.getTodaysGames(date as string);
+          break;
+
+        case 'WNBA':
+          const { WNBAApiService } = await import('./services/wnba-api');
+          const wnbaService = new WNBAApiService();
+          games = await wnbaService.getTodaysGames(date as string);
           break;
 
         default:
@@ -638,10 +646,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/alerts/force-generate', async (req, res) => {
     try {
       console.log('🧪 FORCING TEST LIVE ALERTS');
-      
+
       const alertGenerator = new AlertGenerator();
       const alertCount = await alertGenerator.generateLiveGameAlerts();
-      
+
       res.json({ 
         message: `Generated ${alertCount} test alerts`,
         alertCount
@@ -656,21 +664,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/telegram/force-test', async (req, res) => {
     try {
       console.log('🧪 FORCING TEST TELEGRAM ALERT');
-      
+
       // Get all users with Telegram
       const allUsers = await storage.getAllUsers();
       const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-      
+
       console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
-      
+
       let successCount = 0;
       let errorCount = 0;
-      
+
       for (const user of telegramUsers) {
         console.log(`📱 Testing Telegram for user: ${user.username}`);
         console.log(`📱 Bot token length: ${user.telegramBotToken?.length || 0}`);
         console.log(`📱 Chat ID: ${user.telegramChatId}`);
-        
+
         const config: TelegramConfig = {
           botToken: user.telegramBotToken || '',
           chatId: user.telegramChatId || ''
@@ -996,7 +1004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/alerts/:alertId', async (req, res) => {
     try {
       const { alertId } = req.params;
-      
+
       if (!alertId) {
         return res.status(400).json({ message: 'Alert ID is required' });
       }
@@ -1337,7 +1345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                          Object.keys(debugResults.endpoints).length;
       const errorCount = debugResults.errors.length;
       const healthScore = Math.max(0, Math.round(((totalChecks - errorCount) / totalChecks) * 100));
-      
+
       debugResults.summary = {
         healthScore: `${healthScore}%`,
         totalErrors: errorCount,
@@ -1467,7 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const mlbService = new MLBApiService();
         const todaysGames = await mlbService.getTodaysGames();
         const liveGames = todaysGames.filter(game => game.status === 'live' || game.isLive);
-        
+
         monitoringStatus.games = {
           status: 'OK',
           total: todaysGames.length,

@@ -240,7 +240,7 @@ export default function AdminPanel() {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-300">Admins</CardTitle>
@@ -327,24 +327,24 @@ export default function AdminPanel() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <div className="flex items-center space-x-2">
                         <Mail className="w-4 h-4 text-slate-400" />
                         <span className="text-sm text-slate-300">{user.email}</span>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <Badge className={getRoleBadgeColor(user.role)}>
                         {user.role.toUpperCase()}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <span className="text-sm text-slate-300 capitalize">{user.authMethod}</span>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <Badge 
                         className={user.telegramEnabled 
@@ -355,7 +355,7 @@ export default function AdminPanel() {
                         {user.telegramEnabled ? "Enabled" : "Disabled"}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value)}>
                         <SelectTrigger className="w-32 h-8 bg-slate-600 border-slate-500 text-white">
@@ -394,7 +394,7 @@ export default function AdminPanel() {
               <span>Manage User: {selectedUser?.username}</span>
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedUser && (
             <div className="space-y-6">
               {/* User Info */}
@@ -448,6 +448,7 @@ export default function AdminPanel() {
                         <SelectItem value="NHL">NHL</SelectItem>
                         <SelectItem value="CFL">CFL</SelectItem>
                         <SelectItem value="NCAAF">NCAAF</SelectItem>
+                        <SelectItem value="WNBA">WNBA</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -467,7 +468,7 @@ export default function AdminPanel() {
                                 p.alertType === alert.key && p.sport === selectedSport
                               );
                               const isEnabled = preference?.enabled ?? true;
-                              
+
                               return (
                                 <div key={alert.key} className="flex items-center justify-between p-4 bg-slate-600/50 rounded-lg border border-slate-600">
                                   <div className="flex-1">
