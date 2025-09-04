@@ -73,136 +73,6 @@ import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
-// Component to show next game information when no games today
-function NextGameSchedule({ sport, selectedDate }: { sport: string; selectedDate: Date }) {
-  const { data: nextGameData, isLoading } = useQuery({
-    queryKey: ["/api/games/next", { sport, date: format(selectedDate, 'yyyy-MM-dd') }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      
-      // Check next 14 days for upcoming games
-      for (let i = 1; i <= 14; i++) {
-        const checkDate = addDays(selectedDate, i);
-        const dateStr = format(checkDate, 'yyyy-MM-dd');
-        
-        try {
-          const response = await fetch(`/api/games/today?sport=${sport}&date=${dateStr}`, {
-            credentials: "include",
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.games && data.games.length > 0) {
-              return {
-                nextGameDate: checkDate,
-                games: data.games,
-                daysUntil: i
-              };
-            }
-          }
-        } catch (error) {
-          console.log(`Error checking games for ${dateStr}:`, error);
-        }
-      }
-      
-      return null;
-    },
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
-
-  if (isLoading) {
-    return (
-      <div className="text-center py-8 text-slate-300">
-        <SportsLoading sport={sport} message={`Looking for upcoming ${sport} games...`} size="md" />
-      </div>
-    );
-  }
-
-  if (!nextGameData) {
-    return (
-      <div className="text-center py-8 text-slate-300">
-        <Calendar className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-        <p className="text-lg font-medium">No {sport} games scheduled</p>
-        <p className="text-sm mt-2 text-slate-400">No games found in the next 14 days</p>
-      </div>
-    );
-  }
-
-  const nextGame = nextGameData.games[0];
-  const startTime = new Date(nextGame.startTime);
-  const formattedDate = format(nextGameData.nextGameDate, 'EEEE, MMMM d');
-  const formattedTime = isNaN(startTime.getTime()) 
-    ? 'TBD'
-    : startTime.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit' 
-      });
-
-  return (
-    <div className="text-center py-8">
-      <Card className="max-w-md mx-auto bg-white/5 backdrop-blur-sm border-white/10 p-6">
-        <Calendar className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
-        <p className="text-lg font-medium text-slate-200 mb-2">
-          No {sport} games {isSameDay(selectedDate, new Date()) ? 'today' : 'on this date'}
-        </p>
-        
-        <div className="space-y-3 mt-4">
-          <div className="text-emerald-400 font-semibold">
-            Next {sport} game:
-          </div>
-          
-          <div className="space-y-2">
-            <div className="text-slate-300">
-              {nextGameData.daysUntil === 1 ? 'Tomorrow' : 
-               nextGameData.daysUntil === 2 ? 'Day after tomorrow' : 
-               `In ${nextGameData.daysUntil} days`}
-            </div>
-            
-            <div className="text-sm text-slate-400">
-              {formattedDate} at {formattedTime}
-            </div>
-            
-            <div className="flex items-center justify-center space-x-3 mt-3">
-              <div className="text-center">
-                <TeamLogo
-                  teamName={removeCity(nextGame.awayTeam?.name || 'TBD')}
-                  abbreviation={extractTeamAbbreviation(nextGame.awayTeam?.name || 'TBD')}
-                  sport={sport}
-                  size="md"
-                />
-                <div className="text-xs text-slate-400 mt-1">
-                  {removeCity(nextGame.awayTeam?.name || 'TBD')}
-                </div>
-              </div>
-              
-              <div className="text-slate-400 font-bold">@</div>
-              
-              <div className="text-center">
-                <TeamLogo
-                  teamName={removeCity(nextGame.homeTeam?.name || 'TBD')}
-                  abbreviation={extractTeamAbbreviation(nextGame.homeTeam?.name || 'TBD')}
-                  sport={sport}
-                  size="md"
-                />
-                <div className="text-xs text-slate-400 mt-1">
-                  {removeCity(nextGame.homeTeam?.name || 'TBD')}
-                </div>
-              </div>
-            </div>
-            
-            {nextGame.venue && (
-              <div className="text-xs text-slate-500 mt-2">
-                at {nextGame.venue}
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
@@ -506,12 +376,13 @@ export default function Calendar() {
                 {isSameDay(selectedDate, new Date()) ? "Today's Games" : format(selectedDate, 'MMMM d, yyyy')}
               </h2>
               <Button
-                variant="ghost"
-                size="sm"
+                variant="outline"
+                size="default"
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                className="bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30 hover:text-emerald-200 hover:border-emerald-400 transition-all duration-200 font-semibold"
               >
-                <CalendarIcon className="w-4 h-4" />
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Pick Date
               </Button>
             </div>
             <div className="flex items-center space-x-4 mt-1">
@@ -627,7 +498,10 @@ export default function Calendar() {
             ))}
           </div>
         ) : games.length === 0 ? (
-          <NextGameSchedule sport={activeSport} selectedDate={selectedDate} />
+          <div className="text-center py-8 text-slate-300">
+            <p className="text-lg font-medium">No games scheduled for today</p>
+            <p className="text-sm mt-2 text-slate-400">Check back later or try a different sport</p>
+          </div>
         ) : (
           <div className="space-y-6">
             {/* Today's Games */}
