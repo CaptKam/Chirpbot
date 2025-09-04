@@ -266,71 +266,64 @@ export const storage = {
     return results;
   },
 
-  // Global alert settings for admin management  
+  // Global alert settings for admin management - FIXED ARCHITECTURE
   async getGlobalAlertSettings(sport: string) {
     try {
-      // Check admin user preferences to get current global state
-      const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
+      // Use the proper globalAlertSettings table instead of admin personal preferences
+      const globalSettings = await db.select()
+        .from(globalAlertSettings)
+        .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
 
-      if (adminUsers.length > 0) {
-        const firstAdmin = adminUsers[0];
-        const adminPrefs = await db.select()
-          .from(userAlertPreferences)
-          .where(and(
-            eq(userAlertPreferences.userId, firstAdmin.id),
-            eq(userAlertPreferences.sport, sport.toLowerCase())
-          ));
+      // Start with all defaults enabled
+      const defaultSettings: Record<string, boolean> = {
+        // MLB alerts - all enabled by default
+        'RISP': true,
+        'BASES_LOADED': true,
+        'RUNNERS_1ST_2ND': true,
+        'CLOSE_GAME': true,
+        'CLOSE_GAME_LIVE': true,
+        'LATE_PRESSURE': true,
+        'HOME_RUN_LIVE': true,
+        'HIGH_SCORING': true,
+        'SHUTOUT': true,
+        'BLOWOUT': true,
+        'FULL_COUNT': true,
+        'STRIKEOUT': true,
+        'POWER_HITTER': true,
+        'HOT_HITTER': true,
+        // AI Enhancement Features
+        'AI_ENHANCED_MESSAGES': true,
+        'AI_PREDICTIVE_AT_BAT': true,
+        'AI_SCORING_PROBABILITY': true,
+        'AI_SITUATION_ANALYSIS': true,
+        'AI_EVENT_SUMMARIES': true,
+        'AI_ROI_ALERTS': true,
+        // NFL alerts
+        'RED_ZONE': true,
+        'FOURTH_DOWN': true,
+        'TWO_MINUTE_WARNING': true,
+        // NCAAF alerts
+        'NCAAF_KICKOFF': true,
+        'NCAAF_HALFTIME': true,
+        'NCAAF_TWO_MINUTE_WARNING': true,
+        // NBA alerts
+        'CLUTCH_TIME': true,
+        'OVERTIME': true,
+        // NHL alerts
+        'POWER_PLAY': true,
+        'EMPTY_NET': true
+      };
 
-        // Start with defaults
-        const defaultSettings: Record<string, boolean> = {
-          // MLB alerts - all enabled by default
-          'RISP': true,
-          'BASES_LOADED': true,
-          'RUNNERS_1ST_2ND': true,
-          'CLOSE_GAME': true,
-          'CLOSE_GAME_LIVE': true,
-          'LATE_PRESSURE': true,
-          'HOME_RUN_LIVE': true,
-          'HIGH_SCORING': true,
-          'SHUTOUT': true,
-          'BLOWOUT': true,
-          'FULL_COUNT': true,
-          'STRIKEOUT': true,
-          'POWER_HITTER': true,
-          'HOT_HITTER': true,
-          // AI Enhancement Features
-          'AI_ENHANCED_MESSAGES': true,
-          'AI_PREDICTIVE_AT_BAT': true,
-          'AI_SCORING_PROBABILITY': true,
-          'AI_SITUATION_ANALYSIS': true,
-          'AI_EVENT_SUMMARIES': true,
-          'AI_ROI_ALERTS': true,
-          // NFL alerts
-          'RED_ZONE': true,
-          'FOURTH_DOWN': true,
-          'TWO_MINUTE_WARNING': true,
-          // NCAAF alerts
-          'NCAAF_KICKOFF': true,
-          'NCAAF_HALFTIME': true,
-          'NCAAF_TWO_MINUTE_WARNING': true,
-          // NBA alerts
-          'CLUTCH_TIME': true,
-          'OVERTIME': true,
-          // NHL alerts
-          'POWER_PLAY': true,
-          'EMPTY_NET': true
-        };
+      // Apply actual global settings from the dedicated table
+      globalSettings.forEach(setting => {
+        defaultSettings[setting.alertType] = setting.enabled;
+      });
 
-        // Apply admin's preferences as global settings
-        adminPrefs.forEach(pref => {
-          defaultSettings[pref.alertType] = pref.enabled;
-        });
-
-        console.log(`🔧 DEBUG: Global settings for ${sport} loaded from admin preferences:`, defaultSettings);
-        return defaultSettings;
-      }
-
-      // Fallback to defaults if no admin found
+      console.log(`🔧 FIXED: Global settings for ${sport} loaded from globalAlertSettings table:`, defaultSettings);
+      return defaultSettings;
+    } catch (error) {
+      console.error('Error getting global alert settings:', error);
+      // Return all enabled defaults on error
       return {
         'RISP': true, 'BASES_LOADED': true, 'RUNNERS_1ST_2ND': true, 'CLOSE_GAME': true,
         'CLOSE_GAME_LIVE': true, 'LATE_PRESSURE': true, 'HOME_RUN_LIVE': true,
@@ -345,34 +338,39 @@ export const storage = {
         'RED_ZONE': true, 'FOURTH_DOWN': true, 'TWO_MINUTE_WARNING': true,
         'CLUTCH_TIME': true, 'OVERTIME': true, 'POWER_PLAY': true, 'EMPTY_NET': true
       };
-    } catch (error) {
-      console.error('Error getting global alert settings:', error);
-      return {};
     }
   },
 
   async updateGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy: string) {
     try {
-      console.log(`🔧 RULE 2: Global alert setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
+      console.log(`🔧 FIXED ARCHITECTURE: Global setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
 
-      // When admin changes global settings, apply to all users (RULE 2 enforcement)
-      const users = await this.getAllUsers();
-      let successCount = 0;
-      let failCount = 0;
+      // Use upsert pattern - check if global setting exists
+      const existing = await db.select().from(globalAlertSettings)
+        .where(and(
+          eq(globalAlertSettings.sport, sport.toLowerCase()),
+          eq(globalAlertSettings.alertType, alertType)
+        ));
 
-      for (const user of users) {
-        try {
-          await this.setUserAlertPreference(user.id, sport.toLowerCase(), alertType, enabled);
-          successCount++;
-          console.log(`✅ RULE 2: Updated ${alertType}=${enabled} for user ${user.username || user.id}`);
-        } catch (userError) {
-          failCount++;
-          console.error(`❌ RULE 2: Failed to update ${alertType} for user ${user.username || user.id}:`, userError);
-        }
+      if (existing.length > 0) {
+        // Update existing global setting
+        const result = await db.update(globalAlertSettings)
+          .set({ enabled, updatedAt: new Date(), updatedBy })
+          .where(and(
+            eq(globalAlertSettings.sport, sport.toLowerCase()),
+            eq(globalAlertSettings.alertType, alertType)
+          ))
+          .returning();
+        console.log(`✅ ARCHITECTURE FIX: Updated global setting ${sport}.${alertType} = ${enabled}`);
+        return result[0];
+      } else {
+        // Create new global setting
+        const result = await db.insert(globalAlertSettings)
+          .values({ sport: sport.toLowerCase(), alertType, enabled, updatedBy })
+          .returning();
+        console.log(`✅ ARCHITECTURE FIX: Created global setting ${sport}.${alertType} = ${enabled}`);
+        return result[0];
       }
-
-      console.log(`🎯 RULE 2 ENFORCEMENT: Global setting ${sport}.${alertType} = ${enabled} applied to ${successCount}/${users.length} users (${failCount} failed)`);
-      return { successCount, failCount, totalUsers: users.length };
     } catch (error) {
       console.error('Error updating global alert setting:', error);
       throw error;
