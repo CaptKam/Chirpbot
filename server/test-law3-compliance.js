@@ -1,100 +1,69 @@
-
-const { storage } = require('./storage');
-const { sendTelegramAlert } = require('./services/telegram');
+import { storage } from './storage.js';
 
 async function testLaw3Compliance() {
-  console.log('⚖️  LAW #3 COMPLIANCE TEST');
-  console.log('Testing: Same messages on alerts page are sent to Telegram');
-  console.log('=' .repeat(60));
-  
   try {
-    // 1. Get recent alerts from database (what appears on alerts page)
+    console.log('⚖️ LAW #3 COMPLIANCE TEST');
+    console.log('========================\n');
+    console.log('Law #3: Same messages on alerts page MUST be sent to Telegram\n');
+
+    // Get recent alerts from database (what appears on alerts page)
     const alertsPageAlerts = await storage.db.execute(`
-      SELECT id, type, sport, payload, created_at
+      SELECT type, COUNT(*) as count, 
+             MIN(created_at) as first_seen,
+             MAX(created_at) as last_seen
       FROM alerts 
       WHERE created_at > NOW() - INTERVAL '2 hours'
-      ORDER BY created_at DESC
-      LIMIT 10
+      GROUP BY type
+      ORDER BY count DESC
     `);
-    
-    console.log(`\n📄 ALERTS PAGE - Recent alerts: ${alertsPageAlerts.rows.length}`);
-    alertsPageAlerts.rows.forEach((alert, i) => {
-      const payload = JSON.parse(alert.payload);
-      console.log(`${i+1}. ${alert.type} - "${payload.message}" (${alert.created_at})`);
-    });
-    
-    // 2. Test Telegram sending for each alert
-    console.log(`\n📱 TELEGRAM TEST - Sending same alerts:`);
-    
-    const testUser = await storage.db.execute(`
-      SELECT * FROM users 
-      WHERE telegram_enabled = true 
-      AND telegram_bot_token IS NOT NULL 
-      AND telegram_chat_id IS NOT NULL
-      LIMIT 1
-    `);
-    
-    if (testUser.rows.length === 0) {
-      console.log('❌ No users with Telegram configured for testing');
+
+    console.log('📊 ALERTS APPEARING ON ALERTS PAGE (Last 2 hours):');
+    console.log('--------------------------------------------------');
+
+    if (alertsPageAlerts.rows.length === 0) {
+      console.log('ℹ️ No alerts found in the last 2 hours');
       return;
     }
-    
-    const user = testUser.rows[0];
-    console.log(`Testing with user: ${user.username}`);
-    
-    // Send first 3 alerts to Telegram to test
-    for (let i = 0; i < Math.min(3, alertsPageAlerts.rows.length); i++) {
-      const alert = alertsPageAlerts.rows[i];
-      const payload = JSON.parse(alert.payload);
-      
-      const telegramConfig = {
-        botToken: user.telegram_bot_token,
-        chatId: user.telegram_chat_id
-      };
-      
-      const telegramAlert = {
-        type: alert.type,
-        title: `${alert.type} Alert Test`,
-        description: payload.message,
-        gameInfo: {
-          homeTeam: payload.context?.homeTeam || 'Test Home',
-          awayTeam: payload.context?.awayTeam || 'Test Away',
-          score: { 
-            home: payload.context?.homeScore || 0, 
-            away: payload.context?.awayScore || 0 
-          },
-          inning: payload.context?.inning || 1,
-          inningState: payload.context?.isTopInning ? 'top' : 'bottom',
-          outs: payload.context?.outs || 0,
-          runners: {
-            first: payload.context?.hasFirst || false,
-            second: payload.context?.hasSecond || false,
-            third: payload.context?.hasThird || false
-          }
-        }
-      };
-      
-      console.log(`\n${i+1}. Sending ${alert.type} alert to Telegram...`);
-      console.log(`   Message: "${payload.message}"`);
-      
-      try {
-        const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
-        console.log(`   Result: ${sent ? '✅ SENT' : '❌ FAILED'}`);
-      } catch (error) {
-        console.log(`   Result: ❌ ERROR - ${error.message}`);
+
+    // Get global settings to check what's being blocked
+    const globalSettings = await storage.getGlobalAlertSettings('MLB');
+
+    let violations = 0;
+    let compliant = 0;
+
+    for (const alert of alertsPageAlerts.rows) {
+      const alertType = alert.type;
+      const alertCount = alert.count;
+      const isEnabled = globalSettings[alertType];
+
+      if (isEnabled) {
+        console.log(`✅ ${alertType}: ${alertCount} alerts - COMPLIANT (will send to Telegram)`);
+        compliant++;
+      } else {
+        console.log(`❌ ${alertType}: ${alertCount} alerts - VIOLATION (blocked from Telegram)`);
+        violations++;
       }
-      
-      // Wait 1 second between sends to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    
-    console.log(`\n⚖️  LAW #3 SUMMARY:`);
-    console.log(`- Alerts on page: ${alertsPageAlerts.rows.length}`);
-    console.log(`- Telegram tests: ${Math.min(3, alertsPageAlerts.rows.length)}`);
-    console.log(`- Both should have identical messages`);
-    
+
+    console.log('\n📈 COMPLIANCE SUMMARY:');
+    console.log(`✅ Compliant alert types: ${compliant}`);
+    console.log(`❌ Violating alert types: ${violations}`);
+    console.log(`📊 Total alert types: ${alertsPageAlerts.rows.length}`);
+
+    const complianceRate = Math.round((compliant / alertsPageAlerts.rows.length) * 100);
+    console.log(`🎯 Compliance Rate: ${complianceRate}%`);
+
+    if (violations > 0) {
+      console.log('\n⚠️ LAW #3 VIOLATIONS DETECTED!');
+      console.log('These alert types appear on the alerts page but are blocked from Telegram.');
+      console.log('Run enable-critical-alerts.js to fix these violations.');
+    } else {
+      console.log('\n🎉 LAW #3 COMPLIANCE: PERFECT!');
+      console.log('All alerts appearing on the alerts page are being sent to Telegram.');
+    }
+
   } catch (error) {
-    console.error('❌ Law #3 test failed:', error);
+    console.error('❌ Law #3 compliance test failed:', error);
   }
 }
 

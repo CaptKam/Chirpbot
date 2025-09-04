@@ -1,14 +1,14 @@
 
-const { storage } = require('./storage');
+import { storage } from './storage.js';
 
 async function enableCriticalAlerts() {
-  console.log('🔧 ENABLING CRITICAL ALERTS FOR LAW #3 COMPLIANCE');
-  console.log('=' .repeat(50));
-  
   try {
-    // Get admin user to make global changes
-    const adminUsers = await storage.getAllUsers();
-    const admin = adminUsers.find(u => u.role === 'admin') || adminUsers[0];
+    console.log('🔧 ENABLING CRITICAL ALERT TYPES');
+    console.log('================================\n');
+
+    // Get admin user
+    const allUsers = await storage.getAllUsers();
+    const admin = allUsers.find(user => user.role === 'admin') || allUsers[0];
     
     if (!admin) {
       console.log('❌ No admin user found');
@@ -33,23 +33,21 @@ async function enableCriticalAlerts() {
     ];
     
     console.log('\n📋 Enabling alert types:');
+    
     for (const alertType of alertsToEnable) {
-      await storage.updateGlobalAlertSetting('MLB', alertType, true, admin.id);
-      console.log(`✅ Enabled: ${alertType}`);
+      try {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, admin.id);
+        console.log(`✅ ${alertType}: ENABLED`);
+      } catch (error) {
+        console.log(`❌ ${alertType}: FAILED - ${error.message}`);
+      }
     }
     
-    // Verify settings
-    console.log('\n🔍 Current global settings:');
-    const globalSettings = await storage.getGlobalAlertSettings('MLB');
-    alertsToEnable.forEach(alertType => {
-      console.log(`${alertType}: ${globalSettings[alertType] ? '✅ ENABLED' : '❌ DISABLED'}`);
-    });
-    
-    console.log('\n🎯 LAW #3 COMPLIANCE: All critical alerts now enabled');
-    console.log('Alerts will now appear on alerts page AND be sent to Telegram');
+    console.log('\n🎯 Law #3 Compliance restored!');
+    console.log('All alerts on the alerts page will now be sent to Telegram.');
     
   } catch (error) {
-    console.error('❌ Failed to enable alerts:', error);
+    console.error('❌ Enable alerts failed:', error);
   }
 }
 

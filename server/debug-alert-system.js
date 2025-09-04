@@ -1,64 +1,65 @@
 
-const { storage } = require('./storage');
-const { AlertGenerator } = require('./services/alert-generator');
+import { storage } from './storage.js';
 
 async function debugAlertSystem() {
-  console.log('🔍 ALERT SYSTEM DEBUG REPORT');
-  console.log('=' .repeat(50));
-  
   try {
-    // 1. Check Global Alert Settings
-    console.log('\n📋 GLOBAL ALERT SETTINGS:');
+    console.log('🔍 CHIRPBOT V2 ALERT SYSTEM DEBUG');
+    console.log('=====================================\n');
+
+    // 1. Database Connection Test
+    console.log('📊 DATABASE CONNECTION:');
+    try {
+      const testQuery = await storage.db.execute(`SELECT 1 as test`);
+      console.log('✅ Database connection: OK');
+    } catch (error) {
+      console.log('❌ Database connection: FAILED');
+      console.error(error);
+      return;
+    }
+
+    // 2. Global Alert Settings Check
+    console.log('\n⚙️ GLOBAL ALERT SETTINGS:');
     const globalSettings = await storage.getGlobalAlertSettings('MLB');
-    console.log(globalSettings);
+    console.log('Global settings for MLB:', globalSettings);
     
-    // 2. Check Recent Alerts in Database
-    console.log('\n📊 RECENT ALERTS (last 1 hour):');
+    const disabledAlerts = Object.entries(globalSettings).filter(([_, enabled]) => !enabled);
+    if (disabledAlerts.length > 0) {
+      console.log('❌ DISABLED ALERT TYPES:');
+      disabledAlerts.forEach(([type, _]) => {
+        console.log(`  - ${type}: BLOCKED`);
+      });
+    }
+
+    // 3. User Count and Configuration
+    console.log('\n👥 USER CONFIGURATION:');
+    const allUsers = await storage.getAllUsers();
+    console.log(`Total users: ${allUsers.length}`);
+    
+    // 4. Recent Alert Generation
+    console.log('\n🚨 RECENT ALERT ACTIVITY:');
     const recentAlerts = await storage.db.execute(`
-      SELECT type, COUNT(*) as count, MAX(created_at) as latest, sport
+      SELECT type, COUNT(*) as count, MAX(created_at) as latest
+      FROM alerts 
+      WHERE created_at > NOW() - INTERVAL '24 hours'
+      GROUP BY type
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+    console.log('Alert types in last 24 hours:');
+    console.log(recentAlerts.rows);
+
+    // 5. Very Recent Alerts (last hour)
+    console.log('\n⏰ VERY RECENT ALERTS (Last Hour):');
+    const veryRecentAlerts = await storage.db.execute(`
+      SELECT id, type, title, created_at, metadata
       FROM alerts 
       WHERE created_at > NOW() - INTERVAL '1 hour'
-      GROUP BY type, sport
-      ORDER BY latest DESC
-    `);
-    console.log(recentAlerts.rows);
-    
-    // 3. Check User Telegram Configurations
-    console.log('\n📱 TELEGRAM CONFIGURATIONS:');
-    const allUsers = await storage.getAllUsers();
-    const telegramUsers = allUsers.filter(u => u.telegramEnabled);
-    console.log(`Total users: ${allUsers.length}`);
-    console.log(`Telegram enabled: ${telegramUsers.length}`);
-    
-    telegramUsers.forEach(user => {
-      console.log(`- ${user.username}: Token=${user.telegramBotToken ? 'SET' : 'MISSING'}, ChatId=${user.telegramChatId || 'MISSING'}`);
-    });
-    
-    // 4. Check User Alert Preferences
-    console.log('\n⚙️ USER ALERT PREFERENCES:');
-    for (const user of telegramUsers) {
-      const prefs = await storage.getUserAlertPreferencesBySport(user.id, 'mlb');
-      console.log(`${user.username}:`, prefs.map(p => `${p.alertType}=${p.enabled}`));
-    }
-    
-    // 5. Test Alert Generation
-    console.log('\n🧪 TESTING ALERT GENERATION:');
-    const alertGenerator = new AlertGenerator();
-    console.log('Generating test alerts...');
-    await alertGenerator.generateLiveGameAlerts();
-    
-    // 6. Check if any alerts were created in the last 5 minutes
-    console.log('\n⏰ VERY RECENT ALERTS (last 5 minutes):');
-    const veryRecentAlerts = await storage.db.execute(`
-      SELECT id, type, sport, created_at, payload 
-      FROM alerts 
-      WHERE created_at > NOW() - INTERVAL '5 minutes'
       ORDER BY created_at DESC
       LIMIT 5
     `);
     console.log(veryRecentAlerts.rows);
 
-    // 7. LAW #3 COMPLIANCE CHECK
+    // 6. LAW #3 COMPLIANCE CHECK
     console.log('\n⚖️ LAW #3 COMPLIANCE CHECK:');
     console.log('Rule: Same messages on alerts page MUST be sent to Telegram');
     
@@ -81,7 +82,7 @@ async function debugAlertSystem() {
       }
     }
 
-    // 8. Check for telegram sending failures
+    // 7. Check for telegram sending failures
     console.log('\n📱 TELEGRAM DIAGNOSTIC:');
     const telegramEnabledUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
     console.log(`Users with valid Telegram config: ${telegramEnabledUsers.length}/${allUsers.length}`);
