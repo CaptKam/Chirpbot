@@ -705,29 +705,16 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     );
   }
 
-  // Check for WNBA logos if not found in ESPN
-  const wnbaLogoUrl = teamAbbr ? wnbaLogos[teamAbbr] : null;
-  if (wnbaLogoUrl) {
-    return (
-      <img 
-        src={wnbaLogoUrl} 
-        alt={teamName}
-        className={`${sizeClasses[size]} ${className} object-contain`}
-        onError={(e) => {
-          console.log(`Failed to load WNBA logo for ${teamName}`);
-          e.currentTarget.style.display = 'none';
-        }}
-      />
-    );
-  }
-
-  // Sport-specific team colors mapping
+  // Define team colors early for consistent reference
   const teamColors: Record<string, { primary: string; secondary: string; accent?: string }> = {
     // WNBA Team Colors
     'PHO': { primary: '#E56020', secondary: '#000000', accent: '#FFFFFF' }, // Mercury Orange/Black
+    'PHX': { primary: '#E56020', secondary: '#000000', accent: '#FFFFFF' }, // Mercury Orange/Black (alt)
     'WAS': { primary: '#C8102E', secondary: '#002B5C', accent: '#FFFFFF' }, // Mystics Red/Navy
     'GSV': { primary: '#000000', secondary: '#FDB927', accent: '#FFFFFF' }, // Valkyries Black/Gold
+    'GOL': { primary: '#000000', secondary: '#FDB927', accent: '#FFFFFF' }, // Valkyries Black/Gold (alt)
     'LV': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' },  // Aces Black/Red/Gold
+    'LAS': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' }, // Aces Black/Red/Gold (alt)
     'CHIS': { primary: '#418FDE', secondary: '#FFC72C', accent: '#000000' }, // Sky Blue/Yellow
     'CON': { primary: '#E03A3E', secondary: '#041E42', accent: '#FFFFFF' },  // Sun Red/Navy
     'IND': { primary: '#002D62', secondary: '#FDBB30', accent: '#FFFFFF' },  // Fever Navy/Gold
@@ -748,9 +735,27 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     'PSU': { primary: '#041E42', secondary: '#FFFFFF', accent: '#000000' }, // Penn State Navy
     'LSU': { primary: '#461D7C', secondary: '#FDD023', accent: '#FFFFFF' }, // LSU Purple/Gold
     'FLA': { primary: '#0021A5', secondary: '#FA4616', accent: '#FFFFFF' }, // Florida Blue/Orange
+
+    // NBA Team Colors (add common ones)
+    'LAL': { primary: '#552583', secondary: '#FDB927', accent: '#000000' }, // Lakers Purple/Gold
+    'BOS': { primary: '#007A33', secondary: '#BA9653', accent: '#FFFFFF' }, // Celtics Green/Gold
+    'GSW': { primary: '#1D428A', secondary: '#FFC72C', accent: '#FFFFFF' }, // Warriors Blue/Gold
+    'CHI': { primary: '#CE1141', secondary: '#000000', accent: '#FFFFFF' }, // Bulls Red/Black
+    'MIA': { primary: '#98002E', secondary: '#F9A01B', accent: '#000000' }, // Heat Red/Orange
+
+    // NHL Team Colors (add common ones)
+    'LAK': { primary: '#111111', secondary: '#A2AAAD', accent: '#FFFFFF' }, // Kings Black/Silver
+    'ANA': { primary: '#F47A38', secondary: '#B9975B', accent: '#000000' }, // Ducks Orange/Gold
+    'VGK': { primary: '#B4975A', secondary: '#000000', accent: '#C8AA6E' }, // Golden Knights Gold/Black
+
+    // NFL Team Colors (add common ones)
+    'KC': { primary: '#E31837', secondary: '#FFB81C', accent: '#FFFFFF' },  // Chiefs Red/Gold
+    'BUF': { primary: '#00338D', secondary: '#C60C30', accent: '#FFFFFF' }, // Bills Blue/Red
+    'DAL': { primary: '#041E42', secondary: '#869397', accent: '#FFFFFF' }, // Cowboys Navy/Silver
+    'NE': { primary: '#002244', secondary: '#C60C30', accent: '#B0B7BC' }, // Patriots Navy/Red/Silver
   };
 
-  // Generate sport-specific logo
+  // Generate sport-specific logo function (main implementation)
   const generateSportLogo = (sport: string, teamAbbr: string, teamName: string) => {
     const colors = teamColors[teamAbbr] || { 
       primary: '#1e40af', 
@@ -903,6 +908,14 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
         );
     }
   };
+
+  // For WNBA teams, always use sport-specific generated icons
+  if (sport === 'WNBA' && teamAbbr && teamColors[teamAbbr]) {
+    console.log(`Using sport-specific icon for WNBA team: ${teamName} (${teamAbbr})`);
+    return generateSportLogo('WNBA', teamAbbr, teamName);
+  }
+
+
 
   // Generic fallback logo with better styling
   const defaultLogo = generateSportLogo(sport || 'DEFAULT', teamAbbr || '', teamName || '');
