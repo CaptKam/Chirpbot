@@ -42,7 +42,7 @@ interface AlertStats {
 }
 
 export default function AlertsPage() {
-  const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF' | 'WNBA'>('all');
+  const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF'>('all');
 
   // Fetch alerts using React Query
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
@@ -149,7 +149,7 @@ export default function AlertsPage() {
       {/* Filter Tabs */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
         <div className="flex overflow-x-auto">
-          {(['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA'] as const).map((sport) => (
+          {(['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF'] as const).map((sport) => (
             <button
               key={sport}
               onClick={() => setFilter(sport)}

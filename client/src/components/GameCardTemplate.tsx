@@ -74,7 +74,7 @@ export function GameCardTemplate({
         </div>
       );
     }
-    if ((sport === 'NBA' || sport === 'WNBA') && quarter) {
+    if (sport === 'NBA' && quarter) {
       return (
         <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
           Q{quarter}

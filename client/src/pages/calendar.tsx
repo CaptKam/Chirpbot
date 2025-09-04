@@ -72,7 +72,7 @@ import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
 // Enhanced Game Display Component for Live MLB Games
