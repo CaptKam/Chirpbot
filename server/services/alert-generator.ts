@@ -608,8 +608,8 @@ export class AlertGenerator {
           }
 
           const telegramConfig: TelegramConfig = {
-            botToken: user.telegramBotToken,
-            chatId: user.telegramChatId
+            botToken: user.telegramBotToken || '',
+            chatId: user.telegramChatId || ''
           };
 
           const telegramAlert = {

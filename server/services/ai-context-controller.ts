@@ -248,7 +248,10 @@ Be specific and actionable.
       }
     };
 
-    return actions[urgencyLevel];
+    return {
+      callToAction: actions[urgencyLevel].cta,
+      followUpActions: actions[urgencyLevel].actions
+    };
   }
 
   private buildContentPrompt(context: AlertContext): string {

@@ -2,7 +2,7 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
-import { weatherService } from '../weather-service';
+import { weatherService as weatherSvc } from '../weather-service';
 const weatherService = {
   async getWeatherForTeam(teamName: string) {
     return {
@@ -164,7 +164,7 @@ export class MLBEngine extends BaseSportEngine {
     const scoringProbability = await this.calculateProbability(enhancedGameState);
 
     // Get weather data for enhanced context
-    const weather = await weatherService.getWeatherForTeam(gameState.homeTeam);
+    const weather = await weatherSvc.getWeatherForTeam(gameState.homeTeam);
 
     // Bases loaded: all three bases occupied
     if (hasFirst && hasSecond && hasThird) {
@@ -236,7 +236,43 @@ export class MLBEngine extends BaseSportEngine {
         });
       }
     }
-    // Add other MLB-specific runner situations...
+    // RISP (Runner In Scoring Position) - 2nd or 3rd base
+    else if ((hasSecond || hasThird) && !hasFirst) {
+      const rispEnabled = await this.isAlertEnabled('RISP');
+      if (rispEnabled && scoringProbability >= 35) {
+        const position = hasThird ? '3rd base' : '2nd base';
+        const alertKey = `${gameState.gameId}_RISP_${position}_${inning}_${outs}`;
+        const outsText = outs === 1 ? '1 out' : `${outs} outs`;
+        const message = `⚡ RISP Alert: Runner on ${position} (${scoringProbability}% scoring chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${outsText}`;
+
+        const priority = scoringProbability >= 70 ? 85 : 
+                        scoringProbability >= 50 ? 80 : 75;
+
+        alerts.push({
+          alertKey,
+          type: 'RISP',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            inning,
+            isTopInning,
+            outs,
+            hasFirst,
+            hasSecond,
+            hasThird,
+            second: hasSecond ? offense.second?.fullName : null,
+            third: hasThird ? offense.third?.fullName : null,
+            situation: 'risp',
+            scoringProbability,
+            weather
+          },
+          priority
+        });
+      }
+    }
 
     return alerts;
   }
