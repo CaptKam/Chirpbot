@@ -60,6 +60,122 @@
         </div>
     </div>
     
+    <div id="adminDashboard" class="dashboard-container" style="display: none;">
+        <div class="dashboard-header">
+            <div class="header-content">
+                <div class="header-brand">
+                    <i class="fas fa-shield-alt"></i>
+                    <div>
+                        <h1>ChirpBot Admin Dashboard</h1>
+                        <p>System Management & User Control</p>
+                    </div>
+                </div>
+                
+                <div class="header-actions">
+                    <div class="admin-info">
+                        <div class="admin-avatar" id="adminAvatar">A</div>
+                        <div class="admin-details">
+                            <h3 id="adminUsername">Administrator</h3>
+                            <p>Admin Access</p>
+                        </div>
+                    </div>
+                    
+                    <button class="logout-btn" onclick="handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>Total Users</h3>
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-description">Registered accounts</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>Admins</h3>
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <div class="stat-value" id="totalAdmins">0</div>
+                    <div class="stat-description">Administrator accounts</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>Today's Alerts</h3>
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="stat-value" id="todayAlerts">0</div>
+                    <div class="stat-description">Generated today</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>Total Alerts</h3>
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="stat-value" id="totalAlerts">0</div>
+                    <div class="stat-description">All time alerts</div>
+                </div>
+            </div>
+
+            <!-- User Management Section -->
+            <div class="management-card">
+                <div class="card-header">
+                    <h2>User Management</h2>
+                    <div class="search-container">
+                        <input type="text" id="userSearch" placeholder="Search users..." class="search-input">
+                        <i class="fas fa-search"></i>
+                    </div>
+                </div>
+                
+                <div class="users-table">
+                    <div class="table-header">
+                        <div>User</div>
+                        <div>Email</div>
+                        <div>Role</div>
+                        <div>Auth Method</div>
+                        <div>Telegram</div>
+                        <div>Actions</div>
+                    </div>
+                    <div id="usersTableBody" class="table-body">
+                        <!-- Users will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Settings Section -->
+            <div class="management-card">
+                <div class="card-header">
+                    <h2>Alert Settings Management</h2>
+                    <select id="sportSelector" class="sport-selector">
+                        <option value="MLB">MLB</option>
+                        <option value="NFL">NFL</option>
+                        <option value="NBA">NBA</option>
+                        <option value="NHL">NHL</option>
+                        <option value="CFL">CFL</option>
+                        <option value="NCAAF">NCAAF</option>
+                        <option value="WNBA">WNBA</option>
+                    </select>
+                </div>
+                
+                <div id="alertSettings" class="alert-settings">
+                    <!-- Alert settings will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="login.js"></script>
+    <script src="dashboard.js"></script>
 </body>
 </html>

@@ -9,7 +9,6 @@ import Landing from "./pages/landing";
 import Calendar from "./pages/calendar";
 import Settings from "./pages/settings";
 import Admin from "./pages/admin";
-import AdminPanel from "./pages/admin-panel";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
@@ -83,7 +82,6 @@ function RegularAppContent() {
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
-        <Route path="/admin-panel" component={() => <AdminPanel />} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}
