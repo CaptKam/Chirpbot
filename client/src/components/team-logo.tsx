@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface TeamLogoProps {
@@ -211,7 +210,7 @@ const getSportIcon = (sport: string, teamAbbr: string, size: string, className: 
           <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-sm font-sans">{teamAbbr}</text>
         </svg>
       );
-    
+
     case 'NBA':
       // Basketball for NBA
       return (
@@ -222,7 +221,7 @@ const getSportIcon = (sport: string, teamAbbr: string, size: string, className: 
           <text x="50" y="55" textAnchor="middle" className="fill-white font-black text-xs font-sans">{teamAbbr}</text>
         </svg>
       );
-    
+
     case 'NHL':
       // Hockey puck for NHL
       return (
@@ -304,7 +303,6 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
         className={`${sizeClasses[size]} ${className} object-contain`}
         onError={(e) => {
           // If image fails to load, hide it and show fallback
-          console.log(`Failed to load logo for ${teamName}`);
           e.currentTarget.style.display = 'none';
         }}
       />

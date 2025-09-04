@@ -1321,10 +1321,10 @@ export class AlertGenerator {
   }
 
   private async generateWNBACloseGameAlert(game: any): Promise<number> {
-    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
     const quarter = game.quarter || 0;
+    const scoreDiff = Math.abs(game.homeScore - game.awayScore);
 
-    // Close game in 3rd or 4th quarter
+    // Close games in 3rd or 4th quarter
     if ((quarter >= 3) && scoreDiff <= 5 && (game.homeScore > 0 || game.awayScore > 0)) {
       const alertKey = `${game.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
       const message = `🔥 CLOSE WNBA GAME! ${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
@@ -1392,7 +1392,7 @@ export class AlertGenerator {
 
     try {
       let cleanTime = timeRemaining.trim();
-      
+
       if (cleanTime.includes(' ')) {
         cleanTime = cleanTime.split(' ')[0];
       }
@@ -1573,7 +1573,7 @@ export class AlertGenerator {
 
           const aiPreferences = await storage.getUserAIPreferences('system'); // Use system defaults
           const enhancements = await this.aiEnhancementService.enhanceAlert(type, context, gameContext, aiPreferences);
-          
+
           if (enhancements) {
             context.aiEnhancements = enhancements;
             console.log(`🤖 AI: Enhanced ${type} alert with ${Object.keys(enhancements).length} AI features`);
@@ -1611,7 +1611,7 @@ export class AlertGenerator {
         console.log(`📡 LAW #3: Sending ${type} alert to Telegram (priority: ${priority})`);
         console.log(`📡 Alert message: "${message}"`);
         console.log(`📡 This alert will appear on alerts page AND be sent to Telegram`);
-        
+
         // Send to users with proper preference checking (RULE 1 & 2 ENFORCEMENT)
         console.log(`📡 Sending Telegram alerts with preference checking for ${type}`);
         const allUsers = await storage.getAllUsers();

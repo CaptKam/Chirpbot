@@ -72,11 +72,7 @@ const ALERT_TYPE_CONFIG = {
     ],
     WNBA: [
     { key: 'WNBA_FOURTH_QUARTER', label: 'Fourth Quarter Crunch Time', description: 'Close games in final 5 minutes of 4th quarter' },
-    { key: 'WNBA_CLOSE_GAME', label: 'Close Games', description: 'Games within 5 points in 3rd or 4th quarter' },
-    { key: 'WNBA_OVERTIME', label: 'Overtime Games', description: 'Games entering overtime period' },
-    { key: 'WNBA_HIGH_SCORING', label: 'High-Scoring Games', description: 'Games with 160+ combined points' },
-    { key: 'WNBA_COMEBACK', label: 'Comeback Alerts', description: 'Teams erasing large deficits' },
-    { key: 'WNBA_CLUTCH_PERFORMANCE', label: 'Clutch Performances', description: 'Outstanding individual performances in critical moments' }
+    
   ],
 };
 
