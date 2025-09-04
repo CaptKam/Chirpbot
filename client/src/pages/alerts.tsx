@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Clock, TrendingUp, Users, Bell, Activity } from 'lucide-react';
 import { AlertLoading } from '@/components/sports-loading';
-import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
 interface Alert {
   id: string;
@@ -55,7 +54,6 @@ interface AlertStats {
 
 export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF'>('all');
-  const { getSportHasGames, sportsWithGames } = useGamesAvailability();
 
   // Fetch alerts using React Query
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
@@ -159,12 +157,10 @@ export default function AlertsPage() {
       </header>
       <div className="max-w-4xl mx-auto space-y-6">
 
-      {/* Filter Tabs - Only show sports with games within two days */}
+      {/* Filter Tabs */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
         <div className="flex overflow-x-auto">
-          {(['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA'] as const)
-            .filter(sport => sport === 'all' || getSportHasGames(sport))
-            .map((sport) => (
+          {(['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF'] as const).map((sport) => (
             <button
               key={sport}
               onClick={() => setFilter(sport)}
