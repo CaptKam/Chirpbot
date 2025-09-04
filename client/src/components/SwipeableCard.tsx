@@ -278,6 +278,7 @@ export function SwipeableCard({
       clockStr: alert.context?.timeRemaining,
       atBat: alert.context?.atBat,
       pitcher: alert.context?.pitcher,
+      scheduledAtIso: alert.context?.startTime || alert.context?.scheduledAtIso || alert.timestamp,
       situationText: alert.message || ''
     },
     ai: alert.ai || {
