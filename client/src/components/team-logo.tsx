@@ -359,8 +359,8 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     return getSportIcon(sport, teamAbbr || (teamName || '').slice(0, 3).toUpperCase(), size, className);
   }
 
-  // Try to get the official team logo URL first
-  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, sport) : null;
+  // Try to get the official team logo URL first (but skip WNBA images)
+  const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport) : null;
 
   if (logoUrl) {
     // Use official team logo from ESPN
