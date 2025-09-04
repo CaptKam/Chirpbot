@@ -1373,18 +1373,25 @@ export class AlertGenerator {
         console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
 
         for (const user of telegramUsers) {
+          console.log(`📱 🔍 Processing Telegram for user: ${user.username}`);
+          console.log(`📱 🔧 User config: enabled=${user.telegramEnabled}, token=${user.telegramBotToken?.substring(0, 10)}..., chatId=${user.telegramChatId}`);
+          
           // Check if globally enabled
           const isStillEnabled = await this.isAlertGloballyEnabled(sport, type);
           if (!isStillEnabled) {
-            console.log(`⛔ Telegram alert blocked - ${type} globally disabled`);
+            console.log(`⛔ Telegram alert blocked - ${type} globally disabled for user ${user.username}`);
             continue;
           }
+
+          console.log(`✅ Alert ${type} is globally enabled for user ${user.username}`);
 
           // Check user preferences - default to enabled if not set
           try {
             const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
             const userPref = userPrefs.find(p => p.alertType === type);
             const userHasEnabled = userPref ? userPref.enabled : true; // Default to enabled
+            
+            console.log(`📱 🔧 User ${user.username} preference for ${type}: ${userHasEnabled} (${userPref ? 'set' : 'default'})`);
             
             if (!userHasEnabled) {
               console.log(`⛔ User ${user.username} has ${type} disabled in preferences`);

@@ -584,16 +584,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         id: user.id,
         telegramEnabled: user.telegramEnabled,
-        hasToken: !!user.telegramBotToken && user.telegramBotToken !== 'default_key',
+        hasToken: !!user.telegramBotToken && user.telegramBotToken !== 'default_key' && user.telegramBotToken !== 'test-token',
         tokenLength: user.telegramBotToken?.length || 0,
-        hasChatId: !!user.telegramChatId && user.telegramChatId !== 'default_key',
-        chatId: user.telegramChatId || 'MISSING'
+        tokenValue: user.telegramBotToken?.substring(0, 10) + '...' || 'MISSING',
+        hasChatId: !!user.telegramChatId && user.telegramChatId !== 'default_key' && user.telegramChatId !== 'test-chat-id',
+        chatId: user.telegramChatId || 'MISSING',
+        isTestData: user.telegramBotToken === 'default_key' || user.telegramChatId === 'test-chat-id'
       }));
 
+      const validUsers = telegramDebug.filter(u => u.telegramEnabled && u.hasToken && u.hasChatId && !u.isTestData);
+
       res.json({
+        timestamp: new Date().toISOString(),
         totalUsers: allUsers.length,
-        validTelegramUsers: telegramDebug.filter(u => u.telegramEnabled && u.hasToken && u.hasChatId).length,
-        users: telegramDebug
+        telegramEnabledUsers: telegramDebug.filter(u => u.telegramEnabled).length,
+        validTelegramUsers: validUsers.length,
+        usersWithTestData: telegramDebug.filter(u => u.isTestData).length,
+        users: telegramDebug,
+        readyForAlerts: validUsers.length > 0,
+        nextSteps: validUsers.length === 0 ? [
+          "1. Go to Settings → Telegram Notifications",
+          "2. Create a bot with @BotFather on Telegram", 
+          "3. Get your chat ID from @userinfobot",
+          "4. Enter real credentials and test connection"
+        ] : ["Telegram is properly configured and ready!"]
       });
     } catch (error) {
       console.error('Error debugging Telegram:', error);
@@ -1601,7 +1615,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'HOME_RUN_LIVE',
         'HIGH_SCORING',
         'SHUTOUT',
-        'BLOWOUT'
+        'BLOWOUT',
+        'STRIKEOUT',  // Enable this for testing
+        'FULL_COUNT'  // Enable this for testing
       ];
 
       const results = [];
@@ -1611,13 +1627,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
-        message: 'Critical MLB alerts enabled successfully',
+        message: 'Critical MLB alerts enabled successfully (including STRIKEOUT for testing)',
         enabledAlerts: results,
-        nextStep: 'Alerts should start generating within 15 seconds'
+        nextStep: 'Alerts should start generating within 15 seconds if you have valid Telegram credentials'
       });
     } catch (error) {
       console.error('Error enabling critical alerts:', error);
       res.status(500).json({ message: 'Failed to enable critical alerts' });
+    }
+  });
+
+  // Enable all alerts for testing
+  app.post('/api/admin/enable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const allAlerts = [
+        'RISP', 'BASES_LOADED', 'RUNNERS_1ST_2ND', 'CLOSE_GAME', 'CLOSE_GAME_LIVE',
+        'LATE_PRESSURE', 'HOME_RUN_LIVE', 'HIGH_SCORING', 'SHUTOUT', 'BLOWOUT',
+        'FULL_COUNT', 'STRIKEOUT', 'POWER_HITTER', 'HOT_HITTER'
+      ];
+
+      const results = [];
+      for (const alertType of allAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'All MLB alerts enabled for testing',
+        enabledAlerts: results,
+        count: results.length
+      });
+    } catch (error) {
+      console.error('Error enabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to enable all alerts' });
     }
   });
 

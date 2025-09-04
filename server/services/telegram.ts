@@ -30,8 +30,14 @@ export async function sendTelegramAlert(
   try {
     const { botToken, chatId } = config;
 
-    if (!botToken || !chatId || botToken === "default_key") {
-      console.log("Telegram credentials not configured, skipping notification");
+    console.log(`📱 🔍 TELEGRAM DEBUG: Attempting to send ${alert.type} alert`);
+    console.log(`📱 🔧 Bot token present: ${!!botToken}, length: ${botToken?.length || 0}`);
+    console.log(`📱 🔧 Chat ID: ${chatId}`);
+    console.log(`📱 🔧 Is test data: ${botToken === 'default_key' || chatId === 'test-chat-id'}`);
+
+    if (!botToken || !chatId || botToken === "default_key" || chatId === "test-chat-id") {
+      console.log("📱 ❌ Telegram credentials not properly configured - using test/default values");
+      console.log("📱 💡 Please update your Telegram settings with real bot token and chat ID");
       return false;
     }
 
