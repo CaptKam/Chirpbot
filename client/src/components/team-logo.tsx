@@ -113,7 +113,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Dallas Stars': 'DAL',
   'Nashville Predators': 'NSH',
 
-  // WNBA Teams
+  // WNBA Teams - Full Names
   'Phoenix Mercury': 'PHO',
   'Washington Mystics': 'WAS',
   'Golden State Valkyries': 'GSV',
@@ -126,6 +126,20 @@ const teamNameToAbbr: Record<string, string> = {
   'Seattle Storm': 'SEA',
   'Dallas Wings': 'DAL',
   'Atlanta Dream': 'ATL',
+  
+  // WNBA Teams - Short Names (what the API returns)
+  'Mercury': 'PHO',
+  'Mystics': 'WAS',
+  'Valkyries': 'GSV',
+  'Aces': 'LV',
+  'Sky': 'CHIS',  // Chicago Sky - unique to avoid conflict with CHI
+  'Sun': 'CON',
+  'Fever': 'IND',
+  'Liberty': 'NYL',
+  'Lynx': 'MINL', // Minnesota Lynx - unique to avoid conflict with MIN
+  'Storm': 'SEAS', // Seattle Storm - unique to avoid conflict with SEA  
+  'Wings': 'DALW', // Dallas Wings - unique to avoid conflict with DAL
+  'Dream': 'ATLD', // Atlanta Dream - unique to avoid conflict with ATL
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -194,14 +208,14 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'WAS': 'https://content.sportslogos.net/logos/34/883/full/washington_mystics_logo_primary_20142024.png',
       'GSV': 'https://content.sportslogos.net/logos/34/12102/full/golden_state_valkyries_logo_primary_20242025.png',
       'LV': 'https://content.sportslogos.net/logos/34/7024/full/las_vegas_aces_logo_primary_20172024.png',
-      'CHI': 'https://content.sportslogos.net/logos/34/874/full/chicago_sky_logo_primary_20142024.png',
+      'CHIS': 'https://content.sportslogos.net/logos/34/874/full/chicago_sky_logo_primary_20142024.png',
       'CON': 'https://content.sportslogos.net/logos/34/878/full/connecticut_sun_logo_primary_20142024.png',
       'IND': 'https://content.sportslogos.net/logos/34/877/full/indiana_fever_logo_primary_20142024.png',
       'NYL': 'https://content.sportslogos.net/logos/34/882/full/new_york_liberty_logo_primary_20142024.png',
-      'MIN': 'https://content.sportslogos.net/logos/34/881/full/minnesota_lynx_logo_primary_20142024.png',
-      'SEA': 'https://content.sportslogos.net/logos/34/884/full/seattle_storm_logo_primary_20142024.png',
-      'DAL': 'https://content.sportslogos.net/logos/34/879/full/dallas_wings_logo_primary_20142024.png',
-      'ATL': 'https://content.sportslogos.net/logos/34/876/full/atlanta_dream_logo_primary_20142024.png'
+      'MINL': 'https://content.sportslogos.net/logos/34/881/full/minnesota_lynx_logo_primary_20142024.png',
+      'SEAS': 'https://content.sportslogos.net/logos/34/884/full/seattle_storm_logo_primary_20142024.png',
+      'DALW': 'https://content.sportslogos.net/logos/34/879/full/dallas_wings_logo_primary_20142024.png',
+      'ATLD': 'https://content.sportslogos.net/logos/34/876/full/atlanta_dream_logo_primary_20142024.png'
     }
   };
 
@@ -522,13 +536,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
         <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">GSV</text>
       </svg>
     ),
-    'LV': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">LV</text>
-      </svg>
-    ),
-    'CHI': (
+    'CHIS': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
         <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">CHI</text>
@@ -540,37 +548,31 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
         <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">CON</text>
       </svg>
     ),
-    'IND': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">IND</text>
-      </svg>
-    ),
     'NYL': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#4A2584" stroke="#FFFFFF" strokeWidth="3"/>
         <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">NYL</text>
       </svg>
     ),
-    'MIN': (
+    'MINL': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
         <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">MIN</text>
       </svg>
     ),
-    'SEA': (
+    'SEAS': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
         <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">SEA</text>
       </svg>
     ),
-    'DAL': (
+    'DALW': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
         <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">DAL</text>
       </svg>
     ),
-    'ATL': (
+    'ATLD': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
         <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">ATL</text>
@@ -598,12 +600,6 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#003831" stroke="#EFB21E" strokeWidth="2"/>
         <text x="50" y="58" textAnchor="middle" className="fill-yellow-400 font-black text-xl font-sans">A</text>
-      </svg>
-    ),
-    'MIN': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#002B5C" stroke="#D31145" strokeWidth="2"/>
-        <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-base font-sans">MIN</text>
       </svg>
     ),
     'TB': (
@@ -641,15 +637,15 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     'NEW YORK': '/logos/wnba/liberty.png',
     'LIBERTY': '/logos/wnba/liberty.png',
 
-    'MIN': '/logos/wnba/lynx.png',
+    'MINL': '/logos/wnba/lynx.png',
     'MINNESOTA': '/logos/wnba/lynx.png',
     'LYNX': '/logos/wnba/lynx.png',
 
-    'SEA': '/logos/wnba/storm.png',
+    'SEAS': '/logos/wnba/storm.png',
     'SEATTLE': '/logos/wnba/storm.png',
     'STORM': '/logos/wnba/storm.png',
 
-    'CHI': '/logos/wnba/sky.png',
+    'CHIS': '/logos/wnba/sky.png',
     'CHICAGO': '/logos/wnba/sky.png',
     'SKY': '/logos/wnba/sky.png',
 
@@ -657,7 +653,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     'CONNECTICUT': '/logos/wnba/sun.png',
     'SUN': '/logos/wnba/sun.png',
 
-    'ATL': '/logos/wnba/dream.png',
+    'ATLD': '/logos/wnba/dream.png',
     'ATLANTA': '/logos/wnba/dream.png',
     'DREAM': '/logos/wnba/dream.png',
 
@@ -665,7 +661,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     'INDIANA': '/logos/wnba/fever.png',
     'FEVER': '/logos/wnba/fever.png',
 
-    'DAL': '/logos/wnba/wings.png',
+    'DALW': '/logos/wnba/wings.png',
     'DALLAS': '/logos/wnba/wings.png',
     'WINGS': '/logos/wnba/wings.png'
   };
@@ -690,8 +686,8 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     }
   }
 
-  // Try to get the official team logo URL first, prioritizing MLB for sports betting app
-  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, 'MLB') : null;
+  // Try to get the official team logo URL first, prioritizing the specified sport
+  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, sport) : null;
 
   if (logoUrl) {
     // Use official team logo from ESPN
