@@ -327,7 +327,6 @@ export const storage = {
         });
 
         console.log(`🔧 DEBUG: Global settings for ${sport} loaded from admin preferences:`, defaultSettings);
-        console.log(`📊 Stats: ${Object.keys(defaultSettings).length} total alerts, ${Object.entries(defaultSettings).filter(([_, enabled]) => enabled === false).length} disabled by admin`);
         return defaultSettings;
       }
 
