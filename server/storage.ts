@@ -171,7 +171,8 @@ export const storage = {
       .set({
         telegramBotToken: botToken,
         telegramChatId: chatId,
-        telegramEnabled: enabled
+        telegramEnabled: enabled,
+        updatedAt: new Date()
       })
       .where(eq(users.id, userId))
       .returning();
