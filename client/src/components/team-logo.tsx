@@ -721,19 +721,198 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     );
   }
 
+  // Sport-specific team colors mapping
+  const teamColors: Record<string, { primary: string; secondary: string; accent?: string }> = {
+    // WNBA Team Colors
+    'PHO': { primary: '#E56020', secondary: '#000000', accent: '#FFFFFF' }, // Mercury Orange/Black
+    'WAS': { primary: '#C8102E', secondary: '#002B5C', accent: '#FFFFFF' }, // Mystics Red/Navy
+    'GSV': { primary: '#000000', secondary: '#FDB927', accent: '#FFFFFF' }, // Valkyries Black/Gold
+    'LV': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' },  // Aces Black/Red/Gold
+    'CHIS': { primary: '#418FDE', secondary: '#FFC72C', accent: '#000000' }, // Sky Blue/Yellow
+    'CON': { primary: '#E03A3E', secondary: '#041E42', accent: '#FFFFFF' },  // Sun Red/Navy
+    'IND': { primary: '#002D62', secondary: '#FDBB30', accent: '#FFFFFF' },  // Fever Navy/Gold
+    'NYL': { primary: '#86BC25', secondary: '#000000', accent: '#FFFFFF' },  // Liberty Green/Black
+    'MINL': { primary: '#266092', secondary: '#FFC72C', accent: '#FFFFFF' }, // Lynx Blue/Gold
+    'SEAS': { primary: '#2C5234', secondary: '#FFC72C', accent: '#FFFFFF' }, // Storm Green/Gold
+    'DALW': { primary: '#C4D600', secondary: '#041E42', accent: '#FFFFFF' }, // Wings Lime/Navy
+    'ATLD': { primary: '#C8102E', secondary: '#FFC72C', accent: '#000000' }, // Dream Red/Gold
+
+    // NCAAF Team Colors (popular teams)
+    'ALA': { primary: '#9E1B32', secondary: '#FFFFFF', accent: '#000000' }, // Alabama Crimson
+    'GA': { primary: '#BA0C2F', secondary: '#000000', accent: '#FFFFFF' },  // Georgia Red/Black
+    'OSU': { primary: '#BB0000', secondary: '#FFFFFF', accent: '#000000' }, // Ohio State Scarlet
+    'TEX': { primary: '#BF5700', secondary: '#FFFFFF', accent: '#000000' }, // Texas Orange
+    'ND': { primary: '#0C2340', secondary: '#C99700', accent: '#FFFFFF' },  // Notre Dame Navy/Gold
+    'USC': { primary: '#990000', secondary: '#FFCC00', accent: '#FFFFFF' }, // USC Cardinal/Gold
+    'MICH': { primary: '#00274C', secondary: '#FFCB05', accent: '#FFFFFF' }, // Michigan Navy/Maize
+    'PSU': { primary: '#041E42', secondary: '#FFFFFF', accent: '#000000' }, // Penn State Navy
+    'LSU': { primary: '#461D7C', secondary: '#FDD023', accent: '#FFFFFF' }, // LSU Purple/Gold
+    'FLA': { primary: '#0021A5', secondary: '#FA4616', accent: '#FFFFFF' }, // Florida Blue/Orange
+  };
+
+  // Generate sport-specific logo
+  const generateSportLogo = (sport: string, teamAbbr: string, teamName: string) => {
+    const colors = teamColors[teamAbbr] || { 
+      primary: '#1e40af', 
+      secondary: '#ffffff', 
+      accent: '#000000' 
+    };
+    
+    const abbr = teamAbbr || (teamName || '').slice(0, 3).toUpperCase();
+
+    switch (sport?.toUpperCase()) {
+      case 'WNBA':
+        // Generate jersey shirt with team colors
+        return (
+          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
+            {/* Jersey background */}
+            <rect x="15" y="20" width="70" height="70" rx="8" fill={colors.primary} stroke={colors.secondary} strokeWidth="2"/>
+            
+            {/* Jersey sleeves */}
+            <ellipse cx="12" cy="35" rx="8" ry="15" fill={colors.primary} stroke={colors.secondary} strokeWidth="1"/>
+            <ellipse cx="88" cy="35" rx="8" ry="15" fill={colors.primary} stroke={colors.secondary} strokeWidth="1"/>
+            
+            {/* Jersey collar */}
+            <path d="M 35 20 Q 50 15 65 20 L 65 30 Q 50 25 35 30 Z" fill={colors.secondary} stroke={colors.accent || colors.primary} strokeWidth="1"/>
+            
+            {/* Team abbreviation */}
+            <text x="50" y="55" textAnchor="middle" className="fill-current font-black text-sm" style={{ fill: colors.secondary }}>
+              {abbr}
+            </text>
+            
+            {/* Jersey number accent */}
+            <circle cx="50" cy="70" r="8" fill={colors.secondary} stroke={colors.accent || colors.primary} strokeWidth="1"/>
+            <text x="50" y="75" textAnchor="middle" className="fill-current font-bold text-xs" style={{ fill: colors.primary }}>
+              {Math.abs(abbr.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 99 + 1}
+            </text>
+          </svg>
+        );
+
+      case 'NCAAF':
+        // Generate football helmet with team colors
+        return (
+          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
+            {/* Helmet shell */}
+            <path d="M 25 35 Q 25 20 50 20 Q 75 20 75 35 L 75 60 Q 75 75 50 75 Q 25 75 25 60 Z" 
+                  fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
+            
+            {/* Face mask */}
+            <path d="M 30 45 Q 50 40 70 45" stroke={colors.secondary} strokeWidth="2" fill="none"/>
+            <path d="M 32 52 Q 50 47 68 52" stroke={colors.secondary} strokeWidth="2" fill="none"/>
+            <path d="M 35 59 Q 50 54 65 59" stroke={colors.secondary} strokeWidth="2" fill="none"/>
+            
+            {/* Helmet stripe */}
+            <rect x="47" y="20" width="6" height="55" fill={colors.secondary} rx="3"/>
+            
+            {/* Team logo area */}
+            <circle cx="50" cy="40" r="12" fill={colors.secondary} stroke={colors.accent || colors.primary} strokeWidth="1"/>
+            <text x="50" y="46" textAnchor="middle" className="fill-current font-black text-xs" style={{ fill: colors.primary }}>
+              {abbr}
+            </text>
+            
+            {/* Helmet chin strap */}
+            <ellipse cx="50" cy="70" rx="15" ry="4" fill={colors.secondary} stroke={colors.accent || colors.primary} strokeWidth="1"/>
+          </svg>
+        );
+
+      case 'NBA':
+        // Generate basketball with team colors
+        return (
+          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+            <circle cx="50" cy="50" r="45" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
+            
+            {/* Basketball lines */}
+            <path d="M 50 5 Q 50 50 50 95" stroke={colors.secondary} strokeWidth="2" fill="none"/>
+            <path d="M 5 50 Q 50 50 95 50" stroke={colors.secondary} strokeWidth="2" fill="none"/>
+            <path d="M 15 15 Q 50 50 85 85" stroke={colors.secondary} strokeWidth="1.5" fill="none"/>
+            <path d="M 15 85 Q 50 50 85 15" stroke={colors.secondary} strokeWidth="1.5" fill="none"/>
+            
+            <text x="50" y="58" textAnchor="middle" className="fill-current font-black text-lg" style={{ fill: colors.secondary }}>
+              {abbr}
+            </text>
+          </svg>
+        );
+
+      case 'NHL':
+        // Generate hockey puck with team colors
+        return (
+          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
+            <ellipse cx="50" cy="50" rx="45" ry="35" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
+            
+            {/* Puck edge highlight */}
+            <ellipse cx="50" cy="45" rx="40" ry="30" fill="none" stroke={colors.secondary} strokeWidth="1" opacity="0.6"/>
+            
+            {/* Team text */}
+            <text x="50" y="58" textAnchor="middle" className="fill-current font-black text-lg" style={{ fill: colors.secondary }}>
+              {abbr}
+            </text>
+          </svg>
+        );
+
+      case 'NFL':
+        // Generate football with team colors
+        return (
+          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
+            <ellipse cx="50" cy="50" rx="35" ry="45" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
+            
+            {/* Football laces */}
+            <line x1="50" y1="20" x2="50" y2="80" stroke={colors.secondary} strokeWidth="2"/>
+            <line x1="45" y1="30" x2="55" y2="30" stroke={colors.secondary} strokeWidth="1.5"/>
+            <line x1="45" y1="40" x2="55" y2="40" stroke={colors.secondary} strokeWidth="1.5"/>
+            <line x1="45" y1="50" x2="55" y2="50" stroke={colors.secondary} strokeWidth="1.5"/>
+            <line x1="45" y1="60" x2="55" y2="60" stroke={colors.secondary} strokeWidth="1.5"/>
+            <line x1="45" y1="70" x2="55" y2="70" stroke={colors.secondary} strokeWidth="1.5"/>
+            
+            <text x="50" y="58" textAnchor="middle" className="fill-current font-black text-sm" style={{ fill: colors.secondary }}>
+              {abbr}
+            </text>
+          </svg>
+        );
+
+      case 'CFL':
+        // Generate Canadian football with team colors (slightly wider)
+        return (
+          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
+            <ellipse cx="50" cy="50" rx="38" ry="45" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
+            
+            {/* CFL laces */}
+            <line x1="50" y1="20" x2="50" y2="80" stroke={colors.secondary} strokeWidth="2"/>
+            <line x1="44" y1="30" x2="56" y2="30" stroke={colors.secondary} strokeWidth="1.5"/>
+            <line x1="44" y1="50" x2="56" y2="50" stroke={colors.secondary} strokeWidth="1.5"/>
+            <line x1="44" y1="70" x2="56" y2="70" stroke={colors.secondary} strokeWidth="1.5"/>
+            
+            {/* Maple leaf accent */}
+            <path d="M 45 40 L 50 35 L 55 40 L 52 45 L 48 45 Z" fill={colors.accent || colors.secondary} stroke="none"/>
+            
+            <text x="50" y="68" textAnchor="middle" className="fill-current font-black text-sm" style={{ fill: colors.secondary }}>
+              {abbr}
+            </text>
+          </svg>
+        );
+
+      default:
+        // Generic sport icon with team colors
+        return (
+          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
+            <circle cx="50" cy="50" r="45" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
+            <circle cx="50" cy="50" r="30" fill="none" stroke={colors.secondary} strokeWidth="1" opacity="0.5"/>
+            <text x="50" y="58" textAnchor="middle" className="fill-current font-black text-lg" style={{ fill: colors.secondary }}>
+              {abbr}
+            </text>
+          </svg>
+        );
+    }
+  };
+
   // Generic fallback logo with better styling
-  const defaultLogo = (
-    <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
-      <span className="text-white font-black text-xs">{teamAbbr || (teamName || '').slice(0, 3).toUpperCase()}</span>
-    </div>
-  );
+  const defaultLogo = generateSportLogo(sport || 'DEFAULT', teamAbbr || '', teamName || '');
 
   const selectedLogo = teamAbbr ? logoMap[teamAbbr] : null;
 
   if (!selectedLogo) {
     // Only log warnings for actual team names, not fallback cases
     if (teamName !== 'TBD' && abbreviation !== 'TBD') {
-      console.warn(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
+      console.warn(`No logo found for team: ${teamName} (${teamAbbr}), using sport-specific fallback for ${sport}`);
     }
     return defaultLogo;
   }
