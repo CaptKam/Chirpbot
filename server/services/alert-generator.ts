@@ -192,6 +192,34 @@ export class AlertGenerator {
                 ${alertData.type}, ${alertData.state}, ${alertData.score}, ${alertData.payload}, NOW())
         ON CONFLICT (alert_key) DO NOTHING
       `);
+
+      // Broadcast alert immediately to web clients via WebSocket
+      try {
+        const wsBroadcast = (global as any).wsBroadcast;
+        if (wsBroadcast && typeof wsBroadcast === 'function') {
+          const wsAlertData = {
+            type: 'new_alert',
+            alert: {
+              id: alertData.alertKey,
+              alertKey: alertData.alertKey,
+              sport: alertData.sport,
+              gameId: alertData.gameId,
+              alertType: alertData.type,
+              state: alertData.state,
+              score: alertData.score,
+              payload: JSON.parse(alertData.payload),
+              createdAt: new Date().toISOString()
+            }
+          };
+          
+          wsBroadcast(wsAlertData);
+          console.log(`📡 WebSocket broadcast sent for ${alertData.type} alert (saveAlert method)`);
+        } else {
+          console.warn('📡 WebSocket broadcast function not available (saveAlert method)');
+        }
+      } catch (broadcastError) {
+        console.error('📡 WebSocket broadcast failed (saveAlert method):', broadcastError);
+      }
     } catch (error) {
       console.error('Error saving alert:', error);
     }
