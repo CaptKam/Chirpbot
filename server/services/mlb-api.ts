@@ -21,17 +21,23 @@ export class MLBApiService {
 
       const games = data.dates[0].games || [];
 
-      return games.map((game: any) => ({
-        id: game.gamePk.toString(),
-        homeTeam: { id: game.teams.home.team.id.toString(), name: game.teams.home.team.name, abbreviation: game.teams.home.team.abbreviation, score: game.teams.home.score || 0 },
-        awayTeam: { id: game.teams.away.team.id.toString(), name: game.teams.away.team.name, abbreviation: game.teams.away.team.abbreviation, score: game.teams.away.score || 0 },
-        status: this.mapGameStatus(game.status.detailedState),
-        startTime: game.gameDate,
-        venue: game.venue.name,
-        inning: game.linescore?.currentInning || null,
-        inningState: game.linescore?.inningState || null,
-        isLive: game.status.abstractGameState === 'Live'
-      }));
+      return games.map((game: any) => {
+        // Extract live scores from linescore data for live games, fallback to team score for others
+        const homeScore = game.linescore?.teams?.home?.runs ?? game.teams.home.score ?? 0;
+        const awayScore = game.linescore?.teams?.away?.runs ?? game.teams.away.score ?? 0;
+        
+        return {
+          id: game.gamePk.toString(),
+          homeTeam: { id: game.teams.home.team.id.toString(), name: game.teams.home.team.name, abbreviation: game.teams.home.team.abbreviation, score: homeScore },
+          awayTeam: { id: game.teams.away.team.id.toString(), name: game.teams.away.team.name, abbreviation: game.teams.away.team.abbreviation, score: awayScore },
+          status: this.mapGameStatus(game.status.detailedState),
+          startTime: game.gameDate,
+          venue: game.venue.name,
+          inning: game.linescore?.currentInning || null,
+          inningState: game.linescore?.inningState || null,
+          isLive: game.status.abstractGameState === 'Live'
+        };
+      });
     } catch (error) {
       console.error('Error fetching MLB games:', error);
       return [];
