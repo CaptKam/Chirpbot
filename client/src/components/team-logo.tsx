@@ -111,7 +111,35 @@ const teamNameToAbbr: Record<string, string> = {
   'Vegas Golden Knights': 'VGK',
   'Colorado Avalanche': 'COL',
   'Dallas Stars': 'DAL',
-  'Nashville Predators': 'NSH'
+  'Nashville Predators': 'NSH',
+
+  // WNBA Teams
+  'Atlanta Dream': 'ATL',
+  'Chicago Sky': 'CHI',
+  'Connecticut Sun': 'CON',
+  'Dallas Wings': 'DAL',
+  'Indiana Fever': 'IND',
+  'Las Vegas Aces': 'LAS',
+  'Minnesota Lynx': 'MIN',
+  'New York Liberty': 'NY',
+  'Phoenix Mercury': 'PHX',
+  'Seattle Storm': 'SEA',
+  'Washington Mystics': 'WAS',
+  'Golden State Valkyries': 'GS',
+
+  // Common shortened names for WNBA
+  'Dream': 'ATL',
+  'Sky': 'CHI',
+  'Sun': 'CON',
+  'Wings': 'DAL',
+  'Fever': 'IND',
+  'Aces': 'LAS',
+  'Lynx': 'MIN',
+  'Liberty': 'NY',
+  'Mercury': 'PHX',
+  'Storm': 'SEA',
+  'Mystics': 'WAS',
+  'Valkyries': 'GS'
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -174,6 +202,20 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
       'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
       'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
+    },
+    WNBA: {
+      'ATL': 'https://a.espncdn.com/i/teamlogos/wnba/500/atl.png',
+      'CHI': 'https://a.espncdn.com/i/teamlogos/wnba/500/chi.png',
+      'CON': 'https://a.espncdn.com/i/teamlogos/wnba/500/conn.png',
+      'DAL': 'https://a.espncdn.com/i/teamlogos/wnba/500/dal.png',
+      'IND': 'https://a.espncdn.com/i/teamlogos/wnba/500/ind.png',
+      'LAS': 'https://a.espncdn.com/i/teamlogos/wnba/500/lv.png',
+      'MIN': 'https://a.espncdn.com/i/teamlogos/wnba/500/min.png',
+      'NY': 'https://a.espncdn.com/i/teamlogos/wnba/500/ny.png',
+      'PHX': 'https://a.espncdn.com/i/teamlogos/wnba/500/phx.png',
+      'SEA': 'https://a.espncdn.com/i/teamlogos/wnba/500/sea.png',
+      'WAS': 'https://a.espncdn.com/i/teamlogos/wnba/500/wsh.png',
+      'GS': 'https://a.espncdn.com/i/teamlogos/wnba/500/gs.png',
     }
   };
 
