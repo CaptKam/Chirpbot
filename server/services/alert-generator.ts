@@ -602,8 +602,41 @@ export class AlertGenerator {
         scoringProbability
       }, scoringProbability > 50 ? 88 : 85);
     }
-    // Runner in scoring position (2nd or 3rd base, but not bases loaded or 1st+2nd)
-    else if ((hasSecond || hasThird) && !(hasFirst && hasSecond && hasThird) && !(hasFirst && hasSecond && !hasThird)) {
+    // Runners on 2nd and 3rd (high scoring potential)
+    else if (!hasFirst && hasSecond && hasThird) {
+      // Check if RUNNERS_1ST_2ND alerts are globally enabled (reuse for 2nd+3rd)
+      const runners2nd3rdEnabled = await this.isAlertGloballyEnabled('MLB', 'RUNNERS_1ST_2ND');
+      if (!runners2nd3rdEnabled) {
+        console.log(`⛔ RUNNERS_2ND_3RD alert blocked - globally disabled`);
+        return alertCount;
+      }
+
+      const alertKey = `${game.gameId}_RUNNERS_2ND_3RD_${inning}_${outs}`;
+      const outsText = outs === 1 ? '1 out' : `${outs} outs`;
+      const message = `🔥 Runners on 2nd & 3rd! (${scoringProbability}% scoring chance) ${game.awayTeam} vs ${game.homeTeam} - ${outsText}`;
+
+      console.log(`🚨 GENERATING RUNNERS_2ND_3RD ALERT: ${message}`);
+      alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNERS_1ST_2ND', game.gameId, message, {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        inning,
+        isTopInning,
+        outs,
+        balls,
+        strikes,
+        hasFirst: false,
+        hasSecond,
+        hasThird,
+        second: offense.second?.fullName,
+        third: offense.third?.fullName,
+        situation: 'runners_on_2nd_and_3rd',
+        scoringProbability
+      }, scoringProbability > 60 ? 95 : 90);
+    }
+    // Runner in scoring position (2nd or 3rd base only, not multiple runners)
+    else if ((hasSecond || hasThird) && !(hasFirst && hasSecond && hasThird) && !(hasFirst && hasSecond && !hasThird) && !(!hasFirst && hasSecond && hasThird)) {
       // Check if RISP alerts are globally enabled
       const rispEnabled = await this.isAlertGloballyEnabled('MLB', 'RISP');
       if (!rispEnabled) {
