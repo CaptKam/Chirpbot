@@ -133,7 +133,8 @@ export class AlertGenerator {
       return await this.settingsCache.isAlertEnabled(sport, alertType);
     } catch (error) {
       console.error(`Settings cache error for ${sport}.${alertType}:`, error);
-      return true; // Default to enabled if can't check
+      console.log(`🛡️ ADMIN NOTICE: Blocked ${sport} ${alertType} alert due to settings check failure - fail-safe protection enabled`);
+      return false; // FAIL-SAFE: Block alerts when settings can't be verified
     }
   }
 
