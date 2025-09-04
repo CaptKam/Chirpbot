@@ -365,8 +365,24 @@ export class AlertGenerator {
     const gameId = game.gameId || game.id;
     const homeTeam = typeof game.homeTeam === 'string' ? game.homeTeam : game.homeTeam?.displayName || game.homeTeam?.name || 'Home';
     const awayTeam = typeof game.awayTeam === 'string' ? game.awayTeam : game.awayTeam?.displayName || game.awayTeam?.name || 'Away';
-    const homeScore = typeof game.homeScore === 'number' ? game.homeScore : (game.homeScore?.score || 0);
-    const awayScore = typeof game.awayScore === 'number' ? game.awayScore : (game.awayScore?.score || 0);
+    
+    // For live games, try to get live scores from enhanced game data
+    let homeScore = typeof game.homeScore === 'number' ? game.homeScore : (game.homeScore?.score || 0);
+    let awayScore = typeof game.awayScore === 'number' ? game.awayScore : (game.awayScore?.score || 0);
+    
+    // If scores are 0-0 and this is a live game, fetch live scores
+    if ((homeScore === 0 && awayScore === 0) && game.isLive && gameId) {
+      try {
+        const liveData = await this.mlbApi.getEnhancedGameData(gameId);
+        if (liveData.homeScore !== undefined && liveData.awayScore !== undefined) {
+          homeScore = liveData.homeScore;
+          awayScore = liveData.awayScore;
+          console.log(`🔄 Updated live scores for game ${gameId}: ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch live scores for game ${gameId}:`, error);
+      }
+    }
 
     // Debug: Log game scores to verify they're available
     console.log(`🔧 DEBUG: Processing game ${gameId} - ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`);

@@ -22,6 +22,7 @@ export class MLBApiService {
       const games = data.dates[0].games || [];
 
       return games.map((game: any) => {
+        
         // Extract live scores from linescore data for live games, fallback to team score for others
         const homeScore = game.linescore?.teams?.home?.runs ?? game.teams.home.score ?? 0;
         const awayScore = game.linescore?.teams?.away?.runs ?? game.teams.away.score ?? 0;
@@ -104,8 +105,12 @@ export class MLBApiService {
       const inning = linescore.currentInning || 1;
       const isTopInning = linescore.inningState === 'Top';
 
+      // Extract live scores from the feed/live endpoint
+      const homeScore = linescore?.teams?.home?.runs ?? 0;
+      const awayScore = linescore?.teams?.away?.runs ?? 0;
+
       console.log(`🔍 Live data for game ${gameId}:`, {
-        runners, balls, strikes, outs, inning, isTopInning
+        runners, balls, strikes, outs, inning, isTopInning, homeScore, awayScore
       });
 
       return {
@@ -115,6 +120,8 @@ export class MLBApiService {
         outs,
         inning,
         isTopInning,
+        homeScore,
+        awayScore,
         gameState: liveData.gameState,
         lastUpdated: new Date().toISOString()
       };
