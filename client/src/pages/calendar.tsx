@@ -376,12 +376,13 @@ export default function Calendar() {
                 {isSameDay(selectedDate, new Date()) ? "Today's Games" : format(selectedDate, 'MMMM d, yyyy')}
               </h2>
               <Button
-                variant="ghost"
-                size="sm"
+                variant="outline"
+                size="default"
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                className="bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30 hover:text-emerald-200 hover:border-emerald-400 transition-all duration-200 font-semibold"
               >
-                <CalendarIcon className="w-4 h-4" />
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Pick Date
               </Button>
             </div>
             <div className="flex items-center space-x-4 mt-1">
