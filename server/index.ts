@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import pg from "pg";
 import helmet from "helmet";
 import cors from "cors";
 import { registerRoutes } from "./routes";
@@ -9,6 +8,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
 import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
+import { pool } from "./db";
 
 // Global error handlers to prevent unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -21,8 +21,6 @@ process.on('uncaughtException', (error) => {
   // For uncaught exceptions, we should exit
   process.exit(1);
 });
-
-const { Pool } = pg;
 
 const app = express();
 
@@ -42,17 +40,12 @@ app.use(cors({
 app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 
-// PostgreSQL session store for persistent sessions
-const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
 const PgSession = connectPgSimple(session);
 
-// Session middleware with PostgreSQL store
+// Session middleware with PostgreSQL store using shared pool
 app.use(session({
   store: new PgSession({
-    pool: pgPool,
+    pool: pool,
     tableName: 'session',
     createTableIfMissing: true
   }),
@@ -101,11 +94,15 @@ app.use((req, res, next) => {
   try {
     // Initialize database with required seed data
     try {
+      console.log('🔄 Initializing database...');
       await seedDatabase();
       console.log('✅ Database initialization complete');
     } catch (err) {
       console.error('⚠️ Database seeding failed (may already be seeded):', err);
       // Continue anyway - the database might already be seeded
+      
+      // Add a small delay to allow any connection issues to settle
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     const server = await registerRoutes(app);
