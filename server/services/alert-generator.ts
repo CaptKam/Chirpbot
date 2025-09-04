@@ -461,8 +461,11 @@ export class AlertGenerator {
     };
   }
 
-  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number, sport: string = 'MLB'): Promise<number> {
+  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number | undefined, sport: string = 'MLB'): Promise<number> {
     try {
+      // Ensure priority has a default value
+      let finalPriority = priority || 50;
+      
       // Check if alert already exists (conflict check)
       const existingAlert = await db.execute(sql`
         SELECT 1 FROM alerts WHERE alert_key = ${alertKey}
@@ -489,23 +492,23 @@ export class AlertGenerator {
           });
 
           context.betbookData = betbookData;
-          console.log(`🤖 AI: Generated betting insights for ${type} alert (priority: ${priority}) - ${betbookData.aiAdvice}`);
+          console.log(`🤖 AI: Generated betting insights for ${type} alert (priority: ${finalPriority}) - ${betbookData.aiAdvice}`);
         } catch (error) {
           console.error('❌ AI betting insights generation failed:', error);
         }
       }
 
       // AI Context Controller takes full control for high-value alerts
-      if (priority >= 70) {
+      if (finalPriority >= 70) {
         try {
-          console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${priority})`);
+          console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${finalPriority})`);
           
           const alertContext: AlertContext = {
             gameId,
             sport,
             alertType: type,
-            priority,
-            probability: priority,
+            priority: finalPriority,
+            probability: finalPriority,
             homeTeam: context.homeTeam,
             awayTeam: context.awayTeam,
             homeScore: context.homeScore || 0,
@@ -529,7 +532,7 @@ export class AlertGenerator {
 
           const aiEnhancedAlert = await this.aiContextController.enhanceAlertWithFullControl(alertContext);
           
-          if (aiEnhancedAlert.confidenceScore > priority) {
+          if (aiEnhancedAlert.confidenceScore > finalPriority) {
             // AI has enhanced the alert - use AI-controlled content
             message = aiEnhancedAlert.message;
             context.aiTitle = aiEnhancedAlert.title;
@@ -544,11 +547,11 @@ export class AlertGenerator {
             context.aiProcessingTime = aiEnhancedAlert.aiProcessingTime;
             
             // Update priority with AI confidence
-            priority = Math.min(95, aiEnhancedAlert.confidenceScore);
+            finalPriority = Math.min(95, aiEnhancedAlert.confidenceScore);
             
-            console.log(`✅ AI Context Controller: Enhanced ${type} alert - New priority: ${priority}, Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
+            console.log(`✅ AI Context Controller: Enhanced ${type} alert - New priority: ${finalPriority}, Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
           } else {
-            console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${priority})`);
+            console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${finalPriority})`);
           }
           
         } catch (error) {
@@ -562,7 +565,7 @@ export class AlertGenerator {
         context,
         betbookData: context.betbookData,
         gameInfo: {
-          v3Analysis: this.generateV3Analysis(context, priority, type)
+          v3Analysis: this.generateV3Analysis(context, finalPriority, type)
         }
       };
 
@@ -579,7 +582,7 @@ export class AlertGenerator {
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
-                ${type}, 'NEW', ${priority}, ${JSON.stringify(enhancedPayload)}, NOW())
+                ${type}, 'NEW', ${finalPriority}, ${JSON.stringify(enhancedPayload)}, NOW())
       `);
 
       console.log(`🚨 REAL-TIME ALERT: ${message}`);
@@ -597,7 +600,7 @@ export class AlertGenerator {
               gameId,
               alertType: type,
               state: 'NEW',
-              score: priority,
+              score: finalPriority,
               payload: enhancedPayload,
               createdAt: new Date().toISOString()
             }
