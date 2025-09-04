@@ -8,6 +8,7 @@ import { sendTelegramAlert, type TelegramConfig } from "./telegram";
 import { SettingsCache } from "./settings-cache";
 import { BasicAI } from "./basic-ai";
 import { AIEnhancementService, GameContext } from './ai-enhancements';
+import { AIContextController, AlertContext } from './ai-context-controller';
 
 // Import sport engines
 import { MLBEngine } from './engines/mlb-engine';
@@ -103,6 +104,7 @@ export class AlertGenerator {
   private settingsCache: SettingsCache;
   private ai: BasicAI;
   private aiEnhancementService: AIEnhancementService;
+  private aiContextController: AIContextController;
 
   // Sport-specific engines
   private sportEngines: Map<string, BaseSportEngine>;
@@ -114,6 +116,7 @@ export class AlertGenerator {
     this.settingsCache = new SettingsCache(storage);
     this.ai = new BasicAI();
     this.aiEnhancementService = new AIEnhancementService();
+    this.aiContextController = new AIContextController();
 
     // Initialize sport engines
     this.sportEngines = new Map();
@@ -459,33 +462,64 @@ export class AlertGenerator {
         }
       }
 
-      // Generate AI enhancements for high-value alerts
+      // AI Context Controller takes full control for high-value alerts
       if (priority >= 70) {
         try {
-          const gameContext = {
-            gameId: gameId,
-            sport: sport,
-            score: { home: context.homeScore || 0, away: context.awayScore || 0 },
-            inning: context.inning || 1,
-            outs: context.outs || 0,
+          console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${priority})`);
+          
+          const alertContext: AlertContext = {
+            gameId,
+            sport,
+            alertType: type,
+            priority,
+            probability: priority,
+            homeTeam: context.homeTeam,
+            awayTeam: context.awayTeam,
+            homeScore: context.homeScore || 0,
+            awayScore: context.awayScore || 0,
+            inning: context.inning,
+            outs: context.outs,
+            balls: context.balls,
+            strikes: context.strikes,
             baseRunners: [
               context.hasFirst && '1B',
-              context.hasSecond && '2B', 
+              context.hasSecond && '2B',
               context.hasThird && '3B'
             ].filter(Boolean),
-            batter: context.batter ? { name: context.batter, stats: {} } : null,
-            weather: context.weather || {}
+            weather: context.weather,
+            betbookData: context.betbookData,
+            recentEvents: context.recentEvents || [],
+            playerStats: context.batter || {},
+            originalMessage: message,
+            originalContext: context
           };
 
-          const aiPreferences = await storage.getUserAIPreferences('system'); // Use system defaults
-          const enhancements = await this.aiEnhancementService.enhanceAlert(type, context, gameContext, aiPreferences);
-
-          if (enhancements) {
-            context.aiEnhancements = enhancements;
-            console.log(`🤖 AI: Enhanced ${type} alert with ${Object.keys(enhancements).length} AI features`);
+          const aiEnhancedAlert = await this.aiContextController.enhanceAlertWithFullControl(alertContext);
+          
+          if (aiEnhancedAlert.confidenceScore > priority) {
+            // AI has enhanced the alert - use AI-controlled content
+            message = aiEnhancedAlert.message;
+            context.aiTitle = aiEnhancedAlert.title;
+            context.aiInsights = aiEnhancedAlert.insights;
+            context.aiRecommendation = aiEnhancedAlert.recommendation;
+            context.aiUrgency = aiEnhancedAlert.urgency;
+            context.aiBettingAdvice = aiEnhancedAlert.bettingAdvice;
+            context.aiGameProjection = aiEnhancedAlert.gameProjection;
+            context.aiCallToAction = aiEnhancedAlert.callToAction;
+            context.aiFollowUpActions = aiEnhancedAlert.followUpActions;
+            context.aiConfidenceScore = aiEnhancedAlert.confidenceScore;
+            context.aiProcessingTime = aiEnhancedAlert.aiProcessingTime;
+            
+            // Update priority with AI confidence
+            priority = Math.min(95, aiEnhancedAlert.confidenceScore);
+            
+            console.log(`✅ AI Context Controller: Enhanced ${type} alert - New priority: ${priority}, Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
+          } else {
+            console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${priority})`);
           }
+          
         } catch (error) {
-          console.error('❌ AI enhancements generation failed:', error);
+          console.error('❌ AI Context Controller failed:', error);
         }
       }
 

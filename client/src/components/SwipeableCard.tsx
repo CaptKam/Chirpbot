@@ -335,7 +335,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent backdrop-blur-sm transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
-        {alertData?.betbookData || alertData?.context?.reasons ? (
+        {alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection ? (
           <div className="h-full flex flex-col justify-center p-4 space-y-3">
             {/* AI Insights Header */}
             <div className="flex items-center space-x-2 mb-2">
@@ -348,8 +348,92 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
             </div>
 
+            {/* AI Betting Advice */}
+            {alertData?.context?.aiBettingAdvice && (
+              <div className="mt-3 p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 AI Betting Analysis</span>
+                  <span className="text-green-300 text-xs">
+                    {alertData.context.aiBettingAdvice.confidence}% Confidence
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-green-200 mb-2">
+                  {alertData.context.aiBettingAdvice.recommendation}
+                </p>
+
+                {/* Reasoning */}
+                <div className="space-y-1 mb-2">
+                  {alertData.context.aiBettingAdvice.reasoning?.map((reason: string, idx: number) => (
+                    <p key={idx} className="text-xs text-green-200">• {reason}</p>
+                  ))}
+                </div>
+
+                {/* Suggested Bets */}
+                <div className="flex flex-wrap gap-1">
+                  {alertData.context.aiBettingAdvice.suggestedBets?.map((bet: string, idx: number) => (
+                    <span key={idx} className="px-2 py-1 text-xs bg-green-600/20 text-green-300 rounded">
+                      {bet}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI Game Projection */}
+            {alertData?.context?.aiGameProjection && (
+              <div className="mt-3 p-3 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/30">
+                <div className="flex items-center gap-1 mb-2">
+                  <span className="text-purple-400 text-xs font-bold uppercase tracking-wide">🔮 AI Game Projection</span>
+                </div>
+
+                <p className="text-xs font-medium text-purple-200 mb-2">
+                  Final: {alertData.context.aiGameProjection.finalScorePrediction}
+                </p>
+
+                {/* Win Probability */}
+                <div className="flex justify-between text-xs mb-2">
+                  <span className="text-purple-300">
+                    {alertData?.context?.homeTeam}: {alertData.context.aiGameProjection.winProbability?.home}%
+                  </span>
+                  <span className="text-purple-300">
+                    {alertData?.context?.awayTeam}: {alertData.context.aiGameProjection.winProbability?.away}%
+                  </span>
+                </div>
+
+                {/* Key Moments */}
+                <div className="space-y-1">
+                  {alertData.context.aiGameProjection.keyMoments?.map((moment: string, idx: number) => (
+                    <p key={idx} className="text-xs text-purple-200">⏱️ {moment}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Legacy Betting Analysis (fallback) */}
+            {alertData?.betbookData && !alertData?.context?.aiBettingAdvice && (
+              <div className="mt-3 p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 Betting Analysis</span>
+                  <span className="text-green-300 text-xs">
+                    {alertData.context?.scoringProbability || alertData.confidence}% Confidence
+                  </span>
+                </div>
+                <p className="text-xs text-green-200 mb-2">
+                  {alertData.betbookData.aiAdvice}
+                </p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-300">
+                    O/U: {alertData.betbookData.odds?.total}
+                  </span>
+                  <span className="text-slate-300">
+                    Spread: {alertData.betbookData.odds?.home > 0 ? '+' : ''}{alertData.betbookData.odds?.home}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Betting Recommendations Based on Game Situation */}
-            {(alertData.betbookData || alertData.context?.reasons || (alertData.priority && alertData.priority >= 80)) && (
+            {(alertData.context?.reasons || (alertData.priority && alertData.priority >= 80)) && !alertData?.context?.aiBettingAdvice && (
               <div className="space-y-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
                   <div className="flex items-center space-x-2 mb-2">
@@ -357,8 +441,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
                   </div>
                   <p className="text-white text-sm font-medium">
-                    {alertData.context?.recommendation || 
-                     alertData.betbookData?.aiAdvice || 
+                    {alertData.context?.recommendation ||
+                     alertData.betbookData?.aiAdvice ||
                      (() => {
                        const sport = alertData.sport || 'MLB';
                        const tier = Math.ceil((alertData.priority || 70) / 25);
@@ -382,7 +466,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
 
                 {/* AI Analysis Reasons */}
-                {(alertData.context?.reasons || alertData.context?.aiInsights) && (
+                {(alertData.context?.reasons || alertData.context?.aiInsights) && !alertData?.context?.aiBettingAdvice && (
                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 ring-1 ring-white/10">
                     <div className="flex items-center space-x-2 mb-1">
                       <Brain className="w-3 h-3 text-purple-400" />
@@ -416,8 +500,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
             )}
 
-
-
             {/* Quick Sportsbook Access */}
             <div className="space-y-2">
               <h4 className="text-xs text-blue-200 font-medium tracking-wide uppercase">Quick Bet</h4>
@@ -433,8 +515,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
                       data-testid={`ai-sportsbook-${sportsbook.name.toLowerCase()}`}
                     >
-                      <img 
-                        src={sportsbook.logo} 
+                      <img
+                        src={sportsbook.logo}
                         alt={sportsbook.name}
                         className="w-full h-full rounded object-contain"
                       />
@@ -447,7 +529,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
             {/* Quick Actions */}
             <div className="flex gap-2 mt-3 pt-3 border-t border-slate-700/30">
-              <button 
+              <button
                 className="flex-1 px-3 py-2 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -457,7 +539,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               >
                 📋 Copy
               </button>
-              <button 
+              <button
                 className="flex-1 px-3 py-2 text-xs font-medium bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -491,8 +573,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     style={{ backgroundColor: `${sportsbook.color}20`, borderColor: `${sportsbook.color}40` }}
                     data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
                   >
-                    <img 
-                      src={sportsbook.logo} 
+                    <img
+                      src={sportsbook.logo}
                       alt={sportsbook.name}
                       className="w-full h-full rounded-lg object-contain"
                     />
@@ -514,9 +596,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             handleDeleteAlert();
             setDragX(0); // Return to center after click
           }}
-          disabled={isDeleting}
           className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm ring-1 ring-red-500/30 transition-all hover:scale-110 active:scale-95"
           data-testid={`delete-alert-${alertId}`}
+          disabled={isDeleting}
         >
           <Trash2 className={`w-5 h-5 text-red-400 ${isDeleting ? 'animate-spin' : ''}`} />
         </Button>
@@ -531,9 +613,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         onDragEnd={handleDragEnd}
         onTap={handleTap}
         animate={{ x: dragX }}
-        transition={{ 
-          type: "spring", 
-          damping: 20, 
+        transition={{
+          type: "spring",
+          damping: 20,
           stiffness: 250,
           mass: 0.6
         }}
@@ -551,8 +633,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
                   <div className={`w-3 h-3 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     className="px-3 py-1.5 text-sm font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10 rounded-full"
                   >
                     {alertData.sport}
@@ -566,6 +648,15 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   <span className="text-slate-400 font-medium">{formatTime(alertData.createdAt || '')}</span>
                 </div>
               </div>
+
+              {/* AI-Enhanced Title */}
+              {alertData?.context?.aiTitle && (
+                <div className="mb-2">
+                  <h3 className="text-lg font-bold text-white">
+                    {alertData.context.aiTitle}
+                  </h3>
+                </div>
+              )}
 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-6">
@@ -594,15 +685,33 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
 
-                    {/* Context Information */}
-                    {alertData.context?.reasons && alertData.context.reasons.length > 0 && (
-                      <div className="mt-3 text-sm text-slate-300">
-                        <strong>Game Situation:</strong> {alertData.context.reasons.join(', ')}
+                    {/* AI Insights */}
+                    {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
+                      <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/30">
+                        <div className="flex items-center gap-1 mb-2">
+                          <span className="text-blue-400 text-xs">🤖 AI Insights</span>
+                        </div>
+                        <div className="space-y-1">
+                          {alertData.context.aiInsights.map((insight: string, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-200">
+                              • {insight}
+                            </p>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* AI Call to Action */}
+              {alertData?.context?.aiCallToAction && (
+                <div className="mb-3 p-2 bg-green-500/10 rounded border border-green-500/30">
+                  <p className="text-xs font-medium text-green-300">
+                    {alertData.context.aiCallToAction}
+                  </p>
+                </div>
+              )}
 
               {/* Game Situation Grid - Calendar Page Clean Style */}
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10">
