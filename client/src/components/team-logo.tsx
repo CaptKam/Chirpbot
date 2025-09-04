@@ -113,33 +113,36 @@ const teamNameToAbbr: Record<string, string> = {
   'Dallas Stars': 'DAL',
   'Nashville Predators': 'NSH',
 
-  // WNBA Teams - Full Names
+  // WNBA Teams - Full Names (using unique abbreviations to avoid conflicts)
   'Phoenix Mercury': 'PHO',
   'Washington Mystics': 'WAS',
   'Golden State Valkyries': 'GSV',
-  'Las Vegas Aces': 'LV',
-  'Chicago Sky': 'CHI',
+  'Las Vegas Aces': 'LAS',
+  'Chicago Sky': 'CHIS',
   'Connecticut Sun': 'CON',
   'Indiana Fever': 'IND',
   'New York Liberty': 'NYL',
-  'Minnesota Lynx': 'MIN',
-  'Seattle Storm': 'SEA',
-  'Dallas Wings': 'DAL',
-  'Atlanta Dream': 'ATL',
+  'Minnesota Lynx': 'MINL',
+  'Seattle Storm': 'SEAS',
+  'Dallas Wings': 'DALW',
+  'Atlanta Dream': 'ATLD',
   
   // WNBA Teams - Short Names (what the API returns)
   'Mercury': 'PHO',
   'Mystics': 'WAS',
+  'MYS': 'WAS', // Alternative abbreviation
   'Valkyries': 'GSV',
-  'Aces': 'LV',
-  'Sky': 'CHIS',  // Chicago Sky - unique to avoid conflict with CHI
+  'GOL': 'GSV', // Alternative abbreviation
+  'Aces': 'LAS',
+  'LV': 'LAS', // Alternative abbreviation
+  'Sky': 'CHIS',
   'Sun': 'CON',
   'Fever': 'IND',
   'Liberty': 'NYL',
-  'Lynx': 'MINL', // Minnesota Lynx - unique to avoid conflict with MIN
-  'Storm': 'SEAS', // Seattle Storm - unique to avoid conflict with SEA  
-  'Wings': 'DALW', // Dallas Wings - unique to avoid conflict with DAL
-  'Dream': 'ATLD', // Atlanta Dream - unique to avoid conflict with ATL
+  'Lynx': 'MINL',
+  'Storm': 'SEAS',
+  'Wings': 'DALW',
+  'Dream': 'ATLD'
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -707,14 +710,14 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
   // Define team colors early for consistent reference
   const teamColors: Record<string, { primary: string; secondary: string; accent?: string }> = {
-    // WNBA Team Colors
+    // WNBA Team Colors (all using unique abbreviations)
     'PHO': { primary: '#E56020', secondary: '#000000', accent: '#FFFFFF' }, // Mercury Orange/Black
-    'PHX': { primary: '#E56020', secondary: '#000000', accent: '#FFFFFF' }, // Mercury Orange/Black (alt)
     'WAS': { primary: '#C8102E', secondary: '#002B5C', accent: '#FFFFFF' }, // Mystics Red/Navy
+    'MYS': { primary: '#C8102E', secondary: '#002B5C', accent: '#FFFFFF' }, // Mystics Red/Navy (alt)
     'GSV': { primary: '#000000', secondary: '#FDB927', accent: '#FFFFFF' }, // Valkyries Black/Gold
     'GOL': { primary: '#000000', secondary: '#FDB927', accent: '#FFFFFF' }, // Valkyries Black/Gold (alt)
-    'LV': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' },  // Aces Black/Red/Gold
-    'LAS': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' }, // Aces Black/Red/Gold (alt)
+    'LAS': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' }, // Aces Black/Red/Gold
+    'LV': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' },  // Aces Black/Red/Gold (alt)
     'CHIS': { primary: '#418FDE', secondary: '#FFC72C', accent: '#000000' }, // Sky Blue/Yellow
     'CON': { primary: '#E03A3E', secondary: '#041E42', accent: '#FFFFFF' },  // Sun Red/Navy
     'IND': { primary: '#002D62', secondary: '#FDBB30', accent: '#FFFFFF' },  // Fever Navy/Gold
