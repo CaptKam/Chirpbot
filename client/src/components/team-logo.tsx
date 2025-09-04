@@ -995,26 +995,23 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     }
   };
 
-  // For WNBA teams, always use sport-specific generated icons
-  if (sport === 'WNBA' && teamAbbr && teamColors[teamAbbr]) {
+  // For WNBA teams, ALWAYS use sport-specific generated icons (bypass logoMap completely)
+  if (sport === 'WNBA') {
     console.log(`Using sport-specific icon for WNBA team: ${teamName} (${teamAbbr})`);
-    return generateSportLogo('WNBA', teamAbbr, teamName);
+    return generateSportLogo('WNBA', teamAbbr || '', teamName || '');
   }
 
-
-
-  // Generic fallback logo with better styling
-  const defaultLogo = generateSportLogo(sport || 'DEFAULT', teamAbbr || '', teamName || '');
-
+  // Check logoMap for non-WNBA teams
   const selectedLogo = teamAbbr ? logoMap[teamAbbr] : null;
 
-  if (!selectedLogo) {
-    // Only log warnings for actual team names, not fallback cases
-    if (teamName !== 'TBD' && abbreviation !== 'TBD') {
-      console.warn(`No logo found for team: ${teamName} (${teamAbbr}), using sport-specific fallback for ${sport}`);
-    }
-    return defaultLogo;
+  if (selectedLogo) {
+    return selectedLogo;
   }
 
-  return selectedLogo;
+  // Fallback: Generate sport-specific logo for any team without a logoMap entry
+  if (teamName !== 'TBD' && abbreviation !== 'TBD') {
+    console.warn(`No logo found for team: ${teamName} (${teamAbbr}), using sport-specific fallback for ${sport}`);
+  }
+  
+  return generateSportLogo(sport || 'DEFAULT', teamAbbr || '', teamName || '');
 }
