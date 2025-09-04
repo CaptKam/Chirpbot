@@ -32,17 +32,6 @@ interface Alert {
   hasSecond?: boolean;
   hasThird?: boolean;
   context?: any;
-  // Additional fields that might come from API
-  title?: string;
-  description?: string;
-  homeScore?: number;
-  awayScore?: number;
-  timestamp?: string;
-  sentToTelegram?: boolean;
-  weather?: any;
-  weatherData?: any;
-  betbookData?: any;
-  gameInfo?: any;
 }
 
 interface AlertStats {
@@ -221,7 +210,6 @@ export default function AlertsPage() {
                 // Use Complex Card for detailed game state alerts
                 <SwipeableCard 
                   alertId={alert.id}
-                  children={null}
                   alertData={{
                     id: alert.id,
                     type: alert.type,
