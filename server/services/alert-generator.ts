@@ -567,7 +567,7 @@ export class AlertGenerator {
         context,
         betbookData: context.betbookData,
         gameInfo: {
-          v3Analysis: this.generateV3Analysis(context, priority || 50, type)
+          v3Analysis: this.generateV3Analysis(context, finalPriority, type)
         }
       };
 
@@ -575,7 +575,7 @@ export class AlertGenerator {
       const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
       if (!isGloballyEnabled) {
         console.log(`🚫 BLOCKED database save: ${type} alert globally disabled (Real-time alert method)`);
-        return;
+        return finalPriority;
       }
 
       console.log(`💾 Saving alert: ${type} for game ${gameId}`);
@@ -584,7 +584,7 @@ export class AlertGenerator {
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
-                ${type}, 'NEW', ${priority || 50}, ${JSON.stringify(enhancedPayload)}, NOW())
+                ${type}, 'NEW', ${finalPriority}, ${JSON.stringify(enhancedPayload)}, NOW())
       `);
 
       console.log(`🚨 REAL-TIME ALERT: ${message}`);
@@ -602,7 +602,7 @@ export class AlertGenerator {
               gameId,
               alertType: type,
               state: 'NEW',
-              score: priority || 50,
+              score: finalPriority,
               payload: enhancedPayload,
               createdAt: new Date().toISOString()
             }
@@ -659,7 +659,7 @@ export class AlertGenerator {
             type,
             title: context.aiTitle || `${type.replace('_', ' ')} Alert`,
             description: message,
-            aiContext: {
+            aiContext: JSON.stringify({
               aiTitle: context.aiTitle,
               aiMessage: message,
               aiInsights: context.aiInsights,
@@ -669,7 +669,7 @@ export class AlertGenerator {
               aiGameProjection: context.aiGameProjection,
               aiCallToAction: context.aiCallToAction,
               aiConfidenceScore: context.aiConfidenceScore
-            },
+            }),
             gameInfo: {
               homeTeam: context.homeTeam,
               awayTeam: context.awayTeam,
