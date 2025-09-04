@@ -241,7 +241,7 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'PHX': 'https://a.espncdn.com/i/teamlogos/wnba/500/phx.png',
       'SEA': 'https://a.espncdn.com/i/teamlogos/wnba/500/sea.png',
       'WAS': 'https://a.espncdn.com/i/teamlogos/wnba/500/wsh.png',
-      'GS': 'https://a.espncdn.com/i/teamlogos/wnba/500/gs.png',
+      'GS': 'https://a.espncdn.com/i/teamlogos/wnba/500/gsw.png',
     }
   };
 
