@@ -203,4 +203,19 @@ Keep response under 100 words. Focus on immediate betting value.
       return this.getFallbackInsights(context);
     }
   }
+
+  // Simple response generation method for AI enhancements
+  async generateResponse(prompt: string): Promise<string | null> {
+    if (!this.isConfigured) {
+      return null;
+    }
+
+    try {
+      const response = await this.callOpenAI(prompt);
+      return response.insights || null;
+    } catch (error) {
+      console.error('AI response generation error:', error);
+      return null;
+    }
+  }
 }

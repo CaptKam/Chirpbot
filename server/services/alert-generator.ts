@@ -365,11 +365,11 @@ export class AlertGenerator {
     const gameId = game.gameId || game.id;
     const homeTeam = typeof game.homeTeam === 'string' ? game.homeTeam : game.homeTeam?.displayName || game.homeTeam?.name || 'Home';
     const awayTeam = typeof game.awayTeam === 'string' ? game.awayTeam : game.awayTeam?.displayName || game.awayTeam?.name || 'Away';
-    
+
     // For live games, try to get live scores from enhanced game data
     let homeScore = typeof game.homeScore === 'number' ? game.homeScore : (game.homeScore?.score || 0);
     let awayScore = typeof game.awayScore === 'number' ? game.awayScore : (game.awayScore?.score || 0);
-    
+
     // If scores are 0-0 and this is a live game, fetch live scores
     if ((homeScore === 0 && awayScore === 0) && game.isLive && gameId) {
       try {

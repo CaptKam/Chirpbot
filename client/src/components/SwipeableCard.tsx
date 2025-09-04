@@ -382,23 +382,34 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
 
                 {/* AI Analysis Reasons */}
-                {alertData.context?.reasons && (
+                {(alertData.context?.reasons || alertData.context?.aiInsights) && (
                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 ring-1 ring-white/10">
                     <div className="flex items-center space-x-2 mb-1">
                       <Brain className="w-3 h-3 text-purple-400" />
                       <span className="text-xs text-purple-200 font-medium">AI Analysis</span>
                       <span className="text-xs text-green-300 font-mono">
-                        {alertData.context.confidence}% confidence
+                        {alertData.context.confidence || alertData.confidence}% confidence
                       </span>
                     </div>
-                    <ul className="text-xs text-white/90 space-y-0.5">
-                      {alertData.context.reasons.slice(0, 2).map((reason, idx) => (
-                        <li key={idx} className="flex items-start space-x-1">
-                          <span className="text-green-400 mt-0.5">•</span>
-                          <span>{reason}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    
+                    {/* AI Insights */}
+                    {alertData.context?.aiInsights && (
+                      <div className="mb-2 p-2 bg-blue-500/10 rounded border-l-2 border-blue-400">
+                        <p className="text-xs text-blue-200 font-medium">{alertData.context.aiInsights}</p>
+                      </div>
+                    )}
+                    
+                    {/* Context Reasons */}
+                    {alertData.context?.reasons && (
+                      <ul className="text-xs text-white/90 space-y-0.5">
+                        {alertData.context.reasons.slice(0, 2).map((reason, idx) => (
+                          <li key={idx} className="flex items-start space-x-1">
+                            <span className="text-green-400 mt-0.5">•</span>
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
 

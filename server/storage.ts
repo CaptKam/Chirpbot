@@ -459,12 +459,12 @@ export const storage = {
         ));
 
       const aiPrefs = {
-        AI_ENHANCED_MESSAGES: false,
-        AI_PREDICTIVE_AT_BAT: false,
-        AI_SCORING_PROBABILITY: false,
-        AI_SITUATION_ANALYSIS: false,
-        AI_EVENT_SUMMARIES: false,
-        AI_ROI_ALERTS: false
+        AI_ENHANCED_MESSAGES: true,  // Default enabled
+        AI_PREDICTIVE_AT_BAT: true,  // Default enabled
+        AI_SCORING_PROBABILITY: true,  // Default enabled
+        AI_SITUATION_ANALYSIS: true,  // Default enabled
+        AI_EVENT_SUMMARIES: true,  // Default enabled
+        AI_ROI_ALERTS: true  // Default enabled
       };
 
       preferences.forEach(pref => {
@@ -473,16 +473,17 @@ export const storage = {
         }
       });
 
+      console.log(`🤖 AI Preferences for user ${userId}:`, aiPrefs);
       return aiPrefs;
     } catch (error) {
       console.error('Error getting user AI preferences:', error);
       return {
-        AI_ENHANCED_MESSAGES: false,
-        AI_PREDICTIVE_AT_BAT: false,
-        AI_SCORING_PROBABILITY: false,
-        AI_SITUATION_ANALYSIS: false,
-        AI_EVENT_SUMMARIES: false,
-        AI_ROI_ALERTS: false
+        AI_ENHANCED_MESSAGES: true,  // Fallback to enabled
+        AI_PREDICTIVE_AT_BAT: true,
+        AI_SCORING_PROBABILITY: true,
+        AI_SITUATION_ANALYSIS: true,
+        AI_EVENT_SUMMARIES: true,
+        AI_ROI_ALERTS: true
       };
     }
   },

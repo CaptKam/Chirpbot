@@ -344,6 +344,28 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
               <p className="text-slate-100 text-sm font-medium leading-relaxed">
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').trim()}
               </p>
+              
+              {/* AI Insights - Simple Display */}
+              {(alert.context?.aiInsights || alert.context?.recommendation) && (
+                <div className="mt-2 pt-2 border-t border-slate-700/50">
+                  <div className="flex items-center gap-1 mb-1">
+                    <div className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <span className="text-white text-xs">🤖</span>
+                    </div>
+                    <span className="text-xs text-blue-300 font-medium">AI Analysis</span>
+                  </div>
+                  {alert.context.recommendation && (
+                    <p className="text-xs text-green-300 font-medium">
+                      {alert.context.recommendation}
+                    </p>
+                  )}
+                  {alert.context.aiInsights && (
+                    <p className="text-xs text-slate-300 mt-1">
+                      {alert.context.aiInsights}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Basic Game Context - Minimal */}
