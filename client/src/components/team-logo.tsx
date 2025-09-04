@@ -72,9 +72,9 @@ const teamNameToAbbr: Record<string, string> = {
   'Twins': 'MIN',
   'Rays': 'TB',
 
-  // NFL Teams - Full Names
+  // NFL Teams
   'Kansas City Chiefs': 'KC',
-  'Buffalo Bills': 'BUF', 
+  'Buffalo Bills': 'BUF',
   'New York Jets': 'NYJ',
   'New England Patriots': 'NE',
   'Miami Dolphins': 'MIA',
@@ -87,68 +87,13 @@ const teamNameToAbbr: Record<string, string> = {
   'Jacksonville Jaguars': 'JAX',
   'Tennessee Titans': 'TEN',
   'Denver Broncos': 'DEN',
-  'Las Vegas Raiders': 'LAS',
+  'Las Vegas Raiders': 'LV',
   'Los Angeles Chargers': 'LAC',
   'Dallas Cowboys': 'DAL',
   'Philadelphia Eagles': 'PHI',
   'Atlanta Falcons': 'ATL',
   'Chicago Bears': 'CHI',
   'Minnesota Vikings': 'MIN',
-  'Green Bay Packers': 'GB',
-  'Detroit Lions': 'DET',
-  'Seattle Seahawks': 'SEA',
-  'Los Angeles Rams': 'LAR',
-  'San Francisco 49ers': 'SF',
-  'Arizona Cardinals': 'ARI',
-  'New Orleans Saints': 'NO',
-  'Tampa Bay Buccaneers': 'TB',
-  'Carolina Panthers': 'CAR',
-  'Washington Commanders': 'WAS',
-  'New York Giants': 'NYG',
-  
-  // NFL Teams - Short Names
-  'Chiefs': 'KC',
-  'Bills': 'BUF',
-  'Jets': 'NYJ',
-  'JET': 'NYJ',
-  'Patriots': 'NE',
-  'NEW': 'NE',
-  'Dolphins': 'MIA',
-  'Steelers': 'PIT',
-  'Ravens': 'BAL',
-  'Bengals': 'CIN',
-  'Browns': 'CLE',
-  'Texans': 'HOU',
-  'Colts': 'IND',
-  'Jaguars': 'JAX',
-  'JAC': 'JAX',
-  'Titans': 'TEN',
-  'Broncos': 'DEN',
-  'Raiders': 'LAS',
-  'Chargers': 'LAC',
-  'CHA': 'LAC',
-  'Cowboys': 'DAL',
-  'Eagles': 'PHI',
-  'Falcons': 'ATL',
-  'Bears': 'CHI',
-  'Vikings': 'MIN',
-  'Packers': 'GB',
-  'GRE': 'GB',
-  'Lions': 'DET',
-  'Seahawks': 'SEA',
-  'Rams': 'LAR',
-  'RAM': 'LAR',
-  '49ers': 'SF',
-  '49E': 'SF',
-  'Cardinals': 'ARI',
-  'Saints': 'NO',
-  'NEW': 'NO',
-  'Buccaneers': 'TB',
-  'BUC': 'TB',
-  'Panthers': 'CAR',
-  'Commanders': 'WAS',
-  'COM': 'WAS',
-  'Giants': 'NYG',
 
   // NBA Teams  
   'Los Angeles Lakers': 'LAL',
@@ -168,39 +113,33 @@ const teamNameToAbbr: Record<string, string> = {
   'Dallas Stars': 'DAL',
   'Nashville Predators': 'NSH',
 
-  // WNBA Teams - Full Names (using unique abbreviations to avoid conflicts)
+  // WNBA Teams - Full Names
   'Phoenix Mercury': 'PHO',
   'Washington Mystics': 'WAS',
   'Golden State Valkyries': 'GSV',
-  'Las Vegas Aces': 'LAS',
-  'Chicago Sky': 'CHIS',
+  'Las Vegas Aces': 'LV',
+  'Chicago Sky': 'CHI',
   'Connecticut Sun': 'CON',
   'Indiana Fever': 'IND',
   'New York Liberty': 'NYL',
-  'Minnesota Lynx': 'MINL',
-  'Seattle Storm': 'SEAS',
-  'Dallas Wings': 'DALW',
-  'Atlanta Dream': 'ATLD',
+  'Minnesota Lynx': 'MIN',
+  'Seattle Storm': 'SEA',
+  'Dallas Wings': 'DAL',
+  'Atlanta Dream': 'ATL',
   
   // WNBA Teams - Short Names (what the API returns)
   'Mercury': 'PHO',
   'Mystics': 'WAS',
-  'MYS': 'WAS', // Alternative abbreviation
   'Valkyries': 'GSV',
-  'GOL': 'GSV', // Alternative abbreviation
-  'GS': 'GSV', // ESPN API abbreviation for Golden State Valkyries
-  'Aces': 'LAS',
-  'LV': 'LAS', // Alternative abbreviation
-  'Sky': 'CHIS',
+  'Aces': 'LV',
+  'Sky': 'CHIS',  // Chicago Sky - unique to avoid conflict with CHI
   'Sun': 'CON',
   'Fever': 'IND',
   'Liberty': 'NYL',
-  'Lynx': 'MINL',
-  'MIN': 'MINL', // ESPN API abbreviation for Minnesota Lynx (conflicts with NFL!)
-  'Storm': 'SEAS',
-  'Wings': 'DALW',
-  'DAL': 'DALW', // ESPN API abbreviation for Dallas Wings (conflicts with NFL!)
-  'Dream': 'ATLD'
+  'Lynx': 'MINL', // Minnesota Lynx - unique to avoid conflict with MIN
+  'Storm': 'SEAS', // Seattle Storm - unique to avoid conflict with SEA  
+  'Wings': 'DALW', // Dallas Wings - unique to avoid conflict with DAL
+  'Dream': 'ATLD', // Atlanta Dream - unique to avoid conflict with ATL
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -766,260 +705,38 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     );
   }
 
-  // Define team colors early for consistent reference
-  const teamColors: Record<string, { primary: string; secondary: string; accent?: string }> = {
-    // WNBA Team Colors (all using unique abbreviations)
-    'PHO': { primary: '#E56020', secondary: '#000000', accent: '#FFFFFF' }, // Mercury Orange/Black
-    'WAS': { primary: '#C8102E', secondary: '#002B5C', accent: '#FFFFFF' }, // Mystics Red/Navy
-    'MYS': { primary: '#C8102E', secondary: '#002B5C', accent: '#FFFFFF' }, // Mystics Red/Navy (alt)
-    'GSV': { primary: '#000000', secondary: '#FDB927', accent: '#FFFFFF' }, // Valkyries Black/Gold
-    'GOL': { primary: '#000000', secondary: '#FDB927', accent: '#FFFFFF' }, // Valkyries Black/Gold (alt)
-    'LAS': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' }, // Aces Black/Red/Gold
-    'LV': { primary: '#000000', secondary: '#C8102E', accent: '#FDB927' },  // Aces Black/Red/Gold (alt)
-    'CHIS': { primary: '#418FDE', secondary: '#FFC72C', accent: '#000000' }, // Sky Blue/Yellow
-    'CON': { primary: '#E03A3E', secondary: '#041E42', accent: '#FFFFFF' },  // Sun Red/Navy
-    'IND': { primary: '#002D62', secondary: '#FDBB30', accent: '#FFFFFF' },  // Fever Navy/Gold
-    'NYL': { primary: '#86BC25', secondary: '#000000', accent: '#FFFFFF' },  // Liberty Green/Black
-    'MINL': { primary: '#266092', secondary: '#FFC72C', accent: '#FFFFFF' }, // Lynx Blue/Gold
-    'SEAS': { primary: '#2C5234', secondary: '#FFC72C', accent: '#FFFFFF' }, // Storm Green/Gold
-    'DALW': { primary: '#C4D600', secondary: '#041E42', accent: '#FFFFFF' }, // Wings Lime/Navy
-    'ATLD': { primary: '#C8102E', secondary: '#FFC72C', accent: '#000000' }, // Dream Red/Gold
-
-    // NCAAF Team Colors (popular teams)
-    'ALA': { primary: '#9E1B32', secondary: '#FFFFFF', accent: '#000000' }, // Alabama Crimson
-    'GA': { primary: '#BA0C2F', secondary: '#000000', accent: '#FFFFFF' },  // Georgia Red/Black
-    'OSU': { primary: '#BB0000', secondary: '#FFFFFF', accent: '#000000' }, // Ohio State Scarlet
-    'TEX': { primary: '#BF5700', secondary: '#FFFFFF', accent: '#000000' }, // Texas Orange
-    'ND': { primary: '#0C2340', secondary: '#C99700', accent: '#FFFFFF' },  // Notre Dame Navy/Gold
-    'USC': { primary: '#990000', secondary: '#FFCC00', accent: '#FFFFFF' }, // USC Cardinal/Gold
-    'MICH': { primary: '#00274C', secondary: '#FFCB05', accent: '#FFFFFF' }, // Michigan Navy/Maize
-    'PSU': { primary: '#041E42', secondary: '#FFFFFF', accent: '#000000' }, // Penn State Navy
-    'LSU': { primary: '#461D7C', secondary: '#FDD023', accent: '#FFFFFF' }, // LSU Purple/Gold
-    'FLA': { primary: '#0021A5', secondary: '#FA4616', accent: '#FFFFFF' }, // Florida Blue/Orange
-
-    // NBA Team Colors (add common ones)
-    'LAL': { primary: '#552583', secondary: '#FDB927', accent: '#000000' }, // Lakers Purple/Gold
-    'BOS': { primary: '#007A33', secondary: '#BA9653', accent: '#FFFFFF' }, // Celtics Green/Gold
-    'GSW': { primary: '#1D428A', secondary: '#FFC72C', accent: '#FFFFFF' }, // Warriors Blue/Gold
-    'CHI': { primary: '#CE1141', secondary: '#000000', accent: '#FFFFFF' }, // Bulls Red/Black
-    'MIA': { primary: '#98002E', secondary: '#F9A01B', accent: '#000000' }, // Heat Red/Orange
-
-    // NHL Team Colors (add common ones)
-    'LAK': { primary: '#111111', secondary: '#A2AAAD', accent: '#FFFFFF' }, // Kings Black/Silver
-    'ANA': { primary: '#F47A38', secondary: '#B9975B', accent: '#000000' }, // Ducks Orange/Gold
-    'VGK': { primary: '#B4975A', secondary: '#000000', accent: '#C8AA6E' }, // Golden Knights Gold/Black
-
-    // NFL Team Colors (comprehensive set)
-    'KC': { primary: '#E31837', secondary: '#FFB81C', accent: '#FFFFFF' },  // Chiefs Red/Gold
-    'BUF': { primary: '#00338D', secondary: '#C60C30', accent: '#FFFFFF' }, // Bills Blue/Red
-    'NYJ': { primary: '#125740', secondary: '#FFFFFF', accent: '#000000' }, // Jets Green/White
-    'NE': { primary: '#002244', secondary: '#C60C30', accent: '#B0B7BC' }, // Patriots Navy/Red/Silver
-    'MIA': { primary: '#008E97', secondary: '#FC4C02', accent: '#FFFFFF' }, // Dolphins Aqua/Orange
-    'PIT': { primary: '#FFB612', secondary: '#101820', accent: '#FFFFFF' }, // Steelers Gold/Black
-    'BAL': { primary: '#241773', secondary: '#000000', accent: '#9E7C0C' }, // Ravens Purple/Black/Gold
-    'CIN': { primary: '#FB4F14', secondary: '#000000', accent: '#FFFFFF' }, // Bengals Orange/Black
-    'CLE': { primary: '#311D00', secondary: '#FF3C00', accent: '#FFFFFF' }, // Browns Brown/Orange
-    'HOU': { primary: '#03202F', secondary: '#A71930', accent: '#FFFFFF' }, // Texans Navy/Red
-    'IND': { primary: '#002C5F', secondary: '#A2AAAD', accent: '#FFFFFF' }, // Colts Blue/Silver
-    'JAX': { primary: '#006778', secondary: '#D7A22A', accent: '#9F792C' }, // Jaguars Teal/Gold
-    'TEN': { primary: '#0C2340', secondary: '#4B92DB', accent: '#C8102E' }, // Titans Navy/Blue/Red
-    'DEN': { primary: '#FB4F14', secondary: '#002244', accent: '#FFFFFF' }, // Broncos Orange/Navy
-    'LAS': { primary: '#000000', secondary: '#A5ACAF', accent: '#FFFFFF' }, // Raiders Black/Silver
-    'LAC': { primary: '#0080C6', secondary: '#FFC20E', accent: '#FFFFFF' }, // Chargers Blue/Gold
-    'DAL': { primary: '#041E42', secondary: '#869397', accent: '#FFFFFF' }, // Cowboys Navy/Silver
-    'PHI': { primary: '#004C54', secondary: '#A5ACAF', accent: '#ACC0C6' }, // Eagles Green/Silver
-    'ATL': { primary: '#A71930', secondary: '#000000', accent: '#A5ACAF' }, // Falcons Red/Black/Silver
-    'CHI': { primary: '#0B162A', secondary: '#C83803', accent: '#FFFFFF' }, // Bears Navy/Orange
-    'MIN': { primary: '#4F2683', secondary: '#FFC62F', accent: '#FFFFFF' }, // Vikings Purple/Gold
-    'GB': { primary: '#203731', secondary: '#FFB612', accent: '#FFFFFF' },  // Packers Green/Gold
-    'DET': { primary: '#0076B6', secondary: '#B0B7BC', accent: '#000000' }, // Lions Blue/Silver
-    'SEA': { primary: '#002244', secondary: '#69BE28', accent: '#A5ACAF' }, // Seahawks Navy/Green/Silver
-    'LAR': { primary: '#003594', secondary: '#FFA300', accent: '#FFFFFF' }, // Rams Blue/Gold
-    'SF': { primary: '#AA0000', secondary: '#B3995D', accent: '#FFFFFF' },  // 49ers Red/Gold
-    'ARI': { primary: '#97233F', secondary: '#000000', accent: '#FFB612' }, // Cardinals Red/Black/Gold
-    'NO': { primary: '#D3BC8D', secondary: '#101820', accent: '#FFFFFF' },  // Saints Gold/Black
-    'TB': { primary: '#D50A0A', secondary: '#FF7900', accent: '#0A0A08' }, // Bucs Red/Orange/Black
-    'CAR': { primary: '#0085CA', secondary: '#101820', accent: '#BFC0BF' }, // Panthers Blue/Black/Silver
-    'WAS': { primary: '#5A1414', secondary: '#FFB612', accent: '#FFFFFF' }, // Commanders Burgundy/Gold
-    'NYG': { primary: '#0B2265', secondary: '#A71930', accent: '#A5ACAF' }, // Giants Blue/Red/Silver
-  };
-
-  // Generate sport-specific logo function (main implementation)
-  const generateSportLogo = (sport: string, teamAbbr: string, teamName: string) => {
-    const colors = teamColors[teamAbbr] || { 
-      primary: '#1e40af', 
-      secondary: '#ffffff', 
-      accent: '#000000' 
-    };
-    
-    const abbr = teamAbbr || (teamName || '').slice(0, 3).toUpperCase();
-
-    switch (sport?.toUpperCase()) {
-      case 'WNBA':
-        // Generate jersey shirt with team colors
-        return (
-          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
-            {/* Jersey background */}
-            <rect x="15" y="20" width="70" height="70" rx="8" fill={colors.primary} stroke={colors.secondary} strokeWidth="2"/>
-            
-            {/* Jersey sleeves */}
-            <ellipse cx="12" cy="35" rx="8" ry="15" fill={colors.primary} stroke={colors.secondary} strokeWidth="1"/>
-            <ellipse cx="88" cy="35" rx="8" ry="15" fill={colors.primary} stroke={colors.secondary} strokeWidth="1"/>
-            
-            {/* Jersey collar */}
-            <path d="M 35 20 Q 50 15 65 20 L 65 30 Q 50 25 35 30 Z" fill={colors.secondary} stroke={colors.accent || colors.primary} strokeWidth="1"/>
-            
-            {/* Team abbreviation */}
-            <text x="50" y="55" textAnchor="middle" className="fill-current font-black text-sm" style={{ fill: colors.secondary }}>
-              {abbr}
-            </text>
-            
-            {/* Jersey number accent */}
-            <circle cx="50" cy="70" r="8" fill={colors.secondary} stroke={colors.accent || colors.primary} strokeWidth="1"/>
-            <text x="50" y="75" textAnchor="middle" className="fill-current font-bold text-xs" style={{ fill: colors.primary }}>
-              {Math.abs(abbr.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 99 + 1}
-            </text>
-          </svg>
-        );
-
-      case 'NCAAF':
-        // Generate football helmet with team colors
-        return (
-          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
-            {/* Helmet shell */}
-            <path d="M 25 35 Q 25 20 50 20 Q 75 20 75 35 L 75 60 Q 75 75 50 75 Q 25 75 25 60 Z" 
-                  fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
-            
-            {/* Face mask */}
-            <path d="M 30 45 Q 50 40 70 45" stroke={colors.secondary} strokeWidth="2" fill="none"/>
-            <path d="M 32 52 Q 50 47 68 52" stroke={colors.secondary} strokeWidth="2" fill="none"/>
-            <path d="M 35 59 Q 50 54 65 59" stroke={colors.secondary} strokeWidth="2" fill="none"/>
-            
-            {/* Helmet stripe */}
-            <rect x="47" y="20" width="6" height="55" fill={colors.secondary} rx="3"/>
-            
-            {/* Team logo area */}
-            <circle cx="50" cy="40" r="12" fill={colors.secondary} stroke={colors.accent || colors.primary} strokeWidth="1"/>
-            <text x="50" y="46" textAnchor="middle" className="fill-current font-black text-xs" style={{ fill: colors.primary }}>
-              {abbr}
-            </text>
-            
-            {/* Helmet chin strap */}
-            <ellipse cx="50" cy="70" rx="15" ry="4" fill={colors.secondary} stroke={colors.accent || colors.primary} strokeWidth="1"/>
-          </svg>
-        );
-
-      case 'NBA':
-        // Generate basketball with team colors
-        return (
-          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-            <circle cx="50" cy="50" r="45" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
-            
-            {/* Basketball lines */}
-            <path d="M 50 5 Q 50 50 50 95" stroke={colors.secondary} strokeWidth="2" fill="none"/>
-            <path d="M 5 50 Q 50 50 95 50" stroke={colors.secondary} strokeWidth="2" fill="none"/>
-            <path d="M 15 15 Q 50 50 85 85" stroke={colors.secondary} strokeWidth="1.5" fill="none"/>
-            <path d="M 15 85 Q 50 50 85 15" stroke={colors.secondary} strokeWidth="1.5" fill="none"/>
-            
-            <text x="50" y="58" textAnchor="middle" className="fill-current font-black text-lg" style={{ fill: colors.secondary }}>
-              {abbr}
-            </text>
-          </svg>
-        );
-
-      case 'NHL':
-        // Generate hockey puck with team colors
-        return (
-          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
-            <ellipse cx="50" cy="50" rx="45" ry="35" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
-            
-            {/* Puck edge highlight */}
-            <ellipse cx="50" cy="45" rx="40" ry="30" fill="none" stroke={colors.secondary} strokeWidth="1" opacity="0.6"/>
-            
-            {/* Team text */}
-            <text x="50" y="58" textAnchor="middle" className="fill-current font-black text-lg" style={{ fill: colors.secondary }}>
-              {abbr}
-            </text>
-          </svg>
-        );
-
-      case 'NFL':
-        // Generate football with team colors
-        return (
-          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
-            <ellipse cx="50" cy="50" rx="35" ry="45" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
-            
-            {/* Football laces */}
-            <line x1="50" y1="20" x2="50" y2="80" stroke={colors.secondary} strokeWidth="2"/>
-            <line x1="45" y1="30" x2="55" y2="30" stroke={colors.secondary} strokeWidth="1.5"/>
-            <line x1="45" y1="40" x2="55" y2="40" stroke={colors.secondary} strokeWidth="1.5"/>
-            <line x1="45" y1="50" x2="55" y2="50" stroke={colors.secondary} strokeWidth="1.5"/>
-            <line x1="45" y1="60" x2="55" y2="60" stroke={colors.secondary} strokeWidth="1.5"/>
-            <line x1="45" y1="70" x2="55" y2="70" stroke={colors.secondary} strokeWidth="1.5"/>
-            
-            <text x="50" y="58" textAnchor="middle" className="fill-current font-black text-sm" style={{ fill: colors.secondary }}>
-              {abbr}
-            </text>
-          </svg>
-        );
-
-      case 'CFL':
-        // Generate Canadian football with team colors (slightly wider)
-        return (
-          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
-            <ellipse cx="50" cy="50" rx="38" ry="45" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
-            
-            {/* CFL laces */}
-            <line x1="50" y1="20" x2="50" y2="80" stroke={colors.secondary} strokeWidth="2"/>
-            <line x1="44" y1="30" x2="56" y2="30" stroke={colors.secondary} strokeWidth="1.5"/>
-            <line x1="44" y1="50" x2="56" y2="50" stroke={colors.secondary} strokeWidth="1.5"/>
-            <line x1="44" y1="70" x2="56" y2="70" stroke={colors.secondary} strokeWidth="1.5"/>
-            
-            {/* Maple leaf accent */}
-            <path d="M 45 40 L 50 35 L 55 40 L 52 45 L 48 45 Z" fill={colors.accent || colors.secondary} stroke="none"/>
-            
-            <text x="50" y="68" textAnchor="middle" className="fill-current font-black text-sm" style={{ fill: colors.secondary }}>
-              {abbr}
-            </text>
-          </svg>
-        );
-
-      default:
-        // Generic sport icon with team colors
-        return (
-          <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-            <circle cx="50" cy="50" r="45" fill={colors.primary} stroke={colors.secondary} strokeWidth="3"/>
-            <circle cx="50" cy="50" r="30" fill="none" stroke={colors.secondary} strokeWidth="1" opacity="0.5"/>
-            <text x="50" y="58" textAnchor="middle" className="fill-current font-black text-lg" style={{ fill: colors.secondary }}>
-              {abbr}
-            </text>
-          </svg>
-        );
-    }
-  };
-
-  // For WNBA teams, ALWAYS use sport-specific generated icons (bypass logoMap completely)
-  if (sport === 'WNBA') {
-    // Handle ESPN API abbreviation conflicts (DAL=Wings, MIN=Lynx, etc.)
-    if (teamName?.includes('Wings')) teamAbbr = 'DALW';
-    if (teamName?.includes('Lynx')) teamAbbr = 'MINL';
-    if (teamName?.includes('Valkyries')) teamAbbr = 'GSV';
-    
-    console.log(`Using sport-specific icon for WNBA team: ${teamName} (${teamAbbr})`);
-    return generateSportLogo('WNBA', teamAbbr || '', teamName || '');
+  // Check for WNBA logos if not found in ESPN
+  const wnbaLogoUrl = teamAbbr ? wnbaLogos[teamAbbr] : null;
+  if (wnbaLogoUrl) {
+    return (
+      <img 
+        src={wnbaLogoUrl} 
+        alt={teamName}
+        className={`${sizeClasses[size]} ${className} object-contain`}
+        onError={(e) => {
+          console.log(`Failed to load WNBA logo for ${teamName}`);
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
   }
 
-  // Check logoMap for non-WNBA teams
+  // Generic fallback logo with better styling
+  const defaultLogo = (
+    <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
+      <span className="text-white font-black text-xs">{teamAbbr || (teamName || '').slice(0, 3).toUpperCase()}</span>
+    </div>
+  );
+
   const selectedLogo = teamAbbr ? logoMap[teamAbbr] : null;
 
-  if (selectedLogo) {
-    return selectedLogo;
+  if (!selectedLogo) {
+    // Only log warnings for actual team names, not fallback cases
+    if (teamName !== 'TBD' && abbreviation !== 'TBD') {
+      console.warn(`No logo found for team: ${teamName} (${teamAbbr}), using fallback`);
+    }
+    return defaultLogo;
   }
 
-  // Fallback: Generate sport-specific logo for any team without a logoMap entry
-  if (teamName !== 'TBD' && abbreviation !== 'TBD') {
-    console.warn(`No logo found for team: ${teamName} (${teamAbbr}), using sport-specific fallback for ${sport}`);
-  }
-  
-  return generateSportLogo(sport || 'DEFAULT', teamAbbr || '', teamName || '');
+  return selectedLogo;
 }

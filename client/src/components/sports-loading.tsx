@@ -156,13 +156,6 @@ export function SportsLoading({
         "Loading college rankings...",
         "Analyzing conference play...",
         "Preparing bowl projections..."
-      ],
-      WNBA: [
-        "Shooting for the stars...",
-        "Loading court dimensions...",
-        "Analyzing three-point range...",
-        "Preparing for tip-off...",
-        "Studying defensive schemes..."
       ]
     };
 
