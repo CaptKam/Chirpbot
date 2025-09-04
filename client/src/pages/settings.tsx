@@ -48,12 +48,11 @@ const ALERT_TYPE_CONFIG = {
     { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
   ],
   NCAAF: [
+    { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Game kickoff notification' },
+    { key: 'NCAAF_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Second half begins notification' },
     { key: 'RED_ZONE', label: 'Red Zone Opportunities', description: 'Team advances inside the 20-yard line' },
     { key: 'FOURTH_DOWN', label: 'Fourth Down Situations', description: 'Critical fourth down attempts' },
     { key: 'TWO_MINUTE_WARNING', label: 'Two-Minute Warning', description: 'Final 2 minutes of each half' },
-    { key: 'NCAAF_KICKOFF', label: 'Game Start & Second Half', description: 'Kickoffs for game start and second half' },
-    { key: 'NCAAF_HALFTIME', label: 'Halftime Score', description: 'Score updates at halftime' },
-    { key: 'NCAAF_TWO_MINUTE_WARNING', label: 'Late Game Pressure', description: 'Critical final minutes' },
     { key: 'CLUTCH_TIME', label: 'Clutch Time Situations', description: 'High-pressure game moments' },
     { key: 'OVERTIME', label: 'Overtime Play', description: 'Games entering overtime' }
   ],
@@ -75,8 +74,13 @@ const ALERT_TYPE_CONFIG = {
       { key: "EMPTY_NET", label: "Empty Net", description: "Goalie pulled situations" },
     ],
     CFL: [
+      { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+      { key: "CFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+      { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 25-yard line" },
+      { key: "THIRD_DOWN", label: "Third Down (CFL)", description: "Critical third down conversion attempts" },
+      { key: "THREE_MINUTE_WARNING", label: "Three-Minute Warning", description: "Final 3 minutes of each half" },
       { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Third Down (CFL)", description: "Critical down conversion attempts" },
+      { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
     ],
     WNBA: [
     { key: 'CLOSE_GAME', label: 'Close Game Alert', description: 'Games with tight scores' },

@@ -307,18 +307,23 @@ export const storage = {
         'RE24_DYNAMIC_PRIORITY': true,
 
         // NCAAF Alerts
+        'NCAAF_GAME_START': true,
+        'NCAAF_SECOND_HALF_KICKOFF': true,
         'RED_ZONE': true,
         'FOURTH_DOWN': true,
         'TWO_MINUTE_WARNING': true,
-        'NCAAF_KICKOFF': true,
-        'NCAAF_HALFTIME': true,
-        'NCAAF_TWO_MINUTE_WARNING': true,
         'CLUTCH_TIME': true,
         'OVERTIME': true,
 
         // NFL Alerts
         'NFL_GAME_START': true,
         'NFL_SECOND_HALF_KICKOFF': true,
+
+        // CFL Alerts
+        'CFL_GAME_START': true,
+        'CFL_SECOND_HALF_KICKOFF': true,
+        'THIRD_DOWN': true,
+        'THREE_MINUTE_WARNING': true,
 
         // WNBA Alerts
         'WNBA_FOURTH_QUARTER': true,

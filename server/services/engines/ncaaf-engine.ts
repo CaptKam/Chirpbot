@@ -55,6 +55,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
     try {
       // Generate NCAAF-specific alerts
+      alerts.push(...await this.generateGameStartAlerts(gameState));
+      alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
       alerts.push(...await this.generateTwoMinuteWarningAlerts(gameState));
       alerts.push(...await this.generateRedZoneAlerts(gameState));
       alerts.push(...await this.generateFourthDownAlerts(gameState));
@@ -168,6 +170,70 @@ export class NCAAFEngine extends BaseSportEngine {
     return alerts;
   }
 
+  private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { quarter, timeRemaining } = gameState;
+
+    // Game start - first quarter kickoff
+    if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
+      const gameStartEnabled = await this.isAlertEnabled('NCAAF_GAME_START');
+      if (gameStartEnabled) {
+        const alertKey = `${gameState.gameId}_NCAAF_GAME_START`;
+        const message = `🏈 NCAAF GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
+
+        alerts.push({
+          alertKey,
+          type: 'NCAAF_GAME_START',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter,
+            timeRemaining,
+            isGameStart: true
+          },
+          priority: 100
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  private async generateHalftimeKickoffAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { quarter, timeRemaining } = gameState;
+
+    // Second half kickoff
+    if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
+      const halftimeKickoffEnabled = await this.isAlertEnabled('NCAAF_SECOND_HALF_KICKOFF');
+      if (halftimeKickoffEnabled) {
+        const alertKey = `${gameState.gameId}_NCAAF_SECOND_HALF_KICKOFF`;
+        const message = `🏈 NCAAF SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
+
+        alerts.push({
+          alertKey,
+          type: 'NCAAF_SECOND_HALF_KICKOFF',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter,
+            timeRemaining,
+            isSecondHalf: true
+          },
+          priority: 95
+        });
+      }
+    }
+
+    return alerts;
+  }
+
   private async generateOvertimeAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
     const { quarter } = gameState;
@@ -218,6 +284,18 @@ export class NCAAFEngine extends BaseSportEngine {
       return (minutes * 60) + seconds;
     }
     return parseInt(cleanTime) || 0;
+  }
+
+  private isKickoffTime(timeRemaining: string): boolean {
+    // Kickoff typically happens at start of quarter (15:00 or close to it)
+    if (!timeRemaining) return false;
+    
+    try {
+      const totalSeconds = this.parseTimeToSeconds(timeRemaining);
+      return totalSeconds >= 880 && totalSeconds <= 900; // Between 14:40 and 15:00
+    } catch (error) {
+      return false;
+    }
   }
 
   private getOrdinalSuffix(num: number): string {
