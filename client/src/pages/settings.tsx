@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 
@@ -81,10 +82,22 @@ export default function Settings() {
     // Persist active sport selection in localStorage
     return localStorage.getItem('settings-active-sport') || "MLB";
   });
+
+  // Ensure active sport has games, otherwise switch to first available sport
+  useEffect(() => {
+    if (sportsWithGames.length > 0 && !getSportHasGames(activeSport)) {
+      const firstAvailableSport = sportsWithGames[0];
+      setActiveSport(firstAvailableSport);
+      localStorage.setItem('settings-active-sport', firstAvailableSport);
+    }
+  }, [sportsWithGames, activeSport, getSportHasGames]);
   const { toast } = useToast();
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  
+  // Games availability
+  const { getSportHasGames, sportsWithGames } = useGamesAvailability();
 
   // Telegram settings state
   const [telegramBotToken, setTelegramBotToken] = useState("");
@@ -326,10 +339,10 @@ export default function Settings() {
         )}
       </header>
 
-      {/* Sport Tabs */}
+      {/* Sport Tabs - Only show sports with games within two days */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
         <div className="flex overflow-x-auto">
-          {SPORTS.map((sport) => (
+          {SPORTS.filter(sport => getSportHasGames(sport)).map((sport) => (
             <button
               key={sport}
               onClick={() => {

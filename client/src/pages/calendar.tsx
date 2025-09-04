@@ -165,7 +165,14 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   
-  const { hasGamesWithinTwoDays, hasTomorrowGames } = useGamesAvailability();
+  const { hasGamesWithinTwoDays, hasTomorrowGames, getSportHasGames, sportsWithGames } = useGamesAvailability();
+
+  // Ensure active sport has games, otherwise switch to first available sport
+  useEffect(() => {
+    if (sportsWithGames.length > 0 && !getSportHasGames(activeSport)) {
+      setActiveSport(sportsWithGames[0]);
+    }
+  }, [sportsWithGames, activeSport, getSportHasGames]);
 
   // Fetch today's games
   const { data: todayGamesData, isLoading: isLoadingToday } = useQuery<GameDay>({
@@ -343,10 +350,10 @@ export default function Calendar() {
         </div>
       </header>
 
-      {/* Sport Tabs */}
+      {/* Sport Tabs - Only show sports with games within two days */}
       <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
         <div className="flex overflow-x-auto">
-          {SPORTS.map((sport) => (
+          {SPORTS.filter(sport => getSportHasGames(sport)).map((sport) => (
             <button
               key={sport}
               onClick={() => {
