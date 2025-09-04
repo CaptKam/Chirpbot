@@ -9,6 +9,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
 import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
+import { pool } from "./db";
 
 // Global error handlers to prevent unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
