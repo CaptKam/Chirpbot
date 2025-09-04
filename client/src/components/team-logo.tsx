@@ -111,35 +111,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Vegas Golden Knights': 'VGK',
   'Colorado Avalanche': 'COL',
   'Dallas Stars': 'DAL',
-  'Nashville Predators': 'NSH',
-
-  // WNBA Teams
-  'Atlanta Dream': 'ATL',
-  'Chicago Sky': 'CHI',
-  'Connecticut Sun': 'CONN',
-  'Dallas Wings': 'DAL',
-  'Indiana Fever': 'IND',
-  'Las Vegas Aces': 'LAS',
-  'Minnesota Lynx': 'MIN',
-  'New York Liberty': 'NY',
-  'Phoenix Mercury': 'PHX',
-  'Seattle Storm': 'SEA',
-  'Washington Mystics': 'WSH',
-  'Golden State Valkyries': 'GSV',
-
-  // Common shortened names for WNBA
-  'Dream': 'ATL',
-  'Sky': 'CHI',
-  'Sun': 'CONN',
-  'Wings': 'DAL',
-  'Fever': 'IND',
-  'Aces': 'LAS',
-  'Lynx': 'MIN',
-  'Liberty': 'NY',
-  'Mercury': 'PHX',
-  'Storm': 'SEA',
-  'Mystics': 'WSH',
-  'Valkyries': 'GSV'
+  'Nashville Predators': 'NSH'
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -537,92 +509,6 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#092C5C" stroke="#8FBCE6" strokeWidth="2"/>
         <text x="50" y="58" textAnchor="middle" className="fill-white font-black text-xl font-sans">TB</text>
-      </svg>
-    ),
-
-    // WNBA Teams with Team Colors
-    'ATL': ( // Atlanta Dream
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#E31837" stroke="#000000" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">ATL</text>
-      </svg>
-    ),
-    'CHI': ( // Chicago Sky
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#5091CD" stroke="#FFC72C" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">CHI</text>
-      </svg>
-    ),
-    'CONN': ( // Connecticut Sun
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#FF4500" stroke="#000080" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-xs font-sans">CONN</text>
-      </svg>
-    ),
-    'DAL': ( // Dallas Wings
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#0053BC" stroke="#00A651" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">DAL</text>
-      </svg>
-    ),
-    'IND': ( // Indiana Fever (WNBA)
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#002D62" stroke="#FDBB30" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">IND</text>
-      </svg>
-    ),
-    'LAS': ( // Las Vegas Aces
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#000000" stroke="#C8102E" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-red-500 font-black text-sm font-sans">LAS</text>
-      </svg>
-    ),
-    'MIN': ( // Minnesota Lynx (WNBA)
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#266092" stroke="#00A651" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">MIN</text>
-      </svg>
-    ),
-    'NY': ( // New York Liberty
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#86BC25" stroke="#000000" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-black font-black text-xl font-sans">NY</text>
-      </svg>
-    ),
-    'PHX': ( // Phoenix Mercury
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#CB6015" stroke="#201747" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">PHX</text>
-      </svg>
-    ),
-    'SEA': ( // Seattle Storm (WNBA)
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#2C5234" stroke="#FFC72C" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">SEA</text>
-      </svg>
-    ),
-    'WSH': ( // Washington Mystics (WNBA)
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#E31837" stroke="#002B5C" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">WSH</text>
-      </svg>
-    ),
-    'GSV': ( // Golden State Valkyries
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#1D428A" stroke="#FFC72C" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">GSV</text>
-      </svg>
-    ),
-    'GOL': ( // Golden State Valkyries (alternate abbreviation)
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#1D428A" stroke="#FFC72C" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">GOL</text>
-      </svg>
-    ),
-    'MYS': ( // Washington Mystics (alternate abbreviation)
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <rect x="20" y="35" width="60" height="30" rx="5" fill="#E31837" stroke="#002B5C" strokeWidth="2"/>
-        <text x="50" y="53" textAnchor="middle" className="fill-white font-black text-sm font-sans">MYS</text>
       </svg>
     )
   };
