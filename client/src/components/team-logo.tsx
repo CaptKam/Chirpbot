@@ -202,15 +202,6 @@ const getSportIcon = (sport: string, teamAbbr: string, size: string, className: 
   };
 
   switch (sport) {
-    case 'WNBA':
-      // Jersey-style for WNBA
-      return (
-        <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-lg`}>
-          <rect x="20" y="25" width="60" height="50" rx="8" fill="#E31837" stroke="#FFFFFF" strokeWidth="2"/>
-          <text x="50" y="55" textAnchor="middle" className="fill-white font-black text-sm font-sans">{teamAbbr}</text>
-        </svg>
-      );
-    
     case 'NCAAF':
       // Football helmet for NCAAF
       return (
@@ -297,7 +288,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
   }
 
   // For sports without ESPN logos, use sport-specific icons
-  if (sport && ['WNBA', 'NCAAF'].includes(sport)) {
+  if (sport && ['NCAAF'].includes(sport)) {
     return getSportIcon(sport, teamAbbr || (teamName || '').slice(0, 3).toUpperCase(), size, className);
   }
 
