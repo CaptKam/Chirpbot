@@ -246,11 +246,13 @@ export const storage = {
           eq(userAlertPreferences.alertType, alertType)
         ))
         .returning();
+      console.log(`🔧 RULE 1: Updated user preference ${userId} ${sport}.${alertType} = ${enabled}`);
       return result[0];
     } else {
       const result = await db.insert(userAlertPreferences)
         .values({ userId, sport, alertType, enabled })
         .returning();
+      console.log(`🔧 RULE 1: Created user preference ${userId} ${sport}.${alertType} = ${enabled}`);
       return result[0];
     }
   },
@@ -351,21 +353,26 @@ export const storage = {
 
   async updateGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy: string) {
     try {
-      console.log(`Global alert setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
+      console.log(`🔧 RULE 2: Global alert setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
 
-      // When admin changes global settings, apply to all users (including admin)
+      // When admin changes global settings, apply to all users (RULE 2 enforcement)
       const users = await this.getAllUsers();
+      let successCount = 0;
+      let failCount = 0;
 
       for (const user of users) {
         try {
           await this.setUserAlertPreference(user.id, sport.toLowerCase(), alertType, enabled);
+          successCount++;
+          console.log(`✅ RULE 2: Updated ${alertType}=${enabled} for user ${user.username || user.id}`);
         } catch (userError) {
-          console.error(`Failed to update ${alertType} for user ${user.id}:`, userError);
+          failCount++;
+          console.error(`❌ RULE 2: Failed to update ${alertType} for user ${user.username || user.id}:`, userError);
         }
       }
 
-      console.log(`✅ Successfully updated ${sport}.${alertType} = ${enabled} for all ${users.length} users`);
-      return;
+      console.log(`🎯 RULE 2 ENFORCEMENT: Global setting ${sport}.${alertType} = ${enabled} applied to ${successCount}/${users.length} users (${failCount} failed)`);
+      return { successCount, failCount, totalUsers: users.length };
     } catch (error) {
       console.error('Error updating global alert setting:', error);
       throw error;

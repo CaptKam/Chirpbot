@@ -1360,46 +1360,48 @@ export class AlertGenerator {
 
       // Send to Telegram for users monitoring this game
       try {
-        // Get all monitored games and filter by this gameId
-        const allMonitoredGames = await storage.getAllMonitoredGames();
-        const usersMonitoringGame = allMonitoredGames.filter(mg => mg.gameId === gameId);
+        // Send to users with proper preference checking (RULE 1 & 2 ENFORCEMENT)
+      console.log(`📡 Sending Telegram alerts with preference checking for ${type}`);
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
+      console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
 
-        console.log(`📡 DEBUG: Found ${allMonitoredGames.length} total monitored games, ${usersMonitoringGame.length} for gameId ${gameId}`);
+      for (const user of telegramUsers) {
+        console.log(`📱 🔍 Processing Telegram for user: ${user.username}`);
 
-        // Send to ALL users with Telegram configured (simplified approach)
-        console.log(`📡 Sending Telegram alerts to all configured users for ${type}`);
-        const allUsers = await storage.getAllUsers();
-        const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-        console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
+        // RULE 2: Check if globally enabled by admin first
+        const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
+        if (!isGloballyEnabled) {
+          console.log(`⛔ RULE 2: Telegram alert blocked - ${type} globally disabled by admin for user ${user.username}`);
+          continue;
+        }
+        console.log(`✅ RULE 2: Alert ${type} is globally enabled by admin`);
 
-        for (const user of telegramUsers) {
-          console.log(`📱 🔍 Processing Telegram for user: ${user.username}`);
-          console.log(`📱 🔧 User config: enabled=${user.telegramEnabled}, token=${user.telegramBotToken?.substring(0, 10)}..., chatId=${user.telegramChatId}`);
-          
-          // Check if globally enabled
-          const isStillEnabled = await this.isAlertGloballyEnabled(sport, type);
-          if (!isStillEnabled) {
-            console.log(`⛔ Telegram alert blocked - ${type} globally disabled for user ${user.username}`);
+        // RULE 1: Check individual user preferences  
+        try {
+          const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
+          const userPref = userPrefs.find(p => p.alertType === type);
+
+          // Default behavior: if user has never set a preference, follow global admin setting
+          const userHasEnabled = userPref ? userPref.enabled : isGloballyEnabled;
+
+          console.log(`📱 🔧 RULE 1: User ${user.username} preference for ${type}: ${userHasEnabled} (${userPref ? 'explicitly set' : 'following global admin setting'})`);
+
+          if (!userHasEnabled) {
+            console.log(`⛔ RULE 1: User ${user.username} has ${type} disabled in individual preferences`);
             continue;
           }
 
-          console.log(`✅ Alert ${type} is globally enabled for user ${user.username}`);
-
-          // Check user preferences - default to enabled if not set
-          try {
-            const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
-            const userPref = userPrefs.find(p => p.alertType === type);
-            const userHasEnabled = userPref ? userPref.enabled : true; // Default to enabled
-            
-            console.log(`📱 🔧 User ${user.username} preference for ${type}: ${userHasEnabled} (${userPref ? 'set' : 'default'})`);
-            
-            if (!userHasEnabled) {
-              console.log(`⛔ User ${user.username} has ${type} disabled in preferences`);
-              continue;
-            }
-          } catch (prefError) {
-            console.log(`⚠️ Could not check preferences for ${user.username}, defaulting to enabled`);
+          console.log(`✅ RULE 1 & 2: All checks passed for user ${user.username}`);
+        } catch (prefError) {
+          console.error(`❌ Error checking preferences for ${user.username}:`, prefError);
+          // On error, default to global admin setting as fallback
+          if (!isGloballyEnabled) {
+            console.log(`⛔ Fallback: Using global admin setting (disabled) for ${user.username}`);
+            continue;
           }
+          console.log(`⚠️ Fallback: Using global admin setting (enabled) for ${user.username}`);
+        }
 
           const telegramConfig: TelegramConfig = {
             botToken: user.telegramBotToken,
@@ -1431,7 +1433,7 @@ export class AlertGenerator {
           try {
             console.log(`📱 🔄 Attempting to send Telegram alert to user ${user.username} (${telegramConfig.chatId})`);
             console.log(`📱 📋 Alert details: ${type} - ${message.substring(0, 100)}...`);
-            
+
             const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
             if (sent) {
               console.log(`📱 ✅ Telegram alert sent successfully to user ${user.username}`);
