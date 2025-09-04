@@ -95,8 +95,10 @@ export default function Settings() {
 
   // Global settings query to check admin-disabled alerts
   const { data: globalSettings } = useQuery({
-    queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
+    queryKey: [`/api/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes to catch admin changes
   });
 
   // Alert preferences query
@@ -127,15 +129,20 @@ export default function Settings() {
 
     // Check if the alert is globally disabled by admin
     if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
+      console.log(`🚫 Global admin setting disabled: ${alertType} for ${sport}`);
       return false;
     }
 
     // For AI Enhancement alerts, look up in MLB preferences (since they're MLB-specific)
     if (alertType.startsWith('AI_')) {
-      return preferenceMap.get(alertType) ?? true;
+      const preference = preferenceMap.get(alertType) ?? true;
+      console.log(`🤖 AI preference for ${alertType}: ${preference}`);
+      return preference;
     }
 
-    return preferenceMap.get(alertType) ?? true;
+    const preference = preferenceMap.get(alertType) ?? true;
+    console.log(`⚙️ User preference for ${alertType}: ${preference}`);
+    return preference;
   };
 
   const logoutMutation = useMutation({
@@ -364,6 +371,17 @@ export default function Settings() {
               Configure settings for {activeSport} alerts and notifications.
             </p>
           </div>
+          {/* Debug info for global settings */}
+          {globalSettings && (
+            <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="text-xs text-blue-300 mb-2">🔧 Admin Global Settings Status:</p>
+              <div className="text-xs text-slate-400 space-y-1">
+                <p>Loaded: {Object.keys(globalSettings).length} alert types</p>
+                <p>Disabled by admin: {Object.entries(globalSettings).filter(([_, enabled]) => enabled === false).length}</p>
+                <p>Last refreshed: {new Date().toLocaleTimeString()}</p>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Alert Preferences */}

@@ -1531,10 +1531,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Global Alert Management Endpoints
   app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
+      // Allow both admin users and regular users to read global settings
+      // Admin users need this for management, regular users need it for their settings page
       const { sport } = req.params;
 
       // Get the global settings from storage
@@ -1595,6 +1593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/admin/global-alert-setting', async (req, res) => {
     try {
+      // Write operations still require admin authentication
       if (!req.session.adminUserId) {
         return res.status(401).json({ message: 'Admin authentication required' });
       }
@@ -1617,6 +1616,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Global settings endpoint for user settings page
+  app.get('/api/global-alert-settings/:sport', async (req, res) => {
+    try {
+      const { sport } = req.params;
+      const settings = await storage.getGlobalAlertSettings(sport);
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching global settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global settings' });
+    }
+  });
+
+  // Legacy endpoint for backwards compatibility
   app.get('/api/admin/global-settings', async (req, res) => {
     try {
       // This endpoint should return the same data as the sport-specific endpoint
@@ -1690,6 +1701,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error enabling all alerts:', error);
       res.status(500).json({ message: 'Failed to enable all alerts' });
+    }
+  });
+
+  // Debug endpoint to test admin-user settings connection
+  app.get('/api/debug/settings-connection/:userId/:sport', async (req, res) => {
+    try {
+      const { userId, sport } = req.params;
+
+      // Get global admin settings
+      const globalSettings = await storage.getGlobalAlertSettings(sport);
+      
+      // Get user's individual preferences
+      const userPreferences = await storage.getUserAlertPreferencesBySport(userId, sport);
+      
+      // Create a combined view
+      const combinedView = {};
+      for (const [alertType, globalEnabled] of Object.entries(globalSettings)) {
+        const userPref = userPreferences.find(p => p.alertType === alertType);
+        const userEnabled = userPref ? userPref.enabled : true; // Default to true if no user preference
+        
+        combinedView[alertType] = {
+          globallyEnabled: globalEnabled,
+          userEnabled: userEnabled,
+          finalResult: globalEnabled && userEnabled, // Must pass both checks
+          ruledBy: !globalEnabled ? 'ADMIN_DISABLED' : 'USER_CHOICE'
+        };
+      }
+
+      res.json({
+        userId,
+        sport,
+        timestamp: new Date().toISOString(),
+        globalSettings,
+        userPreferencesCount: userPreferences.length,
+        combinedView,
+        summary: {
+          totalAlerts: Object.keys(globalSettings).length,
+          adminDisabled: Object.entries(globalSettings).filter(([_, enabled]) => !enabled).length,
+          userCustomized: userPreferences.length,
+          finallyEnabled: Object.values(combinedView).filter((alert: any) => alert.finalResult).length
+        }
+      });
+    } catch (error) {
+      console.error('Error debugging settings connection:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 
