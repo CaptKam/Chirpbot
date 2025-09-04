@@ -620,6 +620,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate test live alerts
+  app.post('/api/alerts/force-generate', async (req, res) => {
+    try {
+      console.log('🧪 FORCING TEST LIVE ALERTS');
+      
+      const alertGenerator = new AlertGenerator();
+      const alertCount = await alertGenerator.generateLiveGameAlerts();
+      
+      res.json({ 
+        message: `Generated ${alertCount} test alerts`,
+        alertCount
+      });
+    } catch (error) {
+      console.error('Error generating test alerts:', error);
+      res.status(500).json({ error: 'Failed to generate test alerts' });
+    }
+  });
+
   // Force send test Telegram alert
   app.post('/api/telegram/force-test', async (req, res) => {
     try {
@@ -631,7 +649,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
       
+      let successCount = 0;
+      let errorCount = 0;
+      
       for (const user of telegramUsers) {
+        console.log(`📱 Testing Telegram for user: ${user.username}`);
+        console.log(`📱 Bot token length: ${user.telegramBotToken?.length || 0}`);
+        console.log(`📱 Chat ID: ${user.telegramChatId}`);
+        
         const config: TelegramConfig = {
           botToken: user.telegramBotToken || '',
           chatId: user.telegramChatId || ''
@@ -659,12 +684,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
 
         const sent = await sendTelegramAlert(config, testAlert);
-        console.log(`📱 Test alert sent to ${user.username}: ${sent}`);
+        if (sent) {
+          successCount++;
+          console.log(`📱 ✅ Test alert sent to ${user.username}`);
+        } else {
+          errorCount++;
+          console.log(`📱 ❌ Test alert failed for ${user.username}`);
+        }
       }
 
       res.json({ 
-        message: 'Test alerts sent',
-        userCount: telegramUsers.length 
+        message: 'Test alerts completed',
+        userCount: telegramUsers.length,
+        successCount,
+        errorCount
       });
     } catch (error) {
       console.error('Error sending test alerts:', error);

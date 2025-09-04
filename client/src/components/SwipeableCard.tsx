@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
-import { motion, PanInfo } from 'framer-motion';
-import { Card } from '@/components/ui/card';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, PanInfo, useMotionValue, useTransform } from 'framer-motion';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calculator, Activity } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, BrainCircuit, ExternalLink, Clock, Check } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import AlertFooter from '@/components/AlertFooter';
-import { Badge } from '@/components/ui/badge';
-import { Alert } from '@/types';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -16,46 +14,52 @@ import draftkingsLogo from '@assets/draftkings.png';
 import fanaticsLogo from '@assets/fanatics.png';
 import fanduelLogo from '@assets/fanduel.png';
 
-// Utility functions
-function formatTime(date: string | Date): string {
-  const alertTime = new Date(date);
-  const now = new Date();
-  const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
+// Types based on your specification
+type InningHalf = "Top" | "Bot";
+type BaseState = { first: boolean; second: boolean; third: boolean };
 
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
-  return alertTime.toLocaleDateString();
+interface TeamSide {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  score: number;
 }
 
-function getAlertColor(priority: number): string {
-  if (priority >= 90) return 'bg-red-400';
-  if (priority >= 80) return 'bg-orange-400';
-  if (priority >= 70) return 'bg-yellow-400';
-  return 'bg-blue-400';
+interface GameState {
+  sport: "MLB" | "NCAAF" | "NBA" | "NHL";
+  inning?: number;
+  half?: InningHalf;
+  outs?: number;
+  balls?: number;
+  strikes?: number;
+  bases?: BaseState;
+  countStr?: string;
+  clockStr?: string;
+  atBat?: string;
+  pitcher?: string;
+  scheduledAtIso?: string;
+  situationText: string;
 }
 
-interface BetbookData {
-  odds: {
-    home: number;
-    away: number;
-    total: number;
-  };
-  aiAdvice: string;
-  sportsbookLinks: Array<{
-    name: string;
-    url: string;
-  }>;
-}
-
-
-interface SwipeableCardProps {
-  children: React.ReactNode;
-  alertId: string;
-  className?: string;
-  onTap?: () => void;
-  alertData?: Alert;
-  [key: string]: any;
+interface Alert {
+  id: string;
+  type: string;
+  priority: number;
+  confidence?: number;
+  ts?: string;
+  createdAt?: string;
+  away?: TeamSide;
+  home?: TeamSide;
+  awayTeam?: string;
+  homeTeam?: string;
+  awayScore?: number;
+  homeScore?: number;
+  game?: GameState;
+  message?: string;
+  sport?: string;
+  context?: any;
+  ai?: { headline?: string; rec?: string; roi?: number };
+  seen?: boolean;
 }
 
 interface Sportsbook {
@@ -104,20 +108,60 @@ const sportsbooks: Sportsbook[] = [
   }
 ];
 
-export function SwipeableCard({ children, alertId, className, onTap, alertData, ...props }: SwipeableCardProps) {
-  const [dragX, setDragX] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+interface SwipeableCardProps {
+  alert: Alert;
+  onOpen?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
+  onAck?: (id: string) => void;
+  className?: string;
+  alertId?: string;
+  alertData?: Alert;
+  children?: React.ReactNode;
+}
+
+export function SwipeableCard({
+  alert: propAlert,
+  onOpen,
+  onDelete,
+  onAck,
+  className,
+  alertId,
+  alertData,
+  children
+}: SwipeableCardProps) {
+  // Use alertData if provided, fallback to alert prop
+  const alert = alertData || propAlert;
+
+  const dragX = useMotionValue(0);
+  const [isDragging, setDragging] = useState(false);
+  const [isDeleting, setDeleting] = useState(false);
+  const autoRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
+
+  // Panel reveals
+  const showLeft = useTransform(dragX, [-420, -120, 0], [1, 1, 0]);
+  const showRight = useTransform(dragX, [0, 90, 160], [0, 1, 1]);
+
+  // Auto-return after 3s when panels are partially open
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const x = dragX.get();
+      if (!isDragging && Math.abs(x) > 10) {
+        dragX.stop();
+        dragX.set(0);
+      }
+    }, 3000);
+    autoRef.current = id;
+    return () => {
+      if (autoRef.current) window.clearInterval(autoRef.current);
+    };
+  }, [isDragging, dragX]);
 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
-    // Try to open the app first, with better fallback handling
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (isMobile) {
-      // On mobile, try deep link first
       const startTime = Date.now();
       const link = document.createElement('a');
       link.href = sportsbook.appUrl;
@@ -126,14 +170,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       link.click();
       document.body.removeChild(link);
 
-      // Check if app opened, fallback to store if not
       setTimeout(() => {
         if (Date.now() - startTime < 1500) {
           window.open(sportsbook.storeUrl, '_blank');
         }
       }, 1000);
     } else {
-      // On desktop, go directly to web version
       const webUrls = {
         'Bet365': 'https://www.bet365.com',
         'DraftKings': 'https://sportsbook.draftkings.com',
@@ -151,17 +193,15 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   };
 
   const handleDeleteAlert = async () => {
-    setIsDeleting(true);
+    setDeleting(true);
     try {
-      const response = await apiRequest("DELETE", `/api/alerts/${alertId}`);
+      await apiRequest("DELETE", `/api/alerts/${alertId || alert.id}`);
 
-      // Immediately update the query cache to remove the deleted alert
       queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
         if (!oldData) return [];
-        return oldData.filter((alert: any) => alert.id !== alertId);
+        return oldData.filter((a: any) => a.id !== (alertId || alert.id));
       });
 
-      // Invalidate queries to refresh from server
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/unseen/count'] });
 
@@ -172,427 +212,296 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     } catch (error: any) {
       console.error('Delete alert error:', error);
       toast({
-        title: "Error", 
+        title: "Error",
         description: error?.message || "Failed to delete alert. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsDeleting(false);
+      setDeleting(false);
+      dragX.set(0);
     }
   };
 
-  const startAutoReturnTimer = () => {
-    // Clear any existing timer
-    if (autoReturnTimeoutRef.current) {
-      clearTimeout(autoReturnTimeoutRef.current);
-    }
+  const handleDragEnd = async (_: any, info: PanInfo) => {
+    setDragging(false);
+    const x = info.offset.x;
+    const v = info.velocity.x;
 
-    // Set new timer to return to center after 3 seconds
-    autoReturnTimeoutRef.current = setTimeout(() => {
-      setDragX(0);
-    }, 3000);
+    // Complete delete (right swipe)
+    if (x > 90 || v > 300) {
+      await handleDeleteAlert();
+      return;
+    }
+    // Open AI panel (left swipe)
+    if (x < -120 || v < -300) {
+      dragX.set(-320);
+      return;
+    }
+    // Return to center
+    dragX.set(0);
   };
 
-  const handleDragEnd = (event: any, info: PanInfo) => {
-    setIsDragging(false);
-    const threshold = 80; // Lower threshold for better responsiveness
-    const velocity = info.velocity.x;
-
-    // Use velocity for more natural swipe detection
-    if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 300) {
-      setDragX(0);
-    } else if (info.offset.x > threshold || velocity > 300) {
-      // Swiped right - show delete
-      setDragX(120);
-      startAutoReturnTimer();
-    } else if (info.offset.x < -threshold || velocity < -300) {
-      // Swiped left - show sportsbooks
-      setDragX(-360);
-      startAutoReturnTimer();
-    } else {
-      setDragX(0);
-    }
+  // Create normalized data structure
+  const normalizedAlert = {
+    id: alert.id,
+    type: alert.type,
+    priority: alert.priority || 0,
+    confidence: alert.confidence,
+    ts: alert.ts || alert.createdAt || new Date().toISOString(),
+    away: alert.away || {
+      id: 'away',
+      name: alert.awayTeam || 'Away',
+      score: alert.awayScore || alert.context?.awayScore || alert.context?.scores?.away || 0,
+      logoUrl: ''
+    },
+    home: alert.home || {
+      id: 'home',
+      name: alert.homeTeam || 'Home',
+      score: alert.homeScore || alert.context?.homeScore || alert.context?.scores?.home || 0,
+      logoUrl: ''
+    },
+    game: alert.game || {
+      sport: (alert.sport as "MLB" | "NCAAF" | "NBA" | "NHL") || "MLB",
+      inning: alert.context?.inning,
+      half: alert.context?.isTopInning ? "Top" : "Bot",
+      outs: alert.context?.outs,
+      balls: alert.context?.balls,
+      strikes: alert.context?.strikes,
+      bases: {
+        first: alert.context?.hasFirst || false,
+        second: alert.context?.hasSecond || false,
+        third: alert.context?.hasThird || false
+      },
+      countStr: alert.context?.balls !== undefined && alert.context?.strikes !== undefined
+        ? `${alert.context.balls}-${alert.context.strikes}`
+        : undefined,
+      clockStr: alert.context?.timeRemaining,
+      atBat: alert.context?.atBat,
+      pitcher: alert.context?.pitcher,
+      situationText: alert.message || ''
+    },
+    ai: alert.ai || {
+      headline: alert.context?.aiEnhancedMessage || alert.context?.aiInsight,
+      rec: alert.context?.recommendation || alert.context?.aiAdvice,
+      roi: alert.context?.aiROI
+    },
+    seen: alert.seen
   };
-
-  const handleDragStart = () => {
-    setIsDragging(true);
-    // Clear any existing timer when starting a new drag
-    if (autoReturnTimeoutRef.current) {
-      clearTimeout(autoReturnTimeoutRef.current);
-    }
-  };
-
-  const handleTap = () => {
-    if (!isDragging && onTap) {
-      onTap();
-    }
-  };
-
-  // Clear timer on component unmount
-  React.useEffect(() => {
-    return () => {
-      if (autoReturnTimeoutRef.current) {
-        clearTimeout(autoReturnTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Construct a display message for sharing/copying
-  const displayMessage = React.useMemo(() => {
-    let message = `ChirpBot Alert: ${alertData?.homeTeam || ''} vs ${alertData?.awayTeam || ''}`;
-    if (alertData?.sport) message += ` (${alertData.sport})`;
-    if (alertData?.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
-    if (alertData?.priority !== undefined) message += ` - Priority: ${alertData.priority}`;
-    if (alertData?.context?.reasons) {
-      message += `\nReasons: ${alertData.context.reasons.join(', ')}`;
-    }
-    if (alertData?.betbookData?.aiAdvice) {
-      message += `\nAI Advice: ${alertData.betbookData.aiAdvice}`;
-    }
-    return message;
-  }, [alertData]);
-
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
-      {/* AI Betting Insights Panel (Left Swipe) - Only show when swiped left */}
-      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent backdrop-blur-sm transition-opacity duration-300 ${
-        dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}>
-        {alertData?.betbookData || alertData?.context?.reasons ? (
-          <div className="h-full flex flex-col justify-center p-4 space-y-3">
-            {/* AI Insights Header */}
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <Brain className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-sm">AI Betting Insights</h3>
-                <p className="text-blue-200 text-xs">ChirpBot v3 Analysis</p>
-              </div>
-            </div>
-
-            {/* Betting Recommendations Based on Game Situation */}
-            {(alertData.betbookData || alertData.context?.reasons || (alertData.priority && alertData.priority >= 80)) && (
-              <div className="space-y-2">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Target className="w-4 h-4 text-green-400" />
-                    <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
-                  </div>
-                  <p className="text-white text-sm font-medium">
-                    {alertData.context?.recommendation || 
-                     alertData.betbookData?.aiAdvice || 
-                     (() => {
-                       const sport = alertData.sport || 'MLB';
-                       const tier = Math.ceil((alertData.priority || 70) / 25);
-                       const homeScore = alertData.context?.homeScore || alertData.homeScore || 0;
-                       const awayScore = alertData.context?.awayScore || alertData.awayScore || 0;
-                       const totalScore = homeScore + awayScore;
-
-                       if (sport === 'MLB') {
-                         const overLine = Math.max(totalScore + 1.5, 7.5);
-                         if (tier >= 3) {
-                           return `Bet Over ${overLine} runs - High-tier scoring opportunity`;
-                         } else {
-                           return `Bet Over ${overLine} runs - Live betting situation`;
-                         }
-                       } else {
-                         return "Live bet recommended - High-value situation detected";
-                       }
-                     })()
-                    }
-                  </p>
-                </div>
-
-                {/* AI Analysis Reasons */}
-                {alertData.context?.reasons && (
-                  <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 ring-1 ring-white/10">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Brain className="w-3 h-3 text-purple-400" />
-                      <span className="text-xs text-purple-200 font-medium">AI Analysis</span>
-                      <span className="text-xs text-green-300 font-mono">
-                        {alertData.context.confidence}% confidence
-                      </span>
-                    </div>
-                    <ul className="text-xs text-white/90 space-y-0.5">
-                      {alertData.context.reasons.slice(0, 2).map((reason, idx) => (
-                        <li key={idx} className="flex items-start space-x-1">
-                          <span className="text-green-400 mt-0.5">•</span>
-                          <span>{reason}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-              </div>
-            )}
-
-
-
-            {/* Quick Sportsbook Access */}
-            <div className="space-y-2">
-              <h4 className="text-xs text-blue-200 font-medium tracking-wide uppercase">Quick Bet</h4>
-              <div className="flex space-x-2">
-                {sportsbooks.slice(0, 4).map((sportsbook) => (
-                  <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
-                    <Button
-                      onClick={() => {
-                        handleSportsbookClick(sportsbook);
-                        setDragX(0);
-                      }}
-                      className="h-10 w-10 p-1 rounded-lg bg-white/90 hover:bg-white hover:scale-105 shadow-lg ring-2 ring-white/20 transition-all duration-200"
-                      style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
-                      data-testid={`ai-sportsbook-${sportsbook.name.toLowerCase()}`}
-                    >
-                      <img 
-                        src={sportsbook.logo} 
-                        alt={sportsbook.name}
-                        className="w-full h-full rounded object-contain"
-                      />
-                    </Button>
-                    <span className="text-xs text-white/80 font-medium">{sportsbook.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex gap-2 mt-3 pt-3 border-t border-slate-700/30">
-              <button 
-                className="flex-1 px-3 py-2 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(displayMessage);
-                  toast({ title: "Copied to clipboard", description: displayMessage.substring(0, 50) + "..." });
-                }}
-              >
-                📋 Copy
-              </button>
-              <button 
-                className="flex-1 px-3 py-2 text-xs font-medium bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Share alert
-                  if (navigator.share) {
-                    navigator.share({ text: displayMessage }).catch(() => {
-                      toast({ title: "Sharing failed", description: "Could not share this alert." });
-                    });
-                  } else {
-                    toast({ title: "Sharing not supported", description: "Your browser does not support sharing." });
-                  }
-                }}
-              >
-                📤 Share
-              </button>
-            </div>
-          </div>
-        ) : (
-          // Fallback to original sportsbook buttons when no AI data
-          (<div className="h-full flex flex-col items-center justify-center p-4 space-y-3">
-            <h4 className="text-sm text-white/90 font-semibold tracking-wide">Sports Betting</h4>
-            <div className="grid grid-cols-2 gap-3">
-              {sportsbooks.map((sportsbook) => (
-                <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
-                  <Button
-                    onClick={() => {
-                      handleSportsbookClick(sportsbook);
-                      setDragX(0);
-                    }}
-                    className="h-12 w-12 p-1.5 rounded-xl bg-white/90 hover:bg-white hover:scale-105 shadow-xl ring-2 ring-white/30 transition-all duration-200"
-                    style={{ backgroundColor: `${sportsbook.color}20`, borderColor: `${sportsbook.color}40` }}
-                    data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
-                  >
-                    <img 
-                      src={sportsbook.logo} 
-                      alt={sportsbook.name}
-                      className="w-full h-full rounded-lg object-contain"
-                    />
-                  </Button>
-                  <span className="text-xs text-white/90 font-medium text-center">{sportsbook.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>)
-        )}
-      </div>
-      {/* Delete Menu (Right Swipe) - Only show when swiped right */}
-      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent backdrop-blur-sm flex items-center justify-start pl-4 transition-opacity duration-300 ${
-        dragX > 30 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}>
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDeleteAlert();
-            setDragX(0); // Return to center after click
-          }}
-          disabled={isDeleting}
-          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm ring-1 ring-red-500/30 transition-all hover:scale-110 active:scale-95"
-          data-testid={`delete-alert-${alertId}`}
-        >
-          <Trash2 className={`w-5 h-5 text-red-400 ${isDeleting ? 'animate-spin' : ''}`} />
-        </Button>
-      </div>
-      {/* Main Card */}
+    <div className={`relative h-[168px] select-none ${className || ""}`}>
+      {/* LEFT: AI / Betting panel */}
       <motion.div
+        className="absolute inset-0 rounded-2xl p-4 bg-gradient-to-r from-indigo-700 to-fuchsia-600 text-white"
+        style={{ opacity: showLeft }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <BrainCircuit className="h-5 w-5" />
+          <span className="font-semibold">AI Insight</span>
+        </div>
+        <div className="text-sm line-clamp-3">
+          {normalizedAlert.ai?.headline || normalizedAlert.ai?.rec || "Analyzing live situation..."}
+        </div>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {sportsbooks.slice(0, 5).map(b => (
+            <Button
+              key={b.name}
+              onClick={() => handleSportsbookClick(b)}
+              size="sm"
+              variant="secondary"
+              className="gap-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <img src={b.logo} alt="" className="h-4 w-4 rounded" />
+              {b.name}
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* RIGHT: Delete panel */}
+      <motion.div
+        className="absolute inset-0 rounded-2xl p-4 bg-gradient-to-l from-rose-600 to-red-500 text-white flex items-center justify-end pr-6"
+        style={{ opacity: showRight }}
+      >
+        <Button
+          onClick={handleDeleteAlert}
+          disabled={isDeleting}
+          variant="destructive"
+          className="gap-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
+        >
+          <Trash2 className="h-4 w-4" />
+          {isDeleting ? "Deleting..." : "Delete"}
+        </Button>
+      </motion.div>
+
+      {/* CENTER: Main card */}
+      <motion.div
+        role="button"
+        aria-label={`${normalizedAlert.away.name} at ${normalizedAlert.home.name}, ${normalizedAlert.game.situationText}`}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onOpen?.(normalizedAlert.id);
+          if (e.key === "Delete") handleDeleteAlert();
+          if (e.key === "ArrowLeft") dragX.set(-320);
+          if (e.key === "ArrowRight") dragX.set(140);
+        }}
         drag="x"
-        dragConstraints={{ left: -400, right: 150 }}
+        dragConstraints={{ left: -420, right: 160 }}
         dragElastic={0.15}
-        dragMomentum={true}
-        onDragStart={handleDragStart}
+        style={{ x: dragX }}
+        onDragStart={() => setDragging(true)}
         onDragEnd={handleDragEnd}
-        onTap={handleTap}
-        animate={{ x: dragX }}
-        transition={{ 
-          type: "spring", 
-          damping: 20, 
-          stiffness: 250,
+        className="absolute inset-0"
+        transition={{
+          type: "spring",
+          damping: 24,
+          stiffness: 260,
           mass: 0.6
         }}
-        className="relative z-10"
-        whileDrag={{ scale: 1.01, cursor: "grabbing" }}
-        style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <Card className={className} {...props}>
-          {/* Render the redesigned alert card content here */}
-          {/* The actual alert content is expected to be passed as children or within alertData */}
-          {/* Assuming alertData is passed and contains the alert details */}
-          {alertData ? (
-            <div className="p-3" key={`alert-${alertData.id}-${Date.now()}`}>
-              {/* Compact Header */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
-                  <Badge 
-                    variant="outline" 
-                    className="px-1.5 py-0.5 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
-                  >
-                    {alertData.sport}
-                  </Badge>
-                  <span className="text-slate-400 text-[13px] font-bold">{alertData.type.replace(/_/g, ' ')}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-emerald-400 font-bold">{alertData.confidence}%</span>
-                  <span className="text-slate-400">{formatTime(alertData.createdAt || '')}</span>
-                </div>
-              </div>
-
-              {/* Compact Team Matchup */}
-              <div className="bg-gradient-to-r from-slate-800/40 to-slate-700/40 rounded-lg p-2 mb-2 border border-slate-600/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="text-center">
-                      <div className="text-xs font-medium text-slate-300">{alertData.awayTeam?.split(' ').pop()}</div>
-                      <div className="text-lg font-black text-white">
-                        {alertData.context?.awayScore ?? alertData.awayScore ?? 0}
-                      </div>
-                    </div>
-                    <div className="text-xs text-slate-400">@</div>
-                    <div className="text-center">
-                      <div className="text-xs font-medium text-slate-300">{alertData.homeTeam?.split(' ').pop()}</div>
-                      <div className="text-lg font-black text-white">
-                        {alertData.context?.homeScore ?? alertData.homeScore ?? 0}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {/* Game State Indicator */}
-                    {alertData.sport === 'MLB' && alertData.context?.inning && (
-                      <div className="text-xs text-slate-400">
-                        {alertData.context.isTopInning ? 'T' : 'B'}{alertData.context.inning}
-                      </div>
-                    )}
-                    {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.quarter && (
-                      <div className="text-xs text-slate-400">
-                        Q{alertData.context.quarter}
-                      </div>
-                    )}
-                    {alertData.sport === 'NBA' && alertData.context?.quarter && (
-                      <div className="text-xs text-slate-400">
-                        Q{alertData.context.quarter}
-                      </div>
-                    )}
-                    {alertData.sport === 'NHL' && alertData.context?.period && (
-                      <div className="text-xs text-slate-400">
-                        P{alertData.context.period}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Compact Game Situation */}
-              <div className="grid grid-cols-4 gap-2 mb-2">
-                {/* MLB Specific */}
-                {alertData.sport === 'MLB' && alertData.context?.outs !== undefined && (
-                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400">OUTS</div>
-                    <div className="text-sm font-bold text-white">{alertData.context.outs}</div>
-                  </div>
-                )}
-
-                {alertData.sport === 'MLB' && (alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
-                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400">COUNT</div>
-                    <div className="text-sm font-bold text-white">
-                      {alertData.context?.balls ?? 0}-{alertData.context?.strikes ?? 0}
-                    </div>
-                  </div>
-                )}
-
-                {/* Football Specific */}
-                {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && alertData.context?.down && (
-                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400">DOWN</div>
-                    <div className="text-sm font-bold text-white">
-                      {alertData.context.down}&{alertData.context.yardsToGo || 10}
-                    </div>
-                  </div>
-                )}
-
-                {/* Universal Time */}
-                {alertData.context?.timeRemaining && (
-                  <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                    <div className="text-xs text-slate-400">TIME</div>
-                    <div className="text-sm font-bold text-white">{alertData.context.timeRemaining}</div>
-                  </div>
-                )}
-
-                {/* Priority */}
-                <div className="bg-slate-800/50 rounded p-2 text-center border border-slate-700/30">
-                  <div className="text-xs text-slate-400">PRI</div>
-                  <div className={`text-sm font-bold ${(alertData.priority ?? 0) >= 90 ? 'text-red-400' : (alertData.priority ?? 0) >= 80 ? 'text-orange-400' : (alertData.priority ?? 0) >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
-                    {alertData.priority ?? 0}
-                  </div>
-                </div>
-              </div>
-
-              {/* Compact Alert Message */}
-              <div className="bg-slate-900/50 rounded p-2 border-l-2 border-emerald-500">
-                <p className="text-slate-100 text-sm leading-snug">
-                  {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
-                </p>
-              </div>
-
-              {/* Compact Base Runners (MLB only) */}
-              {alertData.sport === 'MLB' && (alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) && (
-                <div className="flex justify-center mt-2">
-                  <div className="relative w-16 h-16">
-                    <div className="absolute inset-0 rotate-45 border border-slate-600 bg-slate-800/30"></div>
-                    <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400' : 'bg-slate-700 border-slate-600'}`}></div>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-slate-600 border border-slate-500"></div>
-                  </div>
-                </div>
-              )}
+        <Card className={`h-full rounded-2xl border-2 ${priorityBorder(normalizedAlert.priority)} bg-white/5 backdrop-blur-sm`}>
+          <CardContent className="h-full p-3">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <TeamScore team={normalizedAlert.away} align="left" />
+              <CenterBadge game={normalizedAlert.game} priority={normalizedAlert.priority} seen={normalizedAlert.seen} />
+              <TeamScore team={normalizedAlert.home} align="right" />
             </div>
-          ) : (
-            children // Fallback to rendering children if alertData is not available
-          )}
+
+            {/* Play text */}
+            <p className="mt-2 text-sm leading-snug line-clamp-2 text-slate-100">
+              {normalizedAlert.game.situationText}
+            </p>
+
+            {/* Footer + grid */}
+            <div className="mt-3 grid grid-cols-5 gap-2 text-xs">
+              <InfoPill label="Inning" value={inningStr(normalizedAlert.game)} />
+              <InfoPill label="Outs" value={String(normalizedAlert.game.outs ?? "-")}/>
+              <InfoPill label="Count" value={normalizedAlert.game.countStr || "-"} />
+              <BaseDiamond bases={normalizedAlert.game.bases}/>
+              <PriorityPill value={normalizedAlert.priority}/>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+              <div>
+                {normalizedAlert.game.scheduledAtIso
+                  ? (<span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> First pitch {timeShort(normalizedAlert.game.scheduledAtIso)}</span>)
+                  : (<span>{normalizedAlert.game.atBat ? `${normalizedAlert.game.atBat}` : ""}{normalizedAlert.game.pitcher ? `  •  ${normalizedAlert.game.pitcher}` : ""}</span>)
+                }
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-emerald-500/40 text-emerald-400">{normalizedAlert.type}</Badge>
+                {typeof normalizedAlert.confidence === "number" && (
+                  <Badge className="bg-emerald-500/20 text-emerald-400">{normalizedAlert.confidence}%</Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </motion.div>
     </div>
   );
+}
+
+/* ---------- Subcomponents ---------- */
+
+function TeamScore({ team, align }: { team: TeamSide; align: "left" | "right" }) {
+  // Extract team name from full name (e.g., "Los Angeles Dodgers" -> "LAD")
+  const getTeamCode = (name: string) => {
+    const codes: Record<string, string> = {
+      'Los Angeles Dodgers': 'LAD', 'Pittsburgh Pirates': 'PIT',
+      'Toronto Blue Jays': 'TOR', 'Cincinnati Reds': 'CIN',
+      'Cleveland Guardians': 'CLE', 'Boston Red Sox': 'BOS',
+      'Seattle Mariners': 'SEA', 'Tampa Bay Rays': 'TB',
+      'Los Angeles Angels': 'LAA', 'Kansas City Royals': 'KC',
+      'Atlanta Braves': 'ATL', 'Chicago Cubs': 'CHC',
+      'Chicago White Sox': 'CWS', 'Minnesota Twins': 'MIN',
+      'Philadelphia Phillies': 'PHI', 'Milwaukee Brewers': 'MIL',
+      'Athletics': 'OAK', 'St. Louis Cardinals': 'STL',
+      'New York Yankees': 'NYY', 'Houston Astros': 'HOU'
+    };
+    return codes[name] || name.split(' ').pop()?.substring(0, 3).toUpperCase() || name.substring(0, 3).toUpperCase();
+  };
+
+  return (
+    <div className={`flex items-center gap-2 ${align === "right" ? "flex-row-reverse" : ""}`}>
+      <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white">
+        {getTeamCode(team.name).substring(0, 2)}
+      </div>
+      <span className="text-lg font-semibold text-white">{team.score}</span>
+    </div>
+  );
+}
+
+function CenterBadge({ game, priority, seen }: { game: GameState; priority: number; seen?: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`h-2.5 w-2.5 rounded-full ${priorityDot(priority)} animate-pulse`} />
+      <div className="rounded-xl bg-slate-800/50 px-2 py-1 text-xs font-medium text-white">
+        {game.half && game.inning ? `${game.half} ${game.inning}` : game.clockStr || "—"}
+      </div>
+      {seen && <Check className="h-3 w-3 text-green-400" />}
+    </div>
+  );
+}
+
+function InfoPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-white/20 bg-white/5 px-2 py-1">
+      <div className="text-[10px] uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="font-medium text-white text-xs">{value}</div>
+    </div>
+  );
+}
+
+function BaseDiamond({ bases }: { bases?: BaseState }) {
+  const b = bases || { first: false, second: false, third: false };
+  return (
+    <div className="flex items-center justify-center">
+      <div className="relative h-8 w-8 rotate-45 border border-white/30 rounded-sm bg-white/5">
+        <span className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full border ${b.second ? "bg-emerald-400 border-emerald-400" : "border-white/30 bg-slate-700"}`} />
+        <span className={`absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full border ${b.third ? "bg-emerald-400 border-emerald-400" : "border-white/30 bg-slate-700"}`} />
+        <span className={`absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full border ${b.first ? "bg-emerald-400 border-emerald-400" : "border-white/30 bg-slate-700"}`} />
+        <span className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 h-2 w-2 rounded-full bg-slate-600 border border-slate-500" />
+      </div>
+    </div>
+  );
+}
+
+function PriorityPill({ value }: { value: number }) {
+  return (
+    <div className={`rounded-lg px-2 py-1 text-center font-semibold text-xs ${priorityBg(value)}`}>
+      {value}
+    </div>
+  );
+}
+
+/* ---------- Helpers ---------- */
+
+function priorityBorder(p: number) {
+  if (p >= 70) return "border-red-500";
+  if (p >= 40) return "border-amber-500";
+  return "border-white/10";
+}
+
+function priorityBg(p: number) {
+  if (p >= 70) return "bg-red-500/20 text-red-400";
+  if (p >= 40) return "bg-amber-500/20 text-amber-400";
+  return "bg-white/10 text-slate-300";
+}
+
+function priorityDot(p: number) {
+  if (p >= 70) return "bg-red-500";
+  if (p >= 40) return "bg-amber-500";
+  return "bg-gray-400";
+}
+
+function inningStr(g: GameState) {
+  return g.half && g.inning ? `${g.half.substring(0, 1)}${g.inning}` : "—";
+}
+
+function timeShort(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
