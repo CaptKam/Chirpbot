@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Calendar, Settings, AlertTriangle, Shield } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 
 // Placeholder for the utility hook to check for games within the next two days.
 // This hook should fetch game data and return a boolean indicating availability.
@@ -16,6 +17,13 @@ export function BottomNavigation() {
   const { user } = useAuth();
   const { hasGamesWithinTwoDays } = useGamesAvailability();
 
+  // Fetch alert count for badge
+  const { data: alertStats } = useQuery({
+    queryKey: ['/api/alerts/stats'],
+    refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: hasGamesWithinTwoDays,
+  });
+
   const baseNavItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
   ];
@@ -23,7 +31,7 @@ export function BottomNavigation() {
   // Conditionally add Calendar, Alerts, and Settings tabs if there are games within two days
   const conditionalNavItems = hasGamesWithinTwoDays
     ? [
-        { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts" },
+        { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts", badgeCount: (alertStats as any)?.todayAlerts || 0 },
         { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
       ]
     : [];
@@ -33,7 +41,7 @@ export function BottomNavigation() {
   return (
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50">
       <div className="flex">
-        {navItems.map(({ path, icon: Icon, label, testId }) => {
+        {navItems.map(({ path, icon: Icon, label, testId, badgeCount }) => {
           const isActive = location === path || (path === "/dashboard" && location === "/");
 
           return (
@@ -49,6 +57,11 @@ export function BottomNavigation() {
             >
               <div className="relative">
                 <Icon className="w-6 h-6 mb-1 mx-auto" />
+                {badgeCount > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </div>
+                )}
               </div>
               <span className="text-xs font-semibold uppercase tracking-wider">
                 {label}
