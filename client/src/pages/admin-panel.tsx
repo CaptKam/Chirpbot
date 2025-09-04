@@ -91,6 +91,7 @@ const ALERT_TYPE_CONFIG = {
       { key: "FINAL_MINUTES", label: "Final Minutes", description: "Alerts in the last 2 minutes of the game" },
       { key: "HIGH_SCORING_QUARTER", label: "High-Scoring Quarter", description: "Quarters with 25+ points" },
       { key: "LOW_SCORING_QUARTER", label: "Low-Scoring Quarter", description: "Quarters with 10 or fewer points" },
+      { key: "FOURTH_QUARTER", label: "Fourth Quarter Crunch Time", description: "Critical final quarter moments" },
     ]
   }
 };

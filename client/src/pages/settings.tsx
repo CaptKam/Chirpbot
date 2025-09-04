@@ -71,12 +71,12 @@ const ALERT_TYPE_CONFIG = {
       { key: "FOURTH_DOWN", label: "Third Down (CFL)", description: "Critical down conversion attempts" },
     ],
     WNBA: [
-    { key: 'WNBA_FOURTH_QUARTER', label: 'Fourth Quarter Crunch Time', description: 'Close games in final 5 minutes of 4th quarter' },
-    { key: 'WNBA_CLOSE_GAME', label: 'Close Games', description: 'Games within 5 points in 3rd or 4th quarter' },
-    { key: 'WNBA_OVERTIME', label: 'Overtime Games', description: 'Games entering overtime period' },
-    { key: 'WNBA_HIGH_SCORING', label: 'High-Scoring Games', description: 'Games with 160+ combined points' },
-    { key: 'WNBA_COMEBACK', label: 'Comeback Alerts', description: 'Teams erasing large deficits' },
-    { key: 'WNBA_CLUTCH_PERFORMANCE', label: 'Clutch Performances', description: 'Outstanding individual performances in critical moments' }
+    { key: 'CLOSE_GAME', label: 'Close Game Alert', description: 'Games with tight scores' },
+    { key: 'OVERTIME', label: 'Overtime', description: 'Games going to overtime' },
+    { key: 'FINAL_MINUTES', label: 'Final Minutes', description: 'Alerts in the last 2 minutes of the game' },
+    { key: 'HIGH_SCORING_QUARTER', label: 'High-Scoring Quarter', description: 'Quarters with 25+ points' },
+    { key: 'LOW_SCORING_QUARTER', label: 'Low-Scoring Quarter', description: 'Quarters with 10 or fewer points' },
+    { key: 'FOURTH_QUARTER', label: 'Fourth Quarter Crunch Time', description: 'Critical final quarter moments' }
   ],
 };
 
