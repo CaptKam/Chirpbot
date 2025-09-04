@@ -188,6 +188,7 @@ const teamNameToAbbr: Record<string, string> = {
   'MYS': 'WAS', // Alternative abbreviation
   'Valkyries': 'GSV',
   'GOL': 'GSV', // Alternative abbreviation
+  'GS': 'GSV', // ESPN API abbreviation for Golden State Valkyries
   'Aces': 'LAS',
   'LV': 'LAS', // Alternative abbreviation
   'Sky': 'CHIS',
@@ -195,8 +196,10 @@ const teamNameToAbbr: Record<string, string> = {
   'Fever': 'IND',
   'Liberty': 'NYL',
   'Lynx': 'MINL',
+  'MIN': 'MINL', // ESPN API abbreviation for Minnesota Lynx (conflicts with NFL!)
   'Storm': 'SEAS',
   'Wings': 'DALW',
+  'DAL': 'DALW', // ESPN API abbreviation for Dallas Wings (conflicts with NFL!)
   'Dream': 'ATLD'
 };
 
@@ -997,6 +1000,11 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
   // For WNBA teams, ALWAYS use sport-specific generated icons (bypass logoMap completely)
   if (sport === 'WNBA') {
+    // Handle ESPN API abbreviation conflicts (DAL=Wings, MIN=Lynx, etc.)
+    if (teamName?.includes('Wings')) teamAbbr = 'DALW';
+    if (teamName?.includes('Lynx')) teamAbbr = 'MINL';
+    if (teamName?.includes('Valkyries')) teamAbbr = 'GSV';
+    
     console.log(`Using sport-specific icon for WNBA team: ${teamName} (${teamAbbr})`);
     return generateSportLogo('WNBA', teamAbbr || '', teamName || '');
   }
