@@ -41,62 +41,120 @@ export async function sendTelegramAlert(
       return false;
     }
 
-    // Build rich notification message with escaped markdown
-    let message = `🚨 *${escapeMd(alert.type.replace(/_/g, ' ').toUpperCase())} ALERT*\n\n*${escapeMd(alert.title)}*\n\n${escapeMd(alert.description)}\n\n`;
+    // Check if this is an AI-enhanced alert
+    const isAIEnhanced = alert.aiContext && (
+      alert.aiContext.aiTitle || 
+      alert.aiContext.aiInsights || 
+      alert.aiContext.aiBettingAdvice
+    );
 
-    // Game situation section
-    message += `🎮 *GAME SITUATION*\n`;
-    message += `${escapeMd(alert.gameInfo.awayTeam)} ${alert.gameInfo.score?.away || 0} @ ${escapeMd(alert.gameInfo.homeTeam)} ${alert.gameInfo.score?.home || 0}\n`;
+    let message = '';
 
-    if (alert.gameInfo.inning && alert.gameInfo.inningState) {
-      message += `📍 ${alert.gameInfo.inningState.charAt(0).toUpperCase() + alert.gameInfo.inningState.slice(1)} ${alert.gameInfo.inning}th`;
+    if (isAIEnhanced) {
+      // AI-Enhanced Alert Format
+      const aiTitle = alert.aiContext.aiTitle || alert.title;
+      message += `🤖 *${escapeMd(aiTitle.toUpperCase())}*\n\n`;
+      
+      // AI-enhanced message
+      const aiMessage = alert.aiContext.aiMessage || alert.description;
+      message += `${escapeMd(aiMessage)}\n\n`;
 
-      if (alert.gameInfo.outs !== undefined) {
-        message += ` • ${alert.gameInfo.outs} out${alert.gameInfo.outs !== 1 ? 's' : ''}`;
-      }
+      // Game situation with live scores
+      message += `🎮 *LIVE GAME*\n`;
+      message += `${escapeMd(alert.gameInfo.awayTeam)} ${alert.gameInfo.score?.away || 0} @ ${escapeMd(alert.gameInfo.homeTeam)} ${alert.gameInfo.score?.home || 0}\n`;
 
-      if (alert.gameInfo.balls !== undefined && alert.gameInfo.strikes !== undefined) {
-        message += ` • ${alert.gameInfo.balls}\\-${alert.gameInfo.strikes} count`;
-      }
-
-      message += `\n`;
-    }
-
-    // Runners and scoring probability
-    if (alert.gameInfo.runners) {
-      const runnersOn = [];
-      if (alert.gameInfo.runners.first) runnersOn.push('1st');
-      if (alert.gameInfo.runners.second) runnersOn.push('2nd');
-      if (alert.gameInfo.runners.third) runnersOn.push('3rd');
-
-      if (runnersOn.length > 0) {
-        message += `🏃 Runners: ${runnersOn.join(', ')}`;
-        if (alert.gameInfo.scoringProbability) {
-          message += ` • ${alert.gameInfo.scoringProbability}% scoring chance`;
+      if (alert.gameInfo.inning && alert.gameInfo.inningState) {
+        message += `📍 ${alert.gameInfo.inningState.charAt(0).toUpperCase() + alert.gameInfo.inningState.slice(1)} ${alert.gameInfo.inning}th`;
+        if (alert.gameInfo.outs !== undefined) {
+          message += ` • ${alert.gameInfo.outs} out${alert.gameInfo.outs !== 1 ? 's' : ''}`;
         }
         message += `\n`;
       }
-    }
 
-    // Team planning section - current matchup
-    if (alert.gameInfo.currentBatter || alert.gameInfo.currentPitcher) {
-      message += `\n🎯 *TEAM PLANNING*\n`;
-
-      if (alert.gameInfo.currentBatter) {
-        const batter = alert.gameInfo.currentBatter;
-        message += `🏏 Batter: ${escapeMd(batter.name)} \\(${escapeMd(batter.batSide)}\\)\n`;
-        message += `   Stats: ${batter.stats.avg.toFixed(3)} AVG, ${batter.stats.hr} HR, ${batter.stats.rbi} RBI, ${batter.stats.ops.toFixed(3)} OPS\n`;
+      // AI Insights
+      if (alert.aiContext.aiInsights && alert.aiContext.aiInsights.length > 0) {
+        message += `\n💡 *AI INSIGHTS*\n`;
+        alert.aiContext.aiInsights.slice(0, 3).forEach((insight, index) => {
+          message += `${index + 1}\\. ${escapeMd(insight)}\n`;
+        });
       }
 
-      if (alert.gameInfo.currentPitcher) {
-        const pitcher = alert.gameInfo.currentPitcher;
-        message += `⚾ Pitcher: ${escapeMd(pitcher.name)} \\(${escapeMd(pitcher.throwHand)}\\)\n`;
-        message += `   Stats: ${pitcher.stats.era.toFixed(2)} ERA, ${pitcher.stats.whip.toFixed(2)} WHIP, ${pitcher.stats.strikeOuts} K, ${pitcher.stats.wins}\\-${pitcher.stats.losses} W\\-L\n`;
+      // AI Betting Analysis
+      if (alert.aiContext.aiBettingAdvice) {
+        const betting = alert.aiContext.aiBettingAdvice;
+        message += `\n💰 *BETTING ANALYSIS*\n`;
+        message += `${escapeMd(betting.confidence)}% Confidence\n`;
+        message += `*${escapeMd(betting.recommendation)}*\n`;
+        
+        if (betting.reasoning && betting.reasoning.length > 0) {
+          message += `\n📊 *REASONING*\n`;
+          betting.reasoning.slice(0, 2).forEach((reason, index) => {
+            message += `• ${escapeMd(reason)}\n`;
+          });
+        }
       }
-    }
 
-    if (alert.aiContext) {
-      message += `\n🤖 *AI ANALYSIS:*\n${escapeMd(alert.aiContext)}\n`;
+      // AI Game Projection
+      if (alert.aiContext.aiGameProjection) {
+        const projection = alert.aiContext.aiGameProjection;
+        message += `\n🎯 *GAME PROJECTION*\n`;
+        message += `Final: ${escapeMd(projection.finalScorePrediction)}\n`;
+        
+        if (projection.winProbability) {
+          const homeProb = projection.winProbability.home;
+          const awayProb = projection.winProbability.away;
+          message += `Win %: ${escapeMd(alert.gameInfo.homeTeam.split(' ').pop())} ${homeProb}% | ${escapeMd(alert.gameInfo.awayTeam.split(' ').pop())} ${awayProb}%\n`;
+        }
+      }
+
+      // AI Call to Action
+      if (alert.aiContext.aiCallToAction) {
+        message += `\n⚡ ${escapeMd(alert.aiContext.aiCallToAction)}\n`;
+      }
+
+    } else {
+      // Standard Alert Format (fallback)
+      message += `🚨 *${escapeMd(alert.type.replace(/_/g, ' ').toUpperCase())} ALERT*\n\n`;
+      message += `*${escapeMd(alert.title)}*\n\n${escapeMd(alert.description)}\n\n`;
+
+      // Game situation section
+      message += `🎮 *GAME SITUATION*\n`;
+      message += `${escapeMd(alert.gameInfo.awayTeam)} ${alert.gameInfo.score?.away || 0} @ ${escapeMd(alert.gameInfo.homeTeam)} ${alert.gameInfo.score?.home || 0}\n`;
+
+      if (alert.gameInfo.inning && alert.gameInfo.inningState) {
+        message += `📍 ${alert.gameInfo.inningState.charAt(0).toUpperCase() + alert.gameInfo.inningState.slice(1)} ${alert.gameInfo.inning}th`;
+
+        if (alert.gameInfo.outs !== undefined) {
+          message += ` • ${alert.gameInfo.outs} out${alert.gameInfo.outs !== 1 ? 's' : ''}`;
+        }
+
+        if (alert.gameInfo.balls !== undefined && alert.gameInfo.strikes !== undefined) {
+          message += ` • ${alert.gameInfo.balls}\\-${alert.gameInfo.strikes} count`;
+        }
+
+        message += `\n`;
+      }
+
+      // Runners and scoring probability
+      if (alert.gameInfo.runners) {
+        const runnersOn = [];
+        if (alert.gameInfo.runners.first) runnersOn.push('1st');
+        if (alert.gameInfo.runners.second) runnersOn.push('2nd');
+        if (alert.gameInfo.runners.third) runnersOn.push('3rd');
+
+        if (runnersOn.length > 0) {
+          message += `🏃 Runners: ${runnersOn.join(', ')}`;
+          if (alert.gameInfo.scoringProbability) {
+            message += ` • ${alert.gameInfo.scoringProbability}% scoring chance`;
+          }
+          message += `\n`;
+        }
+      }
+
+      // Basic betting data if available
+      if (alert.aiContext && typeof alert.aiContext === 'string') {
+        message += `\n🤖 *AI ANALYSIS:*\n${escapeMd(alert.aiContext)}\n`;
+      }
     }
 
     // Add clickable link to view alert details
