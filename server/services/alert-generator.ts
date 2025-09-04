@@ -441,7 +441,19 @@ export class AlertGenerator {
   }
 
 
-  private calculateScoringProbability(hasFirst: boolean, hasSecond: boolean, hasThird: boolean, outs: number, gameState?: any): number {
+  private async calculateScoringProbability(hasFirst: boolean, hasSecond: boolean, hasThird: boolean, outs: number, gameState?: any): Promise<number> {
+    // Check if RE24 system is enabled
+    const re24Enabled = await this.isAlertGloballyEnabled('MLB', 'RE24_ENABLED');
+    if (!re24Enabled) {
+      // Fallback to simple percentage calculation
+      let baseProb = 0;
+      if (hasThird) baseProb += 60;
+      if (hasSecond) baseProb += 40; 
+      if (hasFirst) baseProb += 20;
+      baseProb = baseProb * (3 - outs) / 3;
+      return Math.min(Math.max(baseProb, 15), 85);
+    }
+
     // Build state key for RE24 lookup
     const firstBase = hasFirst ? "1" : "0";
     const secondBase = hasSecond ? "1" : "0"; 
@@ -455,8 +467,9 @@ export class AlertGenerator {
     // RE of 2.0+ = ~90% probability, RE of 0.5 = ~50% probability
     let probability = Math.round((1 / (1 + Math.exp(-2.5 * (baseExpectancy - 0.8)))) * 100);
 
-    // Context-aware adjustments
-    if (gameState) {
+    // Context-aware adjustments (if enabled)
+    const contextFactorsEnabled = await this.isAlertGloballyEnabled('MLB', 'RE24_CONTEXT_FACTORS');
+    if (gameState && contextFactorsEnabled) {
       // Weather adjustments for home run probability
       if (gameState.weather?.windSpeed > 10 && 
           typeof gameState.weather?.windDirection === 'string' && 
