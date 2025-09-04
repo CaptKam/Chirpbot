@@ -31,7 +31,7 @@ export function BottomNavigation() {
   // Conditionally add Calendar, Alerts, and Settings tabs if there are games within two days
   const conditionalNavItems = hasGamesWithinTwoDays
     ? [
-        { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts", badgeCount: (alertStats as any)?.todayAlerts || 0 },
+        { path: "/alerts", icon: AlertTriangle, label: "Alerts", testId: "nav-alerts", badgeCount: (alertStats as any)?.unreadCount || 0 },
         { path: "/settings", icon: Settings, label: "Settings", testId: "nav-settings" },
       ]
     : [];
