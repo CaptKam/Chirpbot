@@ -591,9 +591,20 @@ export class AlertGenerator {
         return alertCount;
       }
 
+      // MINIMUM PROBABILITY THRESHOLD: Only generate alerts if scoring probability >= 45%
+      if (scoringProbability < 45) {
+        console.log(`⛔ RUNNERS_1ST_2ND alert blocked - scoring probability ${scoringProbability}% below 45% threshold`);
+        return alertCount;
+      }
+
       const alertKey = `${game.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
       const outsText = outs === 1 ? '1 out' : `${outs} outs`;
       const message = `💎 Runners on 1st & 2nd (${scoringProbability}% scoring chance) ${game.awayTeam} vs ${game.homeTeam} - ${outsText}`;
+
+      // Dynamic priority based on scoring probability
+      const priority = scoringProbability >= 70 ? 95 : 
+                     scoringProbability >= 55 ? 90 : 
+                     scoringProbability >= 45 ? 85 : 80;
 
       alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNERS_1ST_2ND', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -612,7 +623,7 @@ export class AlertGenerator {
         second: offense.second?.fullName,
         situation: 'runners_on_1st_and_2nd',
         scoringProbability
-      }, scoringProbability > 50 ? 88 : 85);
+      }, priority);
     }
     // Runners on 2nd and 3rd (high scoring potential)
     else if (!hasFirst && hasSecond && hasThird) {
@@ -656,6 +667,12 @@ export class AlertGenerator {
         return alertCount;
       }
 
+      // MINIMUM PROBABILITY THRESHOLD: Only generate RISP alerts if scoring probability >= 40%
+      if (scoringProbability < 40) {
+        console.log(`⛔ RISP alert blocked - scoring probability ${scoringProbability}% below 40% threshold`);
+        return alertCount;
+      }
+
       const alertKey = `${game.gameId}_RISP_${inning}_${outs}`;
       const positions = [];
       if (hasSecond) positions.push('2nd');
@@ -667,6 +684,10 @@ export class AlertGenerator {
 
       const outsText = outs === 1 ? '1 out' : `${outs} outs`;
       const message = `⚾ SCORING POSITION (${scoringProbability}% chance) ${game.awayTeam} vs ${game.homeTeam} - Runner on ${positions.join(' & ')}, ${outsText}. ${weather.temperature}°F, ${windDesc}`;
+
+      // Dynamic priority based on scoring probability
+      const priority = scoringProbability >= 70 ? 95 : 
+                     scoringProbability >= 55 ? 90 : 85;
 
       alertCount += await this.saveRealTimeAlert(alertKey, 'RISP', game.gameId, message, {
         homeTeam: game.homeTeam,
@@ -682,13 +703,14 @@ export class AlertGenerator {
         hasSecond,
         hasThird,
         situation: 'runner_in_scoring_position',
+        scoringProbability,
         weather: {
           temperature: weather.temperature,
           condition: weather.condition,
           windDescription: windDesc,
           homeRunFactor: homeRunFactor
         }
-      }, 85);
+      }, priority);
     }
 
     return alertCount;
