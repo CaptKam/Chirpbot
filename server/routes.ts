@@ -33,10 +33,28 @@ async function requireAuthentication(req: any, res: any, next: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // Add route debugging middleware
+  // Add route debugging middleware with duplicate detection
+  const recentRequests = new Map();
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) {
-      console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
+      const now = Date.now();
+      const requestKey = `${req.method}:${req.path}:${req.ip}`;
+      const lastRequest = recentRequests.get(requestKey);
+      
+      if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
+        console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
+      } else {
+        console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
+      }
+      
+      recentRequests.set(requestKey, now);
+      // Clean up old entries periodically
+      if (recentRequests.size > 100) {
+        const oldestTime = now - 10000; // 10 seconds
+        for (const [key, time] of recentRequests.entries()) {
+          if (time < oldestTime) recentRequests.delete(key);
+        }
+      }
     }
     next();
   });
