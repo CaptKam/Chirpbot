@@ -451,13 +451,7 @@ export const storage = {
   // Get user's AI enhancement preferences
   async getUserAIPreferences(userId: string): Promise<any> {
     try {
-      const preferences = await db.select()
-        .from(userAlertPreferences)
-        .where(and(
-          eq(userAlertPreferences.userId, userId),
-          eq(userAlertPreferences.sport, 'mlb')
-        ));
-
+      // System-level defaults for all AI features
       const aiPrefs = {
         AI_ENHANCED_MESSAGES: true,  // Default enabled
         AI_PREDICTIVE_AT_BAT: true,  // Default enabled
@@ -466,6 +460,19 @@ export const storage = {
         AI_EVENT_SUMMARIES: true,  // Default enabled
         AI_ROI_ALERTS: true  // Default enabled
       };
+
+      // For system user, return defaults
+      if (userId === 'system') {
+        console.log(`🤖 AI Preferences for system: all enabled`);
+        return aiPrefs;
+      }
+
+      const preferences = await db.select()
+        .from(userAlertPreferences)
+        .where(and(
+          eq(userAlertPreferences.userId, userId),
+          eq(userAlertPreferences.sport, 'mlb')
+        ));
 
       preferences.forEach(pref => {
         if (pref.alertType.startsWith('AI_')) {

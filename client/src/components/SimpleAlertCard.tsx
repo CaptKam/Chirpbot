@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { motion, PanInfo } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users } from 'lucide-react';
+import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +19,7 @@ function formatTime(date: string | Date): string {
   const alertTime = new Date(date);
   const now = new Date();
   const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
-  
+
   if (diffMinutes < 1) return 'Just now';
   if (diffMinutes < 60) return `${diffMinutes}m ago`;
   if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
@@ -52,6 +51,19 @@ interface SimpleAlert {
     inning?: number;
     isTopInning?: boolean;
     period?: number;
+    aiInsights?: string;
+    recommendation?: string;
+  };
+  payload?: {
+    betbookData?: {
+      aiAdvice?: string;
+    };
+    gameInfo?: {
+      v3Analysis?: {
+        confidence?: number;
+        reasons?: string[];
+      };
+    };
   };
 }
 
@@ -162,17 +174,17 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
     setIsDeleting(true);
     try {
       await apiRequest("DELETE", `/api/alerts/${alert.id}`);
-      
+
       // Immediately update the query cache to remove the deleted alert
       queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
         if (!oldData) return [];
         return oldData.filter((a: any) => a.id !== alert.id);
       });
-      
+
       // Invalidate queries to refresh from server
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/unseen/count'] });
-      
+
       toast({
         title: "Alert deleted",
         description: "The alert has been removed from your feed.",
@@ -250,8 +262,8 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                   className="h-10 w-10 p-1 rounded-lg bg-white/90 hover:bg-white hover:scale-105 shadow-lg ring-2 ring-white/20 transition-all duration-200"
                   style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
                 >
-                  <img 
-                    src={sportsbook.logo} 
+                  <img
+                    src={sportsbook.logo}
                     alt={sportsbook.name}
                     className="w-full h-full rounded object-contain"
                   />
@@ -288,9 +300,9 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         animate={{ x: dragX }}
-        transition={{ 
-          type: "spring", 
-          damping: 25, 
+        transition={{
+          type: "spring",
+          damping: 25,
           stiffness: 300,
           mass: 0.8
         }}
@@ -328,7 +340,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                   {alert.homeTeam?.split(' ').pop() || 'Home'}
                 </span>
               </div>
-              
+
               {/* Score if available */}
               {(alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined) && (
                 <div className="flex items-center gap-2 text-lg font-bold">
@@ -344,7 +356,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
               <p className="text-slate-100 text-sm font-medium leading-relaxed">
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').trim()}
               </p>
-              
+
               {/* AI Insights - Simple Display */}
               {(alert.context?.aiInsights || alert.context?.recommendation) && (
                 <div className="mt-2 pt-2 border-t border-slate-700/50">

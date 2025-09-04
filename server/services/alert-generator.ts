@@ -1329,8 +1329,8 @@ export class AlertGenerator {
         return 0; // Alert already exists
       }
 
-      // Generate AI betting insights for high-priority alerts
-      if (priority >= 70 && !context.betbookData) {
+      // Generate AI betting insights for ALL alerts (always run AI)
+      if (!context.betbookData) {
         try {
           const betbookData = getBetbookData({
             sport: sport,
@@ -1346,9 +1346,39 @@ export class AlertGenerator {
           });
 
           context.betbookData = betbookData;
-          console.log(`🤖 AI: Generated betting insights for ${type} alert - ${betbookData.aiAdvice}`);
+          console.log(`🤖 AI: Generated betting insights for ${type} alert (priority: ${priority}) - ${betbookData.aiAdvice}`);
         } catch (error) {
           console.error('❌ AI betting insights generation failed:', error);
+        }
+      }
+
+      // Generate AI enhancements for high-value alerts
+      if (priority >= 70) {
+        try {
+          const gameContext = {
+            gameId: gameId,
+            sport: sport,
+            score: { home: context.homeScore || 0, away: context.awayScore || 0 },
+            inning: context.inning || 1,
+            outs: context.outs || 0,
+            baseRunners: [
+              context.hasFirst && '1B',
+              context.hasSecond && '2B', 
+              context.hasThird && '3B'
+            ].filter(Boolean),
+            batter: context.batter ? { name: context.batter, stats: {} } : null,
+            weather: context.weather || {}
+          };
+
+          const aiPreferences = await storage.getUserAIPreferences('system'); // Use system defaults
+          const enhancements = await this.aiEnhancementService.enhanceAlert(type, context, gameContext, aiPreferences);
+          
+          if (enhancements) {
+            context.aiEnhancements = enhancements;
+            console.log(`🤖 AI: Enhanced ${type} alert with ${Object.keys(enhancements).length} AI features`);
+          }
+        } catch (error) {
+          console.error('❌ AI enhancements generation failed:', error);
         }
       }
 
@@ -1447,18 +1477,19 @@ export class AlertGenerator {
           };
 
           try {
-            console.log(`📱 🔄 Attempting to send Telegram alert to user ${user.username} (${telegramConfig.chatId})`);
+            console.log(`📱 🔄 Attempting to send ${type} Telegram alert to user ${user.username} (${telegramConfig.chatId})`);
             console.log(`📱 📋 Alert details: ${type} - ${message.substring(0, 100)}...`);
+            console.log(`📱 🎯 Alert priority: ${priority}, Has AI: ${!!context.betbookData}, Has runners: ${context.hasFirst || context.hasSecond || context.hasThird}`);
 
             const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
             if (sent) {
-              console.log(`📱 ✅ Telegram alert sent successfully to user ${user.username}`);
+              console.log(`📱 ✅ ${type} Telegram alert sent successfully to user ${user.username}`);
             } else {
-              console.log(`📱 ❌ Failed to send Telegram alert to user ${user.username}`);
+              console.log(`📱 ❌ Failed to send ${type} Telegram alert to user ${user.username}`);
               console.log(`📱 🔧 Bot token length: ${telegramConfig.botToken?.length || 0}, Chat ID: ${telegramConfig.chatId}`);
             }
           } catch (telegramError) {
-            console.error(`📱 ❌ Telegram error for user ${user.username}:`, telegramError);
+            console.error(`📱 ❌ Telegram error for ${type} alert to user ${user.username}:`, telegramError);
             console.error(`📱 🔧 Config: token=${telegramConfig.botToken ? 'SET' : 'MISSING'}, chatId=${telegramConfig.chatId}`);
           }
         }

@@ -134,14 +134,14 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   // Find the matching game for this alert to get live scores
   const liveGameData = React.useMemo(() => {
     if (!todaysGames?.games || !alertData) return null;
-    
+
     return todaysGames.games.find((game: any) => {
       // Match by team names (both home and away combinations)
       const gameHomeTeam = game.homeTeam?.name || '';
       const gameAwayTeam = game.awayTeam?.name || '';
       const alertHomeTeam = alertData.homeTeam || '';
       const alertAwayTeam = alertData.awayTeam || '';
-      
+
       return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
              (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
     });
@@ -151,7 +151,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const displayScores = React.useMemo(() => {
     const storedHomeScore = alertData?.context?.homeScore ?? alertData?.homeScore ?? 0;
     const storedAwayScore = alertData?.context?.awayScore ?? alertData?.awayScore ?? 0;
-    
+
     // Use live scores if we have live game data and it's a live or final game
     if (liveGameData && (liveGameData.status === 'live' || liveGameData.status === 'final')) {
       return {
@@ -160,7 +160,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         isLive: true
       };
     }
-    
+
     // Fallback to stored scores
     return {
       homeScore: storedHomeScore,
@@ -391,14 +391,14 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         {alertData.context.confidence || alertData.confidence}% confidence
                       </span>
                     </div>
-                    
+
                     {/* AI Insights */}
                     {alertData.context?.aiInsights && (
                       <div className="mb-2 p-2 bg-blue-500/10 rounded border-l-2 border-blue-400">
                         <p className="text-xs text-blue-200 font-medium">{alertData.context.aiInsights}</p>
                       </div>
                     )}
-                    
+
                     {/* Context Reasons */}
                     {alertData.context?.reasons && (
                       <ul className="text-xs text-white/90 space-y-0.5">
@@ -619,7 +619,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Outs */}
                       {alertData.context?.outs !== undefined && (
                         <div className="text-center">
@@ -627,7 +627,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                           <div className="text-2xl font-bold text-white">{alertData.context.outs}</div>
                         </div>
                       )}
-                      
+
                       {/* Ball-Strike Count */}
                       {(alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
                         <div className="text-center">
@@ -637,7 +637,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Baseball Diamond - Enhanced */}
                       {(alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) ? (
                         <div className="text-center">
@@ -670,7 +670,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                           </div>
                         </div>
                       )}
-                      
+
                       {alertData.context?.down && (
                         <div className="text-center">
                           <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">DOWN</div>
@@ -679,7 +679,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                           </div>
                         </div>
                       )}
-                      
+
                       {alertData.context?.timeRemaining && (
                         <div className="text-center">
                           <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">TIME</div>
