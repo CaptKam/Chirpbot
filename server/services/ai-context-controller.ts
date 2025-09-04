@@ -159,33 +159,91 @@ export class AIContextController {
     reasoning: string[];
     suggestedBets: string[];
   }> {
+    const currentTotal = context.homeScore + context.awayScore;
+    const scoreDiff = Math.abs(context.homeScore - context.awayScore);
+    
+    // Calculate realistic game-specific betting lines
+    const liveTotal = this.calculateLiveTotal(context);
+    const liveSpread = this.calculateLiveSpread(context);
+    
     const prompt = `
-Analyze this ${context.sport} betting opportunity:
+Analyze this ${context.sport} live betting opportunity:
 
-GAME: ${context.awayTeam} @ ${context.homeTeam}
-SCORE: ${context.awayScore}-${context.homeScore}
-SITUATION: ${context.alertType} (${context.probability}% probability)
-${this.formatGameState(context)}
+CURRENT GAME STATE:
+- ${context.awayTeam} ${context.awayScore} @ ${context.homeTeam} ${context.homeScore}
+- Current total runs: ${currentTotal}
+- Score difference: ${scoreDiff}
+- Alert: ${context.alertType} (${context.probability}% probability)
+- Game situation: ${this.formatGameState(context)}
 
-Provide detailed betting analysis:
-1. Primary betting recommendation with confidence
-2. 3 specific reasoning points
-3. 3 concrete bet suggestions with odds consideration
+CURRENT BETTING CONTEXT:
+- Live total line: ${liveTotal}
+- Live spread: ${liveSpread}
+- Runners on base: ${context.baseRunners?.length || 0}
 
-Focus on immediate betting value and timing.
+Based on this SPECIFIC game situation, provide:
+1. Your #1 betting recommendation (be specific with the line)
+2. 3 reasons why this bet makes sense RIGHT NOW
+3. 3 specific bets with current game context
+
+Focus on immediate value based on the actual score and game state.
 `;
 
     const response = await this.basicAI.generateResponse(prompt);
     if (!response) {
-      return {
-        recommendation: 'MONITOR CLOSELY',
-        confidence: context.probability,
-        reasoning: ['High-value situation detected'],
-        suggestedBets: ['Live total', 'Next scoring play']
-      };
+      return this.getContextualFallback(context, liveTotal, liveSpread);
     }
 
     return this.parseBettingResponse(response, context);
+  }
+
+  private calculateLiveTotal(context: AlertContext): number {
+    const currentTotal = context.homeScore + context.awayScore;
+    const inning = context.inning || 5;
+    
+    // Adjust total based on current score and inning progression
+    if (context.sport === 'MLB') {
+      const baseTotal = 8.5; // Standard MLB total
+      const currentPace = (currentTotal / Math.max(inning, 1)) * 9;
+      return Math.round((baseTotal + currentPace) / 2 * 2) / 2; // Round to nearest 0.5
+    }
+    
+    return currentTotal + 3.5; // Fallback
+  }
+
+  private calculateLiveSpread(context: AlertContext): string {
+    const scoreDiff = context.homeScore - context.awayScore;
+    
+    if (scoreDiff === 0) return 'Pick\'em';
+    
+    const team = scoreDiff > 0 ? context.homeTeam : context.awayTeam;
+    const line = Math.abs(scoreDiff) + 0.5;
+    
+    return `${team.split(' ').pop()} -${line}`;
+  }
+
+  private getContextualFallback(context: AlertContext, liveTotal: number, liveSpread: string): {
+    recommendation: string;
+    confidence: number;
+    reasoning: string[];
+    suggestedBets: string[];
+  } {
+    const currentTotal = context.homeScore + context.awayScore;
+    
+    return {
+      recommendation: currentTotal < liveTotal ? `Over ${liveTotal}` : `Under ${liveTotal}`,
+      confidence: Math.min(85, context.probability),
+      reasoning: [
+        `Current score ${context.awayScore}-${context.homeScore} suggests ${currentTotal < liveTotal ? 'over' : 'under'} value`,
+        `${context.alertType.replace('_', ' ')} creates scoring opportunity`,
+        `Live line ${liveTotal} vs current pace`
+      ],
+      suggestedBets: [
+        `${currentTotal < liveTotal ? 'Over' : 'Under'} ${liveTotal}`,
+        `Next inning total runs`,
+        `${context.baseRunners?.length ? 'Runner to score' : 'No runs this inning'}`
+      ]
+    };
   }
 
   private async generateGameProjection(context: AlertContext): Promise<{
@@ -248,10 +306,7 @@ Be specific and actionable.
       }
     };
 
-    return {
-      callToAction: actions[urgencyLevel].cta,
-      followUpActions: actions[urgencyLevel].actions
-    };
+    return actions[urgencyLevel];
   }
 
   private buildContentPrompt(context: AlertContext): string {

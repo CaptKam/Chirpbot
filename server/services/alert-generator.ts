@@ -54,28 +54,53 @@ interface AlertData {
 function getBetbookData(context: any): BetbookData {
   const { sport, gameId, homeTeam, awayTeam, homeScore, awayScore, type, probability, inning, outs } = context;
   const totalScore = homeScore + awayScore;
-
-  // Generate realistic odds based on game situation
-  let homeOdds = -110;
-  let awayOdds = -110;
-  let totalLine = sport === 'MLB' ? Math.max(totalScore + 1.5, 7.5) : Math.max(totalScore + 3, 45);
-
-  // Adjust odds based on score differential
   const scoreDiff = homeScore - awayScore;
-  if (scoreDiff > 0) {
-    homeOdds = Math.max(-200, -110 - (scoreDiff * 15));
-    awayOdds = Math.min(+180, -110 + (scoreDiff * 20));
-  } else if (scoreDiff < 0) {
-    awayOdds = Math.max(-200, -110 - (Math.abs(scoreDiff) * 15));
-    homeOdds = Math.min(+180, -110 + (Math.abs(scoreDiff) * 20));
+
+  // Calculate realistic live betting lines based on current game state
+  const currentInning = inning || 5;
+  const gameProgress = Math.min(currentInning / 9, 1); // How far through the game
+  
+  // Dynamic total calculation based on current pace
+  let totalLine: number;
+  if (sport === 'MLB') {
+    const currentPace = (totalScore / Math.max(currentInning, 1)) * 9;
+    const standardTotal = 8.5;
+    totalLine = Math.round(((currentPace + standardTotal) / 2) * 2) / 2; // Round to nearest 0.5
+    totalLine = Math.max(totalLine, totalScore + 0.5); // Never set below current score
+  } else {
+    totalLine = Math.max(totalScore + 3, 45);
   }
 
-  // Generate AI advice based on alert context
-  let aiAdvice = "Standard betting situation detected.";
-  if (probability >= 90) {
-    aiAdvice = `HIGH VALUE: ${sport === 'MLB' ? 'Live over/under' : 'In-game betting'} opportunity with ${probability}% confidence. Consider betting the over ${totalLine}.`;
-  } else if (probability >= 80) {
-    aiAdvice = `GOOD VALUE: Moderate betting opportunity. ${sport === 'MLB' ? 'Over ' + totalLine + ' runs' : 'Live betting'} shows value.`;
+  // Dynamic odds calculation
+  let homeOdds = -110;
+  let awayOdds = -110;
+  
+  // Adjust for current score difference and game situation
+  if (scoreDiff > 0) {
+    const advantage = Math.min(scoreDiff * 25 + (gameProgress * 50), 150);
+    homeOdds = Math.max(-250, -110 - advantage);
+    awayOdds = Math.min(+200, -110 + advantage + 10);
+  } else if (scoreDiff < 0) {
+    const advantage = Math.min(Math.abs(scoreDiff) * 25 + (gameProgress * 50), 150);
+    awayOdds = Math.max(-250, -110 - advantage);
+    homeOdds = Math.min(+200, -110 + advantage + 10);
+  }
+
+  // Generate contextual AI advice based on actual game situation
+  let aiAdvice = `${awayTeam.split(' ').pop()} ${awayScore}-${homeScore} ${homeTeam.split(' ').pop()}`;
+  
+  if (type === 'BASES_LOADED') {
+    aiAdvice += ` | BASES LOADED: Strong over ${totalLine} value. Historical 75%+ scoring rate.`;
+  } else if (type === 'RISP') {
+    aiAdvice += ` | Runner in scoring position. Over ${totalLine} shows value at ${inning}th inning.`;
+  } else if (type === 'HOME_RUN') {
+    aiAdvice += ` | Momentum shift! Live betting window for over ${totalLine}.`;
+  } else if (totalScore < totalLine - 1) {
+    aiAdvice += ` | Current pace suggests OVER ${totalLine} value (${totalScore} through ${currentInning}).`;
+  } else if (totalScore > totalLine + 1) {
+    aiAdvice += ` | High-scoring game. Consider UNDER ${totalLine} (${totalScore} runs already).`;
+  } else {
+    aiAdvice += ` | Live total ${totalLine}. Monitor for value based on next few plays.`;
   }
 
   return {
@@ -608,8 +633,8 @@ export class AlertGenerator {
           }
 
           const telegramConfig: TelegramConfig = {
-            botToken: user.telegramBotToken || '',
-            chatId: user.telegramChatId || ''
+            botToken: user.telegramBotToken,
+            chatId: user.telegramChatId
           };
 
           const telegramAlert = {
