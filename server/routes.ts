@@ -163,6 +163,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
+  // Export broadcast function for use by other services
+  (global as any).wsBroadcast = broadcast;
+
   // Basic health check
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

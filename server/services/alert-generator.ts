@@ -443,6 +443,34 @@ export class AlertGenerator {
 
       console.log(`🚨 REAL-TIME ALERT: ${message}`);
 
+      // Broadcast alert immediately to web clients via WebSocket
+      try {
+        const wsBroadcast = (global as any).wsBroadcast;
+        if (wsBroadcast && typeof wsBroadcast === 'function') {
+          const alertData = {
+            type: 'new_alert',
+            alert: {
+              id: alertKey,
+              alertKey,
+              sport,
+              gameId,
+              alertType: type,
+              state: 'NEW',
+              score: priority,
+              payload: enhancedPayload,
+              createdAt: new Date().toISOString()
+            }
+          };
+          
+          wsBroadcast(alertData);
+          console.log(`📡 WebSocket broadcast sent for ${type} alert`);
+        } else {
+          console.warn('📡 WebSocket broadcast function not available');
+        }
+      } catch (broadcastError) {
+        console.error('📡 WebSocket broadcast failed:', broadcastError);
+      }
+
       // Send to Telegram for users monitoring this game
       try {
         console.log(`📡 LAW #3: Sending ${type} alert to Telegram (priority: ${priority})`);
