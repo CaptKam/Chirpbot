@@ -396,6 +396,12 @@ const ALERT_TYPE_CONFIG = {
             { key: 'AI_SITUATION_ANALYSIS', label: 'Game Situation Analysis', description: 'AI analyzes pressure situations and momentum' },
             { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
             { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
+        ],
+        'RE24 System': [
+            { key: 'RE24_ENABLED', label: 'RE24 Probability System', description: 'Advanced run expectancy calculations for scoring probability' },
+            { key: 'RE24_CONTEXT_FACTORS', label: 'RE24 Context Adjustments', description: 'Weather, power hitter, and ballpark factors' },
+            { key: 'RE24_MINIMUM_THRESHOLDS', label: 'RE24 Minimum Thresholds', description: 'Probability-based alert filtering (40-45% minimums)' },
+            { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
         ]
     },
     NCAAF: {
