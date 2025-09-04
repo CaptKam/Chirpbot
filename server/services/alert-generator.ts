@@ -1439,11 +1439,16 @@ export class AlertGenerator {
 
       // Send to Telegram for users monitoring this game
       try {
+        // LAW #3 ENFORCEMENT: Same messages on alerts page MUST be sent to Telegram
+        console.log(`📡 LAW #3: Sending ${type} alert to Telegram (priority: ${priority})`);
+        console.log(`📡 Alert message: "${message}"`);
+        console.log(`📡 This alert will appear on alerts page AND be sent to Telegram`);
+        
         // Send to users with proper preference checking (RULE 1 & 2 ENFORCEMENT)
-      console.log(`📡 Sending Telegram alerts with preference checking for ${type}`);
-      const allUsers = await storage.getAllUsers();
-      const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-      console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
+        console.log(`📡 Sending Telegram alerts with preference checking for ${type}`);
+        const allUsers = await storage.getAllUsers();
+        const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
+        console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
 
       for (const user of telegramUsers) {
         console.log(`📱 🔍 Processing Telegram for user: ${user.username}`);
