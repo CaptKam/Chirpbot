@@ -6,10 +6,10 @@ interface SportsLoadingProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function SportsLoading({
-  sport = 'MLB',
-  message = 'Loading game data...',
-  size = 'md'
+export function SportsLoading({ 
+  sport = 'MLB', 
+  message = 'Loading game data...', 
+  size = 'md' 
 }: SportsLoadingProps) {
   const getSizeClasses = () => {
     switch (size) {
@@ -34,7 +34,7 @@ export function SportsLoading({
             </div>
           </div>
         );
-
+        
       case 'NFL':
         return (
           <div className="relative">
@@ -48,7 +48,7 @@ export function SportsLoading({
             </div>
           </div>
         );
-
+        
       case 'NBA':
         return (
           <div className="relative">
@@ -62,54 +62,57 @@ export function SportsLoading({
             </div>
           </div>
         );
-
+        
       case 'NHL':
         return (
           <div className="relative">
-            {/* Hockey puck sliding */}
-            <div className={`${getSizeClasses()} animate-pulse flex items-center justify-center text-slate-300`}>
-              🏒
+            {/* Puck sliding */}
+            <div className={`${getSizeClasses()} flex items-center justify-center`}>
+              <div className="w-8 h-2 bg-black rounded-full animate-pulse"></div>
             </div>
-            {/* Moving goal */}
-            <div className="absolute -top-2 -right-2 text-lg animate-bounce">
-              🥅
+            {/* Hockey sticks crossing */}
+            <div className="absolute inset-0 flex items-center justify-center text-sm">
+              <div className="animate-ping">🏒</div>
             </div>
           </div>
         );
-
-      case 'WNBA':
+        
+      case 'CFL':
         return (
           <div className="relative">
-            {/* Basketball bouncing with pink accent */}
-            <div className={`${getSizeClasses()} animate-bounce flex items-center justify-center text-pink-400`}>
-              🏀
+            {/* Canadian football with maple leaf */}
+            <div className={`${getSizeClasses()} animate-spin flex items-center justify-center text-red-600`}>
+              🏈
             </div>
-            {/* Spinning hoop */}
-            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-lg animate-pulse text-pink-300">
-              🏀
+            <div className="absolute top-0 right-0 text-xs animate-pulse">
+              🍁
             </div>
           </div>
         );
-
-      case 'CFL':
+        
       case 'NCAAF':
         return (
           <div className="relative">
-            {/* Football spinning */}
-            <div className={`${getSizeClasses()} animate-spin flex items-center justify-center text-amber-600`}>
+            {/* College football with graduation cap */}
+            <div className={`${getSizeClasses()} animate-spin flex items-center justify-center text-blue-600`}>
               🏈
             </div>
-            {/* Pulsing goal posts */}
-            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 text-sm animate-pulse">
-              🥅
+            <div className="absolute -top-1 -right-1 text-xs animate-bounce">
+              🎓
             </div>
           </div>
         );
-
+        
       default:
         return (
-          <div className={`${getSizeClasses()} animate-spin flex items-center justify-center text-emerald-500`}>
-            ⚡
+          <div className="relative">
+            {/* Generic sports with trophy */}
+            <div className={`${getSizeClasses()} animate-spin flex items-center justify-center text-yellow-500`}>
+              🏆
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-full h-full border-2 border-emerald-500 border-t-transparent rounded-full animate-spin opacity-50"></div>
+            </div>
           </div>
         );
     }
@@ -118,47 +121,47 @@ export function SportsLoading({
   const getLoadingMessages = (sport: string) => {
     const messages = {
       MLB: [
-        "Analyzing pitcher tendencies...",
-        "Tracking base runners...",
-        "Calculating batting averages...",
+        "Analyzing pitcher tendencies...", 
+        "Tracking base runners...", 
+        "Calculating batting averages...", 
         "Checking field conditions...",
         "Loading diamond data..."
       ],
       NFL: [
-        "Reading the playbook...",
-        "Analyzing offensive line...",
-        "Checking down and distance...",
+        "Reading the playbook...", 
+        "Analyzing offensive line...", 
+        "Checking down and distance...", 
         "Loading field position...",
         "Studying game film..."
       ],
       NBA: [
-        "Bouncing into action...",
-        "Shooting for the stats...",
-        "Dribbling up the data...",
+        "Bouncing into action...", 
+        "Shooting for the stats...", 
+        "Dribbling up the data...", 
         "Loading court vision...",
         "Analyzing shot charts..."
       ],
       NHL: [
-        "Skating to the net...",
-        "Checking ice conditions...",
-        "Loading power play data...",
+        "Skating to the net...", 
+        "Checking ice conditions...", 
+        "Loading power play data...", 
         "Analyzing face-off wins...",
         "Preparing for overtime..."
       ],
       CFL: [
-        "Eh! Loading Canadian stats...",
-        "Preparing three downs...",
-        "Loading wider field data...",
+        "Eh! Loading Canadian stats...", 
+        "Preparing three downs...", 
+        "Loading wider field data...", 
         "Analyzing rouge plays..."
       ],
       NCAAF: [
-        "Studying for the game...",
-        "Loading college rankings...",
-        "Analyzing conference play...",
+        "Studying for the game...", 
+        "Loading college rankings...", 
+        "Analyzing conference play...", 
         "Preparing bowl projections..."
       ]
     };
-
+    
     const sportMessages = messages[sport.toUpperCase() as keyof typeof messages] || messages.MLB;
     return sportMessages[Math.floor(Math.random() * sportMessages.length)];
   };
@@ -226,13 +229,13 @@ export function GameCardLoading({ sport = 'MLB' }: { sport?: string }) {
             <div className="h-4 w-16 bg-slate-700 rounded animate-pulse"></div>
           </div>
         </div>
-
+        
         {/* Sport-specific loading animation */}
         <div className="flex items-center space-x-3">
           <SportsLoading sport={sport} message="" size="sm" />
         </div>
       </div>
-
+      
       {/* Game details loading */}
       <div className="mt-4 space-y-2">
         <div className="h-3 w-24 bg-slate-700 rounded animate-pulse"></div>

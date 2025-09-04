@@ -111,21 +111,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Vegas Golden Knights': 'VGK',
   'Colorado Avalanche': 'COL',
   'Dallas Stars': 'DAL',
-  'Nashville Predators': 'NSH',
-
-  // WNBA Teams
-  'Phoenix Mercury': 'PHO',
-  'Washington Mystics': 'WAS',
-  'Golden State Valkyries': 'GSV',
-  'Las Vegas Aces': 'LV',
-  'Chicago Sky': 'CHI',
-  'Connecticut Sun': 'CON',
-  'Indiana Fever': 'IND',
-  'New York Liberty': 'NYL',
-  'Minnesota Lynx': 'MIN',
-  'Seattle Storm': 'SEA',
-  'Dallas Wings': 'DAL',
-  'Atlanta Dream': 'ATL',
+  'Nashville Predators': 'NSH'
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -188,20 +174,6 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
       'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
       'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
-    },
-    WNBA: {
-      'PHO': 'https://content.sportslogos.net/logos/34/875/full/phoenix_mercury_logo_primary_20142024.png',
-      'WAS': 'https://content.sportslogos.net/logos/34/883/full/washington_mystics_logo_primary_20142024.png',
-      'GSV': 'https://content.sportslogos.net/logos/34/12102/full/golden_state_valkyries_logo_primary_20242025.png',
-      'LV': 'https://content.sportslogos.net/logos/34/7024/full/las_vegas_aces_logo_primary_20172024.png',
-      'CHI': 'https://content.sportslogos.net/logos/34/874/full/chicago_sky_logo_primary_20142024.png',
-      'CON': 'https://content.sportslogos.net/logos/34/878/full/connecticut_sun_logo_primary_20142024.png',
-      'IND': 'https://content.sportslogos.net/logos/34/877/full/indiana_fever_logo_primary_20142024.png',
-      'NYL': 'https://content.sportslogos.net/logos/34/882/full/new_york_liberty_logo_primary_20142024.png',
-      'MIN': 'https://content.sportslogos.net/logos/34/881/full/minnesota_lynx_logo_primary_20142024.png',
-      'SEA': 'https://content.sportslogos.net/logos/34/884/full/seattle_storm_logo_primary_20142024.png',
-      'DAL': 'https://content.sportslogos.net/logos/34/879/full/dallas_wings_logo_primary_20142024.png',
-      'ATL': 'https://content.sportslogos.net/logos/34/876/full/atlanta_dream_logo_primary_20142024.png'
     }
   };
 
@@ -503,79 +475,6 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
         <text x="50" y="70" textAnchor="middle" className="fill-white font-black text-xs font-sans">DUCKS</text>
       </svg>
     ),
-    // WNBA Logos
-    'PHO': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#FDBB2D" stroke="#000000" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-black font-black text-xl font-sans">PHX</text>
-      </svg>
-    ),
-    'WAS': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#A71930" stroke="#000000" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">WAS</text>
-      </svg>
-    ),
-    'GSV': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">GSV</text>
-      </svg>
-    ),
-    'LV': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">LV</text>
-      </svg>
-    ),
-    'CHI': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">CHI</text>
-      </svg>
-    ),
-    'CON': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#002B5C" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">CON</text>
-      </svg>
-    ),
-    'IND': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">IND</text>
-      </svg>
-    ),
-    'NYL': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#4A2584" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">NYL</text>
-      </svg>
-    ),
-    'MIN': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">MIN</text>
-      </svg>
-    ),
-    'SEA': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">SEA</text>
-      </svg>
-    ),
-    'DAL': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">DAL</text>
-      </svg>
-    ),
-    'ATL': (
-      <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-        <circle cx="50" cy="50" r="48" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
-        <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-xl font-sans">ATL</text>
-      </svg>
-    ),
     'NYM': (
       <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
         <circle cx="50" cy="50" r="48" fill="#002D72" stroke="#FF5910" strokeWidth="2"/>
@@ -614,63 +513,6 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     )
   };
 
-  // WNBA team logos mapping
-  const wnbaLogos: Record<string, string> = {
-    'PHO': '/logos/wnba/mercury.png',
-    'PHX': '/logos/wnba/mercury.png',
-    'PHOENIX': '/logos/wnba/mercury.png',
-    'MERCURY': '/logos/wnba/mercury.png',
-
-    'WAS': '/logos/wnba/mystics.png',
-    'WASHINGTON': '/logos/wnba/mystics.png', 
-    'MYSTICS': '/logos/wnba/mystics.png',
-    'MYS': '/logos/wnba/mystics.png',
-
-    'GS': '/logos/wnba/valkyries.png',
-    'GSV': '/logos/wnba/valkyries.png',
-    'GOLDEN STATE': '/logos/wnba/valkyries.png',
-    'VALKYRIES': '/logos/wnba/valkyries.png',
-    'GOL': '/logos/wnba/valkyries.png',
-
-    'LV': '/logos/wnba/aces.png',
-    'LAS': '/logos/wnba/aces.png',
-    'LAS VEGAS': '/logos/wnba/aces.png',
-    'ACES': '/logos/wnba/aces.png',
-
-    'NYL': '/logos/wnba/liberty.png',
-    'NEW YORK': '/logos/wnba/liberty.png',
-    'LIBERTY': '/logos/wnba/liberty.png',
-
-    'MIN': '/logos/wnba/lynx.png',
-    'MINNESOTA': '/logos/wnba/lynx.png',
-    'LYNX': '/logos/wnba/lynx.png',
-
-    'SEA': '/logos/wnba/storm.png',
-    'SEATTLE': '/logos/wnba/storm.png',
-    'STORM': '/logos/wnba/storm.png',
-
-    'CHI': '/logos/wnba/sky.png',
-    'CHICAGO': '/logos/wnba/sky.png',
-    'SKY': '/logos/wnba/sky.png',
-
-    'CON': '/logos/wnba/sun.png',
-    'CONNECTICUT': '/logos/wnba/sun.png',
-    'SUN': '/logos/wnba/sun.png',
-
-    'ATL': '/logos/wnba/dream.png',
-    'ATLANTA': '/logos/wnba/dream.png',
-    'DREAM': '/logos/wnba/dream.png',
-
-    'IND': '/logos/wnba/fever.png',
-    'INDIANA': '/logos/wnba/fever.png',
-    'FEVER': '/logos/wnba/fever.png',
-
-    'DAL': '/logos/wnba/wings.png',
-    'DALLAS': '/logos/wnba/wings.png',
-    'WINGS': '/logos/wnba/wings.png'
-  };
-
-
   // Get abbreviation from prop or lookup from team name
   let teamAbbr = abbreviation;
 
@@ -690,11 +532,11 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     }
   }
 
-  // Try to get the official team logo URL first, prioritizing MLB for sports betting app
-  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, 'MLB') : null;
+  // Try to get the official team logo URL first, but skip for WNBA to use sport-specific icons
+  const logoUrl = sport !== 'WNBA' && teamAbbr ? getTeamLogoUrl(teamAbbr, 'MLB') : null;
 
-  if (logoUrl) {
-    // Use official team logo from ESPN
+  if (logoUrl && sport !== 'WNBA') {
+    // Use official team logo from ESPN (but not for WNBA)
     return (
       <img 
         src={logoUrl} 
@@ -703,22 +545,6 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
         onError={(e) => {
           // If image fails to load, hide it and show fallback
           console.log(`Failed to load logo for ${teamName}`);
-          e.currentTarget.style.display = 'none';
-        }}
-      />
-    );
-  }
-
-  // Check for WNBA logos if not found in ESPN
-  const wnbaLogoUrl = teamAbbr ? wnbaLogos[teamAbbr] : null;
-  if (wnbaLogoUrl) {
-    return (
-      <img 
-        src={wnbaLogoUrl} 
-        alt={teamName}
-        className={`${sizeClasses[size]} ${className} object-contain`}
-        onError={(e) => {
-          console.log(`Failed to load WNBA logo for ${teamName}`);
           e.currentTarget.style.display = 'none';
         }}
       />
