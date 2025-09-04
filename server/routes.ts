@@ -1064,7 +1064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         analysis: {
           homeRunFactor,
           windDescription: windDesc,
-          weatherSource: process.env.OPENWEATHERMAP_API_KEY ? 'Live OpenWeatherMap API' : 'Fallback Data'
+          weatherSource: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data (Set OPENWEATHERMAP_API_KEY for live data)'
         }
       });
     } catch (error: any) {
@@ -1090,7 +1090,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         homeRunFactor,
         humidity: weather.humidity,
         pressure: weather.pressure,
-        timestamp: weather.timestamp
+        timestamp: weather.timestamp,
+        source: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data'
       });
     } catch (error: any) {
       console.error(`Weather API error for team ${req.params.teamName}:`, error);

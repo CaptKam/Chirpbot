@@ -2,8 +2,7 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
-
-// Import weather service properly
+import { weatherService } from '../weather-service';
 const weatherService = {
   async getWeatherForTeam(teamName: string) {
     return {
