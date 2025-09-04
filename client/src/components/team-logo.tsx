@@ -72,9 +72,9 @@ const teamNameToAbbr: Record<string, string> = {
   'Twins': 'MIN',
   'Rays': 'TB',
 
-  // NFL Teams
+  // NFL Teams - Full Names
   'Kansas City Chiefs': 'KC',
-  'Buffalo Bills': 'BUF',
+  'Buffalo Bills': 'BUF', 
   'New York Jets': 'NYJ',
   'New England Patriots': 'NE',
   'Miami Dolphins': 'MIA',
@@ -87,13 +87,68 @@ const teamNameToAbbr: Record<string, string> = {
   'Jacksonville Jaguars': 'JAX',
   'Tennessee Titans': 'TEN',
   'Denver Broncos': 'DEN',
-  'Las Vegas Raiders': 'LV',
+  'Las Vegas Raiders': 'LAS',
   'Los Angeles Chargers': 'LAC',
   'Dallas Cowboys': 'DAL',
   'Philadelphia Eagles': 'PHI',
   'Atlanta Falcons': 'ATL',
   'Chicago Bears': 'CHI',
   'Minnesota Vikings': 'MIN',
+  'Green Bay Packers': 'GB',
+  'Detroit Lions': 'DET',
+  'Seattle Seahawks': 'SEA',
+  'Los Angeles Rams': 'LAR',
+  'San Francisco 49ers': 'SF',
+  'Arizona Cardinals': 'ARI',
+  'New Orleans Saints': 'NO',
+  'Tampa Bay Buccaneers': 'TB',
+  'Carolina Panthers': 'CAR',
+  'Washington Commanders': 'WAS',
+  'New York Giants': 'NYG',
+  
+  // NFL Teams - Short Names
+  'Chiefs': 'KC',
+  'Bills': 'BUF',
+  'Jets': 'NYJ',
+  'JET': 'NYJ',
+  'Patriots': 'NE',
+  'NEW': 'NE',
+  'Dolphins': 'MIA',
+  'Steelers': 'PIT',
+  'Ravens': 'BAL',
+  'Bengals': 'CIN',
+  'Browns': 'CLE',
+  'Texans': 'HOU',
+  'Colts': 'IND',
+  'Jaguars': 'JAX',
+  'JAC': 'JAX',
+  'Titans': 'TEN',
+  'Broncos': 'DEN',
+  'Raiders': 'LAS',
+  'Chargers': 'LAC',
+  'CHA': 'LAC',
+  'Cowboys': 'DAL',
+  'Eagles': 'PHI',
+  'Falcons': 'ATL',
+  'Bears': 'CHI',
+  'Vikings': 'MIN',
+  'Packers': 'GB',
+  'GRE': 'GB',
+  'Lions': 'DET',
+  'Seahawks': 'SEA',
+  'Rams': 'LAR',
+  'RAM': 'LAR',
+  '49ers': 'SF',
+  '49E': 'SF',
+  'Cardinals': 'ARI',
+  'Saints': 'NO',
+  'NEW': 'NO',
+  'Buccaneers': 'TB',
+  'BUC': 'TB',
+  'Panthers': 'CAR',
+  'Commanders': 'WAS',
+  'COM': 'WAS',
+  'Giants': 'NYG',
 
   // NBA Teams  
   'Los Angeles Lakers': 'LAL',
@@ -751,11 +806,39 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     'ANA': { primary: '#F47A38', secondary: '#B9975B', accent: '#000000' }, // Ducks Orange/Gold
     'VGK': { primary: '#B4975A', secondary: '#000000', accent: '#C8AA6E' }, // Golden Knights Gold/Black
 
-    // NFL Team Colors (add common ones)
+    // NFL Team Colors (comprehensive set)
     'KC': { primary: '#E31837', secondary: '#FFB81C', accent: '#FFFFFF' },  // Chiefs Red/Gold
     'BUF': { primary: '#00338D', secondary: '#C60C30', accent: '#FFFFFF' }, // Bills Blue/Red
-    'DAL': { primary: '#041E42', secondary: '#869397', accent: '#FFFFFF' }, // Cowboys Navy/Silver
+    'NYJ': { primary: '#125740', secondary: '#FFFFFF', accent: '#000000' }, // Jets Green/White
     'NE': { primary: '#002244', secondary: '#C60C30', accent: '#B0B7BC' }, // Patriots Navy/Red/Silver
+    'MIA': { primary: '#008E97', secondary: '#FC4C02', accent: '#FFFFFF' }, // Dolphins Aqua/Orange
+    'PIT': { primary: '#FFB612', secondary: '#101820', accent: '#FFFFFF' }, // Steelers Gold/Black
+    'BAL': { primary: '#241773', secondary: '#000000', accent: '#9E7C0C' }, // Ravens Purple/Black/Gold
+    'CIN': { primary: '#FB4F14', secondary: '#000000', accent: '#FFFFFF' }, // Bengals Orange/Black
+    'CLE': { primary: '#311D00', secondary: '#FF3C00', accent: '#FFFFFF' }, // Browns Brown/Orange
+    'HOU': { primary: '#03202F', secondary: '#A71930', accent: '#FFFFFF' }, // Texans Navy/Red
+    'IND': { primary: '#002C5F', secondary: '#A2AAAD', accent: '#FFFFFF' }, // Colts Blue/Silver
+    'JAX': { primary: '#006778', secondary: '#D7A22A', accent: '#9F792C' }, // Jaguars Teal/Gold
+    'TEN': { primary: '#0C2340', secondary: '#4B92DB', accent: '#C8102E' }, // Titans Navy/Blue/Red
+    'DEN': { primary: '#FB4F14', secondary: '#002244', accent: '#FFFFFF' }, // Broncos Orange/Navy
+    'LAS': { primary: '#000000', secondary: '#A5ACAF', accent: '#FFFFFF' }, // Raiders Black/Silver
+    'LAC': { primary: '#0080C6', secondary: '#FFC20E', accent: '#FFFFFF' }, // Chargers Blue/Gold
+    'DAL': { primary: '#041E42', secondary: '#869397', accent: '#FFFFFF' }, // Cowboys Navy/Silver
+    'PHI': { primary: '#004C54', secondary: '#A5ACAF', accent: '#ACC0C6' }, // Eagles Green/Silver
+    'ATL': { primary: '#A71930', secondary: '#000000', accent: '#A5ACAF' }, // Falcons Red/Black/Silver
+    'CHI': { primary: '#0B162A', secondary: '#C83803', accent: '#FFFFFF' }, // Bears Navy/Orange
+    'MIN': { primary: '#4F2683', secondary: '#FFC62F', accent: '#FFFFFF' }, // Vikings Purple/Gold
+    'GB': { primary: '#203731', secondary: '#FFB612', accent: '#FFFFFF' },  // Packers Green/Gold
+    'DET': { primary: '#0076B6', secondary: '#B0B7BC', accent: '#000000' }, // Lions Blue/Silver
+    'SEA': { primary: '#002244', secondary: '#69BE28', accent: '#A5ACAF' }, // Seahawks Navy/Green/Silver
+    'LAR': { primary: '#003594', secondary: '#FFA300', accent: '#FFFFFF' }, // Rams Blue/Gold
+    'SF': { primary: '#AA0000', secondary: '#B3995D', accent: '#FFFFFF' },  // 49ers Red/Gold
+    'ARI': { primary: '#97233F', secondary: '#000000', accent: '#FFB612' }, // Cardinals Red/Black/Gold
+    'NO': { primary: '#D3BC8D', secondary: '#101820', accent: '#FFFFFF' },  // Saints Gold/Black
+    'TB': { primary: '#D50A0A', secondary: '#FF7900', accent: '#0A0A08' }, // Bucs Red/Orange/Black
+    'CAR': { primary: '#0085CA', secondary: '#101820', accent: '#BFC0BF' }, // Panthers Blue/Black/Silver
+    'WAS': { primary: '#5A1414', secondary: '#FFB612', accent: '#FFFFFF' }, // Commanders Burgundy/Gold
+    'NYG': { primary: '#0B2265', secondary: '#A71930', accent: '#A5ACAF' }, // Giants Blue/Red/Silver
   };
 
   // Generate sport-specific logo function (main implementation)
