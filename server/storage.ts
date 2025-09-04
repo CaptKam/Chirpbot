@@ -272,7 +272,7 @@ export const storage = {
       // Use the proper globalAlertSettings table instead of admin personal preferences
       const globalSettings = await db.select()
         .from(globalAlertSettings)
-        .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
+        .where(eq(globalAlertSettings.sport, sport.toUpperCase()));
 
       // Start with all defaults enabled
       const defaultSettings: Record<string, boolean> = {
