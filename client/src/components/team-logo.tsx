@@ -532,11 +532,11 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     }
   }
 
-  // Try to get the official team logo URL first, prioritizing MLB for sports betting app
-  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, 'MLB') : null;
+  // Try to get the official team logo URL first, but skip for WNBA to use sport-specific icons
+  const logoUrl = sport !== 'WNBA' && teamAbbr ? getTeamLogoUrl(teamAbbr, 'MLB') : null;
 
-  if (logoUrl) {
-    // Use official team logo from ESPN
+  if (logoUrl && sport !== 'WNBA') {
+    // Use official team logo from ESPN (but not for WNBA)
     return (
       <img 
         src={logoUrl} 
