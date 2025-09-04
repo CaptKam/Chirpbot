@@ -319,7 +319,7 @@ export const storage = {
         defaultSettings[setting.alertType] = setting.enabled;
       });
 
-      console.log(`🔧 FIXED: Global settings for ${sport} loaded from globalAlertSettings table:`, defaultSettings);
+      // Architecture fixed: Now using proper globalAlertSettings table instead of admin preferences
       return defaultSettings;
     } catch (error) {
       console.error('Error getting global alert settings:', error);
