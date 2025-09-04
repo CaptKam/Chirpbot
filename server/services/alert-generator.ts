@@ -13,6 +13,7 @@ import { AIEnhancementService, GameContext } from './ai-enhancements';
 import { MLBEngine } from './engines/mlb-engine';
 import { NCAAFEngine } from './engines/ncaaf-engine';
 import { WNBAEngine } from './engines/wnba-engine';
+import { NFLEngine } from './engines/nfl-engine';
 import { BaseSportEngine, GameState, AlertResult } from './engines/base-engine';
 
 // AI Betting Analysis Engine
@@ -95,6 +96,7 @@ export class AlertGenerator {
   private mlbApi: MLBApiService;
   private ncaafApi: NCAAFApiService;
   private wnbaApi: any; // Will be initialized dynamically
+  private nflApi: any; // Will be initialized dynamically
   private deduplication: AlertDeduplication;
   private settingsCache: SettingsCache;
   private ai: BasicAI;
@@ -116,6 +118,7 @@ export class AlertGenerator {
     this.sportEngines.set('MLB', new MLBEngine());
     this.sportEngines.set('NCAAF', new NCAAFEngine());
     this.sportEngines.set('WNBA', new WNBAEngine());
+    this.sportEngines.set('NFL', new NFLEngine());
   }
 
   // Check if a specific alert type is globally enabled (CACHED - No DB spam!)
@@ -229,23 +232,25 @@ export class AlertGenerator {
   async generateLiveGameAlerts(): Promise<void> {
     try {
       // Get live games from all sports
-      const [mlbGames, ncaafGames, wnbaGames] = await Promise.all([
+      const [mlbGames, ncaafGames, wnbaGames, nflGames] = await Promise.all([
         this.mlbApi.getTodaysGames(),
         this.ncaafApi.getTodaysGames(),
-        this.getWNBAGames()
+        this.getWNBAGames(),
+        this.getNFLGames()
       ]);
 
       const liveMLBGames = mlbGames.filter(game => game.isLive);
       const liveNCAAFGames = ncaafGames.filter(game => game.isLive);
       const liveWNBAGames = wnbaGames.filter(game => game.isLive);
-      const totalLiveGames = liveMLBGames.length + liveNCAAFGames.length + liveWNBAGames.length;
+      const liveNFLGames = nflGames.filter(game => game.isLive);
+      const totalLiveGames = liveMLBGames.length + liveNCAAFGames.length + liveWNBAGames.length + liveNFLGames.length;
 
       if (totalLiveGames === 0) {
         console.log('🔍 No live games to monitor for alerts');
         return;
       }
 
-      console.log(`🔍 Monitoring ${liveMLBGames.length} MLB + ${liveNCAAFGames.length} NCAAF + ${liveWNBAGames.length} WNBA live games for alerts`);
+      console.log(`🔍 Monitoring ${liveMLBGames.length} MLB + ${liveNCAAFGames.length} NCAAF + ${liveWNBAGames.length} WNBA + ${liveNFLGames.length} NFL live games for alerts`);
 
       let newAlerts = 0;
 
@@ -253,6 +258,7 @@ export class AlertGenerator {
       newAlerts += await this.processGamesWithEngine('MLB', liveMLBGames);
       newAlerts += await this.processGamesWithEngine('NCAAF', liveNCAAFGames);
       newAlerts += await this.processGamesWithEngine('WNBA', liveWNBAGames);
+      newAlerts += await this.processGamesWithEngine('NFL', liveNFLGames);
 
       if (newAlerts > 0) {
         console.log(`🚨 Generated ${newAlerts} new live alerts!`);
@@ -338,6 +344,20 @@ export class AlertGenerator {
       return await this.wnbaApi.getTodaysGames();
     } catch (error) {
       console.error('Error fetching WNBA games:', error);
+      return [];
+    }
+  }
+
+  // Helper method to get NFL games
+  private async getNFLGames(): Promise<any[]> {
+    try {
+      if (!this.nflApi) {
+        const { NFLApiService } = await import('./nfl-api');
+        this.nflApi = new NFLApiService();
+      }
+      return await this.nflApi.getTodaysGames();
+    } catch (error) {
+      console.error('Error fetching NFL games:', error);
       return [];
     }
   }

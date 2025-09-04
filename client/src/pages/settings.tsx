@@ -58,6 +58,8 @@ const ALERT_TYPE_CONFIG = {
     { key: 'OVERTIME', label: 'Overtime Play', description: 'Games entering overtime' }
   ],
   NFL: [
+    { key: 'NFL_GAME_START', label: 'Game Start', description: 'Game kickoff notification' },
+    { key: 'NFL_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Second half begins notification' },
     { key: 'RED_ZONE', label: 'Red Zone', description: 'Team inside 20-yard line' },
     { key: 'FOURTH_DOWN', label: 'Fourth Down', description: 'Critical conversion attempts' },
     { key: 'TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'End of half situations' }

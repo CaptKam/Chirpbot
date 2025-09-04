@@ -276,7 +276,7 @@ export const storage = {
 
       // Start with all defaults enabled
       const defaultSettings: Record<string, boolean> = {
-        // MLB alerts - all enabled by default
+        // MLB Alerts
         'RISP': true,
         'BASES_LOADED': true,
         'RUNNERS_1ST_2ND': true,
@@ -291,27 +291,42 @@ export const storage = {
         'STRIKEOUT': true,
         'POWER_HITTER': true,
         'HOT_HITTER': true,
-        // AI Enhancement Features
+
+        // AI Enhancement Alerts
         'AI_ENHANCED_MESSAGES': true,
         'AI_PREDICTIVE_AT_BAT': true,
         'AI_SCORING_PROBABILITY': true,
         'AI_SITUATION_ANALYSIS': true,
         'AI_EVENT_SUMMARIES': true,
         'AI_ROI_ALERTS': true,
-        // NFL alerts
+
+        // RE24 System Alerts
+        'RE24_ENABLED': true,
+        'RE24_CONTEXT_FACTORS': true,
+        'RE24_MINIMUM_THRESHOLDS': true,
+        'RE24_DYNAMIC_PRIORITY': true,
+
+        // NCAAF Alerts
         'RED_ZONE': true,
         'FOURTH_DOWN': true,
         'TWO_MINUTE_WARNING': true,
-        // NCAAF alerts
         'NCAAF_KICKOFF': true,
         'NCAAF_HALFTIME': true,
         'NCAAF_TWO_MINUTE_WARNING': true,
-        // NBA alerts
         'CLUTCH_TIME': true,
         'OVERTIME': true,
-        // NHL alerts
-        'POWER_PLAY': true,
-        'EMPTY_NET': true
+
+        // NFL Alerts
+        'NFL_GAME_START': true,
+        'NFL_SECOND_HALF_KICKOFF': true,
+
+        // WNBA Alerts
+        'WNBA_FOURTH_QUARTER': true,
+        'WNBA_CLOSE_GAME': true,
+        'WNBA_OVERTIME': true,
+        'WNBA_HIGH_SCORING': true,
+        'WNBA_COMEBACK': true,
+        'WNBA_CLUTCH_PERFORMANCE': true,
       };
 
       // Apply actual global settings from the dedicated table
@@ -336,7 +351,11 @@ export const storage = {
         'AI_EVENT_SUMMARIES': true,
         'AI_ROI_ALERTS': true,
         'RED_ZONE': true, 'FOURTH_DOWN': true, 'TWO_MINUTE_WARNING': true,
-        'CLUTCH_TIME': true, 'OVERTIME': true, 'POWER_PLAY': true, 'EMPTY_NET': true
+        'NCAAF_KICKOFF': true, 'NCAAF_HALFTIME': true, 'NCAAF_TWO_MINUTE_WARNING': true,
+        'CLUTCH_TIME': true, 'OVERTIME': true,
+        'NFL_GAME_START': true, 'NFL_SECOND_HALF_KICKOFF': true,
+        'WNBA_FOURTH_QUARTER': true, 'WNBA_CLOSE_GAME': true, 'WNBA_OVERTIME': true,
+        'WNBA_HIGH_SCORING': true, 'WNBA_COMEBACK': true, 'WNBA_CLUTCH_PERFORMANCE': true
       };
     }
   },

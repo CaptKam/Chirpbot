@@ -428,6 +428,15 @@ const ALERT_TYPE_CONFIG = {
             { key: "WNBA_CLUTCH_PERFORMANCE", label: "Clutch Performances", description: "Outstanding individual performances in critical moments" }
         ]
     },
+    NFL: {
+        "Game Flow": [
+            { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "NFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
+            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
+            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" }
+        ]
+    },
 };
 
 async function loadSportAlertSettings() {
