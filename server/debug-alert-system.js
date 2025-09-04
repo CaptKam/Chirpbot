@@ -57,6 +57,39 @@ async function debugAlertSystem() {
       LIMIT 5
     `);
     console.log(veryRecentAlerts.rows);
+
+    // 7. LAW #3 COMPLIANCE CHECK
+    console.log('\n⚖️ LAW #3 COMPLIANCE CHECK:');
+    console.log('Rule: Same messages on alerts page MUST be sent to Telegram');
+    
+    const alertsPageAlerts = await storage.db.execute(`
+      SELECT type, COUNT(*) as count
+      FROM alerts 
+      WHERE created_at > NOW() - INTERVAL '1 hour'
+      GROUP BY type
+      ORDER BY count DESC
+    `);
+    
+    console.log('Alert types appearing on alerts page:');
+    for (const alert of alertsPageAlerts.rows) {
+      const isGloballyEnabled = globalSettings[alert.type];
+      const status = isGloballyEnabled ? '✅ ENABLED' : '❌ BLOCKED';
+      console.log(`  ${alert.type}: ${alert.count} alerts - Telegram: ${status}`);
+      
+      if (!isGloballyEnabled) {
+        console.log(`    ⚠️ LAW #3 VIOLATION: ${alert.type} appears on alerts page but blocked from Telegram`);
+      }
+    }
+
+    // 8. Check for telegram sending failures
+    console.log('\n📱 TELEGRAM DIAGNOSTIC:');
+    const telegramEnabledUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
+    console.log(`Users with valid Telegram config: ${telegramEnabledUsers.length}/${allUsers.length}`);
+    
+    if (telegramEnabledUsers.length === 0) {
+      console.log('❌ NO USERS with valid Telegram configuration found!');
+      console.log('This explains why no Telegram alerts are being sent.');
+    }
     
   } catch (error) {
     console.error('❌ Debug failed:', error);

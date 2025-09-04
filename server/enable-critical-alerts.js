@@ -17,12 +17,19 @@ async function enableCriticalAlerts() {
     
     console.log(`Using admin: ${admin.username}`);
     
-    // Enable the alert types that are currently disabled
+    // Enable ALL alert types that are currently disabled to fix Law #3 violations
     const alertsToEnable = [
       'FULL_COUNT',
       'STRIKEOUT', 
       'POWER_HITTER',
-      'HOT_HITTER'
+      'HOT_HITTER',
+      'BASES_LOADED',
+      'RUNNERS_1ST_2ND',
+      'RISP',
+      'CLOSE_GAME',
+      'HIGH_SCORING',
+      'SHUTOUT',
+      'BLOWOUT'
     ];
     
     console.log('\n📋 Enabling alert types:');
