@@ -3,7 +3,7 @@ import { motion, PanInfo } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calculator, Activity } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import AlertFooter from '@/components/AlertFooter';
@@ -114,21 +114,79 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
+  // Fetch live game data for MLB alerts to get current scores
+  const { data: todaysGames } = useQuery({
+    queryKey: ["/api/games/today", { sport: alertData?.sport || "MLB" }],
+    queryFn: async ({ queryKey }) => {
+      const [url, params] = queryKey;
+      const searchParams = new URLSearchParams(params as Record<string, string>);
+      const response = await fetch(`${url}?${searchParams}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch games");
+      return response.json();
+    },
+    enabled: alertData?.sport === 'MLB', // Only fetch for MLB alerts
+    refetchInterval: 15000, // Refresh every 15 seconds for live scores
+    staleTime: 10000,
+  });
+
+  // Find the matching game for this alert to get live scores
+  const liveGameData = React.useMemo(() => {
+    if (!todaysGames?.games || !alertData) return null;
+    
+    return todaysGames.games.find((game: any) => {
+      // Match by team names (both home and away combinations)
+      const gameHomeTeam = game.homeTeam?.name || '';
+      const gameAwayTeam = game.awayTeam?.name || '';
+      const alertHomeTeam = alertData.homeTeam || '';
+      const alertAwayTeam = alertData.awayTeam || '';
+      
+      return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
+             (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
+    });
+  }, [todaysGames, alertData]);
+
+  // Calculate scores to display - use live scores if available, fallback to stored scores
+  const displayScores = React.useMemo(() => {
+    const storedHomeScore = alertData?.context?.homeScore ?? alertData?.homeScore ?? 0;
+    const storedAwayScore = alertData?.context?.awayScore ?? alertData?.awayScore ?? 0;
+    
+    // Use live scores if we have live game data and it's a live or final game
+    if (liveGameData && (liveGameData.status === 'live' || liveGameData.status === 'final')) {
+      return {
+        homeScore: liveGameData.homeTeam?.score ?? storedHomeScore,
+        awayScore: liveGameData.awayTeam?.score ?? storedAwayScore,
+        isLive: true
+      };
+    }
+    
+    // Fallback to stored scores
+    return {
+      homeScore: storedHomeScore,
+      awayScore: storedAwayScore,
+      isLive: false
+    };
+  }, [liveGameData, alertData]);
+
   // Debug score data
   React.useEffect(() => {
     if (alertData) {
       console.log('🔍 SwipeableCard Score Debug:', {
         alertId: alertData.id,
-        homeScore: alertData.homeScore,
-        awayScore: alertData.awayScore,
-        contextHomeScore: alertData.context?.homeScore,
-        contextAwayScore: alertData.context?.awayScore,
-        contextScores: alertData.context?.scores,
+        storedHomeScore: alertData.homeScore,
+        storedAwayScore: alertData.awayScore,
+        liveHomeScore: liveGameData?.homeTeam?.score,
+        liveAwayScore: liveGameData?.awayTeam?.score,
+        displayHomeScore: displayScores.homeScore,
+        displayAwayScore: displayScores.awayScore,
+        hasLiveGame: !!liveGameData,
+        gameStatus: liveGameData?.status,
         homeTeam: alertData.homeTeam,
         awayTeam: alertData.awayTeam
       });
     }
-  }, [alertData]);
+  }, [alertData, liveGameData, displayScores]);
 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
     // Try to open the app first, with better fallback handling
@@ -498,73 +556,37 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* Game Card Template - Calendar Page Style */}
+              {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-6">
                 <GameCardTemplate
                   homeTeam={alertData.homeTeam || 'TBD'}
                   awayTeam={alertData.awayTeam || 'TBD'}
-                  homeScore={alertData.context?.homeScore ?? alertData.homeScore ?? alertData.context?.scores?.home ?? 0}
-                  awayScore={alertData.context?.awayScore ?? alertData.awayScore ?? alertData.context?.scores?.away ?? 0}
+                  homeScore={displayScores.homeScore}
+                  awayScore={displayScores.awayScore}
                   sport={alertData.sport}
-                  status="live"
-                  inning={alertData.context?.inning}
-                  quarter={alertData.context?.quarter}
-                  period={alertData.context?.period}
-                  isTopInning={alertData.context?.isTopInning}
+                  status={displayScores.isLive ? "live" : "final"}
+                  inning={alertData.context?.inning || liveGameData?.inning}
+                  quarter={alertData.context?.quarter || liveGameData?.quarter}
+                  period={alertData.context?.period || liveGameData?.period}
+                  isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
                   size="lg"
                   className="shadow-lg"
                 />
               </div>
 
-              {/* AI-Enhanced Alert Message - Clean Layout */}
+              {/* Alert Message - Clean Layout */}
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 mb-6">
                 <div className="flex items-start space-x-3">
-                  {/* AI Enhancement Indicator */}
-                  {alertData.context?.aiEnhanced && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                      <Brain className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                  
                   <div className="flex-1">
-                    {/* Enhanced Message Display */}
+                    {/* Message Display */}
                     <p className="text-slate-100 text-base leading-relaxed font-medium">
-                      {alertData.context?.aiEnhancedMessage ? (
-                        // Show AI-enhanced message if available
-                        <span>
-                          {alertData.context.aiEnhancedMessage}
-                          {alertData.context?.aiInsight && (
-                            <span className="block mt-3 text-sm text-blue-300 italic bg-blue-500/10 p-3 rounded-lg">
-                              🤖 {alertData.context.aiInsight}
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        // Fallback to cleaned original message
-                        (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()
-                      )}
+                      {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
 
-                    {/* AI Prediction if available */}
-                    {alertData.context?.aiPrediction && (
-                      <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Target className="w-4 h-4 text-blue-400" />
-                          <span className="text-sm text-blue-300 font-semibold">AI Prediction</span>
-                        </div>
-                        <p className="text-sm text-blue-200">{alertData.context.aiPrediction}</p>
-                      </div>
-                    )}
-
-                    {/* Scoring Probability */}
-                    {alertData.context?.scoringProbability && (
-                      <div className="mt-3 flex items-center space-x-3">
-                        <div className="flex items-center space-x-2">
-                          <Activity className="w-4 h-4 text-green-400" />
-                          <span className="text-sm text-green-300 font-medium">
-                            {alertData.context.scoringProbability} scoring chance
-                          </span>
-                        </div>
+                    {/* Context Information */}
+                    {alertData.context?.reasons && alertData.context.reasons.length > 0 && (
+                      <div className="mt-3 text-sm text-slate-300">
+                        <strong>Game Situation:</strong> {alertData.context.reasons.join(', ')}
                       </div>
                     )}
                   </div>
