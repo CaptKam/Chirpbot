@@ -93,16 +93,11 @@ export default function Settings() {
   });
 
   // Alert preferences query
-  const { data: alertPreferences = [], isLoading: preferencesLoading } = useQuery({
-    queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toUpperCase()}`],
-    queryFn: async () => {
-      console.log(`🔧 API: Fetching preferences for sport ${activeSport.toUpperCase()}`);
-      const response = await apiRequest("GET", `/api/user/${user?.id}/alert-preferences/${activeSport.toUpperCase()}`);
-      const data = await response.json();
-      console.log(`🔧 API: Received preferences:`, data);
-      return data;
-    },
-    enabled: !!user?.id,
+  const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
+    queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
+    enabled: !!user?.id && isAuthenticated,
+    staleTime: 30 * 1000, // 30 seconds for alert preferences to show admin changes quickly
+    refetchInterval: 60 * 1000, // Refetch every minute to catch admin changes
   });
 
   // Telegram settings query

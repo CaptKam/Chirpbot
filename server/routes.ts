@@ -369,9 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/user/:userId/alert-preferences/:sport', async (req, res) => {
     try {
       const { userId, sport } = req.params;
-      console.log(`🔧 ROUTE: Getting alert preferences for user ${userId} in sport ${sport}`);
-      const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toLowerCase());
-      console.log(`🔧 ROUTE: Found ${preferences.length} preferences for ${sport}`);
+      const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toUpperCase());
       res.json(preferences);
     } catch (error) {
       console.error('Error fetching alert preferences for sport:', error);
@@ -384,14 +382,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { sport, alertType, enabled } = req.body;
 
-      console.log(`🔧 ROUTE: Setting alert preference for user ${userId}: ${sport}.${alertType} = ${enabled}`);
-
       if (!sport || !alertType || typeof enabled !== 'boolean') {
         return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
       }
 
-      const preference = await storage.setUserAlertPreference(userId, sport.toLowerCase(), alertType, enabled);
-      console.log(`🔧 ROUTE: Successfully set preference:`, preference);
+      const preference = await storage.setUserAlertPreference(userId, sport.toUpperCase(), alertType, enabled);
       res.json(preference);
     } catch (error) {
       console.error('Error setting alert preference:', error);

@@ -221,17 +221,11 @@ export const storage = {
   },
 
   async getUserAlertPreferencesBySport(userId: string, sport: string) {
-    console.log(`🔧 STORAGE DEBUG: Getting preferences for user ${userId} in sport ${sport}`);
-    const result = await db.select().from(userAlertPreferences)
+    return await db.select().from(userAlertPreferences)
       .where(and(
         eq(userAlertPreferences.userId, userId),
         eq(userAlertPreferences.sport, sport)
       ));
-    console.log(`🔧 STORAGE DEBUG: Found ${result.length} preferences for user ${userId} in ${sport}`);
-    result.forEach(pref => {
-      console.log(`🔧 STORAGE DEBUG: ${pref.alertType} = ${pref.enabled}`);
-    });
-    return result;
   },
 
   async setUserAlertPreference(userId: string, sport: string, alertType: string, enabled: boolean) {
@@ -275,16 +269,11 @@ export const storage = {
   // Global alert settings for admin management  
   async getGlobalAlertSettings(sport: string) {
     try {
-      console.log(`🔧 STORAGE DEBUG: Getting global alert settings for ${sport}`);
-      
       // Check admin user preferences to get current global state
       const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
-      console.log(`🔧 STORAGE DEBUG: Found ${adminUsers.length} admin users`);
 
       if (adminUsers.length > 0) {
         const firstAdmin = adminUsers[0];
-        console.log(`🔧 STORAGE DEBUG: Using admin user ${firstAdmin.username || firstAdmin.id} for global settings`);
-        
         const adminPrefs = await db.select()
           .from(userAlertPreferences)
           .where(and(
@@ -292,11 +281,9 @@ export const storage = {
             eq(userAlertPreferences.sport, sport.toLowerCase())
           ));
 
-        console.log(`🔧 STORAGE DEBUG: Found ${adminPrefs.length} admin preferences for ${sport}`);
-
-        // Start with defaults - all enabled by default
+        // Start with defaults
         const defaultSettings: Record<string, boolean> = {
-          // MLB alerts
+          // MLB alerts - all enabled by default
           'RISP': true,
           'BASES_LOADED': true,
           'RUNNERS_1ST_2ND': true,
@@ -336,15 +323,13 @@ export const storage = {
 
         // Apply admin's preferences as global settings
         adminPrefs.forEach(pref => {
-          console.log(`🔧 STORAGE DEBUG: Admin setting: ${pref.alertType} = ${pref.enabled}`);
           defaultSettings[pref.alertType] = pref.enabled;
         });
 
-        console.log(`🔧 STORAGE DEBUG: Final global settings for ${sport}:`, Object.keys(defaultSettings).filter(key => defaultSettings[key]).join(', '));
+        console.log(`🔧 DEBUG: Global settings for ${sport} loaded from admin preferences:`, defaultSettings);
         return defaultSettings;
       }
 
-      console.log(`🔧 STORAGE DEBUG: No admin found, using all-enabled defaults`);
       // Fallback to defaults if no admin found
       return {
         'RISP': true, 'BASES_LOADED': true, 'RUNNERS_1ST_2ND': true, 'CLOSE_GAME': true,
@@ -505,11 +490,8 @@ export const storage = {
   // Check if alert is globally enabled by admin
   async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
     try {
-      console.log(`🔧 STORAGE DEBUG: Checking if ${alertType} is globally enabled for ${sport}`);
       const globalSettings = await this.getGlobalAlertSettings(sport);
-      const isEnabled = globalSettings[alertType] === true;
-      console.log(`🔧 STORAGE DEBUG: Global setting ${sport}.${alertType} = ${isEnabled}`);
-      return isEnabled;
+      return globalSettings[alertType] === true;
     } catch (error) {
       console.error(`Error checking if alert ${alertType} is globally enabled for ${sport}:`, error);
       return false; // Default to false if error occurs

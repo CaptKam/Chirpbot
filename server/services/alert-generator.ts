@@ -365,8 +365,24 @@ export class AlertGenerator {
     const gameId = game.gameId || game.id;
     const homeTeam = typeof game.homeTeam === 'string' ? game.homeTeam : game.homeTeam?.displayName || game.homeTeam?.name || 'Home';
     const awayTeam = typeof game.awayTeam === 'string' ? game.awayTeam : game.awayTeam?.displayName || game.awayTeam?.name || 'Away';
-    const homeScore = typeof game.homeScore === 'number' ? game.homeScore : (game.homeScore?.score || 0);
-    const awayScore = typeof game.awayScore === 'number' ? game.awayScore : (game.awayScore?.score || 0);
+    
+    // For live games, try to get live scores from enhanced game data
+    let homeScore = typeof game.homeScore === 'number' ? game.homeScore : (game.homeScore?.score || 0);
+    let awayScore = typeof game.awayScore === 'number' ? game.awayScore : (game.awayScore?.score || 0);
+    
+    // If scores are 0-0 and this is a live game, fetch live scores
+    if ((homeScore === 0 && awayScore === 0) && game.isLive && gameId) {
+      try {
+        const liveData = await this.mlbApi.getEnhancedGameData(gameId);
+        if (liveData.homeScore !== undefined && liveData.awayScore !== undefined) {
+          homeScore = liveData.homeScore;
+          awayScore = liveData.awayScore;
+          console.log(`🔄 Updated live scores for game ${gameId}: ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch live scores for game ${gameId}:`, error);
+      }
+    }
 
     // Debug: Log game scores to verify they're available
     console.log(`🔧 DEBUG: Processing game ${gameId} - ${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`);
@@ -539,8 +555,6 @@ export class AlertGenerator {
         awayTeam: game.awayTeam,
         homeScore: game.homeScore,
         awayScore: game.awayScore,
-        homeScore: game.homeScore,
-        awayScore: game.awayScore,
         inning,
         isTopInning,
         outs,
@@ -572,8 +586,6 @@ export class AlertGenerator {
       alertCount += await this.saveRealTimeAlert(alertKey, 'RUNNERS_1ST_2ND', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
-        homeScore: game.homeScore,
-        awayScore: game.awayScore,
         homeScore: game.homeScore,
         awayScore: game.awayScore,
         inning,
@@ -614,8 +626,6 @@ export class AlertGenerator {
       alertCount += await this.saveRealTimeAlert(alertKey, 'RISP', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
-        homeScore: game.homeScore,
-        awayScore: game.awayScore,
         homeScore: game.homeScore,
         awayScore: game.awayScore,
         inning,
@@ -700,8 +710,6 @@ export class AlertGenerator {
         awayTeam: game.awayTeam,
         homeScore: game.homeScore,
         awayScore: game.awayScore,
-        homeScore: game.homeScore,
-        awayScore: game.awayScore,
         inning,
         isTopInning,
         outs,
@@ -766,8 +774,6 @@ export class AlertGenerator {
             awayTeam: game.awayTeam,
             homeScore: game.homeScore,
             awayScore: game.awayScore,
-            homeScore: game.homeScore,
-            awayScore: game.awayScore,
             batter: batter.fullName,
             batterId: batter.id,
             seasonHomeRuns: seasonHRs,
@@ -795,8 +801,6 @@ export class AlertGenerator {
           alertCount += await this.saveRealTimeAlert(alertKey, 'HOT_HITTER', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
-            homeScore: game.homeScore,
-            awayScore: game.awayScore,
             homeScore: game.homeScore,
             awayScore: game.awayScore,
             batter: batter.fullName,
@@ -894,8 +898,6 @@ export class AlertGenerator {
           const alertsSaved = await this.saveRealTimeAlert(alertKey, 'STRIKEOUT', game.gameId, message, {
             homeTeam: game.homeTeam,
             awayTeam: game.awayTeam,
-            homeScore: game.homeScore,
-            awayScore: game.awayScore,
             batter: batter,
             pitcher: pitcher,
             inning: play.about?.inning,
@@ -920,8 +922,6 @@ export class AlertGenerator {
       alertCount += await this.saveRealTimeAlert(alertKey, 'FULL_COUNT', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
-        homeScore: game.homeScore,
-        awayScore: game.awayScore,
         homeScore: game.homeScore,
         awayScore: game.awayScore,
         balls,
@@ -965,8 +965,6 @@ export class AlertGenerator {
             awayTeam: game.awayTeam,
             homeScore: game.homeScore,
             awayScore: game.awayScore,
-            homeScore: game.homeScore,
-            awayScore: game.awayScore,
             batter: lastPlay.matchup?.batter?.fullName,
             inning: lastPlay.about?.inning,
             balls: liveData?.plays?.currentPlay?.count?.balls || 0,
@@ -1000,8 +998,6 @@ export class AlertGenerator {
       alertCount += await this.saveRealTimeAlert(alertKey, 'CLOSE_GAME_LIVE', game.gameId, message, {
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
-        homeScore: game.homeScore,
-        awayScore: game.awayScore,
         homeScore: game.homeScore,
         awayScore: game.awayScore,
         scoreDiff
@@ -1380,48 +1376,48 @@ export class AlertGenerator {
 
       // Send to Telegram for users monitoring this game
       try {
-        console.log(`📡 Sending Telegram alerts with RULE 1 & 2 enforcement for ${type}`);
-        const allUsers = await storage.getAllUsers();
-        const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-        console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
+        // Send to users with proper preference checking (RULE 1 & 2 ENFORCEMENT)
+      console.log(`📡 Sending Telegram alerts with preference checking for ${type}`);
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
+      console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
 
-        for (const user of telegramUsers) {
-          console.log(`📱 🔍 Processing Telegram for user: ${user.username} (ID: ${user.id})`);
+      for (const user of telegramUsers) {
+        console.log(`📱 🔍 Processing Telegram for user: ${user.username}`);
 
-          // RULE 2: Check if globally enabled by admin first
-          const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
-          console.log(`📱 🔧 RULE 2: Global admin setting for ${type}: ${isGloballyEnabled}`);
-          
+        // RULE 2: Check if globally enabled by admin first
+        const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
+        if (!isGloballyEnabled) {
+          console.log(`⛔ RULE 2: Telegram alert blocked - ${type} globally disabled by admin for user ${user.username}`);
+          continue;
+        }
+        console.log(`✅ RULE 2: Alert ${type} is globally enabled by admin`);
+
+        // RULE 1: Check individual user preferences  
+        try {
+          const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
+          const userPref = userPrefs.find(p => p.alertType === type);
+
+          // Default behavior: if user has never set a preference, follow global admin setting
+          const userHasEnabled = userPref ? userPref.enabled : isGloballyEnabled;
+
+          console.log(`📱 🔧 RULE 1: User ${user.username} preference for ${type}: ${userHasEnabled} (${userPref ? 'explicitly set' : 'following global admin setting'})`);
+
+          if (!userHasEnabled) {
+            console.log(`⛔ RULE 1: User ${user.username} has ${type} disabled in individual preferences`);
+            continue;
+          }
+
+          console.log(`✅ RULE 1 & 2: All checks passed for user ${user.username}`);
+        } catch (prefError) {
+          console.error(`❌ Error checking preferences for ${user.username}:`, prefError);
+          // On error, default to global admin setting as fallback
           if (!isGloballyEnabled) {
-            console.log(`⛔ RULE 2: Telegram alert blocked - ${type} globally disabled by admin for user ${user.username}`);
+            console.log(`⛔ Fallback: Using global admin setting (disabled) for ${user.username}`);
             continue;
           }
-
-          // RULE 1: Check individual user preferences  
-          try {
-            const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
-            console.log(`📱 🔧 RULE 1: Found ${userPrefs.length} user preferences for ${user.username} in ${sport}`);
-            
-            const userPref = userPrefs.find(p => p.alertType === type);
-            console.log(`📱 🔧 RULE 1: User specific preference for ${type}: ${userPref ? userPref.enabled : 'not set'}`);
-
-            // RULE 1: If user has explicitly set a preference, use it. Otherwise, follow global admin setting
-            const userHasEnabled = userPref ? userPref.enabled : isGloballyEnabled;
-
-            console.log(`📱 🔧 RULE 1: Final user preference for ${user.username} ${type}: ${userHasEnabled} (${userPref ? 'user explicit' : 'admin default'})`);
-
-            if (!userHasEnabled) {
-              console.log(`⛔ RULE 1: User ${user.username} has ${type} disabled - skipping Telegram`);
-              continue;
-            }
-
-            console.log(`✅ RULE 1 & 2: All checks passed for user ${user.username} - sending Telegram alert`);
-          } catch (prefError) {
-            console.error(`❌ Error checking user preferences for ${user.username}:`, prefError);
-            // On error, be conservative and skip sending
-            console.log(`⛔ Error fallback: Skipping Telegram for ${user.username} due to preference check error`);
-            continue;
-          }
+          console.log(`⚠️ Fallback: Using global admin setting (enabled) for ${user.username}`);
+        }
 
           const telegramConfig: TelegramConfig = {
             botToken: user.telegramBotToken,
