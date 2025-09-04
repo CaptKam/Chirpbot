@@ -24,7 +24,7 @@ export function useWebSocket() {
     try {
       // Close existing connection if it exists and is not already closing/closed
       if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-        wsRef.current.close();
+        wsRef.current.close(1000, 'Reconnecting');
       }
 
       const ws = new WebSocket(wsUrl);
@@ -116,10 +116,11 @@ export function useWebSocket() {
         }
       };
 
-      ws.onerror = () => {
-        // Don't log the error event itself as it doesn't contain useful information
-        // The actual error details will be in the onclose event
-        // Don't trigger reconnection here as onclose will always be called after onerror
+      ws.onerror = (error) => {
+        // Only log in development to avoid console spam in production
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('WebSocket error occurred, will attempt to reconnect');
+        }
         setIsConnected(false);
         // Clear any existing timeout to avoid duplicates
         if (reconnectTimeoutRef.current) {

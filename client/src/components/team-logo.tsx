@@ -614,6 +614,63 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     )
   };
 
+  // WNBA team logos mapping
+  const wnbaLogos: Record<string, string> = {
+    'PHO': '/logos/wnba/mercury.png',
+    'PHX': '/logos/wnba/mercury.png',
+    'PHOENIX': '/logos/wnba/mercury.png',
+    'MERCURY': '/logos/wnba/mercury.png',
+
+    'WAS': '/logos/wnba/mystics.png',
+    'WASHINGTON': '/logos/wnba/mystics.png', 
+    'MYSTICS': '/logos/wnba/mystics.png',
+    'MYS': '/logos/wnba/mystics.png',
+
+    'GS': '/logos/wnba/valkyries.png',
+    'GSV': '/logos/wnba/valkyries.png',
+    'GOLDEN STATE': '/logos/wnba/valkyries.png',
+    'VALKYRIES': '/logos/wnba/valkyries.png',
+    'GOL': '/logos/wnba/valkyries.png',
+
+    'LV': '/logos/wnba/aces.png',
+    'LAS': '/logos/wnba/aces.png',
+    'LAS VEGAS': '/logos/wnba/aces.png',
+    'ACES': '/logos/wnba/aces.png',
+
+    'NYL': '/logos/wnba/liberty.png',
+    'NEW YORK': '/logos/wnba/liberty.png',
+    'LIBERTY': '/logos/wnba/liberty.png',
+
+    'MIN': '/logos/wnba/lynx.png',
+    'MINNESOTA': '/logos/wnba/lynx.png',
+    'LYNX': '/logos/wnba/lynx.png',
+
+    'SEA': '/logos/wnba/storm.png',
+    'SEATTLE': '/logos/wnba/storm.png',
+    'STORM': '/logos/wnba/storm.png',
+
+    'CHI': '/logos/wnba/sky.png',
+    'CHICAGO': '/logos/wnba/sky.png',
+    'SKY': '/logos/wnba/sky.png',
+
+    'CON': '/logos/wnba/sun.png',
+    'CONNECTICUT': '/logos/wnba/sun.png',
+    'SUN': '/logos/wnba/sun.png',
+
+    'ATL': '/logos/wnba/dream.png',
+    'ATLANTA': '/logos/wnba/dream.png',
+    'DREAM': '/logos/wnba/dream.png',
+
+    'IND': '/logos/wnba/fever.png',
+    'INDIANA': '/logos/wnba/fever.png',
+    'FEVER': '/logos/wnba/fever.png',
+
+    'DAL': '/logos/wnba/wings.png',
+    'DALLAS': '/logos/wnba/wings.png',
+    'WINGS': '/logos/wnba/wings.png'
+  };
+
+
   // Get abbreviation from prop or lookup from team name
   let teamAbbr = abbreviation;
 
@@ -646,6 +703,22 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
         onError={(e) => {
           // If image fails to load, hide it and show fallback
           console.log(`Failed to load logo for ${teamName}`);
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
+  }
+
+  // Check for WNBA logos if not found in ESPN
+  const wnbaLogoUrl = teamAbbr ? wnbaLogos[teamAbbr] : null;
+  if (wnbaLogoUrl) {
+    return (
+      <img 
+        src={wnbaLogoUrl} 
+        alt={teamName}
+        className={`${sizeClasses[size]} ${className} object-contain`}
+        onError={(e) => {
+          console.log(`Failed to load WNBA logo for ${teamName}`);
           e.currentTarget.style.display = 'none';
         }}
       />
