@@ -83,6 +83,15 @@ const ALERT_TYPE_CONFIG = {
       { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical conversion attempts" },
       { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-quarter/half pressure situations" },
     ]
+  },
+  WNBA: {
+    "Game Situations": [
+      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+      { key: "OVERTIME", label: "Overtime", description: "Games going to overtime" },
+      { key: "FINAL_MINUTES", label: "Final Minutes", description: "Alerts in the last 2 minutes of the game" },
+      { key: "HIGH_SCORING_QUARTER", label: "High-Scoring Quarter", description: "Quarters with 25+ points" },
+      { key: "LOW_SCORING_QUARTER", label: "Low-Scoring Quarter", description: "Quarters with 10 or fewer points" },
+    ]
   }
 };
 
