@@ -221,6 +221,13 @@ export class AlertGenerator {
 
   private async saveAlert(alertData: AlertData): Promise<void> {
     try {
+      // 🛡️ FAIL-SAFE: Check global settings BEFORE database creation
+      const isGloballyEnabled = await this.isAlertGloballyEnabled(alertData.sport, alertData.type);
+      if (!isGloballyEnabled) {
+        console.log(`🚫 BLOCKED database save: ${alertData.type} alert globally disabled`);
+        return;
+      }
+
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertData.alertKey}, ${alertData.sport}, ${alertData.gameId}, 
@@ -559,7 +566,13 @@ export class AlertGenerator {
         }
       };
 
-      // Always save alerts - let Telegram sending handle user preferences
+      // 🛡️ FAIL-SAFE: Check global settings BEFORE database creation
+      const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
+      if (!isGloballyEnabled) {
+        console.log(`🚫 BLOCKED database save: ${type} alert globally disabled (Real-time alert method)`);
+        return;
+      }
+
       console.log(`💾 Saving alert: ${type} for game ${gameId}`);
 
       // Insert new alert
@@ -633,8 +646,8 @@ export class AlertGenerator {
           }
 
           const telegramConfig: TelegramConfig = {
-            botToken: user.telegramBotToken,
-            chatId: user.telegramChatId
+            botToken: user.telegramBotToken || '',
+            chatId: user.telegramChatId || ''
           };
 
           const telegramAlert = {

@@ -26,7 +26,7 @@ export abstract class BaseSportEngine {
     this.sport = sport;
   }
 
-  abstract async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]>;
-  abstract async isAlertEnabled(alertType: string): Promise<boolean>;
-  abstract async calculateProbability(gameState: GameState): Promise<number>;
+  abstract generateLiveAlerts(gameState: GameState): Promise<AlertResult[]>;
+  abstract isAlertEnabled(alertType: string): Promise<boolean>;
+  abstract calculateProbability(gameState: GameState): Promise<number>;
 }
