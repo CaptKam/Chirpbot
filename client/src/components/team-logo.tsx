@@ -139,7 +139,27 @@ const teamNameToAbbr: Record<string, string> = {
   'Mercury': 'PHX',
   'Storm': 'SEA',
   'Mystics': 'WAS',
-  'Valkyries': 'GS'
+  'Valkyries': 'GS',
+
+  // WNBA API format variations (Team Name + Abbreviation)
+  'Mercury (PHO)': 'PHX',
+  'Mercury (PHX)': 'PHX',
+  'Mystics (MYS)': 'WAS',
+  'Mystics (WAS)': 'WAS',
+  'Valkyries (GOL)': 'GS',
+  'Valkyries (GS)': 'GS',
+  'Aces (LAS)': 'LAS',
+  'Aces (LV)': 'LAS',
+  'Wings (DAL)': 'DAL',
+  'Sky (CHI)': 'CHI',
+  'Dream (ATL)': 'ATL',
+  'Fever (IND)': 'IND',
+  'Liberty (NY)': 'NY',
+  'Liberty (NYL)': 'NY',
+  'Storm (SEA)': 'SEA',
+  'Sun (CON)': 'CON',
+  'Sun (CONN)': 'CON',
+  'Lynx (MIN)': 'MIN'
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -214,7 +234,7 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'NY': 'https://a.espncdn.com/i/teamlogos/wnba/500/ny.png',
       'PHX': 'https://a.espncdn.com/i/teamlogos/wnba/500/phx.png',
       'SEA': 'https://a.espncdn.com/i/teamlogos/wnba/500/sea.png',
-      'WAS': 'https://a.espncdn.com/i/teamlogos/wnba/500/wsh.png',
+      'WAS': 'https://a.espncdn.com/i/teamlogos/wnba/500/was.png',
       'GS': 'https://a.espncdn.com/i/teamlogos/wnba/500/gs.png',
     }
   };
