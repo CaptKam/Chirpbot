@@ -269,16 +269,6 @@ const getSportIcon = (sport: string, teamAbbr: string, size: string, className: 
   };
 
   switch (sport) {
-    case 'NCAAF':
-      // Football helmet for NCAAF
-      return (
-        <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-          <ellipse cx="50" cy="55" rx="35" ry="40" fill="#002D62" stroke="#FFFFFF" strokeWidth="2"/>
-          <rect x="15" y="45" width="70" height="4" fill="#FFFFFF"/>
-          <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-sm font-sans">{teamAbbr}</text>
-        </svg>
-      );
-
     case 'NBA':
       // Basketball for NBA
       return (
