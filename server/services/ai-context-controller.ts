@@ -229,23 +229,19 @@ Focus on immediate value based on the actual score and game state.
     suggestedBets: string[];
   } {
     const currentTotal = context.homeScore + context.awayScore;
-    const teamNames = {
-      home: context.homeTeam.split(' ').pop(),
-      away: context.awayTeam.split(' ').pop()
-    };
     
     return {
-      recommendation: currentTotal < liveTotal ? `OVER ${liveTotal} - Strong Value` : `UNDER ${liveTotal} - High Pace`,
+      recommendation: currentTotal < liveTotal ? `Over ${liveTotal}` : `Under ${liveTotal}`,
       confidence: Math.min(85, context.probability),
       reasoning: [
-        `${teamNames.away} ${context.awayScore}-${context.homeScore} ${teamNames.home} trending ${currentTotal < liveTotal ? 'OVER' : 'UNDER'}`,
-        `${context.alertType.replace('_', ' ')} = immediate scoring window`,
-        `Live total ${liveTotal} vs actual pace suggests value`
+        `Current score ${context.awayScore}-${context.homeScore} suggests ${currentTotal < liveTotal ? 'over' : 'under'} value`,
+        `${context.alertType.replace('_', ' ')} creates scoring opportunity`,
+        `Live line ${liveTotal} vs current pace`
       ],
       suggestedBets: [
-        `${currentTotal < liveTotal ? 'OVER' : 'UNDER'} ${liveTotal} (Primary)`,
-        `Next inning O/U 0.5 runs`,
-        `${context.baseRunners?.length ? 'Runner to score YES' : 'Next batter result'}`
+        `${currentTotal < liveTotal ? 'Over' : 'Under'} ${liveTotal}`,
+        `Next inning total runs`,
+        `${context.baseRunners?.length ? 'Runner to score' : 'No runs this inning'}`
       ]
     };
   }

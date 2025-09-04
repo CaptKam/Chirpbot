@@ -35,9 +35,7 @@ export class SettingsCache {
 
     // Fetch fresh data
     try {
-      console.log(`🔍 Settings Cache: Fetching fresh data for ${sport}`);
       const freshData = await this.storage.getGlobalAlertSettings(sport);
-      console.log(`🔍 Settings Cache: Got data for ${sport}:`, freshData);
       
       // Cache the result
       this.cache.set(sport, {
@@ -68,12 +66,7 @@ export class SettingsCache {
   // Check if specific alert type is enabled (with caching)
   async isAlertEnabled(sport: string, alertType: string): Promise<boolean> {
     const settings = await this.getGlobalSettings(sport);
-    const result = settings[alertType] !== false; // Default to enabled
-    
-    // 🔍 DEBUG: Log what's happening
-    console.log(`🔍 Settings Debug: ${sport}.${alertType} = ${settings[alertType]} → ${result}`);
-    
-    return result;
+    return settings[alertType] !== false; // Default to enabled
   }
 
   // Pre-filter disabled alert types to skip processing entirely

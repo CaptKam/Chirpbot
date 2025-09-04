@@ -461,8 +461,11 @@ export class AlertGenerator {
     };
   }
 
-  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number, sport: string = 'MLB'): Promise<number> {
+  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number | undefined, sport: string = 'MLB'): Promise<number> {
     try {
+      // Ensure priority has a default value
+      let finalPriority = priority || 50;
+      
       // Check if alert already exists (conflict check)
       const existingAlert = await db.execute(sql`
         SELECT 1 FROM alerts WHERE alert_key = ${alertKey}
@@ -489,23 +492,23 @@ export class AlertGenerator {
           });
 
           context.betbookData = betbookData;
-          console.log(`🤖 AI: Generated betting insights for ${type} alert (priority: ${priority}) - ${betbookData.aiAdvice}`);
+          console.log(`🤖 AI: Generated betting insights for ${type} alert (priority: ${finalPriority}) - ${betbookData.aiAdvice}`);
         } catch (error) {
           console.error('❌ AI betting insights generation failed:', error);
         }
       }
 
       // AI Context Controller takes full control for high-value alerts
-      if (priority >= 70) {
+      if (finalPriority >= 70) {
         try {
-          console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${priority})`);
+          console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${finalPriority})`);
           
           const alertContext: AlertContext = {
             gameId,
             sport,
             alertType: type,
-            priority,
-            probability: priority,
+            priority: finalPriority,
+            probability: finalPriority,
             homeTeam: context.homeTeam,
             awayTeam: context.awayTeam,
             homeScore: context.homeScore || 0,
@@ -529,32 +532,27 @@ export class AlertGenerator {
 
           const aiEnhancedAlert = await this.aiContextController.enhanceAlertWithFullControl(alertContext);
           
-          // Always use AI enhancements if available (remove confidence check)
-          message = aiEnhancedAlert.message;
-          context.aiTitle = aiEnhancedAlert.title;
-          context.aiMessage = aiEnhancedAlert.message;
-          context.aiInsights = aiEnhancedAlert.insights;
-          context.aiRecommendation = aiEnhancedAlert.recommendation;
-          context.aiUrgency = aiEnhancedAlert.urgency;
-          context.aiBettingAdvice = aiEnhancedAlert.bettingAdvice;
-          context.aiGameProjection = aiEnhancedAlert.gameProjection;
-          context.aiCallToAction = aiEnhancedAlert.callToAction;
-          context.aiFollowUpActions = aiEnhancedAlert.followUpActions;
-          context.aiConfidenceScore = aiEnhancedAlert.confidenceScore;
-          context.aiProcessingTime = aiEnhancedAlert.aiProcessingTime;
-          
-          // Update priority with AI confidence if higher
-          if (aiEnhancedAlert.confidenceScore > priority) {
-            priority = Math.min(95, aiEnhancedAlert.confidenceScore);
+          if (aiEnhancedAlert.confidenceScore > finalPriority) {
+            // AI has enhanced the alert - use AI-controlled content
+            message = aiEnhancedAlert.message;
+            context.aiTitle = aiEnhancedAlert.title;
+            context.aiInsights = aiEnhancedAlert.insights;
+            context.aiRecommendation = aiEnhancedAlert.recommendation;
+            context.aiUrgency = aiEnhancedAlert.urgency;
+            context.aiBettingAdvice = aiEnhancedAlert.bettingAdvice;
+            context.aiGameProjection = aiEnhancedAlert.gameProjection;
+            context.aiCallToAction = aiEnhancedAlert.callToAction;
+            context.aiFollowUpActions = aiEnhancedAlert.followUpActions;
+            context.aiConfidenceScore = aiEnhancedAlert.confidenceScore;
+            context.aiProcessingTime = aiEnhancedAlert.aiProcessingTime;
+            
+            // Update priority with AI confidence
+            finalPriority = Math.min(95, aiEnhancedAlert.confidenceScore);
+            
+            console.log(`✅ AI Context Controller: Enhanced ${type} alert - New priority: ${finalPriority}, Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
+          } else {
+            console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${finalPriority})`);
           }
-          
-          console.log(`✅ AI Context Controller: Enhanced ${type} alert`);
-          console.log(`   📊 Title: "${aiEnhancedAlert.title}"`);
-          console.log(`   🎯 Insights: ${aiEnhancedAlert.insights?.length || 0} generated`);
-          console.log(`   💰 Betting: ${aiEnhancedAlert.bettingAdvice?.recommendation || 'N/A'}`);
-          console.log(`   ⚡ CTA: "${aiEnhancedAlert.callToAction}"`);
-          console.log(`   🕒 Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
-          console.log(`   📈 Final Priority: ${priority} (was ${context.priority})`);
           
         } catch (error) {
           console.error('❌ AI Context Controller failed:', error);
@@ -575,7 +573,7 @@ export class AlertGenerator {
       const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
       if (!isGloballyEnabled) {
         console.log(`🚫 BLOCKED database save: ${type} alert globally disabled (Real-time alert method)`);
-        return finalPriority;
+        return;
       }
 
       console.log(`💾 Saving alert: ${type} for game ${gameId}`);
@@ -657,19 +655,8 @@ export class AlertGenerator {
 
           const telegramAlert = {
             type,
-            title: context.aiTitle || `${type.replace('_', ' ')} Alert`,
+            title: `${type.replace('_', ' ')} Alert`,
             description: message,
-            aiContext: JSON.stringify({
-              aiTitle: context.aiTitle,
-              aiMessage: message,
-              aiInsights: context.aiInsights,
-              aiRecommendation: context.aiRecommendation,
-              aiUrgency: context.aiUrgency,
-              aiBettingAdvice: context.aiBettingAdvice,
-              aiGameProjection: context.aiGameProjection,
-              aiCallToAction: context.aiCallToAction,
-              aiConfidenceScore: context.aiConfidenceScore
-            }),
             gameInfo: {
               homeTeam: context.homeTeam,
               awayTeam: context.awayTeam,
@@ -684,8 +671,7 @@ export class AlertGenerator {
                 second: context.hasSecond,
                 third: context.hasThird
               },
-              weather: context.weather,
-              scoringProbability: context.scoringProbability
+              weather: context.weather
             }
           };
 
