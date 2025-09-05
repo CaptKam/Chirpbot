@@ -7,6 +7,7 @@ import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain } from 'lu
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { GameCardTemplate } from '@/components/GameCardTemplate';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -310,137 +311,59 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <Card className={`${className} bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200`}>
-          <div className="p-4">
-            {/* Simple Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${getAlertColor(alert.priority)} animate-pulse`}></div>
-                <div className="flex items-center gap-1 text-emerald-400">
-                  {getAlertIcon(alert.type)}
-                  <Badge variant="outline" className="px-2 py-0 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
-                    {alert.sport}
-                  </Badge>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-400">{formatTime(alert.createdAt)}</span>
-                <span className="text-emerald-400 font-bold">{alert.priority}</span>
-              </div>
-            </div>
-
-            {/* Simple Team Display */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-300 text-sm font-medium">
-                  {alert.awayTeam?.split(' ').pop() || 'Away'}
-                </span>
-                <span className="text-slate-500 text-xs">@</span>
-                <span className="text-slate-300 text-sm font-medium">
-                  {alert.homeTeam?.split(' ').pop() || 'Home'}
-                </span>
-              </div>
-
-              {/* Score if available */}
-              {(alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined) && (
-                <div className="flex items-center gap-2 text-lg font-bold">
-                  <span className="text-white">{alert.context.awayScore}</span>
-                  <span className="text-slate-500">-</span>
-                  <span className="text-white">{alert.context.homeScore}</span>
-                </div>
-              )}
-            </div>
+        <div className={`${className} hover:border-emerald-500/30 transition-all duration-200`}>
+          <GameCardTemplate
+            gameId={alert.id}
+            homeTeam={{
+              name: alert.homeTeam || 'Home',
+              score: alert.context?.homeScore
+            }}
+            awayTeam={{
+              name: alert.awayTeam || 'Away', 
+              score: alert.context?.awayScore
+            }}
+            sport={alert.sport}
+            status={(alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined) ? 'live' : 'scheduled'}
+            inning={alert.context?.inning}
+            quarter={alert.context?.quarter}
+            period={alert.context?.period}
+            isTopInning={alert.context?.isTopInning}
+            size="md"
+            showWeather={false}
+            showVenue={false}
+            showEnhancedMLB={false}
+            className="bg-white/5 backdrop-blur-sm border-white/10"
+          />
+          
+          {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
+          <div className="p-4 pt-0">
 
             {/* Alert Message - Clean & Simple */}
             <div className="bg-slate-900/50 rounded-lg p-3 border-l-2 border-emerald-500">
+              {/* Alert Header */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${getAlertColor(alert.priority)} animate-pulse`}></div>
+                  <div className="flex items-center gap-1 text-emerald-400">
+                    {getAlertIcon(alert.type)}
+                    <Badge variant="outline" className="px-2 py-0 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+                      {alert.type}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-400">{formatTime(alert.createdAt)}</span>
+                  <span className="text-emerald-400 font-bold">{alert.priority}</span>
+                </div>
+              </div>
+              
               <p className="text-slate-100 text-sm font-medium leading-relaxed">
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').trim()}
               </p>
 
-              {/* AI Enhanced Content - DISABLED */}
-              {false && alert.context?.aiTitle && (
-                <div className="mt-2 pt-2 border-t border-slate-700/50">
-                  <h4 className="text-sm font-semibold text-white mb-1">
-                    {alert.context.aiTitle}
-                  </h4>
-                </div>
-              )}
-
-              {/* AI Insights - DISABLED */}
-              {false && alert.context?.aiInsights && (
-                <div className="mt-2 pt-2 border-t border-slate-700/50">
-                  <div className="flex items-center gap-1 mb-1">
-                    <div className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      <span className="text-white text-xs">🤖</span>
-                    </div>
-                    <span className="text-xs text-blue-300 font-medium">AI Analysis</span>
-                  </div>
-                  
-                  {alert.context.aiInsights.map((insight: string, idx: number) => (
-                    <p key={idx} className="text-xs text-slate-300 mt-1">
-                      • {insight}
-                    </p>
-                  ))}
-                  
-                  {alert.context.aiRecommendation && (
-                    <p className="text-xs text-green-300 font-medium mt-2">
-                      🎯 {alert.context.aiRecommendation}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Legacy AI Insights - DISABLED */}
-              {false && !alert.context?.aiInsights && (alert.context?.aiInsights || alert.context?.recommendation) && (
-                <div className="mt-2 pt-2 border-t border-slate-700/50">
-                  <div className="flex items-center gap-1 mb-1">
-                    <div className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      <span className="text-white text-xs">🤖</span>
-                    </div>
-                    <span className="text-xs text-blue-300 font-medium">AI Analysis</span>
-                  </div>
-                  {alert.context.recommendation && (
-                    <p className="text-xs text-green-300 font-medium">
-                      {alert.context.recommendation}
-                    </p>
-                  )}
-                  {alert.context.aiInsights && (
-                    <p className="text-xs text-slate-300 mt-1">
-                      {alert.context.aiInsights}
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
-
-            {/* Basic Game Context - Minimal */}
-            {(alert.context?.quarter || alert.context?.inning || alert.context?.period || alert.context?.timeRemaining) && (
-              <div className="mt-3 flex items-center gap-3 text-xs">
-                {/* Time/Period Info */}
-                {alert.context.quarter && (
-                  <span className="bg-slate-800/50 px-2 py-1 rounded text-slate-300">
-                    Q{alert.context.quarter}
-                  </span>
-                )}
-                {alert.context.inning && (
-                  <span className="bg-slate-800/50 px-2 py-1 rounded text-slate-300">
-                    {alert.context.isTopInning ? 'T' : 'B'}{alert.context.inning}
-                  </span>
-                )}
-                {alert.context.period && (
-                  <span className="bg-slate-800/50 px-2 py-1 rounded text-slate-300">
-                    P{alert.context.period}
-                  </span>
-                )}
-                {alert.context.timeRemaining && (
-                  <span className="bg-slate-800/50 px-2 py-1 rounded text-slate-300">
-                    {alert.context.timeRemaining}
-                  </span>
-                )}
-              </div>
-            )}
           </div>
-        </Card>
+        </div>
       </motion.div>
     </div>
   );
