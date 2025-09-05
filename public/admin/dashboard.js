@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update sport selector with NCAAF
     const sportSelector = document.getElementById('sportSelector');
     if (sportSelector) {
-        // loadSportAlertSettings(); // Load settings for the default sport on load - REMOVED
+        loadSportAlertSettings(); // Load settings for the default sport on load
     }
 });
 
@@ -240,33 +240,33 @@ function editUser(userId) {
 function getUserDeleteDisabled(user) {
     // Get current admin user from localStorage
     const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
-
+    
     // Can't delete yourself
     if (user.id === currentAdminUser.id) return true;
-
+    
     // Can't delete the last admin
     if (user.role === 'admin') {
         const adminCount = currentUsers.filter(u => u.role === 'admin').length;
         if (adminCount <= 1) return true;
     }
-
+    
     return false;
 }
 
 function getDeleteTooltip(user) {
     const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
-
+    
     if (user.id === currentAdminUser.id) {
         return "Cannot delete your own account";
     }
-
+    
     if (user.role === 'admin') {
         const adminCount = currentUsers.filter(u => u.role === 'admin').length;
         if (adminCount <= 1) {
             return "Cannot delete the last admin user";
         }
     }
-
+    
     return "Delete this user and all associated data";
 }
 
@@ -282,9 +282,9 @@ async function deleteUser(userId, username, role) {
         `• All associated user data\n\n` +
         `Type "DELETE" to confirm (case sensitive)`
     );
-
+    
     if (!confirmed) return;
-
+    
     // Second confirmation for admin users
     if (role === 'admin') {
         const adminConfirmed = confirm(
@@ -293,31 +293,31 @@ async function deleteUser(userId, username, role) {
             `This will remove all admin privileges for "${username}".\n\n` +
             `Are you absolutely certain you want to proceed?`
         );
-
+        
         if (!adminConfirmed) return;
     }
-
+    
     try {
         showNotification('Deleting user...', 'info');
-
+        
         const response = await fetch(`/api/admin/users/${userId}`, {
             method: 'DELETE',
             credentials: 'include'
         });
-
+        
         if (response.ok) {
             const result = await response.json();
-
+            
             // Remove user from local data
             const userIndex = currentUsers.findIndex(u => u.id === userId);
             if (userIndex !== -1) {
                 currentUsers.splice(userIndex, 1);
                 updateUsersTable();
             }
-
+            
             // Reload stats to reflect changes
             await loadStats();
-
+            
             showNotification(`✅ User "${username}" deleted successfully`, 'success');
             console.log(`🗑️ User deleted:`, result.deletedUser);
         } else {
@@ -448,7 +448,7 @@ function showTab(tabName) {
 
     // Load alert settings when alerts tab is opened
     if (tabName === 'alerts') {
-        // loadSportAlertSettings(); // REMOVED
+        loadSportAlertSettings();
     }
 }
 
@@ -474,28 +474,353 @@ async function handleLogout() {
     }
 }
 
-// Alert configuration functions removed - now handled at user level
+// Alert Configuration Functions
+const ALERT_TYPE_CONFIG = {
+    'MLB': {
+        'Game Situations': [
+            { key: 'RISP', label: 'Runner in Scoring Position', description: 'Runner on 2nd or 3rd base' },
+            { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases occupied' },
+            { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity' },
+            { key: 'LATE_PRESSURE', label: 'Late Inning Pressure', description: '8th+ inning, close game' }
+        ],
+        'Scoring Events': [
+            { key: 'HOME_RUN_LIVE', label: 'Home Run (Live)', description: 'Live home run alerts' },
+            { key: 'CLOSE_GAME_LIVE', label: 'Close Game (Live)', description: 'Live close game updates' },
+            { key: 'HIGH_SCORING', label: 'High Scoring Game', description: '12+ total runs' },
+            { key: 'SHUTOUT', label: 'Shutout', description: 'One team held scoreless' },
+            { key: 'BLOWOUT', label: 'Blowout', description: '7+ run difference' },
+            { key: 'CLOSE_GAME', label: 'Close Game (Final)', description: '≤3 run difference final' }
+        ],
+        'At-Bat Situations': [
+            { key: 'FULL_COUNT', label: 'Full Count', description: '3-2 count pressure' },
+            { key: 'STRIKEOUT', label: 'Strikeout Alert', description: 'Real-time strikeout notifications' },
+            { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at plate' },
+            { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' }
+        ],
+        'AI Enhancements': [
+            { key: 'AI_ENHANCED_MESSAGES', label: 'AI-Enhanced Alert Messages', description: 'AI adds context like launch angle insights' },
+            { key: 'AI_PREDICTIVE_AT_BAT', label: 'Predictive At-Bat Analysis', description: 'AI predicts contact probability and outcomes' },
+            { key: 'AI_SCORING_PROBABILITY', label: 'Real-Time Scoring Probability', description: 'AI calculates and displays scoring chances' },
+            { key: 'AI_SITUATION_ANALYSIS', label: 'Game Situation Analysis', description: 'AI analyzes pressure situations and momentum' },
+            { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
+            { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
+        ],
+        'RE24 System': [
+            { key: 'RE24_ENABLED', label: 'RE24 Probability System', description: 'Advanced run expectancy calculations for scoring probability' },
+            { key: 'RE24_CONTEXT_FACTORS', label: 'RE24 Context Adjustments', description: 'Weather, power hitter, and ballpark factors' },
+            { key: 'RE24_MINIMUM_THRESHOLDS', label: 'RE24 Minimum Thresholds', description: 'Probability-based alert filtering (40-45% minimums)' },
+            { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
+        ]
+    },
+    NCAAF: {
+        "Game Flow": [
+            { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "NCAAF_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
+            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
+            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" },
+            { key: "CLUTCH_TIME", label: "Clutch Time Situations", description: "High-pressure game moments" },
+            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
+        ]
+    },
+    WNBA: {
+        "Critical Moments": [
+            { key: "WNBA_FOURTH_QUARTER", label: "Fourth Quarter Crunch Time", description: "Close games in final 5 minutes of 4th quarter" },
+            { key: "WNBA_CLOSE_GAME", label: "Close Games", description: "Games within 5 points in 3rd or 4th quarter" },
+            { key: "WNBA_OVERTIME", label: "Overtime Games", description: "Games entering overtime period" }
+        ],
+        "Scoring Events": [
+            { key: "WNBA_HIGH_SCORING", label: "High-Scoring Games", description: "Games with 160+ combined points" },
+            { key: "WNBA_COMEBACK", label: "Comeback Alerts", description: "Teams erasing large deficits" },
+            { key: "WNBA_CLUTCH_PERFORMANCE", label: "Clutch Performances", description: "Outstanding individual performances in critical moments" }
+        ]
+    },
+    NFL: {
+        "Game Flow": [
+            { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "NFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
+            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
+            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" }
+        ]
+    },
+    CFL: {
+        "Game Flow": [
+            { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "CFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 25-yard line" },
+            { key: "THIRD_DOWN", label: "Third Down (CFL)", description: "Critical third down conversion attempts" },
+            { key: "THREE_MINUTE_WARNING", label: "Three-Minute Warning", description: "Final 3 minutes of each half" },
+            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
+        ]
+    },
+};
 
-// Function to switch sport and load settings
-function switchSport(sport) {
-    // currentSport = sport; // REMOVED
-    // loadSportAlertSettings(); // REMOVED
+async function loadSportAlertSettings() {
+    const sportSelector = document.getElementById('sportSelector');
+    const sportTitle = document.getElementById('sportTitle');
+    const alertConfigContainer = document.getElementById('alertConfigContainer');
+
+    currentSport = sportSelector.value;
+    if (sportTitle) {
+        sportTitle.textContent = currentSport;
+    }
+
+    // Show loading
+    alertConfigContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        // Load global settings for this sport
+        const response = await fetch(`/api/admin/global-alert-settings/${currentSport}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            globalAlertSettings = data || {};
+        } else {
+            // If not authorized or other error, use default settings
+            globalAlertSettings = {};
+            console.warn('Using default settings - API returned:', response.status);
+        }
+
+        renderAlertConfiguration();
+    } catch (error) {
+        console.error('Error loading alert settings:', error);
+        // Use default settings on error
+        globalAlertSettings = {};
+
+        // Still render the configuration with defaults
+        renderAlertConfiguration();
+
+        // Show a less intrusive notification
+        showNotification('Using default alert settings', 'info');
+    }
 }
 
-// Add event listener for sport selector change
-const sportSelector = document.getElementById('sportSelector');
-if (sportSelector) {
-    sportSelector.addEventListener('change', function() {
-        // switchSport(this.value); // REMOVED
+function renderAlertConfiguration() {
+    const alertConfigContainer = document.getElementById('alertConfigContainer');
+    const sportConfig = ALERT_TYPE_CONFIG[currentSport];
+
+    if (!sportConfig) {
+        alertConfigContainer.innerHTML = `
+            <div style="text-align: center; color: #94a3b8; padding: 40px;">
+                <i class="fas fa-info-circle" style="font-size: 32px; margin-bottom: 15px;"></i>
+                <h3>No Configuration Available</h3>
+                <p>Alert configuration for ${currentSport} is not yet available.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+
+    Object.entries(sportConfig).forEach(([category, alerts]) => {
+        html += `
+            <div class="alert-category">
+                <div class="category-header">
+                    <div class="category-title">
+                        <i class="${getCategoryIcon(category)}"></i>
+                        ${category}
+                    </div>
+                    <div class="category-toggle">
+                        <span>Enable All</span>
+                        <label class="switch">
+                            <input type="checkbox" onchange="toggleCategory('${category}')" 
+                                   ${isCategoryEnabled(category) ? 'checked' : ''}>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="alert-list">
+                    ${alerts.map(alert => `
+                        <div class="alert-item">
+                            <div class="alert-info">
+                                <div class="alert-title">${alert.label}</div>
+                                <div class="alert-description">${alert.description}</div>
+                            </div>
+                            <div class="alert-controls">
+                                <div class="user-count">${getUserCountForAlert(alert.key)} users</div>
+                                <label class="switch">
+                                    <input type="checkbox" 
+                                           id="alert-${alert.key}"
+                                           onchange="toggleGlobalAlert('${alert.key}')"
+                                           ${isAlertGloballyEnabled(alert.key) ? 'checked' : ''}>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
     });
+
+    alertConfigContainer.innerHTML = html;
 }
 
-async function enableAllAlerts() {
-    // REMOVED
+function getCategoryIcon(category) {
+    switch (category) {
+        case "Game Situations": return "fas fa-gamepad text-emerald-400";
+        case "Scoring Events": return "fas fa-trophy text-yellow-400";
+        case "At-Bat Situations": return "fas fa-clock text-blue-400";
+        case "Game Flow": return "fas fa-random text-teal-400";
+        case "Critical Moments": return "fas fa-exclamation-triangle text-red-400";
+        default: return "fas fa-bell text-slate-400";
+    }
 }
 
-async function disableAllAlerts() {
-    // REMOVED
+function isCategoryEnabled(category) {
+    const sportConfig = ALERT_TYPE_CONFIG[currentSport];
+    if (!sportConfig || !sportConfig[category]) return false;
+
+    return sportConfig[category].every(alert => 
+        isAlertGloballyEnabled(alert.key)
+    );
+}
+
+function isAlertGloballyEnabled(alertKey) {
+    return globalAlertSettings[alertKey] !== false;
+}
+
+function getUserCountForAlert(alertKey) {
+    // Calculate how many users have this alert enabled
+    // This would be populated from actual user data
+    return Math.floor(Math.random() * currentUsers.length || 50);
+}
+
+async function toggleMasterAlerts() {
+    const toggle = document.getElementById('masterAlertToggle');
+    const isEnabled = toggle.checked;
+
+    try {
+        const response = await fetch('/api/admin/master-alerts', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ enabled: isEnabled })
+        });
+
+        if (response.ok) {
+            showNotification(`Master alerts ${isEnabled ? 'enabled' : 'disabled'}`, 'success');
+        } else {
+            toggle.checked = !isEnabled; // Revert on error
+            showNotification('Failed to update master alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling master alerts:', error);
+        toggle.checked = !isEnabled;
+        showNotification('Failed to update master alerts', 'error');
+    }
+}
+
+async function toggleCategory(category) {
+    const sportConfig = ALERT_TYPE_CONFIG[currentSport];
+    if (!sportConfig || !sportConfig[category]) return;
+
+    const shouldEnable = !isCategoryEnabled(category);
+    const alertKeys = sportConfig[category].map(alert => alert.key);
+
+    try {
+        const response = await fetch('/api/admin/global-alert-category', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ 
+                sport: currentSport,
+                category: category,
+                alertKeys: alertKeys,
+                enabled: shouldEnable 
+            })
+        });
+
+        if (response.ok) {
+            // Update local state
+            alertKeys.forEach(key => {
+                globalAlertSettings[key] = shouldEnable;
+            });
+
+            // Automatically apply these changes to all users
+            await applyGlobalSettingsToAllUsers();
+
+            // Re-render configuration
+            renderAlertConfiguration();
+            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} globally`, 'success');
+        } else {
+            showNotification('Failed to update category settings', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling category:', error);
+        showNotification('Failed to update category settings', 'error');
+    }
+}
+
+async function toggleGlobalAlert(alertKey) {
+    const toggle = document.getElementById(`alert-${alertKey}`);
+    const isEnabled = toggle.checked;
+
+    try {
+        const response = await fetch('/api/admin/global-alert-setting', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ 
+                sport: currentSport,
+                alertType: alertKey,
+                enabled: isEnabled 
+            })
+        });
+
+        if (response.ok) {
+            globalAlertSettings[alertKey] = isEnabled;
+
+            // Automatically apply this change to all users
+            await applyGlobalSettingsToAllUsers();
+
+            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally`, 'success');
+        } else {
+            toggle.checked = !isEnabled;
+            showNotification('Failed to update alert setting', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling alert:', error);
+        toggle.checked = !isEnabled;
+        showNotification('Failed to update alert setting', 'error');
+    }
+}
+
+// Auto-apply function - simplified to always apply changes
+async function applyGlobalSettingsToAllUsers() {
+    try {
+        const response = await fetch('/api/admin/apply-global-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ 
+                sport: currentSport,
+                settings: globalAlertSettings 
+            })
+        });
+
+        if (response.ok) {
+            console.log('Global settings automatically applied to all users');
+        } else {
+            console.error('Failed to apply settings to all users');
+        }
+    } catch (error) {
+        console.error('Error applying settings:', error);
+    }
+}
+
+async function refreshAlertSettings() {
+    await loadSportAlertSettings();
+    showNotification('Alert settings refreshed', 'success');
 }
 
 function showNotification(message, type = 'info') {
@@ -544,4 +869,88 @@ function showNotification(message, type = 'info') {
             }
         }, 300);
     }, 3000);
+}
+
+// Function to switch sport and load settings
+function switchSport(sport) {
+    currentSport = sport;
+    loadSportAlertSettings();
+}
+
+// Add event listener for sport selector change
+const sportSelector = document.getElementById('sportSelector');
+if (sportSelector) {
+    sportSelector.addEventListener('change', function() {
+        switchSport(this.value);
+    });
+}
+
+async function enableAllAlerts() {
+    try {
+        showNotification('Enabling all alerts...', 'info');
+
+        const response = await fetch('/api/admin/enable-all-alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification(`Enabled ${result.count} alert types`, 'success');
+            // Reload settings to reflect changes
+            setTimeout(() => {
+                loadGlobalAlertSettings();
+            }, 1000);
+        } else {
+            showNotification(result.message || 'Failed to enable alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Error enabling all alerts:', error);
+        showNotification('Failed to enable all alerts', 'error');
+    }
+}
+
+async function disableAllAlerts() {
+    // Double confirmation for this destructive action
+    const confirmed = confirm('⚠️ WARNING: This will disable ALL alert features across the entire system for ALL users.\n\nThis includes:\n- All MLB, NFL, NBA, NHL, WNBA, CFL, NCAAF alerts\n- All Telegram notifications\n- All AI enhancements\n- All RE24 features\n\nAre you absolutely sure?');
+
+    if (!confirmed) return;
+
+    const doubleConfirmed = confirm('🚫 FINAL CONFIRMATION: This action will completely shut down all alert functionality system-wide. Users will receive NO notifications until manually re-enabled.\n\nProceed?');
+
+    if (!doubleConfirmed) return;
+
+    try {
+        showNotification('🚫 Disabling ALL alerts globally...', 'warning');
+
+        const response = await fetch('/api/admin/disable-all-alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification(
+                `🚫 ALL ALERTS DISABLED: ${result.summary.alertTypesDisabled} alert types disabled, ${result.summary.telegramUsersDisabled} Telegram configs disabled`, 
+                'success'
+            );
+
+            // Show summary
+            console.log('Disable All Alerts Result:', result);
+
+            // Reload settings to reflect changes
+            setTimeout(() => {
+                loadGlobalAlertSettings();
+            }, 1000);
+        } else {
+            showNotification(result.message || 'Failed to disable all alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Error disabling all alerts:', error);
+        showNotification('Failed to disable all alerts', 'error');
+    }
 }

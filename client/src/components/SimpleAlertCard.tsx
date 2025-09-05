@@ -333,11 +333,11 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-slate-300 text-sm font-medium">
-                  {(typeof alert.awayTeam === 'string' ? alert.awayTeam : alert.awayTeam?.name || 'Away').split(' ').pop()}
+                  {alert.awayTeam?.split(' ').pop() || 'Away'}
                 </span>
                 <span className="text-slate-500 text-xs">@</span>
                 <span className="text-slate-300 text-sm font-medium">
-                  {(typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || 'Home').split(' ').pop()}
+                  {alert.homeTeam?.split(' ').pop() || 'Home'}
                 </span>
               </div>
 
