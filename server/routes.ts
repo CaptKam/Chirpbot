@@ -1061,6 +1061,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alerts routes
   app.get("/api/alerts", async (req, res) => {
     try {
+      // Check if master alerts are disabled
+      const masterAlertsEnabled = await storage.getMasterAlertEnabled();
+      if (!masterAlertsEnabled) {
+        // Return empty array if master alerts are disabled
+        res.json([]);
+        return;
+      }
+
       const limit = parseInt(req.query.limit as string) || 50;
 
       // Get alerts from database
@@ -1077,7 +1085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sport = String(row.sport || 'MLB');
         const alertType = String(row.type || '');
 
-        // Always include alerts - no filtering
+        // Process alerts normally when master alerts are enabled
         try {
           let payload: any = {};
           try {
