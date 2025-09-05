@@ -63,7 +63,8 @@ const teamColorsBySport: Record<string, Record<string, string>> = {
     'ALA': '#9E1B32', 'GA': '#BA0C2F', 'OSU': '#BB0000', 'CLEM': '#F66733',
     'ND': '#0C2340', 'TEX': '#BF5700', 'USC': '#990000', 'MICH': '#00274C',
     'PSU': '#041E42', 'LSU': '#461D7C', 'FLA': '#0021A5', 'OKLA': '#841617',
-    'WIS': '#C5050C', 'ORE': '#154733', 'WASH': '#4B2E83', 'STAN': '#8C1515'
+    'WIS': '#C5050C', 'ORE': '#154733', 'WASH': '#4B2E83', 'STAN': '#8C1515',
+    'JAM': '#663399', 'LOU': '#AD0000', 'WES': '#003366', 'NOR': '#4B0082'
   }
 };
 
@@ -312,7 +313,15 @@ const teamNameToAbbr: Record<string, string> = {
   'Wisconsin Badgers': 'WIS',
   'Oregon Ducks': 'ORE',
   'Washington Huskies': 'WASH',
-  'Stanford Cardinal': 'STAN'
+  'Stanford Cardinal': 'STAN',
+  'James Madison Dukes': 'JAM',
+  'Dukes': 'JAM',
+  'Louisville Cardinals': 'LOU',
+  'Western Illinois Leathernecks': 'WES',
+  'Leathernecks': 'WES',
+  'Northwestern Wildcats': 'NOR',
+  'Wildcats': 'NOR',
+  'Huskies': 'NOR'
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -521,15 +530,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     }
   }
 
-  // Debug logging for team colors
-  console.log('Team color debug:', { 
-    teamName, 
-    teamAbbr, 
-    sport, 
-    providedColor: teamColor, 
-    finalColor: finalTeamColor,
-    sportColors: sport && teamColorsBySport[sport] ? Object.keys(teamColorsBySport[sport]).length : 0
-  });
+  
 
   const fallbackStyle = finalTeamColor 
     ? { 
