@@ -54,23 +54,31 @@ export const storage = {
     try {
       console.log(`🗑️ Deleting user ${userId} and all related data...`);
       
-      // Use raw SQL to handle all foreign key constraints at once
-      await db.execute(sql`
-        -- Step 1: Delete user alert preferences
-        DELETE FROM user_alert_preferences WHERE user_id = ${userId};
-        
-        -- Step 2: Delete user monitored teams  
-        DELETE FROM user_monitored_teams WHERE user_id = ${userId};
-        
-        -- Step 3: Clear global alert settings references
-        UPDATE global_alert_settings SET updated_by = NULL WHERE updated_by = ${userId};
-        
-        -- Step 4: Delete audit logs if they exist
-        DELETE FROM audit_logs WHERE user_id = ${userId};
-        
-        -- Step 5: Delete the user
-        DELETE FROM users WHERE id = ${userId};
-      `);
+      // Execute each deletion step separately to avoid multiple command error
+      
+      // Step 1: Delete user alert preferences
+      await db.execute(sql`DELETE FROM user_alert_preferences WHERE user_id = ${userId}`);
+      console.log(`🗑️ Deleted alert preferences for user ${userId}`);
+      
+      // Step 2: Delete user monitored teams  
+      await db.execute(sql`DELETE FROM user_monitored_teams WHERE user_id = ${userId}`);
+      console.log(`🗑️ Deleted monitored teams for user ${userId}`);
+      
+      // Step 3: Clear global alert settings references
+      await db.execute(sql`UPDATE global_alert_settings SET updated_by = NULL WHERE updated_by = ${userId}`);
+      console.log(`🗑️ Cleared global alert settings references for user ${userId}`);
+      
+      // Step 4: Delete audit logs if they exist (table may not exist, so wrap in try-catch)
+      try {
+        await db.execute(sql`DELETE FROM audit_logs WHERE user_id = ${userId}`);
+        console.log(`🗑️ Deleted audit logs for user ${userId}`);
+      } catch (auditError) {
+        console.log(`📝 No audit logs table found or no logs to delete for user ${userId}`);
+      }
+      
+      // Step 5: Delete the user
+      await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
+      console.log(`🗑️ Deleted user ${userId} from users table`);
       
       console.log(`✅ Successfully deleted user ${userId} and all related data`);
       return true;
