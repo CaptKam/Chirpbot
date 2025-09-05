@@ -1,4 +1,3 @@
-
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 
 export default class TwoMinuteWarningModule extends BaseAlertModule {
@@ -6,15 +5,14 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
   sport = 'NFL';
 
   isTriggered(gameState: GameState): boolean {
-    // Trigger when approaching 2:00 mark in 2nd or 4th quarter
-    if (gameState.status !== 'in') return false;
-    if (!gameState.timeRemaining) return false;
-    
-    const [minutes, seconds] = gameState.timeRemaining.split(':').map(Number);
-    const totalSeconds = minutes * 60 + seconds;
-    
-    return (gameState.quarter === 2 || gameState.quarter === 4) && 
-           totalSeconds <= 120 && totalSeconds > 110;
+    // Trigger in 2nd or 4th quarter with exactly 2:00 remaining
+    if (![2, 4].includes(gameState.quarter)) return false;
+
+    const timeRemaining = gameState.timeRemaining;
+    if (!timeRemaining) return false;
+
+    // Check for official two-minute warning (exactly 2:00)
+    return timeRemaining === '2:00' || timeRemaining === '02:00';
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
