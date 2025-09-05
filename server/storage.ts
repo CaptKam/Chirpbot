@@ -470,7 +470,19 @@ export const storage = {
 
   async getMasterAlertEnabled() {
     try {
-      // For now, return true by default
+      // Check for the special MASTER_ALERTS_ENABLED setting
+      const result = await db.select()
+        .from(globalAlertSettings)
+        .where(and(
+          eq(globalAlertSettings.sport, 'system'),
+          eq(globalAlertSettings.alertType, 'MASTER_ALERTS_ENABLED')
+        ));
+
+      if (result.length > 0) {
+        return result[0].enabled;
+      }
+
+      // Default to enabled if no setting exists
       return true;
     } catch (error) {
       console.error('Error getting master alert enabled:', error);
@@ -481,8 +493,12 @@ export const storage = {
   async setMasterAlertEnabled(enabled: boolean, updatedBy: string) {
     try {
       console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin ${updatedBy}`);
-      // For now, just log the change. In a full implementation, this would update the database
-      return;
+      
+      // Use the existing updateGlobalAlertSetting method to persist the master switch
+      await this.updateGlobalAlertSetting('system', 'MASTER_ALERTS_ENABLED', enabled, updatedBy);
+      
+      console.log(`✅ Master alerts setting persisted: ${enabled}`);
+      return { enabled, updatedBy };
     } catch (error) {
       console.error('Error setting master alert enabled:', error);
       throw error;

@@ -1699,6 +1699,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/master-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const enabled = await storage.getMasterAlertEnabled();
+      res.json({ enabled });
+    } catch (error) {
+      console.error('Error fetching master alerts status:', error);
+      res.status(500).json({ message: 'Failed to fetch master alerts status' });
+    }
+  });
+
   app.put('/api/admin/master-alerts', async (req, res) => {
     try {
       if (!req.session.adminUserId) {
@@ -1707,9 +1721,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { enabled } = req.body;
 
-      // In a full implementation, this would update a global master switch in the database
-      // For now, we'll just acknowledge the request
-      console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin`);
+      // Actually persist the master alerts setting to the database
+      await storage.setMasterAlertEnabled(enabled, req.session.adminUserId);
 
       res.json({
         message: `Master alerts ${enabled ? 'enabled' : 'disabled'} successfully`,
