@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load initial data
     loadDashboardData();
 
+    // Load master alert status from database
+    loadMasterAlertStatus();
+
     // Update sport selector with NCAAF
     const sportSelector = document.getElementById('sportSelector');
     if (sportSelector) {
@@ -693,6 +696,37 @@ function getUserCountForAlert(alertKey) {
     // Calculate how many users have this alert enabled
     // This would be populated from actual user data
     return Math.floor(Math.random() * currentUsers.length || 50);
+}
+
+async function loadMasterAlertStatus() {
+    try {
+        const response = await fetch('/api/admin/master-alerts', {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const toggle = document.getElementById('masterAlertToggle');
+            if (toggle) {
+                toggle.checked = data.enabled;
+            }
+        } else {
+            console.warn('Failed to load master alerts status, using default (enabled)');
+            const toggle = document.getElementById('masterAlertToggle');
+            if (toggle) {
+                toggle.checked = true; // Default to enabled if can't load
+            }
+        }
+    } catch (error) {
+        console.error('Error loading master alerts status:', error);
+        // Default to enabled on error
+        const toggle = document.getElementById('masterAlertToggle');
+        if (toggle) {
+            toggle.checked = true;
+        }
+    }
 }
 
 async function toggleMasterAlerts() {
