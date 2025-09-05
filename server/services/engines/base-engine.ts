@@ -46,7 +46,7 @@ export class AlertModuleManager {
 
     try {
       // Dynamic import based on sport and alert type
-      const modulePath = `./alert-modules/${this.sport.toLowerCase()}/${alertType.toLowerCase()}-module`;
+      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${alertType.toLowerCase()}-module`;
       const { default: AlertModule } = await import(modulePath);
       const module = new AlertModule();
       
