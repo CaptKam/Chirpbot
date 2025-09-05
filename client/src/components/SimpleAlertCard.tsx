@@ -362,7 +362,19 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             showVenue={false}
             showEnhancedMLB={false}
             className="bg-white/5 backdrop-blur-sm border-white/10"
-          />
+          >
+            {/* Weather for MLB games */}
+            {alert.sport === 'MLB' && weatherData && (
+              <WeatherDisplay 
+                windSpeed={weatherData.windSpeed}
+                windDirection={getCardinalDirection(weatherData.windDirection)}
+                windGust={weatherData.windGust}
+                temperature={weatherData.temperature}
+                stadiumWindContext={weatherData.stadiumWindContext}
+                size="sm"
+              />
+            )}
+          </GameCardTemplate>
 
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
           <div className="p-4 pt-0">

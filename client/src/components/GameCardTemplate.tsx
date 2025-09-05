@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { TeamLogo } from '@/components/team-logo';
 import { Badge } from '@/components/ui/badge';
@@ -23,13 +24,13 @@ interface GameCardTemplateProps {
   status?: 'live' | 'scheduled' | 'final';
   startTime?: string;
   venue?: string;
-
+  
   // Game state info
   inning?: number;
   quarter?: number;
   period?: number;
   isTopInning?: boolean;
-
+  
   // Baseball specific (for enhanced display)
   runners?: {
     first: boolean;
@@ -39,17 +40,17 @@ interface GameCardTemplateProps {
   balls?: number;
   strikes?: number;
   outs?: number;
-
+  
   // Weather data
   weather?: {
     windSpeed: number;
     windDirection: string;
   };
-
+  
   // Selection state
   isSelected?: boolean;
   onSelect?: () => void;
-
+  
   // Display options
   size?: 'sm' | 'md' | 'lg';
   showWeather?: boolean;
@@ -67,7 +68,7 @@ const removeCity = (teamName: string) => {
 
 const extractTeamAbbreviation = (teamName: string) => {
   if (!teamName || teamName.trim() === '') return 'TBD';
-
+  
   // Full team name mappings (check these first)
   const fullTeamMappings: Record<string, string> = {
     'San Diego Padres': 'SD',
@@ -81,16 +82,16 @@ const extractTeamAbbreviation = (teamName: string) => {
     'TCU Horned Frogs': 'TCU',
     'North Carolina Tar Heels': 'UNC'
   };
-
+  
   // Check full team name first
   if (fullTeamMappings[teamName]) {
     return fullTeamMappings[teamName];
   }
-
+  
   // Extract abbreviation from team name
   const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington', 'Kansas City'];
   let cleanName = teamName;
-
+  
   // Remove city prefixes
   for (const prefix of cityPrefixes) {
     if (teamName.startsWith(prefix)) {
@@ -98,7 +99,7 @@ const extractTeamAbbreviation = (teamName: string) => {
       break;
     }
   }
-
+  
   // Common team abbreviations
   const abbreviations: Record<string, string> = {
     'Yankees': 'NYY', 'Mets': 'NYM', 'Dodgers': 'LAD', 'Angels': 'LAA',
@@ -110,7 +111,7 @@ const extractTeamAbbreviation = (teamName: string) => {
     'Braves': 'ATL', 'Pirates': 'PIT', 'Reds': 'CIN', 'Brewers': 'MIL',
     'Diamondbacks': 'ARI', 'Rockies': 'COL'
   };
-
+  
   return abbreviations[cleanName] || cleanName.slice(0, 3).toUpperCase();
 };
 
@@ -139,11 +140,11 @@ export function GameCardTemplate({
   showEnhancedMLB = true,
   className = ''
 }: GameCardTemplateProps) {
-
+  
   const logoSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md';
   const scoreSize = size === 'sm' ? 'text-lg' : size === 'lg' ? 'text-2xl' : 'text-2xl';
   const cardHeight = size === 'sm' ? 'min-h-[120px]' : 'min-h-[160px]';
-
+  
   const formatTime = (dateString?: string) => {
     if (!dateString) return 'TBD';
     const date = new Date(dateString);
@@ -233,6 +234,7 @@ export function GameCardTemplate({
               sport={sport}
               size={logoSize}
               className="shadow-sm"
+              teamColor={awayTeam.logoColor}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
               {removeCity(awayTeam.name)}
@@ -265,7 +267,7 @@ export function GameCardTemplate({
               <CheckCircle className="w-5 h-5 text-emerald-400" data-testid={`game-selected-${gameId}`} />
             )}
           </div>
-
+          
           {/* Enhanced MLB Display */}
           {sport === 'MLB' && showEnhancedMLB && (status === 'live' || status === 'final') && (
             <BaseballDiamond 
@@ -279,7 +281,7 @@ export function GameCardTemplate({
               showCount={status === 'live'}
             />
           )}
-
+          
           {/* Game State for other sports */}
           {(sport !== 'MLB' || !showEnhancedMLB) && getGameState()}
         </div>
@@ -300,6 +302,7 @@ export function GameCardTemplate({
               sport={sport}
               size={logoSize}
               className="shadow-sm"
+              teamColor={homeTeam.logoColor}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
               {removeCity(homeTeam.name)}
@@ -312,18 +315,16 @@ export function GameCardTemplate({
       <div className="flex items-center justify-between pt-3 border-t border-white/10">
         {/* Weather Display - Use real weather data from API */}
         {showWeather && sport === 'MLB' && weatherData && (
-          <div className="flex justify-center">
-            <WeatherDisplay 
-              windSpeed={weatherData.windSpeed}
-              windDirection={getCardinalDirection(weatherData.windDirection)}
-              windGust={weatherData.windGust}
-              temperature={weatherData.temperature}
-              stadiumWindContext={weatherData.stadiumWindContext}
-              size="md"
-            />
-          </div>
+          <WeatherDisplay 
+            windSpeed={weatherData.windSpeed}
+            windDirection={getCardinalDirection(weatherData.windDirection)}
+            windGust={weatherData.windGust}
+            temperature={weatherData.temperature}
+            stadiumWindContext={weatherData.stadiumWindContext}
+            size="sm"
+          />
         )}
-
+        
         {/* Fallback weather display for non-MLB or when no data */}
         {showWeather && (sport !== 'MLB' || !weatherData) && (
           <WeatherDisplay 
@@ -332,7 +333,7 @@ export function GameCardTemplate({
             size="sm"
           />
         )}
-
+        
         <div className="flex items-center space-x-3">
           {/* Time for scheduled games */}
           {status === 'scheduled' && (
@@ -343,7 +344,7 @@ export function GameCardTemplate({
               </span>
             </div>
           )}
-
+          
           {/* Venue */}
           {showVenue && venue && (
             <div className="text-xs text-slate-400 text-right">
