@@ -109,32 +109,16 @@ export function WeatherDisplay({
       'N': '↑', 'S': '↓', 'E': '→', 'W': '←',
       'NE': '↗', 'NW': '↖', 'SE': '↘', 'SW': '↙'
     };
-    return directions[direction.toUpperCase()] || '○';
-  };
-
-  const getWindColor = (speed: number) => {
-    if (speed >= 15) return 'text-red-400';
-    if (speed >= 10) return 'text-yellow-400';
-    if (speed >= 5) return 'text-green-400';
-    return 'text-slate-400';
+    return directions[direction.toUpperCase()] || '↑';
   };
 
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
 
   return (
     <div className={`flex items-center space-x-1 ${textSize}`}>
-      <motion.span
-        className={`${getWindColor(windSpeed)} font-mono`}
-        animate={{ rotate: windSpeed > 20 ? [0, 5, -5, 0] : 0 }}
-        transition={{ 
-          duration: windSpeed > 20 ? 1.5 : 0, 
-          repeat: windSpeed > 20 ? Infinity : 0, 
-          ease: 'easeInOut',
-          repeatDelay: 0.5
-        }}
-      >
+      <span className="text-slate-400 font-mono">
         {getWindIcon(windDirection)}
-      </motion.span>
+      </span>
       <span className="text-slate-300 font-medium">
         {windSpeed}mph
       </span>
