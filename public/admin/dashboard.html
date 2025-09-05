@@ -46,8 +46,7 @@
                 <i class="fas fa-users"></i>
                 User Management
             </button>
-            <!-- Alerts tab disabled -->
-            <button class="nav-tab" onclick="showTab('alerts')" id="alertsTab" style="display: none;">
+            <button class="nav-tab" onclick="showTab('alerts')" id="alertsTab">
                 <i class="fas fa-bell"></i>
                 Alert Settings
             </button>
@@ -80,24 +79,23 @@
                     <div class="stat-label">Admin Users</div>
                 </div>
 
-                <!-- Alert stat cards disabled -->
-                <div class="stat-card" style="display: none;">
+                <div class="stat-card">
                     <div class="stat-header">
                         <div class="stat-icon alerts">
                             <i class="fas fa-bell"></i>
                         </div>
                     </div>
-                    <div class="stat-value" id="todayAlerts">0</div>
+                    <div class="stat-value" id="todayAlerts">Loading...</div>
                     <div class="stat-label">Today's Alerts</div>
                 </div>
 
-                <div class="stat-card" style="display: none;">
+                <div class="stat-card">
                     <div class="stat-header">
                         <div class="stat-icon total">
                             <i class="fas fa-chart-bar"></i>
                         </div>
                     </div>
-                    <div class="stat-value" id="totalAlerts">0</div>
+                    <div class="stat-value" id="totalAlerts">Loading...</div>
                     <div class="stat-label">Total Alerts</div>
                 </div>
             </div>

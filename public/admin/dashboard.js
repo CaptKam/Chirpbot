@@ -122,9 +122,8 @@ function updateStatsDisplay() {
 
     if (totalUsersEl) totalUsersEl.textContent = currentStats.users?.total || 0;
     if (totalAdminsEl) totalAdminsEl.textContent = currentStats.users?.admins || 0;
-    // Alert displays disabled - always show 0
-    if (todayAlertsEl) todayAlertsEl.textContent = '0';
-    if (totalAlertsEl) totalAlertsEl.textContent = '0';
+    if (todayAlertsEl) todayAlertsEl.textContent = currentStats.alerts?.today || 0;
+    if (totalAlertsEl) totalAlertsEl.textContent = currentStats.alerts?.total || 0;
 }
 
 function updateUsersTable() {
