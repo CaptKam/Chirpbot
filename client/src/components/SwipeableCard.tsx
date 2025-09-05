@@ -661,8 +661,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-6">
                 <GameCardTemplate
-                  homeTeam={alertData.homeTeam || 'TBD'}
-                  awayTeam={alertData.awayTeam || 'TBD'}
+                  homeTeam={typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'TBD'}
+                  awayTeam={typeof alertData.awayTeam === 'string' ? alertData.awayTeam : (alertData.awayTeam as any)?.name || 'TBD'}
                   homeScore={displayScores.homeScore}
                   awayScore={displayScores.awayScore}
                   sport={alertData.sport}

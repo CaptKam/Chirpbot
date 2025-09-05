@@ -86,8 +86,10 @@ function getBetbookData(context: any): BetbookData {
     homeOdds = Math.min(+200, -110 + advantage + 10);
   }
 
-  // Generate contextual AI advice based on actual game situation
-  let aiAdvice = `${awayTeam.split(' ').pop()} ${awayScore}-${homeScore} ${homeTeam.split(' ').pop()}`;
+  // Generate contextual AI advice based on actual game situation  
+  const awayTeamName = typeof awayTeam === 'string' ? awayTeam : awayTeam?.name || 'Away';
+  const homeTeamName = typeof homeTeam === 'string' ? homeTeam : homeTeam?.name || 'Home';
+  let aiAdvice = `${awayTeamName.split(' ').pop()} ${awayScore}-${homeScore} ${homeTeamName.split(' ').pop()}`;
   
   if (type === 'BASES_LOADED') {
     aiAdvice += ` | BASES LOADED: Strong over ${totalLine} value. Historical 75%+ scoring rate.`;
@@ -486,7 +488,7 @@ export class AlertGenerator {
             homeScore: context.homeScore || 0,
             awayScore: context.awayScore || 0,
             type: type,
-            probability: priority,
+            probability: finalPriority,
             inning: context.inning,
             outs: context.outs || 0
           });
