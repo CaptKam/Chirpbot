@@ -831,15 +831,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin middleware
   async function requireAdmin(req: any, res: any, next: any) {
     try {
-      if (!req.session?.userId) {
+      // Check for admin session (adminUserId) first, then fall back to regular session
+      const userId = req.session?.adminUserId || req.session?.userId;
+      
+      if (!userId) {
+        console.log('🔒 Admin middleware: No session found');
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      const user = await storage.getUserById(req.session.userId);
+      const user = await storage.getUserById(userId);
       if (!user || user.role !== 'admin') {
+        console.log(`🔒 Admin middleware: User ${userId} is not admin (role: ${user?.role})`);
         return res.status(403).json({ message: 'Admin access required' });
       }
 
+      console.log(`✅ Admin middleware: Admin ${user.username} authenticated`);
       req.user = user;
       next();
     } catch (error) {
@@ -1619,6 +1625,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin-auth/logout', (req, res) => {
     req.session.adminUserId = undefined;
     res.json({ message: 'Admin logout successful' });
+  });
+
+  // Check if admin users exist (public endpoint for troubleshooting)
+  app.get('/api/admin-auth/check', async (req, res) => {
+    try {
+      const adminUsers = await storage.getUsersByRole('admin');
+      res.json({
+        hasAdminUsers: adminUsers.length > 0,
+        adminCount: adminUsers.length,
+        adminUsernames: adminUsers.map(u => u.username)
+      });
+    } catch (error) {
+      console.error('Error checking admin users:', error);
+      res.status(500).json({ message: 'Error checking admin users' });
+    }
   });
 
   // Global Alert Management Endpoints
