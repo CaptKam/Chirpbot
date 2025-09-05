@@ -54,34 +54,26 @@ export const storage = {
     try {
       console.log(`🗑️ Deleting user ${userId} and all related data...`);
       
-      // Delete related data first (foreign key constraints)
-      // 1. User alert preferences (has cascade delete, but let's be explicit)
-      await db.delete(userAlertPreferences).where(eq(userAlertPreferences.userId, userId));
-      console.log(`✅ Deleted alert preferences for user ${userId}`);
+      // Use raw SQL to handle all foreign key constraints at once
+      await db.execute(sql`
+        -- Step 1: Delete user alert preferences
+        DELETE FROM user_alert_preferences WHERE user_id = ${userId};
+        
+        -- Step 2: Delete user monitored teams  
+        DELETE FROM user_monitored_teams WHERE user_id = ${userId};
+        
+        -- Step 3: Clear global alert settings references
+        UPDATE global_alert_settings SET updated_by = NULL WHERE updated_by = ${userId};
+        
+        -- Step 4: Delete audit logs if they exist
+        DELETE FROM audit_logs WHERE user_id = ${userId};
+        
+        -- Step 5: Delete the user
+        DELETE FROM users WHERE id = ${userId};
+      `);
       
-      // 2. User monitored teams (has cascade delete, but let's be explicit)
-      await db.delete(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
-      console.log(`✅ Deleted monitored teams for user ${userId}`);
-      
-      // 3. Global alert settings where this user was the updater
-      await db.update(globalAlertSettings)
-        .set({ updatedBy: null })
-        .where(eq(globalAlertSettings.updatedBy, userId));
-      console.log(`✅ Cleared global alert settings updated_by references for user ${userId}`);
-      
-      // 4. Audit logs - delete entries for this user (using raw SQL since table might not be in schema)
-      try {
-        await db.execute(sql`DELETE FROM audit_logs WHERE user_id = ${userId}`);
-        console.log(`✅ Deleted audit logs for user ${userId}`);
-      } catch (auditError) {
-        console.log(`⚠️ No audit_logs table or no entries for user ${userId}`);
-      }
-      
-      // 5. Delete the user
-      const result = await db.delete(users).where(eq(users.id, userId));
-      console.log(`✅ Deleted user ${userId} from users table`);
-      
-      return result.rowCount > 0;
+      console.log(`✅ Successfully deleted user ${userId} and all related data`);
+      return true;
     } catch (error) {
       console.error(`❌ Error deleting user ${userId}:`, error);
       throw error;
