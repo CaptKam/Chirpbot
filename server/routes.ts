@@ -40,13 +40,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = Date.now();
       const requestKey = `${req.method}:${req.path}:${req.ip}`;
       const lastRequest = recentRequests.get(requestKey);
-
+      
       if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
         console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
       } else {
         console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
       }
-
+      
       recentRequests.set(requestKey, now);
       // Clean up old entries periodically
       if (recentRequests.size > 100) {
@@ -703,7 +703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 🛡️ RULE COMPLIANCE: Check if TEST_STRIKEOUT is globally enabled
         const alertGenerator = new AlertGenerator();
         const isGloballyEnabled = await (alertGenerator as any).isAlertGloballyEnabled('MLB', 'TEST_STRIKEOUT');
-
+        
         if (!isGloballyEnabled) {
           console.log(`🚫 RULE COMPLIANT: TEST_STRIKEOUT globally disabled - skipping user ${user.username}`);
           errorCount++;
@@ -780,9 +780,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/debug/telegram-bypasses', requireAuthentication, async (req, res) => {
     try {
       console.log('🔍 SCANNING FOR TELEGRAM BYPASS ROUTES');
-
+      
       const bypasses = [];
-
+      
       // Check for direct telegram calls in the codebase
       const potentialBypasses = [
         {
@@ -833,7 +833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check for admin session (adminUserId) first, then fall back to regular session
       const userId = req.session?.adminUserId || req.session?.userId;
-
+      
       if (!userId) {
         console.log('🔒 Admin middleware: No session found');
         return res.status(401).json({ message: 'Authentication required' });
@@ -913,22 +913,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user; // from requireAdmin middleware
-
+      
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
-
+      
       // Prevent self-deletion
       if (userId === currentUser.id) {
         return res.status(400).json({ 
           message: 'Cannot delete your own account' 
         });
       }
-
+      
       // Check if user exists
       const userToDelete = await storage.getUserById(userId);
       if (!userToDelete) {
         return res.status(404).json({ message: 'User not found' });
       }
-
+      
       // Prevent deleting the last admin
       if (userToDelete.role === 'admin') {
         const allAdmins = await storage.getUsersByRole('admin');
@@ -938,10 +938,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-
+      
       // Delete user and all related data
       const deleted = await storage.deleteUser(userId);
-
+      
       if (deleted) {
         console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser.username}`);
         res.json({ 
@@ -967,19 +967,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user;
-
+      
       console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
-
+      
       // Prevent self-deletion
       if (userId === currentUser.id) {
         return res.status(400).json({ 
           message: 'Cannot delete your own account' 
         });
       }
-
+      
       // Force delete using the aggressive method
       const deleted = await storage.forceDeleteUser(userId);
-
+      
       if (deleted) {
         console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser.username}`);
         res.json({ 
@@ -1061,82 +1061,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alerts routes
   app.get("/api/alerts", async (req, res) => {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-      const offset = (page - 1) * limit;
+      const limit = parseInt(req.query.limit as string) || 50;
 
-      console.log(`🔧 ROUTE DEBUG: GET /api/alerts - Body: ${JSON.stringify(req.body)}`);
-
-      // Check if alerts are globally disabled
-      const globalSettings = await storage.getGlobalAlertSettings();
-      const alertsEnabled = Object.values(globalSettings).some(enabled => enabled === true);
-
-      if (!alertsEnabled) {
-        console.log('🚫 All alerts globally disabled - returning empty result');
-        res.json([]);
-        return;
-      }
-
-      const alerts = await db.execute(sql`
-        SELECT * FROM alerts 
-        ORDER BY created_at DESC 
-        LIMIT ${limit} OFFSET ${offset}
+      // Get alerts from database
+      const result = await db.execute(sql`
+        SELECT id, type, game_id, sport, score, payload, created_at
+        FROM alerts
+        ORDER BY created_at DESC
+        LIMIT ${limit}
       `);
 
-      // Filter alerts based on global settings
-      const filteredAlerts = alerts.rows.filter(alert => {
-        const settingKey = alert.type;
-        return globalSettings[settingKey] !== false;
-      });
+      const alerts = [];
 
-      res.json(filteredAlerts);
+      for (const row of result.rows) {
+        const sport = String(row.sport || 'MLB');
+        const alertType = String(row.type || '');
+
+        // Always include alerts - no filtering
+        try {
+          let payload: any = {};
+          try {
+            payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
+          } catch (e) {
+            console.error('Error parsing payload:', e);
+            payload = {};
+          }
+          alerts.push({
+            id: row.id,
+            type: row.type,
+            message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
+            gameId: row.game_id,
+            sport: row.sport || 'MLB',
+            homeTeam: payload.context?.homeTeam || 'Home Team',
+            awayTeam: payload.context?.awayTeam || 'Away Team',
+            homeScore: payload.context?.homeScore,
+            awayScore: payload.context?.awayScore,
+            confidence: row.score || 85,
+            priority: row.score || 80,
+            createdAt: row.created_at,
+            // Add context data for footer
+            context: payload.context || {},
+            inning: payload.context?.inning,
+            isTopInning: payload.context?.isTopInning,
+            outs: payload.context?.outs,
+            balls: payload.context?.balls,
+            strikes: payload.context?.strikes,
+            hasFirst: payload.context?.first || payload.context?.hasFirst,
+            hasSecond: payload.context?.second || payload.context?.hasSecond,
+            hasThird: payload.context?.third || payload.context?.hasThird,
+            // Include AI data
+            betbookData: payload.betbookData || null,
+            gameInfo: payload.gameInfo || null
+          });
+        } catch (error) {
+          console.error(`Error processing alert for ${row.id}:`, error);
+        }
+      }
+
+      res.json(alerts);
     } catch (error) {
-      console.error('Error fetching alerts:', error);
-      res.status(500).json({ message: 'Failed to fetch alerts' });
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ message: "Failed to fetch alerts" });
     }
   });
 
   app.get('/api/alerts/stats', async (req, res) => {
     try {
-      console.log(`🔧 ROUTE DEBUG: GET /api/alerts/stats - Body: ${JSON.stringify(req.body)}`);
+      // Use direct SQL counts for better performance and reliability
+      const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
+      const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
+      const monitoredGames = await storage.getAllMonitoredGames();
 
-      // Check if alerts are globally disabled
-      const globalSettings = await storage.getGlobalAlertSettings();
-      const alertsEnabled = Object.values(globalSettings).some(enabled => enabled === true);
-
-      if (!alertsEnabled) {
-        console.log('🚫 All alerts globally disabled - returning zero stats');
-        res.json({
-          totalAlerts: 0,
-          todayAlerts: 0,
-          liveAlerts: 0
-        });
-        return;
-      }
-
-      // Get total alerts count
-      const totalResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
-      const totalAlerts = Number(totalResult.rows[0]?.count || 0);
-
-      // Get today's alerts count
-      const todayResult = await db.execute(sql`
-        SELECT COUNT(*) as count FROM alerts 
-        WHERE DATE(created_at) = CURRENT_DATE
-      `);
-      const todayAlerts = Number(todayResult.rows[0]?.count || 0);
-
-      // Get live alerts count (alerts from games that might still be active)
-      const liveResult = await db.execute(sql`
-        SELECT COUNT(*) as count FROM alerts 
-        WHERE created_at >= NOW() - INTERVAL '4 hours'
-      `);
-      const liveAlerts = Number(liveResult.rows[0]?.count || 0);
-
-      res.json({
-        totalAlerts,
-        todayAlerts,
-        liveAlerts
-      });
+      const stats = {
+        totalAlerts: parseInt(String(totalAlertsResult.rows[0]?.count || '0')),
+        todayAlerts: parseInt(String(todayAlertsResult.rows[0]?.count || '0')),
+        liveGames: 6, // This would need live games API integration
+        monitoredGames: monitoredGames.length
+      };
+      res.json(stats);
     } catch (error) {
       console.error('Error fetching alert stats:', error);
       res.status(500).json({ message: 'Failed to fetch alert stats' });
@@ -1920,7 +1922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Disable Telegram for all users
       const allUsers = await storage.getAllUsers();
       let telegramDisabled = 0;
-
+      
       for (const user of allUsers) {
         if (user.telegramEnabled) {
           try {
@@ -1989,7 +1991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //     console.error('Error in live monitoring:', error);
   //   }
   // }, 15000); // Check every 15 seconds for real-time updates
-
+  
   console.log('🚫 ALL ALERTS DISABLED - No monitoring will occur');
 
   return httpServer;
