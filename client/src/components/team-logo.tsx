@@ -30,17 +30,40 @@ const teamColorsBySport: Record<string, Record<string, string>> = {
     'MIN': '#4F2683'
   },
   NBA: {
-    'LAL': '#552583', 'CEL': '#007A33', 'GSW': '#1D428A', 'CHI': '#CE1141',
-    'MIA': '#98002E', 'NYK': '#006BB6', 'BKN': '#000000', 'PHI': '#006BB6'
+    'LAL': '#552583', 'LAC': '#C8102E', 'GSW': '#1D428A', 'SAC': '#5A2D81', 
+    'PHX': '#1D1160', 'POR': '#E03A3E', 'DEN': '#0E2240', 'UTA': '#002B5C', 
+    'OKC': '#007AC1', 'MIN': '#0C2340', 'SAS': '#C4CED4', 'DAL': '#00538C', 
+    'MEM': '#5D76A9', 'NO': '#0C2340', 'HOU': '#CE1141', 'MIL': '#00471B', 
+    'CHI': '#CE1141', 'IND': '#002D62', 'CLE': '#860038', 'DET': '#C8102E', 
+    'ATL': '#E03A3E', 'CHA': '#1D1160', 'MIA': '#98002E', 'ORL': '#0077C0', 
+    'WAS': '#002B5C', 'NYK': '#006BB6', 'BKN': '#000000', 'PHI': '#006BB6', 
+    'TOR': '#CE1141', 'BOS': '#007A33'
   },
   NHL: {
-    'LAK': '#111111', 'ANA': '#F47A38', 'VGK': '#B4975A', 'COL': '#6F263D',
-    'DAL': '#006847', 'NSH': '#FFB81C'
+    'ANA': '#F47A38', 'BOS': '#FFB81C', 'BUF': '#002654', 'CGY': '#C8102E',
+    'CAR': '#CC0000', 'CHI': '#CF0A2C', 'COL': '#6F263D', 'CBJ': '#002654',
+    'DAL': '#006847', 'DET': '#CE1126', 'EDM': '#041E42', 'FLA': '#041E42',
+    'LAK': '#111111', 'MIN': '#154734', 'MTL': '#AF1E2D', 'NSH': '#FFB81C',
+    'NJ': '#CE1126', 'NYI': '#00539B', 'NYR': '#0038A8', 'OTT': '#C52032',
+    'PHI': '#F74902', 'PIT': '#000000', 'SJ': '#006D75', 'SEA': '#99D9D9',
+    'STL': '#002F87', 'TB': '#002868', 'TOR': '#003E7E', 'VAN': '#001F5B',
+    'VGK': '#B4975A', 'WAS': '#C8102E', 'WPG': '#041E42'
   },
   WNBA: {
     'ATL': '#E03A3E', 'CHI': '#418FDE', 'CON': '#FF8200', 'DAL': '#C4D600',
     'IND': '#FFD100', 'LAS': '#A6192E', 'MIN': '#23458A', 'NY': '#86CEBC',
     'PHX': '#CB6015', 'SEA': '#2C5234', 'WAS': '#E03A3E', 'GS': '#FDB927'
+  },
+  CFL: {
+    'BC': '#FF6600', 'CGY': '#CE1126', 'EDM': '#004225', 'SSK': '#006A37',
+    'WPG': '#041E42', 'HAM': '#FFD100', 'TOR': '#004C9B', 'OTT': '#000000',
+    'MTL': '#C8102E'
+  },
+  NCAAF: {
+    'ALA': '#9E1B32', 'GA': '#BA0C2F', 'OSU': '#BB0000', 'CLEM': '#F66733',
+    'ND': '#0C2340', 'TEX': '#BF5700', 'USC': '#990000', 'MICH': '#00274C',
+    'PSU': '#041E42', 'LSU': '#461D7C', 'FLA': '#0021A5', 'OKLA': '#841617',
+    'WIS': '#C5050C', 'ORE': '#154733', 'WASH': '#4B2E83', 'STAN': '#8C1515'
   }
 };
 
@@ -51,7 +74,9 @@ const teamColors: Record<string, string> = {
   ...teamColorsBySport.NFL,
   ...teamColorsBySport.NBA,
   ...teamColorsBySport.NHL,
-  ...teamColorsBySport.WNBA
+  ...teamColorsBySport.WNBA,
+  ...teamColorsBySport.CFL,
+  ...teamColorsBySport.NCAAF
 };
 
 // Team name to abbreviation mapping for when API doesn't provide abbreviations
@@ -150,6 +175,28 @@ const teamNameToAbbr: Record<string, string> = {
   'New York Knicks': 'NYK',
   'Brooklyn Nets': 'BKN',
   'Philadelphia 76ers': 'PHI',
+  'Los Angeles Clippers': 'LAC',
+  'Sacramento Kings': 'SAC',
+  'Phoenix Suns': 'PHX',
+  'Portland Trail Blazers': 'POR',
+  'Denver Nuggets': 'DEN',
+  'Utah Jazz': 'UTA',
+  'Oklahoma City Thunder': 'OKC',
+  'Minnesota Timberwolves': 'MIN',
+  'San Antonio Spurs': 'SAS',
+  'Dallas Mavericks': 'DAL',
+  'Memphis Grizzlies': 'MEM',
+  'New Orleans Pelicans': 'NO',
+  'Houston Rockets': 'HOU',
+  'Milwaukee Bucks': 'MIL',
+  'Indiana Pacers': 'IND',
+  'Cleveland Cavaliers': 'CLE',
+  'Detroit Pistons': 'DET',
+  'Atlanta Hawks': 'ATL',
+  'Charlotte Hornets': 'CHA',
+  'Orlando Magic': 'ORL',
+  'Washington Wizards': 'WAS',
+  'Toronto Raptors': 'TOR',
 
   // NHL Teams
   'Los Angeles Kings': 'LAK',
@@ -158,6 +205,31 @@ const teamNameToAbbr: Record<string, string> = {
   'Colorado Avalanche': 'COL',
   'Dallas Stars': 'DAL',
   'Nashville Predators': 'NSH',
+  'Boston Bruins': 'BOS',
+  'Buffalo Sabres': 'BUF',
+  'Calgary Flames': 'CGY',
+  'Carolina Hurricanes': 'CAR',
+  'Chicago Blackhawks': 'CHI',
+  'Columbus Blue Jackets': 'CBJ',
+  'Detroit Red Wings': 'DET',
+  'Edmonton Oilers': 'EDM',
+  'Florida Panthers': 'FLA',
+  'Minnesota Wild': 'MIN',
+  'Montreal Canadiens': 'MTL',
+  'New Jersey Devils': 'NJ',
+  'New York Islanders': 'NYI',
+  'New York Rangers': 'NYR',
+  'Ottawa Senators': 'OTT',
+  'Philadelphia Flyers': 'PHI',
+  'Pittsburgh Penguins': 'PIT',
+  'San Jose Sharks': 'SJ',
+  'Seattle Kraken': 'SEA',
+  'St. Louis Blues': 'STL',
+  'Tampa Bay Lightning': 'TB',
+  'Toronto Maple Leafs': 'TOR',
+  'Vancouver Canucks': 'VAN',
+  'Washington Capitals': 'WAS',
+  'Winnipeg Jets': 'WPG',
 
   // WNBA Teams
   'Atlanta Dream': 'ATL',
@@ -211,7 +283,36 @@ const teamNameToAbbr: Record<string, string> = {
   'Sun (CON)': 'CON',
   'Connecticut Sun (CON)': 'CON',
   'Lynx (MIN)': 'MIN',
-  'Minnesota Lynx (MIN)': 'MIN'
+  'Minnesota Lynx (MIN)': 'MIN',
+
+  // CFL Teams
+  'BC Lions': 'BC',
+  'Calgary Stampeders': 'CGY',
+  'Edmonton Elks': 'EDM',
+  'Saskatchewan Roughriders': 'SSK',
+  'Winnipeg Blue Bombers': 'WPG',
+  'Hamilton Tiger-Cats': 'HAM',
+  'Toronto Argonauts': 'TOR',
+  'Ottawa Redblacks': 'OTT',
+  'Montreal Alouettes': 'MTL',
+
+  // College Football Teams
+  'Alabama Crimson Tide': 'ALA',
+  'Georgia Bulldogs': 'GA',
+  'Ohio State Buckeyes': 'OSU',
+  'Clemson Tigers': 'CLEM',
+  'Notre Dame Fighting Irish': 'ND',
+  'Texas Longhorns': 'TEX',
+  'USC Trojans': 'USC',
+  'Michigan Wolverines': 'MICH',
+  'Penn State Nittany Lions': 'PSU',
+  'LSU Tigers': 'LSU',
+  'Florida Gators': 'FLA',
+  'Oklahoma Sooners': 'OKLA',
+  'Wisconsin Badgers': 'WIS',
+  'Oregon Ducks': 'ORE',
+  'Washington Huskies': 'WASH',
+  'Stanford Cardinal': 'STAN'
 };
 
 // ESPN team logo URLs - these return actual mascot logos
@@ -353,7 +454,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     }
   }
 
-  
+
 
   // Try to get the official team logo URL first (but skip WNBA images)
   const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport) : null;
@@ -373,20 +474,20 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     );
   }
 
-  
+
 
   // Final fallback with team colors - use provided color or lookup by sport first, then general lookup
   const finalTeamColor = teamColor || 
     (teamAbbr && sport && teamColorsBySport[sport] ? teamColorsBySport[sport][teamAbbr] : null) ||
     (teamAbbr ? teamColors[teamAbbr] : null);
-  
+
   const fallbackStyle = finalTeamColor 
     ? { 
         background: `linear-gradient(135deg, ${finalTeamColor}, ${finalTeamColor}dd)`,
         borderColor: 'white'
       }
     : {};
-  
+
   return (
     <div 
       className={`${sizeClasses[size]} ${className} rounded-full ${finalTeamColor ? '' : 'bg-gradient-to-br from-gray-500 to-gray-600'} border-2 border-white shadow-sm flex items-center justify-center`}
