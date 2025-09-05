@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import bcrypt from "bcryptjs";
+import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
@@ -65,6 +66,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
+
+  // Admin panel route
+  app.get('/admin-panel', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'public/admin/dashboard.html'));
+  });
 
   function heartbeat(this: any) {
     this.isAlive = true;
