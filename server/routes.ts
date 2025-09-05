@@ -512,10 +512,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/signup', async (req, res) => {
     try {
-      const { username, email, password } = req.body;
+      const { username, email, password, usernameOrEmail, firstName, lastName } = req.body;
 
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: 'Username, email, and password are required' });
+      // Handle both old format (username + email) and new format (usernameOrEmail)
+      let finalUsername = username;
+      let finalEmail = email;
+      
+      if (usernameOrEmail && !username && !email) {
+        // New format - determine if usernameOrEmail is email or username
+        if (usernameOrEmail.includes('@')) {
+          finalEmail = usernameOrEmail;
+          finalUsername = usernameOrEmail.split('@')[0]; // Use part before @ as username
+        } else {
+          finalUsername = usernameOrEmail;
+          finalEmail = null; // Allow optional email
+        }
+      }
+
+      if (!finalUsername || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
       }
 
       if (password.length < 6) {
@@ -523,14 +538,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user already exists
-      const existingUserByUsername = await storage.getUserByUsername(username);
+      const existingUserByUsername = await storage.getUserByUsername(finalUsername);
       if (existingUserByUsername) {
         return res.status(409).json({ message: 'Username already exists' });
       }
 
-      const existingUserByEmail = await storage.getUserByEmail(email);
-      if (existingUserByEmail) {
-        return res.status(409).json({ message: 'Email already exists' });
+      if (finalEmail) {
+        const existingUserByEmail = await storage.getUserByEmail(finalEmail);
+        if (existingUserByEmail) {
+          return res.status(409).json({ message: 'Email already exists' });
+        }
       }
 
       // Hash password
@@ -539,9 +556,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create user
       const newUser = await storage.createUser({
-        username,
-        email,
+        username: finalUsername,
+        email: finalEmail,
         password: hashedPassword,
+        firstName: firstName || null,
+        lastName: lastName || null,
         authMethod: 'local',
         role: 'user'
       });
