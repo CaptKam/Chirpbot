@@ -263,44 +263,9 @@ export class AlertGenerator {
   }
 
   private async processGamesWithEngine(sport: string, games: any[]): Promise<number> {
-    if (games.length === 0) return 0;
-
-    const engine = this.sportEngines.get(sport);
-    if (!engine) {
-      console.error(`No engine found for sport: ${sport}`);
-      return 0;
-    }
-
-    console.log(`🏆 Processing ${games.length} live ${sport} games`);
-    let alertCount = 0;
-
-    for (const game of games) {
-      try {
-        // Convert game to standardized GameState
-        const gameState: GameState = this.normalizeGameState(game, sport);
-
-        // Generate alerts using sport-specific engine
-        const alerts = await engine.generateLiveAlerts(gameState);
-
-        // Save each alert
-        for (const alert of alerts) {
-          const saved = await this.saveRealTimeAlert(
-            alert.alertKey,
-            alert.type,
-            gameState.gameId,
-            alert.message,
-            alert.context,
-            alert.priority,
-            sport
-          );
-          alertCount += saved;
-        }
-      } catch (error) {
-        console.error(`Error processing ${sport} game ${game.gameId}:`, error);
-      }
-    }
-
-    return alertCount;
+    // ALL ALERT GENERATION DISABLED BY USER REQUEST
+    console.log(`🚫 Alert generation completely disabled - no ${sport} alerts will be generated`);
+    return 0;
   }
 
   private normalizeGameState(game: any, sport: string): GameState {
