@@ -376,6 +376,8 @@ export const storage = {
       // Define default settings for all known alert types
       const defaultSettings: Record<string, boolean> = {
         // MLB alerts
+        'MLB_GAME_START': true,
+        'MLB_SEVENTH_INNING_STRETCH': true,
         'RISP': true,
         'BASES_LOADED': true,
         'RUNNERS_1ST_2ND': true,
@@ -390,8 +392,6 @@ export const storage = {
         'STRIKEOUT': true,
         'POWER_HITTER': true,
         'HOT_HITTER': true,
-        'MLB_GAME_START': true,
-        'MLB_SEVENTH_INNING_STRETCH': true,
 
         // AI Enhancement alerts
         'AI_ENHANCED_MESSAGES': true,

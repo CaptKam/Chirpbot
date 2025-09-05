@@ -18,6 +18,8 @@ const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 // Comprehensive alert configuration for all sports
 const ALERT_TYPE_CONFIG = {
   MLB: [
+    { key: 'MLB_GAME_START', label: 'Game Start', description: 'Alert when MLB game begins' },
+    { key: 'MLB_SEVENTH_INNING_STRETCH', label: 'Seventh Inning Stretch', description: 'Traditional 7th inning stretch alert' },
     { key: 'RISP', label: 'Runner in Scoring Position', description: 'Alerts when a runner reaches 2nd or 3rd base' },
     { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases are occupied' },
     { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity setup' },
