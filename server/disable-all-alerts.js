@@ -1,5 +1,5 @@
 
-import { storage } from './storage.js';
+import { storage } from './storage.ts';
 
 async function disableAllAlerts() {
   try {
@@ -93,4 +93,4 @@ async function disableAllAlerts() {
   }
 }
 
-enableCriticalAlerts();
+disableAllAlerts();
