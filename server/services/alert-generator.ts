@@ -349,10 +349,48 @@ export class AlertGenerator {
   private normalizeGameState(game: any, sport: string): GameState {
     // Extract common fields and normalize them
     const gameId = game.gameId || game.id;
-    const homeTeam = typeof game.homeTeam === 'string' ? game.homeTeam : game.homeTeam?.displayName || game.homeTeam?.name || 'Home';
-    const awayTeam = typeof game.awayTeam === 'string' ? game.awayTeam : game.awayTeam?.displayName || game.awayTeam?.name || 'Away';
-    const homeScore = typeof game.homeScore === 'number' ? game.homeScore : (game.homeScore?.score || 0);
-    const awayScore = typeof game.awayScore === 'number' ? game.awayScore : (game.awayScore?.score || 0);
+    
+    // Enhanced team name extraction with multiple fallback strategies
+    let homeTeam = 'Home Team';
+    let awayTeam = 'Away Team';
+    
+    if (typeof game.homeTeam === 'string') {
+      homeTeam = game.homeTeam;
+    } else if (game.homeTeam && typeof game.homeTeam === 'object') {
+      homeTeam = game.homeTeam.displayName || 
+                 game.homeTeam.name || 
+                 game.homeTeam.teamName || 
+                 game.homeTeam.shortDisplayName ||
+                 game.homeTeam.abbreviation ||
+                 'Home Team';
+    }
+    
+    if (typeof game.awayTeam === 'string') {
+      awayTeam = game.awayTeam;
+    } else if (game.awayTeam && typeof game.awayTeam === 'object') {
+      awayTeam = game.awayTeam.displayName || 
+                 game.awayTeam.name || 
+                 game.awayTeam.teamName || 
+                 game.awayTeam.shortDisplayName ||
+                 game.awayTeam.abbreviation ||
+                 'Away Team';
+    }
+    
+    // Enhanced score extraction
+    let homeScore = 0;
+    let awayScore = 0;
+    
+    if (typeof game.homeScore === 'number') {
+      homeScore = game.homeScore;
+    } else if (game.homeScore && typeof game.homeScore === 'object') {
+      homeScore = game.homeScore.score || game.homeScore.value || 0;
+    }
+    
+    if (typeof game.awayScore === 'number') {
+      awayScore = game.awayScore;
+    } else if (game.awayScore && typeof game.awayScore === 'object') {
+      awayScore = game.awayScore.score || game.awayScore.value || 0;
+    }
 
     const gameState: GameState = {
       gameId,

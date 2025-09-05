@@ -152,8 +152,10 @@ export class MLBEngine extends BaseSportEngine {
     const enhancedGameState = { ...gameState, hasFirst, hasSecond, hasThird, outs, inning, isTopInning };
     const scoringProbability = await this.calculateProbability(enhancedGameState);
 
-    // Get weather data for enhanced context
-    const weather = await weatherSvc.getWeatherForTeam(gameState.homeTeam);
+    // Get weather data for enhanced context - ensure we have a string team name
+    const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
+                        gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Unknown Team';
+    const weather = await weatherSvc.getWeatherForTeam(homeTeamName);
 
     // Bases loaded: all three bases occupied
     if (hasFirst && hasSecond && hasThird) {
@@ -279,7 +281,9 @@ export class MLBEngine extends BaseSportEngine {
       {
         const alertKey = `${gameState.gameId}_LATE_PRESSURE_${inning}`;
         const situation = isTopInning ? 'top' : 'bottom';
-        const weather = await weatherService.getWeatherForTeam(gameState.homeTeam);
+        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
+                        gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Unknown Team';
+        const weather = await weatherService.getWeatherForTeam(homeTeamName);
         const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
 
         const message = `🔥 LATE INNING PRESSURE! ${gameState.homeTeam} ${gameState.homeScore}, ${gameState.awayTeam} ${gameState.awayScore} - ${situation} ${inning}th. ${weather.temperature}°F, ${windDesc}`;

@@ -1,4 +1,3 @@
-
 import { BasicAI } from './basic-ai';
 import { storage } from '../storage';
 
@@ -8,13 +7,13 @@ export interface AlertContext {
   alertType: string;
   priority: number;
   probability: number;
-  
+
   // Game State
   homeTeam: string;
   awayTeam: string;
   homeScore: number;
   awayScore: number;
-  
+
   // Sport-specific context
   inning?: number;
   outs?: number;
@@ -23,10 +22,10 @@ export interface AlertContext {
   quarter?: number;
   timeRemaining?: string;
   baseRunners?: string[];
-  
+
   // Betting context
   betbookData?: any;
-  
+
   // Environmental
   weather?: {
     temperature: number;
@@ -34,11 +33,11 @@ export interface AlertContext {
     windSpeed?: number;
     humidity?: number;
   };
-  
+
   // Historical context
   recentEvents?: string[];
   playerStats?: any;
-  
+
   // Original message
   originalMessage: string;
   originalContext: any;
@@ -51,7 +50,7 @@ export interface AIEnhancedAlert {
   insights: string[];
   recommendation: string;
   urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  
+
   // Enhanced context
   bettingAdvice: {
     recommendation: string;
@@ -59,18 +58,18 @@ export interface AIEnhancedAlert {
     reasoning: string[];
     suggestedBets: string[];
   };
-  
+
   // Predictive analysis
   gameProjection: {
     finalScorePrediction: string;
     keyMoments: string[];
     winProbability: { home: number; away: number };
   };
-  
+
   // User engagement
   callToAction: string;
   followUpActions: string[];
-  
+
   // Original data preserved
   originalContext: any;
   aiProcessingTime: number;
@@ -79,21 +78,21 @@ export interface AIEnhancedAlert {
 
 export class AIContextController {
   private basicAI: BasicAI;
-  
+
   constructor() {
     this.basicAI = new BasicAI();
   }
 
   async enhanceAlertWithFullControl(context: AlertContext): Promise<AIEnhancedAlert> {
     const startTime = Date.now();
-    
+
     if (!this.basicAI.configured) {
       return this.getFallbackAlert(context);
     }
 
     try {
       console.log(`🤖 AI Context Controller: Taking full control of ${context.alertType} alert`);
-      
+
       // AI analyzes the complete game state and generates enhanced content
       const [
         enhancedContent,
@@ -108,9 +107,9 @@ export class AIContextController {
       ]);
 
       const processingTime = Date.now() - startTime;
-      
+
       console.log(`✅ AI Context Controller: Enhanced ${context.alertType} in ${processingTime}ms`);
-      
+
       return {
         ...enhancedContent,
         bettingAdvice: bettingAnalysis,
@@ -120,7 +119,7 @@ export class AIContextController {
         aiProcessingTime: processingTime,
         confidenceScore: this.calculateConfidenceScore(context, enhancedContent)
       };
-      
+
     } catch (error) {
       console.error('❌ AI Context Controller failed:', error);
       return this.getFallbackAlert(context);
@@ -136,14 +135,14 @@ export class AIContextController {
   }> {
     const prompt = this.buildContentPrompt(context);
     const response = await this.basicAI.generateResponse(prompt);
-    
+
     if (!response) {
       throw new Error('AI content generation failed');
     }
 
     // Parse AI response into structured content
     const lines = response.split('\n').filter(line => line.trim());
-    
+
     return {
       title: this.extractTitle(lines, context),
       message: this.extractMessage(lines, context),
@@ -161,11 +160,11 @@ export class AIContextController {
   }> {
     const currentTotal = context.homeScore + context.awayScore;
     const scoreDiff = Math.abs(context.homeScore - context.awayScore);
-    
+
     // Calculate realistic game-specific betting lines
     const liveTotal = this.calculateLiveTotal(context);
-    const liveSpread = this.calculateLiveSpread(context);
-    
+    const liveSpread = this.calculateLiveSpread(context.homeTeam, context.awayTeam, context.homeScore, context.awayScore);
+
     const prompt = `
 Analyze this ${context.sport} live betting opportunity:
 
@@ -200,27 +199,50 @@ Focus on immediate value based on the actual score and game state.
   private calculateLiveTotal(context: AlertContext): number {
     const currentTotal = context.homeScore + context.awayScore;
     const inning = context.inning || 5;
-    
+
     // Adjust total based on current score and inning progression
     if (context.sport === 'MLB') {
       const baseTotal = 8.5; // Standard MLB total
       const currentPace = (currentTotal / Math.max(inning, 1)) * 9;
       return Math.round((baseTotal + currentPace) / 2 * 2) / 2; // Round to nearest 0.5
     }
-    
+
     return currentTotal + 3.5; // Fallback
   }
 
-  private calculateLiveSpread(context: AlertContext): string {
-    const scoreDiff = context.homeScore - context.awayScore;
-    
+  private calculateLiveSpread(homeTeam: any, awayTeam: any, homeScore: number, awayScore: number): string {
+    // Extract team names properly with fallbacks
+    let homeTeamName = 'Home Team';
+    let awayTeamName = 'Away Team';
+
+    if (typeof homeTeam === 'string') {
+      homeTeamName = homeTeam;
+    } else if (homeTeam && typeof homeTeam === 'object') {
+      homeTeamName = homeTeam.displayName || homeTeam.name || homeTeam.teamName || homeTeam.abbreviation || 'Home Team';
+    }
+
+    if (typeof awayTeam === 'string') {
+      awayTeamName = awayTeam;
+    } else if (awayTeam && typeof awayTeam === 'object') {
+      awayTeamName = awayTeam.displayName || awayTeam.name || awayTeam.teamName || awayTeam.abbreviation || 'Away Team';
+    }
+
+    // Ensure we have valid strings before calling split()
+    const homeTeamCity = (typeof homeTeamName === 'string' && homeTeamName.length > 0) ? 
+                         homeTeamName.split(' ').pop() || 'Home' : 'Home';
+    const awayTeamCity = (typeof awayTeamName === 'string' && awayTeamName.length > 0) ? 
+                         awayTeamName.split(' ').pop() || 'Away' : 'Away';
+
+    const scoreDiff = homeScore - awayScore;
+
     if (scoreDiff === 0) return 'Pick\'em';
-    
-    const team = scoreDiff > 0 ? context.homeTeam : context.awayTeam;
+
+    const team = scoreDiff > 0 ? homeTeamCity : awayTeamCity;
     const line = Math.abs(scoreDiff) + 0.5;
-    
-    return `${team.split(' ').pop()} -${line}`;
+
+    return `${team} ${scoreDiff > 0 ? '-' : '+'}${line}`;
   }
+
 
   private getContextualFallback(context: AlertContext, liveTotal: number, liveSpread: string): {
     recommendation: string;
@@ -229,7 +251,7 @@ Focus on immediate value based on the actual score and game state.
     suggestedBets: string[];
   } {
     const currentTotal = context.homeScore + context.awayScore;
-    
+
     return {
       recommendation: currentTotal < liveTotal ? `Over ${liveTotal}` : `Under ${liveTotal}`,
       confidence: Math.min(85, context.probability),
@@ -270,7 +292,7 @@ Be specific and actionable.
     if (!response) {
       const homeLead = context.homeScore - context.awayScore;
       const homeWinProb = Math.max(10, Math.min(90, 50 + (homeLead * 15)));
-      
+
       return {
         finalScorePrediction: `${context.awayTeam} ${context.awayScore + 2}, ${context.homeTeam} ${context.homeScore + 1}`,
         keyMoments: ['Next scoring opportunity', 'Defensive stop', 'Late game situation'],
@@ -286,7 +308,7 @@ Be specific and actionable.
     followUpActions: string[];
   }> {
     const urgencyLevel = this.determineUrgency(context);
-    
+
     const actions = {
       'CRITICAL': {
         cta: '🚨 ACT NOW - Prime betting window closing!',
@@ -338,7 +360,7 @@ Make every word count. Users need instant clarity and value.
 
   private formatGameState(context: AlertContext): string {
     let state = '';
-    
+
     if (context.sport === 'MLB' || context.sport === 'NCAAF') {
       if (context.inning) state += `${context.inning}th inning, `;
       if (context.outs !== undefined) state += `${context.outs} outs, `;
@@ -352,7 +374,7 @@ Make every word count. Users need instant clarity and value.
       if (context.quarter) state += `Q${context.quarter}, `;
       if (context.timeRemaining) state += `${context.timeRemaining} left`;
     }
-    
+
     return state;
   }
 
@@ -361,7 +383,7 @@ Make every word count. Users need instant clarity and value.
       line.toLowerCase().includes('title') || 
       line.length < 60 && line.includes(context.alertType)
     );
-    
+
     return titleLine?.replace(/^title:?\s*/i, '').trim() || 
            `🚨 ${context.alertType.replace('_', ' ')} Alert`;
   }
@@ -371,7 +393,7 @@ Make every word count. Users need instant clarity and value.
       line.toLowerCase().includes('message') ||
       (line.length > 30 && line.length < 120)
     );
-    
+
     return messageLine?.replace(/^message:?\s*/i, '').trim() || 
            context.originalMessage;
   }
@@ -382,7 +404,7 @@ Make every word count. Users need instant clarity and value.
       line.toLowerCase().includes('insight') ||
       line.includes('•') || line.includes('-')
     );
-    
+
     return insightLines.slice(0, 3).map(line => 
       line.replace(/^\d+\.?\s*|^[•-]\s*/g, '').trim()
     );
@@ -394,7 +416,7 @@ Make every word count. Users need instant clarity and value.
       line.toLowerCase().includes('bet') ||
       line.toLowerCase().includes('action')
     );
-    
+
     return recLine?.replace(/^recommendation:?\s*/i, '').trim() || 
            'Monitor situation closely';
   }
@@ -413,7 +435,7 @@ Make every word count. Users need instant clarity and value.
     suggestedBets: string[];
   } {
     const lines = response.split('\n').filter(line => line.trim());
-    
+
     return {
       recommendation: lines[0]?.trim() || 'MONITOR',
       confidence: Math.min(95, context.probability + 10),
@@ -428,11 +450,11 @@ Make every word count. Users need instant clarity and value.
     winProbability: { home: number; away: number };
   } {
     const lines = response.split('\n').filter(line => line.trim());
-    
+
     // Extract win probability from response or calculate
     const homeLead = context.homeScore - context.awayScore;
     const homeWinProb = Math.max(10, Math.min(90, 50 + (homeLead * 12)));
-    
+
     return {
       finalScorePrediction: lines[0]?.trim() || `${context.awayTeam} ${context.awayScore + 1}, ${context.homeTeam} ${context.homeScore + 2}`,
       keyMoments: lines.slice(1, 4).map(line => line.replace(/^\d+\.?\s*/g, '')),
@@ -445,16 +467,16 @@ Make every word count. Users need instant clarity and value.
 
   private calculateConfidenceScore(context: AlertContext, content: any): number {
     let score = context.probability;
-    
+
     // Boost for high-urgency situations
     if (content.urgency === 'CRITICAL') score += 15;
     else if (content.urgency === 'HIGH') score += 10;
-    
+
     // Boost for multi-factor analysis
     if (context.weather) score += 5;
     if (context.playerStats) score += 5;
     if (context.betbookData) score += 5;
-    
+
     return Math.min(95, score);
   }
 

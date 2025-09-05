@@ -72,7 +72,12 @@ export class WNBAEngine extends BaseSportEngine {
       // No filtering - always enabled
       {
         const alertKey = `${gameState.gameId}_WNBA_FOURTH_QUARTER_${timeRemaining.replace(/[:\s]/g, '')}`;
-        const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left`;
+        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
+                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
+                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+        
+        const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${timeRemaining} left`;
 
         alerts.push({
           alertKey,
@@ -105,7 +110,12 @@ export class WNBAEngine extends BaseSportEngine {
       // No filtering - always enabled
       {
         const alertKey = `${gameState.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
-        const message = `🔥 CLOSE WNBA GAME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
+                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
+                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+        
+        const message = `🔥 CLOSE WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
 
         alerts.push({
           alertKey,
@@ -137,7 +147,12 @@ export class WNBAEngine extends BaseSportEngine {
       {
         const overtimePeriod = quarter - 4;
         const alertKey = `${gameState.gameId}_WNBA_OVERTIME_${quarter}`;
-        const message = `⚡ WNBA OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
+        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
+                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
+                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+        
+        const message = `⚡ WNBA OVERTIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
 
         alerts.push({
           alertKey,
@@ -169,7 +184,12 @@ export class WNBAEngine extends BaseSportEngine {
       // No filtering - always enabled
       {
         const alertKey = `${gameState.gameId}_WNBA_HIGH_SCORING`;
-        const message = `🎯 HIGH-SCORING WNBA GAME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${totalScore} combined points`;
+        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
+                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
+                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+        
+        const message = `🎯 HIGH-SCORING WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${totalScore} combined points`;
 
         alerts.push({
           alertKey,
