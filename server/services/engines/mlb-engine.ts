@@ -1,4 +1,3 @@
-
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
@@ -16,7 +15,7 @@ export class MLBEngine extends BaseSportEngine {
       // Only check settings for actual MLB alert types
       const validMLBAlerts = [
         'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
-        'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START', 
+        'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
         'MLB_SEVENTH_INNING_STRETCH', 'TEST_ALERT'
       ];
 
@@ -65,6 +64,8 @@ export class MLBEngine extends BaseSportEngine {
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     // Enhance game state with MLB-specific data if needed
     const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+
+    // Use the parent class method which properly calls all loaded modules
     return super.generateLiveAlerts(enhancedGameState);
   }
 
@@ -108,14 +109,14 @@ export class MLBEngine extends BaseSportEngine {
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
 
-      // Filter to only valid MLB alerts and check global settings
+      // Filter to only valid MLB alerts
       const validMLBAlerts = [
         'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
-        'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START', 
+        'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
         'MLB_SEVENTH_INNING_STRETCH', 'TEST_ALERT'
       ];
 
-      const mlbEnabledTypes = enabledTypes.filter(alertType => 
+      const mlbEnabledTypes = enabledTypes.filter(alertType =>
         validMLBAlerts.includes(alertType)
       );
 
@@ -130,7 +131,7 @@ export class MLBEngine extends BaseSportEngine {
 
       console.log(`🎯 Initializing MLB engine for user ${userId} with ${globallyEnabledTypes.length} MLB alerts: ${globallyEnabledTypes.join(', ')}`);
 
-      // Initialize only the MLB alert modules
+      // Initialize the MLB alert modules using parent class method
       await this.initializeUserAlertModules(globallyEnabledTypes);
 
     } catch (error) {
