@@ -139,8 +139,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       // Match by team names (both home and away combinations)
       const gameHomeTeam = game.homeTeam?.name || '';
       const gameAwayTeam = game.awayTeam?.name || '';
-      const alertHomeTeam = alertData.homeTeam || '';
-      const alertAwayTeam = alertData.awayTeam || '';
+      const alertHomeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || '';
+      const alertAwayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || '';
 
       return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
              (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
@@ -315,7 +315,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   // Construct a display message for sharing/copying
   const displayMessage = React.useMemo(() => {
-    let message = `ChirpBot Alert: ${alertData?.homeTeam || ''} vs ${alertData?.awayTeam || ''}`;
+    const homeTeamName = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
+    const awayTeamName = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
+    let message = `ChirpBot Alert: ${homeTeamName} vs ${awayTeamName}`;
     if (alertData?.sport) message += ` (${alertData.sport})`;
     if (alertData?.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
     if (alertData?.priority !== undefined) message += ` - Priority: ${alertData.priority}`;
@@ -393,10 +395,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 {/* Win Probability */}
                 <div className="flex justify-between text-xs mb-2">
                   <span className="text-purple-300">
-                    {alertData?.context?.homeTeam}: {alertData.context.aiGameProjection.winProbability?.home}%
+                    {typeof alertData?.context?.homeTeam === 'string' ? alertData.context.homeTeam : alertData?.context?.homeTeam?.name || 'Home'}: {(alertData.context as any).aiGameProjection?.winProbability?.home}%
                   </span>
                   <span className="text-purple-300">
-                    {alertData?.context?.awayTeam}: {alertData.context.aiGameProjection.winProbability?.away}%
+                    {typeof alertData?.context?.awayTeam === 'string' ? alertData.context.awayTeam : alertData?.context?.awayTeam?.name || 'Away'}: {(alertData.context as any).aiGameProjection?.winProbability?.away}%
                   </span>
                 </div>
 

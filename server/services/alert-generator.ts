@@ -575,7 +575,7 @@ export class AlertGenerator {
       const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
       if (!isGloballyEnabled) {
         console.log(`🚫 BLOCKED database save: ${type} alert globally disabled (Real-time alert method)`);
-        return;
+        return 0;
       }
 
       console.log(`💾 Saving alert: ${type} for game ${gameId}`);
