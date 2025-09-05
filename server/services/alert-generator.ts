@@ -162,18 +162,9 @@ export class AlertGenerator {
 
   // Generate realistic alerts from today's completed games
   async generateAlertsFromCompletedGames(): Promise<void> {
-    try {
-      const games = await this.mlbApi.getTodaysGames();
-      console.log(`Found ${games.length} games to analyze for alerts`);
-
-      for (const game of games) {
-        if (game.status === 'final' && game.homeScore && game.awayScore) {
-          await this.generateGameAlerts(game);
-        }
-      }
-    } catch (error) {
-      console.error('Error generating alerts from completed games:', error);
-    }
+    // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
+    console.log('🚫 Alert generation from completed games is disabled - no alerts will be generated');
+    return;
   }
 
   private async generateGameAlerts(game: any): Promise<void> {
@@ -262,47 +253,9 @@ export class AlertGenerator {
 
   // Method to generate alerts for live games (when they're happening)
   async generateLiveGameAlerts(): Promise<void> {
-    try {
-      // Get live games from all sports
-      const [mlbGames, ncaafGames, wnbaGames, nflGames, cflGames] = await Promise.all([
-        this.mlbApi.getTodaysGames(),
-        this.ncaafApi.getTodaysGames(),
-        this.getWNBAGames(),
-        this.getNFLGames(),
-        this.getCFLGames()
-      ]);
-
-      const liveMLBGames = mlbGames.filter(game => game.isLive);
-      const liveNCAAFGames = ncaafGames.filter(game => game.isLive);
-      const liveWNBAGames = wnbaGames.filter(game => game.isLive);
-      const liveNFLGames = nflGames.filter(game => game.isLive);
-      const liveCFLGames = cflGames.filter(game => game.isLive);
-      const totalLiveGames = liveMLBGames.length + liveNCAAFGames.length + liveWNBAGames.length + liveNFLGames.length + liveCFLGames.length;
-
-      if (totalLiveGames === 0) {
-        console.log('🔍 No live games to monitor for alerts');
-        return;
-      }
-
-      console.log(`🔍 Monitoring ${liveMLBGames.length} MLB + ${liveNCAAFGames.length} NCAAF + ${liveWNBAGames.length} WNBA + ${liveNFLGames.length} NFL + ${liveCFLGames.length} CFL live games for alerts`);
-
-      let newAlerts = 0;
-
-      // Process each sport using its specific engine
-      newAlerts += await this.processGamesWithEngine('MLB', liveMLBGames);
-      newAlerts += await this.processGamesWithEngine('NCAAF', liveNCAAFGames);
-      newAlerts += await this.processGamesWithEngine('WNBA', liveWNBAGames);
-      newAlerts += await this.processGamesWithEngine('NFL', liveNFLGames);
-      newAlerts += await this.processGamesWithEngine('CFL', liveCFLGames);
-
-      if (newAlerts > 0) {
-        console.log(`🚨 Generated ${newAlerts} new live alerts!`);
-      } else {
-        console.log('📊 No new alerts generated from live games');
-      }
-    } catch (error) {
-      console.error('Error generating live game alerts:', error);
-    }
+    // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
+    console.log('🚫 Alert generation is completely disabled - no alerts will be generated');
+    return;
   }
 
   private async processGamesWithEngine(sport: string, games: any[]): Promise<number> {
@@ -613,7 +566,10 @@ export class AlertGenerator {
 
       console.log(`🚨 REAL-TIME ALERT: ${message}`);
 
-      // Broadcast alert immediately to web clients via WebSocket
+      // DISABLED: Broadcast alert immediately to web clients via WebSocket
+      // ALL WEBSOCKET ALERT BROADCASTING HAS BEEN DISABLED
+      console.log(`🚫 WebSocket broadcasting disabled for ${type} alert`);
+      /*
       try {
         const wsBroadcast = (global as any).wsBroadcast;
         if (wsBroadcast && typeof wsBroadcast === 'function') {
@@ -640,8 +596,12 @@ export class AlertGenerator {
       } catch (broadcastError) {
         console.error('📡 WebSocket broadcast failed:', broadcastError);
       }
+      */
 
-      // Send to Telegram for users monitoring this game
+      // DISABLED: Send to Telegram for users monitoring this game
+      // ALL TELEGRAM NOTIFICATIONS HAVE BEEN DISABLED
+      console.log(`🚫 Telegram notifications disabled for ${type} alert`);
+      /*
       try {
         console.log(`📡 LAW #3: Sending ${type} alert to Telegram (priority: ${priority})`);
 
@@ -712,6 +672,7 @@ export class AlertGenerator {
       } catch (telegramError) {
         console.error('Error sending Telegram alerts:', telegramError);
       }
+      */
 
       return 1;
     } catch (error) {
