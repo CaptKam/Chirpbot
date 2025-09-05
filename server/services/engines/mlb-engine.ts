@@ -75,7 +75,7 @@ export class MLBEngine extends BaseSportEngine {
             outs: enhancedData.outs || 0,
             inning: enhancedData.inning || gameState.inning || 1,
             isTopInning: enhancedData.isTopInning,
-            homeScore: enhancedData.homeScore || gameState.homeScore,
+            homeScore: enhancedData.homeScore || gameState.awayScore,
             awayScore: enhancedData.awayScore || gameState.awayScore
           };
         }
@@ -115,16 +115,27 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // Placeholder for initializing user-specific alert modules
-  private async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    // This method would dynamically load and set up the alert generation logic
-    // for each enabled alert type. For now, we'll just log them.
-    console.log(`Setting up alert modules for: ${enabledAlertTypes.join(', ')}`);
-    // Example:
-    // if (enabledAlertTypes.includes('MLB_GAME_START')) {
-    //   this.alertGenerators.push(this.generateGameStartAlerts);
-    // }
-    // ... and so on for other alert types.
+  // Initialize alert modules for enabled alert types
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    this.alertModules.clear();
+
+    console.log(`🔧 Loading ${enabledAlertTypes.length} alert modules for MLB...`);
+
+    for (const alertType of enabledAlertTypes) {
+      try {
+        const module = await this.loadAlertModule(alertType);
+        if (module) {
+          this.alertModules.set(alertType, module);
+          console.log(`✅ Loaded alert module: ${alertType}`);
+        } else {
+          console.log(`❌ Failed to load module: ${alertType}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error loading ${alertType}:`, error);
+      }
+    }
+
+    console.log(`🎯 Successfully initialized ${this.alertModules.size} alert modules`);
   }
 
   // Load alert modules dynamically
