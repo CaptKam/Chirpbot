@@ -692,44 +692,17 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             alertData?.createdAt || '', 
             liveGameData?.status || displayScores.isLive ? 'live' : 'final'
           );
-          return alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
+          const baseClasses = alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
+          const borderClasses = alertStatus.status === 'ACTIVE' 
+            ? 'border-2 border-emerald-500 shadow-emerald-500/20 shadow-lg' 
+            : 'border-2 border-red-500 shadow-red-500/20 shadow-lg';
+          return `${baseClasses} ${borderClasses}`;
         })()}`} {...props}>
           {/* Render the redesigned alert card content here */}
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
             <div className="p-6 relative" key={`alert-${alertData.id}-${Date.now()}`}>
-              {/* Time-Sensitive Status Badge - Top Right Corner */}
-              {(() => {
-                const alertStatus = getAlertStatus(
-                  alertData.type, 
-                  alertData.createdAt || '', 
-                  liveGameData?.status || displayScores.isLive ? 'live' : 'final'
-                );
-                
-                return (
-                  <div className="absolute top-3 -right-7 z-20">
-                    <div 
-                      className={`
-                        transform rotate-25 px-3 py-1 text-xs font-bold uppercase tracking-wide
-                        shadow-lg ring-2 rounded-lg border-2
-                        ${alertStatus.status === 'ACTIVE' 
-                          ? 'bg-emerald-500 text-white ring-emerald-400 border-emerald-300' 
-                          : 'bg-red-500 text-white ring-red-400 border-red-300'
-                        }
-                      `}
-                      style={{ transform: 'rotate(25deg)' }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <div className={`w-1.5 h-1.5 rounded-full ${
-                          alertStatus.status === 'ACTIVE' ? 'bg-emerald-200 animate-pulse' : 'bg-red-200'
-                        }`}></div>
-                        {alertStatus.status}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Clean Header - Calendar Page Style */}
               <div className="flex items-center justify-between mb-6">

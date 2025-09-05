@@ -370,37 +370,14 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <div className={`${className} hover:border-emerald-500/30 transition-all duration-200 relative ${(() => {
+        <div className={`${className} transition-all duration-200 relative ${(() => {
           const alertStatus = getAlertStatus(alert.type, alert.createdAt);
-          return alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
+          const baseClasses = alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
+          const borderClasses = alertStatus.status === 'ACTIVE' 
+            ? 'border-2 border-emerald-500 shadow-emerald-500/20 shadow-lg rounded-xl' 
+            : 'border-2 border-red-500 shadow-red-500/20 shadow-lg rounded-xl';
+          return `${baseClasses} ${borderClasses}`;
         })()}`}>
-          {/* Time-Sensitive Status Badge */}
-          {(() => {
-            const alertStatus = getAlertStatus(alert.type, alert.createdAt);
-            
-            return (
-              <div className="absolute top-3 -right-7 z-20">
-                <div 
-                  className={`
-                    transform px-2 py-1 text-xs font-bold uppercase tracking-wide
-                    shadow-lg ring-1 rounded-md border-2
-                    ${alertStatus.status === 'ACTIVE' 
-                      ? 'bg-emerald-500 text-white ring-emerald-400 border-emerald-300' 
-                      : 'bg-red-500 text-white ring-red-400 border-red-300'
-                    }
-                  `}
-                  style={{ transform: 'rotate(25deg)' }}
-                >
-                  <div className="flex items-center gap-1">
-                    <div className={`w-1 h-1 rounded-full ${
-                      alertStatus.status === 'ACTIVE' ? 'bg-emerald-200 animate-pulse' : 'bg-red-200'
-                    }`}></div>
-                    {alertStatus.status}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
 
           <GameCardTemplate
             gameId={alert.id}
