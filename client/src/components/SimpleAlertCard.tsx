@@ -306,7 +306,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* Sportsbooks Panel (Left Swipe) */}
-      <div className={`absolute inset-y-0 right-0 w-60 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent backdrop-blur-sm transition-opacity duration-300 ${
+      <div className={`absolute inset-y-0 right-0 w-60 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         <div className="h-full flex flex-col items-center justify-center p-4 space-y-3">
@@ -336,7 +336,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
       </div>
 
       {/* Delete Panel (Right Swipe) */}
-      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent backdrop-blur-sm flex items-center justify-start pl-4 transition-opacity duration-300 ${
+      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent flex items-center justify-start pl-4 transition-opacity duration-300 ${
         dragX > 50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         <Button
@@ -345,7 +345,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             setDragX(0);
           }}
           disabled={isDeleting}
-          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm ring-1 ring-red-500/30 transition-all"
+          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 ring-1 ring-red-500/30 transition-all"
         >
           <Trash2 className="w-5 h-5 text-red-400" />
         </Button>
@@ -425,7 +425,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             showWeather={alert.sport === 'MLB'}
             showVenue={false}
             showEnhancedMLB={false}
-            className="bg-white/5 backdrop-blur-sm border-white/10"
+            className="bg-white/5 border-white/10"
           >
             {/* Weather for MLB games */}
             {alert.sport === 'MLB' && weatherData && (

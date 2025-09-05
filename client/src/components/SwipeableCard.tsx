@@ -395,7 +395,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* AI Betting Insights Panel (Left Swipe) - Only show when swiped left */}
-      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent backdrop-blur-sm transition-opacity duration-300 ${
+      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         {false && (alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
@@ -650,7 +650,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         )}
       </div>
       {/* Delete Menu (Right Swipe) - Only show when swiped right */}
-      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent backdrop-blur-sm flex items-center justify-start pl-4 transition-opacity duration-300 ${
+      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent flex items-center justify-start pl-4 transition-opacity duration-300 ${
         dragX > 30 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         <Button
@@ -659,7 +659,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             handleDeleteAlert();
             setDragX(0); // Return to center after click
           }}
-          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm ring-1 ring-red-500/30 transition-all hover:scale-110 active:scale-95"
+          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 ring-1 ring-red-500/30 transition-all hover:scale-110 active:scale-95"
           data-testid={`delete-alert-${alertId}`}
           disabled={isDeleting}
         >
@@ -725,9 +725,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         }`}></div>
                         {alertStatus.status}
                       </div>
-                      <div className="text-xs opacity-90 font-medium">
-                        {alertStatus.minutesAgo}m ago
-                      </div>
                     </div>
                   </div>
                 );
@@ -790,7 +787,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
 
               {/* Alert Message - Clean Layout */}
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 mb-6">
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
                 <div className="flex items-start space-x-3">
                   <div className="flex-1">
                     {/* Message Display */}
@@ -827,7 +824,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               )}
 
               {/* Game Situation Grid - Calendar Page Clean Style */}
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10">
+              <div className="bg-white/5 rounded-xl p-5 border border-white/10">
                 <div className="grid grid-cols-5 gap-6 items-center">
                   {/* MLB Specific Data */}
                   {alertData.sport === 'MLB' && (
