@@ -82,6 +82,7 @@ function RegularAppContent() {
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
+        <Route path="/admin-panel" component={() => <ProtectedRoute component={Admin} />} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}
