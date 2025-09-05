@@ -360,9 +360,25 @@ export class AlertGenerator {
 
     console.log(`👥 Processing for ${usersWithAlerts.length} users with ${sport} alerts enabled`);
 
+    // Initialize alert cylinders for users with enabled alerts
+    for (const user of usersWithAlerts) {
+      try {
+        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
+        const enabledAlertTypes = userPrefs
+          .filter(pref => pref.enabled)
+          .map(pref => pref.alertType);
+        
+        // Initialize user-specific alert cylinders for this sport
+        await engine.initializeUserAlertModules(enabledAlertTypes);
+        console.log(`🔧 Loaded ${enabledAlertTypes.length} alert cylinders for user ${user.username} in ${sport}`);
+      } catch (error) {
+        console.error(`❌ Error initializing alert cylinders for user ${user.username}:`, error);
+      }
+    }
+
     for (const game of games) {
       try {
-        // Only process live games
+        // Process each games live games
         if (!game.isLive) continue;
 
         const gameState = this.normalizeGameState(game, sport);

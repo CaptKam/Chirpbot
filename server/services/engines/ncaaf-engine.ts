@@ -1,4 +1,3 @@
-
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
@@ -51,34 +50,8 @@ export class NCAAFEngine extends BaseSportEngine {
   }
 
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-
-    try {
-      // Generate NCAAF-specific alerts ONLY if they're globally enabled
-      if (await this.isAlertEnabled('NCAAF_GAME_START')) {
-        alerts.push(...await this.generateGameStartAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('NCAAF_SECOND_HALF_KICKOFF')) {
-        alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('TWO_MINUTE_WARNING')) {
-        alerts.push(...await this.generateTwoMinuteWarningAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('RED_ZONE')) {
-        alerts.push(...await this.generateRedZoneAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('FOURTH_DOWN')) {
-        alerts.push(...await this.generateFourthDownAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('OVERTIME')) {
-        alerts.push(...await this.generateOvertimeAlerts(gameState));
-      }
-
-    } catch (error) {
-      console.error(`Error generating NCAAF alerts for game ${gameState.gameId}:`, error);
-    }
-
-    return alerts;
+    // Alert processing is now handled by the base class using alert cylinders
+    return super.generateLiveAlerts(gameState);
   }
 
   private async generateTwoMinuteWarningAlerts(gameState: GameState): Promise<AlertResult[]> {
@@ -292,7 +265,7 @@ export class NCAAFEngine extends BaseSportEngine {
 
   private isWithinTwoMinutes(timeRemaining: string): boolean {
     if (!timeRemaining || timeRemaining === '0:00') return false;
-    
+
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds <= 120 && totalSeconds > 0;
@@ -313,7 +286,7 @@ export class NCAAFEngine extends BaseSportEngine {
   private isKickoffTime(timeRemaining: string): boolean {
     // Kickoff typically happens at start of quarter (15:00 or close to it)
     if (!timeRemaining) return false;
-    
+
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds >= 880 && totalSeconds <= 900; // Between 14:40 and 15:00

@@ -1,4 +1,3 @@
-
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
@@ -49,32 +48,9 @@ export class NFLEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
+  // Alert processing is now handled by the base class using alert cylinders
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-
-    try {
-      // Generate NFL-specific alerts ONLY if they're globally enabled
-      if (await this.isAlertEnabled('NFL_GAME_START')) {
-        alerts.push(...await this.generateGameStartAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('NFL_SECOND_HALF_KICKOFF')) {
-        alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('RED_ZONE')) {
-        alerts.push(...await this.generateRedZoneAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('FOURTH_DOWN')) {
-        alerts.push(...await this.generateFourthDownAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('TWO_MINUTE_WARNING')) {
-        alerts.push(...await this.generateTwoMinuteWarningAlerts(gameState));
-      }
-
-    } catch (error) {
-      console.error(`Error generating NFL alerts for game ${gameState.gameId}:`, error);
-    }
-
-    return alerts;
+    return [];
   }
 
   private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
@@ -255,7 +231,7 @@ export class NFLEngine extends BaseSportEngine {
   private isKickoffTime(timeRemaining: string): boolean {
     // Kickoff typically happens at start of quarter (15:00 or close to it)
     if (!timeRemaining) return false;
-    
+
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds >= 880 && totalSeconds <= 900; // Between 14:40 and 15:00
@@ -266,7 +242,7 @@ export class NFLEngine extends BaseSportEngine {
 
   private isTwoMinuteWarning(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
-    
+
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds <= 125 && totalSeconds >= 115; // Around 2:00 mark

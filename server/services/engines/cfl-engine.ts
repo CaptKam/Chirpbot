@@ -1,4 +1,3 @@
-
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
@@ -50,34 +49,8 @@ export class CFLEngine extends BaseSportEngine {
   }
 
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-
-    try {
-      // Generate CFL-specific alerts ONLY if they're globally enabled
-      if (await this.isAlertEnabled('CFL_GAME_START')) {
-        alerts.push(...await this.generateGameStartAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('CFL_SECOND_HALF_KICKOFF')) {
-        alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('THREE_MINUTE_WARNING')) {
-        alerts.push(...await this.generateThreeMinuteWarningAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('RED_ZONE')) {
-        alerts.push(...await this.generateRedZoneAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('THIRD_DOWN')) {
-        alerts.push(...await this.generateThirdDownAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('OVERTIME')) {
-        alerts.push(...await this.generateOvertimeAlerts(gameState));
-      }
-
-    } catch (error) {
-      console.error(`Error generating CFL alerts for game ${gameState.gameId}:`, error);
-    }
-
-    return alerts;
+    // Alert processing is now handled by the base class using alert cylinders
+    return super.generateLiveAlerts(gameState);
   }
 
   private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
@@ -126,7 +99,7 @@ export class CFLEngine extends BaseSportEngine {
     // Second half kickoff
     if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
       const alertKey = `${gameState.gameId}_CFL_SECOND_HALF_KICKOFF`;
-      const message = `🏈 CFL SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
+      const message = `🏈 CFL SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
 
         alerts.push({
           alertKey,
@@ -292,7 +265,7 @@ export class CFLEngine extends BaseSportEngine {
   private isKickoffTime(timeRemaining: string): boolean {
     // Kickoff typically happens at start of quarter (15:00 or close to it)
     if (!timeRemaining) return false;
-    
+
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds >= 880 && totalSeconds <= 900; // Between 14:40 and 15:00
@@ -303,7 +276,7 @@ export class CFLEngine extends BaseSportEngine {
 
   private isWithinThreeMinutes(timeRemaining: string): boolean {
     if (!timeRemaining || timeRemaining === '0:00') return false;
-    
+
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds <= 180 && totalSeconds > 0;
