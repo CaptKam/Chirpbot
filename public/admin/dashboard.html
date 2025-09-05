@@ -106,10 +106,20 @@
                         <i class="fas fa-activity"></i>
                         Recent Activity
                     </h2>
+                    <button class="refresh-btn" onclick="loadRecentActivity()" title="Refresh Activity">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
                 <div id="recentActivity">
-                    <div class="loading">
-                        <div class="spinner"></div>
+                    <div class="activity-item">
+                        <div class="activity-icon system">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Loading Activity...</div>
+                            <div class="activity-description">Please wait while we fetch recent activity</div>
+                            <div class="activity-time">-</div>
+                        </div>
                     </div>
                 </div>
             </div>

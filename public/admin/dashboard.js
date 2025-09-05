@@ -75,10 +75,151 @@ function initializeDashboard() {
 }
 
 async function loadDashboardData() {
-    await Promise.all([
-        loadStats(),
-        loadUsers()
-    ]);
+    try {
+        // Load stats
+        const statsResponse = await fetch('/api/admin/stats', {
+            credentials: 'include'
+        });
+        const stats = await statsResponse.json();
+
+        updateStatsDisplay(stats);
+
+        // Load users
+        const usersResponse = await fetch('/api/admin/users', {
+            credentials: 'include'
+        });
+        const users = await usersResponse.json();
+
+        displayUsers(users);
+
+        // Load sport alert settings
+        loadSportAlertSettings();
+
+        // Load recent activity
+        loadRecentActivity();
+
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showNotification('Failed to load dashboard data', 'error');
+    }
+}
+
+async function loadRecentActivity() {
+    try {
+        const [alertsResponse, usersResponse] = await Promise.all([
+            fetch('/api/alerts?limit=10', { credentials: 'include' }),
+            fetch('/api/admin/users', { credentials: 'include' })
+        ]);
+
+        const alerts = await alertsResponse.json();
+        const users = await usersResponse.json();
+
+        displayRecentActivity(alerts, users);
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+        displayRecentActivity([], []);
+    }
+}
+
+function displayRecentActivity(alerts, users) {
+    const activityContainer = document.getElementById('recentActivity');
+    if (!activityContainer) return;
+
+    const activities = [];
+
+    // Add recent alerts
+    alerts.slice(0, 5).forEach(alert => {
+        activities.push({
+            type: 'alert',
+            icon: 'fas fa-bell',
+            title: `${alert.type} Alert`,
+            description: `${alert.homeTeam} vs ${alert.awayTeam}`,
+            time: formatTimeAgo(alert.createdAt),
+            timestamp: new Date(alert.createdAt).getTime(),
+            priority: alert.priority || 80
+        });
+    });
+
+    // Add recent user registrations
+    users.slice(0, 3).forEach(user => {
+        activities.push({
+            type: 'user',
+            icon: 'fas fa-user-plus',
+            title: 'New User Registration',
+            description: `${user.username} joined the platform`,
+            time: formatTimeAgo(user.createdAt),
+            timestamp: new Date(user.createdAt).getTime(),
+            priority: 50
+        });
+    });
+
+    // Add system status
+    activities.push({
+        type: 'system',
+        icon: 'fas fa-cog',
+        title: 'System Status',
+        description: 'All services operational',
+        time: 'Just now',
+        timestamp: Date.now(),
+        priority: 30
+    });
+
+    // Sort by timestamp (newest first)
+    activities.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Take only the 8 most recent
+    const recentActivities = activities.slice(0, 8);
+
+    if (recentActivities.length === 0) {
+        activityContainer.innerHTML = `
+            <div class="activity-item">
+                <div class="activity-icon system">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">No Recent Activity</div>
+                    <div class="activity-description">System activity will appear here</div>
+                    <div class="activity-time">-</div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    activityContainer.innerHTML = recentActivities.map(activity => `
+        <div class="activity-item ${activity.type}">
+            <div class="activity-icon ${activity.type}">
+                <i class="${activity.icon}"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-title">${activity.title}</div>
+                <div class="activity-description">${activity.description}</div>
+                <div class="activity-time">${activity.time}</div>
+            </div>
+            ${activity.priority > 70 ? '<div class="activity-priority high"></div>' : 
+              activity.priority > 50 ? '<div class="activity-priority medium"></div>' : 
+              '<div class="activity-priority low"></div>'}
+        </div>
+    `).join('');
+}
+
+function formatTimeAgo(dateString) {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) {
+        return 'Just now';
+    } else if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `${minutes}m ago`;
+    } else if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `${hours}h ago`;
+    } else {
+        const days = Math.floor(diffInSeconds / 86400);
+        return `${days}d ago`;
+    }
 }
 
 async function loadStats() {
@@ -243,33 +384,33 @@ function editUser(userId) {
 function getUserDeleteDisabled(user) {
     // Get current admin user from localStorage
     const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
-    
+
     // Can't delete yourself
     if (user.id === currentAdminUser.id) return true;
-    
+
     // Can't delete the last admin
     if (user.role === 'admin') {
         const adminCount = currentUsers.filter(u => u.role === 'admin').length;
         if (adminCount <= 1) return true;
     }
-    
+
     return false;
 }
 
 function getDeleteTooltip(user) {
     const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
-    
+
     if (user.id === currentAdminUser.id) {
         return "Cannot delete your own account";
     }
-    
+
     if (user.role === 'admin') {
         const adminCount = currentUsers.filter(u => u.role === 'admin').length;
         if (adminCount <= 1) {
             return "Cannot delete the last admin user";
         }
     }
-    
+
     return "Delete this user and all associated data";
 }
 
@@ -285,9 +426,9 @@ async function deleteUser(userId, username, role) {
         `• All associated user data\n\n` +
         `Type "DELETE" to confirm (case sensitive)`
     );
-    
+
     if (!confirmed) return;
-    
+
     // Second confirmation for admin users
     if (role === 'admin') {
         const adminConfirmed = confirm(
@@ -296,31 +437,31 @@ async function deleteUser(userId, username, role) {
             `This will remove all admin privileges for "${username}".\n\n` +
             `Are you absolutely certain you want to proceed?`
         );
-        
+
         if (!adminConfirmed) return;
     }
-    
+
     try {
         showNotification('Deleting user...', 'info');
-        
+
         const response = await fetch(`/api/admin/users/${userId}`, {
             method: 'DELETE',
             credentials: 'include'
         });
-        
+
         if (response.ok) {
             const result = await response.json();
-            
+
             // Remove user from local data
             const userIndex = currentUsers.findIndex(u => u.id === userId);
             if (userIndex !== -1) {
                 currentUsers.splice(userIndex, 1);
                 updateUsersTable();
             }
-            
+
             // Reload stats to reflect changes
             await loadStats();
-            
+
             showNotification(`✅ User "${username}" deleted successfully`, 'success');
             console.log(`🗑️ User deleted:`, result.deletedUser);
         } else {
