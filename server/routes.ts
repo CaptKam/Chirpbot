@@ -406,13 +406,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/user/:userId/alert-preferences', async (req, res) => {
+  app.post('/api/user/:userId/alert-preferences', requireAuthentication, async (req, res) => {
     try {
       const { userId } = req.params;
       const { sport, alertType, enabled } = req.body;
 
+      // Verify user can only modify their own preferences
+      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Can only modify your own alert preferences' });
+      }
+
       if (!sport || !alertType || typeof enabled !== 'boolean') {
         return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
+      }
+
+      // Check if alert type is globally enabled first
+      const isGloballyEnabled = await storage.isAlertGloballyEnabled(sport.toUpperCase(), alertType);
+      if (!isGloballyEnabled && enabled) {
+        return res.status(400).json({ 
+          message: `Alert type ${alertType} is globally disabled by admin`,
+          globallyDisabled: true 
+        });
       }
 
       const preference = await storage.setUserAlertPreference(userId, sport.toUpperCase(), alertType, enabled);
@@ -423,17 +437,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/user/:userId/alert-preferences/bulk', async (req, res) => {
+  app.post('/api/user/:userId/alert-preferences/bulk', requireAuthentication, async (req, res) => {
     try {
       const { userId } = req.params;
       const { sport, preferences } = req.body;
+
+      // Verify user can only modify their own preferences
+      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Can only modify your own alert preferences' });
+      }
 
       if (!sport || !preferences || !Array.isArray(preferences)) {
         return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
       }
 
-      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
-      res.json({ message: 'Alert preferences updated successfully', count: result.length });
+      // Validate each preference against global settings
+      const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
+      const filteredPreferences = [];
+
+      for (const pref of preferences) {
+        if (pref.enabled && !globalSettings[pref.alertType]) {
+          console.log(`🚫 Skipping ${pref.alertType} - globally disabled by admin`);
+          continue;
+        }
+        filteredPreferences.push(pref);
+      }
+
+      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), filteredPreferences);
+      res.json({ 
+        message: 'Alert preferences updated successfully', 
+        count: result.length,
+        filtered: preferences.length - filteredPreferences.length 
+      });
     } catch (error) {
       console.error('Error setting bulk alert preferences:', error);
       res.status(500).json({ message: 'Failed to set bulk alert preferences' });
@@ -606,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug all Telegram configurations
-  app.get('/api/telegram/debug', requireAuthentication, async (req, res) => {
+  app.get('/api/telegram/debug', requireAdmin, async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       const telegramDebug = allUsers.map(user => ({
@@ -663,10 +698,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate test live alerts - RULE COMPLIANT VERSION
-  app.post('/api/alerts/force-generate', async (req, res) => {
+  // Generate test live alerts - RULE COMPLIANT VERSION - ADMIN ONLY
+  app.post('/api/alerts/force-generate', requireAdmin, async (req, res) => {
     try {
-      console.log('🧪 FORCING RULE-COMPLIANT TEST LIVE ALERTS');
+      console.log('🧪 ADMIN FORCING RULE-COMPLIANT TEST LIVE ALERTS');
       console.log('🛡️ NOTE: All generated alerts will respect global admin settings and user preferences');
 
       const alertGenerator = new AlertGenerator();
@@ -683,8 +718,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Force send test Telegram alert - RULE COMPLIANT VERSION
-  app.post('/api/telegram/force-test', async (req, res) => {
+  // Force send test Telegram alert - RULE COMPLIANT VERSION - ADMIN ONLY
+  app.post('/api/telegram/force-test', requireAdmin, async (req, res) => {
     try {
       console.log('🧪 TESTING TELEGRAM ALERT (Rule-Compliant)');
 
@@ -777,7 +812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug endpoint to detect rule bypasses
-  app.get('/api/debug/telegram-bypasses', requireAuthentication, async (req, res) => {
+  app.get('/api/debug/telegram-bypasses', requireAdmin, async (req, res) => {
     try {
       console.log('🔍 SCANNING FOR TELEGRAM BYPASS ROUTES');
 
