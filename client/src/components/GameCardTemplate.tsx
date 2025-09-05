@@ -136,6 +136,7 @@ export function GameCardTemplate({
   isSelected = false,
   onSelect,
   size = 'md',
+  children,
   showWeather = true,
   showVenue = true,
   showEnhancedMLB = true,
