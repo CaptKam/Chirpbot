@@ -15,7 +15,7 @@ export class MLBEngine extends BaseSportEngine {
       return await this.settingsCache.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`MLB Settings cache error for ${alertType}:`, error);
-      return true;
+      return true; // Default to true if cache fails, to ensure alerts still fire
     }
   }
 
@@ -49,322 +49,44 @@ export class MLBEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
-  async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-
+  // Initialize alert modules based on user's enabled preferences
+  async initializeForUser(userId: string): Promise<void> {
     try {
-      // Generate MLB-specific alerts ONLY if they're globally enabled
-      if (await this.isAlertEnabled('MLB_GAME_START')) {
-        alerts.push(...await this.generateGameStartAlerts(gameState));
+      // Get user's enabled alert types
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'mlb');
+      const enabledTypes = userPrefs
+        .filter(pref => pref.enabled)
+        .map(pref => pref.alertType);
+
+      // Also check global settings
+      const globallyEnabledTypes = [];
+      for (const alertType of enabledTypes) {
+        const isGloballyEnabled = await this.isAlertEnabled(alertType); // Use the class method
+        if (isGloballyEnabled) {
+          globallyEnabledTypes.push(alertType);
+        }
       }
-      if (await this.isAlertEnabled('MLB_SEVENTH_INNING') || await this.isAlertEnabled('MLB_NINTH_INNING')) {
-        alerts.push(...await this.generateInningAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('RISP')) {
-        alerts.push(...await this.generateRunnersInScoringPositionAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('BASES_LOADED')) {
-        alerts.push(...await this.generateBasesLoadedAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('CLOSE_GAME')) {
-        alerts.push(...await this.generateCloseGameAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('HOME_RUN')) {
-        alerts.push(...await this.generateHomeRunAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('FULL_COUNT')) {
-        alerts.push(...await this.generateFullCountAlerts(gameState));
-      }
-      if (await this.isAlertEnabled('HOT_HITTER')) {
-        alerts.push(...await this.generateHotHitterAlerts(gameState));
-      }
+
+      console.log(`🎯 Initializing MLB engine for user ${userId} with alerts: ${globallyEnabledTypes.join(', ')}`);
+
+      // Initialize only the alert modules that are both globally enabled and user-enabled
+      await this.initializeUserAlertModules(globallyEnabledTypes);
 
     } catch (error) {
-      console.error(`Error generating MLB alerts for game ${gameState.gameId}:`, error);
+      console.error(`❌ Failed to initialize MLB engine for user ${userId}:`, error);
     }
-
-    return alerts;
   }
 
-  private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { inning, inningState } = gameState;
-
-    // Double-check global settings before generating any alerts
-    if (!(await this.isAlertEnabled('MLB_GAME_START'))) {
-      return alerts;
-    }
-
-    // Game start - first inning, top half
-    if (inning === 1 && inningState === 'Top') {
-      const alertKey = `${gameState.gameId}_MLB_GAME_START`;
-      const message = `⚾ GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - First pitch!`;
-
-      alerts.push({
-        alertKey,
-        type: 'MLB_GAME_START',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          inning,
-          inningState,
-          isGameStart: true
-        },
-        priority: 85
-      });
-    }
-
-    return alerts;
-  }
-
-  private async generateInningAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { inning, inningState } = gameState;
-
-    // Seventh inning stretch
-    if (inning === 7 && inningState === 'Top') {
-      const alertKey = `${gameState.gameId}_MLB_SEVENTH_INNING`;
-      const message = `⚾ SEVENTH INNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Stretch time!`;
-
-      alerts.push({
-        alertKey,
-        type: 'MLB_SEVENTH_INNING',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          inning,
-          inningState,
-          isSeventhInning: true
-        },
-        priority: 70
-      });
-    }
-
-    // Ninth inning
-    if (inning === 9) {
-      const alertKey = `${gameState.gameId}_MLB_NINTH_INNING_${inningState}`;
-      const message = `⚾ NINTH INNING ${inningState}! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Final inning!`;
-
-      alerts.push({
-        alertKey,
-        type: 'MLB_NINTH_INNING',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          inning,
-          inningState,
-          isNinthInning: true
-        },
-        priority: 90
-      });
-    }
-
-    return alerts;
-  }
-
-  private async generateRunnersInScoringPositionAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { hasSecond, hasThird, outs, inning } = gameState;
-
-    if (hasSecond || hasThird) {
-      const alertKey = `${gameState.gameId}_MLB_RISP_${inning}_${outs}`;
-      const runners = [];
-      if (hasSecond) runners.push('2nd');
-      if (hasThird) runners.push('3rd');
-      
-      const message = `⚾ RUNNERS IN SCORING POSITION! ${runners.join(' & ')} base, ${outs} out${outs !== 1 ? 's' : ''}`;
-
-      alerts.push({
-        alertKey,
-        type: 'RISP',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          inning,
-          outs,
-          hasSecond,
-          hasThird,
-          scoringPosition: true
-        },
-        priority: 80
-      });
-    }
-
-    return alerts;
-  }
-
-  private async generateBasesLoadedAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { hasFirst, hasSecond, hasThird, outs, inning } = gameState;
-
-    if (hasFirst && hasSecond && hasThird) {
-      const alertKey = `${gameState.gameId}_MLB_BASES_LOADED_${inning}_${outs}`;
-      const message = `⚾ BASES LOADED! ${outs} out${outs !== 1 ? 's' : ''} - Maximum scoring potential!`;
-
-      alerts.push({
-        alertKey,
-        type: 'BASES_LOADED',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          inning,
-          outs,
-          hasFirst,
-          hasSecond,
-          hasThird,
-          basesLoaded: true
-        },
-        priority: 95
-      });
-    }
-
-    return alerts;
-  }
-
-  private async generateCloseGameAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { homeScore, awayScore, inning } = gameState;
-    const scoreDiff = Math.abs(homeScore - awayScore);
-
-    if (scoreDiff <= 2 && inning >= 7) {
-      const alertKey = `${gameState.gameId}_MLB_CLOSE_GAME_${inning}`;
-      const message = `⚾ CLOSE GAME! ${gameState.awayTeam} ${awayScore}, ${gameState.homeTeam} ${homeScore} - ${scoreDiff} run game in ${inning}th inning`;
-
-      alerts.push({
-        alertKey,
-        type: 'CLOSE_GAME',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore,
-          awayScore,
-          inning,
-          scoreDifference: scoreDiff,
-          closeGame: true
-        },
-        priority: 85
-      });
-    }
-
-    return alerts;
-  }
-
-  private async generateHomeRunAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-
-    // Double-check global settings
-    if (!(await this.isAlertEnabled('HOME_RUN'))) {
-      return alerts;
-    }
-
-    // This would be triggered when a home run occurs
-    // For now, this is a placeholder - in a real implementation,
-    // this would be triggered by actual game events
-    if (gameState.lastPlay && gameState.lastPlay.includes('home run')) {
-      const alertKey = `${gameState.gameId}_MLB_HOME_RUN_${Date.now()}`;
-      const message = `⚾ HOME RUN! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore}`;
-
-      alerts.push({
-        alertKey,
-        type: 'HOME_RUN',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          inning: gameState.inning,
-          homeRun: true
-        },
-        priority: 100
-      });
-    }
-
-    return alerts;
-  }
-
-  private async generateFullCountAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-
-    // Double-check global settings first
-    if (!(await this.isAlertEnabled('FULL_COUNT'))) {
-      return alerts;
-    }
-
-    // Check for 3-2 count
-    if (gameState.balls === 3 && gameState.strikes === 2) {
-      const alertKey = `${gameState.gameId}_FULL_COUNT_${gameState.inning}_${gameState.outs}`;
-      const message = `⚾ FULL COUNT! 3-2 count, ${gameState.outs} out${gameState.outs !== 1 ? 's' : ''} - Maximum pressure!`;
-
-      alerts.push({
-        alertKey,
-        type: 'FULL_COUNT',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          inning: gameState.inning,
-          outs: gameState.outs,
-          balls: gameState.balls,
-          strikes: gameState.strikes,
-          fullCount: true
-        },
-        priority: 75
-      });
-    }
-
-    return alerts;
-  }
-
-  private async generateHotHitterAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-
-    // Double-check global settings first
-    if (!(await this.isAlertEnabled('HOT_HITTER'))) {
-      return alerts;
-    }
-
-    // Check if batter already has home run today
-    if (gameState.batter && gameState.batter.homeRunsToday > 0) {
-      const alertKey = `${gameState.gameId}_HOT_HITTER_${gameState.batter.id}_${gameState.inning}`;
-      const message = `⚾ HOT HITTER! ${gameState.batter.name} (${gameState.batter.homeRunsToday} HR today) at bat`;
-
-      alerts.push({
-        alertKey,
-        type: 'HOT_HITTER',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          inning: gameState.inning,
-          batter: gameState.batter,
-          hotHitter: true
-        },
-        priority: 70
-      });
-    }
-
-    return alerts;
+  // Placeholder for initializing user-specific alert modules
+  private async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    // This method would dynamically load and set up the alert generation logic
+    // for each enabled alert type. For now, we'll just log them.
+    console.log(`Setting up alert modules for: ${enabledAlertTypes.join(', ')}`);
+    // Example:
+    // if (enabledAlertTypes.includes('MLB_GAME_START')) {
+    //   this.alertGenerators.push(this.generateGameStartAlerts);
+    // }
+    // ... and so on for other alert types.
   }
 
   // Helper method to parse time strings (if needed)
