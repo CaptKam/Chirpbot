@@ -88,6 +88,61 @@ export const storage = {
     }
   },
 
+  async forceDeleteUser(userId: string) {
+    try {
+      console.log(`💀 FORCE DELETE: Completely removing user ${userId} from all tables...`);
+      
+      // Get user info first for logging
+      const userInfo = await db.execute(sql`SELECT username, email FROM users WHERE id = ${userId}`);
+      const username = userInfo.rows[0]?.username || 'Unknown';
+      
+      console.log(`💀 Force deleting user: ${username} (${userId})`);
+      
+      // Force delete from ALL possible tables that might reference the user
+      const deletionSteps = [
+        { table: 'user_alert_preferences', condition: `user_id = '${userId}'` },
+        { table: 'user_monitored_teams', condition: `user_id = '${userId}'` },
+        { table: 'user_monitored_games', condition: `user_id = '${userId}'` },
+        { table: 'audit_logs', condition: `user_id = '${userId}'` },
+        { table: 'user_sessions', condition: `user_id = '${userId}'` },
+        { table: 'user_preferences', condition: `user_id = '${userId}'` },
+        { table: 'user_settings', condition: `user_id = '${userId}'` },
+      ];
+      
+      for (const step of deletionSteps) {
+        try {
+          const result = await db.execute(sql.raw(`DELETE FROM ${step.table} WHERE ${step.condition}`));
+          console.log(`💀 Deleted from ${step.table}: ${result.rowsAffected || 0} rows`);
+        } catch (error) {
+          console.log(`📝 Table ${step.table} not found or no data - continuing`);
+        }
+      }
+      
+      // Clear any references in other tables
+      try {
+        await db.execute(sql`UPDATE global_alert_settings SET updated_by = NULL WHERE updated_by = ${userId}`);
+        console.log(`💀 Cleared global_alert_settings references`);
+      } catch (error) {
+        console.log(`📝 No global_alert_settings to update`);
+      }
+      
+      // Final deletion of the user record
+      const finalResult = await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
+      console.log(`💀 Final user deletion: ${finalResult.rowsAffected || 0} user records removed`);
+      
+      if (finalResult.rowsAffected === 0) {
+        console.log(`⚠️ User ${userId} was not found in users table - may have been already deleted`);
+        return false;
+      }
+      
+      console.log(`✅ FORCE DELETE COMPLETE: User ${username} (${userId}) has been completely removed`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Force delete failed for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
 
   // Team operations
   async getAllTeams() {

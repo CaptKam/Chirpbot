@@ -962,6 +962,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Force delete endpoint for stubborn test users
+  app.delete('/api/admin/users/:userId/force', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUser = req.user;
+      
+      console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
+      
+      // Prevent self-deletion
+      if (userId === currentUser.id) {
+        return res.status(400).json({ 
+          message: 'Cannot delete your own account' 
+        });
+      }
+      
+      // Force delete using the aggressive method
+      const deleted = await storage.forceDeleteUser(userId);
+      
+      if (deleted) {
+        console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser.username}`);
+        res.json({ 
+          message: `User ${userId} has been completely removed from the system`,
+          method: 'FORCE_DELETE',
+          deletedUserId: userId
+        });
+      } else {
+        res.json({ 
+          message: `User ${userId} was not found or already deleted`,
+          method: 'FORCE_DELETE',
+          deletedUserId: userId
+        });
+      }
+    } catch (error) {
+      console.error('Error force deleting user:', error);
+      res.status(500).json({ message: 'Failed to force delete user' });
+    }
+  });
+
   app.get('/api/admin/users/:userId/alert-preferences', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
