@@ -110,29 +110,23 @@ async function loadDashboardData() {
 }
 
 async function loadRecentActivity() {
+    console.log('Loading recent activity...');
     try {
-        const [alertsResponse, usersResponse] = await Promise.all([
-            fetch('/api/alerts?limit=10', { credentials: 'include' }),
-            fetch('/api/admin/users', { credentials: 'include' })
-        ]);
+        // Only fetch alerts data since it's reliable
+        const alertsResponse = await fetch('/api/alerts?limit=10', { credentials: 'include' });
 
         // Handle alerts response
         let alerts = [];
         if (alertsResponse.ok) {
             alerts = await alertsResponse.json();
+            console.log('Fetched alerts:', alerts.length);
         } else {
             console.warn('Failed to fetch alerts for recent activity');
         }
 
-        // Handle users response
-        let users = [];
-        if (usersResponse.ok) {
-            users = await usersResponse.json();
-        } else {
-            console.warn('Failed to fetch users for recent activity (may be authentication issue)');
-        }
-
-        displayRecentActivity(alerts, users);
+        // Skip problematic admin users endpoint for now
+        // Focus on alerts data which is working reliably
+        displayRecentActivity(alerts, []);
     } catch (error) {
         console.error('Error loading recent activity:', error);
         displayRecentActivity([], []);
@@ -140,35 +134,48 @@ async function loadRecentActivity() {
 }
 
 function displayRecentActivity(alerts, users) {
+    console.log('displayRecentActivity called with:', { alerts: alerts.length, users: users.length });
+    
     const activityContainer = document.getElementById('recentActivity');
-    if (!activityContainer) return;
+    if (!activityContainer) {
+        console.error('recentActivity container not found');
+        return;
+    }
 
     const activities = [];
 
     // Add recent alerts
-    alerts.slice(0, 5).forEach(alert => {
-        activities.push({
-            type: 'alert',
-            icon: 'fas fa-bell',
-            title: `${alert.type} Alert`,
-            description: `${alert.homeTeam} vs ${alert.awayTeam}`,
-            time: formatTimeAgo(alert.createdAt),
-            timestamp: new Date(alert.createdAt).getTime(),
-            priority: alert.priority || 80
-        });
+    alerts.slice(0, 5).forEach((alert, index) => {
+        try {
+            activities.push({
+                type: 'alert',
+                icon: 'fas fa-bell',
+                title: `${alert.type || 'Unknown'} Alert`,
+                description: `${alert.homeTeam || 'Team1'} vs ${alert.awayTeam || 'Team2'}`,
+                time: alert.createdAt ? formatTimeAgo(alert.createdAt) : 'Recently',
+                timestamp: alert.createdAt ? new Date(alert.createdAt).getTime() : Date.now(),
+                priority: alert.priority || 80
+            });
+        } catch (error) {
+            console.error(`Error processing alert ${index}:`, error, alert);
+        }
     });
 
     // Add recent user registrations
-    users.slice(0, 3).forEach(user => {
-        activities.push({
-            type: 'user',
-            icon: 'fas fa-user-plus',
-            title: 'New User Registration',
-            description: `${user.username} joined the platform`,
-            time: formatTimeAgo(user.createdAt),
-            timestamp: new Date(user.createdAt).getTime(),
-            priority: 50
-        });
+    users.slice(0, 3).forEach((user, index) => {
+        try {
+            activities.push({
+                type: 'user',
+                icon: 'fas fa-user-plus',
+                title: 'New User Registration',
+                description: `${user.username || 'Unknown User'} joined the platform`,
+                time: user.createdAt ? formatTimeAgo(user.createdAt) : 'Recently',
+                timestamp: user.createdAt ? new Date(user.createdAt).getTime() : Date.now(),
+                priority: 50
+            });
+        } catch (error) {
+            console.error(`Error processing user ${index}:`, error, user);
+        }
     });
 
     // Add system status
