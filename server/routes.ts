@@ -40,13 +40,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = Date.now();
       const requestKey = `${req.method}:${req.path}:${req.ip}`;
       const lastRequest = recentRequests.get(requestKey);
-      
+
       if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
         console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
       } else {
         console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
       }
-      
+
       recentRequests.set(requestKey, now);
       // Clean up old entries periodically
       if (recentRequests.size > 100) {
@@ -633,7 +633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         readyForAlerts: validUsers.length > 0,
         nextSteps: validUsers.length === 0 ? [
           "1. Go to Settings → Telegram Notifications",
-          "2. Create a bot with @BotFather on Telegram", 
+          "2. Create a bot with @BotFather on Telegram",
           "3. Get your chat ID from @userinfobot",
           "4. Enter real credentials and test connection"
         ] : ["Telegram is properly configured and ready!"]
@@ -672,7 +672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const alertGenerator = new AlertGenerator();
       const alertCount = await alertGenerator.generateLiveGameAlerts();
 
-      res.json({ 
+      res.json({
         message: `Generated ${alertCount} rule-compliant alerts (filtered by admin settings)`,
         alertCount,
         note: 'All alerts respect global admin settings and user preferences'
@@ -703,7 +703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 🛡️ RULE COMPLIANCE: Check if TEST_STRIKEOUT is globally enabled
         const alertGenerator = new AlertGenerator();
         const isGloballyEnabled = await (alertGenerator as any).isAlertGloballyEnabled('MLB', 'TEST_STRIKEOUT');
-        
+
         if (!isGloballyEnabled) {
           console.log(`🚫 RULE COMPLIANT: TEST_STRIKEOUT globally disabled - skipping user ${user.username}`);
           errorCount++;
@@ -763,7 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({ 
+      res.json({
         message: 'Rule-compliant test alerts completed',
         userCount: telegramUsers.length,
         successCount,
@@ -780,9 +780,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/debug/telegram-bypasses', requireAuthentication, async (req, res) => {
     try {
       console.log('🔍 SCANNING FOR TELEGRAM BYPASS ROUTES');
-      
+
       const bypasses = [];
-      
+
       // Check for direct telegram calls in the codebase
       const potentialBypasses = [
         {
@@ -791,7 +791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           risk: 'LOW'
         },
         {
-          route: '/api/alerts/force-generate', 
+          route: '/api/alerts/force-generate',
           status: 'PATCHED - Now rule-compliant',
           risk: 'LOW'
         },
@@ -833,7 +833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check for admin session (adminUserId) first, then fall back to regular session
       const userId = req.session?.adminUserId || req.session?.userId;
-      
+
       if (!userId) {
         console.log('🔒 Admin middleware: No session found');
         return res.status(401).json({ message: 'Authentication required' });
@@ -913,38 +913,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user; // from requireAdmin middleware
-      
+
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
-      
+
       // Prevent self-deletion
       if (userId === currentUser.id) {
-        return res.status(400).json({ 
-          message: 'Cannot delete your own account' 
+        return res.status(400).json({
+          message: 'Cannot delete your own account'
         });
       }
-      
+
       // Check if user exists
       const userToDelete = await storage.getUserById(userId);
       if (!userToDelete) {
         return res.status(404).json({ message: 'User not found' });
       }
-      
+
       // Prevent deleting the last admin
       if (userToDelete.role === 'admin') {
         const allAdmins = await storage.getUsersByRole('admin');
         if (allAdmins.length <= 1) {
-          return res.status(400).json({ 
-            message: 'Cannot delete the last admin user' 
+          return res.status(400).json({
+            message: 'Cannot delete the last admin user'
           });
         }
       }
-      
+
       // Delete user and all related data
       const deleted = await storage.deleteUser(userId);
-      
+
       if (deleted) {
         console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser.username}`);
-        res.json({ 
+        res.json({
           message: `User ${userToDelete.username} deleted successfully`,
           deletedUser: {
             id: userToDelete.id,
@@ -967,28 +967,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user;
-      
+
       console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
-      
+
       // Prevent self-deletion
       if (userId === currentUser.id) {
-        return res.status(400).json({ 
-          message: 'Cannot delete your own account' 
+        return res.status(400).json({
+          message: 'Cannot delete your own account'
         });
       }
-      
+
       // Force delete using the aggressive method
       const deleted = await storage.forceDeleteUser(userId);
-      
+
       if (deleted) {
         console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser.username}`);
-        res.json({ 
+        res.json({
           message: `User ${userId} has been completely removed from the system`,
           method: 'FORCE_DELETE',
           deletedUserId: userId
         });
       } else {
-        res.json({ 
+        res.json({
           message: `User ${userId} was not found or already deleted`,
           method: 'FORCE_DELETE',
           deletedUserId: userId
@@ -1173,7 +1173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Delete the alert from database
       const result = await db.execute(sql`
-        DELETE FROM alerts 
+        DELETE FROM alerts
         WHERE id = ${alertId}
       `);
 
@@ -1241,6 +1241,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error(`Weather API error for team ${req.params.teamName}:`, error);
       res.status(500).json({ error: error.message });
     }
+  });
+
+  // Weather endpoint - redirect to team-specific endpoint
+  app.get('/api/weather', async (req, res) => {
+    console.log('🔧 ROUTE DEBUG: GET /api/weather - Body:', req.body);
+    console.log('⚠️ Generic weather endpoint called - should use /api/weather/team/:teamName');
+
+    // Return fallback data with clear indication it's generic
+    res.json({
+      temperature: 72,
+      condition: 'Clear',
+      windSpeed: 5,
+      windDirection: 0, // North
+      humidity: 50,
+      pressure: 1013,
+      timestamp: new Date().toISOString(),
+      source: 'Generic Fallback - Use team-specific endpoint'
+    });
   });
 
   // Test NCAAF two-minute warning logic
@@ -1409,9 +1427,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Test Telegram Service
       try {
         const telegramUsers = await storage.getAllUsers();
-        const validTelegramUsers = telegramUsers.filter(u => 
-          u.telegramEnabled && 
-          u.telegramBotToken && 
+        const validTelegramUsers = telegramUsers.filter(u =>
+          u.telegramEnabled &&
+          u.telegramBotToken &&
           u.telegramBotToken !== 'default_key' &&
           u.telegramChatId &&
           u.telegramChatId !== 'default_key'
@@ -1503,8 +1521,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Overall Health Score
-      const totalChecks = Object.keys(debugResults.database).length + 
-                         Object.keys(debugResults.services).length + 
+      const totalChecks = Object.keys(debugResults.database).length +
+                         Object.keys(debugResults.services).length +
                          Object.keys(debugResults.endpoints).length;
       const errorCount = debugResults.errors.length;
       const healthScore = Math.max(0, Math.round(((totalChecks - errorCount) / totalChecks) * 100));
@@ -1513,15 +1531,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         healthScore: `${healthScore}%`,
         totalErrors: errorCount,
         status: errorCount === 0 ? 'HEALTHY' : errorCount < 5 ? 'DEGRADED' : 'CRITICAL',
-        recommendation: errorCount === 0 ? 'System is operating normally' : 
-                       errorCount < 5 ? 'Minor issues detected, monitor closely' : 
+        recommendation: errorCount === 0 ? 'System is operating normally' :
+                       errorCount < 5 ? 'Minor issues detected, monitor closely' :
                        'Critical issues require immediate attention'
       };
 
       res.json(debugResults);
     } catch (error: any) {
       console.error('Debug endpoint error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Debug endpoint failed',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -1578,7 +1596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const recentAlerts = await db.execute(sql`
           SELECT type, COUNT(*) as count, MAX(created_at) as latest
-          FROM alerts 
+          FROM alerts
           WHERE created_at > NOW() - INTERVAL '1 hour'
           GROUP BY type
         `);
@@ -1930,7 +1948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Disable Telegram for all users
       const allUsers = await storage.getAllUsers();
       let telegramDisabled = 0;
-      
+
       for (const user of allUsers) {
         if (user.telegramEnabled) {
           try {
@@ -1997,7 +2015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error in live monitoring:', error);
     }
   }, 15000); // Check every 15 seconds for real-time updates
-  
+
   console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 
   return httpServer;

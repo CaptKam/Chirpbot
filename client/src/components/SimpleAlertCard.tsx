@@ -121,6 +121,29 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
+  // Fetch weather data for MLB games
+  const { data: weatherData } = useQuery({
+    queryKey: ['weather', alert.homeTeam],
+    queryFn: async () => {
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(alert.homeTeam || '')}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Weather fetch failed');
+      return response.json();
+    },
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchInterval: 60 * 1000, // Refetch every minute
+    retry: 1,
+    enabled: alert.sport === 'MLB' && !!alert.homeTeam // Only fetch for MLB games with home team
+  });
+
+  // Convert wind direction degrees to cardinal direction
+  const getCardinalDirection = (degrees: number) => {
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const index = Math.round(degrees / 22.5) % 16;
+    return directions[index];
+  };
+
   const getAlertIcon = (type: string) => {
     switch (type) {
       case 'TWO_MINUTE_WARNING':
@@ -329,8 +352,12 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             quarter={alert.context?.quarter}
             period={alert.context?.period}
             isTopInning={alert.context?.isTopInning}
+            weather={weatherData ? {
+              windSpeed: weatherData.windSpeed,
+              windDirection: getCardinalDirection(weatherData.windDirection)
+            } : undefined}
             size="md"
-            showWeather={false}
+            showWeather={alert.sport === 'MLB'}
             showVenue={false}
             showEnhancedMLB={false}
             className="bg-white/5 backdrop-blur-sm border-white/10"

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Clock, Play, CheckCircle } from 'lucide-react';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
+import { useQuery } from '@tanstack/react-query';
 
 interface GameCardTemplateProps {
   // Game basic info
@@ -188,6 +189,29 @@ export function GameCardTemplate({
   const homeAbbr = homeTeam.abbreviation || extractTeamAbbreviation(homeTeam.name);
   const awayAbbr = awayTeam.abbreviation || extractTeamAbbreviation(awayTeam.name);
 
+  // Fetch weather data for the home team
+  const { data: weatherData } = useQuery({
+    queryKey: ['weather', homeTeam.name],
+    queryFn: async () => {
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeam.name)}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Weather fetch failed');
+      return response.json();
+    },
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchInterval: 60 * 1000, // Refetch every minute
+    retry: 1,
+    enabled: showWeather && sport === 'MLB' // Only fetch for MLB games when weather is shown
+  });
+
+  // Convert wind direction degrees to cardinal direction
+  const getCardinalDirection = (degrees: number) => {
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const index = Math.round(degrees / 22.5) % 16;
+    return directions[index];
+  };
+
   return (
     <Card 
       className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 ${cardHeight} hover:bg-white/10 ${
@@ -289,20 +313,21 @@ export function GameCardTemplate({
 
       {/* Bottom Row - Weather, Time & Venue Info */}
       <div className="flex items-center justify-between pt-3 border-t border-white/10">
-        {/* Weather Display */}
-        {showWeather && weather && (
+        {/* Weather Display - Use real weather data from API */}
+        {showWeather && sport === 'MLB' && weatherData && (
           <WeatherDisplay 
-            windSpeed={weather.windSpeed}
-            windDirection={weather.windDirection}
+            windSpeed={weatherData.windSpeed}
+            windDirection={getCardinalDirection(weatherData.windDirection)}
+            temperature={weatherData.temperature}
             size="sm"
           />
         )}
         
-        {/* Default weather placeholder if no weather data */}
-        {showWeather && !weather && (
+        {/* Fallback weather display for non-MLB or when no data */}
+        {showWeather && (sport !== 'MLB' || !weatherData) && (
           <WeatherDisplay 
-            windSpeed={5}
-            windDirection="N"
+            windSpeed={weather?.windSpeed || 5}
+            windDirection={weather?.windDirection || "N"}
             size="sm"
           />
         )}
