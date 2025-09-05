@@ -44,11 +44,6 @@ export function BaseballDiamond({
       {/* Count and Inning Info */}
       {showCount && (inning || outs || balls || strikes) && (
         <div className="text-center space-y-1">
-          {inning && (
-            <div className={`${text} text-slate-300 font-bold`}>
-              {isTopInning ? '↑' : '↓'} {inning}th
-            </div>
-          )}
           <div className="flex items-center justify-center space-x-3">
             {(balls > 0 || strikes > 0) && (
               <div className={`${text} text-emerald-400 font-mono`}>
