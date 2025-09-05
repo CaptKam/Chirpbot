@@ -286,7 +286,10 @@ export class AlertGenerator {
       let totalAlerts = 0;
 
       for (const sport of sports) {
+        console.log(`🔍 DEBUG: Checking sport ${sport}...`);
         const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
+        console.log(`🔍 DEBUG: ${sport} enabled alerts:`, enabledAlerts);
+        
         if (enabledAlerts.length === 0) {
           console.log(`🚫 No ${sport} alert types enabled - skipping ${sport} monitoring`);
           continue;
