@@ -365,14 +365,16 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           >
             {/* Weather for MLB games */}
             {alert.sport === 'MLB' && weatherData && (
-              <WeatherDisplay 
-                windSpeed={weatherData.windSpeed}
-                windDirection={getCardinalDirection(weatherData.windDirection)}
-                windGust={weatherData.windGust}
-                temperature={weatherData.temperature}
-                stadiumWindContext={weatherData.stadiumWindContext}
-                size="sm"
-              />
+              <div className="flex justify-center mt-2">
+                <WeatherDisplay 
+                  windSpeed={weatherData.windSpeed}
+                  windDirection={getCardinalDirection(weatherData.windDirection)}
+                  windGust={weatherData.windGust}
+                  temperature={weatherData.temperature}
+                  stadiumWindContext={weatherData.stadiumWindContext}
+                  size="sm"
+                />
+              </div>
             )}
           </GameCardTemplate>
 
