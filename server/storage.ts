@@ -241,7 +241,7 @@ export const storage = {
       .where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitoredGame(gameData: InsertUserMonitoredTeam) {
+  async addUserMonitMonitoredGame(gameData: InsertUserMonitoredTeam) {
     const result = await db.insert(userMonitoredTeams).values(gameData).returning();
     return result[0];
   },
@@ -360,70 +360,110 @@ export const storage = {
   },
 
   // Global alert settings for admin management - FIXED ARCHITECTURE
-  async getGlobalAlertSettings(sport: string) {
+  async getGlobalAlertSettings(sport: string): Promise<Record<string, boolean>> {
     try {
-      // Use the proper globalAlertSettings table instead of admin personal preferences
-      const globalSettings = await db.select()
-        .from(globalAlertSettings)
-        .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
+      const settingsQuery = `
+        SELECT alertType, enabled 
+        FROM alertSettings 
+        WHERE sport = ? AND isGlobal = 1
+      `;
 
-      // Build settings directly from database, defaulting to disabled if not in DB
-      const defaultSettings: Record<string, boolean> = {};
+      const settings = await this.query(settingsQuery, [sport]);
 
-      // Apply actual global settings from the database
-      globalSettings.forEach(setting => {
-        defaultSettings[setting.alertType] = setting.enabled;
+      // Convert to object with defaults for missing keys
+      const result: Record<string, boolean> = {};
+
+      // Define default settings for all known alert types
+      const defaultSettings: Record<string, boolean> = {
+        // MLB alerts
+        'RISP': true,
+        'BASES_LOADED': true,
+        'RUNNERS_1ST_2ND': true,
+        'CLOSE_GAME': true,
+        'CLOSE_GAME_LIVE': true,
+        'LATE_PRESSURE': true,
+        'HOME_RUN_LIVE': true,
+        'HIGH_SCORING': true,
+        'SHUTOUT': true,
+        'BLOWOUT': true,
+        'FULL_COUNT': true,
+        'STRIKEOUT': true,
+        'POWER_HITTER': true,
+        'HOT_HITTER': true,
+        'MLB_GAME_START': true,
+        'MLB_SEVENTH_INNING_STRETCH': true,
+
+        // AI Enhancement alerts
+        'AI_ENHANCED_MESSAGES': true,
+        'AI_PREDICTIVE_AT_BAT': true,
+        'AI_SCORING_PROBABILITY': true,
+        'AI_SITUATION_ANALYSIS': true,
+        'AI_EVENT_SUMMARIES': true,
+        'AI_ROI_ALERTS': true,
+
+        // RE24 System alerts
+        'RE24_ENABLED': true,
+        'RE24_CONTEXT_FACTORS': true,
+        'RE24_MINIMUM_THRESHOLDS': true,
+        'RE24_DYNAMIC_PRIORITY': true,
+
+        // NFL alerts
+        'NFL_GAME_START': true,
+        'NFL_SECOND_HALF_KICKOFF': true,
+        'NFL_TWO_MINUTE_WARNING': true,
+        'RED_ZONE': true,
+        'FOURTH_DOWN': true,
+        'CLUTCH_TIME': true,
+        'OVERTIME': true,
+
+        // NCAAF alerts
+        'NCAAF_GAME_START': true,
+        'NCAAF_SECOND_HALF_KICKOFF': true,
+        'NCAAF_TWO_MINUTE_WARNING': true,
+
+        // CFL alerts
+        'CFL_GAME_START': true,
+        'CFL_SECOND_HALF_KICKOFF': true,
+        'CFL_TWO_MINUTE_WARNING': true,
+        'THIRD_DOWN': true,
+        'THREE_MINUTE_WARNING': true,
+
+        // WNBA alerts
+        'WNBA_GAME_START': true,
+        'WNBA_TWO_MINUTE_WARNING': true,
+        'FINAL_MINUTES': true,
+        'HIGH_SCORING_QUARTER': true,
+        'LOW_SCORING_QUARTER': true,
+        'FOURTH_QUARTER': true,
+
+        // NBA alerts
+        'NBA_FOURTH_QUARTER': true,
+        'NBA_CLOSE_GAME': true,
+        'NBA_OVERTIME': true,
+        'NBA_HIGH_SCORING': true,
+        'NBA_COMEBACK': true,
+        'NBA_CLUTCH_PERFORMANCE': true,
+
+        // NHL alerts
+        'NHL_THIRD_PERIOD': true,
+        'NHL_CLOSE_GAME': true,
+        'NHL_OVERTIME': true,
+        'NHL_POWER_PLAY': true,
+        'NHL_PENALTY_KILL': true,
+        'NHL_CLUTCH_PERFORMANCE': true,
+        'POWER_PLAY': true,
+        'EMPTY_NET': true
+      };
+
+      // Apply fetched settings, overriding defaults
+      settings.forEach(setting => {
+        if (defaultSettings.hasOwnProperty(setting.alertType)) {
+          defaultSettings[setting.alertType] = setting.enabled;
+        }
       });
 
-      // Default settings for specific sports if not found in DB
-      switch (sport.toUpperCase()) {
-        case 'NFL':
-          return {
-            ...defaultSettings,
-            'NFL_GAME_START': true,
-            'NFL_SECOND_HALF_KICKOFF': true,
-            'RED_ZONE': true,
-            'FOURTH_DOWN': true,
-            'NFL_TWO_MINUTE_WARNING': true,
-          };
-        case 'NCAAF':
-          return {
-            ...defaultSettings,
-            'NCAAF_GAME_START': true,
-            'NCAAF_SECOND_HALF_KICKOFF': true,
-            'RED_ZONE': true,
-            'FOURTH_DOWN': true,
-            'NCAAF_TWO_MINUTE_WARNING': true,
-            'CLUTCH_TIME': true,
-            'OVERTIME': true
-          };
-        case 'CFL':
-          return {
-            ...defaultSettings,
-            'CFL_GAME_START': true,
-            'CFL_SECOND_HALF_KICKOFF': true,
-            'RED_ZONE': true,
-            'THIRD_DOWN': true,
-            'CFL_TWO_MINUTE_WARNING': true,
-            'THREE_MINUTE_WARNING': true,
-            'CLOSE_GAME': true,
-            'OVERTIME': true
-          };
-        case 'WNBA':
-          return {
-            ...defaultSettings,
-            'WNBA_GAME_START': true,
-            'WNBA_TWO_MINUTE_WARNING': true,
-            'CLOSE_GAME': true,
-            'OVERTIME': true,
-            'FINAL_MINUTES': true,
-            'HIGH_SCORING_QUARTER': true,
-            'LOW_SCORING_QUARTER': true,
-            'FOURTH_QUARTER': true
-          };
-        default:
-          return defaultSettings;
-      }
+      return defaultSettings;
+
     } catch (error) {
       console.error('Error getting global alert settings:', error);
       // SECURITY FIX: Fail closed - return all DISABLED defaults on error
