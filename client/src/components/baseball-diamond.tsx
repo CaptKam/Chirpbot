@@ -274,3 +274,11 @@ export function SimpleWeatherDisplay({
       {temperature && (
         <>
           <span className="text-slate-500">•</span>
+          <span className="text-slate-300">
+            {temperature}°F
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
