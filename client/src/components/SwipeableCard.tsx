@@ -711,13 +711,14 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   <div className="absolute -top-2 -right-2 z-20">
                     <div 
                       className={`
-                        transform rotate-12 px-3 py-1 text-xs font-bold uppercase tracking-wide
-                        shadow-lg ring-2 rounded-lg
+                        transform rotate-25 px-3 py-1 text-xs font-bold uppercase tracking-wide
+                        shadow-lg ring-2 rounded-lg border-2
                         ${alertStatus.status === 'ACTIVE' 
-                          ? 'bg-emerald-500 text-white ring-emerald-400/50' 
-                          : 'bg-red-500 text-white ring-red-400/50'
+                          ? 'bg-emerald-500 text-white ring-emerald-400 border-emerald-300' 
+                          : 'bg-red-500 text-white ring-red-400 border-red-300'
                         }
                       `}
+                      style={{ transform: 'rotate(25deg)' }}
                     >
                       <div className="flex items-center gap-1">
                         <div className={`w-1.5 h-1.5 rounded-full ${

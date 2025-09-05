@@ -382,13 +382,14 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
               <div className="absolute -top-2 -right-2 z-20">
                 <div 
                   className={`
-                    transform rotate-12 px-2 py-1 text-xs font-bold uppercase tracking-wide
-                    shadow-lg ring-1 rounded-md
+                    transform px-2 py-1 text-xs font-bold uppercase tracking-wide
+                    shadow-lg ring-1 rounded-md border-2
                     ${alertStatus.status === 'ACTIVE' 
-                      ? 'bg-emerald-500 text-white ring-emerald-400/50' 
-                      : 'bg-red-500 text-white ring-red-400/50'
+                      ? 'bg-emerald-500 text-white ring-emerald-400 border-emerald-300' 
+                      : 'bg-red-500 text-white ring-red-400 border-red-300'
                     }
                   `}
+                  style={{ transform: 'rotate(25deg)' }}
                 >
                   <div className="flex items-center gap-1">
                     <div className={`w-1 h-1 rounded-full ${
