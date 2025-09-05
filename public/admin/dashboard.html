@@ -161,23 +161,93 @@
 
         <!-- Alerts Tab -->
         <div id="alertsContent" class="tab-content" style="display: none;">
-            <!-- Alert Controls Removed -->
+            <!-- Global Alert Controls -->
             <div class="content-section" style="margin-bottom: 30px;">
                 <div class="section-header">
                     <h2 class="section-title">
-                        <i class="fas fa-info-circle"></i>
-                        Notice
+                        <i class="fas fa-globe"></i>
+                        Global Alert Controls
                     </h2>
+                    <div class="search-bar">
+                        <button class="action-btn edit" onclick="refreshAlertSettings()">
+                            <i class="fas fa-sync"></i>
+                            Refresh
+                        </button>
+                    </div>
                 </div>
 
-                <div style="padding: 30px; text-align: center;">
-                    <div style="background: rgba(59, 130, 246, 0.1); border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 30px; margin-bottom: 20px;">
-                        <i class="fas fa-bell-slash" style="font-size: 48px; color: #3b82f6; margin-bottom: 20px;"></i>
-                        <h3 style="color: #f8fafc; margin-bottom: 15px; font-size: 24px;">Alert Settings Removed</h3>
-                        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.6;">
-                            Global alert configuration has been removed from the admin panel. 
-                            Alert settings are now managed at the user level through individual user preferences.
-                        </p>
+                <div style="padding: 30px;">
+                    <div class="stats-grid" style="margin-bottom: 30px;">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon alerts">
+                                    <i class="fas fa-power-off"></i>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div class="stat-label">Master Alert System</div>
+                                    <p style="font-size: 12px; color: #64748b; margin-top: 5px;">Enable/disable all alerts globally</p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="masterAlertToggle" onchange="toggleMasterAlerts()" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon users">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="activeUsersCount">Loading...</div>
+                            <div class="stat-label">Users with Alerts Enabled</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon total">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="totalAlertTypes">Loading...</div>
+                            <div class="stat-label">Active Alert Types</div>
+                        </div>
+                    </div>
+
+                    <!-- Sport Selection -->
+                    <div style="margin-bottom: 30px;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #e2e8f0;">Select Sport for Configuration:</label>
+                        <select id="sportSelector" onchange="loadSportAlertSettings()" style="padding: 12px 16px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; background: rgba(15, 23, 42, 0.6); color: #f8fafc; font-size: 16px; width: 200px;">
+                            <option value="MLB">MLB</option>
+                            <option value="NFL">NFL</option>
+                            <option value="NBA">NBA</option>
+                            <option value="NHL">NHL</option>
+                            <option value="CFL">CFL</option>
+                            <option value="NCAAF">NCAAF</option>
+                            <option value="WNBA">WNBA</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sport-Specific Alert Configuration -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-cogs"></i>
+                        <span id="sportTitle">MLB</span> Alert Configuration
+                    </h2>
+                    <div class="search-bar">
+                        <span style="color: #94a3b8; font-style: italic;">Changes automatically apply to all users</span>
+                    </div>
+                </div>
+
+                <div id="alertConfigContainer" style="padding: 30px;">
+                    <div class="loading">
+                        <div class="spinner"></div>
                     </div>
                 </div>
             </div>
