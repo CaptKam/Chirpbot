@@ -96,22 +96,21 @@ export class NCAAFEngine extends BaseSportEngine {
       const alertKey = `${gameState.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
       const message = `⏰ TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
 
-        alerts.push({
-          alertKey,
-          type: 'TWO_MINUTE_WARNING',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            timeRemaining,
-            isEndOfHalf
-          },
-          priority: 88
-        });
-      }
+      alerts.push({
+        alertKey,
+        type: 'TWO_MINUTE_WARNING',
+        message,
+        context: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          quarter,
+          timeRemaining,
+          isEndOfHalf
+        },
+        priority: 88
+      });
     }
 
     return alerts;
@@ -132,23 +131,22 @@ export class NCAAFEngine extends BaseSportEngine {
       const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
       const message = `🎯 RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line (${probability}% TD chance)`;
 
-        alerts.push({
-          alertKey,
-          type: 'RED_ZONE',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            down,
-            yardsToGo,
-            fieldPosition,
-            probability
-          },
-          priority: probability > 70 ? 90 : 85
-        });
-      }
+      alerts.push({
+        alertKey,
+        type: 'RED_ZONE',
+        message,
+        context: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          down,
+          yardsToGo,
+          fieldPosition,
+          probability
+        },
+        priority: probability > 70 ? 90 : 85
+      });
     }
 
     return alerts;
@@ -169,23 +167,22 @@ export class NCAAFEngine extends BaseSportEngine {
       const alertKey = `${gameState.gameId}_FOURTH_DOWN_${yardsToGo}_${fieldPosition}`;
       const message = `🏈 FOURTH DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 4th & ${yardsToGo} at ${fieldPosition} yard line`;
 
-        alerts.push({
-          alertKey,
-          type: 'FOURTH_DOWN',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            down,
-            yardsToGo,
-            fieldPosition,
-            probability
-          },
-          priority: yardsToGo <= 3 ? 95 : 85
-        });
-      }
+      alerts.push({
+        alertKey,
+        type: 'FOURTH_DOWN',
+        message,
+        context: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          down,
+          yardsToGo,
+          fieldPosition,
+          probability
+        },
+        priority: yardsToGo <= 3 ? 95 : 85
+      });
     }
 
     return alerts;
@@ -205,22 +202,21 @@ export class NCAAFEngine extends BaseSportEngine {
       const alertKey = `${gameState.gameId}_NCAAF_GAME_START`;
       const message = `🏈 NCAAF GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
 
-        alerts.push({
-          alertKey,
-          type: 'NCAAF_GAME_START',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            timeRemaining,
-            isGameStart: true
-          },
-          priority: 100
-        });
-      }
+      alerts.push({
+        alertKey,
+        type: 'NCAAF_GAME_START',
+        message,
+        context: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          quarter,
+          timeRemaining,
+          isGameStart: true
+        },
+        priority: 100
+      });
     }
 
     return alerts;
@@ -240,22 +236,21 @@ export class NCAAFEngine extends BaseSportEngine {
       const alertKey = `${gameState.gameId}_NCAAF_SECOND_HALF_KICKOFF`;
       const message = `🏈 NCAAF SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
 
-        alerts.push({
-          alertKey,
-          type: 'NCAAF_SECOND_HALF_KICKOFF',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            timeRemaining,
-            isSecondHalf: true
-          },
-          priority: 95
-        });
-      }
+      alerts.push({
+        alertKey,
+        type: 'NCAAF_SECOND_HALF_KICKOFF',
+        message,
+        context: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          quarter,
+          timeRemaining,
+          isSecondHalf: true
+        },
+        priority: 95
+      });
     }
 
     return alerts;
@@ -276,21 +271,20 @@ export class NCAAFEngine extends BaseSportEngine {
       const alertKey = `${gameState.gameId}_OVERTIME_${quarter}`;
       const message = `⚡ NCAAF OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
 
-        alerts.push({
-          alertKey,
-          type: 'OVERTIME',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            overtimePeriod
-          },
-          priority: 100
-        });
-      }
+      alerts.push({
+        alertKey,
+        type: 'OVERTIME',
+        message,
+        context: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          quarter,
+          overtimePeriod
+        },
+        priority: 100
+      });
     }
 
     return alerts;

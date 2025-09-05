@@ -106,7 +106,6 @@ export class NFLEngine extends BaseSportEngine {
           },
           priority: 100
         });
-      }
     }
 
     return alerts;
@@ -141,7 +140,6 @@ export class NFLEngine extends BaseSportEngine {
           },
           priority: 95
         });
-      }
     }
 
     return alerts;
@@ -178,7 +176,6 @@ export class NFLEngine extends BaseSportEngine {
           },
           priority: probability > 70 ? 90 : 85
         });
-      }
     }
 
     return alerts;
@@ -215,7 +212,6 @@ export class NFLEngine extends BaseSportEngine {
           },
           priority: yardsToGo <= 3 ? 95 : 85
         });
-      }
     }
 
     return alerts;
@@ -251,7 +247,6 @@ export class NFLEngine extends BaseSportEngine {
           },
           priority: isEndOfGame ? 95 : 88
         });
-      }
     }
 
     return alerts;
