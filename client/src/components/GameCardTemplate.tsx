@@ -210,6 +210,7 @@ export function GameCardTemplate({
               sport={sport}
               size={logoSize}
               className="shadow-sm"
+              teamColor={awayTeam.logoColor}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
               {removeCity(awayTeam.name)}
@@ -277,6 +278,7 @@ export function GameCardTemplate({
               sport={sport}
               size={logoSize}
               className="shadow-sm"
+              teamColor={homeTeam.logoColor}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
               {removeCity(homeTeam.name)}

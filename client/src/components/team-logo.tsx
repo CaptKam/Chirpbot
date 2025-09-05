@@ -6,6 +6,7 @@ interface TeamLogoProps {
   sport?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  teamColor?: string;
 }
 
 // Team name to abbreviation mapping for when API doesn't provide abbreviations
@@ -262,7 +263,7 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
 
 
 
-export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className = '' }: TeamLogoProps) {
+export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className = '', teamColor }: TeamLogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -329,9 +330,19 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
   
 
-  // Final fallback
+  // Final fallback with team colors
+  const fallbackStyle = teamColor 
+    ? { 
+        background: `linear-gradient(135deg, ${teamColor}, ${teamColor}dd)`,
+        borderColor: 'white'
+      }
+    : {};
+  
   return (
-    <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
+    <div 
+      className={`${sizeClasses[size]} ${className} rounded-full ${teamColor ? '' : 'bg-gradient-to-br from-gray-500 to-gray-600'} border-2 border-white shadow-sm flex items-center justify-center`}
+      style={fallbackStyle}
+    >
       <span className="text-white font-black text-xs">{teamAbbr || (teamName || '').slice(0, 3).toUpperCase()}</span>
     </div>
   );
