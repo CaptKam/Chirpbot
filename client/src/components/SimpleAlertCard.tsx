@@ -357,8 +357,8 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').trim()}
               </p>
 
-              {/* AI Enhanced Content - DISABLED */}
-              {false && alert.context?.aiTitle && (
+              {/* AI Enhanced Content */}
+              {alert.context?.aiTitle && (
                 <div className="mt-2 pt-2 border-t border-slate-700/50">
                   <h4 className="text-sm font-semibold text-white mb-1">
                     {alert.context.aiTitle}
@@ -366,8 +366,8 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                 </div>
               )}
 
-              {/* AI Insights - DISABLED */}
-              {false && alert.context?.aiInsights && (
+              {/* AI Insights */}
+              {alert.context?.aiInsights && (
                 <div className="mt-2 pt-2 border-t border-slate-700/50">
                   <div className="flex items-center gap-1 mb-1">
                     <div className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -390,8 +390,8 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                 </div>
               )}
 
-              {/* Legacy AI Insights - DISABLED */}
-              {false && !alert.context?.aiInsights && (alert.context?.aiInsights || alert.context?.recommendation) && (
+              {/* Legacy AI Insights - Simple Display (fallback) */}
+              {!alert.context?.aiInsights && (alert.context?.aiInsights || alert.context?.recommendation) && (
                 <div className="mt-2 pt-2 border-t border-slate-700/50">
                   <div className="flex items-center gap-1 mb-1">
                     <div className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

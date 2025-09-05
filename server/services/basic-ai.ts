@@ -35,13 +35,13 @@ export class BasicAI {
 
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
-    // AI functionality disabled - always return false
-    this.isConfigured = false;
+    // In a real scenario, you'd check if the API key is valid or if other configs are present
+    this.isConfigured = !!this.apiKey;
   }
 
-  // Public getter for isConfigured - AI disabled
+  // Public getter for isConfigured
   get configured(): boolean {
-    return false;
+    return this.isConfigured;
   }
 
   // Simple AI enhancement for high-value alerts
