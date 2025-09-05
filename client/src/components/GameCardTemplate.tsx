@@ -212,7 +212,7 @@ export function GameCardTemplate({
               className="shadow-sm"
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
-              {awayAbbr}
+              {removeCity(awayTeam.name)}
             </div>
           </div>
           {(status === 'live' || status === 'final') && (
@@ -279,7 +279,7 @@ export function GameCardTemplate({
               className="shadow-sm"
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
-              {homeAbbr}
+              {removeCity(homeTeam.name)}
             </div>
           </div>
         </div>
