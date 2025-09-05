@@ -13,13 +13,11 @@ interface GameCardTemplateProps {
     name: string;
     abbreviation?: string;
     score?: number;
-    color?: string;
   };
   awayTeam: {
     name: string;
     abbreviation?: string;
     score?: number;
-    color?: string;
   };
   sport: string;
   status?: 'live' | 'scheduled' | 'final';
@@ -212,7 +210,7 @@ export function GameCardTemplate({
               sport={sport}
               size={logoSize}
               className="shadow-sm"
-              teamColor={awayTeam.color}
+              teamColor={awayTeam.logoColor}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
               {removeCity(awayTeam.name)}
@@ -280,7 +278,7 @@ export function GameCardTemplate({
               sport={sport}
               size={logoSize}
               className="shadow-sm"
-              teamColor={homeTeam.color}
+              teamColor={homeTeam.logoColor}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
               {removeCity(homeTeam.name)}
