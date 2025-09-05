@@ -360,12 +360,12 @@ export const storage = {
   },
 
   // Global alert settings for admin management - FIXED ARCHITECTURE
-  async getGlobalAlertSettings(sport: string) {
+  async getGlobalAlertSettings(sport: string = 'mlb') {
     try {
       // Use the proper globalAlertSettings table instead of admin personal preferences
       const globalSettings = await db.select()
         .from(globalAlertSettings)
-        .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
+        .where(eq(globalAlertSettings.sport, (sport || 'mlb').toLowerCase()));
 
       // Build settings directly from database, defaulting to disabled if not in DB
       const defaultSettings: Record<string, boolean> = {};
