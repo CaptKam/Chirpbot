@@ -51,7 +51,7 @@ export class MLBEngine extends BaseSportEngine {
       return await this.settingsCache.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`MLB Settings cache error for ${alertType}:`, error);
-      return true;
+      return false; // Fail closed - default to disabled on error
     }
   }
 
