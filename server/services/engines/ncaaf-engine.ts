@@ -75,8 +75,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
     // Check if we're in the final 2 minutes of any quarter
     if (this.isWithinTwoMinutes(timeRemaining) && quarter > 0) {
-      const twoMinEnabled = await this.isAlertEnabled('TWO_MINUTE_WARNING');
-      if (twoMinEnabled) {
+      // No filtering - always enabled
+      {
         const isEndOfHalf = quarter === 2 || quarter === 4;
         const alertKey = `${gameState.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
         const message = `⏰ TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
@@ -108,8 +108,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
     // Red zone detection (within 20 yards of goal line)
     if (fieldPosition <= 20) {
-      const redZoneEnabled = await this.isAlertEnabled('RED_ZONE');
-      if (redZoneEnabled) {
+      // No filtering - always enabled
+      {
         const probability = await this.calculateProbability(gameState);
         const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
         const message = `🎯 RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line (${probability}% TD chance)`;
@@ -142,8 +142,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
     // Fourth down situations
     if (down === 4) {
-      const fourthDownEnabled = await this.isAlertEnabled('FOURTH_DOWN');
-      if (fourthDownEnabled) {
+      // No filtering - always enabled
+      {
         const probability = await this.calculateProbability(gameState);
         const alertKey = `${gameState.gameId}_FOURTH_DOWN_${yardsToGo}_${fieldPosition}`;
         const message = `🏈 FOURTH DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 4th & ${yardsToGo} at ${fieldPosition} yard line`;
@@ -176,8 +176,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
     // Game start - first quarter kickoff
     if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
-      const gameStartEnabled = await this.isAlertEnabled('NCAAF_GAME_START');
-      if (gameStartEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_NCAAF_GAME_START`;
         const message = `🏈 NCAAF GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
 
@@ -208,8 +208,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
     // Second half kickoff
     if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
-      const halftimeKickoffEnabled = await this.isAlertEnabled('NCAAF_SECOND_HALF_KICKOFF');
-      if (halftimeKickoffEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_NCAAF_SECOND_HALF_KICKOFF`;
         const message = `🏈 NCAAF SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
 
@@ -240,8 +240,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
     // Overtime detection (period 5+)
     if (quarter >= 5) {
-      const overtimeEnabled = await this.isAlertEnabled('OVERTIME');
-      if (overtimeEnabled) {
+      // No filtering - always enabled
+      {
         const overtimePeriod = quarter - 4;
         const alertKey = `${gameState.gameId}_OVERTIME_${quarter}`;
         const message = `⚡ NCAAF OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;

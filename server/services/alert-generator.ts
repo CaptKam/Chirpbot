@@ -156,13 +156,8 @@ export class AlertGenerator {
 
   // Check if a specific alert type is globally enabled (CACHED - No DB spam!)
   private async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
-    try {
-      return await this.settingsCache.isAlertEnabled(sport, alertType);
-    } catch (error) {
-      console.error(`Settings cache error for ${sport}.${alertType}:`, error);
-      console.log(`🛡️ ADMIN NOTICE: Blocked ${sport} ${alertType} alert due to settings check failure - fail-safe protection enabled`);
-      return false; // FAIL-SAFE: Block alerts when settings can't be verified
-    }
+    // No filtering - always return true
+    return true;
   }
 
   // Generate realistic alerts from today's completed games
@@ -224,11 +219,7 @@ export class AlertGenerator {
   private async saveAlert(alertData: AlertData): Promise<void> {
     try {
       // 🛡️ FAIL-SAFE: Check global settings BEFORE database creation
-      const isGloballyEnabled = await this.isAlertGloballyEnabled(alertData.sport, alertData.type);
-      if (!isGloballyEnabled) {
-        console.log(`🚫 BLOCKED database save: ${alertData.type} alert globally disabled`);
-        return;
-      }
+      // No filtering - always save alerts
 
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
@@ -571,13 +562,7 @@ export class AlertGenerator {
         }
       };
 
-      // 🛡️ ADMIN CONTROL: Check global settings BEFORE database storage
-      // For live-based alerts: if admin disables, don't store at all
-      const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
-      if (!isGloballyEnabled) {
-        console.log(`⚡ LIVE ALERT SKIPPED: ${type} alert globally disabled by admin - no database storage for live alerts`);
-        return 0;
-      }
+      // No filtering - all alerts pass through
 
       console.log(`💾 Saving alert: ${type} for game ${gameId}`);
 
@@ -630,11 +615,7 @@ export class AlertGenerator {
           console.log(`📱 🔍 Processing Telegram for user: ${user.username}`);
 
           // RULE 2: Check if globally enabled by admin first
-          const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
-          if (!isGloballyEnabled) {
-            console.log(`⛔ RULE 2: Telegram alert blocked - ${type} globally disabled by admin for user ${user.username}`);
-            continue;
-          }
+          // No filtering - always send to Telegram
 
           // RULE 1: Check individual user preferences  
           try {
@@ -649,7 +630,7 @@ export class AlertGenerator {
             }
           } catch (prefError) {
             console.error(`❌ Error checking preferences for ${user.username}:`, prefError);
-            if (!isGloballyEnabled) continue;
+            // No filtering
           }
 
           const telegramConfig: TelegramConfig = {

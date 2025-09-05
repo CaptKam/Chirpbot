@@ -58,17 +58,7 @@ export class MLBEngine extends BaseSportEngine {
   async calculateProbability(gameState: GameState): Promise<number> {
     const { hasFirst, hasSecond, hasThird, outs } = gameState;
 
-    // Check if RE24 system is enabled
-    const re24Enabled = await this.isAlertEnabled('RE24_ENABLED');
-    if (!re24Enabled) {
-      // Fallback to simple percentage calculation
-      let baseProb = 0;
-      if (hasThird) baseProb += 60;
-      if (hasSecond) baseProb += 40; 
-      if (hasFirst) baseProb += 20;
-      baseProb = baseProb * (3 - outs) / 3;
-      return Math.min(Math.max(baseProb, 15), 85);
-    }
+    // Always use RE24 system
 
     // Build state key for RE24 lookup
     const firstBase = hasFirst ? "1" : "0";
@@ -82,9 +72,8 @@ export class MLBEngine extends BaseSportEngine {
     // Convert run expectancy to scoring probability using sigmoid function
     let probability = Math.round((1 / (1 + Math.exp(-2.5 * (baseExpectancy - 0.8)))) * 100);
 
-    // Context-aware adjustments
-    const contextFactorsEnabled = await this.isAlertEnabled('RE24_CONTEXT_FACTORS');
-    if (contextFactorsEnabled) {
+    // Context-aware adjustments - always enabled
+    {
       // Weather adjustments for home run probability
       if (gameState.weather?.windSpeed > 10 && 
           typeof gameState.weather?.windDirection === 'string' && 
@@ -168,8 +157,8 @@ export class MLBEngine extends BaseSportEngine {
 
     // Bases loaded: all three bases occupied
     if (hasFirst && hasSecond && hasThird) {
-      const basesLoadedEnabled = await this.isAlertEnabled('BASES_LOADED');
-      if (basesLoadedEnabled) {
+      // No filtering - always generate alert
+      {
         const alertKey = `${gameState.gameId}_BASES_LOADED_${inning}_${outs}`;
         const outsText = outs === 1 ? '1 out' : `${outs} outs`;
         const message = `🔥 BASES LOADED! (${scoringProbability}% scoring chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${outsText} in the ${isTopInning ? 'Top' : 'Bottom'} of ${inning}`;
@@ -202,8 +191,8 @@ export class MLBEngine extends BaseSportEngine {
     }
     // Runners on 1st and 2nd (prime scoring opportunity)
     else if (hasFirst && hasSecond && !hasThird) {
-      const runners1st2ndEnabled = await this.isAlertEnabled('RUNNERS_1ST_2ND');
-      if (runners1st2ndEnabled && scoringProbability >= 45) {
+      // No filtering - always generate alert
+      if (scoringProbability >= 45) {
         const alertKey = `${gameState.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
         const outsText = outs === 1 ? '1 out' : `${outs} outs`;
         const message = `💎 Runners on 1st & 2nd (${scoringProbability}% scoring chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${outsText}`;
@@ -238,8 +227,8 @@ export class MLBEngine extends BaseSportEngine {
     }
     // RISP (Runner In Scoring Position) - 2nd or 3rd base
     else if ((hasSecond || hasThird) && !hasFirst) {
-      const rispEnabled = await this.isAlertEnabled('RISP');
-      if (rispEnabled && scoringProbability >= 35) {
+      // No filtering - always enabled
+      {
         const position = hasThird ? '3rd base' : '2nd base';
         const alertKey = `${gameState.gameId}_RISP_${position}_${inning}_${outs}`;
         const outsText = outs === 1 ? '1 out' : `${outs} outs`;
@@ -286,8 +275,8 @@ export class MLBEngine extends BaseSportEngine {
 
     // Late inning pressure situations (MLB-specific: 8th inning or later)
     if (inning >= 8 && scoreDiff <= 2) {
-      const lateEnabled = await this.isAlertEnabled('LATE_PRESSURE');
-      if (lateEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_LATE_PRESSURE_${inning}`;
         const situation = isTopInning ? 'top' : 'bottom';
         const weather = await weatherService.getWeatherForTeam(gameState.homeTeam);

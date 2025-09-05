@@ -74,8 +74,8 @@ export class CFLEngine extends BaseSportEngine {
 
     // Game start - first quarter kickoff
     if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
-      const gameStartEnabled = await this.isAlertEnabled('CFL_GAME_START');
-      if (gameStartEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_CFL_GAME_START`;
         const message = `🏈 CFL GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
 
@@ -106,8 +106,8 @@ export class CFLEngine extends BaseSportEngine {
 
     // Second half kickoff
     if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
-      const halftimeKickoffEnabled = await this.isAlertEnabled('CFL_SECOND_HALF_KICKOFF');
-      if (halftimeKickoffEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_CFL_SECOND_HALF_KICKOFF`;
         const message = `🏈 CFL SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
 
@@ -138,8 +138,8 @@ export class CFLEngine extends BaseSportEngine {
 
     // Check if we're in the final 3 minutes (CFL uses 3-minute warning)
     if (this.isWithinThreeMinutes(timeRemaining) && quarter > 0) {
-      const threeMinEnabled = await this.isAlertEnabled('THREE_MINUTE_WARNING');
-      if (threeMinEnabled) {
+      // No filtering - always enabled
+      {
         const isEndOfHalf = quarter === 2 || quarter === 4;
         const alertKey = `${gameState.gameId}_THREE_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
         const message = `⏰ THREE MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
@@ -171,8 +171,8 @@ export class CFLEngine extends BaseSportEngine {
 
     // Red zone detection (within 25 yards of goal line in CFL)
     if (fieldPosition <= 25) {
-      const redZoneEnabled = await this.isAlertEnabled('RED_ZONE');
-      if (redZoneEnabled) {
+      // No filtering - always enabled
+      {
         const probability = await this.calculateProbability(gameState);
         const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
         const message = `🎯 CFL RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line (${probability}% TD chance)`;
@@ -205,8 +205,8 @@ export class CFLEngine extends BaseSportEngine {
 
     // Third down situations (critical in CFL - equivalent to 4th down in NFL)
     if (down === 3) {
-      const thirdDownEnabled = await this.isAlertEnabled('THIRD_DOWN');
-      if (thirdDownEnabled) {
+      // No filtering - always enabled
+      {
         const probability = await this.calculateProbability(gameState);
         const alertKey = `${gameState.gameId}_THIRD_DOWN_${yardsToGo}_${fieldPosition}`;
         const message = `🏈 CFL THIRD DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 3rd & ${yardsToGo} at ${fieldPosition} yard line`;
@@ -239,8 +239,8 @@ export class CFLEngine extends BaseSportEngine {
 
     // Overtime detection (period 5+)
     if (quarter >= 5) {
-      const overtimeEnabled = await this.isAlertEnabled('OVERTIME');
-      if (overtimeEnabled) {
+      // No filtering - always enabled
+      {
         const overtimePeriod = quarter - 4;
         const alertKey = `${gameState.gameId}_OVERTIME_${quarter}`;
         const message = `⚡ CFL OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;

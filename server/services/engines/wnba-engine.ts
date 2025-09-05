@@ -69,8 +69,8 @@ export class WNBAEngine extends BaseSportEngine {
 
     // Fourth quarter with less than 5 minutes remaining and close score
     if (quarter === 4 && this.isWithinMinutes(timeRemaining, 5) && scoreDiff <= 10) {
-      const fourthEnabled = await this.isAlertEnabled('WNBA_FOURTH_QUARTER');
-      if (fourthEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_WNBA_FOURTH_QUARTER_${timeRemaining.replace(/[:\s]/g, '')}`;
         const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left`;
 
@@ -102,8 +102,8 @@ export class WNBAEngine extends BaseSportEngine {
 
     // Close games in 3rd or 4th quarter
     if ((quarter >= 3) && scoreDiff <= 5 && (gameState.homeScore > 0 || gameState.awayScore > 0)) {
-      const closeEnabled = await this.isAlertEnabled('WNBA_CLOSE_GAME');
-      if (closeEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
         const message = `🔥 CLOSE WNBA GAME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
 
@@ -133,8 +133,8 @@ export class WNBAEngine extends BaseSportEngine {
 
     // Overtime detection (period 5+)
     if (quarter >= 5) {
-      const overtimeEnabled = await this.isAlertEnabled('WNBA_OVERTIME');
-      if (overtimeEnabled) {
+      // No filtering - always enabled
+      {
         const overtimePeriod = quarter - 4;
         const alertKey = `${gameState.gameId}_WNBA_OVERTIME_${quarter}`;
         const message = `⚡ WNBA OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
@@ -166,8 +166,8 @@ export class WNBAEngine extends BaseSportEngine {
 
     // High-scoring game (over 160 combined points)
     if (totalScore >= 160 && quarter >= 3) {
-      const highScoringEnabled = await this.isAlertEnabled('WNBA_HIGH_SCORING');
-      if (highScoringEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_WNBA_HIGH_SCORING`;
         const message = `🎯 HIGH-SCORING WNBA GAME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${totalScore} combined points`;
 

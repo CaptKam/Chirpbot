@@ -73,8 +73,8 @@ export class NFLEngine extends BaseSportEngine {
 
     // Game start - first quarter kickoff
     if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
-      const gameStartEnabled = await this.isAlertEnabled('NFL_GAME_START');
-      if (gameStartEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_NFL_GAME_START`;
         const message = `🏈 GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
 
@@ -105,8 +105,8 @@ export class NFLEngine extends BaseSportEngine {
 
     // Second half kickoff
     if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
-      const halftimeKickoffEnabled = await this.isAlertEnabled('NFL_SECOND_HALF_KICKOFF');
-      if (halftimeKickoffEnabled) {
+      // No filtering - always enabled
+      {
         const alertKey = `${gameState.gameId}_NFL_SECOND_HALF_KICKOFF`;
         const message = `🏈 SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
 
@@ -137,8 +137,8 @@ export class NFLEngine extends BaseSportEngine {
 
     // Red zone detection (within 20 yards of goal line)
     if (fieldPosition <= 20) {
-      const redZoneEnabled = await this.isAlertEnabled('RED_ZONE');
-      if (redZoneEnabled) {
+      // No filtering - always enabled
+      {
         const probability = await this.calculateProbability(gameState);
         const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
         const message = `🎯 RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line`;
@@ -171,8 +171,8 @@ export class NFLEngine extends BaseSportEngine {
 
     // Fourth down situations
     if (down === 4) {
-      const fourthDownEnabled = await this.isAlertEnabled('FOURTH_DOWN');
-      if (fourthDownEnabled) {
+      // No filtering - always enabled
+      {
         const probability = await this.calculateProbability(gameState);
         const alertKey = `${gameState.gameId}_FOURTH_DOWN_${yardsToGo}_${fieldPosition}`;
         const message = `🏈 FOURTH DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 4th & ${yardsToGo} at ${fieldPosition} yard line`;
@@ -205,8 +205,8 @@ export class NFLEngine extends BaseSportEngine {
 
     // Two-minute warning (end of 2nd and 4th quarters)
     if ((quarter === 2 || quarter === 4) && this.isTwoMinuteWarning(timeRemaining)) {
-      const twoMinEnabled = await this.isAlertEnabled('TWO_MINUTE_WARNING');
-      if (twoMinEnabled) {
+      // No filtering - always enabled
+      {
         const isEndOfGame = quarter === 4;
         const alertKey = `${gameState.gameId}_TWO_MINUTE_WARNING_Q${quarter}`;
         const message = `⏰ TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
