@@ -52,7 +52,7 @@ const ALERT_TYPE_CONFIG = {
     { key: 'NCAAF_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Second half begins notification' },
     { key: 'RED_ZONE', label: 'Red Zone Opportunities', description: 'Team advances inside the 20-yard line' },
     { key: 'FOURTH_DOWN', label: 'Fourth Down Situations', description: 'Critical fourth down attempts' },
-    { key: 'TWO_MINUTE_WARNING', label: 'Two-Minute Warning', description: 'Final 2 minutes of each half' },
+    { key: 'NCAAF_TWO_MINUTE_WARNING', label: 'Two-Minute Warning', description: 'Final 2 minutes of each half' },
     { key: 'CLUTCH_TIME', label: 'Clutch Time Situations', description: 'High-pressure game moments' },
     { key: 'OVERTIME', label: 'Overtime Play', description: 'Games entering overtime' }
   ],
@@ -61,7 +61,7 @@ const ALERT_TYPE_CONFIG = {
     { key: 'NFL_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Second half begins notification' },
     { key: 'RED_ZONE', label: 'Red Zone', description: 'Team inside 20-yard line' },
     { key: 'FOURTH_DOWN', label: 'Fourth Down', description: 'Critical conversion attempts' },
-    { key: 'TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'End of half situations' }
+    { key: 'NFL_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'End of half situations' }
   ],
   NBA: [
       { key: "CLUTCH_TIME", label: "Clutch Time", description: "Final 5 minutes with close score" },
@@ -78,11 +78,14 @@ const ALERT_TYPE_CONFIG = {
       { key: "CFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
       { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 25-yard line" },
       { key: "THIRD_DOWN", label: "Third Down (CFL)", description: "Critical third down conversion attempts" },
+      { key: "CFL_TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" },
       { key: "THREE_MINUTE_WARNING", label: "Three-Minute Warning", description: "Final 3 minutes of each half" },
       { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
       { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
     ],
     WNBA: [
+    { key: 'WNBA_GAME_START', label: 'Game Start', description: 'Game tipoff notification' },
+    { key: 'WNBA_TWO_MINUTE_WARNING', label: 'Two-Minute Warning', description: 'Final 2 minutes of each quarter' },
     { key: 'CLOSE_GAME', label: 'Close Game Alert', description: 'Games with tight scores' },
     { key: 'OVERTIME', label: 'Overtime', description: 'Games going to overtime' },
     { key: 'FINAL_MINUTES', label: 'Final Minutes', description: 'Alerts in the last 2 minutes of the game' },
