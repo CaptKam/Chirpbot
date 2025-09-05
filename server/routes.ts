@@ -1963,19 +1963,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Generate alerts from today's completed games
-  const alertGenerator = new AlertGenerator();
-  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
+  // DISABLED: Generate alerts from today's completed games
+  // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
+  // const alertGenerator = new AlertGenerator();
+  // alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
-  // Start live game monitoring every 15 seconds for real-time alerts
-  setInterval(async () => {
-    try {
-      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-      await alertGenerator.generateLiveGameAlerts();
-    } catch (error) {
-      console.error('Error in live monitoring:', error);
-    }
-  }, 15000); // Check every 15 seconds for real-time updates
+  // DISABLED: Start live game monitoring every 15 seconds for real-time alerts
+  // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
+  // setInterval(async () => {
+  //   try {
+  //     console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+  //     await alertGenerator.generateLiveGameAlerts();
+  //   } catch (error) {
+  //     console.error('Error in live monitoring:', error);
+  //   }
+  // }, 15000); // Check every 15 seconds for real-time updates
+  
+  console.log('🚫 ALL ALERTS DISABLED - No monitoring will occur');
 
   return httpServer;
 }
