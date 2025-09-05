@@ -639,10 +639,11 @@ export class AlertGenerator {
           try {
             const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
             const userPref = userPrefs.find(p => p.alertType === type);
-            const userHasEnabled = userPref ? userPref.enabled : isGloballyEnabled;
+            // CRITICAL FIX: If user has no preference, default to FALSE (opt-in required!)
+            const userHasEnabled = userPref ? userPref.enabled : false;
 
             if (!userHasEnabled) {
-              console.log(`⛔ RULE 1: User ${user.username} has ${type} disabled in individual preferences`);
+              console.log(`⛔ RULE 1: User ${user.username} has ${type} disabled or not explicitly enabled`);
               continue;
             }
           } catch (prefError) {
