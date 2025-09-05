@@ -698,6 +698,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug: Test specific alert generation
+  app.post('/api/debug/test-alerts', requireAdmin, async (req, res) => {
+    try {
+      console.log('🧪 Testing alert generation system...');
+      
+      const alertGenerator = new AlertGenerator();
+      
+      // Force generate alerts for live games
+      await alertGenerator.generateLiveGameAlerts();
+      
+      res.json({
+        message: 'Test alert generation completed - check server logs',
+        note: 'This forces the alert generation process to run immediately'
+      });
+    } catch (error) {
+      console.error('Error in test alert generation:', error);
+      res.status(500).json({ error: 'Failed to test alert generation' });
+    }
+  });
+
   // Generate test live alerts - RULE COMPLIANT VERSION - ADMIN ONLY
   app.post('/api/alerts/force-generate', requireAdmin, async (req, res) => {
     try {

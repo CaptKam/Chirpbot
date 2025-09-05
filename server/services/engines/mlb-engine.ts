@@ -63,7 +63,7 @@ export class MLBEngine extends BaseSportEngine {
         const { MLBApiService } = await import('../mlb-api');
         const mlbApi = new MLBApiService();
         const enhancedData = await mlbApi.getEnhancedGameData(gameState.gameId);
-        
+
         if (enhancedData && !enhancedData.error) {
           return {
             ...gameState,
@@ -83,7 +83,7 @@ export class MLBEngine extends BaseSportEngine {
     } catch (error) {
       console.error('Error enhancing game state with live data:', error);
     }
-    
+
     return gameState;
   }
 
@@ -125,6 +125,40 @@ export class MLBEngine extends BaseSportEngine {
     //   this.alertGenerators.push(this.generateGameStartAlerts);
     // }
     // ... and so on for other alert types.
+  }
+
+  // Load alert modules dynamically
+  async loadAlertModule(alertType: string): Promise<BaseAlertModule | null> {
+    try {
+      // Map alert types to actual module files
+      const moduleMap: Record<string, string> = {
+        'BASES_LOADED': 'bases-loaded-module',
+        'RISP': 'risp-module',
+        'CLOSE_GAME': 'close-game-module',
+        'LATE_PRESSURE': 'late-pressure-module',
+        'POWER_HITTER': 'power-hitter-module',
+        'HOT_HITTER': 'hot-hitter-module',
+        'RUNNERS_1ST_2ND': 'runners-1st-2nd-module',
+        'FULL_COUNT': 'full-count-module',
+        'MLB_GAME_START': 'game-start-module',
+        'MLB_SEVENTH_INNING_STRETCH': 'seventh-inning-stretch-module',
+        'TEST_ALERT': 'test-alert-module'
+      };
+
+      const moduleFileName = moduleMap[alertType];
+      if (!moduleFileName) {
+        console.log(`No module mapping found for alert type: ${alertType}`);
+        return null;
+      }
+
+      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
+      const module = await import(modulePath);
+      const ModuleClass = module.default;
+      return new ModuleClass();
+    } catch (error) {
+      console.error(`Failed to load alert module ${alertType} for ${this.sport}:`, error);
+      return null;
+    }
   }
 
   // Helper method to parse time strings (if needed)

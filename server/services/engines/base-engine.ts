@@ -104,19 +104,29 @@ export abstract class BaseSportEngine {
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
 
+    console.log(`🔍 Generating alerts for game ${gameState.gameId} with ${this.alertModules.size} loaded modules`);
+    
     for (const [alertType, module] of this.alertModules) {
       try {
+        console.log(`🧪 Checking ${alertType} module for game ${gameState.gameId}`);
+        
         if (module.isTriggered(gameState)) {
+          console.log(`✅ ${alertType} triggered for game ${gameState.gameId}`);
+          
           const alert = module.generateAlert(gameState);
           if (alert) {
+            console.log(`📢 Generated ${alertType} alert: ${alert.message}`);
             alerts.push(alert);
           }
+        } else {
+          console.log(`⏸️ ${alertType} not triggered for game ${gameState.gameId}`);
         }
       } catch (error) {
-        console.error(`Error generating ${alertType} alert:`, error);
+        console.error(`❌ Error generating ${alertType} alert:`, error);
       }
     }
 
+    console.log(`📊 Generated ${alerts.length} alerts for game ${gameState.gameId}`);
     return alerts;
   }
 
