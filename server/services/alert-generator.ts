@@ -156,8 +156,8 @@ export class AlertGenerator {
 
   // Check if a specific alert type is globally enabled (CACHED - No DB spam!)
   private async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
-    // No filtering - always return true
-    return true;
+    // Check master controls from settings cache
+    return await this.settingsCache.isAlertEnabled(sport, alertType);
   }
 
   // Generate realistic alerts from today's completed games
@@ -210,7 +210,11 @@ export class AlertGenerator {
   private async saveAlert(alertData: AlertData): Promise<void> {
     try {
       // 🛡️ FAIL-SAFE: Check global settings BEFORE database creation
-      // No filtering - always save alerts
+      const isEnabled = await this.isAlertGloballyEnabled(alertData.sport, alertData.type);
+      if (!isEnabled) {
+        console.log(`🚫 Alert type ${alertData.type} is globally disabled for ${alertData.sport} - not saving`);
+        return;
+      }
 
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
