@@ -321,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport } = req.query;
-      const games = await storage.getUserMonitoredGames(userId);
+      const games = await storage.getUserMonitoredTeams(userId);
       res.json(games);
     } catch (error) {
       console.error('Error fetching monitored games:', error);
@@ -343,7 +343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date()
       };
 
-      await storage.addUserMonitoredGame(gameData);
+      await storage.addUserMonitoredTeam(userId, gameId, sport || 'MLB', homeTeamName || '', awayTeamName || '');
       res.json({ message: 'Game monitoring enabled' });
     } catch (error) {
       console.error('Error adding monitored game:', error);
@@ -354,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
     try {
       const { userId, gameId } = req.params;
-      await storage.removeUserMonitoredGame(userId, gameId);
+      await storage.removeUserMonitoredTeam(userId, gameId);
       res.json({ message: 'Game monitoring disabled' });
     } catch (error) {
       console.error('Error removing monitored game:', error);
