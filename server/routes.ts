@@ -980,54 +980,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sport = String(row.sport || 'MLB');
         const alertType = String(row.type || '');
 
-        // Check if this alert type is globally enabled
+        // Always include alerts - no filtering
         try {
-          const globalSettings: Record<string, boolean> = await storage.getGlobalAlertSettings(sport);
-          const isEnabled = alertType && globalSettings[alertType] !== false;
-
-          if (isEnabled) {
-            let payload: any = {};
-            try {
-              // The payload is already a JSON object, not a string
-              payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
-            } catch (e) {
-              console.error('Error parsing payload:', e);
-              payload = {};
-            }
-
-            alerts.push({
-              id: row.id,
-              type: row.type,
-              message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
-              gameId: row.game_id,
-              sport: row.sport || 'MLB',
-              homeTeam: payload.context?.homeTeam || 'Home Team',
-              awayTeam: payload.context?.awayTeam || 'Away Team',
-              homeScore: payload.context?.homeScore,
-              awayScore: payload.context?.awayScore,
-              confidence: row.score || 85,
-              priority: row.score || 80,
-              createdAt: row.created_at,
-              // Add context data for footer
-              context: payload.context || {},
-              inning: payload.context?.inning,
-              isTopInning: payload.context?.isTopInning,
-              outs: payload.context?.outs,
-              balls: payload.context?.balls,
-              strikes: payload.context?.strikes,
-              hasFirst: payload.context?.first || payload.context?.hasFirst,
-              hasSecond: payload.context?.second || payload.context?.hasSecond,
-              hasThird: payload.context?.third || payload.context?.hasThird,
-              // Include AI data
-              betbookData: payload.betbookData || null,
-              gameInfo: payload.gameInfo || null
-            });
-          } else {
-            console.log(`🚫 Filtered out ${alertType} alert (globally disabled)`);
-          }
-        } catch (error) {
-          // If we can't check global settings, include the alert (fail-safe)
-          console.error(`Error checking global settings for ${sport}:${alertType}`, error);
           let payload: any = {};
           try {
             payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};

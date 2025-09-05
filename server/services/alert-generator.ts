@@ -571,12 +571,7 @@ export class AlertGenerator {
         }
       };
 
-      // 🛡️ FAIL-SAFE: Check global settings BEFORE database creation
-      const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
-      if (!isGloballyEnabled) {
-        console.log(`🚫 BLOCKED database save: ${type} alert globally disabled (Real-time alert method)`);
-        return 0;
-      }
+      // Global filtering removed - all alerts now pass through
 
       console.log(`💾 Saving alert: ${type} for game ${gameId}`);
 
