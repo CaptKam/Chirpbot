@@ -30,6 +30,49 @@ function formatTime(date: string | Date): string {
   return alertTime.toLocaleDateString();
 }
 
+function getAlertStatus(alertType: string, createdAt: string, gameStatus?: string): { status: 'ACTIVE' | 'EXPIRED', minutesAgo: number } {
+  const alertTime = new Date(createdAt);
+  const now = new Date();
+  const minutesAgo = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
+
+  // If game is final, all alerts are expired
+  if (gameStatus === 'final') {
+    return { status: 'EXPIRED', minutesAgo };
+  }
+
+  // Time-sensitive alert types and their expiration times (in minutes)
+  const alertExpirationTimes: Record<string, number> = {
+    'BASES_LOADED': 15,        // Bases loaded situation typically lasts 3-5 at-bats
+    'RISP': 12,                // Runners in scoring position
+    'FULL_COUNT': 3,           // Full count expires very quickly
+    'POWER_HITTER': 8,         // Power hitter at bat
+    'HOT_HITTER': 8,           // Hot hitter at bat
+    'RUNNERS_1ST_2ND': 12,     // Runners on 1st and 2nd
+    'RED_ZONE': 8,             // Football red zone opportunity
+    'FOURTH_DOWN': 2,          // Fourth down decision
+    'TWO_MINUTE_WARNING': 5,   // Two minute warning context
+    'POWER_PLAY': 4,           // Hockey power play (typically 2 minutes)
+    'EMPTY_NET': 3,            // Hockey empty net situation
+    'CLUTCH_TIME': 10,         // Basketball clutch time
+    // Game state alerts last longer
+    'CLOSE_GAME': 30,
+    'CLOSE_GAME_LIVE': 30,
+    'HIGH_SCORING': 45,
+    'LATE_PRESSURE': 20,
+    'OVERTIME': 60,
+    'BLOWOUT': 60,
+    'SHUTOUT': 60
+  };
+
+  const expirationMinutes = alertExpirationTimes[alertType] || 10; // Default 10 minutes
+  const isActive = minutesAgo <= expirationMinutes;
+
+  return { 
+    status: isActive ? 'ACTIVE' : 'EXPIRED', 
+    minutesAgo 
+  };
+}
+
 function getAlertColor(priority: number): string {
   if (priority >= 90) return 'bg-red-400';
   if (priority >= 80) return 'bg-orange-400';
@@ -643,12 +686,53 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <Card className={className} {...props}>
+        <Card className={`${className} ${(() => {
+          const alertStatus = getAlertStatus(
+            alertData?.type || '', 
+            alertData?.createdAt || '', 
+            liveGameData?.status || displayScores.isLive ? 'live' : 'final'
+          );
+          return alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
+        })()}`} {...props}>
           {/* Render the redesigned alert card content here */}
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-6" key={`alert-${alertData.id}-${Date.now()}`}>
+            <div className="p-6 relative" key={`alert-${alertData.id}-${Date.now()}`}>
+              {/* Time-Sensitive Status Badge - Top Right Corner */}
+              {(() => {
+                const alertStatus = getAlertStatus(
+                  alertData.type, 
+                  alertData.createdAt || '', 
+                  liveGameData?.status || displayScores.isLive ? 'live' : 'final'
+                );
+                
+                return (
+                  <div className="absolute -top-2 -right-2 z-20">
+                    <div 
+                      className={`
+                        transform rotate-12 px-3 py-1 text-xs font-bold uppercase tracking-wide
+                        shadow-lg ring-2 rounded-lg
+                        ${alertStatus.status === 'ACTIVE' 
+                          ? 'bg-emerald-500 text-white ring-emerald-400/50' 
+                          : 'bg-red-500 text-white ring-red-400/50'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-1">
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          alertStatus.status === 'ACTIVE' ? 'bg-emerald-200 animate-pulse' : 'bg-red-200'
+                        }`}></div>
+                        {alertStatus.status}
+                      </div>
+                      <div className="text-xs opacity-90 font-medium">
+                        {alertStatus.minutesAgo}m ago
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Clean Header - Calendar Page Style */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
