@@ -1777,6 +1777,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Disable ALL alerts across entire system
+  app.post('/api/admin/disable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      console.log('🚫 ADMIN REQUEST: Disabling all alerts globally');
+
+      // Define all alert types across all sports
+      const allAlertTypes = {
+        'MLB': [
+          'RISP', 'BASES_LOADED', 'RUNNERS_1ST_2ND', 'CLOSE_GAME', 'CLOSE_GAME_LIVE',
+          'LATE_PRESSURE', 'HOME_RUN_LIVE', 'HIGH_SCORING', 'SHUTOUT', 'BLOWOUT',
+          'FULL_COUNT', 'STRIKEOUT', 'POWER_HITTER', 'HOT_HITTER',
+          'AI_ENHANCED_MESSAGES', 'AI_PREDICTIVE_AT_BAT', 'AI_SCORING_PROBABILITY',
+          'AI_SITUATION_ANALYSIS', 'AI_EVENT_SUMMARIES', 'AI_ROI_ALERTS',
+          'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
+        ],
+        'NFL': [
+          'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'NCAAF': [
+          'NCAAF_GAME_START', 'NCAAF_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'CFL': [
+          'CFL_GAME_START', 'CFL_SECOND_HALF_KICKOFF', 'THIRD_DOWN', 'THREE_MINUTE_WARNING'
+        ],
+        'WNBA': [
+          'WNBA_FOURTH_QUARTER', 'WNBA_CLOSE_GAME', 'WNBA_OVERTIME',
+          'WNBA_HIGH_SCORING', 'WNBA_COMEBACK', 'WNBA_CLUTCH_PERFORMANCE'
+        ],
+        'NBA': [
+          'NBA_FOURTH_QUARTER', 'NBA_CLOSE_GAME', 'NBA_OVERTIME',
+          'NBA_HIGH_SCORING', 'NBA_COMEBACK', 'NBA_CLUTCH_PERFORMANCE'
+        ],
+        'NHL': [
+          'NHL_THIRD_PERIOD', 'NHL_CLOSE_GAME', 'NHL_OVERTIME',
+          'NHL_POWER_PLAY', 'NHL_PENALTY_KILL', 'NHL_CLUTCH_PERFORMANCE'
+        ]
+      };
+
+      let totalDisabled = 0;
+      const results = [];
+
+      // Disable all alert types globally
+      for (const [sport, alertTypes] of Object.entries(allAlertTypes)) {
+        for (const alertType of alertTypes) {
+          try {
+            await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
+            results.push({ sport, alertType, disabled: true });
+            totalDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable ${sport}.${alertType}:`, error);
+            results.push({ sport, alertType, disabled: false, error: error.message });
+          }
+        }
+      }
+
+      // Disable Telegram for all users
+      const allUsers = await storage.getAllUsers();
+      let telegramDisabled = 0;
+      
+      for (const user of allUsers) {
+        if (user.telegramEnabled) {
+          try {
+            await storage.updateUserTelegramSettings(user.id, '', '', false);
+            telegramDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable Telegram for user ${user.username}:`, error);
+          }
+        }
+      }
+
+      res.json({
+        message: 'ALL alert features disabled globally',
+        summary: {
+          alertTypesDisabled: totalDisabled,
+          telegramUsersDisabled: telegramDisabled,
+          totalUsers: allUsers.length
+        },
+        details: results,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`✅ Successfully disabled ${totalDisabled} alert types and ${telegramDisabled} Telegram configurations`);
+
+    } catch (error) {
+      console.error('Error disabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to disable all alerts' });
+    }
+  });
+
   app.put('/api/admin/apply-global-settings', async (req, res) => {
     try {
       if (!req.session.adminUserId) {

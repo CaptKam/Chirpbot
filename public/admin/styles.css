@@ -631,13 +631,13 @@ body {
         gap: 16px;
         text-align: center;
     }
-    
+
     .table-header,
     .table-row {
         grid-template-columns: 1fr;
         gap: 8px;
     }
-    
+
     .search-container {
         width: 100%;
     }
@@ -1214,7 +1214,7 @@ input:checked + .slider:before {
     .dashboard-container {
         padding: 20px;
     }
-    
+
     .stats-grid {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     }
@@ -1226,21 +1226,33 @@ input:checked + .slider:before {
         flex-direction: column;
         gap: 15px;
     }
-    
+
     .admin-info {
         order: -1;
     }
-    
+
     .search-input input {
         width: 220px;
     }
-    
+
     .users-table {
         font-size: 13px;
     }
-    
+
     .table-header th,
     .table-row td {
         padding: 12px 15px;
     }
+}
+
+.btn-danger {
+    background: #dc3545;
+    border-color: #dc3545;
+    font-weight: bold;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    border-color: #bd2130;
+    transform: scale(1.02);
 }

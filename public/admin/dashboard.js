@@ -776,3 +776,73 @@ if (sportSelector) {
         switchSport(this.value);
     });
 }
+
+async function enableAllAlerts() {
+    try {
+        showNotification('Enabling all alerts...', 'info');
+
+        const response = await fetch('/api/admin/enable-all-alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification(`Enabled ${result.count} alert types`, 'success');
+            // Reload settings to reflect changes
+            setTimeout(() => {
+                loadGlobalAlertSettings();
+            }, 1000);
+        } else {
+            showNotification(result.message || 'Failed to enable alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Error enabling all alerts:', error);
+        showNotification('Failed to enable all alerts', 'error');
+    }
+}
+
+async function disableAllAlerts() {
+    // Double confirmation for this destructive action
+    const confirmed = confirm('⚠️ WARNING: This will disable ALL alert features across the entire system for ALL users.\n\nThis includes:\n- All MLB, NFL, NBA, NHL, WNBA, CFL, NCAAF alerts\n- All Telegram notifications\n- All AI enhancements\n- All RE24 features\n\nAre you absolutely sure?');
+
+    if (!confirmed) return;
+
+    const doubleConfirmed = confirm('🚫 FINAL CONFIRMATION: This action will completely shut down all alert functionality system-wide. Users will receive NO notifications until manually re-enabled.\n\nProceed?');
+
+    if (!doubleConfirmed) return;
+
+    try {
+        showNotification('🚫 Disabling ALL alerts globally...', 'warning');
+
+        const response = await fetch('/api/admin/disable-all-alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification(
+                `🚫 ALL ALERTS DISABLED: ${result.summary.alertTypesDisabled} alert types disabled, ${result.summary.telegramUsersDisabled} Telegram configs disabled`, 
+                'success'
+            );
+
+            // Show summary
+            console.log('Disable All Alerts Result:', result);
+
+            // Reload settings to reflect changes
+            setTimeout(() => {
+                loadGlobalAlertSettings();
+            }, 1000);
+        } else {
+            showNotification(result.message || 'Failed to disable all alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Error disabling all alerts:', error);
+        showNotification('Failed to disable all alerts', 'error');
+    }
+}
