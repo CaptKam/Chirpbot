@@ -1016,6 +1016,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             betbookData: payload.betbookData || null,
             gameInfo: payload.gameInfo || null
           });
+        } catch (error) {
+          console.error(`Error processing alert for ${row.id}:`, error);
         }
       }
 

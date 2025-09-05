@@ -571,7 +571,13 @@ export class AlertGenerator {
         }
       };
 
-      // Global filtering removed - all alerts now pass through
+      // 🛡️ ADMIN CONTROL: Check global settings BEFORE database storage
+      // For live-based alerts: if admin disables, don't store at all
+      const isGloballyEnabled = await this.isAlertGloballyEnabled(sport, type);
+      if (!isGloballyEnabled) {
+        console.log(`⚡ LIVE ALERT SKIPPED: ${type} alert globally disabled by admin - no database storage for live alerts`);
+        return 0;
+      }
 
       console.log(`💾 Saving alert: ${type} for game ${gameId}`);
 
