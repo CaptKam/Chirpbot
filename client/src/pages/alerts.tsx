@@ -118,7 +118,12 @@ export default function AlertsPage() {
       // Simple milestones
       'TOUCHDOWN',
       'FIELD_GOAL',
-      'SAFETY'
+      'SAFETY',
+      // MLB Common alerts to test template consistency
+      'RISP',
+      'BASES_LOADED',
+      'HOME_RUN_LIVE',
+      'STRIKEOUT'
     ];
     return simpleAlertTypes.includes(alertType);
   };
