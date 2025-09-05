@@ -563,7 +563,7 @@ export default function Calendar() {
                     size="lg"
                     showWeather={true}
                     showVenue={true}
-                    showEnhancedMLB={activeSport === 'MLB'}
+                    showEnhancedMLB={false}
                   />
                 </div>
               );
