@@ -362,13 +362,8 @@ export const storage = {
   // Global alert settings for admin management - FIXED ARCHITECTURE
   async getGlobalAlertSettings(sport: string): Promise<Record<string, boolean>> {
     try {
-      const settingsQuery = `
-        SELECT alertType, enabled 
-        FROM alertSettings 
-        WHERE sport = ? AND isGlobal = 1
-      `;
-
-      const settings = await this.query(settingsQuery, [sport]);
+      const settings = await db.select().from(globalAlertSettings)
+        .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
 
       // Convert to object with defaults for missing keys
       const result: Record<string, boolean> = {};
