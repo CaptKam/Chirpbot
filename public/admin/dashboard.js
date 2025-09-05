@@ -88,9 +88,14 @@ async function loadDashboardData() {
         const usersResponse = await fetch('/api/admin/users', {
             credentials: 'include'
         });
-        const users = await usersResponse.json();
-
-        displayUsers(users);
+        
+        if (usersResponse.ok) {
+            const users = await usersResponse.json();
+            displayUsers(users);
+        } else {
+            console.warn('Failed to fetch users for display (may be authentication issue)');
+            displayUsers([]);
+        }
 
         // Load sport alert settings
         loadSportAlertSettings();
@@ -111,8 +116,21 @@ async function loadRecentActivity() {
             fetch('/api/admin/users', { credentials: 'include' })
         ]);
 
-        const alerts = await alertsResponse.json();
-        const users = await usersResponse.json();
+        // Handle alerts response
+        let alerts = [];
+        if (alertsResponse.ok) {
+            alerts = await alertsResponse.json();
+        } else {
+            console.warn('Failed to fetch alerts for recent activity');
+        }
+
+        // Handle users response
+        let users = [];
+        if (usersResponse.ok) {
+            users = await usersResponse.json();
+        } else {
+            console.warn('Failed to fetch users for recent activity (may be authentication issue)');
+        }
 
         displayRecentActivity(alerts, users);
     } catch (error) {
