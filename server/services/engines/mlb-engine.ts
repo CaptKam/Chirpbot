@@ -1,3 +1,4 @@
+
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
@@ -12,22 +13,26 @@ export class MLBEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Always allow critical MLB alert types to bypass global rules
-      const criticalAlerts = ['BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME'];
-      if (criticalAlerts.includes(alertType)) {
-        console.log(`🎯 Critical alert ${alertType} bypassing global rules`);
-        return true;
+      // Only check settings for actual MLB alert types
+      const validMLBAlerts = [
+        'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
+        'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START', 
+        'MLB_SEVENTH_INNING_STRETCH', 'TEST_ALERT'
+      ];
+
+      if (!validMLBAlerts.includes(alertType)) {
+        console.log(`❌ ${alertType} is not a valid MLB alert type - rejecting`);
+        return false;
       }
-      
+
       return await this.settingsCache.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`MLB Settings cache error for ${alertType}:`, error);
-      return true; // Default to true if cache fails, to ensure alerts still fire
+      return true; // Default to true if cache fails
     }
   }
 
   async calculateProbability(gameState: GameState): Promise<number> {
-    // MLB-specific probability calculation
     const { inning, outs, homeScore, awayScore } = gameState;
 
     let probability = 50; // Base probability
@@ -82,7 +87,7 @@ export class MLBEngine extends BaseSportEngine {
             outs: enhancedData.outs || 0,
             inning: enhancedData.inning || gameState.inning || 1,
             isTopInning: enhancedData.isTopInning,
-            homeScore: enhancedData.homeScore || gameState.awayScore,
+            homeScore: enhancedData.homeScore || gameState.homeScore,
             awayScore: enhancedData.awayScore || gameState.awayScore
           };
         }
@@ -103,18 +108,29 @@ export class MLBEngine extends BaseSportEngine {
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
 
-      // Also check global settings
+      // Filter to only valid MLB alerts and check global settings
+      const validMLBAlerts = [
+        'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
+        'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START', 
+        'MLB_SEVENTH_INNING_STRETCH', 'TEST_ALERT'
+      ];
+
+      const mlbEnabledTypes = enabledTypes.filter(alertType => 
+        validMLBAlerts.includes(alertType)
+      );
+
+      // Check global settings for these MLB alerts
       const globallyEnabledTypes = [];
-      for (const alertType of enabledTypes) {
-        const isGloballyEnabled = await this.isAlertEnabled(alertType); // Use the class method
+      for (const alertType of mlbEnabledTypes) {
+        const isGloballyEnabled = await this.isAlertEnabled(alertType);
         if (isGloballyEnabled) {
           globallyEnabledTypes.push(alertType);
         }
       }
 
-      console.log(`🎯 Initializing MLB engine for user ${userId} with alerts: ${globallyEnabledTypes.join(', ')}`);
+      console.log(`🎯 Initializing MLB engine for user ${userId} with ${globallyEnabledTypes.length} MLB alerts: ${globallyEnabledTypes.join(', ')}`);
 
-      // Initialize only the alert modules that are both globally enabled and user-enabled
+      // Initialize only the MLB alert modules
       await this.initializeUserAlertModules(globallyEnabledTypes);
 
     } catch (error) {
@@ -122,33 +138,10 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // Initialize alert modules for enabled alert types
-  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    this.alertModules.clear();
-
-    console.log(`🔧 Loading ${enabledAlertTypes.length} alert modules for MLB...`);
-
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ Loaded alert module: ${alertType}`);
-        } else {
-          console.log(`❌ Failed to load module: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error loading ${alertType}:`, error);
-      }
-    }
-
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} alert modules`);
-  }
-
-  // Load alert modules dynamically
-  async loadAlertModule(alertType: string): Promise<BaseAlertModule | null> {
+  // Load alert modules dynamically - MLB only
+  async loadAlertModule(alertType: string): Promise<any | null> {
     try {
-      // Map alert types to actual module files
+      // Map MLB alert types to actual module files
       const moduleMap: Record<string, string> = {
         'BASES_LOADED': 'bases-loaded-module',
         'RISP': 'risp-module',
@@ -165,7 +158,7 @@ export class MLBEngine extends BaseSportEngine {
 
       const moduleFileName = moduleMap[alertType];
       if (!moduleFileName) {
-        console.log(`No module mapping found for alert type: ${alertType}`);
+        console.log(`❌ No MLB module found for: ${alertType}`);
         return null;
       }
 
@@ -174,19 +167,31 @@ export class MLBEngine extends BaseSportEngine {
       const ModuleClass = module.default;
       return new ModuleClass();
     } catch (error) {
-      console.error(`Failed to load alert module ${alertType} for ${this.sport}:`, error);
+      console.error(`❌ Failed to load MLB alert module ${alertType}:`, error);
       return null;
     }
   }
 
-  // Helper method to parse time strings (if needed)
-  private parseTimeToSeconds(timeString: string): number {
-    if (!timeString) return 0;
-    // MLB doesn't use time format like football, but keeping for compatibility
-    const parts = timeString.split(':');
-    if (parts.length === 2) {
-      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  // Initialize alert modules for enabled alert types - MLB only
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    this.alertModules.clear();
+
+    console.log(`🔧 Loading ${enabledAlertTypes.length} MLB alert modules...`);
+
+    for (const alertType of enabledAlertTypes) {
+      try {
+        const module = await this.loadAlertModule(alertType);
+        if (module) {
+          this.alertModules.set(alertType, module);
+          console.log(`✅ Loaded MLB alert module: ${alertType}`);
+        } else {
+          console.log(`❌ Failed to load MLB module: ${alertType}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error loading MLB ${alertType}:`, error);
+      }
     }
-    return 0;
+
+    console.log(`🎯 Successfully initialized ${this.alertModules.size} MLB alert modules`);
   }
 }
