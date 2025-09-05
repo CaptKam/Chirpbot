@@ -1,4 +1,3 @@
-
 export interface GameState {
   gameId: string;
   sport: string;
@@ -23,7 +22,7 @@ export interface AlertResult {
 export abstract class BaseAlertModule {
   abstract alertType: string;
   abstract sport: string;
-  
+
   abstract isTriggered(gameState: GameState): boolean;
   abstract generateAlert(gameState: GameState): AlertResult | null;
   abstract calculateProbability(gameState: GameState): number;
@@ -49,7 +48,7 @@ export class AlertModuleManager {
       const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${alertType.toLowerCase()}-module`;
       const { default: AlertModule } = await import(modulePath);
       const module = new AlertModule();
-      
+
       this.activeModules.set(alertType, module);
       console.log(`✅ Loaded ${alertType} module for ${this.sport}`);
     } catch (error) {
@@ -93,32 +92,57 @@ export class AlertModuleManager {
 
 export abstract class BaseSportEngine {
   protected sport: string;
-  protected alertManager: AlertModuleManager;
+  protected alertModules: Map<string, BaseAlertModule> = new Map();
 
   constructor(sport: string) {
     this.sport = sport;
-    this.alertManager = new AlertModuleManager(sport);
-  }
-
-  // Load alert modules based on user preferences
-  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    // Clear existing modules
-    const currentTypes = this.alertManager.getActiveAlertTypes();
-    for (const type of currentTypes) {
-      if (!enabledAlertTypes.includes(type)) {
-        this.alertManager.unloadAlertModule(type);
-      }
-    }
-
-    // Load new modules
-    for (const alertType of enabledAlertTypes) {
-      await this.alertManager.loadAlertModule(alertType);
-    }
-  }
-
-  async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    return this.alertManager.processAlerts(gameState);
   }
 
   abstract calculateProbability(gameState: GameState): Promise<number>;
+
+  // Generate live alerts using loaded modules
+  async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+
+    for (const [alertType, module] of this.alertModules) {
+      try {
+        if (module.isTriggered(gameState)) {
+          const alert = module.generateAlert(gameState);
+          if (alert) {
+            alerts.push(alert);
+          }
+        }
+      } catch (error) {
+        console.error(`Error generating ${alertType} alert:`, error);
+      }
+    }
+
+    return alerts;
+  }
+
+  // Load alert modules dynamically
+  async loadAlertModule(alertType: string): Promise<BaseAlertModule | null> {
+    try {
+      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${alertType.toLowerCase().replace('_', '-')}-module`;
+      const module = await import(modulePath);
+      const ModuleClass = module.default;
+      return new ModuleClass();
+    } catch (error) {
+      console.error(`Failed to load alert module ${alertType} for ${this.sport}:`, error);
+      return null;
+    }
+  }
+
+  // Initialize alert modules for enabled alert types
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    this.alertModules.clear();
+
+    for (const alertType of enabledAlertTypes) {
+      const module = await this.loadAlertModule(alertType);
+      if (module) {
+        this.alertModules.set(alertType, module);
+        console.log(`✅ Loaded alert module: ${alertType}`);
+      }
+    }
+  }
 }

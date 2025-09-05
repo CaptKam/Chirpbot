@@ -49,6 +49,44 @@ export class MLBEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
+  // Override to add MLB-specific game state normalization
+  async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
+    // Enhance game state with MLB-specific data if needed
+    const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+    return super.generateLiveAlerts(enhancedGameState);
+  }
+
+  private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
+    try {
+      // Get live data from MLB API if game is live
+      if (gameState.isLive && gameState.gameId) {
+        const { MLBApiService } = await import('../mlb-api');
+        const mlbApi = new MLBApiService();
+        const enhancedData = await mlbApi.getEnhancedGameData(gameState.gameId);
+        
+        if (enhancedData && !enhancedData.error) {
+          return {
+            ...gameState,
+            hasFirst: enhancedData.runners?.first || false,
+            hasSecond: enhancedData.runners?.second || false,
+            hasThird: enhancedData.runners?.third || false,
+            balls: enhancedData.balls || 0,
+            strikes: enhancedData.strikes || 0,
+            outs: enhancedData.outs || 0,
+            inning: enhancedData.inning || gameState.inning || 1,
+            isTopInning: enhancedData.isTopInning,
+            homeScore: enhancedData.homeScore || gameState.homeScore,
+            awayScore: enhancedData.awayScore || gameState.awayScore
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error enhancing game state with live data:', error);
+    }
+    
+    return gameState;
+  }
+
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
