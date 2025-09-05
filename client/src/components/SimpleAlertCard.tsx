@@ -379,7 +379,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             const alertStatus = getAlertStatus(alert.type, alert.createdAt);
             
             return (
-              <div className="absolute -top-2 -right-2 z-20">
+              <div className="absolute top-3 -right-7 z-20">
                 <div 
                   className={`
                     transform px-2 py-1 text-xs font-bold uppercase tracking-wide

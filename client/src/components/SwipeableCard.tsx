@@ -708,7 +708,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 );
                 
                 return (
-                  <div className="absolute -top-2 -right-2 z-20">
+                  <div className="absolute top-3 -right-7 z-20">
                     <div 
                       className={`
                         transform rotate-25 px-3 py-1 text-xs font-bold uppercase tracking-wide
