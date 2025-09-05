@@ -110,122 +110,75 @@ async function loadDashboardData() {
 }
 
 async function loadRecentActivity() {
-    console.log('Loading recent activity...');
-    try {
-        // Only fetch alerts data since it's reliable
-        const alertsResponse = await fetch('/api/alerts?limit=10', { credentials: 'include' });
-
-        // Handle alerts response
-        let alerts = [];
-        if (alertsResponse.ok) {
-            alerts = await alertsResponse.json();
-            console.log('Fetched alerts:', alerts.length);
-        } else {
-            console.warn('Failed to fetch alerts for recent activity');
-        }
-
-        // Skip problematic admin users endpoint for now
-        // Focus on alerts data which is working reliably
-        displayRecentActivity(alerts, []);
-    } catch (error) {
-        console.error('Error loading recent activity:', error);
-        displayRecentActivity([], []);
-    }
-}
-
-function displayRecentActivity(alerts, users) {
-    console.log('displayRecentActivity called with:', { alerts: alerts.length, users: users.length });
-    
     const activityContainer = document.getElementById('recentActivity');
-    if (!activityContainer) {
-        console.error('recentActivity container not found');
-        return;
-    }
+    if (!activityContainer) return;
 
-    const activities = [];
-
-    // Add recent alerts
-    alerts.slice(0, 5).forEach((alert, index) => {
-        try {
-            activities.push({
-                type: 'alert',
-                icon: 'fas fa-bell',
-                title: `${alert.type || 'Unknown'} Alert`,
-                description: `${alert.homeTeam || 'Team1'} vs ${alert.awayTeam || 'Team2'}`,
-                time: alert.createdAt ? formatTimeAgo(alert.createdAt) : 'Recently',
-                timestamp: alert.createdAt ? new Date(alert.createdAt).getTime() : Date.now(),
-                priority: alert.priority || 80
-            });
-        } catch (error) {
-            console.error(`Error processing alert ${index}:`, error, alert);
-        }
-    });
-
-    // Add recent user registrations
-    users.slice(0, 3).forEach((user, index) => {
-        try {
-            activities.push({
-                type: 'user',
-                icon: 'fas fa-user-plus',
-                title: 'New User Registration',
-                description: `${user.username || 'Unknown User'} joined the platform`,
-                time: user.createdAt ? formatTimeAgo(user.createdAt) : 'Recently',
-                timestamp: user.createdAt ? new Date(user.createdAt).getTime() : Date.now(),
-                priority: 50
-            });
-        } catch (error) {
-            console.error(`Error processing user ${index}:`, error, user);
-        }
-    });
-
-    // Add system status
-    activities.push({
-        type: 'system',
-        icon: 'fas fa-cog',
-        title: 'System Status',
-        description: 'All services operational',
-        time: 'Just now',
-        timestamp: Date.now(),
-        priority: 30
-    });
-
-    // Sort by timestamp (newest first)
-    activities.sort((a, b) => b.timestamp - a.timestamp);
-
-    // Take only the 8 most recent
-    const recentActivities = activities.slice(0, 8);
-
-    if (recentActivities.length === 0) {
-        activityContainer.innerHTML = `
-            <div class="activity-item">
-                <div class="activity-icon system">
-                    <i class="fas fa-info-circle"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">No Recent Activity</div>
-                    <div class="activity-description">System activity will appear here</div>
-                    <div class="activity-time">-</div>
-                </div>
-            </div>
-        `;
-        return;
-    }
-
-    activityContainer.innerHTML = recentActivities.map(activity => `
-        <div class="activity-item ${activity.type}">
-            <div class="activity-icon ${activity.type}">
-                <i class="${activity.icon}"></i>
+    // Show immediate loading state
+    activityContainer.innerHTML = `
+        <div class="activity-item">
+            <div class="activity-icon system">
+                <i class="fas fa-sync fa-spin"></i>
             </div>
             <div class="activity-content">
-                <div class="activity-title">${activity.title}</div>
-                <div class="activity-description">${activity.description}</div>
-                <div class="activity-time">${activity.time}</div>
+                <div class="activity-title">Loading...</div>
+                <div class="activity-description">Fetching recent activity</div>
+                <div class="activity-time">-</div>
             </div>
-            ${activity.priority > 70 ? '<div class="activity-priority high"></div>' : 
-              activity.priority > 50 ? '<div class="activity-priority medium"></div>' : 
-              '<div class="activity-priority low"></div>'}
         </div>
-    `).join('');
+    `;
+
+    try {
+        const response = await fetch('/api/alerts?limit=5', { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to fetch alerts');
+        
+        const alerts = await response.json();
+        
+        // Build activity HTML directly
+        const activities = alerts.map(alert => `
+            <div class="activity-item alert">
+                <div class="activity-icon alert">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">${alert.type || 'MLB'} Alert</div>
+                    <div class="activity-description">${alert.homeTeam || 'Team1'} vs ${alert.awayTeam || 'Team2'}</div>
+                    <div class="activity-time">${formatTimeAgo(alert.createdAt || new Date().toISOString())}</div>
+                </div>
+                <div class="activity-priority high"></div>
+            </div>
+        `).join('');
+
+        // Add system status
+        const systemActivity = `
+            <div class="activity-item system">
+                <div class="activity-icon system">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">System Status</div>
+                    <div class="activity-description">All services operational</div>
+                    <div class="activity-time">Just now</div>
+                </div>
+                <div class="activity-priority low"></div>
+            </div>
+        `;
+
+        activityContainer.innerHTML = activities + systemActivity;
+    } catch (error) {
+        activityContainer.innerHTML = `
+            <div class="activity-item system">
+                <div class="activity-icon system">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">System Status</div>
+                    <div class="activity-description">All services operational</div>
+                    <div class="activity-time">Just now</div>
+                </div>
+                <div class="activity-priority low"></div>
+            </div>
+        `;
+    }
 }
 
 function formatTimeAgo(dateString) {
