@@ -53,13 +53,25 @@ export class CFLEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
 
     try {
-      // Generate CFL-specific alerts
-      alerts.push(...await this.generateGameStartAlerts(gameState));
-      alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
-      alerts.push(...await this.generateThreeMinuteWarningAlerts(gameState));
-      alerts.push(...await this.generateRedZoneAlerts(gameState));
-      alerts.push(...await this.generateThirdDownAlerts(gameState));
-      alerts.push(...await this.generateOvertimeAlerts(gameState));
+      // Generate CFL-specific alerts ONLY if they're globally enabled
+      if (await this.isAlertEnabled('CFL_GAME_START')) {
+        alerts.push(...await this.generateGameStartAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('CFL_SECOND_HALF_KICKOFF')) {
+        alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('THREE_MINUTE_WARNING')) {
+        alerts.push(...await this.generateThreeMinuteWarningAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('RED_ZONE')) {
+        alerts.push(...await this.generateRedZoneAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('THIRD_DOWN')) {
+        alerts.push(...await this.generateThirdDownAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('OVERTIME')) {
+        alerts.push(...await this.generateOvertimeAlerts(gameState));
+      }
 
     } catch (error) {
       console.error(`Error generating CFL alerts for game ${gameState.gameId}:`, error);
@@ -72,12 +84,15 @@ export class CFLEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { quarter, timeRemaining } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('CFL_GAME_START'))) {
+      return alerts;
+    }
+
     // Game start - first quarter kickoff
     if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
-      // No filtering - always enabled
-      {
-        const alertKey = `${gameState.gameId}_CFL_GAME_START`;
-        const message = `🏈 CFL GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
+      const alertKey = `${gameState.gameId}_CFL_GAME_START`;
+      const message = `🏈 CFL GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
 
         alerts.push({
           alertKey,
@@ -104,12 +119,15 @@ export class CFLEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { quarter, timeRemaining } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('CFL_SECOND_HALF_KICKOFF'))) {
+      return alerts;
+    }
+
     // Second half kickoff
     if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
-      // No filtering - always enabled
-      {
-        const alertKey = `${gameState.gameId}_CFL_SECOND_HALF_KICKOFF`;
-        const message = `🏈 CFL SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
+      const alertKey = `${gameState.gameId}_CFL_SECOND_HALF_KICKOFF`;
+      const message = `🏈 CFL SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
 
         alerts.push({
           alertKey,
@@ -136,13 +154,16 @@ export class CFLEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { quarter, timeRemaining } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('THREE_MINUTE_WARNING'))) {
+      return alerts;
+    }
+
     // Check if we're in the final 3 minutes (CFL uses 3-minute warning)
     if (this.isWithinThreeMinutes(timeRemaining) && quarter > 0) {
-      // No filtering - always enabled
-      {
-        const isEndOfHalf = quarter === 2 || quarter === 4;
-        const alertKey = `${gameState.gameId}_THREE_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
-        const message = `⏰ THREE MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+      const isEndOfHalf = quarter === 2 || quarter === 4;
+      const alertKey = `${gameState.gameId}_THREE_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
+      const message = `⏰ THREE MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
 
         alerts.push({
           alertKey,
@@ -169,13 +190,16 @@ export class CFLEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { fieldPosition, down, yardsToGo } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('RED_ZONE'))) {
+      return alerts;
+    }
+
     // Red zone detection (within 25 yards of goal line in CFL)
     if (fieldPosition <= 25) {
-      // No filtering - always enabled
-      {
-        const probability = await this.calculateProbability(gameState);
-        const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
-        const message = `🎯 CFL RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line (${probability}% TD chance)`;
+      const probability = await this.calculateProbability(gameState);
+      const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
+      const message = `🎯 CFL RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line (${probability}% TD chance)`;
 
         alerts.push({
           alertKey,
@@ -203,13 +227,16 @@ export class CFLEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { down, yardsToGo, fieldPosition } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('THIRD_DOWN'))) {
+      return alerts;
+    }
+
     // Third down situations (critical in CFL - equivalent to 4th down in NFL)
     if (down === 3) {
-      // No filtering - always enabled
-      {
-        const probability = await this.calculateProbability(gameState);
-        const alertKey = `${gameState.gameId}_THIRD_DOWN_${yardsToGo}_${fieldPosition}`;
-        const message = `🏈 CFL THIRD DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 3rd & ${yardsToGo} at ${fieldPosition} yard line`;
+      const probability = await this.calculateProbability(gameState);
+      const alertKey = `${gameState.gameId}_THIRD_DOWN_${yardsToGo}_${fieldPosition}`;
+      const message = `🏈 CFL THIRD DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 3rd & ${yardsToGo} at ${fieldPosition} yard line`;
 
         alerts.push({
           alertKey,
@@ -237,13 +264,16 @@ export class CFLEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { quarter } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('OVERTIME'))) {
+      return alerts;
+    }
+
     // Overtime detection (period 5+)
     if (quarter >= 5) {
-      // No filtering - always enabled
-      {
-        const overtimePeriod = quarter - 4;
-        const alertKey = `${gameState.gameId}_OVERTIME_${quarter}`;
-        const message = `⚡ CFL OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
+      const overtimePeriod = quarter - 4;
+      const alertKey = `${gameState.gameId}_OVERTIME_${quarter}`;
+      const message = `⚡ CFL OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
 
         alerts.push({
           alertKey,

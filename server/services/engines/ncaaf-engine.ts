@@ -54,13 +54,25 @@ export class NCAAFEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
 
     try {
-      // Generate NCAAF-specific alerts
-      alerts.push(...await this.generateGameStartAlerts(gameState));
-      alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
-      alerts.push(...await this.generateTwoMinuteWarningAlerts(gameState));
-      alerts.push(...await this.generateRedZoneAlerts(gameState));
-      alerts.push(...await this.generateFourthDownAlerts(gameState));
-      alerts.push(...await this.generateOvertimeAlerts(gameState));
+      // Generate NCAAF-specific alerts ONLY if they're globally enabled
+      if (await this.isAlertEnabled('NCAAF_GAME_START')) {
+        alerts.push(...await this.generateGameStartAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('NCAAF_SECOND_HALF_KICKOFF')) {
+        alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('TWO_MINUTE_WARNING')) {
+        alerts.push(...await this.generateTwoMinuteWarningAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('RED_ZONE')) {
+        alerts.push(...await this.generateRedZoneAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('FOURTH_DOWN')) {
+        alerts.push(...await this.generateFourthDownAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('OVERTIME')) {
+        alerts.push(...await this.generateOvertimeAlerts(gameState));
+      }
 
     } catch (error) {
       console.error(`Error generating NCAAF alerts for game ${gameState.gameId}:`, error);
@@ -73,13 +85,16 @@ export class NCAAFEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { quarter, timeRemaining } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('TWO_MINUTE_WARNING'))) {
+      return alerts;
+    }
+
     // Check if we're in the final 2 minutes of any quarter
     if (this.isWithinTwoMinutes(timeRemaining) && quarter > 0) {
-      // No filtering - always enabled
-      {
-        const isEndOfHalf = quarter === 2 || quarter === 4;
-        const alertKey = `${gameState.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
-        const message = `⏰ TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+      const isEndOfHalf = quarter === 2 || quarter === 4;
+      const alertKey = `${gameState.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
+      const message = `⏰ TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
 
         alerts.push({
           alertKey,
@@ -106,13 +121,16 @@ export class NCAAFEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { fieldPosition, down, yardsToGo } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('RED_ZONE'))) {
+      return alerts;
+    }
+
     // Red zone detection (within 20 yards of goal line)
     if (fieldPosition <= 20) {
-      // No filtering - always enabled
-      {
-        const probability = await this.calculateProbability(gameState);
-        const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
-        const message = `🎯 RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line (${probability}% TD chance)`;
+      const probability = await this.calculateProbability(gameState);
+      const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
+      const message = `🎯 RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line (${probability}% TD chance)`;
 
         alerts.push({
           alertKey,
@@ -140,13 +158,16 @@ export class NCAAFEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { down, yardsToGo, fieldPosition } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('FOURTH_DOWN'))) {
+      return alerts;
+    }
+
     // Fourth down situations
     if (down === 4) {
-      // No filtering - always enabled
-      {
-        const probability = await this.calculateProbability(gameState);
-        const alertKey = `${gameState.gameId}_FOURTH_DOWN_${yardsToGo}_${fieldPosition}`;
-        const message = `🏈 FOURTH DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 4th & ${yardsToGo} at ${fieldPosition} yard line`;
+      const probability = await this.calculateProbability(gameState);
+      const alertKey = `${gameState.gameId}_FOURTH_DOWN_${yardsToGo}_${fieldPosition}`;
+      const message = `🏈 FOURTH DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 4th & ${yardsToGo} at ${fieldPosition} yard line`;
 
         alerts.push({
           alertKey,
@@ -174,12 +195,15 @@ export class NCAAFEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { quarter, timeRemaining } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('NCAAF_GAME_START'))) {
+      return alerts;
+    }
+
     // Game start - first quarter kickoff
     if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
-      // No filtering - always enabled
-      {
-        const alertKey = `${gameState.gameId}_NCAAF_GAME_START`;
-        const message = `🏈 NCAAF GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
+      const alertKey = `${gameState.gameId}_NCAAF_GAME_START`;
+      const message = `🏈 NCAAF GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
 
         alerts.push({
           alertKey,
@@ -206,12 +230,15 @@ export class NCAAFEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { quarter, timeRemaining } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('NCAAF_SECOND_HALF_KICKOFF'))) {
+      return alerts;
+    }
+
     // Second half kickoff
     if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
-      // No filtering - always enabled
-      {
-        const alertKey = `${gameState.gameId}_NCAAF_SECOND_HALF_KICKOFF`;
-        const message = `🏈 NCAAF SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
+      const alertKey = `${gameState.gameId}_NCAAF_SECOND_HALF_KICKOFF`;
+      const message = `🏈 NCAAF SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
 
         alerts.push({
           alertKey,
@@ -238,13 +265,16 @@ export class NCAAFEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
     const { quarter } = gameState;
 
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('OVERTIME'))) {
+      return alerts;
+    }
+
     // Overtime detection (period 5+)
     if (quarter >= 5) {
-      // No filtering - always enabled
-      {
-        const overtimePeriod = quarter - 4;
-        const alertKey = `${gameState.gameId}_OVERTIME_${quarter}`;
-        const message = `⚡ NCAAF OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
+      const overtimePeriod = quarter - 4;
+      const alertKey = `${gameState.gameId}_OVERTIME_${quarter}`;
+      const message = `⚡ NCAAF OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
 
         alerts.push({
           alertKey,
