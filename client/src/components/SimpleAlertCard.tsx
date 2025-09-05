@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
@@ -32,6 +32,120 @@ function getAlertColor(priority: number): string {
   if (priority >= 80) return 'bg-orange-400';
   if (priority >= 70) return 'bg-yellow-400';
   return 'bg-blue-400';
+}
+
+interface SimpleAlertCardProps {
+  alertData: any;
+  onDelete?: (alertId: string) => void;
+  className?: string;
+}
+
+export function SimpleAlertCard({ alertData, onDelete, className }: SimpleAlertCardProps) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Weather data query for alert cards
+  const { data: weatherData } = useQuery({
+    queryKey: ['weather', alertData?.homeTeam || ''],
+    queryFn: async () => {
+      if (!alertData?.homeTeam) return null;
+      const teamName = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam.name;
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(teamName)}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!alertData?.homeTeam && alertData?.sport === 'MLB',
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchInterval: 60 * 1000, // Refetch every minute
+    retry: 1
+  });
+
+  const handleDeleteAlert = async () => {
+    if (!onDelete) return;
+    
+    try {
+      await apiRequest("DELETE", `/api/alerts/${alertData.id}`);
+      onDelete(alertData.id);
+      toast({
+        title: "Alert deleted",
+        description: "The alert has been removed from your feed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error", 
+        description: error?.message || "Failed to delete alert. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Card className={`${className} mb-4`}>
+      <div className="p-4">
+        {/* Alert Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className={`w-3 h-3 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
+            <Badge variant="outline" className="px-2 py-1 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+              {alertData.sport}
+            </Badge>
+            <span className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+              {(alertData.type || '').replace(/_/g, ' ')}
+            </span>
+          </div>
+          <div className="flex items-center space-x-3 text-xs">
+            <span className="text-emerald-400 font-bold">{alertData.confidence}%</span>
+            <span className="text-slate-400 font-medium">{formatTime(alertData.createdAt || '')}</span>
+          </div>
+        </div>
+
+        {/* Game Card with Weather */}
+        <div className="mb-4">
+          <GameCardTemplate
+            gameId={alertData.id}
+            homeTeam={{
+              name: typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home Team',
+              score: alertData.homeScore || 0
+            }}
+            awayTeam={{
+              name: typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away Team',
+              score: alertData.awayScore || 0
+            }}
+            sport={alertData.sport}
+            status="live"
+            weather={weatherData}
+            showWeather={true}
+            showVenue={false}
+            size="md"
+          />
+        </div>
+
+        {/* Alert Message */}
+        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+          <p className="text-slate-100 text-sm leading-relaxed">
+            {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
+          </p>
+        </div>
+
+        {/* Delete Button */}
+        {onDelete && (
+          <div className="flex justify-end mt-3">
+            <Button
+              onClick={handleDeleteAlert}
+              variant="ghost"
+              size="sm"
+              className="text-red-400 hover:bg-red-500/20"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
 }
 
 interface SimpleAlert {

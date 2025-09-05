@@ -53,6 +53,8 @@ const STADIUMS: Record<string, StadiumCoordinates> = {
 
 export class WeatherService {
   private apiKey: string;
+  private weatherCache: Map<string, { data: WeatherData; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 60 * 1000; // 1 minute cache
 
   constructor() {
     this.apiKey = process.env.OPENWEATHERMAP_API_KEY || '';
@@ -63,15 +65,27 @@ export class WeatherService {
   }
 
   async getWeatherForTeam(teamName: string): Promise<WeatherData> {
+    const now = Date.now();
+    const cached = this.weatherCache.get(teamName);
+    
+    // Return cached data if it's less than 1 minute old
+    if (cached && (now - cached.timestamp) < this.CACHE_DURATION) {
+      return cached.data;
+    }
+
     const stadium = STADIUMS[teamName];
     
     if (!stadium) {
       console.warn(`🌤️ No stadium coordinates found for ${teamName}, using fallback`);
-      return this.getFallbackWeather();
+      const fallbackData = this.getFallbackWeather();
+      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
+      return fallbackData;
     }
 
     if (!this.apiKey) {
-      return this.getFallbackWeather();
+      const fallbackData = this.getFallbackWeather();
+      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
+      return fallbackData;
     }
 
     try {
@@ -85,7 +99,7 @@ export class WeatherService {
 
       const data = await response.json();
       
-      return {
+      const weatherData = {
         temperature: Math.round(data.main.temp),
         condition: data.weather[0].main,
         windSpeed: Math.round(data.wind?.speed || 0),
@@ -94,9 +108,16 @@ export class WeatherService {
         pressure: data.main.pressure,
         timestamp: new Date().toISOString()
       };
+
+      // Cache the fresh data
+      this.weatherCache.set(teamName, { data: weatherData, timestamp: now });
+      
+      return weatherData;
     } catch (error) {
       console.error(`🌤️ Weather API error for ${teamName}:`, error);
-      return this.getFallbackWeather();
+      const fallbackData = this.getFallbackWeather();
+      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
+      return fallbackData;
     }
   }
 

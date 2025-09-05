@@ -129,7 +129,8 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
       if (!response.ok) throw new Error('Weather fetch failed');
       return response.json();
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchInterval: 60 * 1000, // Refetch every minute
     retry: 1
   });
 
