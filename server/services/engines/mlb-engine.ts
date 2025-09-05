@@ -53,13 +53,31 @@ export class MLBEngine extends BaseSportEngine {
     const alerts: AlertResult[] = [];
 
     try {
-      // Generate MLB-specific alerts
-      alerts.push(...await this.generateGameStartAlerts(gameState));
-      alerts.push(...await this.generateInningAlerts(gameState));
-      alerts.push(...await this.generateRunnersInScoringPositionAlerts(gameState));
-      alerts.push(...await this.generateBasesLoadedAlerts(gameState));
-      alerts.push(...await this.generateCloseGameAlerts(gameState));
-      alerts.push(...await this.generateHomeRunAlerts(gameState));
+      // Generate MLB-specific alerts ONLY if they're globally enabled
+      if (await this.isAlertEnabled('MLB_GAME_START')) {
+        alerts.push(...await this.generateGameStartAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('MLB_SEVENTH_INNING') || await this.isAlertEnabled('MLB_NINTH_INNING')) {
+        alerts.push(...await this.generateInningAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('RISP')) {
+        alerts.push(...await this.generateRunnersInScoringPositionAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('BASES_LOADED')) {
+        alerts.push(...await this.generateBasesLoadedAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('CLOSE_GAME')) {
+        alerts.push(...await this.generateCloseGameAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('HOME_RUN')) {
+        alerts.push(...await this.generateHomeRunAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('FULL_COUNT')) {
+        alerts.push(...await this.generateFullCountAlerts(gameState));
+      }
+      if (await this.isAlertEnabled('HOT_HITTER')) {
+        alerts.push(...await this.generateHotHitterAlerts(gameState));
+      }
 
     } catch (error) {
       console.error(`Error generating MLB alerts for game ${gameState.gameId}:`, error);
@@ -71,6 +89,11 @@ export class MLBEngine extends BaseSportEngine {
   private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
     const { inning, inningState } = gameState;
+
+    // Double-check global settings before generating any alerts
+    if (!(await this.isAlertEnabled('MLB_GAME_START'))) {
+      return alerts;
+    }
 
     // Game start - first inning, top half
     if (inning === 1 && inningState === 'Top') {
@@ -245,6 +268,11 @@ export class MLBEngine extends BaseSportEngine {
   private async generateHomeRunAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
 
+    // Double-check global settings
+    if (!(await this.isAlertEnabled('HOME_RUN'))) {
+      return alerts;
+    }
+
     // This would be triggered when a home run occurs
     // For now, this is a placeholder - in a real implementation,
     // this would be triggered by actual game events
@@ -265,6 +293,74 @@ export class MLBEngine extends BaseSportEngine {
           homeRun: true
         },
         priority: 100
+      });
+    }
+
+    return alerts;
+  }
+
+  private async generateFullCountAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+
+    // Double-check global settings first
+    if (!(await this.isAlertEnabled('FULL_COUNT'))) {
+      return alerts;
+    }
+
+    // Check for 3-2 count
+    if (gameState.balls === 3 && gameState.strikes === 2) {
+      const alertKey = `${gameState.gameId}_FULL_COUNT_${gameState.inning}_${gameState.outs}`;
+      const message = `⚾ FULL COUNT! 3-2 count, ${gameState.outs} out${gameState.outs !== 1 ? 's' : ''} - Maximum pressure!`;
+
+      alerts.push({
+        alertKey,
+        type: 'FULL_COUNT',
+        message,
+        context: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          inning: gameState.inning,
+          outs: gameState.outs,
+          balls: gameState.balls,
+          strikes: gameState.strikes,
+          fullCount: true
+        },
+        priority: 75
+      });
+    }
+
+    return alerts;
+  }
+
+  private async generateHotHitterAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+
+    // Double-check global settings first
+    if (!(await this.isAlertEnabled('HOT_HITTER'))) {
+      return alerts;
+    }
+
+    // Check if batter already has home run today
+    if (gameState.batter && gameState.batter.homeRunsToday > 0) {
+      const alertKey = `${gameState.gameId}_HOT_HITTER_${gameState.batter.id}_${gameState.inning}`;
+      const message = `⚾ HOT HITTER! ${gameState.batter.name} (${gameState.batter.homeRunsToday} HR today) at bat`;
+
+      alerts.push({
+        alertKey,
+        type: 'HOT_HITTER',
+        message,
+        context: {
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          inning: gameState.inning,
+          batter: gameState.batter,
+          hotHitter: true
+        },
+        priority: 70
       });
     }
 
