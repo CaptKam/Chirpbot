@@ -643,7 +643,7 @@ async function toggleCategory(category) {
 
             // Re-render configuration
             renderAlertConfiguration();
-            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} and applied to all users`, 'success');
+            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} globally`, 'success');
         } else {
             showNotification('Failed to update category settings', 'error');
         }
@@ -675,7 +675,7 @@ async function toggleGlobalAlert(alertKey) {
             // Automatically apply this change to all users
             await applyGlobalSettingsToAllUsers();
 
-            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally and applied to all users`, 'success');
+            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally`, 'success');
         } else {
             toggle.checked = !isEnabled;
             showNotification('Failed to update alert setting', 'error');
