@@ -53,6 +53,7 @@ interface GameCardTemplateProps {
   
   // Display options
   size?: 'sm' | 'md' | 'lg';
+  children?: React.ReactNode;
   showWeather?: boolean;
   showVenue?: boolean;
   showEnhancedMLB?: boolean;
@@ -234,7 +235,7 @@ export function GameCardTemplate({
               sport={sport}
               size={logoSize}
               className="shadow-sm"
-              teamColor={awayTeam.logoColor}
+              teamColor={undefined}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
               {removeCity(awayTeam.name)}
@@ -302,7 +303,7 @@ export function GameCardTemplate({
               sport={sport}
               size={logoSize}
               className="shadow-sm"
-              teamColor={homeTeam.logoColor}
+              teamColor={undefined}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
               {removeCity(homeTeam.name)}
@@ -353,6 +354,9 @@ export function GameCardTemplate({
           )}
         </div>
       </div>
+      
+      {/* Render children if provided */}
+      {children}
     </Card>
   );
 }
