@@ -86,9 +86,8 @@ export class AIContextController {
   async enhanceAlertWithFullControl(context: AlertContext): Promise<AIEnhancedAlert> {
     const startTime = Date.now();
 
-    if (!this.basicAI.configured) {
-      return this.getFallbackAlert(context);
-    }
+    // AI enhancements disabled - always return fallback
+    return this.getFallbackAlert(context);
 
     try {
       console.log(`🤖 AI Context Controller: Taking full control of ${context.alertType} alert`);

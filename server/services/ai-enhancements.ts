@@ -37,9 +37,8 @@ export class AIEnhancementService {
     gameContext: GameContext,
     userPreferences: AIEnhancementConfig
   ): Promise<string> {
-    let enhancedMessage = originalMessage;
-
-    try {
+    // AI enhancements disabled - return original message
+    return originalMessage;
       // 1. AI-Enhanced Alert Messages
       if (userPreferences.AI_ENHANCED_MESSAGES) {
         const contextInsight = await this.generateContextInsight(alertType, gameContext);
