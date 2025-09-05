@@ -9,6 +9,40 @@ interface TeamLogoProps {
   teamColor?: string;
 }
 
+// Team colors mapping - primary colors for each team
+const teamColors: Record<string, string> = {
+  // MLB Teams
+  'LAD': '#005A9C', 'SF': '#FD5A1E', 'NYY': '#132448', 'BOS': '#BD3039',
+  'CHC': '#0E3386', 'MIL': '#FFC52D', 'DET': '#0C2340', 'HOU': '#002D62',
+  'PIT': '#FDB827', 'TOR': '#134A8E', 'MIA': '#00A3E0', 'STL': '#C41E3A',
+  'PHI': '#E81828', 'SEA': '#0C2C56', 'BAL': '#DF4601', 'ATL': '#CE1141',
+  'CWS': '#27251F', 'KC': '#004687', 'TEX': '#C0111F', 'COL': '#33006F',
+  'LAA': '#BA0021', 'CIN': '#C6011F', 'ARI': '#A71930', 'CLE': '#E31937',
+  'SD': '#2F241D', 'NYM': '#002D72', 'WSH': '#AB0003', 'OAK': '#003831',
+  'MIN': '#002B5C', 'TB': '#092C5C',
+
+  // NFL Teams
+  'KC': '#E31837', 'BUF': '#00338D', 'NYJ': '#125740', 'NE': '#002244',
+  'MIA': '#008E97', 'PIT': '#FFB612', 'BAL': '#241773', 'CIN': '#FB4F14',
+  'CLE': '#311D00', 'HOU': '#03202F', 'IND': '#002C5F', 'JAX': '#006778',
+  'TEN': '#0C2340', 'DEN': '#FB4F14', 'LV': '#000000', 'LAC': '#0080C6',
+  'DAL': '#003594', 'PHI': '#004C54', 'ATL': '#A71930', 'CHI': '#0B162A',
+  'MIN': '#4F2683',
+
+  // NBA Teams
+  'LAL': '#552583', 'CEL': '#007A33', 'GSW': '#1D428A', 'CHI': '#CE1141',
+  'MIA': '#98002E', 'NYK': '#006BB6', 'BKN': '#000000', 'PHI': '#006BB6',
+
+  // NHL Teams
+  'LAK': '#111111', 'ANA': '#F47A38', 'VGK': '#B4975A', 'COL': '#6F263D',
+  'DAL': '#006847', 'NSH': '#FFB81C',
+
+  // WNBA Teams
+  'ATL': '#E03A3E', 'CHI': '#418FDE', 'CON': '#FF8200', 'DAL': '#C4D600',
+  'IND': '#FFD100', 'LAS': '#A6192E', 'MIN': '#23458A', 'NY': '#86CEBC',
+  'PHX': '#CB6015', 'SEA': '#2C5234', 'WAS': '#E03A3E', 'GS': '#FDB927'
+};
+
 // Team name to abbreviation mapping for when API doesn't provide abbreviations
 const teamNameToAbbr: Record<string, string> = {
   // MLB Teams
@@ -330,17 +364,19 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
   
 
-  // Final fallback with team colors
-  const fallbackStyle = teamColor 
+  // Final fallback with team colors - use provided color or lookup by abbreviation
+  const finalTeamColor = teamColor || (teamAbbr ? teamColors[teamAbbr] : null);
+  
+  const fallbackStyle = finalTeamColor 
     ? { 
-        background: `linear-gradient(135deg, ${teamColor}, ${teamColor}dd)`,
+        background: `linear-gradient(135deg, ${finalTeamColor}, ${finalTeamColor}dd)`,
         borderColor: 'white'
       }
     : {};
   
   return (
     <div 
-      className={`${sizeClasses[size]} ${className} rounded-full ${teamColor ? '' : 'bg-gradient-to-br from-gray-500 to-gray-600'} border-2 border-white shadow-sm flex items-center justify-center`}
+      className={`${sizeClasses[size]} ${className} rounded-full ${finalTeamColor ? '' : 'bg-gradient-to-br from-gray-500 to-gray-600'} border-2 border-white shadow-sm flex items-center justify-center`}
       style={fallbackStyle}
     >
       <span className="text-white font-black text-xs">{teamAbbr || (teamName || '').slice(0, 3).toUpperCase()}</span>
