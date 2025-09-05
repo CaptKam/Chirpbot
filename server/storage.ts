@@ -50,6 +50,28 @@ export const storage = {
     return result[0];
   },
 
+  async deleteUser(userId: string) {
+    try {
+      console.log(`🗑️ Deleting user ${userId} and all related data...`);
+      
+      // Delete related data first (foreign key constraints)
+      await db.delete(userAlertPreferences).where(eq(userAlertPreferences.userId, userId));
+      console.log(`✅ Deleted alert preferences for user ${userId}`);
+      
+      await db.delete(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
+      console.log(`✅ Deleted monitored teams for user ${userId}`);
+      
+      // Delete the user
+      const result = await db.delete(users).where(eq(users.id, userId));
+      console.log(`✅ Deleted user ${userId} from users table`);
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`❌ Error deleting user ${userId}:`, error);
+      throw error;
+    }
+  },
+
 
   // Team operations
   async getAllTeams() {

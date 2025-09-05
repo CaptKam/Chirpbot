@@ -903,6 +903,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUser = req.user; // from requireAdmin middleware
+      
+      console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
+      
+      // Prevent self-deletion
+      if (userId === currentUser.id) {
+        return res.status(400).json({ 
+          message: 'Cannot delete your own account' 
+        });
+      }
+      
+      // Check if user exists
+      const userToDelete = await storage.getUserById(userId);
+      if (!userToDelete) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Prevent deleting the last admin
+      if (userToDelete.role === 'admin') {
+        const allAdmins = await storage.getUsersByRole('admin');
+        if (allAdmins.length <= 1) {
+          return res.status(400).json({ 
+            message: 'Cannot delete the last admin user' 
+          });
+        }
+      }
+      
+      // Delete user and all related data
+      const deleted = await storage.deleteUser(userId);
+      
+      if (deleted) {
+        console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser.username}`);
+        res.json({ 
+          message: `User ${userToDelete.username} deleted successfully`,
+          deletedUser: {
+            id: userToDelete.id,
+            username: userToDelete.username,
+            email: userToDelete.email,
+            role: userToDelete.role
+          }
+        });
+      } else {
+        res.status(500).json({ message: 'Failed to delete user' });
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: 'Failed to delete user' });
+    }
+  });
+
   app.get('/api/admin/users/:userId/alert-preferences', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;

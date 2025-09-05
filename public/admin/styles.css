@@ -1053,8 +1053,16 @@ body {
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-.action-btn.delete:hover {
+.action-btn.delete:hover:not(.disabled) {
     background: rgba(239, 68, 68, 0.2);
+}
+
+.action-btn.disabled {
+    background: rgba(107, 114, 128, 0.1) !important;
+    color: #9ca3af !important;
+    border: 1px solid rgba(107, 114, 128, 0.2) !important;
+    cursor: not-allowed !important;
+    opacity: 0.5;
 }
 
 /* Loading States */

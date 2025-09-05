@@ -182,6 +182,13 @@ function updateUsersTable() {
                         <i class="fas fa-edit"></i>
                         Edit
                     </button>
+                    <button class="action-btn delete ${getUserDeleteDisabled(user) ? 'disabled' : ''}" 
+                            onclick="deleteUser('${user.id}', '${user.username || 'Unknown'}', '${user.role || 'user'}')"
+                            ${getUserDeleteDisabled(user) ? 'disabled' : ''}
+                            title="${getDeleteTooltip(user)}">
+                        <i class="fas fa-trash"></i>
+                        Delete
+                    </button>
                 </div>
             </td>
         </tr>
@@ -227,6 +234,100 @@ function editUser(userId) {
 
     // For now, just show user details
     alert(`User Details:\n\nUsername: ${user.username}\nEmail: ${user.email}\nRole: ${user.role}\nCreated: ${new Date(user.createdAt).toLocaleDateString()}`);
+}
+
+// Helper functions for delete button state
+function getUserDeleteDisabled(user) {
+    // Get current admin user from localStorage
+    const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    
+    // Can't delete yourself
+    if (user.id === currentAdminUser.id) return true;
+    
+    // Can't delete the last admin
+    if (user.role === 'admin') {
+        const adminCount = currentUsers.filter(u => u.role === 'admin').length;
+        if (adminCount <= 1) return true;
+    }
+    
+    return false;
+}
+
+function getDeleteTooltip(user) {
+    const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    
+    if (user.id === currentAdminUser.id) {
+        return "Cannot delete your own account";
+    }
+    
+    if (user.role === 'admin') {
+        const adminCount = currentUsers.filter(u => u.role === 'admin').length;
+        if (adminCount <= 1) {
+            return "Cannot delete the last admin user";
+        }
+    }
+    
+    return "Delete this user and all associated data";
+}
+
+async function deleteUser(userId, username, role) {
+    // Double confirmation dialog
+    const confirmed = confirm(
+        `⚠️ DELETE USER CONFIRMATION\n\n` +
+        `Are you sure you want to delete user "${username}"?\n\n` +
+        `This action CANNOT be undone and will permanently remove:\n` +
+        `• User account and login access\n` +
+        `• All alert preferences\n` +
+        `• All monitored teams\n` +
+        `• All associated user data\n\n` +
+        `Type "DELETE" to confirm (case sensitive)`
+    );
+    
+    if (!confirmed) return;
+    
+    // Second confirmation for admin users
+    if (role === 'admin') {
+        const adminConfirmed = confirm(
+            `🚨 ADMIN DELETION WARNING\n\n` +
+            `You are about to delete an ADMIN user!\n\n` +
+            `This will remove all admin privileges for "${username}".\n\n` +
+            `Are you absolutely certain you want to proceed?`
+        );
+        
+        if (!adminConfirmed) return;
+    }
+    
+    try {
+        showNotification('Deleting user...', 'info');
+        
+        const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            
+            // Remove user from local data
+            const userIndex = currentUsers.findIndex(u => u.id === userId);
+            if (userIndex !== -1) {
+                currentUsers.splice(userIndex, 1);
+                updateUsersTable();
+            }
+            
+            // Reload stats to reflect changes
+            await loadStats();
+            
+            showNotification(`✅ User "${username}" deleted successfully`, 'success');
+            console.log(`🗑️ User deleted:`, result.deletedUser);
+        } else {
+            const error = await response.json();
+            showNotification(`❌ ${error.message}`, 'error');
+        }
+    } catch (error) {
+        console.error('Delete user error:', error);
+        showNotification('❌ Failed to delete user', 'error');
+    }
 }
 
 function filterUsers() {
@@ -293,6 +394,13 @@ function filterUsers() {
                     <button class="action-btn edit" onclick="editUser('${user.id}')">
                         <i class="fas fa-edit"></i>
                         Edit
+                    </button>
+                    <button class="action-btn delete ${getUserDeleteDisabled(user) ? 'disabled' : ''}" 
+                            onclick="deleteUser('${user.id}', '${user.username || 'Unknown'}', '${user.role || 'user'}')"
+                            ${getUserDeleteDisabled(user) ? 'disabled' : ''}
+                            title="${getDeleteTooltip(user)}">
+                        <i class="fas fa-trash"></i>
+                        Delete
                     </button>
                 </div>
             </td>
