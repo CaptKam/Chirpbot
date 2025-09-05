@@ -8,6 +8,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
+import { BaseballDiamond, WeatherDisplay } from './baseball-diamond';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -361,8 +362,20 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             showVenue={false}
             showEnhancedMLB={false}
             className="bg-white/5 backdrop-blur-sm border-white/10"
-          />
-          
+          >
+            {/* Weather for MLB games */}
+            {alert.sport === 'MLB' && weatherData && (
+              <WeatherDisplay 
+                windSpeed={weatherData.windSpeed}
+                windDirection={getCardinalDirection(weatherData.windDirection)}
+                windGust={weatherData.windGust}
+                temperature={weatherData.temperature}
+                stadiumWindContext={weatherData.stadiumWindContext}
+                size="sm"
+              />
+            )}
+          </GameCardTemplate>
+
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
           <div className="p-4 pt-0">
 
@@ -384,7 +397,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                   <span className="text-emerald-400 font-bold">{alert.priority}</span>
                 </div>
               </div>
-              
+
               <p className="text-slate-100 text-sm font-medium leading-relaxed">
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').trim()}
               </p>

@@ -318,7 +318,9 @@ export function GameCardTemplate({
           <WeatherDisplay 
             windSpeed={weatherData.windSpeed}
             windDirection={getCardinalDirection(weatherData.windDirection)}
+            windGust={weatherData.windGust}
             temperature={weatherData.temperature}
+            stadiumWindContext={weatherData.stadiumWindContext}
             size="sm"
           />
         )}
