@@ -229,8 +229,8 @@ export class MLBEngine extends BaseSportEngine {
     }
     // RISP (Runner In Scoring Position) - 2nd or 3rd base
     else if ((hasSecond || hasThird) && !hasFirst) {
-      // No filtering - always enabled
-      {
+      // Check if RISP alerts are enabled
+      if (await this.isAlertEnabled('RISP')) {
         const position = hasThird ? '3rd base' : '2nd base';
         const alertKey = `${gameState.gameId}_RISP_${position}_${inning}_${outs}`;
         const outsText = outs === 1 ? '1 out' : `${outs} outs`;
@@ -277,8 +277,8 @@ export class MLBEngine extends BaseSportEngine {
 
     // Late inning pressure situations (MLB-specific: 8th inning or later)
     if (inning >= 8 && scoreDiff <= 2) {
-      // No filtering - always enabled
-      {
+      // Check if LATE_PRESSURE alerts are enabled
+      if (await this.isAlertEnabled('LATE_PRESSURE')) {
         const alertKey = `${gameState.gameId}_LATE_PRESSURE_${inning}`;
         const situation = isTopInning ? 'top' : 'bottom';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 

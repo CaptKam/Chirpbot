@@ -69,8 +69,8 @@ export class WNBAEngine extends BaseSportEngine {
 
     // Fourth quarter with less than 5 minutes remaining and close score
     if (quarter === 4 && this.isWithinMinutes(timeRemaining, 5) && scoreDiff <= 10) {
-      // No filtering - always enabled
-      {
+      // Check if WNBA_FOURTH_QUARTER alerts are enabled
+      if (await this.isAlertEnabled('WNBA_FOURTH_QUARTER')) {
         const alertKey = `${gameState.gameId}_WNBA_FOURTH_QUARTER_${timeRemaining.replace(/[:\s]/g, '')}`;
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
                             gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
@@ -107,8 +107,8 @@ export class WNBAEngine extends BaseSportEngine {
 
     // Close games in 3rd or 4th quarter
     if ((quarter >= 3) && scoreDiff <= 5 && (gameState.homeScore > 0 || gameState.awayScore > 0)) {
-      // No filtering - always enabled
-      {
+      // Check if WNBA_CLOSE_GAME alerts are enabled
+      if (await this.isAlertEnabled('WNBA_CLOSE_GAME')) {
         const alertKey = `${gameState.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
                             gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
@@ -143,8 +143,8 @@ export class WNBAEngine extends BaseSportEngine {
 
     // Overtime detection (period 5+)
     if (quarter >= 5) {
-      // No filtering - always enabled
-      {
+      // Check if WNBA_OVERTIME alerts are enabled
+      if (await this.isAlertEnabled('WNBA_OVERTIME')) {
         const overtimePeriod = quarter - 4;
         const alertKey = `${gameState.gameId}_WNBA_OVERTIME_${quarter}`;
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
@@ -181,8 +181,8 @@ export class WNBAEngine extends BaseSportEngine {
 
     // High-scoring game (over 160 combined points)
     if (totalScore >= 160 && quarter >= 3) {
-      // No filtering - always enabled
-      {
+      // Check if WNBA_HIGH_SCORING alerts are enabled
+      if (await this.isAlertEnabled('WNBA_HIGH_SCORING')) {
         const alertKey = `${gameState.gameId}_WNBA_HIGH_SCORING`;
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
                             gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
