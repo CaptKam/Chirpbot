@@ -260,54 +260,7 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
   return null;
 };
 
-// Generic sport-specific icon generators
-const getSportIcon = (sport: string, teamAbbr: string, size: string, className: string) => {
-  const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-12 h-12',
-    lg: 'w-16 h-16'
-  };
 
-  switch (sport) {
-    case 'NCAAF':
-      // Football helmet for NCAAF
-      return (
-        <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-          <ellipse cx="50" cy="55" rx="35" ry="40" fill="#002D62" stroke="#FFFFFF" strokeWidth="2"/>
-          <rect x="15" y="45" width="70" height="4" fill="#FFFFFF"/>
-          <text x="50" y="60" textAnchor="middle" className="fill-white font-black text-sm font-sans">{teamAbbr}</text>
-        </svg>
-      );
-
-    case 'NBA':
-      // Basketball for NBA
-      return (
-        <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-          <circle cx="50" cy="50" r="45" fill="#FF6B00" stroke="#000000" strokeWidth="2"/>
-          <path d="M 50 5 Q 75 50 50 95" stroke="#000000" strokeWidth="1" fill="none"/>
-          <path d="M 5 50 Q 50 25 95 50" stroke="#000000" strokeWidth="1" fill="none"/>
-          <text x="50" y="55" textAnchor="middle" className="fill-white font-black text-xs font-sans">{teamAbbr}</text>
-        </svg>
-      );
-
-    case 'NHL':
-      // Hockey puck for NHL
-      return (
-        <svg viewBox="0 0 100 100" className={`${sizeClasses[size]} ${className} rounded-full`}>
-          <ellipse cx="50" cy="50" rx="45" ry="20" fill="#000000" stroke="#C0C0C0" strokeWidth="2"/>
-          <text x="50" y="55" textAnchor="middle" className="fill-white font-black text-sm font-sans">{teamAbbr}</text>
-        </svg>
-      );
-
-    default:
-      // Generic fallback
-      return (
-        <div className={`${sizeClasses[size]} ${className} rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white shadow-sm flex items-center justify-center`}>
-          <span className="text-white font-black text-xs">{teamAbbr}</span>
-        </div>
-      );
-  }
-};
 
 export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className = '' }: TeamLogoProps) {
   const sizeClasses = {
@@ -354,10 +307,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     }
   }
 
-  // For sports without ESPN logos, use sport-specific icons
-  if (sport && ['NCAAF'].includes(sport)) {
-    return getSportIcon(sport, teamAbbr || (teamName || '').slice(0, 3).toUpperCase(), size, className);
-  }
+  
 
   // Try to get the official team logo URL first (but skip WNBA images)
   const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport) : null;
@@ -377,10 +327,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
     );
   }
 
-  // Generic fallback with sport-specific styling if available
-  if (sport && ['NBA', 'NHL'].includes(sport)) {
-    return getSportIcon(sport, teamAbbr || (teamName || '').slice(0, 3).toUpperCase(), size, className);
-  }
+  
 
   // Final fallback
   return (
