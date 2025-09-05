@@ -831,15 +831,15 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         </div>
                       )}
 
-                      {/* Baseball Diamond - Enhanced */}
-                      {(alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) ? (
+                      {/* Baseball Diamond - Always show for MLB alerts */}
+                      {alertData.sport === 'MLB' && (
                         <div className="text-center">
                           <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">BASES</div>
                           <div className="relative w-10 h-10 mx-auto">
                             <div className="absolute inset-0 rotate-45 border-2 border-slate-600 bg-slate-800/30 rounded-lg shadow-sm"></div>
                             <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
                             <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
-                            <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>0/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
                             <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-slate-600 border-2 border-slate-500"></div>
                           </div>
                         </div>

@@ -628,7 +628,7 @@ export default function Calendar() {
                         size="lg"
                         showWeather={true}
                         showVenue={true}
-                        showEnhancedMLB={false} // Don't show baseball diamond for tomorrow's games
+                        showEnhancedMLB={game.status === 'live'} // Don't show baseball diamond for tomorrow's games
                       />
                     </div>
                   );
