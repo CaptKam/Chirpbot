@@ -379,25 +379,8 @@ export const storage = {
       return defaultSettings;
     } catch (error) {
       console.error('Error getting global alert settings:', error);
-      // Return all enabled defaults on error
-      return {
-        'RISP': true, 'BASES_LOADED': true, 'RUNNERS_1ST_2ND': true, 'CLOSE_GAME': true,
-        'CLOSE_GAME_LIVE': true, 'LATE_PRESSURE': true, 'HOME_RUN_LIVE': true,
-        'HIGH_SCORING': true, 'SHUTOUT': true, 'BLOWOUT': true, 'FULL_COUNT': true, 'STRIKEOUT': true,
-        'POWER_HITTER': true, 'HOT_HITTER': true,
-        'AI_ENHANCED_MESSAGES': true,
-        'AI_PREDICTIVE_AT_BAT': true,
-        'AI_SCORING_PROBABILITY': true,
-        'AI_SITUATION_ANALYSIS': true,
-        'AI_EVENT_SUMMARIES': true,
-        'AI_ROI_ALERTS': true,
-        'RED_ZONE': true, 'FOURTH_DOWN': true, 'TWO_MINUTE_WARNING': true,
-        'NCAAF_KICKOFF': true, 'NCAAF_HALFTIME': true, 'NCAAF_TWO_MINUTE_WARNING': true,
-        'CLUTCH_TIME': true, 'OVERTIME': true,
-        'NFL_GAME_START': true, 'NFL_SECOND_HALF_KICKOFF': true,
-        'WNBA_FOURTH_QUARTER': true, 'WNBA_CLOSE_GAME': true, 'WNBA_OVERTIME': true,
-        'WNBA_HIGH_SCORING': true, 'WNBA_COMEBACK': true, 'WNBA_CLUTCH_PERFORMANCE': true
-      };
+      // SECURITY FIX: Fail closed - return all DISABLED defaults on error
+      return {};
     }
   },
 
