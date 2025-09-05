@@ -241,30 +241,9 @@ export const storage = {
       .where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitMonitoredGame(gameData: InsertUserMonitoredTeam): Promise<void> {
-    try {
-      console.log(`💾 Inserting monitored game into database:`, gameData);
-
-      // Check if already exists to prevent duplicates
-      const existing = await db.select().from(userMonitoredTeams)
-        .where(sql`user_id = ${gameData.userId} AND game_id = ${gameData.gameId}`);
-
-      if (existing.length > 0) {
-        console.log(`⚠️ Game already monitored by user: ${gameData.gameId}`);
-        return;
-      }
-
-      const result = await db.insert(userMonitoredTeams).values(gameData);
-      console.log(`✅ Successfully inserted monitored game:`, {
-        userId: gameData.userId,
-        gameId: gameData.gameId,
-        teams: `${gameData.awayTeamName} @ ${gameData.homeTeamName}`
-      });
-    } catch (error) {
-      console.error(`❌ Database error inserting monitored game:`, error);
-      console.error(`❌ Failed gameData:`, gameData);
-      throw error;
-    }
+  async addUserMonitMonitoredGame(gameData: InsertUserMonitoredTeam) {
+    const result = await db.insert(userMonitoredTeams).values(gameData).returning();
+    return result[0];
   },
 
   async removeUserMonitoredGame(userId: string, gameId: string) {
@@ -314,7 +293,7 @@ export const storage = {
     return await db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
+  async addUserMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
     const result = await db.insert(userMonitoredTeams)
       .values({ userId, gameId, sport, homeTeamName, awayTeamName })
       .returning();
