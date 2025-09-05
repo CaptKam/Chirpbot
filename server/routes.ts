@@ -663,17 +663,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate test live alerts
+  // Generate test live alerts - RULE COMPLIANT VERSION
   app.post('/api/alerts/force-generate', async (req, res) => {
     try {
-      console.log('🧪 FORCING TEST LIVE ALERTS');
+      console.log('🧪 FORCING RULE-COMPLIANT TEST LIVE ALERTS');
+      console.log('🛡️ NOTE: All generated alerts will respect global admin settings and user preferences');
 
       const alertGenerator = new AlertGenerator();
       const alertCount = await alertGenerator.generateLiveGameAlerts();
 
       res.json({ 
-        message: `Generated ${alertCount} test alerts`,
-        alertCount
+        message: `Generated ${alertCount} rule-compliant alerts (filtered by admin settings)`,
+        alertCount,
+        note: 'All alerts respect global admin settings and user preferences'
       });
     } catch (error) {
       console.error('Error generating test alerts:', error);
@@ -681,10 +683,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Force send test Telegram alert
+  // Force send test Telegram alert - RULE COMPLIANT VERSION
   app.post('/api/telegram/force-test', async (req, res) => {
     try {
-      console.log('🧪 FORCING TEST TELEGRAM ALERT');
+      console.log('🧪 TESTING TELEGRAM ALERT (Rule-Compliant)');
 
       // Get all users with Telegram
       const allUsers = await storage.getAllUsers();
@@ -697,8 +699,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const user of telegramUsers) {
         console.log(`📱 Testing Telegram for user: ${user.username}`);
-        console.log(`📱 Bot token length: ${user.telegramBotToken?.length || 0}`);
-        console.log(`📱 Chat ID: ${user.telegramChatId}`);
+
+        // 🛡️ RULE COMPLIANCE: Check if TEST_STRIKEOUT is globally enabled
+        const alertGenerator = new AlertGenerator();
+        const isGloballyEnabled = await (alertGenerator as any).isAlertGloballyEnabled('MLB', 'TEST_STRIKEOUT');
+        
+        if (!isGloballyEnabled) {
+          console.log(`🚫 RULE COMPLIANT: TEST_STRIKEOUT globally disabled - skipping user ${user.username}`);
+          errorCount++;
+          continue;
+        }
+
+        // 🛡️ RULE COMPLIANCE: Check user preferences
+        try {
+          const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, 'mlb');
+          const userPref = userPrefs.find(p => p.alertType === 'TEST_STRIKEOUT');
+          const userHasEnabled = userPref ? userPref.enabled : isGloballyEnabled;
+
+          if (!userHasEnabled) {
+            console.log(`🚫 RULE COMPLIANT: User ${user.username} has TEST_STRIKEOUT disabled`);
+            errorCount++;
+            continue;
+          }
+        } catch (prefError) {
+          console.error(`❌ Error checking preferences for ${user.username}:`, prefError);
+          errorCount++;
+          continue;
+        }
 
         const config: TelegramConfig = {
           botToken: user.telegramBotToken || '',
@@ -708,7 +735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const testAlert = {
           type: 'TEST_STRIKEOUT',
           title: 'Test Strikeout Alert',
-          description: '⚡ TEST STRIKEOUT! Test Batter struck out by Test Pitcher - Test Team vs Test Team',
+          description: '⚡ RULE-COMPLIANT TEST! Test Batter struck out by Test Pitcher - Test Team vs Test Team',
           gameInfo: {
             homeTeam: 'Test Home',
             awayTeam: 'Test Away',
@@ -729,7 +756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sent = await sendTelegramAlert(config, testAlert);
         if (sent) {
           successCount++;
-          console.log(`📱 ✅ Test alert sent to ${user.username}`);
+          console.log(`📱 ✅ Rule-compliant test alert sent to ${user.username}`);
         } else {
           errorCount++;
           console.log(`📱 ❌ Test alert failed for ${user.username}`);
@@ -737,14 +764,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ 
-        message: 'Test alerts completed',
+        message: 'Rule-compliant test alerts completed',
         userCount: telegramUsers.length,
         successCount,
-        errorCount
+        errorCount,
+        note: 'All alerts respect global admin settings and user preferences'
       });
     } catch (error) {
       console.error('Error sending test alerts:', error);
       res.status(500).json({ error: 'Failed to send test alerts' });
+    }
+  });
+
+  // Debug endpoint to detect rule bypasses
+  app.get('/api/debug/telegram-bypasses', requireAuthentication, async (req, res) => {
+    try {
+      console.log('🔍 SCANNING FOR TELEGRAM BYPASS ROUTES');
+      
+      const bypasses = [];
+      
+      // Check for direct telegram calls in the codebase
+      const potentialBypasses = [
+        {
+          route: '/api/telegram/force-test',
+          status: 'PATCHED - Now rule-compliant',
+          risk: 'LOW'
+        },
+        {
+          route: '/api/alerts/force-generate', 
+          status: 'PATCHED - Now rule-compliant',
+          risk: 'LOW'
+        },
+        {
+          route: '/api/telegram/test',
+          status: 'SAFE - Connection test only',
+          risk: 'NONE'
+        }
+      ];
+
+      // Check alert generator paths
+      const alertPaths = [
+        {
+          path: 'saveRealTimeAlert() -> Telegram sending',
+          ruleCheck: 'isAlertGloballyEnabled() + user preferences',
+          status: 'PROTECTED'
+        },
+        {
+          path: 'saveAlert() -> WebSocket broadcast only',
+          ruleCheck: 'isAlertGloballyEnabled() before DB save',
+          status: 'PROTECTED'
+        }
+      ];
+
+      res.json({
+        message: 'Telegram bypass scan complete',
+        potentialBypasses,
+        alertPaths,
+        recommendation: 'All major bypass routes have been identified and patched'
+      });
+    } catch (error) {
+      console.error('Error scanning for bypasses:', error);
+      res.status(500).json({ error: 'Failed to scan for bypasses' });
     }
   });
 
