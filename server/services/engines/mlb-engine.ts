@@ -159,8 +159,8 @@ export class MLBEngine extends BaseSportEngine {
 
     // Bases loaded: all three bases occupied
     if (hasFirst && hasSecond && hasThird) {
-      // No filtering - always generate alert
-      {
+      // Check if BASES_LOADED alerts are enabled
+      if (await this.isAlertEnabled('BASES_LOADED')) {
         const alertKey = `${gameState.gameId}_BASES_LOADED_${inning}_${outs}`;
         const outsText = outs === 1 ? '1 out' : `${outs} outs`;
         const message = `🔥 BASES LOADED! (${scoringProbability}% scoring chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${outsText} in the ${isTopInning ? 'Top' : 'Bottom'} of ${inning}`;
@@ -193,8 +193,8 @@ export class MLBEngine extends BaseSportEngine {
     }
     // Runners on 1st and 2nd (prime scoring opportunity)
     else if (hasFirst && hasSecond && !hasThird) {
-      // No filtering - always generate alert
-      if (scoringProbability >= 45) {
+      // Check if RUNNERS_1ST_2ND alerts are enabled
+      if (await this.isAlertEnabled('RUNNERS_1ST_2ND') && scoringProbability >= 45) {
         const alertKey = `${gameState.gameId}_RUNNERS_1ST_2ND_${inning}_${outs}`;
         const outsText = outs === 1 ? '1 out' : `${outs} outs`;
         const message = `💎 Runners on 1st & 2nd (${scoringProbability}% scoring chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${outsText}`;
