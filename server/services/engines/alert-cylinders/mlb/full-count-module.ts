@@ -7,7 +7,9 @@ export default class FullCountModule extends BaseAlertModule {
 
   isTriggered(gameState: GameState): boolean {
     // 3-2 count (3 balls, 2 strikes)
-    return gameState.balls === 3 && gameState.strikes === 2;
+    const triggered = gameState.balls === 3 && gameState.strikes === 2;
+    console.log(`🔍 FULL_COUNT check: balls=${gameState.balls}, strikes=${gameState.strikes} → ${triggered}`);
+    return triggered;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

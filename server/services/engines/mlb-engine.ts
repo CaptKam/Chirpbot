@@ -12,6 +12,13 @@ export class MLBEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
+      // Always allow critical MLB alert types to bypass global rules
+      const criticalAlerts = ['BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME'];
+      if (criticalAlerts.includes(alertType)) {
+        console.log(`🎯 Critical alert ${alertType} bypassing global rules`);
+        return true;
+      }
+      
       return await this.settingsCache.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`MLB Settings cache error for ${alertType}:`, error);

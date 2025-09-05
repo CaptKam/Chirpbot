@@ -7,7 +7,9 @@ export default class BasesLoadedModule extends BaseAlertModule {
 
   isTriggered(gameState: GameState): boolean {
     // All three bases must be occupied
-    return gameState.hasFirst && gameState.hasSecond && gameState.hasThird;
+    const triggered = gameState.hasFirst && gameState.hasSecond && gameState.hasThird;
+    console.log(`🔍 BASES_LOADED check: 1st=${gameState.hasFirst}, 2nd=${gameState.hasSecond}, 3rd=${gameState.hasThird} → ${triggered}`);
+    return triggered;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
