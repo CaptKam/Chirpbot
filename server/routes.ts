@@ -1151,6 +1151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           alerts.push({
             id: row.id,
+            alertKey: `${row.game_id}_${row.type}`,
             type: row.type,
             message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
             gameId: row.game_id,
@@ -1162,6 +1163,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             confidence: row.score || 85,
             priority: row.score || 80,
             createdAt: row.created_at,
+            timestamp: row.created_at,
+            seen: false,
+            sentToTelegram: false,
             // Add context data for footer
             context: payload.context || {},
             inning: payload.context?.inning,

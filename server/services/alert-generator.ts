@@ -684,10 +684,7 @@ export class AlertGenerator {
 
       console.log(`🚨 REAL-TIME ALERT: ${message}`);
 
-      // DISABLED: Broadcast alert immediately to web clients via WebSocket
-      // ALL WEBSOCKET ALERT BROADCASTING HAS BEEN DISABLED
-      console.log(`🚫 WebSocket broadcasting disabled for ${type} alert`);
-      /*
+      // Broadcast alert immediately to web clients via WebSocket
       try {
         const wsBroadcast = (global as any).wsBroadcast;
         if (wsBroadcast && typeof wsBroadcast === 'function') {
@@ -714,7 +711,6 @@ export class AlertGenerator {
       } catch (broadcastError) {
         console.error('📡 WebSocket broadcast failed:', broadcastError);
       }
-      */
 
       // DISABLED: Send to Telegram for users monitoring this game
       // ALL TELEGRAM NOTIFICATIONS HAVE BEEN DISABLED
