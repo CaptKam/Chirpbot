@@ -215,7 +215,7 @@ export function GameCardTemplate({
               teamColor={awayTeam.color}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
-              {console.log('Away team debug:', { name: awayTeam.name, processed: removeCity(awayTeam.name), sport }) || removeCity(awayTeam.name)}
+              {removeCity(awayTeam.name)}
             </div>
           </div>
           {(status === 'live' || status === 'final') && (
@@ -283,7 +283,7 @@ export function GameCardTemplate({
               teamColor={homeTeam.color}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
-              {console.log('Home team debug:', { name: homeTeam.name, processed: removeCity(homeTeam.name), sport }) || removeCity(homeTeam.name)}
+              {removeCity(homeTeam.name)}
             </div>
           </div>
         </div>

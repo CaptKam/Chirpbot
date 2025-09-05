@@ -486,11 +486,11 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
 
 
-  // Try to get the official team logo URL first
-  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, sport) : null;
+  // Try to get the official team logo URL first (only for MLB and NFL as per your requirement)
+  const logoUrl = (sport === 'MLB' || sport === 'NFL') && teamAbbr ? getTeamLogoUrl(teamAbbr, sport) : null;
 
-  if (logoUrl) {
-    // Use official team logo from ESPN
+  if (logoUrl && (sport === 'MLB' || sport === 'NFL')) {
+    // Use official team logo from ESPN for MLB and NFL only
     return (
       <img 
         src={logoUrl} 
@@ -499,6 +499,8 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
         onError={(e) => {
           // If image fails to load, hide it and show fallback
           e.currentTarget.style.display = 'none';
+          // Force a re-render to show the color fallback
+          e.currentTarget.parentElement?.setAttribute('data-logo-failed', 'true');
         }}
       />
     );
@@ -507,9 +509,27 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
 
   // Final fallback with team colors - use provided color or lookup by sport first, then general lookup
-  const finalTeamColor = teamColor || 
-    (teamAbbr && sport && teamColorsBySport[sport] ? teamColorsBySport[sport][teamAbbr] : null) ||
-    (teamAbbr ? teamColors[teamAbbr] : null);
+  let finalTeamColor = teamColor;
+  
+  if (!finalTeamColor && teamAbbr) {
+    // First try sport-specific colors
+    if (sport && teamColorsBySport[sport] && teamColorsBySport[sport][teamAbbr]) {
+      finalTeamColor = teamColorsBySport[sport][teamAbbr];
+    } else {
+      // Then try general team colors (flattened from all sports)
+      finalTeamColor = teamColors[teamAbbr];
+    }
+  }
+
+  // Debug logging for team colors
+  console.log('Team color debug:', { 
+    teamName, 
+    teamAbbr, 
+    sport, 
+    providedColor: teamColor, 
+    finalColor: finalTeamColor,
+    sportColors: sport && teamColorsBySport[sport] ? Object.keys(teamColorsBySport[sport]).length : 0
+  });
 
   const fallbackStyle = finalTeamColor 
     ? { 
