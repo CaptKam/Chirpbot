@@ -375,6 +375,36 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
       'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
       'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
+      'LAR': 'https://a.espncdn.com/i/teamlogos/nfl/500/lar.png',
+      'SF': 'https://a.espncdn.com/i/teamlogos/nfl/500/sf.png',
+      'SEA': 'https://a.espncdn.com/i/teamlogos/nfl/500/sea.png',
+      'AZ': 'https://a.espncdn.com/i/teamlogos/nfl/500/ari.png',
+      'ARI': 'https://a.espncdn.com/i/teamlogos/nfl/500/ari.png',
+      'NYG': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png',
+      'WAS': 'https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png',
+      'CAR': 'https://a.espncdn.com/i/teamlogos/nfl/500/car.png',
+      'NO': 'https://a.espncdn.com/i/teamlogos/nfl/500/no.png',
+      'TB': 'https://a.espncdn.com/i/teamlogos/nfl/500/tb.png',
+      'DET': 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png',
+      'GB': 'https://a.espncdn.com/i/teamlogos/nfl/500/gb.png',
+    },
+    NCAAF: {
+      'ALA': 'https://a.espncdn.com/i/teamlogos/ncf/500/333.png',
+      'GA': 'https://a.espncdn.com/i/teamlogos/ncf/500/61.png',
+      'OSU': 'https://a.espncdn.com/i/teamlogos/ncf/500/194.png',
+      'CLEM': 'https://a.espncdn.com/i/teamlogos/ncf/500/228.png',
+      'ND': 'https://a.espncdn.com/i/teamlogos/ncf/500/87.png',
+      'TEX': 'https://a.espncdn.com/i/teamlogos/ncf/500/251.png',
+      'USC': 'https://a.espncdn.com/i/teamlogos/ncf/500/30.png',
+      'MICH': 'https://a.espncdn.com/i/teamlogos/ncf/500/130.png',
+      'PSU': 'https://a.espncdn.com/i/teamlogos/ncf/500/213.png',
+      'LSU': 'https://a.espncdn.com/i/teamlogos/ncf/500/99.png',
+      'FLA': 'https://a.espncdn.com/i/teamlogos/ncf/500/57.png',
+      'OKLA': 'https://a.espncdn.com/i/teamlogos/ncf/500/201.png',
+      'WIS': 'https://a.espncdn.com/i/teamlogos/ncf/500/275.png',
+      'ORE': 'https://a.espncdn.com/i/teamlogos/ncf/500/2483.png',
+      'WASH': 'https://a.espncdn.com/i/teamlogos/ncf/500/264.png',
+      'STAN': 'https://a.espncdn.com/i/teamlogos/ncf/500/24.png',
     },
     WNBA: {
       'ATL': 'https://a.espncdn.com/i/teamlogos/wnba/500/atl.png',
@@ -456,8 +486,8 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
 
 
-  // Try to get the official team logo URL first (but skip WNBA images)
-  const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport) : null;
+  // Try to get the official team logo URL first
+  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, sport) : null;
 
   if (logoUrl) {
     // Use official team logo from ESPN
