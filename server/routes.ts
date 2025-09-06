@@ -106,9 +106,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Setup WebSocket server with heartbeat
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  // Enhanced WebSocket server with robust heartbeat and health monitoring
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    clientTracking: true,
+    perMessageDeflate: false // Disable compression for better performance with small messages
+  });
   const clients = new Set<WebSocket>();
+  let heartbeatInterval: NodeJS.Timeout;
 
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
@@ -117,23 +123,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     this.isAlive = true;
   }
 
+  // Enhanced connection health monitoring
+  function checkAliveConnections() {
+    const deadConnections: WebSocket[] = [];
+    
+    clients.forEach((ws: any) => {
+      if (ws.isAlive === false) {
+        deadConnections.push(ws);
+        return;
+      }
+      
+      ws.isAlive = false;
+      try {
+        ws.ping();
+      } catch (error) {
+        console.error('Error pinging WebSocket client:', error);
+        deadConnections.push(ws);
+      }
+    });
+
+    // Clean up dead connections
+    deadConnections.forEach(ws => {
+      try {
+        clients.delete(ws);
+        ws.terminate();
+        console.log('🧹 Cleaned up dead WebSocket connection');
+      } catch (error) {
+        console.error('Error terminating dead connection:', error);
+      }
+    });
+
+    if (deadConnections.length > 0) {
+      console.log(`💔 Removed ${deadConnections.length} dead connections. Active: ${clients.size}`);
+    }
+  }
+
+  // Start heartbeat interval (every 30 seconds)
+  heartbeatInterval = setInterval(checkAliveConnections, 30000);
+
   wss.on('connection', (ws: any) => {
     ws.isAlive = true;
     clients.add(ws);
-    console.log('WebSocket client connected');
+    console.log(`💚 WebSocket client connected. Total clients: ${clients.size}`);
+
+    // Send connection acknowledgment
+    try {
+      ws.send(JSON.stringify({
+        type: 'connection_ack',
+        timestamp: new Date().toISOString(),
+        message: 'ChirpBot V2 connected successfully'
+      }));
+    } catch (error) {
+      console.error('Error sending connection ack:', error);
+    }
 
     ws.on('pong', heartbeat);
 
-    ws.on('close', () => {
+    ws.on('ping', () => {
+      try {
+        ws.pong();
+      } catch (error) {
+        console.error('Error responding to ping:', error);
+      }
+    });
+
+    ws.on('close', (code: number, reason: Buffer) => {
       clients.delete(ws);
-      console.log('WebSocket client disconnected');
+      const reasonStr = reason.toString() || 'Unknown';
+      console.log(`🔌 WebSocket disconnected (${code}): ${reasonStr}. Remaining: ${clients.size}`);
     });
 
     ws.on('error', (error: Error) => {
-      console.error('WebSocket error:', error);
+      console.error('💥 WebSocket error:', error.message);
       clients.delete(ws);
+      
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1011, 'Server error');
+        }
+      } catch (closeError) {
+        console.error('Error closing WebSocket after error:', closeError);
+      }
+    });
+
+    // Handle client messages for better bidirectional communication
+    ws.on('message', (data: Buffer) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        // Handle client heartbeat responses
+        if (message.type === 'heartbeat_response') {
+          ws.isAlive = true;
+        }
+        
+        // Log unexpected messages for debugging
+        if (message.type !== 'heartbeat_response') {
+          console.log('📨 Received WebSocket message:', message.type);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
     });
   });
+
+  // Graceful shutdown handling
+  const gracefulShutdown = () => {
+    console.log('🛑 Shutting down WebSocket server...');
+    
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+    }
+    
+    // Close all client connections gracefully
+    clients.forEach(ws => {
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1001, 'Server shutting down');
+        }
+      } catch (error) {
+        console.error('Error closing WebSocket during shutdown:', error);
+      }
+    });
+    
+    clients.clear();
+    
+    wss.close(() => {
+      console.log('✅ WebSocket server closed gracefully');
+    });
+  };
+
+  // Register shutdown handlers
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
@@ -182,23 +303,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Heartbeat interval to detect zombie connections
-  const heartbeatInterval = setInterval(() => {
-    wss.clients.forEach((ws: any) => {
-      if (ws.isAlive === false) {
-        return ws.terminate();
-      }
-      ws.isAlive = false;
-      ws.ping();
-    });
-  }, 30000);
-
-  // Ensure cleanup on server shutdown
-  process.on('SIGINT', () => {
-    console.log('🛑 Server shutting down, cleaning up intervals...');
-    clearInterval(heartbeatInterval);
-    process.exit(0);
-  });
 
   // Broadcast function with backpressure handling
   function broadcast(data: any) {
