@@ -28,44 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 
-// Alert configuration - Only GAME_START alerts remain active
-const ALERT_TYPE_CONFIG = {
-  MLB: {
-    "Game Flow": [
-      { key: "MLB_GAME_START", label: "Game Start", description: "Game start notification" }
-    ]
-  },
-  NFL: {
-    "Game Flow": [
-      { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
-    ]
-  },
-  NBA: {
-    "Game Flow": [
-      { key: "NBA_GAME_START", label: "Game Start", description: "Game start notification" }
-    ]
-  },
-  NHL: {
-    "Game Flow": [
-      { key: "NHL_GAME_START", label: "Game Start", description: "Game start notification" }
-    ]
-  },
-  CFL: {
-    "Game Flow": [
-      { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
-    ]
-  },
-  NCAAF: {
-    "Game Flow": [
-      { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" }
-    ]
-  },
-  WNBA: {
-    "Game Flow": [
-      { key: "WNBA_GAME_START", label: "Game Start", description: "Game start notification" }
-    ]
-  }
-};
+import { ALERT_TYPE_CONFIG, type AlertConfigKey } from '../../shared/alert-config';
 
 type User = {
   id: string;

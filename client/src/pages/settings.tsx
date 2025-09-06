@@ -13,46 +13,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+import { ALERT_TYPE_CONFIG, type AlertConfigKey } from '../../shared/alert-config';
 
-// Alert configuration removed - starting fresh
-const ALERT_TYPE_CONFIG = {
-  MLB: {
-    "Game Flow": [
-      { key: "MLB_GAME_START", label: "Game Start", description: "Game start notification" }
-    ]
-  },
-  NFL: {
-    "Game Flow": [
-      { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
-    ]
-  },
-  NCAAF: {
-    "Game Flow": [
-      { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" }
-    ]
-  },
-  CFL: {
-    "Game Flow": [
-      { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
-    ]
-  },
-  WNBA: {
-    "Game Flow": [
-      { key: "WNBA_GAME_START", label: "Game Start", description: "Game start notification" }
-    ]
-  },
-  NBA: {
-    "Game Flow": [
-      { key: "NBA_GAME_START", label: "Game Start", description: "Game start notification" }
-    ]
-  },
-  NHL: {
-    "Game Flow": [
-      { key: "NHL_GAME_START", label: "Game Start", description: "Game start notification" }
-    ]
-  }
-};
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 
 export default function Settings() {
   const [activeSport, setActiveSport] = useState(() => {
