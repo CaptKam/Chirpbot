@@ -117,7 +117,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
     // Try to open the app first, with better fallback handling
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
+
     if (isMobile) {
       // On mobile, try deep link first
       const startTime = Date.now();
@@ -127,7 +127,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Check if app opened, fallback to store if not
       setTimeout(() => {
         if (Date.now() - startTime < 1500) {
@@ -156,11 +156,11 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     setIsDeleting(true);
     try {
       await apiRequest("DELETE", `/api/alerts/${alertId}`);
-      
+
       // Invalidate and refetch alerts
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/unseen/count'] });
-      
+
       toast({
         title: "Alert deleted",
         description: "The alert has been removed from your feed.",
@@ -181,7 +181,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     if (autoReturnTimeoutRef.current) {
       clearTimeout(autoReturnTimeoutRef.current);
     }
-    
+
     // Set new timer to return to center after 3 seconds
     autoReturnTimeoutRef.current = setTimeout(() => {
       setDragX(0);
@@ -192,7 +192,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     setIsDragging(false);
     const threshold = 100; // Lowered back for better responsiveness
     const velocity = info.velocity.x;
-    
+
     // Use velocity for more natural swipe detection
     if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 500) {
       setDragX(0);
@@ -266,7 +266,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       const homeScore = alertData.homeScore || 0;
                       const awayScore = alertData.awayScore || 0;
                       const totalScore = homeScore + awayScore;
-                      
+
                       if (sport === 'MLB') {
                         const overLine = Math.max(totalScore + 1.5, 7.5);
                         if (tier >= 3) {
@@ -280,7 +280,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     })()}
                   </p>
                 </div>
-                
+
               </div>
             )}
 
