@@ -86,10 +86,9 @@ export class AIContextController {
   async enhanceAlertWithFullControl(context: AlertContext): Promise<AIEnhancedAlert> {
     const startTime = Date.now();
 
-    // Check if AI is configured before proceeding
-    if (!this.basicAI.configured) {
-      return this.getFallbackAlert(context);
-    }
+    // OpenAI is force disabled
+    console.log('🚫 AI Context Controller: DISABLED - OpenAI integration turned off');
+    return this.getFallbackAlert(context);
 
     try {
       console.log(`🤖 AI Context Controller: Taking full control of ${context.alertType} alert`);

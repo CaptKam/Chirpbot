@@ -36,7 +36,7 @@ export class BasicAI {
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
     // Check for disable flags first
-    this.isConfigured = this.checkIfEnabled() && !!this.apiKey && this.apiKey.startsWith('sk-');
+    this.isConfigured = false; // Force disable OpenAI
   }
 
   // Check if AI system is enabled via disable flags
@@ -48,15 +48,16 @@ export class BasicAI {
       
       if (fs.existsSync(disableFlagsPath)) {
         const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
-        if (flags.ai_disabled) {
+        if (flags.ai_disabled || flags.openai_disabled) {
           console.log('🚫 AI System: DISABLED via disable flags');
           return false;
         }
       }
-      return true;
+      console.log('🚫 OpenAI: FORCE DISABLED');
+      return false; // Force disable OpenAI
     } catch (error) {
-      console.warn('⚠️ Could not check disable flags, assuming enabled');
-      return true;
+      console.warn('⚠️ Could not check disable flags, force disabling AI');
+      return false; // Force disable on error
     }
   }
 

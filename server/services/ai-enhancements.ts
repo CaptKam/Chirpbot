@@ -29,6 +29,7 @@ export class AIEnhancementService {
 
   constructor() {
     this.basicAI = new BasicAI();
+    console.log('🚫 AI Enhancements: DISABLED - OpenAI integration turned off');
   }
 
   async enhanceAlert(
@@ -37,16 +38,10 @@ export class AIEnhancementService {
     gameContext: GameContext,
     userPreferences: AIEnhancementConfig
   ): Promise<string> {
-    try {
-      let enhancedMessage = originalMessage;
-
-      // 1. AI-Enhanced Alert Messages
-      if (userPreferences.AI_ENHANCED_MESSAGES) {
-        const contextInsight = await this.generateContextInsight(alertType, gameContext);
-        if (contextInsight) {
-          enhancedMessage += `\n🤖 AI Insight: ${contextInsight}`;
-        }
-      }
+    // AI is disabled - return original message
+    console.log('🚫 AI Enhancement skipped - OpenAI disabled');
+    return originalMessage;
+  }
 
       // 2. Predictive At-Bat Analysis
       if (userPreferences.AI_PREDICTIVE_AT_BAT && gameContext.batter) {
