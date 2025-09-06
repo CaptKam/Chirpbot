@@ -175,7 +175,7 @@ export class AlertGenerator {
       console.log('🔍 Generating live game alerts...');
       
       // Get today's games from MLB API
-      const games = await this.mlbApi.getTodayGames();
+      const games = await this.mlbApi.getTodaysGames();
       
       if (!games || games.length === 0) {
         console.log('📄 No games found for today');
