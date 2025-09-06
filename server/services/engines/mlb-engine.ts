@@ -12,11 +12,10 @@ export class MLBEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only check settings for actual MLB alert types
+      // Only check settings for actual MLB alert types that have corresponding modules
       const validMLBAlerts = [
-        'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
-        'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT'
+        'MLB_GAME_START',
+        'MLB_SEVENTH_INNING_STRETCH'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
