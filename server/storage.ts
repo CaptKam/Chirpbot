@@ -53,21 +53,21 @@ export const storage = {
   async deleteUser(userId: string) {
     try {
       console.log(`🗑️ Deleting user ${userId} and all related data...`);
-      
+
       // Execute each deletion step separately to avoid multiple command error
-      
+
       // Step 1: Delete user alert preferences
       await db.execute(sql`DELETE FROM user_alert_preferences WHERE user_id = ${userId}`);
       console.log(`🗑️ Deleted alert preferences for user ${userId}`);
-      
+
       // Step 2: Delete user monitored teams  
       await db.execute(sql`DELETE FROM user_monitored_teams WHERE user_id = ${userId}`);
       console.log(`🗑️ Deleted monitored teams for user ${userId}`);
-      
+
       // Step 3: Clear global alert settings references
       await db.execute(sql`UPDATE global_alert_settings SET updated_by = NULL WHERE updated_by = ${userId}`);
       console.log(`🗑️ Cleared global alert settings references for user ${userId}`);
-      
+
       // Step 4: Delete audit logs if they exist (table may not exist, so wrap in try-catch)
       try {
         await db.execute(sql`DELETE FROM audit_logs WHERE user_id = ${userId}`);
@@ -75,11 +75,11 @@ export const storage = {
       } catch (auditError) {
         console.log(`📝 No audit logs table found or no logs to delete for user ${userId}`);
       }
-      
+
       // Step 5: Delete the user
       await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
       console.log(`🗑️ Deleted user ${userId} from users table`);
-      
+
       console.log(`✅ Successfully deleted user ${userId} and all related data`);
       return true;
     } catch (error) {
@@ -91,13 +91,13 @@ export const storage = {
   async forceDeleteUser(userId: string) {
     try {
       console.log(`💀 FORCE DELETE: Completely removing user ${userId} from all tables...`);
-      
+
       // Get user info first for logging
       const userInfo = await db.execute(sql`SELECT username, email FROM users WHERE id = ${userId}`);
       const username = userInfo.rows[0]?.username || 'Unknown';
-      
+
       console.log(`💀 Force deleting user: ${username} (${userId})`);
-      
+
       // Force delete from ALL possible tables that might reference the user
       const deletionSteps = [
         { table: 'user_alert_preferences', condition: `user_id = '${userId}'` },
@@ -108,7 +108,7 @@ export const storage = {
         { table: 'user_preferences', condition: `user_id = '${userId}'` },
         { table: 'user_settings', condition: `user_id = '${userId}'` },
       ];
-      
+
       for (const step of deletionSteps) {
         try {
           const result = await db.execute(sql.raw(`DELETE FROM ${step.table} WHERE ${step.condition}`));
@@ -117,7 +117,7 @@ export const storage = {
           console.log(`📝 Table ${step.table} not found or no data - continuing`);
         }
       }
-      
+
       // Clear any references in other tables
       try {
         await db.execute(sql`UPDATE global_alert_settings SET updated_by = NULL WHERE updated_by = ${userId}`);
@@ -125,16 +125,16 @@ export const storage = {
       } catch (error) {
         console.log(`📝 No global_alert_settings to update`);
       }
-      
+
       // Final deletion of the user record
       const finalResult = await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
       console.log(`💀 Final user deletion: ${finalResult.rowsAffected || 0} user records removed`);
-      
+
       if (finalResult.rowsAffected === 0) {
         console.log(`⚠️ User ${userId} was not found in users table - may have been already deleted`);
         return false;
       }
-      
+
       console.log(`✅ FORCE DELETE COMPLETE: User ${username} (${userId}) has been completely removed`);
       return true;
     } catch (error) {
@@ -241,7 +241,7 @@ export const storage = {
       .where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitoredGame(gameData: InsertUserMonitoredTeam) {
+  async addUserMonitMonitoredGame(gameData: InsertUserMonitoredTeam) {
     const result = await db.insert(userMonitoredTeams).values(gameData).returning();
     return result[0];
   },
@@ -360,23 +360,107 @@ export const storage = {
   },
 
   // Global alert settings for admin management - FIXED ARCHITECTURE
-  async getGlobalAlertSettings(sport: string) {
+  async getGlobalAlertSettings(sport: string): Promise<Record<string, boolean>> {
     try {
-      // Use the proper globalAlertSettings table instead of admin personal preferences
-      const globalSettings = await db.select()
-        .from(globalAlertSettings)
+      const settings = await db.select().from(globalAlertSettings)
         .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
 
-      // Build settings directly from database, defaulting to disabled if not in DB
-      const defaultSettings: Record<string, boolean> = {};
-      
-      // Apply actual global settings from the database
-      globalSettings.forEach(setting => {
-        defaultSettings[setting.alertType] = setting.enabled;
+      // Convert to object with defaults for missing keys
+      const result: Record<string, boolean> = {};
+
+      // Define sport-specific default settings
+      const sportDefaults: Record<string, Record<string, boolean>> = {
+        'mlb': {
+          'MLB_GAME_START': true,
+          'MLB_SEVENTH_INNING_STRETCH': true,
+          'RISP': true,
+          'BASES_LOADED': true,
+          'RUNNERS_1ST_2ND': true,
+          'CLOSE_GAME': true,
+          'CLOSE_GAME_LIVE': true,
+          'LATE_PRESSURE': true,
+          'HOME_RUN_LIVE': true,
+          'HIGH_SCORING': true,
+          'SHUTOUT': true,
+          'BLOWOUT': true,
+          'FULL_COUNT': true,
+          'STRIKEOUT': true,
+          'POWER_HITTER': true,
+          'HOT_HITTER': true,
+          // AI Enhancement alerts (available for MLB)
+          'AI_ENHANCED_MESSAGES': true,
+          'AI_PREDICTIVE_AT_BAT': true,
+          'AI_SCORING_PROBABILITY': true,
+          'AI_SITUATION_ANALYSIS': true,
+          'AI_EVENT_SUMMARIES': true,
+          'AI_ROI_ALERTS': true,
+          // RE24 System alerts (MLB specific)
+          'RE24_ENABLED': true,
+          'RE24_CONTEXT_FACTORS': true,
+          'RE24_MINIMUM_THRESHOLDS': true,
+          'RE24_DYNAMIC_PRIORITY': true
+        },
+        'nfl': {
+          'NFL_GAME_START': true,
+          'NFL_SECOND_HALF_KICKOFF': true,
+          'NFL_TWO_MINUTE_WARNING': true,
+          'RED_ZONE': true,
+          'FOURTH_DOWN': true,
+          'CLUTCH_TIME': true,
+          'OVERTIME': true
+        },
+        'ncaaf': {
+          'NCAAF_GAME_START': true,
+          'NCAAF_SECOND_HALF_KICKOFF': true,
+          'NCAAF_TWO_MINUTE_WARNING': true
+        },
+        'cfl': {
+          'CFL_GAME_START': true,
+          'CFL_SECOND_HALF_KICKOFF': true,
+          'CFL_TWO_MINUTE_WARNING': true,
+          'THIRD_DOWN': true,
+          'THREE_MINUTE_WARNING': true
+        },
+        'wnba': {
+          'WNBA_GAME_START': true,
+          'WNBA_TWO_MINUTE_WARNING': true,
+          'FINAL_MINUTES': true,
+          'HIGH_SCORING_QUARTER': true,
+          'LOW_SCORING_QUARTER': true,
+          'FOURTH_QUARTER': true
+        },
+        'nba': {
+          'NBA_FOURTH_QUARTER': true,
+          'NBA_CLOSE_GAME': true,
+          'NBA_OVERTIME': true,
+          'NBA_HIGH_SCORING': true,
+          'NBA_COMEBACK': true,
+          'NBA_CLUTCH_PERFORMANCE': true
+        },
+        'nhl': {
+          'NHL_THIRD_PERIOD': true,
+          'NHL_CLOSE_GAME': true,
+          'NHL_OVERTIME': true,
+          'NHL_POWER_PLAY': true,
+          'NHL_PENALTY_KILL': true,
+          'NHL_CLUTCH_PERFORMANCE': true,
+          'POWER_PLAY': true,
+          'EMPTY_NET': true
+        }
+      };
+
+      // Get sport-specific defaults
+      const defaultSettings = sportDefaults[sport.toLowerCase()] || {};
+
+      // Apply fetched settings, overriding defaults
+      settings.forEach(setting => {
+        if (defaultSettings.hasOwnProperty(setting.alertType)) {
+          defaultSettings[setting.alertType] = setting.enabled;
+        }
       });
 
-      // Architecture fixed: Now using proper globalAlertSettings table instead of admin preferences
       return defaultSettings;
+
     } catch (error) {
       console.error('Error getting global alert settings:', error);
       // SECURITY FIX: Fail closed - return all DISABLED defaults on error
@@ -493,10 +577,10 @@ export const storage = {
   async setMasterAlertEnabled(enabled: boolean, updatedBy: string) {
     try {
       console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin ${updatedBy}`);
-      
+
       // Use the existing updateGlobalAlertSetting method to persist the master switch
       await this.updateGlobalAlertSetting('system', 'MASTER_ALERTS_ENABLED', enabled, updatedBy);
-      
+
       console.log(`✅ Master alerts setting persisted: ${enabled}`);
       return { enabled, updatedBy };
     } catch (error) {

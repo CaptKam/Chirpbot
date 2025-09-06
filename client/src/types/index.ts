@@ -68,6 +68,23 @@ export interface Alert {
     reasons?: string[];
     recommendation?: string;
     confidence?: number;
+    homeTeam?: string;
+    awayTeam?: string;
+    scoringProbability?: number;
+    aiBettingAdvice?: {
+      recommendation: string;
+      confidence: number;
+      reasoning: string[];
+      suggestedBets: string[];
+    };
+    aiGameProjection?: {
+      finalScorePrediction: string;
+      keyMoments: string[];
+      winProbability: { home: number; away: number };
+    };
+    aiInsights?: string[];
+    aiTitle?: string;
+    aiCallToAction?: string;
   };
   gameInfo?: {
     homeTeam: string;
