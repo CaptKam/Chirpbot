@@ -329,9 +329,13 @@ export class AlertGenerator {
             break;
         }
 
+        console.log(`🎮 DEBUG: Found ${games.length} ${sport} games to process`);
+        
         if (games.length > 0) {
           const alerts = await this.processGamesWithEngine(sport, games);
           totalAlerts += alerts;
+        } else {
+          console.log(`🚫 No ${sport} games found - skipping user processing for ${sport}`);
         }
       }
 
@@ -373,11 +377,15 @@ export class AlertGenerator {
           
           // Check if this user should inherit global defaults
           const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
+          console.log(`🔍 DEBUG: ${sport} global settings for ${user.username}:`, globalSettings);
           const hasAnyEnabledGlobally = Object.values(globalSettings).some(enabled => enabled === true);
+          console.log(`🔍 DEBUG: ${sport} has globally enabled alerts for ${user.username}: ${hasAnyEnabledGlobally}`);
           
           if (hasAnyEnabledGlobally) {
             console.log(`👤 User ${user.username}: Inheriting global ${sport} settings as defaults`);
             usersWithAlerts.push(user);
+          } else {
+            console.log(`👤 User ${user.username}: No global ${sport} settings enabled - skipping user`);
           }
         }
       } catch (error) {
@@ -389,6 +397,7 @@ export class AlertGenerator {
 
     if (usersWithAlerts.length === 0) {
       console.log(`🚫 No users have ${sport} alerts enabled - skipping processing`);
+      console.log(`🔍 DEBUG: ${sport} total users checked: ${allUsers.length}, users found with alerts: ${usersWithAlerts.length}`);
       return 0;
     }
 
