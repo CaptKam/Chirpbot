@@ -112,7 +112,7 @@ export const storage = {
       for (const step of deletionSteps) {
         try {
           const result = await db.execute(sql.raw(`DELETE FROM ${step.table} WHERE ${step.condition}`));
-          console.log(`💀 Deleted from ${step.table}: ${result.rowCount || 0} rows`);
+          console.log(`💀 Deleted from ${step.table}: ${result.rowsAffected || 0} rows`);
         } catch (error) {
           console.log(`📝 Table ${step.table} not found or no data - continuing`);
         }
@@ -128,9 +128,9 @@ export const storage = {
 
       // Final deletion of the user record
       const finalResult = await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
-      console.log(`💀 Final user deletion: ${finalResult.rowCount || 0} user records removed`);
+      console.log(`💀 Final user deletion: ${finalResult.rowsAffected || 0} user records removed`);
 
-      if ((finalResult.rowCount || 0) === 0) {
+      if (finalResult.rowsAffected === 0) {
         console.log(`⚠️ User ${userId} was not found in users table - may have been already deleted`);
         return false;
       }
@@ -401,6 +401,11 @@ export const storage = {
         'AI_EVENT_SUMMARIES': true,
         'AI_ROI_ALERTS': true,
 
+        // RE24 System alerts
+        'RE24_ENABLED': true,
+        'RE24_CONTEXT_FACTORS': true,
+        'RE24_MINIMUM_THRESHOLDS': true,
+        'RE24_DYNAMIC_PRIORITY': true,
 
         // NFL alerts
         'NFL_GAME_START': true,

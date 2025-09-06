@@ -43,6 +43,12 @@ const ALERT_TYPE_CONFIG = {
     { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
     { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
   ],
+  'RE24 System': [
+    { key: 'RE24_ENABLED', label: 'RE24 Probability System', description: 'Advanced run expectancy calculations for scoring probability' },
+    { key: 'RE24_CONTEXT_FACTORS', label: 'RE24 Context Adjustments', description: 'Weather, power hitter, and ballpark factors' },
+    { key: 'RE24_MINIMUM_THRESHOLDS', label: 'RE24 Minimum Thresholds', description: 'Probability-based alert filtering (40-45% minimums)' },
+    { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
+  ],
   NCAAF: [
     { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Game kickoff notification' },
     { key: 'NCAAF_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Second half begins notification' },
@@ -296,6 +302,25 @@ export default function Settings() {
     });
   };
 
+  // Helper function to get alert preference, considering RE24 specific logic
+  const getAlertPreferenceWithRE24 = (sport: string, alertType: string): boolean => {
+    if (preferencesLoading) return true;
+
+    // Check if the alert is globally disabled by admin
+    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
+      return false;
+    }
+
+    // Handle AI Enhancements and RE24 System separately
+    if (alertType.startsWith('AI_') || alertType.startsWith('RE24_')) {
+      // Assuming AI and RE24 settings are associated with MLB for configuration purposes if not sport-specific
+      return preferenceMap.get(alertType) ?? true;
+    }
+
+    return preferenceMap.get(alertType) ?? true;
+  };
+
+
   // Helper function to get category icon
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -415,6 +440,7 @@ export default function Settings() {
                           // Only show alerts that are not globally disabled by admin
                           return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                         }).map((alertType) => {
+                          const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key);
                           return (
                             <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                               <div className="flex-1">
@@ -451,6 +477,7 @@ export default function Settings() {
                           // Only show AI alerts that are not globally disabled by admin
                           return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                         }).map((alertType) => {
+                          const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key);
                           return (
                             <div key={alertType.key} className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 hover:bg-blue-500/20 transition-colors">
                               <div className="flex-1">
@@ -478,15 +505,52 @@ export default function Settings() {
                         })}
                       </div>
                     </div>
+                     {/* RE24 System Alerts */}
+                    <div className="space-y-3">
+                      <h3 className="text-md font-bold text-purple-400 uppercase tracking-wide">📊 RE24 System</h3>
+                      <div className="space-y-3">
+                        {ALERT_TYPE_CONFIG['RE24 System']?.filter((alertType) => {
+                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
+                        }).map((alertType) => {
+                          const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key); // Assuming RE24 is configured under MLB
+                          return (
+                            <div key={alertType.key} className="flex items-center justify-between p-3 bg-purple-500/10 rounded-lg border border-purple-500/20 hover:bg-purple-500/20 transition-colors">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <h4 className="text-sm font-semibold text-slate-100">
+                                    {alertType.label}
+                                  </h4>
+                                  {updateAlertPreferenceMutation.isPending && (
+                                    <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  {alertType.description}
+                                </p>
+                              </div>
+                              <Switch
+                                checked={isEnabled}
+                                onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
+                                disabled={updateAlertPreferenceMutation.isPending}
+                                data-testid={`toggle-${alertType.key.toLowerCase()}`}
+                                className="data-[state=checked]:bg-purple-500"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
 
                     {/* Show message when all alerts are disabled */}
                     {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).length === 0 && ALERT_TYPE_CONFIG['AI Enhancements']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
+                    }).length === 0 && ALERT_TYPE_CONFIG['RE24 System']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).length === 0 && (
                       <div className="text-center py-8">
+                        <p className="text-slate-400">All MLB, AI, and RE24 alert types have been disabled by your administrator.</p>
                       </div>
                     )}
                   </div>
@@ -498,6 +562,7 @@ export default function Settings() {
                     {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
+                      const isEnabled = getAlertPreferenceWithRE24('NCAAF', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                           <div className="flex-1">
@@ -540,6 +605,7 @@ export default function Settings() {
                     {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
+                      const isEnabled = getAlertPreferenceWithRE24('NFL', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                           <div className="flex-1">
@@ -582,6 +648,7 @@ export default function Settings() {
                     {ALERT_TYPE_CONFIG['NBA']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
+                      const isEnabled = getAlertPreferenceWithRE24('NBA', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                           <div className="flex-1">
@@ -624,6 +691,7 @@ export default function Settings() {
                     {ALERT_TYPE_CONFIG['NHL']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
+                      const isEnabled = getAlertPreferenceWithRE24('NHL', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                           <div className="flex-1">
@@ -666,6 +734,7 @@ export default function Settings() {
                     {ALERT_TYPE_CONFIG['CFL']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
+                      const isEnabled = getAlertPreferenceWithRE24('CFL', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                           <div className="flex-1">
@@ -708,6 +777,7 @@ export default function Settings() {
                     {ALERT_TYPE_CONFIG['WNBA']?.filter((alertType) => {
                       return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
                     }).map((alertType) => {
+                      const isEnabled = getAlertPreferenceWithRE24('WNBA', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                           <div className="flex-1">

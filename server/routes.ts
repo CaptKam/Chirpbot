@@ -54,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clean up old entries periodically
       if (recentRequests.size > 100) {
         const oldestTime = now - 10000; // 10 seconds
-        for (const [key, time] of Array.from(recentRequests.entries())) {
+        for (const [key, time] of recentRequests.entries()) {
           if (time < oldestTime) recentRequests.delete(key);
         }
       }
@@ -1961,6 +1961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH',
           'AI_ENHANCED_MESSAGES', 'AI_PREDICTIVE_AT_BAT', 'AI_SCORING_PROBABILITY',
           'AI_SITUATION_ANALYSIS', 'AI_EVENT_SUMMARIES', 'AI_ROI_ALERTS',
+          'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
         ],
         'NFL': [
           'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',

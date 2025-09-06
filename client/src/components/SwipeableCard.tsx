@@ -496,7 +496,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             )}
 
             {/* Betting Recommendations Based on Game Situation */}
-            {(alertData?.context?.reasons || (alertData?.priority && alertData.priority >= 80)) && !alertData?.context?.aiBettingAdvice && (
+            {(alertData?.context?.reasons || (alertData?.priority && (alertData?.priority >= 80))) && !alertData?.context?.aiBettingAdvice && (
               <div className="space-y-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
                   <div className="flex items-center space-x-2 mb-2">
