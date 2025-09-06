@@ -273,32 +273,14 @@ export class WNBAEngine extends BaseSportEngine {
     }
   }
 
-  // Load alert modules dynamically - WNBA only
+  // Alert cylinders removed - no module loading functionality
   async loadAlertModule(alertType: string): Promise<any | null> {
-    console.log(`🏀 WNBA alert cylinders cleared - no modules available for: ${alertType}`);
     return null;
   }
 
-  // Initialize alert modules for enabled alert types - WNBA only
+  // Alert cylinders removed - no module initialization
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
-
-    console.log(`🔧 Loading ${enabledAlertTypes.length} WNBA alert modules...`);
-
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ Loaded WNBA alert module: ${alertType}`);
-        } else {
-          console.log(`❌ Failed to load WNBA module: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error loading WNBA ${alertType}:`, error);
-      }
-    }
-
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} WNBA alert modules`);
+    console.log(`🚫 WNBA alert cylinders removed - no modules to initialize`);
   }
 }

@@ -348,32 +348,14 @@ export class NCAAFEngine extends BaseSportEngine {
     }
   }
 
-  // Load alert modules dynamically - NCAAF only
+  // Alert cylinders removed - no module loading functionality
   async loadAlertModule(alertType: string): Promise<any | null> {
-    console.log(`🏈 NCAAF alert cylinders cleared - no modules available for: ${alertType}`);
     return null;
   }
 
-  // Initialize alert modules for enabled alert types - NCAAF only
+  // Alert cylinders removed - no module initialization
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
-
-    console.log(`🔧 Loading ${enabledAlertTypes.length} NCAAF alert modules...`);
-
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ Loaded NCAAF alert module: ${alertType}`);
-        } else {
-          console.log(`❌ Failed to load NCAAF module: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error loading NCAAF ${alertType}:`, error);
-      }
-    }
-
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} NCAAF alert modules`);
+    console.log(`🚫 NCAAF alert cylinders removed - no modules to initialize`);
   }
 }

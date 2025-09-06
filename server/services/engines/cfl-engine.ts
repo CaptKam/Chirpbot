@@ -348,32 +348,14 @@ export class CFLEngine extends BaseSportEngine {
     }
   }
 
-  // Load alert modules dynamically - CFL only
+  // Alert cylinders removed - no module loading functionality
   async loadAlertModule(alertType: string): Promise<any | null> {
-    console.log(`🍁 CFL alert cylinders cleared - no modules available for: ${alertType}`);
     return null;
   }
 
-  // Initialize alert modules for enabled alert types - CFL only
+  // Alert cylinders removed - no module initialization
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
-
-    console.log(`🔧 Loading ${enabledAlertTypes.length} CFL alert modules...`);
-
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ Loaded CFL alert module: ${alertType}`);
-        } else {
-          console.log(`❌ Failed to load CFL module: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error loading CFL ${alertType}:`, error);
-      }
-    }
-
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} CFL alert modules`);
+    console.log(`🚫 CFL alert cylinders removed - no modules to initialize`);
   }
 }

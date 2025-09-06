@@ -316,32 +316,14 @@ export class NFLEngine extends BaseSportEngine {
     }
   }
 
-  // Load alert modules dynamically - NFL only
+  // Alert cylinders removed - no module loading functionality
   async loadAlertModule(alertType: string): Promise<any | null> {
-    console.log(`🏈 NFL alert cylinders cleared - no modules available for: ${alertType}`);
     return null;
   }
 
-  // Initialize alert modules for enabled alert types - NFL only
+  // Alert cylinders removed - no module initialization
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
-
-    console.log(`🔧 Loading ${enabledAlertTypes.length} NFL alert modules...`);
-
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ Loaded NFL alert module: ${alertType}`);
-        } else {
-          console.log(`❌ Failed to load NFL module: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error loading NFL ${alertType}:`, error);
-      }
-    }
-
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} NFL alert modules`);
+    console.log(`🚫 NFL alert cylinders removed - no modules to initialize`);
   }
 }

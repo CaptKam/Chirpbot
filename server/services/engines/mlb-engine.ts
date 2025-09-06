@@ -139,32 +139,14 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // Load alert modules dynamically - MLB only
+  // Alert cylinders removed - no module loading functionality
   async loadAlertModule(alertType: string): Promise<any | null> {
-    console.log(`📋 MLB alert cylinders cleared - no modules available for: ${alertType}`);
     return null;
   }
 
-  // Initialize alert modules for enabled alert types - MLB only
+  // Alert cylinders removed - no module initialization
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
-
-    console.log(`🔧 Loading ${enabledAlertTypes.length} MLB alert modules...`);
-
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ Loaded MLB alert module: ${alertType}`);
-        } else {
-          console.log(`❌ Failed to load MLB module: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error loading MLB ${alertType}:`, error);
-      }
-    }
-
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} MLB alert modules`);
+    console.log(`🚫 MLB alert cylinders removed - no modules to initialize`);
   }
 }
