@@ -164,9 +164,10 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
   // Fetch weather data for MLB games
   const { data: weatherData } = useQuery({
-    queryKey: ['weather', alert.homeTeam],
+    queryKey: ['weather', typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name],
     queryFn: async () => {
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(alert.homeTeam || '')}`, {
+      const teamName = typeof alert.homeTeam === 'string' ? alert.homeTeam : (alert.homeTeam?.name || alert.homeTeam?.displayName || '');
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(teamName)}`, {
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Weather fetch failed');
@@ -175,7 +176,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
     staleTime: 60 * 1000, // Cache for 1 minute
     refetchInterval: 60 * 1000, // Refetch every minute
     retry: 1,
-    enabled: alert.sport === 'MLB' && !!alert.homeTeam // Only fetch for MLB games with home team
+    enabled: alert.sport === 'MLB' && !!(typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name) // Only fetch for MLB games with home team
   });
 
   // Convert wind direction degrees to cardinal direction
@@ -483,7 +484,9 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
             {/* Team info */}
             <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>{alert.awayTeam} @ {alert.homeTeam}</span>
+              <span>
+                {typeof alert.awayTeam === 'string' ? alert.awayTeam : (alert.awayTeam?.name || alert.awayTeam?.displayName || 'Away')} @ {typeof alert.homeTeam === 'string' ? alert.homeTeam : (alert.homeTeam?.name || alert.homeTeam?.displayName || 'Home')}
+              </span>
               <span>{formatTime(alert.createdAt)}</span>
             </div>
           </div>
