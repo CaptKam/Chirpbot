@@ -53,11 +53,11 @@ export default function AlertFooter({
     const now = new Date();
     const alertTime = new Date(dateString);
     const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
-    
+
     if (diffMinutes < 1) return 'Just now';
     if (diffMinutes === 1) return '1 min ago';
     if (diffMinutes < 60) return `${diffMinutes} min ago`;
-    
+
     const diffHours = Math.floor(diffMinutes / 60);
     if (diffHours === 1) return '1 hour ago';
     return `${diffHours} hours ago`;
@@ -241,7 +241,7 @@ export default function AlertFooter({
         {renderSportSpecificContent()}
       </div>
 
-      {/* Time Ago */}
+      {/* TimeAgo */}
       <div className="flex items-center space-x-1">
         <Clock className="w-3 h-3" />
         <span>{formatTimeAgo(createdAt)}</span>
