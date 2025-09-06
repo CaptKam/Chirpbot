@@ -21,6 +21,13 @@ interface AIEnhancement {
   enhanced: boolean;
 }
 
+// Placeholder for betting insights structure, assuming it's defined elsewhere
+interface BettingInsights {
+  insights: string;
+  recommendation: string;
+  confidence: number;
+}
+
 export class BasicAI {
   private apiKey: string;
   private baseUrl = 'https://api.openai.com/v1/chat/completions';
@@ -38,7 +45,7 @@ export class BasicAI {
       const fs = require('fs');
       const path = require('path');
       const disableFlagsPath = path.join(__dirname, '../.disable-flags');
-
+      
       if (fs.existsSync(disableFlagsPath)) {
         const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
         if (flags.ai_disabled || flags.openai_disabled) {
@@ -189,6 +196,34 @@ Keep response under 100 words. Focus on immediate betting value.
       recommendation: 'HOLD',
       confidence: context.probability // Fallback to original probability
     };
+  }
+
+  // Function to generate betting insights using AI
+  async generateBettingInsights(context: AlertContext): Promise<BettingInsights> {
+    if (!this.isConfigured) {
+      return this.getFallbackInsights(context);
+    }
+
+    // Check if this alert type should get AI enhancement
+    if (!this.shouldEnhance(context.probability, context.type)) {
+      return this.getFallbackInsights(context);
+    }
+
+    try {
+      console.log(`🤖 AI: Generating betting insights for ${context.type} alert with ${context.probability}% probability`);
+      const prompt = this.buildPrompt(context);
+      const aiResponse = await this.callOpenAI(prompt);
+
+      console.log(`✅ AI: Generated betting insights - ${aiResponse.insights}`);
+      return {
+        insights: aiResponse.insights,
+        recommendation: aiResponse.recommendation,
+        confidence: this.calculateAIConfidence(context.probability, context.situation)
+      };
+    } catch (error) {
+      console.error('❌ AI betting insights failed:', error);
+      return this.getFallbackInsights(context);
+    }
   }
 
   // Simple response generation method for AI enhancements

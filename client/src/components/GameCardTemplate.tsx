@@ -66,13 +66,8 @@ const removeCity = (teamName: string) => {
   return words.length > 1 ? words.slice(-1).join(' ') : teamName;
 };
 
-const extractTeamAbbreviation = (teamName: string | any) => {
-  // Handle case where teamName is an object
-  if (typeof teamName === 'object' && teamName !== null) {
-    teamName = teamName.name || teamName.displayName || teamName.abbreviation || '';
-  }
-  
-  if (!teamName || typeof teamName !== 'string' || teamName.trim() === '') return 'TBD';
+const extractTeamAbbreviation = (teamName: string) => {
+  if (!teamName || teamName.trim() === '') return 'TBD';
 
   // Full team name mappings (check these first)
   const fullTeamMappings: Record<string, string> = {

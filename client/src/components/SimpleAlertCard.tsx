@@ -164,10 +164,9 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
   // Fetch weather data for MLB games
   const { data: weatherData } = useQuery({
-    queryKey: ['weather', typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name],
+    queryKey: ['weather', alert.homeTeam],
     queryFn: async () => {
-      const teamName = typeof alert.homeTeam === 'string' ? alert.homeTeam : (alert.homeTeam?.name || alert.homeTeam?.displayName || '');
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(teamName)}`, {
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(alert.homeTeam || '')}`, {
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Weather fetch failed');
@@ -176,7 +175,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
     staleTime: 60 * 1000, // Cache for 1 minute
     refetchInterval: 60 * 1000, // Refetch every minute
     retry: 1,
-    enabled: alert.sport === 'MLB' && !!(typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name) // Only fetch for MLB games with home team
+    enabled: alert.sport === 'MLB' && !!alert.homeTeam // Only fetch for MLB games with home team
   });
 
   // Convert wind direction degrees to cardinal direction
@@ -389,11 +388,11 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           <GameCardTemplate
             gameId={alert.id}
             homeTeam={{
-              name: typeof alert.homeTeam === 'string' ? alert.homeTeam : (alert.homeTeam?.name || alert.homeTeam?.displayName || 'Home'),
+              name: alert.homeTeam || 'Home',
               score: alert.context?.homeScore
             }}
             awayTeam={{
-              name: typeof alert.awayTeam === 'string' ? alert.awayTeam : (alert.awayTeam?.name || alert.awayTeam?.displayName || 'Away'), 
+              name: alert.awayTeam || 'Away', 
               score: alert.context?.awayScore
             }}
             sport={alert.sport}
@@ -484,9 +483,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
             {/* Team info */}
             <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>
-                {typeof alert.awayTeam === 'string' ? alert.awayTeam : (alert.awayTeam?.name || alert.awayTeam?.displayName || 'Away')} @ {typeof alert.homeTeam === 'string' ? alert.homeTeam : (alert.homeTeam?.name || alert.homeTeam?.displayName || 'Home')}
-              </span>
+              <span>{alert.awayTeam} @ {alert.homeTeam}</span>
               <span>{formatTime(alert.createdAt)}</span>
             </div>
           </div>
