@@ -3,7 +3,7 @@ import { TeamLogo } from '@/components/team-logo';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Clock, Play, CheckCircle } from 'lucide-react';
-import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
+import { WeatherDisplay } from '@/components/baseball-diamond';
 import { useQuery } from '@tanstack/react-query';
 
 interface GameCardTemplateProps {
@@ -317,20 +317,5 @@ export function GameCardTemplate({
 }
 
 // Mock EnhancedGameDisplay for demonstration. Replace with actual component if available.
-const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
-  // This is a placeholder. In a real scenario, this component would render the BaseballDiamond
-  // and potentially other enhanced game details.
-  // The logic for showing the baseball diamond is now handled in the GameCardTemplate itself.
-  return (
-    <BaseballDiamond
-      runners={{ first: true, second: false, third: true }} // Example data
-      inning={inning}
-      isTopInning={isTopInning}
-      outs={1} // Example data
-      balls={2} // Example data
-      strikes={1} // Example data
-      size="sm"
-      showCount={isLive}
-    />
-  );
+// Enhanced Game Display removed - no more baseball diamond;
 };

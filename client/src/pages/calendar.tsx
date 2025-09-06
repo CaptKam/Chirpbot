@@ -71,50 +71,11 @@ const extractTeamAbbreviation = (teamName: string) => {
 
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
-import { BaseballDiamond } from '@/components/baseball-diamond';
+// BaseballDiamond removed
 import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
-// Enhanced Game Display Component for Live MLB Games
-function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
-  gameId: string;
-  inning: number;
-  isTopInning: boolean;
-  isLive: boolean
-}) {
-  const { data: enhancedData } = useQuery({
-    queryKey: ['enhanced-game', gameId],
-    queryFn: async () => {
-      const response = await fetch(`/api/games/${gameId}/live`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch live game data");
-      return response.json();
-    },
-    enabled: isLive,
-    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
-    staleTime: 8000,
-    retry: 3,
-    retryDelay: 1000
-  });
-
-  return (
-    <BaseballDiamond
-      runners={enhancedData?.runners || {
-        first: false,
-        second: false,
-        third: false
-      }}
-      inning={enhancedData?.inning || inning}
-      isTopInning={enhancedData?.isTopInning ?? isTopInning}
-      outs={enhancedData?.outs || 0}
-      balls={enhancedData?.balls || 0}
-      strikes={enhancedData?.strikes || 0}
-      size="sm"
-      showCount={isLive}
-    />
-  );
-}
+// Enhanced Game Display removed - no more baseball diamond
 
 // Weather system completely removed
 function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?: 'sm' | 'md' }) {
