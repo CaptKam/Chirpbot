@@ -108,10 +108,12 @@ async function loadDashboardData() {
         
         if (usersResponse.ok) {
             const users = await usersResponse.json();
-            displayUsers(users);
+            currentUsers = users;
+            updateUsersTable();
         } else {
             console.warn('Failed to fetch users for display (may be authentication issue)');
-            displayUsers([]);
+            currentUsers = [];
+            updateUsersTable();
         }
 
         // Load sport alert settings
