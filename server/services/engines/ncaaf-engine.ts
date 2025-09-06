@@ -56,34 +56,6 @@ export class NCAAFEngine extends BaseSportEngine {
 
     return Math.min(100, probability);
   }
-    // NCAAF-specific probability calculation
-    // Based on down, distance, field position, time remaining, etc.
-    const { down, yardsToGo, fieldPosition, quarter, timeRemaining } = gameState;
-
-    let probability = 50; // Base probability
-
-    // Down-specific adjustments
-    if (down === 1) probability += 20;
-    else if (down === 2) probability += 10;
-    else if (down === 3) probability -= 10;
-    else if (down === 4) probability -= 30;
-
-    // Distance adjustments
-    if (yardsToGo <= 3) probability += 15;
-    else if (yardsToGo <= 7) probability += 5;
-    else if (yardsToGo >= 15) probability -= 15;
-
-    // Field position (red zone bonus)
-    if (fieldPosition <= 20) probability += 25;
-    else if (fieldPosition <= 40) probability += 10;
-
-    // Time pressure
-    if (quarter >= 4 && this.parseTimeToSeconds(timeRemaining) <= 120) {
-      probability += 10;
-    }
-
-    return Math.min(Math.max(probability, 5), 95);
-  }
 
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     // Alert processing is now handled by the base class using alert cylinders
@@ -358,30 +330,6 @@ export class NCAAFEngine extends BaseSportEngine {
       const validNCAAFAlerts = [
         'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN',
         'NCAAF_SECOND_HALF_KICKOFF', 'OVERTIME', 'CLUTCH_TIME'
-      ];
-
-      const ncaafEnabledTypes = enabledTypes.filter(alertType =>
-        validNCAAFAlerts.includes(alertType)
-      );
-
-      // Check global settings for these NCAAF alerts
-      const globallyEnabledTypes = [];
-      for (const alertType of ncaafEnabledTypes) {
-        const isGloballyEnabled = await this.isAlertEnabled(alertType);
-        if (isGloballyEnabled) {
-          globallyEnabledTypes.push(alertType);
-        }
-      }
-
-      console.log(`🎯 Initializing NCAAF engine for user ${userId} with ${globallyEnabledTypes.length} NCAAF alerts: ${globallyEnabledTypes.join(', ')}`);
-
-      // Initialize the NCAAF alert modules using parent class method
-      await this.initializeUserAlertModules(globallyEnabledTypes);
-
-    } catch (error) {
-      console.error(`❌ Failed to initialize NCAAF engine for user ${userId}:`, error);
-    }
-  }TCH_TIME'
       ];
 
       const ncaafEnabledTypes = enabledTypes.filter(alertType =>
