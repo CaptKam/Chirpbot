@@ -146,6 +146,7 @@ Keep response under 100 words. Focus on immediate betting value.
     };
   }
 
+  // Quick confidence boost for RE24-enhanced alerts
   calculateAIConfidence(baseConfidence: number, situation: string): number {
     let boost = 0;
 

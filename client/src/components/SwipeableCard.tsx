@@ -200,8 +200,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       // Match by team names (both home and away combinations)
       const gameHomeTeam = game.homeTeam?.name || '';
       const gameAwayTeam = game.awayTeam?.name || '';
-      const alertHomeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || '';
-      const alertAwayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : (alertData.awayTeam as any)?.name || '';
+      const alertHomeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || '';
+      const alertAwayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || '';
 
       return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
              (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
@@ -376,8 +376,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   // Construct a display message for sharing/copying
   const displayMessage = React.useMemo(() => {
-    const homeTeamName = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : (alertData?.homeTeam as any)?.name || '';
-    const awayTeamName = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : (alertData?.awayTeam as any)?.name || '';
+    const homeTeamName = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
+    const awayTeamName = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
     let message = `ChirpBot Alert: ${homeTeamName} vs ${awayTeamName}`;
     if (alertData?.sport) message += ` (${alertData.sport})`;
     if (alertData?.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
@@ -417,23 +417,23 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 AI Betting Analysis</span>
                   <span className="text-green-300 text-xs">
-                    {alertData?.context?.aiBettingAdvice?.confidence}% Confidence
+                    {alertData.context.aiBettingAdvice.confidence}% Confidence
                   </span>
                 </div>
                 <p className="text-xs font-medium text-green-200 mb-2">
-                  {alertData?.context?.aiBettingAdvice?.recommendation}
+                  {alertData.context.aiBettingAdvice.recommendation}
                 </p>
 
                 {/* Reasoning */}
                 <div className="space-y-1 mb-2">
-                  {alertData?.context?.aiBettingAdvice?.reasoning?.map((reason: string, idx: number) => (
+                  {alertData.context.aiBettingAdvice.reasoning?.map((reason: string, idx: number) => (
                     <p key={idx} className="text-xs text-green-200">• {reason}</p>
                   ))}
                 </div>
 
                 {/* Suggested Bets */}
                 <div className="flex flex-wrap gap-1">
-                  {alertData?.context?.aiBettingAdvice?.suggestedBets?.map((bet: string, idx: number) => (
+                  {alertData.context.aiBettingAdvice.suggestedBets?.map((bet: string, idx: number) => (
                     <span key={idx} className="px-2 py-1 text-xs bg-green-600/20 text-green-300 rounded">
                       {bet}
                     </span>
@@ -450,22 +450,22 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
 
                 <p className="text-xs font-medium text-purple-200 mb-2">
-                  Final: {alertData?.context?.aiGameProjection?.finalScorePrediction}
+                  Final: {alertData.context.aiGameProjection.finalScorePrediction}
                 </p>
 
                 {/* Win Probability */}
                 <div className="flex justify-between text-xs mb-2">
                   <span className="text-purple-300">
-                    {typeof alertData?.context?.homeTeam === 'string' ? alertData?.context?.homeTeam : (alertData?.context?.homeTeam as any)?.name || 'Home'}: {(alertData?.context as any)?.aiGameProjection?.winProbability?.home}%
+                    {typeof alertData?.context?.homeTeam === 'string' ? alertData.context.homeTeam : alertData?.context?.homeTeam?.name || 'Home'}: {(alertData.context as any).aiGameProjection?.winProbability?.home}%
                   </span>
                   <span className="text-purple-300">
-                    {typeof alertData?.context?.awayTeam === 'string' ? alertData?.context?.awayTeam : (alertData?.context?.awayTeam as any)?.name || 'Away'}: {(alertData?.context as any)?.aiGameProjection?.winProbability?.away}%
+                    {typeof alertData?.context?.awayTeam === 'string' ? alertData.context.awayTeam : alertData?.context?.awayTeam?.name || 'Away'}: {(alertData.context as any).aiGameProjection?.winProbability?.away}%
                   </span>
                 </div>
 
                 {/* Key Moments */}
                 <div className="space-y-1">
-                  {alertData?.context?.aiGameProjection?.keyMoments?.map((moment: string, idx: number) => (
+                  {alertData.context.aiGameProjection.keyMoments?.map((moment: string, idx: number) => (
                     <p key={idx} className="text-xs text-purple-200">⏱️ {moment}</p>
                   ))}
                 </div>
@@ -478,25 +478,25 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 Betting Analysis</span>
                   <span className="text-green-300 text-xs">
-                    {alertData?.context?.scoringProbability || alertData?.confidence}% Confidence
+                    {alertData.context?.scoringProbability || alertData.confidence}% Confidence
                   </span>
                 </div>
                 <p className="text-xs text-green-200 mb-2">
-                  {alertData?.betbookData?.aiAdvice}
+                  {alertData.betbookData.aiAdvice}
                 </p>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-300">
-                    O/U: {alertData?.betbookData?.odds?.total}
+                    O/U: {alertData.betbookData.odds?.total}
                   </span>
                   <span className="text-slate-300">
-                    Spread: {(alertData?.betbookData?.odds?.home || 0) > 0 ? '+' : ''}{alertData?.betbookData?.odds?.home}
+                    Spread: {alertData.betbookData.odds?.home > 0 ? '+' : ''}{alertData.betbookData.odds?.home}
                   </span>
                 </div>
               </div>
             )}
 
             {/* Betting Recommendations Based on Game Situation */}
-            {(alertData?.context?.reasons || (alertData?.priority && alertData.priority >= 80)) && !alertData?.context?.aiBettingAdvice && (
+            {(alertData.context?.reasons || (alertData.priority && alertData.priority >= 80)) && !alertData?.context?.aiBettingAdvice && (
               <div className="space-y-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
                   <div className="flex items-center space-x-2 mb-2">
@@ -504,13 +504,13 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
                   </div>
                   <p className="text-white text-sm font-medium">
-                    {alertData?.context?.recommendation ||
-                     alertData?.betbookData?.aiAdvice ||
+                    {alertData.context?.recommendation ||
+                     alertData.betbookData?.aiAdvice ||
                      (() => {
-                       const sport = alertData?.sport || 'MLB';
-                       const tier = Math.ceil((alertData?.priority || 70) / 25);
-                       const homeScore = alertData?.context?.homeScore || alertData?.homeScore || 0;
-                       const awayScore = alertData?.context?.awayScore || alertData?.awayScore || 0;
+                       const sport = alertData.sport || 'MLB';
+                       const tier = Math.ceil((alertData.priority || 70) / 25);
+                       const homeScore = alertData.context?.homeScore || alertData.homeScore || 0;
+                       const awayScore = alertData.context?.awayScore || alertData.awayScore || 0;
                        const totalScore = homeScore + awayScore;
 
                        if (sport === 'MLB') {
@@ -529,27 +529,27 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
 
                 {/* AI Analysis Reasons */}
-                {(alertData?.context?.reasons || alertData?.context?.aiInsights) && !alertData?.context?.aiBettingAdvice && (
+                {(alertData.context?.reasons || alertData.context?.aiInsights) && !alertData?.context?.aiBettingAdvice && (
                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 ring-1 ring-white/10">
                     <div className="flex items-center space-x-2 mb-1">
                       <Brain className="w-3 h-3 text-purple-400" />
                       <span className="text-xs text-purple-200 font-medium">AI Analysis</span>
                       <span className="text-xs text-green-300 font-mono">
-                        {alertData?.context?.confidence || alertData?.confidence}% confidence
+                        {alertData.context.confidence || alertData.confidence}% confidence
                       </span>
                     </div>
 
                     {/* AI Insights */}
-                    {alertData?.context?.aiInsights && (
+                    {alertData.context?.aiInsights && (
                       <div className="mb-2 p-2 bg-blue-500/10 rounded border-l-2 border-blue-400">
-                        <p className="text-xs text-blue-200 font-medium">{alertData?.context?.aiInsights}</p>
+                        <p className="text-xs text-blue-200 font-medium">{alertData.context.aiInsights}</p>
                       </div>
                     )}
 
                     {/* Context Reasons */}
-                    {alertData?.context?.reasons && (
+                    {alertData.context?.reasons && (
                       <ul className="text-xs text-white/90 space-y-0.5">
-                        {alertData?.context?.reasons?.slice(0, 2).map((reason, idx) => (
+                        {alertData.context.reasons.slice(0, 2).map((reason, idx) => (
                           <li key={idx} className="flex items-start space-x-1">
                             <span className="text-green-400 mt-0.5">•</span>
                             <span>{reason}</span>
