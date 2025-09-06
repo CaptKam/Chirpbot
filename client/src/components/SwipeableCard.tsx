@@ -181,14 +181,40 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     if (!todaysGames?.games || !alertData) return null;
 
     return todaysGames.games.find((game: any) => {
-      // Match by team names (both home and away combinations)
-      const gameHomeTeam = game.homeTeam?.name || '';
-      const gameAwayTeam = game.awayTeam?.name || '';
-      const alertHomeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || '';
-      const alertAwayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || '';
+      // Try to match by gameId first (most reliable)
+      if (alertData.gameId && game.id && alertData.gameId === game.id) {
+        return true;
+      }
 
-      return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
-             (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
+      // Fallback to team name matching with better normalization
+      const gameHomeTeam = (game.homeTeam?.name || '').toLowerCase().trim();
+      const gameAwayTeam = (game.awayTeam?.name || '').toLowerCase().trim();
+
+      // Extract team names from alert data
+      let alertHomeTeam = '';
+      let alertAwayTeam = '';
+
+      if (typeof alertData.homeTeam === 'string') {
+        alertHomeTeam = alertData.homeTeam.toLowerCase().trim();
+      } else if (alertData.homeTeam?.name) {
+        alertHomeTeam = alertData.homeTeam.name.toLowerCase().trim();
+      }
+
+      if (typeof alertData.awayTeam === 'string') {
+        alertAwayTeam = alertData.awayTeam.toLowerCase().trim();
+      } else if (alertData.awayTeam?.name) {
+        alertAwayTeam = alertData.awayTeam.name.toLowerCase().trim();
+      }
+
+      // Check if teams match (both home/away combinations)
+      const exactMatch = (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
+                        (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
+
+      // Also try partial matching for team abbreviations or short names
+      const partialMatch = (gameHomeTeam.includes(alertHomeTeam) || alertHomeTeam.includes(gameHomeTeam)) &&
+                          (gameAwayTeam.includes(alertAwayTeam) || alertAwayTeam.includes(gameAwayTeam));
+
+      return exactMatch || partialMatch;
     });
   }, [todaysGames, alertData]);
 
