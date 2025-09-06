@@ -27,6 +27,12 @@ export abstract class BaseSportEngine {
 
   abstract calculateProbability(gameState: GameState): Promise<number>;
 
+  // Optional method for initializing user alert modules (implemented by subclasses that support it)
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    // Default implementation does nothing - subclasses can override
+    console.log(`🔧 Base engine: no specific alert modules to initialize for ${this.sport}`);
+  }
+
   // Simplified alert generation without modules
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     console.log(`🔍 Alert generation disabled - no modules loaded for ${gameState.gameId}`);
