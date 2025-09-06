@@ -483,7 +483,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
             {/* Team info */}
             <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>{alert.awayTeam} @ {alert.homeTeam}</span>
+              <span>{alert.awayTeam || 'Away'} @ {alert.homeTeam || 'Home'}</span>
               <span>{formatTime(alert.createdAt)}</span>
             </div>
           </div>
