@@ -155,7 +155,11 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_GAME_START': 'game-start-module',
         'MLB_SEVENTH_INNING_STRETCH': 'seventh-inning-stretch-module',
         'STRIKEOUT': 'strikeout-module',
-        'TEST_ALERT': 'test-alert-module'
+        'TEST_ALERT': 'test-alert-module',
+        'RE24_ENABLED': 're24-enabled-module',
+        'RE24_CONTEXT_FACTORS': 're24-context-factors-module',
+        'RE24_MINIMUM_THRESHOLDS': 're24-minimum-thresholds-module',
+        'RE24_DYNAMIC_PRIORITY': 're24-dynamic-priority-module'
       };
 
       const moduleFileName = moduleMap[alertType];
