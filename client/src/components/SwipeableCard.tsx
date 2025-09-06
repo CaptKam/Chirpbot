@@ -11,58 +11,12 @@ import { Badge } from '@/components/ui/badge';
 import { TeamLogo } from '@/components/team-logo';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { Alert } from '@/types';
-import { BaseballDiamond } from '@/components/baseball-diamond';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
 import draftkingsLogo from '@assets/draftkings.png';
 import fanaticsLogo from '@assets/fanatics.png';
 import fanduelLogo from '@assets/fanduel.png';
-
-// Import date-fns for date manipulation
-import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
-
-// Enhanced Game Display Component for Live MLB Games
-function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
-  gameId: string; 
-  inning: number; 
-  isTopInning: boolean; 
-  isLive: boolean 
-}) {
-  const { data: enhancedData } = useQuery({
-    queryKey: ['enhanced-game', gameId],
-    queryFn: async () => {
-      const response = await fetch(`/api/games/${gameId}/live`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch live game data");
-      return response.json();
-    },
-    enabled: isLive,
-    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
-    staleTime: 8000,
-    retry: 3,
-    retryDelay: 1000
-  });
-
-  return (
-    <BaseballDiamond 
-      runners={enhancedData?.runners || {
-        first: false,
-        second: false,
-        third: false
-      }}
-      inning={enhancedData?.inning || inning}
-      isTopInning={enhancedData?.isTopInning ?? isTopInning}
-      outs={enhancedData?.outs || 0}
-      balls={enhancedData?.balls || 0}
-      strikes={enhancedData?.strikes || 0}
-      size="sm"
-      showCount={isLive}
-    />
-  );
-}
-
 
 // Utility functions
 function formatTime(date: string | Date): string {
@@ -782,7 +736,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-6">
                 <GameCardTemplate
-                  gameId={alertData.id}
+                  gameId={alertData.gameId || alertData.id}
                   homeTeam={{
                     name: typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'Home Team',
                     score: displayScores.homeScore
@@ -797,11 +751,19 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
+                  runners={{
+                    first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
+                    second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
+                    third: alertData.context?.hasThird || liveGameData?.runners?.third || false
+                  }}
+                  balls={alertData.context?.balls || liveGameData?.balls}
+                  strikes={alertData.context?.strikes || liveGameData?.strikes}
+                  outs={alertData.context?.outs || liveGameData?.outs}
                   weather={weatherData}
                   size="lg"
                   showWeather={true}
                   showVenue={false}
-                  showEnhancedMLB={false}
+                  showEnhancedMLB={alertData.sport === 'MLB'}
                   className="shadow-lg"
                 />
               </div>
@@ -814,18 +776,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <p className="text-slate-100 text-base leading-relaxed font-medium">
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
-
-                    {/* Enhanced Baseball Diamond for MLB live games - Integrated within message */}
-                    {alertData.sport === 'MLB' && displayScores.isLive && (
-                      <div className="flex justify-center mt-4 mb-3">
-                        <EnhancedGameDisplay 
-                          gameId={alertData.id} // Using alertData.id as gameId
-                          inning={alertData.context?.inning || liveGameData?.inning || 1}
-                          isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning ?? true}
-                          isLive={displayScores.isLive}
-                        />
-                      </div>
-                    )}
 
                     {/* AI Insights */}
                     {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
@@ -854,7 +804,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </p>
                 </div>
               )}
-
 
             </div>
           ) : (

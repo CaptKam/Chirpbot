@@ -51,7 +51,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clean up old entries periodically
       if (recentRequests.size > 100) {
         const oldestTime = now - 10000; // 10 seconds
-        for (const [key, time] of recentRequests.entries()) {
+        for (const entry of recentRequests.entries()) {
+          const [key, time] = entry;
           if (time < oldestTime) recentRequests.delete(key);
         }
       }
@@ -321,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport } = req.query;
-      const games = await storage.getUserMonitoredGames(userId);
+      const games = await storage.getUserMonitoredTeams(userId);
       res.json(games);
     } catch (error) {
       console.error('Error fetching monitored games:', error);
@@ -343,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date()
       };
 
-      await storage.addUserMonitoredGame(gameData);
+      await storage.addUserMonitoredTeam(userId, gameId, sport || 'MLB', homeTeamName || '', awayTeamName || '');
       res.json({ message: 'Game monitoring enabled' });
     } catch (error) {
       console.error('Error adding monitored game:', error);
@@ -354,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
     try {
       const { userId, gameId } = req.params;
-      await storage.removeUserMonitoredGame(userId, gameId);
+      await storage.removeUserMonitoredTeam(userId, gameId);
       res.json({ message: 'Game monitoring disabled' });
     } catch (error) {
       console.error('Error removing monitored game:', error);
@@ -968,6 +969,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user; // from requireAdmin middleware
+      if (!currentUser) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
 
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
 
@@ -1022,6 +1026,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user;
+      if (!currentUser) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
 
       console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
 
@@ -1236,7 +1243,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      if (result.rowsAffected === 0) {
+      const rowCount = (result as any).rowsAffected || result.rowCount || 0;
+      if (rowCount === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1436,7 +1444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults = {
+      const debugResults: any = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
@@ -1609,7 +1617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus = {
+      const dbStatus: any = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -1644,7 +1652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/debug/alerts-system', async (req, res) => {
     try {
-      const alertsDebug = {
+      const alertsDebug: any = {
         generation: {},
         storage: {},
         delivery: {},
@@ -1730,10 +1738,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check monitored games
       try {
         const monitoredGames = await storage.getAllMonitoredGames();
+        const userIds = monitoredGames.map(g => g.userId);
+        const uniqueUserSet = new Set(userIds);
+        const uniqueUsers = Array.from(uniqueUserSet);
         monitoringStatus.monitoring = {
           status: 'OK',
           userMonitoredGames: monitoredGames.length,
-          uniqueUsers: [...new Set(monitoredGames.map(g => g.userId))].length
+          uniqueUsers: uniqueUsers.length
         };
       } catch (error: any) {
         monitoringStatus.monitoring = { status: 'ERROR', error: error.message };
@@ -1999,9 +2010,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
             results.push({ sport, alertType, disabled: true });
             totalDisabled++;
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Failed to disable ${sport}.${alertType}:`, error);
-            results.push({ sport, alertType, disabled: false, error: error.message });
+            results.push({ sport, alertType, disabled: false, error: error.message || String(error) });
           }
         }
       }
