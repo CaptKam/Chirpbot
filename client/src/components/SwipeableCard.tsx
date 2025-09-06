@@ -751,11 +751,19 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
+                  runners={{
+                    first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
+                    second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
+                    third: alertData.context?.hasThird || liveGameData?.runners?.third || false
+                  }}
+                  balls={alertData.context?.balls || liveGameData?.balls}
+                  strikes={alertData.context?.strikes || liveGameData?.strikes}
+                  outs={alertData.context?.outs || liveGameData?.outs}
                   weather={weatherData}
                   size="lg"
                   showWeather={true}
                   showVenue={false}
-                  showEnhancedMLB={false}
+                  showEnhancedMLB={alertData.sport === 'MLB'}
                   className="shadow-lg"
                 />
               </div>
