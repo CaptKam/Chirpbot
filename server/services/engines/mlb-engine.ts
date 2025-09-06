@@ -139,14 +139,5 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // Alert cylinders removed - no module loading functionality
-  async loadAlertModule(alertType: string): Promise<any | null> {
-    return null;
-  }
-
-  // Alert cylinders removed - no module initialization
-  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    this.alertModules.clear();
-    console.log(`🚫 MLB alert cylinders removed - no modules to initialize`);
-  }
+  // MLB alert cylinders are now enabled - using base engine functionality
 }
