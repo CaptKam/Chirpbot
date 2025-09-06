@@ -62,34 +62,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Setup WebSocket server with heartbeat
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  const clients = new Set<WebSocket>();
+  // WebSocket server disabled
+  console.log('🚫 WebSocket server disabled');
 
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
-
-  function heartbeat(this: any) {
-    this.isAlive = true;
-  }
-
-  wss.on('connection', (ws: any) => {
-    ws.isAlive = true;
-    clients.add(ws);
-    console.log('WebSocket client connected');
-
-    ws.on('pong', heartbeat);
-
-    ws.on('close', () => {
-      clients.delete(ws);
-      console.log('WebSocket client disconnected');
-    });
-
-    ws.on('error', (error: Error) => {
-      console.error('WebSocket error:', error);
-      clients.delete(ws);
-    });
-  });
 
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
@@ -138,35 +115,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Heartbeat interval to detect zombie connections
-  const heartbeatInterval = setInterval(() => {
-    wss.clients.forEach((ws: any) => {
-      if (ws.isAlive === false) {
-        return ws.terminate();
-      }
-      ws.isAlive = false;
-      ws.ping();
-    });
-  }, 30000);
-
-  // Ensure cleanup on server shutdown
-  process.on('SIGINT', () => {
-    console.log('🛑 Server shutting down, cleaning up intervals...');
-    clearInterval(heartbeatInterval);
-    process.exit(0);
-  });
-
-  // Broadcast function with backpressure handling
+  // WebSocket functionality disabled - no broadcasting
   function broadcast(data: any) {
-    const payload = JSON.stringify(data);
-    clients.forEach((client: any) => {
-      if (client.readyState === WebSocket.OPEN && client.bufferedAmount < 1_000_000) {
-        client.send(payload);
-      }
-    });
+    // WebSocket disabled - no broadcasting
+    console.log('🚫 WebSocket broadcast disabled');
   }
 
-  // Export broadcast function for use by other services
+  // Export disabled broadcast function
   (global as any).wsBroadcast = broadcast;
 
   // Basic health check
