@@ -112,9 +112,28 @@ export default function Admin() {
   const { toast } = useToast();
   const { user: currentUser, isAuthenticated } = useAuth();
 
-  // Redirect to web admin panel
-  if (isAuthenticated && currentUser && currentUser.role === 'admin') {
-    window.location.href = '/admin-panel';
+  // Check if user is admin and redirect once
+  useEffect(() => {
+    if (isAuthenticated && currentUser && currentUser.role === 'admin') {
+      window.location.href = '/admin-panel';
+    }
+  }, [isAuthenticated, currentUser]);
+
+  // Show loading while checking auth
+  if (!isAuthenticated || !currentUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
+        <div className="text-center">
+          <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-pulse" />
+          <h1 className="text-2xl font-bold text-slate-100 mb-2">Checking Access...</h1>
+          <p className="text-slate-400">Please wait...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show redirect message for admins
+  if (currentUser.role === 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
         <div className="text-center">
@@ -133,6 +152,7 @@ export default function Admin() {
         <Shield className="w-16 h-16 text-red-400 mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-slate-100 mb-2">Access Denied</h1>
         <p className="text-slate-400">You need admin privileges to access this page.</p>
+        <p className="text-slate-400 mt-2">Please log in with an admin account at <a href="/admin-panel" className="text-blue-400 underline">/admin-panel</a></p>
       </div>
     </div>
   );
