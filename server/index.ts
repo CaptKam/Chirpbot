@@ -10,9 +10,15 @@ import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
 import { pool } from "./db";
 
-// Keep track of server for graceful shutdown
+// Keep track of server and monitoring timer for graceful shutdown
 let httpServer: any = null;
+let monitoringInterval: NodeJS.Timeout | null = null;
 let isShuttingDown = false;
+
+// Export monitoring interval setter for routes.ts
+(global as any).setMonitoringInterval = (interval: NodeJS.Timeout) => {
+  monitoringInterval = interval;
+};
 
 // Graceful shutdown handler
 const gracefulShutdown = async (signal: string) => {
@@ -30,6 +36,13 @@ const gracefulShutdown = async (signal: string) => {
           resolve();
         });
       });
+    }
+    
+    // Clear monitoring interval to prevent port binding issues
+    if (monitoringInterval) {
+      clearInterval(monitoringInterval);
+      monitoringInterval = null;
+      console.log('✅ Alert monitoring timer cleared');
     }
     
     // Close database connections
