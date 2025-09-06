@@ -293,9 +293,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/games/:gameId/enhanced', async (req, res) => {
     try {
       const { gameId } = req.params;
+      
+      // Extract actual MLB game ID from composite identifiers
+      let actualGameId = gameId;
+      if (gameId.includes('_') && gameId.match(/^\d+_/)) {
+        actualGameId = gameId.split('_')[0];
+      }
+      
+      // If it's not a valid MLB game ID, return error
+      if (!/^\d+$/.test(actualGameId)) {
+        return res.status(400).json({ message: 'Invalid MLB game ID format' });
+      }
+
       const { MLBApiService } = await import('./services/mlb-api');
       const mlbService = new MLBApiService();
-      const enhancedData = await mlbService.getEnhancedGameData(gameId);
+      const enhancedData = await mlbService.getEnhancedGameData(actualGameId);
       res.json(enhancedData);
     } catch (error) {
       console.error('Error fetching enhanced game data:', error);
@@ -307,9 +319,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/games/:gameId/live", async (req, res) => {
     try {
       const { gameId } = req.params;
+      
+      // Extract actual MLB game ID from composite identifiers
+      // Handle formats like "776450_MLB_RISP_9_0" or plain game IDs
+      let actualGameId = gameId;
+      
+      // If it contains underscore, take the first part (likely the game ID)
+      if (gameId.includes('_') && gameId.match(/^\d+_/)) {
+        actualGameId = gameId.split('_')[0];
+      }
+      
+      // If it's a UUID or non-numeric, return mock data to avoid API errors
+      if (!/^\d+$/.test(actualGameId)) {
+        console.log(`⚠️ Non-MLB game ID detected: ${gameId}, returning mock data`);
+        return res.json({
+          runners: { first: false, second: false, third: false },
+          balls: 0,
+          strikes: 0,
+          outs: 0,
+          inning: 1,
+          isTopInning: true,
+          homeScore: 0,
+          awayScore: 0,
+          error: 'Invalid game ID format'
+        });
+      }
+
       const { MLBApiService } = await import('./services/mlb-api');
       const mlbService = new MLBApiService();
-      const liveData = await mlbService.getEnhancedGameData(gameId);
+      const liveData = await mlbService.getEnhancedGameData(actualGameId);
       res.json(liveData);
     } catch (error) {
       console.error('Error fetching live game data:', error);
