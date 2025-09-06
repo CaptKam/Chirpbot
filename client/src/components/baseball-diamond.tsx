@@ -18,17 +18,17 @@ interface BaseballDiamondProps {
   showCount?: boolean;
 }
 
-export function BaseballDiamond({ 
-  runners = {}, 
-  inning, 
-  isTopInning, 
-  outs = 0, 
-  balls = 0, 
-  strikes = 0, 
+export function BaseballDiamond({
+  runners = {},
+  inning,
+  isTopInning,
+  outs = 0,
+  balls = 0,
+  strikes = 0,
   size = 'md',
-  showCount = true 
+  showCount = true
 }: BaseballDiamondProps) {
-  
+
   const getSizeClasses = () => {
     switch (size) {
       case 'sm': return { diamond: 'w-16 h-16', base: 'w-2 h-2', text: 'text-xs' };
@@ -44,11 +44,6 @@ export function BaseballDiamond({
       {/* Count and Inning Info */}
       {showCount && (inning || outs || balls || strikes) && (
         <div className="text-center space-y-1">
-          {inning && (
-            <div className={`${text} text-slate-300 font-bold`}>
-              {isTopInning ? '↑' : '↓'} {inning}th
-            </div>
-          )}
           <div className="flex items-center justify-center space-x-3">
             {(balls > 0 || strikes > 0) && (
               <div className={`${text} text-emerald-400 font-mono`}>
@@ -82,7 +77,7 @@ export function BaseballDiamond({
         >
           {[
             runners.first && '1st',
-            runners.second && '2nd', 
+            runners.second && '2nd',
             runners.third && '3rd'
           ].filter(Boolean).join(' & ')}
         </motion.div>
@@ -94,44 +89,45 @@ export function BaseballDiamond({
 interface WeatherDisplayProps {
   windSpeed?: number;
   windDirection?: string;
+  windGust?: number;
   temperature?: number;
+  stadiumWindContext?: string;
   size?: 'sm' | 'md';
 }
 
-export function WeatherDisplay({ 
-  windSpeed = 0, 
-  windDirection = 'N', 
+export function WeatherDisplay({
+  windSpeed = 0,
+  windDirection = 'N',
+  windGust,
   temperature,
-  size = 'sm' 
+  stadiumWindContext,
+  size = 'sm'
 }: WeatherDisplayProps) {
   const getWindIcon = (direction: string) => {
     const directions: Record<string, string> = {
       'N': '↑', 'S': '↓', 'E': '→', 'W': '←',
       'NE': '↗', 'NW': '↖', 'SE': '↘', 'SW': '↙'
     };
-    return directions[direction.toUpperCase()] || '○';
-  };
-
-  const getWindColor = (speed: number) => {
-    if (speed >= 15) return 'text-red-400';
-    if (speed >= 10) return 'text-yellow-400';
-    if (speed >= 5) return 'text-green-400';
-    return 'text-slate-400';
+    return directions[direction.toUpperCase()] || '↑';
   };
 
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
 
+  // Use stadium context if available, otherwise show basic wind info
+  const displayText = stadiumWindContext || `${windSpeed}mph ${windDirection}`;
+
   return (
     <div className={`flex items-center space-x-1 ${textSize}`}>
-      <motion.span 
-        className={`${getWindColor(windSpeed)} font-mono`}
-        animate={{ rotate: windSpeed > 10 ? 360 : 0 }}
-        transition={{ duration: windSpeed > 10 ? 2 : 0, repeat: windSpeed > 10 ? Infinity : 0, ease: 'linear' }}
-      >
+      <span className="text-slate-400 font-mono">
         {getWindIcon(windDirection)}
-      </motion.span>
+      </span>
       <span className="text-slate-300 font-medium">
-        {windSpeed}mph
+        {displayText}
+        {windGust && windGust > windSpeed + 3 && (
+          <span className="text-yellow-400 ml-1">
+            (gusts {windGust}mph)
+          </span>
+        )}
       </span>
       {temperature && (
         <>
@@ -144,3 +140,5 @@ export function WeatherDisplay({
     </div>
   );
 }
+
+export { default as WeatherImpactVisualizer } from './WeatherImpactVisualizer';

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
+import { GameCardTemplate } from "@/components/GameCardTemplate";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -19,7 +20,7 @@ const removeCity = (teamName: string) => {
 };
 
 const extractTeamAbbreviation = (teamName: string) => {
-  if (!teamName) return '';
+  if (!teamName || teamName.trim() === '') return 'TBD';
   
   // Full team name mappings (check these first)
   const fullTeamMappings: Record<string, string> = {
@@ -27,6 +28,9 @@ const extractTeamAbbreviation = (teamName: string) => {
     'Washington Nationals': 'WSH',
     'Oakland Athletics': 'OAK',
     'Tampa Bay Rays': 'TB',
+    'Kansas City Royals': 'KC',
+    'Kansas City': 'KC',
+    'Royals': 'KC',
     // Add college teams
     'TCU Horned Frogs': 'TCU',
     'North Carolina Tar Heels': 'UNC'
@@ -38,7 +42,7 @@ const extractTeamAbbreviation = (teamName: string) => {
   }
   
   // Extract abbreviation from team name
-  const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington'];
+  const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington', 'Kansas City'];
   let cleanName = teamName;
   
   // Remove city prefixes
@@ -67,9 +71,10 @@ const extractTeamAbbreviation = (teamName: string) => {
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
-import WeatherImpactVisualizer from '@/components/WeatherImpactVisualizer';
+import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
+import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
 // Enhanced Game Display Component for Live MLB Games
@@ -81,25 +86,77 @@ function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
 }) {
   const { data: enhancedData } = useQuery({
     queryKey: ['enhanced-game', gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/${gameId}/live`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch live game data");
+      return response.json();
+    },
     enabled: isLive,
     refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
-    staleTime: 8000
+    staleTime: 8000,
+    retry: 3,
+    retryDelay: 1000
   });
 
   return (
     <BaseballDiamond 
-      runners={(enhancedData as any)?.runners || {
+      runners={enhancedData?.runners || {
         first: false,
         second: false,
         third: false
       }}
-      inning={inning}
-      isTopInning={isTopInning}
-      outs={(enhancedData as any)?.outs || 0}
-      balls={(enhancedData as any)?.balls || 0}
-      strikes={(enhancedData as any)?.strikes || 0}
+      inning={enhancedData?.inning || inning}
+      isTopInning={enhancedData?.isTopInning ?? isTopInning}
+      outs={enhancedData?.outs || 0}
+      balls={enhancedData?.balls || 0}
+      strikes={enhancedData?.strikes || 0}
       size="sm"
       showCount={isLive}
+    />
+  );
+}
+
+// Weather Display Wrapper with real API data
+function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?: 'sm' | 'md' }) {
+  const { data: weather } = useQuery({
+    queryKey: ['weather', teamName],
+    queryFn: async () => {
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(teamName)}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Weather fetch failed');
+      return response.json();
+    },
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchInterval: 60 * 1000, // Refetch every minute
+    retry: 1
+  });
+
+  if (!weather) {
+    // Show loading state with fallback data
+    return (
+      <WeatherDisplay 
+        windSpeed={5}
+        windDirection="N"
+        size={size}
+      />
+    );
+  }
+
+  // Convert wind direction degrees to cardinal direction
+  const getCardinalDirection = (degrees: number) => {
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const index = Math.round(degrees / 22.5) % 16;
+    return directions[index];
+  };
+
+  return (
+    <WeatherDisplay 
+      windSpeed={weather.windSpeed}
+      windDirection={getCardinalDirection(weather.windDirection)}
+      size={size}
     />
   );
 }
@@ -109,8 +166,11 @@ export default function Calendar() {
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  const { hasGamesWithinTwoDays, hasTomorrowGames } = useGamesAvailability();
 
-  const { data: gamesData, isLoading } = useQuery<GameDay>({
+  // Fetch today's games
+  const { data: todayGamesData, isLoading: isLoadingToday } = useQuery<GameDay>({
     queryKey: ["/api/games/today", { sport: activeSport, date: format(selectedDate, 'yyyy-MM-dd') }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
@@ -123,7 +183,25 @@ export default function Calendar() {
     },
   });
 
-  const games = gamesData?.games || [];
+  // Fetch tomorrow's games when there are games within two days
+  const { data: tomorrowGamesData, isLoading: isLoadingTomorrow } = useQuery<GameDay>({
+    queryKey: ["/api/games/today", { sport: activeSport, date: format(addDays(selectedDate, 1), 'yyyy-MM-dd') }],
+    queryFn: async ({ queryKey }) => {
+      const [url, params] = queryKey;
+      const searchParams = new URLSearchParams(params as Record<string, string>);
+      const response = await fetch(`${url}?${searchParams}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch games");
+      return response.json();
+    },
+    enabled: hasGamesWithinTwoDays && hasTomorrowGames && isSameDay(selectedDate, new Date()),
+  });
+
+  const todayGames = todayGamesData?.games || [];
+  const tomorrowGames = tomorrowGamesData?.games || [];
+  const games = todayGames; // Keep existing behavior for main games list
+  const isLoading = isLoadingToday || (hasGamesWithinTwoDays && hasTomorrowGames && isLoadingTomorrow);
 
   // Fetch alerts for badge count
   const { data: alerts } = useQuery({
@@ -248,15 +326,6 @@ export default function Calendar() {
     }
   };
 
-  const getWeatherData = () => {
-    // Fallback weather data - real weather fetched from server via Weather-engine
-    return { 
-      temperature: 72, 
-      condition: "Clear", 
-      windSpeed: 8, 
-      windDirection: 'W' 
-    };
-  };
 
   return (
     <>
@@ -309,12 +378,13 @@ export default function Calendar() {
                 {isSameDay(selectedDate, new Date()) ? "Today's Games" : format(selectedDate, 'MMMM d, yyyy')}
               </h2>
               <Button
-                variant="ghost"
-                size="sm"
+                variant="outline"
+                size="default"
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                className="bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30 hover:text-emerald-200 hover:border-emerald-400 transition-all duration-200 font-semibold"
               >
-                <CalendarIcon className="w-4 h-4" />
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Pick Date
               </Button>
             </div>
             <div className="flex items-center space-x-4 mt-1">
@@ -435,22 +505,23 @@ export default function Calendar() {
             <p className="text-sm mt-2 text-slate-400">Check back later or try a different sport</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {/* Sort games to show live games first, then scheduled, then final */}
-            {games
-              .sort((a, b) => {
-                // Live games first
-                if (a.status === 'live' && b.status !== 'live') return -1;
-                if (b.status === 'live' && a.status !== 'live') return 1;
-                // Then scheduled games
-                if (a.status === 'scheduled' && b.status === 'final') return -1;
-                if (b.status === 'scheduled' && a.status === 'final') return 1;
-                // Then by start time
-                return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-              })
-              .map((game, index) => {
+          <div className="space-y-6">
+            {/* Today's Games */}
+            <div className="space-y-3">
+              {/* Sort games to show live games first, then scheduled, then final */}
+              {games
+                .sort((a, b) => {
+                  // Live games first
+                  if (a.status === 'live' && b.status !== 'live') return -1;
+                  if (b.status === 'live' && a.status !== 'live') return 1;
+                  // Then scheduled games
+                  if (a.status === 'scheduled' && b.status === 'final') return -1;
+                  if (b.status === 'scheduled' && a.status === 'final') return 1;
+                  // Then by start time
+                  return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+                })
+                .map((game, index) => {
               const isSelected = selectedGames.has(game.id);
-              const weather = getWeatherData();
               const startTime = new Date(game.startTime);
               const formattedTime = isNaN(startTime.getTime()) 
                 ? 'TBD'
@@ -459,157 +530,115 @@ export default function Calendar() {
                     minute: '2-digit' 
                   });
 
+              // Validate game data before rendering
+              const gameId = game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-game-${index}`;
+              const awayTeamName = game.awayTeam?.name || 'TBD';
+              const homeTeamName = game.homeTeam?.name || 'TBD';
+              const awayTeamAbbr = extractTeamAbbreviation(awayTeamName);
+              const homeTeamAbbr = extractTeamAbbreviation(homeTeamName);
+
               return (
-                <div key={game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-game-${index}`} className="relative">
-                  <Card 
-                    className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 min-h-[160px] hover:bg-white/10 ${
-                      isSelected 
-                        ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
-                        : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
-                    }`}
-                    style={{ borderRadius: '12px' }}
-                    onClick={() => toggleGameSelection(game.id)}
-                    data-testid={`game-card-${game.id}`}
-                  >
-                    {/* Main Game Layout */}
-                    <div className="flex items-center justify-between mb-4">
-                      {/* Away Team - Left Side */}
-                      <div className="flex items-center space-x-3">
-                        <TeamLogo
-                          teamName={removeCity(game.awayTeam.name)}
-                          abbreviation={extractTeamAbbreviation(game.awayTeam.name)}
-                          sport={activeSport}
-                          size="lg"
-                          className="shadow-sm"
-                        />
-                        {(game.status === 'live' || game.status === 'final') && (
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-slate-200">
-                              {game.awayTeam.score || 0}
-                            </div>
-                            <div className="text-xs text-slate-400 uppercase tracking-wider">
-                              {removeCity(game.awayTeam.name).substring(0, 8)}
-                            </div>
-                          </div>
-                        )}
-                        {game.status === 'scheduled' && (
-                          <div className="text-center">
-                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
-                              {removeCity(game.awayTeam.name).substring(0, 8)}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Center - Baseball Diamond & Game Info */}
-                      <div className="flex-1 flex flex-col items-center space-y-3">
-                        {/* Status & Selection Indicator */}
-                        <div className="flex items-center space-x-2">
-                          <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                            game.status === 'live' 
-                              ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
-                              : game.status === 'final'
-                              ? 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
-                              : 'bg-slate-600/50 text-slate-300 ring-1 ring-slate-500'
-                          }`}>
-                            {game.status === 'live' && <Play className="w-3 h-3 mr-1" />}
-                            {game.status === 'scheduled' && <Clock className="w-3 h-3 mr-1" />}
-                            {game.status === 'live' ? 'LIVE' : game.status.toUpperCase()}
-                          </Badge>
-                          {isSelected && (
-                            <CheckCircle className="w-5 h-5 text-emerald-400" data-testid={`game-selected-${game.id}`} />
-                          )}
-                        </div>
-                        
-                        {/* Baseball Diamond for Live/Final MLB Games */}
-                        {activeSport === 'MLB' && (game.status === 'live' || game.status === 'final') && (
-                          <EnhancedGameDisplay 
-                            gameId={game.id}
-                            inning={game.inning || 1}
-                            isTopInning={game.inningState === 'Top'}
-                            isLive={game.status === 'live'}
-                          />
-                        )}
-                        
-                        {/* Game Info for Non-MLB or Scheduled Games */}
-                        {(activeSport !== 'MLB' || game.status === 'scheduled') && (
-                          <div className="text-center">
-                            <div className="text-sm text-slate-300 font-medium">
-                              {formattedTime}
-                            </div>
-                            {game.venue && (
-                              <div className="text-xs text-slate-400 mt-1">
-                                {game.venue.length > 15 ? `${game.venue.substring(0, 15)}...` : game.venue}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Home Team - Right Side */}
-                      <div className="flex items-center space-x-3">
-                        {(game.status === 'live' || game.status === 'final') && (
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-slate-200">
-                              {game.homeTeam.score || 0}
-                            </div>
-                            <div className="text-xs text-slate-400 uppercase tracking-wider">
-                              {removeCity(game.homeTeam.name).substring(0, 8)}
-                            </div>
-                          </div>
-                        )}
-                        {game.status === 'scheduled' && (
-                          <div className="text-center">
-                            <div className="text-sm text-slate-300 font-medium uppercase tracking-wider">
-                              {removeCity(game.homeTeam.name).substring(0, 8)}
-                            </div>
-                          </div>
-                        )}
-                        <TeamLogo
-                          teamName={removeCity(game.homeTeam.name)}
-                          abbreviation={extractTeamAbbreviation(game.homeTeam.name)}
-                          sport={activeSport}
-                          size="lg"
-                          className="shadow-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Weather Impact Visualizer for MLB games */}
-                    {activeSport === 'MLB' && (
-                      <div className="pt-3 border-t border-white/10">
-                        <WeatherImpactVisualizer 
-                          teamName={game.homeTeam.name}
-                          stadium={game.venue}
-                          compact={true}
-                          showProbabilities={true}
-                          className=""
-                        />
-                      </div>
-                    )}
-
-                    {/* Bottom Row - Basic Weather & Venue Info for non-MLB */}
-                    {activeSport !== 'MLB' && (
-                      <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                        <WeatherDisplay 
-                          windSpeed={weather?.windSpeed || Math.floor(Math.random() * 20) + 5}
-                          windDirection={weather?.windDirection || ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'][Math.floor(Math.random() * 8)]}
-                          temperature={weather?.temperature || Math.floor(Math.random() * 20) + 70}
-                          size="sm"
-                        />
-                        
-                        {game.venue && (
-                          <div className="text-xs text-slate-400 text-right">
-                            {game.venue.length > 25 ? `${game.venue.substring(0, 25)}...` : game.venue}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                </Card>
-                
-              </div>
+                <div key={gameId} className="relative">
+                  <GameCardTemplate
+                    gameId={gameId}
+                    homeTeam={{
+                      name: homeTeamName,
+                      abbreviation: homeTeamAbbr,
+                      score: game.homeTeam?.score
+                    }}
+                    awayTeam={{
+                      name: awayTeamName,
+                      abbreviation: awayTeamAbbr,
+                      score: game.awayTeam?.score
+                    }}
+                    sport={activeSport}
+                    status={game.status === 'live' ? 'live' : game.status === 'final' ? 'final' : 'scheduled'}
+                    startTime={game.startTime}
+                    venue={game.venue}
+                    inning={game.inning}
+                    quarter={game.quarter}
+                    period={game.period}
+                    isTopInning={game.inningState === 'Top'}
+                    runners={game.runners}
+                    balls={game.balls}
+                    strikes={game.strikes}
+                    outs={game.outs}
+                    isSelected={isSelected}
+                    onSelect={() => toggleGameSelection(game.id)}
+                    size="lg"
+                    showWeather={true}
+                    showVenue={true}
+                    showEnhancedMLB={activeSport === 'MLB' && game.status === 'live'}
+                  />
+                </div>
               );
             })}
+            </div>
+
+            {/* Tomorrow's Games Section */}
+            {hasGamesWithinTwoDays && hasTomorrowGames && isSameDay(selectedDate, new Date()) && tomorrowGames.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3 pt-4 border-t border-white/10">
+                  <h2 className="text-lg font-black uppercase tracking-wider text-slate-100">
+                    Tomorrow's Games
+                  </h2>
+                  <span className="text-sm font-semibold text-slate-300">
+                    {format(addDays(selectedDate, 1), 'MMMM d, yyyy')}
+                  </span>
+                </div>
+                
+                {tomorrowGames
+                  .sort((a, b) => {
+                    // Sort by start time
+                    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+                  })
+                  .map((game, index) => {
+                  const isSelected = selectedGames.has(game.id);
+                  const startTime = new Date(game.startTime);
+                  const formattedTime = isNaN(startTime.getTime()) 
+                    ? 'TBD'
+                    : startTime.toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit' 
+                      });
+
+                  // Validate game data before rendering
+                  const gameId = game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-tomorrow-game-${index}`;
+                  const awayTeamName = game.awayTeam?.name || 'TBD';
+                  const homeTeamName = game.homeTeam?.name || 'TBD';
+                  const awayTeamAbbr = extractTeamAbbreviation(awayTeamName);
+                  const homeTeamAbbr = extractTeamAbbreviation(homeTeamName);
+
+                  return (
+                    <div key={gameId} className="relative">
+                      <GameCardTemplate
+                        gameId={gameId}
+                        homeTeam={{
+                          name: homeTeamName,
+                          abbreviation: homeTeamAbbr,
+                          score: undefined // Tomorrow's games don't have scores
+                        }}
+                        awayTeam={{
+                          name: awayTeamName,
+                          abbreviation: awayTeamAbbr,
+                          score: undefined
+                        }}
+                        sport={activeSport}
+                        status="scheduled"
+                        startTime={game.startTime}
+                        venue={game.venue}
+                        isSelected={isSelected}
+                        onSelect={() => toggleGameSelection(game.id)}
+                        size="lg"
+                        showWeather={true}
+                        showVenue={true}
+                        showEnhancedMLB={game.status === 'live'} // Don't show baseball diamond for tomorrow's games
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

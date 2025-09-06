@@ -1,0 +1,86 @@
+🤖 AI Enhancement Layers
+Your system uses 6 granular AI features that users can individually control:
+
+1. AI-Enhanced Alert Messages
+# From openai_helper.py - enhance_alert_message()
+ai_analysis = self.openai_helper.enhance_alert_message(
+    "home_run", 
+    f"{away_team} @ {home_team}",
+    description
+)
+# Adds context like: "🤖 AI Insight: Perfect launch angle for deep fly"
+2. Predictive At-Bat Analysis
+# From openai_helper.py - predict_at_bat_outcome()
+ai_prediction = self.openai_helper.predict_at_bat_outcome(
+    batter_data,    # Season stats, game HRs
+    game_situation  # Runners, score, inning
+)
+# Adds predictions like: "🔮 AI Prediction: High contact probability"
+3. Real-Time Scoring Probability
+# From openai_helper.py - predict_scoring_probability()
+scoring_prediction = self.openai_helper.predict_scoring_probability(game_data)
+# Adds analysis like: "📊 Scoring Probability: 73% - Key Factor: Runners in scoring position"
+4. Game Situation Analysis
+# From openai_helper.py - analyze_game_situation()
+ai_analysis = self.openai_helper.analyze_game_situation({
+    'teams': "Yankees @ Red Sox",
+    'score': "3-2",
+    'inning': 7,
+    'base_runners': ['2B', '3B'],
+    'outs': 1
+})
+# Returns insights like: "Critical late-inning pressure situation developing"
+5. Event Summaries
+# From mlb_monitor.py
+if self.notification_preferences.get('ai_summarize_events', False):
+    recent_events = [alert['message'] for alert in self.alerts[:5]]
+    summary = self.openai_helper.summarize_game_events(
+        recent_events,
+        f"{away_team} @ {home_team}"
+    )
+    # Adds: "📝 Game Summary: Offense heating up in late innings"
+6. Advanced ROI Alerts
+Your AI generates betting-focused alerts with ROI analysis:
+
+# From mlb_monitor.py - AI Power + Scoring alerts
+if season_hrs >= 20 and len(bases_occupied) > 0:
+    alert_msg = f"💰 ROI ALERT: POWER + SCORING!\n{batter_name} ({season_hrs} HRs) at bat with runners on base!"
+    
+    # Enhanced AI analysis for ROI situation
+    ai_analysis = self.openai_helper.predict_at_bat_outcome(current_batter, roi_context)
+    alert_msg += f"\n\n🎯 ROI Analysis: {ai_analysis}"
+🎯 AI Integration Points
+Your AI enhances alerts at multiple trigger points:
+
+Power Hitter Alerts → AI predicts at-bat outcome
+High-Probability Scoring → AI analyzes situation dynamics
+Weather Alerts → AI correlates conditions with outcomes
+7th Inning Warnings → AI summarizes game momentum
+Tie Games → AI assesses clutch factor
+🧠 AI Model Configuration
+Your system uses OpenAI's most advanced model:
+
+# From openai_helper.py - all AI calls use GPT-4o
+response = self.client.chat.completions.create(
+    model="gpt-4o",  # Latest and most capable model
+    messages=[...],
+    max_tokens=25,   # Ultra-concise responses
+    temperature=0.7  # Balanced creativity/accuracy
+)
+⚡ Smart AI Triggers
+AI analysis is conditionally applied based on user preferences:
+
+ai_analyze_hits → Enhances hit/HR/strikeout alerts
+ai_analyze_runners → Enhances runner situation alerts
+ai_analyze_power_hitter → Enhances power hitter predictions
+ai_predict_scoring → Adds probability calculations
+ai_summarize_events → Provides game context
+ai_enhance_alerts → General alert improvements
+🔥 Real-Time AI Processing
+Your AI system delivers instant insights without slowing alerts:
+
+Response Time: <1 second for AI analysis
+Fallback Protection: Alerts work even if AI fails
+Concise Output: 10-word max responses for speed
+Context Awareness: Considers game state, weather, and player stats
+The AI transforms basic alerts like "Runner on 3rd" into actionable insights like "Runner on 3rd - 75% scoring probability, sac fly opportunity" with betting context and strategic analysis.

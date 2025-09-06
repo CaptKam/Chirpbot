@@ -1,14 +1,29 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import pg from "pg";
 import helmet from "helmet";
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
+import { AlertGenerator } from "./services/alert-generator";
+import { BasicAI } from "./services/basic-ai";
+import { pool } from "./db";
 
-const { Pool } = pg;
+// Global error handlers to prevent unhandled rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Log but don't crash - let the app continue
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception thrown:', error);
+  // Only exit on truly fatal errors, not all uncaught exceptions
+  if (error.code === 'EADDRINUSE' || error.code === 'ENOENT') {
+    console.error('Fatal error, exiting...');
+    process.exit(1);
+  }
+});
 
 const app = express();
 
@@ -28,17 +43,13 @@ app.use(cors({
 app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 
-// PostgreSQL session store for persistent sessions
-const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
+// Use the same Neon pool for session storage to avoid connection conflicts
 const PgSession = connectPgSimple(session);
 
-// Session middleware with PostgreSQL store
+// Session middleware with PostgreSQL store using the shared Neon pool
 app.use(session({
   store: new PgSession({
-    pool: pgPool,
+    pool: pool,
     tableName: 'session',
     createTableIfMissing: true
   }),
@@ -84,97 +95,75 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize database with required seed data
   try {
-    await seedDatabase();
-    console.log('✅ Database initialization complete');
-  } catch (err) {
-    console.error('⚠️ Database seeding failed (may already be seeded):', err);
-    // Continue anyway - the database might already be seeded
-  }
-
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    console.error('Express error handler:', {
-      error: err.message,
-      stack: err.stack,
-      url: _req.url,
-      method: _req.method,
-      status
-    });
-
-    // Ensure response is sent if not already sent
-    if (!res.headersSent) {
-      res.status(status).json({ message });
+    // Initialize database with required seed data
+    try {
+      await seedDatabase();
+      console.log('✅ Database initialization complete');
+    } catch (err) {
+      console.error('⚠️ Database seeding failed (may already be seeded):', err);
+      // Continue anyway - the database might already be seeded
     }
-    // Don't throw err - this was causing unhandled rejections!
-  });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+    const server = await registerRoutes(app);
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
-})();
+    // Initialize alert generator and AI system
+    const alertGenerator = new AlertGenerator();
+    const aiEngine = new BasicAI();
 
-// This is a placeholder for the WebSocket server setup.
-// In a real application, you would initialize your WebSocket server here.
-// For example:
-// import WebSocket from 'ws';
-// const wss = new WebSocket.Server({ server });
-//
-// Replace the following placeholder with your actual WebSocket server initialization and alert callback handling.
-// For the purpose of this example, we'll assume 'wss' and 'alertEngineManager' are defined elsewhere and accessible.
+    // Log AI system status
+    console.log(`🤖 AI Betting System: ${aiEngine.configured ? '✅ ACTIVE' : '⚠️ FALLBACK MODE'}`);
+    if (aiEngine.configured) {
+      console.log('🎯 AI betting insights will be generated for high-priority alerts (70%+)');
+    } else {
+      console.log('📊 Using fallback betting analysis (no OpenAI key configured)');
+    }
 
-// Example placeholder for WebSocket server and alert manager
-const wss: any = { clients: new Set() }; // Mock WebSocket server
-const alertEngineManager: any = {
-  setAlertCallback: (callback: (alert: any) => void) => {
-    // Simulate an alert being generated
-    // setTimeout(() => {
-    //   callback({ id: 'a1b2c3d4', type: 'System', message: 'CPU Usage High', data: { cpu: 95 } });
-    // }, 5000);
-    // setTimeout(() => {
-    //   callback({ id: 'e5f6g7h8', type: 'Network', message: 'High Latency', data: { latency: 200 } });
-    // }, 10000);
-  }
-};
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-// Applying the requested changes to the alert callback
-alertEngineManager.setAlertCallback((alert: any) => {
-    const alertId = alert.id || alert.data?.id || 'unknown';
-    const debugId = alert.debugId || alert.data?.debugId || alertId.substring(0, 8);
-    console.log(`📡 WEBSOCKET: Broadcasting alert | ID: ${alertId} | Debug ID: ${debugId} | Type: ${alert.type || alert.data?.type}`);
+      console.error('Express error handler:', {
+        error: err.message,
+        stack: err.stack,
+        url: _req.url,
+        method: _req.method,
+        status
+      });
 
-    // Broadcast to all connected clients
-    wss.clients.forEach((client: any) => {
-      if (client.readyState === client.OPEN) {
-        client.send(JSON.stringify({
-          type: 'new_alert',
-          data: alert
-        }));
+      // Ensure response is sent if not already sent
+      if (!res.headersSent) {
+        res.status(status).json({ message });
       }
+      // Don't throw err - this was causing unhandled rejections!
     });
 
-    console.log(`📡 WEBSOCKET: Alert broadcasted to ${wss.clients.size} clients`);
-  });
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = parseInt(process.env.PORT || '5000', 10);
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`serving on port ${port}`);
+    });
+  } catch (error) {
+    console.error('🚨 Critical error during server startup:', error);
+    process.exit(1);
+  }
+})().catch((error) => {
+  console.error('🚨 Unhandled error in main async function:', error);
+  process.exit(1);
+});
