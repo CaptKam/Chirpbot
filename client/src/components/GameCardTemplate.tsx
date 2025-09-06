@@ -361,16 +361,14 @@ export function GameCardTemplate({
 
 // Enhanced Game Display with live data fetching
 const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
-  // Fetch live games data and filter for this specific game
-  const { data: gamesData } = useQuery({
-    queryKey: ['/api/games/today', { sport: 'MLB' }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
+  // Fetch live game data for this specific game using the dedicated endpoint
+  const { data: liveGameData } = useQuery({
+    queryKey: ['/api/games/live', gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/${gameId}/live`, {
         credentials: 'include'
       });
-      if (!response.ok) throw new Error('Failed to fetch games data');
+      if (!response.ok) throw new Error('Failed to fetch live game data');
       return response.json();
     },
     enabled: isLive && !!gameId,
@@ -379,17 +377,11 @@ const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: 
     retry: 1
   });
 
-  // Find the specific game data by gameId
-  const gameData = React.useMemo(() => {
-    if (!gamesData?.games) return null;
-    return gamesData.games.find((game: any) => game.id === gameId);
-  }, [gamesData, gameId]);
-
   // Use live data if available, otherwise fallback to defaults
-  const runners = gameData?.runners || { first: false, second: false, third: false };
-  const outs = gameData?.outs || 0;
-  const balls = gameData?.balls || 0;
-  const strikes = gameData?.strikes || 0;
+  const runners = liveGameData?.runners || { first: false, second: false, third: false };
+  const outs = liveGameData?.outs || 0;
+  const balls = liveGameData?.balls || 0;
+  const strikes = liveGameData?.strikes || 0;
 
   return (
     <BaseballDiamond
