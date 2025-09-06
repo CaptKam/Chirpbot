@@ -350,29 +350,8 @@ export class CFLEngine extends BaseSportEngine {
 
   // Load alert modules dynamically - CFL only
   async loadAlertModule(alertType: string): Promise<any | null> {
-    try {
-      // Map CFL alert types to actual module files
-      const moduleMap: Record<string, string> = {
-        'CFL_GAME_START': 'cfl-game-start-module',
-        'CFL_TWO_MINUTE_WARNING': 'two-minute-warning-module',
-        'RED_ZONE': 'red-zone-module',
-        'THIRD_DOWN': 'third-down-module'
-      };
-
-      const moduleFileName = moduleMap[alertType];
-      if (!moduleFileName) {
-        console.log(`❌ No CFL module found for: ${alertType}`);
-        return null;
-      }
-
-      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
-      const module = await import(modulePath);
-      const ModuleClass = module.default;
-      return new ModuleClass();
-    } catch (error) {
-      console.error(`❌ Failed to load CFL alert module ${alertType}:`, error);
-      return null;
-    }
+    console.log(`🍁 CFL alert cylinders cleared - no modules available for: ${alertType}`);
+    return null;
   }
 
   // Initialize alert modules for enabled alert types - CFL only

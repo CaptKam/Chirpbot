@@ -318,30 +318,8 @@ export class NFLEngine extends BaseSportEngine {
 
   // Load alert modules dynamically - NFL only
   async loadAlertModule(alertType: string): Promise<any | null> {
-    try {
-      // Map NFL alert types to actual module files
-      const moduleMap: Record<string, string> = {
-        'NFL_GAME_START': 'nfl-game-start-module',
-        'NFL_SECOND_HALF_KICKOFF': 'second-half-kickoff-module',
-        'NFL_TWO_MINUTE_WARNING': 'two-minute-warning-module',
-        'RED_ZONE': 'red-zone-module',
-        'FOURTH_DOWN': 'fourth-down-module'
-      };
-
-      const moduleFileName = moduleMap[alertType];
-      if (!moduleFileName) {
-        console.log(`❌ No NFL module found for: ${alertType}`);
-        return null;
-      }
-
-      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
-      const module = await import(modulePath);
-      const ModuleClass = module.default;
-      return new ModuleClass();
-    } catch (error) {
-      console.error(`❌ Failed to load NFL alert module ${alertType}:`, error);
-      return null;
-    }
+    console.log(`🏈 NFL alert cylinders cleared - no modules available for: ${alertType}`);
+    return null;
   }
 
   // Initialize alert modules for enabled alert types - NFL only

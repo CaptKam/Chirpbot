@@ -350,29 +350,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
   // Load alert modules dynamically - NCAAF only
   async loadAlertModule(alertType: string): Promise<any | null> {
-    try {
-      // Map NCAAF alert types to actual module files
-      const moduleMap: Record<string, string> = {
-        'NCAAF_GAME_START': 'ncaaf-game-start-module',
-        'NCAAF_TWO_MINUTE_WARNING': 'two-minute-warning-module',
-        'RED_ZONE': 'red-zone-module',
-        'FOURTH_DOWN': 'fourth-down-module'
-      };
-
-      const moduleFileName = moduleMap[alertType];
-      if (!moduleFileName) {
-        console.log(`❌ No NCAAF module found for: ${alertType}`);
-        return null;
-      }
-
-      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
-      const module = await import(modulePath);
-      const ModuleClass = module.default;
-      return new ModuleClass();
-    } catch (error) {
-      console.error(`❌ Failed to load NCAAF alert module ${alertType}:`, error);
-      return null;
-    }
+    console.log(`🏈 NCAAF alert cylinders cleared - no modules available for: ${alertType}`);
+    return null;
   }
 
   // Initialize alert modules for enabled alert types - NCAAF only

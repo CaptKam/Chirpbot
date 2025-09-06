@@ -275,27 +275,8 @@ export class WNBAEngine extends BaseSportEngine {
 
   // Load alert modules dynamically - WNBA only
   async loadAlertModule(alertType: string): Promise<any | null> {
-    try {
-      // Map WNBA alert types to actual module files
-      const moduleMap: Record<string, string> = {
-        'WNBA_GAME_START': 'wnba-game-start-module',
-        'WNBA_TWO_MINUTE_WARNING': 'two-minute-warning-module'
-      };
-
-      const moduleFileName = moduleMap[alertType];
-      if (!moduleFileName) {
-        console.log(`❌ No WNBA module found for: ${alertType}`);
-        return null;
-      }
-
-      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
-      const module = await import(modulePath);
-      const ModuleClass = module.default;
-      return new ModuleClass();
-    } catch (error) {
-      console.error(`❌ Failed to load WNBA alert module ${alertType}:`, error);
-      return null;
-    }
+    console.log(`🏀 WNBA alert cylinders cleared - no modules available for: ${alertType}`);
+    return null;
   }
 
   // Initialize alert modules for enabled alert types - WNBA only
