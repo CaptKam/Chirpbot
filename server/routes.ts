@@ -452,7 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sport, alertType, enabled } = req.body;
 
       // Verify user can only modify their own preferences
-      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+      if ((req as any).user?.id !== userId && (req as any).user?.role !== 'admin') {
         return res.status(403).json({ message: 'Can only modify your own alert preferences' });
       }
 
@@ -474,7 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sport, preferences } = req.body;
 
       // Verify user can only modify their own preferences
-      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+      if ((req as any).user?.id !== userId && (req as any).user?.role !== 'admin') {
         return res.status(403).json({ message: 'Can only modify your own alert preferences' });
       }
 
@@ -1027,7 +1027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const currentUser = req.user; // from requireAdmin middleware
+      const currentUser = (req as any).user; // from requireAdmin middleware
 
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
 
@@ -1081,7 +1081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/users/:userId/force', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const currentUser = req.user;
+      const currentUser = (req as any).user;
 
       console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
 
@@ -1296,7 +1296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      if (result.rowsAffected === 0) {
+      if ((result as any).rowsAffected === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1496,7 +1496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults = {
+      const debugResults: any = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
