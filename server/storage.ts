@@ -470,50 +470,36 @@ export const storage = {
 
   async updateGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy: string) {
     try {
-      await db.insert(globalAlertSettings)
-        .values({
-          sport: sport.toLowerCase(),
-          alertType,
-          enabled,
-          updatedBy
-        })
-        .onConflictDoUpdate({
-          target: [globalAlertSettings.sport, globalAlertSettings.alertType],
-          set: {
-            enabled,
-            updatedAt: sql`NOW()`,
-            updatedBy
-          }
-        });
+      console.log(`🔧 FIXED ARCHITECTURE: Global setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
 
-      console.log(`Updated global ${sport} alert setting: ${alertType} = ${enabled} by ${updatedBy}`);
+      // Use upsert pattern - check if global setting exists
+      const existing = await db.select().from(globalAlertSettings)
+        .where(and(
+          eq(globalAlertSettings.sport, sport.toLowerCase()),
+          eq(globalAlertSettings.alertType, alertType)
+        ));
+
+      if (existing.length > 0) {
+        // Update existing global setting
+        const result = await db.update(globalAlertSettings)
+          .set({ enabled, updatedAt: new Date(), updatedBy })
+          .where(and(
+            eq(globalAlertSettings.sport, sport.toLowerCase()),
+            eq(globalAlertSettings.alertType, alertType)
+          ))
+          .returning();
+        console.log(`✅ ARCHITECTURE FIX: Updated global setting ${sport}.${alertType} = ${enabled}`);
+        return result[0];
+      } else {
+        // Create new global setting
+        const result = await db.insert(globalAlertSettings)
+          .values({ sport: sport.toLowerCase(), alertType, enabled, updatedBy })
+          .returning();
+        console.log(`✅ ARCHITECTURE FIX: Created global setting ${sport}.${alertType} = ${enabled}`);
+        return result[0];
+      }
     } catch (error) {
       console.error('Error updating global alert setting:', error);
-      throw error;
-    }
-  },
-
-  async updateGlobalAlertVisibility(sport: string, alertType: string, visible: boolean, updatedBy: string) {
-    try {
-      await db.insert(globalAlertSettings)
-        .values({
-          sport: sport.toLowerCase(),
-          alertType,
-          visible,
-          updatedBy
-        })
-        .onConflictDoUpdate({
-          target: [globalAlertSettings.sport, globalAlertSettings.alertType],
-          set: {
-            visible,
-            updatedAt: sql`NOW()`,
-            updatedBy
-          }
-        });
-
-      console.log(`Updated global ${sport} alert visibility: ${alertType} = ${visible} by ${updatedBy}`);
-    } catch (error) {
-      console.error('Error updating global alert visibility:', error);
       throw error;
     }
   },

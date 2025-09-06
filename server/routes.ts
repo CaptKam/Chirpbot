@@ -702,12 +702,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/debug/test-alerts', requireAdmin, async (req, res) => {
     try {
       console.log('🧪 Testing alert generation system...');
-
+      
       const alertGenerator = new AlertGenerator();
-
+      
       // Force generate alerts for live games
       await alertGenerator.generateLiveGameAlerts();
-
+      
       res.json({
         message: 'Test alert generation completed - check server logs',
         note: 'This forces the alert generation process to run immediately'
@@ -2047,11 +2047,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { sport, settings } = req.body;
-      const userId = req.session.userId!;
 
-      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, userId);
+      // Use the storage method to apply settings to all users
+      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
+
       res.json({
-        message: `Applied ${sport} settings to ${result.usersUpdated}/${result.totalUsers} users`,
+        message: `Global settings applied to ${result.usersUpdated} users successfully`,
+        sport,
         ...result
       });
     } catch (error) {
