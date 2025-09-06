@@ -31,6 +31,31 @@ export class NCAAFEngine extends BaseSportEngine {
   }
 
   async calculateProbability(gameState: GameState): Promise<number> {
+    if (!gameState.isLive) return 0;
+
+    let probability = 50; // Base probability
+
+    // Two-minute warning situations are high priority
+    if (gameState.quarter === 2 || gameState.quarter === 4) {
+      const totalSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
+      if (totalSeconds <= 120) {
+        probability += 30;
+      }
+    }
+
+    // Game start situations
+    if (gameState.quarter === 1 && this.isKickoffTime(gameState.timeRemaining)) {
+      probability += 25;
+    }
+
+    // Close game situations
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    if (scoreDiff <= 7) {
+      probability += 15;
+    }
+
+    return Math.min(100, probability);
+  }
     // NCAAF-specific probability calculation
     // Based on down, distance, field position, time remaining, etc.
     const { down, yardsToGo, fieldPosition, quarter, timeRemaining } = gameState;
@@ -312,6 +337,14 @@ export class NCAAFEngine extends BaseSportEngine {
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
   }
 
+  // Get available alert types from cylinders
+  async getAvailableAlertTypes(): Promise<string[]> {
+    return [
+      'NCAAF_GAME_START',
+      'NCAAF_TWO_MINUTE_WARNING'
+    ];
+  }
+
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
@@ -325,6 +358,30 @@ export class NCAAFEngine extends BaseSportEngine {
       const validNCAAFAlerts = [
         'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN',
         'NCAAF_SECOND_HALF_KICKOFF', 'OVERTIME', 'CLUTCH_TIME'
+      ];
+
+      const ncaafEnabledTypes = enabledTypes.filter(alertType =>
+        validNCAAFAlerts.includes(alertType)
+      );
+
+      // Check global settings for these NCAAF alerts
+      const globallyEnabledTypes = [];
+      for (const alertType of ncaafEnabledTypes) {
+        const isGloballyEnabled = await this.isAlertEnabled(alertType);
+        if (isGloballyEnabled) {
+          globallyEnabledTypes.push(alertType);
+        }
+      }
+
+      console.log(`🎯 Initializing NCAAF engine for user ${userId} with ${globallyEnabledTypes.length} NCAAF alerts: ${globallyEnabledTypes.join(', ')}`);
+
+      // Initialize the NCAAF alert modules using parent class method
+      await this.initializeUserAlertModules(globallyEnabledTypes);
+
+    } catch (error) {
+      console.error(`❌ Failed to initialize NCAAF engine for user ${userId}:`, error);
+    }
+  }TCH_TIME'
       ];
 
       const ncaafEnabledTypes = enabledTypes.filter(alertType =>

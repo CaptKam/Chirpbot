@@ -1829,15 +1829,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sport } = req.params;
 
       try {
-        // Get available alert types from the sport engine
-        const { BaseSportEngine } = await import('./services/engines/base-engine');
-        
-        // Create a temporary engine instance to get available alerts
-        const tempEngine = new (class extends BaseSportEngine {
-          async calculateProbability() { return 0; }
-        })(sport.toUpperCase());
+        let availableAlerts: string[] = [];
 
-        const availableAlerts = await tempEngine.getAvailableAlertTypes();
+        // Get available alert types from the specific sport engine
+        if (sport.toUpperCase() === 'NCAAF') {
+          const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+          const tempEngine = new NCAAFEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else if (sport.toUpperCase() === 'MLB') {
+          const { MLBEngine } = await import('./services/engines/mlb-engine');
+          const tempEngine = new MLBEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else if (sport.toUpperCase() === 'NFL') {
+          const { NFLEngine } = await import('./services/engines/nfl-engine');
+          const tempEngine = new NFLEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else if (sport.toUpperCase() === 'WNBA') {
+          const { WNBAEngine } = await import('./services/engines/wnba-engine');
+          const tempEngine = new WNBAEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else if (sport.toUpperCase() === 'CFL') {
+          const { CFLEngine } = await import('./services/engines/cfl-engine');
+          const tempEngine = new CFLEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else {
+          // Fallback to base engine for other sports
+          const { BaseSportEngine } = await import('./services/engines/base-engine');
+          const tempEngine = new (class extends BaseSportEngine {
+            async calculateProbability() { return 0; }
+          })(sport.toUpperCase());
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        }
         
         // Convert to the format expected by the frontend
         const alertConfig = availableAlerts.map(alertType => {
