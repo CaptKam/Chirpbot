@@ -33,26 +33,73 @@ async function requireAuthentication(req: any, res: any, next: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // Add route debugging middleware with duplicate detection
+  // Enhanced request deduplication and caching system
+  const requestCache = new Map();
   const recentRequests = new Map();
+  
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) {
       const now = Date.now();
       const requestKey = `${req.method}:${req.path}:${req.ip}`;
-      const lastRequest = recentRequests.get(requestKey);
+      const cacheKey = `${req.method}:${req.path}:${JSON.stringify(req.query)}`;
+      
+      const lastRequestTime = recentRequests.get(requestKey);
+      const cachedResponse = requestCache.get(cacheKey);
 
-      if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
-        console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
-      } else {
-        console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
+      // Check for duplicate requests within 200ms
+      if (lastRequestTime && (now - lastRequestTime) < 200) {
+        console.log(`🚫 BLOCKED DUPLICATE: ${req.method} ${req.path} - ${now - lastRequestTime}ms since last`);
+        
+        // If we have a cached response, return it immediately
+        if (cachedResponse && (now - cachedResponse.timestamp) < 5000) { // 5 second cache
+          console.log(`📦 SERVING CACHED: ${req.method} ${req.path}`);
+          return res.status(cachedResponse.status).json(cachedResponse.data);
+        } else {
+          // No cache available, return 429 Too Many Requests
+          return res.status(429).json({ 
+            error: 'Too many requests', 
+            message: 'Please wait before making another request',
+            retryAfter: '200ms'
+          });
+        }
       }
 
+      // Store the original res.json to intercept and cache responses
+      const originalJson = res.json;
+      res.json = function(data: any) {
+        // Cache successful responses for certain endpoints
+        if (res.statusCode === 200 || res.statusCode === 304) {
+          const shouldCache = req.path.includes('/weather') || 
+                             req.path.includes('/games') || 
+                             req.path.includes('/alerts/stats');
+          
+          if (shouldCache) {
+            requestCache.set(cacheKey, {
+              data: data,
+              status: res.statusCode,
+              timestamp: now
+            });
+          }
+        }
+        
+        return originalJson.call(this, data);
+      };
+
+      console.log(`🔧 PROCESSING: ${req.method} ${req.path}`);
       recentRequests.set(requestKey, now);
-      // Clean up old entries periodically
+      
+      // Enhanced cleanup - keep cache and recent requests lean
+      if (requestCache.size > 200) {
+        const cleanupTime = now - 30000; // Clean entries older than 30 seconds
+        for (const [key, entry] of Array.from(requestCache.entries())) {
+          if (entry.timestamp < cleanupTime) requestCache.delete(key);
+        }
+      }
+      
       if (recentRequests.size > 100) {
-        const oldestTime = now - 10000; // 10 seconds
+        const cleanupTime = now - 5000; // Clean requests older than 5 seconds
         for (const [key, time] of Array.from(recentRequests.entries())) {
-          if (time < oldestTime) recentRequests.delete(key);
+          if (time < cleanupTime) recentRequests.delete(key);
         }
       }
     }
