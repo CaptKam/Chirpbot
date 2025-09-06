@@ -16,7 +16,8 @@ export class MLBEngine extends BaseSportEngine {
       const validMLBAlerts = [
         'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
         'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT'
+        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT',
+        'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -113,7 +114,8 @@ export class MLBEngine extends BaseSportEngine {
       const validMLBAlerts = [
         'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
         'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT'
+        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT',
+        'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
