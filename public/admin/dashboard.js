@@ -616,25 +616,9 @@ async function handleLogout() {
 // Alert Configuration Functions
 const ALERT_TYPE_CONFIG = {
     'MLB': {
-        'Game Situations': [
-            { key: 'RISP', label: 'Runner in Scoring Position', description: 'Runner on 2nd or 3rd base' },
-            { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases occupied' },
-            { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity' },
-            { key: 'LATE_PRESSURE', label: 'Late Inning Pressure', description: '8th+ inning, close game' }
-        ],
-        'Scoring Events': [
-            { key: 'HOME_RUN_LIVE', label: 'Home Run (Live)', description: 'Live home run alerts' },
-            { key: 'CLOSE_GAME_LIVE', label: 'Close Game (Live)', description: 'Live close game updates' },
-            { key: 'HIGH_SCORING', label: 'High Scoring Game', description: '12+ total runs' },
-            { key: 'SHUTOUT', label: 'Shutout', description: 'One team held scoreless' },
-            { key: 'BLOWOUT', label: 'Blowout', description: '7+ run difference' },
-            { key: 'CLOSE_GAME', label: 'Close Game (Final)', description: '≤3 run difference final' }
-        ],
-        'At-Bat Situations': [
-            { key: 'FULL_COUNT', label: 'Full Count', description: '3-2 count pressure' },
-            { key: 'STRIKEOUT', label: 'Strikeout Alert', description: 'Real-time strikeout notifications' },
-            { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at plate' },
-            { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' }
+        'Valid Alert Types': [
+            { key: 'MLB_GAME_START', label: 'Game Start', description: 'Alert when MLB game begins' },
+            { key: 'MLB_SEVENTH_INNING_STRETCH', label: 'Seventh Inning Stretch', description: 'Traditional 7th inning stretch alert' }
         ],
         'AI Enhancements': [
             { key: 'AI_ENHANCED_MESSAGES', label: 'AI-Enhanced Alert Messages', description: 'AI adds context like launch angle insights' },

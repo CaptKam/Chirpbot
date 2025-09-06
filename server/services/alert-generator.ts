@@ -556,9 +556,6 @@ export class AlertGenerator {
       reasons.push("Historical: 85% chance of at least 1 run scoring");
       recommendation = "STRONG BET: Over current total";
       confidence = Math.min(95, confidence + 15);
-    } else if (type === 'POWER_HITTER') {
-      reasons.push(`Elite power threat`);
-      recommendation = "Consider player prop bets";
     }
 
     return {

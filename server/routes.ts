@@ -1990,13 +1990,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const criticalAlerts = [
-        'BASES_LOADED',
-        'HOME_RUN_LIVE',
-        'HIGH_SCORING',
-        'SHUTOUT',
-        'BLOWOUT',
-        'STRIKEOUT',  // Enable this for testing
-        'FULL_COUNT'  // Enable this for testing
+        'MLB_GAME_START',
+        'MLB_SEVENTH_INNING_STRETCH'
       ];
 
       const results = [];
@@ -2006,7 +2001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
-        message: 'Critical MLB alerts enabled successfully (including STRIKEOUT for testing)',
+        message: 'Critical MLB alerts enabled successfully',
         enabledAlerts: results,
         nextStep: 'Alerts should start generating within 15 seconds if you have valid Telegram credentials'
       });
@@ -2056,13 +2051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Define all alert types across all sports
       const allAlertTypes = {
         'MLB': [
-          'RISP', 'BASES_LOADED', 'RUNNERS_1ST_2ND', 'CLOSE_GAME', 'CLOSE_GAME_LIVE',
-          'LATE_PRESSURE', 'HOME_RUN_LIVE', 'HIGH_SCORING', 'SHUTOUT', 'BLOWOUT',
-          'FULL_COUNT', 'STRIKEOUT', 'POWER_HITTER', 'HOT_HITTER',
-          'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH',
-          'AI_ENHANCED_MESSAGES', 'AI_PREDICTIVE_AT_BAT', 'AI_SCORING_PROBABILITY',
-          'AI_SITUATION_ANALYSIS', 'AI_EVENT_SUMMARIES', 'AI_ROI_ALERTS',
-          'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
+          'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'
         ],
         'NFL': [
           'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',

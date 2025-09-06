@@ -368,25 +368,11 @@ export const storage = {
       // Convert to object with defaults for missing keys
       const result: Record<string, boolean> = {};
 
-      // Define sport-specific default settings
+      // Define sport-specific default settings - ONLY include alert types that have corresponding modules
       const sportDefaults: Record<string, Record<string, boolean>> = {
         'mlb': {
           'MLB_GAME_START': true,
           'MLB_SEVENTH_INNING_STRETCH': true,
-          'RISP': true,
-          'BASES_LOADED': true,
-          'RUNNERS_1ST_2ND': true,
-          'CLOSE_GAME': true,
-          'CLOSE_GAME_LIVE': true,
-          'LATE_PRESSURE': true,
-          'HOME_RUN_LIVE': true,
-          'HIGH_SCORING': true,
-          'SHUTOUT': true,
-          'BLOWOUT': true,
-          'FULL_COUNT': true,
-          'STRIKEOUT': true,
-          'POWER_HITTER': true,
-          'HOT_HITTER': true,
           // AI Enhancement alerts (available for MLB)
           'AI_ENHANCED_MESSAGES': true,
           'AI_PREDICTIVE_AT_BAT': true,
