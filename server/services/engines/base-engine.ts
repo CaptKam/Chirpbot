@@ -100,6 +100,32 @@ export abstract class BaseSportEngine {
 
   abstract calculateProbability(gameState: GameState): Promise<number>;
 
+  // Discover all available alert cylinders for this sport
+  async discoverAvailableAlerts(): Promise<string[]> {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      const cylinderDir = path.join(__dirname, 'alert-cylinders', this.sport.toLowerCase());
+      
+      try {
+        const files = await fs.readdir(cylinderDir);
+        const alertTypes = files
+          .filter(file => file.endsWith('-module.ts'))
+          .map(file => file.replace('-module.ts', '').toUpperCase().replace('-', '_'));
+        
+        console.log(`🔍 Discovered ${alertTypes.length} alert cylinders for ${this.sport}:`, alertTypes);
+        return alertTypes;
+      } catch (error) {
+        console.log(`📁 No alert cylinders directory found for ${this.sport}`);
+        return [];
+      }
+    } catch (error) {
+      console.error(`❌ Error discovering alert cylinders for ${this.sport}:`, error);
+      return [];
+    }
+  }
+
   // Generate live alerts using loaded modules
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];

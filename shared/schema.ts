@@ -65,7 +65,8 @@ export const globalAlertSettings = pgTable("global_alert_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   sport: text("sport").notNull(), // MLB, NFL, NBA, NHL, etc.
   alertType: text("alert_type").notNull(), // RISP, BASES_LOADED, etc.
-  enabled: boolean("enabled").notNull().default(true),
+  enabled: boolean("enabled").notNull().default(true), // Global admin toggle
+  visible: boolean("visible").notNull().default(false), // Makes alert visible to users
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   updatedBy: varchar("updated_by").references(() => users.id), // Admin who made the change
 });

@@ -43,10 +43,16 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Global settings query to check admin-disabled alerts
+  // Global settings query to check admin-disabled alerts and visibility
   const { data: globalSettings } = useQuery({
     queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
+  });
+
+  // Discovered alerts query - gets all available alert cylinders
+  const { data: discoveredAlerts } = useQuery({
+    queryKey: [`/api/admin/discover-alerts/${activeSport}`],
+    enabled: !!user?.id && isAuthenticated && user?.role === 'admin',
   });
 
   // Alert preferences query
@@ -365,31 +371,34 @@ export default function Settings() {
                     <div className="space-y-3">
                       <h3 className="text-md font-bold text-emerald-400 uppercase tracking-wide">⚾ MLB Game Alerts</h3>
                       <div className="space-y-3">
-                        {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
-                          // Only show alerts that are not globally disabled by admin
-                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                        }).map((alertType) => {
-                          const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key);
+                        {(discoveredAlerts?.availableAlerts || []).filter((alertType: string) => {
+                          // Only show alerts that are visible to users
+                          if (!globalSettings || typeof globalSettings !== 'object') return false;
+                          const settings = globalSettings as Record<string, { enabled: boolean; visible: boolean }>;
+                          return settings[alertType]?.visible === true;
+                        }).map((alertType: string) => {
+                          const isEnabled = getAlertPreferenceWithRE24('MLB', alertType);
+                          const alertLabel = alertType.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
                           return (
-                            <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                            <div key={alertType} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2">
                                   <h4 className="text-sm font-semibold text-slate-100">
-                                    {alertType.label}
+                                    {alertLabel}
                                   </h4>
                                   {updateAlertPreferenceMutation.isPending && (
                                     <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                                   )}
                                 </div>
                                 <p className="text-xs text-slate-400 mt-1">
-                                  {alertType.description}
+                                  Alert for {alertLabel.toLowerCase()} situations
                                 </p>
                               </div>
                               <Switch
                                 checked={isEnabled}
-                                onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
+                                onCheckedChange={(enabled) => handleAlertToggle(alertType, enabled)}
                                 disabled={updateAlertPreferenceMutation.isPending}
-                                data-testid={`toggle-${alertType.key.toLowerCase()}`}
+                                data-testid={`toggle-${alertType.toLowerCase()}`}
                                 className="data-[state=checked]:bg-emerald-500"
                               />
                             </div>
