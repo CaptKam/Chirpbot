@@ -75,8 +75,6 @@ import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
-const TEST_USER_ID = "test-user-123"; // Fallback user ID
-
 // Enhanced Game Display Component for Live MLB Games
 function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
   gameId: string; 
@@ -234,9 +232,33 @@ export default function Calendar() {
   });
   
 
-
-  // Load persisted monitored games
-  const userId = user?.id || TEST_USER_ID;
+  // Load persisted monitored games - ONLY use authenticated user ID
+  const userId = user?.id;
+  
+  // Don't render calendar if not authenticated
+  if (isAuthLoading) {
+    return (
+      <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+          <p className="text-lg font-semibold">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated || !userId) {
+    return (
+      <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-slate-300">Please log in to monitor games</p>
+          <a href="/login" className="mt-4 inline-block px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
+            Log In
+          </a>
+        </div>
+      </div>
+    );
+  }
   const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
     queryKey: [`/api/user/${userId}/monitored-games`, { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
@@ -248,6 +270,7 @@ export default function Calendar() {
       if (!response.ok) throw new Error("Failed to fetch monitored games");
       return response.json();
     },
+    enabled: !!userId && isAuthenticated, // Only run query when authenticated
   });
 
   // Sync selected games with persisted monitored games
