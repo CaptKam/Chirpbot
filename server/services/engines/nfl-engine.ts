@@ -48,9 +48,9 @@ export class NFLEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
-  // Alert module functionality removed
-  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    console.log(`🔧 Alert modules disabled - no NFL modules will be loaded`);
+  // Alert processing is now handled by the base class using alert cylinders
+  async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
+    return [];
   }
 
   private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {

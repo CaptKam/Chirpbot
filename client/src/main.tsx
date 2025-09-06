@@ -26,7 +26,7 @@ window.addEventListener('unhandledrejection', (event) => {
     return;
   }
   
-  // Don't prevent default browser error handling - let it crash gracefully
+  event.preventDefault(); // Prevent the default browser error handling
 });
 
 window.addEventListener('error', (event) => {
@@ -37,8 +37,6 @@ window.addEventListener('error', (event) => {
     lineno: event.lineno,
     colno: event.colno
   });
-  
-  // Don't prevent default behavior - allow proper error handling
 });
 
 createRoot(document.getElementById("root")!).render(<App />);

@@ -41,13 +41,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestKey = `${req.method}:${req.path}:${req.ip}`;
       const lastRequest = recentRequests.get(requestKey);
 
-      // Only log duplicates and non-weather requests to reduce noise
-      if (lastRequest && (now - lastRequest) < 100) {
-        if (!req.path.includes('/api/weather')) {
-          console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
-        }
-      } else if (!req.path.includes('/api/weather')) {
-        console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path}`);
+      if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
+        console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
+      } else {
+        console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
       }
 
       recentRequests.set(requestKey, now);
@@ -1307,7 +1304,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Weather endpoint - redirect to team-specific endpoint
   app.get('/api/weather', async (req, res) => {
-    // Return fallback data without excessive logging
+    console.log('🔧 ROUTE DEBUG: GET /api/weather - Body:', req.body);
+    console.log('⚠️ Generic weather endpoint called - should use /api/weather/team/:teamName');
+
+    // Return fallback data with clear indication it's generic
     res.json({
       temperature: 72,
       condition: 'Clear',

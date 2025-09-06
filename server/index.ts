@@ -13,16 +13,13 @@ import { pool } from "./db";
 // Global error handlers to prevent unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Log but don't crash - let the app continue
+  // Don't exit the process, just log the error
 });
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception thrown:', error);
-  // Only exit on truly fatal errors, not all uncaught exceptions
-  if (error.code === 'EADDRINUSE' || error.code === 'ENOENT') {
-    console.error('Fatal error, exiting...');
-    process.exit(1);
-  }
+  // For uncaught exceptions, we should exit
+  process.exit(1);
 });
 
 const app = express();

@@ -139,8 +139,60 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // Alert module functionality removed
+  // Load alert modules dynamically - MLB only
+  async loadAlertModule(alertType: string): Promise<any | null> {
+    try {
+      // Map MLB alert types to actual module files
+      const moduleMap: Record<string, string> = {
+        'BASES_LOADED': 'bases-loaded-module',
+        'RISP': 'risp-module',
+        'CLOSE_GAME': 'close-game-module',
+        'LATE_PRESSURE': 'late-pressure-module',
+        'POWER_HITTER': 'power-hitter-module',
+        'HOT_HITTER': 'hot-hitter-module',
+        'RUNNERS_1ST_2ND': 'runners-1st-2nd-module',
+        'FULL_COUNT': 'full-count-module',
+        'MLB_GAME_START': 'game-start-module',
+        'MLB_SEVENTH_INNING_STRETCH': 'seventh-inning-stretch-module',
+        'TEST_ALERT': 'test-alert-module'
+      };
+
+      const moduleFileName = moduleMap[alertType];
+      if (!moduleFileName) {
+        console.log(`❌ No MLB module found for: ${alertType}`);
+        return null;
+      }
+
+      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
+      const module = await import(modulePath);
+      const ModuleClass = module.default;
+      return new ModuleClass();
+    } catch (error) {
+      console.error(`❌ Failed to load MLB alert module ${alertType}:`, error);
+      return null;
+    }
+  }
+
+  // Initialize alert modules for enabled alert types - MLB only
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    console.log(`🔧 Alert modules disabled - no MLB modules will be loaded`);
+    this.alertModules.clear();
+
+    console.log(`🔧 Loading ${enabledAlertTypes.length} MLB alert modules...`);
+
+    for (const alertType of enabledAlertTypes) {
+      try {
+        const module = await this.loadAlertModule(alertType);
+        if (module) {
+          this.alertModules.set(alertType, module);
+          console.log(`✅ Loaded MLB alert module: ${alertType}`);
+        } else {
+          console.log(`❌ Failed to load MLB module: ${alertType}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error loading MLB ${alertType}:`, error);
+      }
+    }
+
+    console.log(`🎯 Successfully initialized ${this.alertModules.size} MLB alert modules`);
   }
 }
