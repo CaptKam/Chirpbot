@@ -190,8 +190,6 @@ export function GameCardTemplate({
   const homeAbbr = homeTeam.abbreviation || extractTeamAbbreviation(homeTeam.name);
   const awayAbbr = awayTeam.abbreviation || extractTeamAbbreviation(awayTeam.name);
 
-  // Weather functionality temporarily removed
-
   return (
     <Card 
       className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 ${cardHeight} hover:bg-white/10 ${

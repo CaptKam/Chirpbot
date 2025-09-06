@@ -71,8 +71,7 @@ const extractTeamAbbreviation = (teamName: string) => {
 
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
-import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
-import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
+import { BaseballDiamond } from '@/components/baseball-diamond';
 import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
@@ -117,48 +116,9 @@ function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
   );
 }
 
-// Weather Display Wrapper with real API data
+// Weather system completely removed
 function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?: 'sm' | 'md' }) {
-  const { data: weather } = useQuery({
-    queryKey: ['weather', teamName],
-    queryFn: async () => {
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(teamName)}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Weather fetch failed');
-      return response.json();
-    },
-    staleTime: 60 * 1000, // Cache for 1 minute
-    refetchInterval: 60 * 1000, // Refetch every minute
-    retry: 1,
-    enabled: false // Temporarily disabled during development
-  });
-
-  if (!weather) {
-    // Show loading state with fallback data
-    return (
-      <WeatherDisplay
-        windSpeed={5}
-        windDirection="N"
-        size={size}
-      />
-    );
-  }
-
-  // Convert wind direction degrees to cardinal direction
-  const getCardinalDirection = (degrees: number) => {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-    const index = Math.round(degrees / 22.5) % 16;
-    return directions[index];
-  };
-
-  return (
-    <WeatherDisplay
-      windSpeed={weather.windSpeed}
-      windDirection={getCardinalDirection(weather.windDirection)}
-      size={size}
-    />
-  );
+  return null;
 }
 
 export default function Calendar() {
@@ -335,21 +295,7 @@ export default function Calendar() {
   // Calculate selected count only for current sport's games
   const selectedCount = games.filter(game => selectedGames.has(game.id)).length;
 
-  const getWeatherIcon = (condition: string) => {
-    switch (condition.toLowerCase()) {
-      case "sunny":
-      case "clear":
-        return <Sun className="w-3 h-3" />;
-      case "cloudy":
-      case "overcast":
-        return <Cloud className="w-3 h-3" />;
-      case "rain":
-      case "rainy":
-        return <CloudRain className="w-3 h-3" />;
-      default:
-        return <Sun className="w-3 h-3" />;
-    }
-  };
+  
 
 
   return (

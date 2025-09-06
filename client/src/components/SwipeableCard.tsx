@@ -174,22 +174,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     staleTime: 10000,
   });
 
-  // Fetch live weather data for the game
-  const { data: weatherData } = useQuery({
-    queryKey: ["/api/weather", { gameId: alertData?.id, sport: alertData?.sport }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch weather");
-      return response.json();
-    },
-    enabled: !!alertData?.id && !!alertData?.sport, // Only fetch if we have alert data
-    refetchInterval: 60000, // Refresh every minute
-    staleTime: 60000, // Cache data for 1 minute
-  });
+  // Weather system removed
 
 
   // Find the matching game for this alert to get live scores

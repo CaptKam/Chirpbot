@@ -256,13 +256,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   process.on('SIGTERM', gracefulShutdown);
   process.on('SIGINT', gracefulShutdown);
 
-  // Wind speed test for specific stadiums
-  app.get('/api/test-wind-speeds', async (req, res) => {
-    console.log('🚫 WEATHER API DISABLED: /api/test-wind-speeds');
-    res.status(503).json({
-      error: 'Weather API temporarily disabled',
-      message: 'Weather functionality is disabled to prevent API flooding'
-    });
+  // Block ALL weather endpoints - no processing
+  app.all('/api/weather*', async (req, res) => {
+    res.status(410).json({ error: 'Weather system permanently removed' });
+  });
+
+  app.all('/api/test-wind-speeds*', async (req, res) => {
+    res.status(410).json({ error: 'Weather system permanently removed' });
   });
 
 
