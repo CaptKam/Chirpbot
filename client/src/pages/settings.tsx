@@ -151,104 +151,123 @@ export default function Settings() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-          <p className="text-slate-400">Configure your alert preferences</p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white">
+      <div className="container mx-auto px-6 py-8 max-w-5xl">
+        
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-3">Settings</h1>
+          <p className="text-slate-300 text-lg">Customize your alert preferences and notifications</p>
         </div>
 
-        {/* Alert Preferences */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-slate-100 flex items-center space-x-2">
-              <span>🚨</span>
-              <span>Alert Preferences</span>
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Choose which types of alerts you want to receive for each sport
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {Object.entries(ALERT_TYPE_CONFIG).map(([sportCategory, alertTypes]) => (
-              <div key={sportCategory} className="space-y-3">
-                <h3 className="text-lg font-semibold text-blue-400 uppercase tracking-wide">
-                  {sportCategory.includes('MLB') && '⚾'} 
-                  {sportCategory.includes('NFL') && '🏈'} 
-                  {sportCategory.includes('NCAAF') && '🏈'} 
-                  {sportCategory.includes('WNBA') && '🏀'} 
-                  {sportCategory.includes('CFL') && '🏈'} 
-                  {sportCategory}
-                </h3>
-                <div className="grid gap-3">
-                  {alertTypes.filter((alertType) => {
-                    // Filter out disabled alerts from global settings
-                    return globalSettings && typeof globalSettings === 'object' 
-                      ? (globalSettings as Record<string, boolean>)[alertType.key] !== false 
-                      : true;
-                  }).map((alertType) => {
-                    const sport = sportCategory.split(' ')[0]; // Extract sport (MLB, NFL, etc.)
-                    const isEnabled = getAlertPreference(sport, alertType.key);
-                    
-                    return (
-                      <div key={alertType.key} className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg border border-slate-600/30">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <h4 className="font-medium text-slate-100">
-                              {alertType.label}
-                            </h4>
-                            {updateAlertPreferenceMutation.isPending && (
-                              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>
-                            )}
+        <div className="space-y-8">
+          
+          {/* Alert Preferences Card */}
+          <Card className="bg-slate-800/40 border-slate-600/50 shadow-xl">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-white text-2xl flex items-center gap-3">
+                <span className="text-2xl">🚨</span>
+                <span>Alert Preferences</span>
+              </CardTitle>
+              <CardDescription className="text-slate-300 text-base">
+                Configure which types of alerts you want to receive for each sport
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-8">
+              {Object.entries(ALERT_TYPE_CONFIG).map(([sportCategory, alertTypes], categoryIndex) => (
+                <div key={sportCategory} className="space-y-4">
+                  
+                  {/* Sport Category Header */}
+                  <div className="flex items-center gap-3 pb-2">
+                    <span className="text-xl">
+                      {sportCategory.includes('MLB') && '⚾'} 
+                      {sportCategory.includes('NFL') && '🏈'} 
+                      {sportCategory.includes('NCAAF') && '🏈'} 
+                      {sportCategory.includes('WNBA') && '🏀'} 
+                      {sportCategory.includes('CFL') && '🏈'} 
+                    </span>
+                    <h3 className="text-xl font-bold text-blue-300 uppercase tracking-wider">
+                      {sportCategory}
+                    </h3>
+                  </div>
+                  
+                  {/* Alert Types Grid */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {alertTypes.filter((alertType) => {
+                      // Filter out disabled alerts from global settings
+                      return globalSettings && typeof globalSettings === 'object' 
+                        ? (globalSettings as Record<string, boolean>)[alertType.key] !== false 
+                        : true;
+                    }).map((alertType) => {
+                      const sport = sportCategory.split(' ')[0]; // Extract sport (MLB, NFL, etc.)
+                      const isEnabled = getAlertPreference(sport, alertType.key);
+                      
+                      return (
+                        <div 
+                          key={alertType.key} 
+                          className="flex items-center justify-between p-5 bg-slate-700/50 rounded-xl border border-slate-600/40 hover:bg-slate-700/70 transition-all duration-200"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-white text-base">
+                                {alertType.label}
+                              </h4>
+                              {updateAlertPreferenceMutation.isPending && (
+                                <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"/>
+                              )}
+                            </div>
+                            <p className="text-slate-300 text-sm leading-relaxed">
+                              {alertType.description}
+                            </p>
                           </div>
-                          <p className="text-sm text-slate-400 mt-1">
-                            {alertType.description}
-                          </p>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={(enabled) => handleAlertToggle(sport, alertType.key, enabled)}
+                            disabled={updateAlertPreferenceMutation.isPending}
+                            className="ml-4"
+                          />
                         </div>
-                        <Switch
-                          checked={isEnabled}
-                          onCheckedChange={(enabled) => handleAlertToggle(sport, alertType.key, enabled)}
-                          disabled={updateAlertPreferenceMutation.isPending}
-                        />
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Separator between categories */}
+                  {categoryIndex < Object.keys(ALERT_TYPE_CONFIG).length - 1 && (
+                    <Separator className="bg-slate-600/40 my-6" />
+                  )}
                 </div>
-                {sportCategory !== Object.keys(ALERT_TYPE_CONFIG)[Object.keys(ALERT_TYPE_CONFIG).length - 1] && (
-                  <Separator className="bg-slate-600/30" />
-                )}
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Telegram Integration */}
+          <TelegramSettings onUpdate={handleSettingsUpdate} userPreferences={userPreferences} />
+
+          {/* System Information */}
+          <Card className="bg-slate-800/40 border-slate-600/50 shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-white text-xl flex items-center gap-3">
+                <span className="text-xl">ℹ️</span>
+                <span>System Information</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <span className="text-slate-200 font-medium">User ID</span>
+                <Badge variant="outline" className="text-slate-200 border-slate-500 bg-slate-700/50">
+                  {user?.id}
+                </Badge>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Telegram Integration */}
-        <TelegramSettings onUpdate={handleSettingsUpdate} userPreferences={userPreferences} />
-
-        {/* System Information */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-slate-100 flex items-center space-x-2">
-              <span>ℹ️</span>
-              <span>System Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">User ID</span>
-              <Badge variant="outline" className="text-slate-300 border-slate-600">
-                {user?.id}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">Account Type</span>
-              <Badge variant="outline" className="text-slate-300 border-slate-600">
-                {user?.role || 'Standard'}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <span className="text-slate-200 font-medium">Account Type</span>
+                <Badge variant="outline" className="text-slate-200 border-slate-500 bg-slate-700/50">
+                  {user?.role || 'Standard'}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
@@ -272,53 +291,56 @@ function TelegramSettings({ onUpdate, userPreferences }: {
   };
 
   return (
-    <Card className="bg-slate-800/50 border-slate-700">
+    <Card className="bg-slate-800/40 border-slate-600/50 shadow-xl">
       <CardHeader>
-        <CardTitle className="text-slate-100 flex items-center space-x-2">
-          <span>📱</span>
+        <CardTitle className="text-white text-xl flex items-center gap-3">
+          <span className="text-xl">📱</span>
           <span>Telegram Integration</span>
         </CardTitle>
-        <CardDescription className="text-slate-400">
-          Get instant notifications on Telegram
+        <CardDescription className="text-slate-300 text-base">
+          Get instant notifications delivered to your Telegram
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center space-x-2">
+      <CardContent className="space-y-5">
+        <div className="flex items-center gap-3 p-4 bg-slate-700/30 rounded-lg">
           <Switch
             checked={enabled}
             onCheckedChange={setEnabled}
           />
-          <Label className="text-slate-300">Enable Telegram Notifications</Label>
+          <Label className="text-slate-200 font-medium text-base">Enable Telegram Notifications</Label>
         </div>
         
         {enabled && (
-          <>
+          <div className="space-y-4 p-4 bg-slate-700/20 rounded-lg border border-slate-600/30">
             <div className="space-y-2">
-              <Label htmlFor="botToken" className="text-slate-300">Bot Token</Label>
+              <Label htmlFor="botToken" className="text-slate-200 font-medium">Bot Token</Label>
               <Input
                 id="botToken"
-                placeholder="Your Telegram bot token"
+                placeholder="Enter your Telegram bot token"
                 value={botToken}
                 onChange={(e) => setBotToken(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-slate-100"
+                className="bg-slate-700/50 border-slate-500 text-white placeholder:text-slate-400 focus:ring-blue-500"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="chatId" className="text-slate-300">Chat ID</Label>
+              <Label htmlFor="chatId" className="text-slate-200 font-medium">Chat ID</Label>
               <Input
                 id="chatId"
-                placeholder="Your Telegram chat ID"
+                placeholder="Enter your Telegram chat ID"
                 value={chatId}
                 onChange={(e) => setChatId(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-slate-100"
+                className="bg-slate-700/50 border-slate-500 text-white placeholder:text-slate-400 focus:ring-blue-500"
               />
             </div>
             
-            <Button onClick={handleSave} className="w-full">
+            <Button 
+              onClick={handleSave} 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5"
+            >
               Save Telegram Settings
             </Button>
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
