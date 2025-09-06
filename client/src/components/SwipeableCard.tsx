@@ -736,7 +736,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-6">
                 <GameCardTemplate
-                  gameId={alertData.gameId || alertData.id}
+                  gameId={alertData.id}
                   homeTeam={{
                     name: typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'Home Team',
                     score: displayScores.homeScore
@@ -751,19 +751,11 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
-                  runners={{
-                    first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
-                    second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
-                    third: alertData.context?.hasThird || liveGameData?.runners?.third || false
-                  }}
-                  balls={alertData.context?.balls || liveGameData?.balls}
-                  strikes={alertData.context?.strikes || liveGameData?.strikes}
-                  outs={alertData.context?.outs || liveGameData?.outs}
                   weather={weatherData}
                   size="lg"
                   showWeather={true}
                   showVenue={false}
-                  showEnhancedMLB={alertData.sport === 'MLB'}
+                  showEnhancedMLB={false}
                   className="shadow-lg"
                 />
               </div>
