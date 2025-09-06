@@ -22,8 +22,6 @@ export interface Alert {
   probability?: number;
   homeTeam?: string;
   awayTeam?: string;
-  homeScore?: number;
-  awayScore?: number;
   inning?: number;
   isTopInning?: boolean;
   balls?: number;
@@ -63,7 +61,6 @@ export interface Alert {
     courtPosition?: string;
     period?: number;
     rinkPosition?: string;
-    betbookData?: any;
     gameInfo?: any;
     reasons?: string[];
     recommendation?: string;
@@ -103,7 +100,6 @@ export interface Alert {
   timestamp: string;
   createdAt?: string;
   sentToTelegram: boolean;
-  betbookData?: any;
 }
 
 export interface Settings {
@@ -117,14 +113,14 @@ export interface Settings {
     closeGame?: boolean;
     lateInning?: boolean;
     extraInnings?: boolean;
-    
+
     // MLB Alert Types - Scoring Events
     homeRun?: boolean;
     homeRunAlert?: boolean;
     hits?: boolean;
     scoring?: boolean;
     inningChange?: boolean;
-    
+
     // MLB Alert Types - Player Performance  
     strikeouts?: boolean;
     powerHitter?: boolean;
@@ -133,23 +129,23 @@ export interface Settings {
     eliteClutch?: boolean;
     avgHitter?: boolean;
     rbiMachine?: boolean;
-    
+
     // NFL Alert Types  
     redZone?: boolean;
     nflCloseGame?: boolean;
     fourthDown?: boolean;
     twoMinuteWarning?: boolean;
-    
+
     // NBA Alert Types
     clutchTime?: boolean;
     nbaCloseGame?: boolean;
     overtime?: boolean;
-    
+
     // NHL Alert Types
     powerPlay?: boolean;
     nhlCloseGame?: boolean;
     emptyNet?: boolean;
-    
+
     // NCAAF (College Football) Alert Types
     ncaafRedZone?: boolean;
     ncaafFourthDown?: boolean;

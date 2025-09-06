@@ -15,27 +15,7 @@ import { NFLEngine } from './engines/nfl-engine';
 import { CFLEngine } from './engines/cfl-engine';
 import { BaseSportEngine, GameState, AlertResult } from './engines/base-engine';
 
-// Betting Analysis Engine
-interface BetbookData {
-  odds: {
-    home: number;
-    away: number;
-    total: number;
-  };
-  aiAdvice: string;
-  sportsbookLinks: Array<{
-    name: string;
-    url: string;
-  }>;
-}
-
-interface V3Analysis {
-  tier: number;
-  probability: number;
-  reasons: string[];
-  recommendation: string;
-  confidence: number;
-}
+// Alert analysis interfaces
 
 export class AlertGenerator {
   private mlbApi: MLBApiService;
@@ -64,33 +44,13 @@ export class AlertGenerator {
 
       let finalPriority = probability;
 
-      // Generate contextual advice based on actual game situation
+      // Generate basic game context
       const { homeScore = 0, awayScore = 0, homeTeam = 'Home', awayTeam = 'Away', inning = 5 } = context || {};
-      const totalScore = homeScore + awayScore;
-      const totalLine = 8.5; // Standard MLB total
-      const currentInning = Math.min(9, Math.max(1, inning));
-
-      // Generate contextual advice based on actual game situation  
       const awayTeamName = typeof awayTeam === 'string' ? awayTeam : awayTeam?.name || 'Away';
       const homeTeamName = typeof homeTeam === 'string' ? homeTeam : homeTeam?.name || 'Home';
-      let advice = `${awayTeamName.split(' ').pop()} ${awayScore}-${homeScore} ${homeTeamName.split(' ').pop()}`;
-
-      if (type === 'BASES_LOADED') {
-        advice += ` | BASES LOADED: Strong over ${totalLine} value. Historical 75%+ scoring rate.`;
-      } else if (type === 'RISP') {
-        advice += ` | Runner in scoring position. Over ${totalLine} shows value at ${inning}th inning.`;
-      } else if (type === 'HOME_RUN') {
-        advice += ` | Momentum shift! Live betting window for over ${totalLine}.`;
-      } else if (totalScore < totalLine - 1) {
-        advice += ` | Current pace suggests OVER ${totalLine} value (${totalScore} through ${currentInning}).`;
-      } else if (totalScore > totalLine + 1) {
-        advice += ` | High-scoring game. Consider UNDER ${totalLine} (${totalScore} runs already).`;
-      } else {
-        advice += ` | Live total ${totalLine}. Monitor for value based on next few plays.`;
-      }
-
-      // Update context with betting advice
-      context.aiAdvice = advice;
+      
+      // Simple game state description
+      context.gameState = `${awayTeamName.split(' ').pop()} ${awayScore}-${homeScore} ${homeTeamName.split(' ').pop()}`;
 
       const alertKey = `${type}-${gameId || 'general'}-${Date.now()}`;
 
@@ -159,77 +119,7 @@ export class AlertGenerator {
     }
   }
 
-  // Simplified V3 analysis without AI
-  calculateV3Analysis(
-    alertType: string,
-    probability: number,
-    gameContext: any
-  ): V3Analysis {
-    let tier = 3;
-    let confidence = probability;
-    const reasons: string[] = [];
-    let recommendation = 'MONITOR';
-
-    // Determine tier based on probability and context
-    if (probability >= 85) {
-      tier = 1;
-      recommendation = 'BET NOW';
-      reasons.push('Extremely high probability situation');
-    } else if (probability >= 70) {
-      tier = 2;
-      recommendation = 'STRONG BET';
-      reasons.push('High probability opportunity');
-    } else if (probability >= 60) {
-      tier = 3;
-      recommendation = 'CONSIDER';
-      reasons.push('Moderate probability situation');
-    } else {
-      tier = 4;
-      recommendation = 'WAIT';
-      reasons.push('Low probability - monitor');
-    }
-
-    // Add context-specific reasons
-    if (alertType === 'BASES_LOADED') {
-      reasons.push('Historical 75%+ run scoring rate');
-      confidence += 10;
-    }
-
-    if (alertType === 'RISP') {
-      reasons.push('Runner in prime scoring position');
-      confidence += 5;
-    }
-
-    if (gameContext?.inning >= 7) {
-      reasons.push('Late inning pressure situation');
-      confidence += 5;
-    }
-
-    return {
-      tier,
-      probability: Math.min(95, confidence),
-      reasons: reasons.slice(0, 3),
-      recommendation,
-      confidence: Math.min(95, confidence)
-    };
-  }
-
-  async getBetbookData(gameId: string, sport: string = 'MLB'): Promise<BetbookData> {
-    // Simplified betting data without AI
-    return {
-      odds: {
-        home: -110,
-        away: -110,
-        total: 8.5
-      },
-      aiAdvice: 'Monitor live betting opportunities',
-      sportsbookLinks: [
-        { name: 'DraftKings', url: 'https://sportsbook.draftkings.com' },
-        { name: 'FanDuel', url: 'https://sportsbook.fanduel.com' },
-        { name: 'BetMGM', url: 'https://sports.betmgm.com' }
-      ]
-    };
-  }
+  
 
   async getAlerts(userId?: string, sport?: string, limit: number = 50) {
     try {
