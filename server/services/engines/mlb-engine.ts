@@ -51,7 +51,6 @@ export class MLBEngine extends BaseSportEngine {
 
   async loadAlertModule(alertType: string): Promise<any | null> {
     const moduleMap: Record<string, string> = {
-      'GAME_START': 'game-start-module',
       'RISP': 'risp-module',
       'BASES_LOADED': 'bases-loaded-module',
       'RUNNERS_1ST_2ND': 'runners-1st-2nd-module',
@@ -64,7 +63,8 @@ export class MLBEngine extends BaseSportEngine {
       'BLOWOUT': 'blowout-module',
       'STRIKEOUT': 'strikeout-module',
       'HOME_RUN_LIVE': 'home-run-live-module',
-      'CLOSE_GAME_LIVE': 'close-game-live-module'
+      'CLOSE_GAME_LIVE': 'close-game-live-module',
+      'GAME_START': 'game-start-module'
     };
 
     const moduleName = moduleMap[alertType];
@@ -76,6 +76,13 @@ export class MLBEngine extends BaseSportEngine {
     try {
       const modulePath = `./alert-cylinders/mlb/${moduleName}`;
       const module = await import(modulePath);
+
+      // Instantiate the module class
+      if (alertType === 'GAME_START') {
+        const { MLBGameStartModule } = module;
+        return new MLBGameStartModule();
+      }
+
       return module;
     } catch (error) {
       console.error(`❌ Failed to load MLB alert module ${alertType}:`, error);

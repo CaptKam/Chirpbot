@@ -1,58 +1,71 @@
 
-export interface GameStartResult {
-  shouldAlert: boolean;
-  message: string;
-  priority: number;
-  context: any;
+import { GameState, AlertResult } from '../../base-engine';
+
+export interface GameStartContext {
+  gameId: string;
+  sport: string;
+  homeTeam: string;
+  awayTeam: string;
+  status: string;
+  isLive: boolean;
+  quarter?: number;
+  gameStartTime?: string;
 }
 
-export async function checkAlert(gameState: any): Promise<GameStartResult> {
-  // Check if it's the opening tip-off (1st quarter, 10:00 or close to it, 0-0 score)
-  const isGameStart = gameState.quarter === 1 && 
-                     gameState.homeScore === 0 && 
-                     gameState.awayScore === 0 &&
-                     gameState.isLive &&
-                     isTipOffTime(gameState.timeRemaining);
+export class WNBAGameStartModule {
+  private processedGames: Set<string> = new Set();
 
-  if (!isGameStart) {
+  async checkAlert(gameState: GameState): Promise<AlertResult> {
+    const gameId = gameState.gameId;
+    
+    if (this.processedGames.has(gameId)) {
+      return {
+        shouldAlert: false,
+        type: 'GAME_START',
+        message: '',
+        priority: 0,
+        context: {}
+      };
+    }
+
+    const isGameStarting = (
+      gameState.isLive && 
+      gameState.status === 'live' &&
+      (!gameState.quarter || gameState.quarter <= 1)
+    );
+
+    if (isGameStarting) {
+      this.processedGames.add(gameId);
+      
+      const context: GameStartContext = {
+        gameId: gameState.gameId,
+        sport: 'WNBA',
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        status: gameState.status,
+        isLive: gameState.isLive,
+        quarter: gameState.quarter,
+        gameStartTime: new Date().toISOString()
+      };
+
+      return {
+        shouldAlert: true,
+        type: 'GAME_START',
+        message: `🏀 WNBA Game Starting: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+        priority: 75,
+        context,
+        alertKey: `${gameId}_GAME_START`
+      };
+    }
+
     return {
       shouldAlert: false,
+      type: 'GAME_START',
       message: '',
       priority: 0,
-      context: gameState
+      context: {}
     };
   }
-
-  const message = `🏀 WNBA Game Starting - Tip-off between ${gameState.awayTeam} and ${gameState.homeTeam}`;
-
-  return {
-    shouldAlert: true,
-    message,
-    priority: 40,
-    context: {
-      ...gameState,
-      alertType: 'GAME_START',
-      situation: 'Opening tip-off'
-    }
-  };
 }
 
-function isTipOffTime(timeRemaining: string): boolean {
-  if (!timeRemaining) return false;
-
-  try {
-    const totalSeconds = parseTimeToSeconds(timeRemaining);
-    return totalSeconds >= 580 && totalSeconds <= 600; // Between 9:40 and 10:00
-  } catch (error) {
-    return false;
-  }
-}
-
-function parseTimeToSeconds(timeString: string): number {
-  const cleanTime = timeString.trim().split(' ')[0];
-  if (cleanTime.includes(':')) {
-    const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
-    return (minutes * 60) + seconds;
-  }
-  return parseInt(cleanTime) || 0;
-}
+export default WNBAGameStartModule;
