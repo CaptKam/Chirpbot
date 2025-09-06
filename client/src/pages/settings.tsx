@@ -151,8 +151,8 @@ export default function Settings() {
   }
 
   return (
-    <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="bg-gradient-to-b from-[#0B1220] to-[#0F1A32] min-h-screen text-slate-100 antialiased">
+      <div className="max-w-md mx-auto bg-transparent min-h-screen relative">
         {/* Header */}
         <div className="p-4 text-center">
           <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
@@ -254,6 +254,9 @@ export default function Settings() {
           </Card>
         </div>
       </div>
+
+      {/* Fixed Bottom Navigation Space */}
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50 h-16"></div>
     </div>
   );
 }
