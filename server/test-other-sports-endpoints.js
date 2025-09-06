@@ -1,9 +1,9 @@
 
-const { NFLApiService } = require('./services/nfl-api.ts');
-const { NCAAFApiService } = require('./services/ncaaf-api.ts'); 
-const { WNBAApiService } = require('./services/wnba-api.ts');
-const { CFLApiService } = require('./services/cfl-api.ts');
-const { storage } = require('./storage.ts');
+import { NFLApiService } from './services/nfl-api.ts';
+import { NCAAFApiService } from './services/ncaaf-api.ts'; 
+import { WNBAApiService } from './services/wnba-api.ts';
+import { CFLApiService } from './services/cfl-api.ts';
+import { storage } from './storage.ts';
 
 async function testAllSportsEndpoints() {
   console.log('🔍 Testing all sports API endpoints...\n');
