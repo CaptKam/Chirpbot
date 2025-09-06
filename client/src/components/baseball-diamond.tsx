@@ -139,6 +139,4 @@ export function WeatherDisplay({
       )}
     </div>
   );
-}
-
-export { default as WeatherImpactVisualizer } from './WeatherImpactVisualizer';
+}herImpactVisualizer';

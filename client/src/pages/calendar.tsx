@@ -77,11 +77,11 @@ import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 // Enhanced Game Display Component for Live MLB Games
-function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
-  gameId: string; 
-  inning: number; 
-  isTopInning: boolean; 
-  isLive: boolean 
+function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
+  gameId: string;
+  inning: number;
+  isTopInning: boolean;
+  isLive: boolean
 }) {
   const { data: enhancedData } = useQuery({
     queryKey: ['enhanced-game', gameId],
@@ -100,7 +100,7 @@ function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
   });
 
   return (
-    <BaseballDiamond 
+    <BaseballDiamond
       runners={enhancedData?.runners || {
         first: false,
         second: false,
@@ -137,7 +137,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
   if (!weather) {
     // Show loading state with fallback data
     return (
-      <WeatherDisplay 
+      <WeatherDisplay
         windSpeed={5}
         windDirection="N"
         size={size}
@@ -153,7 +153,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
   };
 
   return (
-    <WeatherDisplay 
+    <WeatherDisplay
       windSpeed={weather.windSpeed}
       windDirection={getCardinalDirection(weather.windDirection)}
       size={size}
@@ -285,14 +285,14 @@ export default function Calendar() {
 
   // Add game monitoring
   const addMonitoringMutation = useMutation({
-    mutationFn: async ({ gameId, sport, homeTeamName, awayTeamName }: { 
-      gameId: string; 
-      sport: string; 
-      homeTeamName: string; 
-      awayTeamName: string; 
+    mutationFn: async ({ gameId, sport, homeTeamName, awayTeamName }: {
+      gameId: string;
+      sport: string;
+      homeTeamName: string;
+      awayTeamName: string;
     }) => {
-      return apiRequest("POST", `/api/user/${userId}/monitored-games`, { 
-        gameId, sport, homeTeamName, awayTeamName 
+      return apiRequest("POST", `/api/user/${userId}/monitored-games`, {
+        gameId, sport, homeTeamName, awayTeamName
       });
     },
     onSuccess: () => {
@@ -523,11 +523,11 @@ export default function Calendar() {
                 .map((game, index) => {
               const isSelected = selectedGames.has(game.id);
               const startTime = new Date(game.startTime);
-              const formattedTime = isNaN(startTime.getTime()) 
+              const formattedTime = isNaN(startTime.getTime())
                 ? 'TBD'
-                : startTime.toLocaleTimeString('en-US', { 
-                    hour: 'numeric', 
-                    minute: '2-digit' 
+                : startTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit'
                   });
 
               // Validate game data before rendering
@@ -564,7 +564,7 @@ export default function Calendar() {
                     size="lg"
                     showWeather={false}
                     showVenue={true}
-                    showEnhancedMLB={false}
+                    showEnhancedMLB={game.status === 'live'}
                   />
                 </div>
               );
@@ -591,11 +591,11 @@ export default function Calendar() {
                   .map((game, index) => {
                   const isSelected = selectedGames.has(game.id);
                   const startTime = new Date(game.startTime);
-                  const formattedTime = isNaN(startTime.getTime()) 
+                  const formattedTime = isNaN(startTime.getTime())
                     ? 'TBD'
-                    : startTime.toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit' 
+                    : startTime.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit'
                       });
 
                   // Validate game data before rendering

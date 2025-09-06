@@ -56,8 +56,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(cachedResponse.status).json(cachedResponse.data);
         } else {
           // No cache available, return 429 Too Many Requests
-          return res.status(429).json({ 
-            error: 'Too many requests', 
+          return res.status(429).json({
+            error: 'Too many requests',
             message: 'Please wait before making another request',
             retryAfter: '200ms'
           });
@@ -69,8 +69,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json = function(data: any) {
         // Cache successful responses for certain endpoints
         if (res.statusCode === 200 || res.statusCode === 304) {
-          const shouldCache = req.path.includes('/weather') || 
-                             req.path.includes('/games') || 
+          const shouldCache = req.path.includes('/weather') ||
+                             req.path.includes('/games') ||
                              req.path.includes('/alerts/stats');
 
           if (shouldCache) {
@@ -107,8 +107,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced WebSocket server with robust heartbeat and health monitoring
-  const wss = new WebSocketServer({ 
-    server: httpServer, 
+  const wss = new WebSocketServer({
+    server: httpServer,
     path: '/ws',
     clientTracking: true,
     perMessageDeflate: false // Disable compression for better performance with small messages
@@ -314,10 +314,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(healthStatus);
     } catch (error) {
-      res.status(500).json({ 
-        status: 'error', 
+      res.status(500).json({
+        status: 'error',
         timestamp: new Date().toISOString(),
-        error: (error as any).message 
+        error: (error as any).message
       });
     }
   });
@@ -583,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.addUserMonitoredGame(gameData);
       console.log(`✅ Successfully added monitored game for ${user.username}: ${homeTeamName} vs ${awayTeamName}`);
 
-      res.json({ 
+      res.json({
         message: 'Game monitoring enabled',
         gameData: {
           gameId,
@@ -689,8 +689,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
-      res.json({ 
-        message: 'Alert preferences updated successfully', 
+      res.json({
+        message: 'Alert preferences updated successfully',
         count: result.length
       });
     } catch (error) {
@@ -1289,7 +1289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const currentUser = (req as any).user;
 
-      console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
+      console.log(`💀 Admin ${currentUser.username} attempting to FORCE DELETE of user ${userId}`);
 
       // Prevent self-deletion
       if (userId === currentUser.id) {
@@ -1519,200 +1519,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`📅 Current Pacific Date: ${getPacificDate()}`);
   console.log(`🕐 Current Pacific Time: ${formatPacificTime()}`);
 
-  // Weather test endpoint
-  app.get('/api/test-weather/:team', async (req, res) => {
-    try {
-      const { weatherService } = await import('./services/weather-service');
-      const weather = await weatherService.getWeatherForTeam(req.params.team);
-      const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
-      const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-
-      res.json({
-        team: req.params.team,
-        weather,
-        analysis: {
-          homeRunFactor,
-          windDescription: windDesc,
-          weatherSource: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data (Set OPENWEATHERMAP_API_KEY for live data)'
-        }
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Weather endpoint for calendar games
-  app.get('/api/weather/team/:teamName', async (req, res) => {
-    try {
-      const { weatherService } = await import('./services/weather-service');
-      const teamName = decodeURIComponent(req.params.teamName);
-      const weather = await weatherService.getWeatherForTeam(teamName);
-      const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
-      const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-
-      res.json({
-        temperature: weather.temperature,
-        condition: weather.condition,
-        windSpeed: weather.windSpeed,
-        windDirection: weather.windDirection,
-        windDescription: windDesc,
-        homeRunFactor,
-        humidity: weather.humidity,
-        pressure: weather.pressure,
-        timestamp: weather.timestamp,
-        source: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data'
-      });
-    } catch (error: any) {
-      console.error(`Weather API error for team ${req.params.teamName}:`, error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Weather endpoint - temporarily disabled during development
-  app.get('/api/weather', async (req, res) => {
-    console.log('🚫 WEATHER DISABLED: GET /api/weather blocked during development');
-
-    // Return immediate response to prevent flooding
-    res.status(503).json({
-      error: 'Weather service temporarily disabled during development',
-      message: 'Weather functionality is disabled to prevent API flooding',
-      fallback: {
-        temperature: 72,
-        condition: 'Clear',
-        windSpeed: 5,
-        windDirection: 0,
-        humidity: 50,
-        pressure: 1013
-      }
-    });
-  });
-
-  // NEW: Batch weather endpoint for multiple teams (STABILITY IMPROVEMENT)
-  app.post('/api/weather/batch', async (req, res) => {
-    try {
-      const { teams } = req.body;
-
-      if (!Array.isArray(teams)) {
-        return res.status(400).json({ error: 'Teams must be an array' });
-      }
-
-      if (teams.length > 30) {
-        return res.status(400).json({ error: 'Maximum 30 teams per batch request' });
-      }
-
-      console.log(`🌦️ BATCH WEATHER REQUEST: ${teams.length} teams`);
-
-      const { weatherService } = await import('./services/weather-service');
-      const results: Record<string, any> = {};
-
-      // Process teams in smaller batches to avoid overwhelming the external API
-      const batchSize = 5;
-      const batches = [];
-
-      for (let i = 0; i < teams.length; i += batchSize) {
-        batches.push(teams.slice(i, i + batchSize));
-      }
-
-      // Process batches with a small delay between them
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        console.log(`🌦️ Processing weather batch ${i + 1}/${batches.length} (${batch.length} teams)`);
-
-        const batchPromises = batch.map(async (teamName: string) => {
-          try {
-            const weather = await weatherService.getWeatherForTeam(teamName);
-            return { teamName, weather };
-          } catch (error) {
-            console.error(`Error getting weather for ${teamName}:`, error);
-            return { 
-              teamName, 
-              weather: null, 
-              error: (error as any).message || 'Unknown error'
-            };
-          }
-        });
-
-        const batchResults = await Promise.all(batchPromises);
-
-        // Store results
-        batchResults.forEach(({ teamName, weather, error }) => {
-          if (weather) {
-            results[teamName] = weather;
-          } else {
-            results[teamName] = { 
-              error: error || 'Failed to fetch weather',
-              fallback: true,
-              temperature: 72,
-              condition: 'Unknown',
-              windSpeed: 0,
-              windDirection: 0,
-              humidity: 50,
-              pressure: 1013
-            };
-          }
-        });
-
-        // Small delay between batches to be respectful to external APIs
-        if (i < batches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-
-      console.log(`✅ BATCH WEATHER COMPLETE: ${Object.keys(results).length} teams processed`);
-
-      res.json({
-        results,
-        timestamp: new Date().toISOString(),
-        cached: Object.keys(results).length,
-        batchSize: teams.length
-      });
-
-    } catch (error) {
-      console.error('Batch weather error:', error);
-      res.status(500).json({ error: 'Failed to fetch batch weather data' });
-    }
-  });
-
-  // Test NCAAF two-minute warning logic
-  app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
-    try {
-      const { AlertGenerator } = await import('./services/alert-generator');
-      const generator = new AlertGenerator();
-
-      const testTime = req.params.time;
-
-      // Test the two-minute detection logic
-      const isWithin2Min = (generator as any).isWithinTwoMinutes(testTime);
-
-      // Create mock game data
-      const mockGame = {
-        gameId: 'test-game',
-        awayTeam: 'Test Team A',
-        homeTeam: 'Test Team B',
-        awayScore: 14,
-        homeScore: 21,
-        timeRemaining: testTime,
-        quarter: 4,
-        status: 'live',
-        isLive: true
-      };
-
-      res.json({
-        inputTime: testTime,
-        isWithinTwoMinutes: isWithin2Min,
-        mockGame,
-        testResults: {
-          '1:30': (generator as any).isWithinTwoMinutes('1:30'),
-          '2:30': (generator as any).isWithinTwoMinutes('2:30'),
-          '0:45': (generator as any).isWithinTwoMinutes('0:45'),
-          '3:00': (generator as any).isWithinTwoMinutes('3:00')
-        }
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // Admin Authentication Routes
   app.post('/api/admin-auth/login', async (req, res) => {
     try {
@@ -1869,33 +1675,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error: any) {
         debugResults.services.mlbApi = { status: 'FAIL', error: error.message };
         debugResults.errors.push(`MLB API: ${error.message}`);
-      }
-
-      // Test Weather Service
-      try {
-        const { weatherService } = await import('./services/weather-service');
-        const testWeather = await weatherService.getWeatherForTeam('Boston Red Sox');
-        debugResults.services.weather = {
-          status: 'OK',
-          source: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data',
-          temperature: testWeather.temperature,
-          condition: testWeather.condition
-        };
-      } catch (error: any) {
-        debugResults.services.weather = { status: 'FAIL', error: error.message };
-        debugResults.errors.push(`Weather service: ${error.message}`);
-      }
-
-      // Test Alert Generator
-      try {
-        const alertGenerator = new AlertGenerator();
-        debugResults.services.alertGenerator = {
-          status: 'INITIALIZED',
-          class: 'AlertGenerator'
-        };
-      } catch (error: any) {
-        debugResults.services.alertGenerator = { status: 'FAIL', error: error.message };
-        debugResults.errors.push(`Alert Generator: ${error.message}`);
       }
 
       // Test Environment Variables
