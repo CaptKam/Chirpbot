@@ -1,6 +1,14 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
 
+interface BaseballDiamondProps {
+  runners: {
+    first: boolean;
+    second: boolean;
+    third: boolean;
+  };
+}
+
 interface AlertFooterProps {
   sport?: string;
   // MLB specific
@@ -9,9 +17,6 @@ interface AlertFooterProps {
   outs?: number;
   balls?: number;
   strikes?: number;
-  hasFirst?: boolean;
-  hasSecond?: boolean;
-  hasThird?: boolean;
   // Weather data
   weather?: {
     temperature?: number;
@@ -27,8 +32,56 @@ interface AlertFooterProps {
   // NBA specific (uses quarter)
   // NHL specific
   period?: number;
-  // Common
   createdAt: string;
+}
+
+function BaseballDiamond({ runners }: BaseballDiamondProps) {
+  return (
+    <div className="relative w-8 h-8" data-testid="baseball-diamond">
+      {/* Home Plate */}
+      <div
+        className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-gray-400 rotate-45"
+        style={{ bottom: '-1px' }}
+      />
+
+      {/* First Base */}
+      <div
+        className={`absolute right-0 bottom-1/2 transform translate-y-1/2 w-1.5 h-1.5 rotate-45 ${
+          runners.first ? 'bg-emerald-400' : 'bg-gray-300 dark:bg-gray-600'
+        }`}
+        style={{ right: '-1px' }}
+        data-testid="first-base"
+      />
+
+      {/* Second Base */}
+      <div
+        className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 rotate-45 ${
+          runners.second ? 'bg-emerald-400' : 'bg-gray-300 dark:bg-gray-600'
+        }`}
+        style={{ top: '-1px' }}
+        data-testid="second-base"
+      />
+
+      {/* Third Base */}
+      <div
+        className={`absolute left-0 bottom-1/2 transform translate-y-1/2 w-1.5 h-1.5 rotate-45 ${
+          runners.third ? 'bg-emerald-400' : 'bg-gray-300 dark:bg-gray-600'
+        }`}
+        style={{ left: '-1px' }}
+        data-testid="third-base"
+      />
+
+      {/* Diamond outline */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 32 32">
+        <path
+          d="M16 2 L30 16 L16 30 L2 16 Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+        />
+      </svg>
+    </div>
+  );
 }
 
 export default function AlertFooter({
@@ -38,9 +91,6 @@ export default function AlertFooter({
   outs = 0,
   balls = 0,
   strikes = 0,
-  hasFirst = false,
-  hasSecond = false,
-  hasThird = false,
   weather,
   quarter,
   timeRemaining,
@@ -94,12 +144,13 @@ export default function AlertFooter({
             )}
 
             {/* Baseball Diamond */}
-            <div className="relative w-6 h-6 flex-shrink-0">
-              <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 rotate-45 border ${hasSecond ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
-              <div className={`absolute top-1/2 left-0 transform -translate-y-1/2 w-1.5 h-1.5 rotate-45 border ${hasThird ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
-              <div className={`absolute top-1/2 right-0 transform -translate-y-1/2 w-1.5 h-1.5 rotate-45 border ${hasFirst ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-slate-600 rounded-full" />
-            </div>
+            <BaseballDiamond
+              runners={{
+                first: false, // Placeholder, should be dynamic
+                second: false, // Placeholder, should be dynamic
+                third: false   // Placeholder, should be dynamic
+              }}
+            />
           </>
         );
 
