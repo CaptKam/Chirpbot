@@ -157,9 +157,9 @@ export default function AlertsPage() {
               transition={{ delay: index * 0.1 }}
             >
               <SwipeableCard 
-                alertId={alert.id}
+                onSwipe={(alertId, direction) => console.log(`Alert ${alertId} swiped ${direction}`)}
+                isActive={true}
                 alertData={alert}
-                className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
               >
                 <div className="p-5">
                   {/* Clean header: Alert type + Confidence + Time */}
