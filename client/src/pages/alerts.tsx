@@ -233,6 +233,7 @@ export default function AlertsPage() {
               ) : (
                 // Use Complex Card for detailed game state alerts
                 <SwipeableCard 
+                  alertId={alert.id}
                   onSwipe={handleSwipe}
                   isActive={true}
                   alertData={{
@@ -281,7 +282,9 @@ export default function AlertsPage() {
                     gameInfo: alert.context?.gameInfo
                   }}
                   className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
-                />
+                >
+                  {null}
+                </SwipeableCard>
               )}
             </motion.div>
           ))
