@@ -30,14 +30,8 @@ export async function sendTelegramAlert(
   try {
     const { botToken, chatId } = config;
 
-    console.log(`📱 🔍 TELEGRAM DEBUG: Attempting to send ${alert.type} alert`);
-    console.log(`📱 🔧 Bot token present: ${!!botToken}, length: ${botToken?.length || 0}`);
-    console.log(`📱 🔧 Chat ID: ${chatId}`);
-    console.log(`📱 🔧 Is test data: ${botToken === 'default_key' || chatId === 'test-chat-id'}`);
-
-    if (!botToken || !chatId || botToken === "default_key" || chatId === "test-chat-id") {
-      console.log("📱 ❌ Telegram credentials not properly configured - using test/default values");
-      console.log("📱 💡 Please update your Telegram settings with real bot token and chat ID");
+    if (!botToken || !chatId || botToken === "default_key") {
+      console.log("Telegram credentials not configured, skipping notification");
       return false;
     }
 
@@ -101,72 +95,38 @@ export async function sendTelegramAlert(
 
     // Add clickable link to view alert details
     const appUrl = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.replit.app` : 'https://chirpbot.replit.app';
-    message += `\n🔗 [View Full Details](${appUrl}/alerts${alert.id ? `\\#${alert.id}` : ''})`;
+    message += `\n🔗 [View Full Details](${appUrl}/alerts${alert.id ? `#${alert.id}` : ''})`;
 
-    message += `\n\n${escapeMd('#ChirpBot')} ${escapeMd('#' + alert.type.replace(/\s+/g, ''))}`;
-
-    console.log(`📱 Sending Telegram message to chat ${chatId}`);
-    console.log(`📱 Message preview: ${message.substring(0, 100)}...`);
+    message += `\n\n#ChirpBot #${alert.type.replace(/\s+/g, '')}`;
 
     try {
-      // Try with native fetch first as fallback
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: message,
-          parse_mode: 'MarkdownV2',
-          disable_web_page_preview: false,
-        }),
-      });
-
-      const result = await response.json();
-      console.log(`📱 Telegram API response:`, result);
-      
-      if (response.ok && result.ok === true) {
-        console.log(`📱 ✅ Successfully sent Telegram message`);
-        return true;
-      } else {
-        console.error(`📱 ❌ Telegram API error:`, result);
-        
-        // Try with plain text if MarkdownV2 failed
-        if (result.description?.includes('parse') || result.description?.includes('markdown')) {
-          console.log(`📱 🔄 Retrying with plain text...`);
-          const plainResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              chat_id: chatId,
-              text: message.replace(/[\\*_`\[\]()~>#+=|{}.!-]/g, ''), // Strip markdown
-              disable_web_page_preview: false,
-            }),
-          });
-          
-          const plainResult = await plainResponse.json();
-          if (plainResponse.ok && plainResult.ok === true) {
-            console.log(`📱 ✅ Successfully sent plain text Telegram message`);
-            return true;
-          }
+      const result = await fetchJson<any>(
+        `https://api.telegram.org/bot${botToken}/sendMessage`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: 'MarkdownV2',
+            disable_web_page_preview: false,
+          }),
+          timeoutMs: 8000
         }
-        
-        return false;
-      }
+      );
+
+      return result.ok === true;
     } catch (fetchError: any) {
-      console.error(`📱 ❌ Telegram network error:`, fetchError);
-      
       // Handle rate limiting
       if (fetchError.message?.includes('429')) {
-        console.warn('📱 ⚠️ Telegram rate limit hit, dropping alert');
+        console.warn('Telegram rate limit hit, dropping alert');
       } else if (fetchError.message?.includes('404')) {
         // Invalid bot token - disable future attempts
-        console.warn('📱 ⚠️ Invalid Telegram bot token detected. Please update TELEGRAM_BOT_TOKEN in environment settings.');
+        console.warn('⚠️ Invalid Telegram bot token detected. Please update TELEGRAM_BOT_TOKEN in environment settings.');
       } else {
-        console.error('📱 ❌ Telegram send error:', fetchError.message);
+        console.error('Telegram send error:', fetchError.message);
       }
       return false;
     }

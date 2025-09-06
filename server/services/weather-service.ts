@@ -58,7 +58,6 @@ export class WeatherService {
     this.apiKey = process.env.OPENWEATHERMAP_API_KEY || '';
     if (!this.apiKey) {
       console.warn('⚠️ OpenWeatherMap API key not configured - using fallback data');
-      console.warn('⚠️ Set OPENWEATHERMAP_API_KEY in Secrets for live weather data');
     }
   }
 
@@ -149,16 +148,6 @@ export class WeatherService {
     if (windSpeed < 5) return 'Light winds';
     if (windSpeed < 15) return `${windSpeed}mph ${direction}`;
     return `Strong ${windSpeed}mph ${direction} winds`;
-  }
-
-  // Check if using live weather data
-  isUsingLiveData(): boolean {
-    return !!this.apiKey;
-  }
-
-  // Get current weather data source
-  getDataSource(): string {
-    return this.apiKey ? 'OpenWeatherMap API' : 'Fallback Data';
   }
 }
 

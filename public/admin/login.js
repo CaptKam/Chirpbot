@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Store admin session
                 localStorage.setItem('adminLoggedIn', 'true');
                 localStorage.setItem('adminUser', JSON.stringify(data.user));
-
+                
                 // Redirect to dashboard
                 window.location.href = '/admin/dashboard.html';
             } else {
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function togglePassword() {
     const passwordInput = document.getElementById('adminPassword');
     const toggleIcon = document.getElementById('toggleIcon');
-
+    
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
         toggleIcon.classList.remove('fa-eye');
@@ -107,16 +107,4 @@ function togglePassword() {
         toggleIcon.classList.remove('fa-eye-slash');
         toggleIcon.classList.add('fa-eye');
     }
-}
-
-// Placeholder for loadDashboardData function, which would handle fetching and displaying dashboard content
-function loadDashboardData() {
-    console.log("Dashboard data loading...");
-    // In a real application, you would fetch data here and update the DOM
-    // For example:
-    // fetch('/api/admin/dashboard')
-    //   .then(response => response.json())
-    //   .then(data => {
-    //     document.getElementById('dashboardStats').innerText = `Users: ${data.userCount}, Posts: ${data.postCount}`;
-    //   });
 }
