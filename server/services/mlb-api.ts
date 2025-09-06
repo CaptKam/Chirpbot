@@ -22,13 +22,23 @@ export class MLBApiService {
       const games = data.dates[0].games || [];
       
       return games.map((game: any) => ({
-        gameId: game.gamePk.toString(),
-        homeTeam: game.teams.home.team.name,
-        awayTeam: game.teams.away.team.name,
-        homeScore: game.teams.home.score || 0,
-        awayScore: game.teams.away.score || 0,
+        id: game.gamePk.toString(),
+        gameId: game.gamePk.toString(), // Keep both for compatibility
+        sport: 'MLB',
+        homeTeam: {
+          id: game.teams.home.team.id?.toString(),
+          name: game.teams.home.team.name,
+          abbreviation: game.teams.home.team.abbreviation || game.teams.home.team.teamCode,
+          score: game.teams.home.score || 0
+        },
+        awayTeam: {
+          id: game.teams.away.team.id?.toString(),
+          name: game.teams.away.team.name,
+          abbreviation: game.teams.away.team.abbreviation || game.teams.away.team.teamCode,
+          score: game.teams.away.score || 0
+        },
         status: this.mapGameStatus(game.status.detailedState),
-        gameDate: game.gameDate,
+        startTime: game.gameDate,
         venue: game.venue.name,
         inning: game.linescore?.currentInning || null,
         inningState: game.linescore?.inningState || null,

@@ -20,12 +20,21 @@ export class NFLApiService {
         const awayTeam = game.competitors.find((c: any) => c.homeAway === 'away');
         
         return {
-          gameId: event.id,
+          id: event.id,
+          gameId: event.id, // Keep both for compatibility
           sport: 'NFL',
-          homeTeam: homeTeam.team.displayName,
-          awayTeam: awayTeam.team.displayName,
-          homeScore: parseInt(homeTeam.score) || 0,
-          awayScore: parseInt(awayTeam.score) || 0,
+          homeTeam: {
+            id: homeTeam.team.id,
+            name: homeTeam.team.displayName,
+            abbreviation: homeTeam.team.abbreviation,
+            score: parseInt(homeTeam.score) || 0
+          },
+          awayTeam: {
+            id: awayTeam.team.id,
+            name: awayTeam.team.displayName,
+            abbreviation: awayTeam.team.abbreviation,
+            score: parseInt(awayTeam.score) || 0
+          },
           startTime: new Date(event.date).toISOString(),
           status: this.mapGameStatus(event.status.type.name),
           isLive: event.status.type.state === 'in',
