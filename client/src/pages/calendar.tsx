@@ -559,12 +559,16 @@ export default function Calendar() {
                     quarter={game.quarter}
                     period={game.period}
                     isTopInning={game.inningState === 'Top'}
+                    runners={game.runners}
+                    balls={game.balls}
+                    strikes={game.strikes}
+                    outs={game.outs}
                     isSelected={isSelected}
                     onSelect={() => toggleGameSelection(game.id)}
                     size="lg"
                     showWeather={true}
                     showVenue={true}
-                    showEnhancedMLB={false}
+                    showEnhancedMLB={activeSport === 'MLB' && game.status === 'live'}
                   />
                 </div>
               );

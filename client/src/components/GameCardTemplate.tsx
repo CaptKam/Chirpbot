@@ -272,11 +272,19 @@ export function GameCardTemplate({
           {/* Enhanced MLB Display with Baseball Diamond */}
           {sport === 'MLB' && (status === 'live' || showEnhancedMLB) && (
             <div className="mt-3 flex justify-center">
-              <EnhancedGameDisplay 
-                gameId={gameId}
+              <BaseballDiamond 
+                runners={runners || {
+                  first: false,
+                  second: false,
+                  third: false
+                }}
                 inning={inning || 1}
                 isTopInning={isTopInning || false}
-                isLive={status === 'live'}
+                outs={outs}
+                balls={balls}
+                strikes={strikes}
+                size="sm"
+                showCount={status === 'live'}
               />
             </div>
           )}
@@ -358,22 +366,3 @@ export function GameCardTemplate({
     </Card>
   );
 }
-
-// Mock EnhancedGameDisplay for demonstration. Replace with actual component if available.
-const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
-  // This is a placeholder. In a real scenario, this component would render the BaseballDiamond
-  // and potentially other enhanced game details.
-  // The logic for showing the baseball diamond is now handled in the GameCardTemplate itself.
-  return (
-    <BaseballDiamond
-      runners={{ first: true, second: false, third: true }} // Example data
-      inning={inning}
-      isTopInning={isTopInning}
-      outs={1} // Example data
-      balls={2} // Example data
-      strikes={1} // Example data
-      size="sm"
-      showCount={isLive}
-    />
-  );
-};
