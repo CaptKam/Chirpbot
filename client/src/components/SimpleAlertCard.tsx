@@ -388,11 +388,11 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           <GameCardTemplate
             gameId={alert.id}
             homeTeam={{
-              name: alert.homeTeam || 'Home',
+              name: typeof alert.homeTeam === 'string' ? alert.homeTeam : (alert.homeTeam?.name || alert.homeTeam?.displayName || 'Home'),
               score: alert.context?.homeScore
             }}
             awayTeam={{
-              name: alert.awayTeam || 'Away', 
+              name: typeof alert.awayTeam === 'string' ? alert.awayTeam : (alert.awayTeam?.name || alert.awayTeam?.displayName || 'Away'), 
               score: alert.context?.awayScore
             }}
             sport={alert.sport}
