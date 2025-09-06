@@ -245,7 +245,7 @@ export class WNBAEngine extends BaseSportEngine {
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
 
-      // Filter to only valid WNBA alerts  
+      // Filter to only valid WNBA alerts that have corresponding modules
       const validWNBAAlerts = [
         'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING'
       ];
@@ -282,5 +282,13 @@ export class WNBAEngine extends BaseSportEngine {
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
     console.log(`🚫 WNBA alert cylinders removed - no modules to initialize`);
+  }
+
+  // Override to return only valid WNBA alert types
+  async getAvailableAlertTypes(): Promise<string[]> {
+    return [
+      'WNBA_GAME_START',
+      'WNBA_TWO_MINUTE_WARNING'
+    ];
   }
 }
