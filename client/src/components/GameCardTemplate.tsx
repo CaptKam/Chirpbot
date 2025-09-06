@@ -359,19 +359,46 @@ export function GameCardTemplate({
   );
 }
 
-// Mock EnhancedGameDisplay for demonstration. Replace with actual component if available.
+// Enhanced Game Display with live data fetching
 const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
-  // This is a placeholder. In a real scenario, this component would render the BaseballDiamond
-  // and potentially other enhanced game details.
-  // The logic for showing the baseball diamond is now handled in the GameCardTemplate itself.
+  // Fetch live games data and filter for this specific game
+  const { data: gamesData } = useQuery({
+    queryKey: ['/api/games/today', { sport: 'MLB' }],
+    queryFn: async ({ queryKey }) => {
+      const [url, params] = queryKey;
+      const searchParams = new URLSearchParams(params as Record<string, string>);
+      const response = await fetch(`${url}?${searchParams}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch games data');
+      return response.json();
+    },
+    enabled: isLive && !!gameId,
+    refetchInterval: isLive ? 30000 : false, // Refetch every 30 seconds for live games
+    staleTime: 10000, // Consider data stale after 10 seconds
+    retry: 1
+  });
+
+  // Find the specific game data by gameId
+  const gameData = React.useMemo(() => {
+    if (!gamesData?.games) return null;
+    return gamesData.games.find((game: any) => game.id === gameId);
+  }, [gamesData, gameId]);
+
+  // Use live data if available, otherwise fallback to defaults
+  const runners = gameData?.runners || { first: false, second: false, third: false };
+  const outs = gameData?.outs || 0;
+  const balls = gameData?.balls || 0;
+  const strikes = gameData?.strikes || 0;
+
   return (
     <BaseballDiamond
-      runners={{ first: true, second: false, third: true }} // Example data
+      runners={runners}
       inning={inning}
       isTopInning={isTopInning}
-      outs={1} // Example data
-      balls={2} // Example data
-      strikes={1} // Example data
+      outs={outs}
+      balls={balls}
+      strikes={strikes}
       size="sm"
       showCount={isLive}
     />
