@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SportHeaderNav } from "@/components/SportHeaderNav";
 import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -286,18 +287,20 @@ export default function Settings() {
 
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-      {/* Header */}
-      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-            <Zap className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
-            <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
-          </div>
-        </div>
-        {isAuthenticated && (
+      <SportHeaderNav
+        activeSport={activeSport}
+        onSportChange={(sport) => {
+          setActiveSport(sport);
+          localStorage.setItem('settings-active-sport', sport);
+        }}
+        title="ChirpBot Settings"
+        subtitle="V2 Alert System"
+        icon="settings"
+      />
+
+      {/* Logout Button - positioned as overlay */}
+      {isAuthenticated && (
+        <div className="absolute top-4 right-4 z-10">
           <Button
             onClick={handleLogout}
             variant="ghost"
@@ -308,31 +311,8 @@ export default function Settings() {
             <LogOut className="w-4 h-4 mr-2" />
             Logout
           </Button>
-        )}
-      </header>
-
-      {/* Sport Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
-        <div className="flex overflow-x-auto">
-          {SPORTS.map((sport) => (
-            <button
-              key={sport}
-              onClick={() => {
-                setActiveSport(sport);
-                localStorage.setItem('settings-active-sport', sport);
-              }}
-              data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors ${
-                activeSport === sport
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {sport}
-            </button>
-          ))}
         </div>
-      </div>
+      )}
 
       {/* Settings Content */}
       <div className="p-4 space-y-6">

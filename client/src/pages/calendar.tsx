@@ -4,6 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SportHeaderNav } from "@/components/SportHeaderNav";
 import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
@@ -356,42 +357,17 @@ export default function Calendar() {
 
 
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-      {/* Header */}
-      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-            <Zap className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black uppercase tracking-wider text-slate-100">ChirpBot</h1>
-            <p className="text-emerald-300/80 text-xs font-semibold">V2 Alert System</p>
-          </div>
-        </div>
-      </header>
-
-      {/* Sport Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
-        <div className="flex overflow-x-auto">
-          {SPORTS.map((sport) => (
-            <button
-              key={sport}
-              onClick={() => {
-                setActiveSport(sport);
-                // Clear cache when switching sports to ensure fresh data
-                queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
-              }}
-              data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
-                activeSport === sport
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {sport}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SportHeaderNav
+        activeSport={activeSport}
+        onSportChange={(sport) => {
+          setActiveSport(sport);
+          // Clear cache when switching sports to ensure fresh data
+          queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
+        }}
+        title="ChirpBot"
+        subtitle="V2 Alert System"
+        icon="zap"
+      />
 
       {/* Teams List */}
       <div className="p-4 space-y-3">
