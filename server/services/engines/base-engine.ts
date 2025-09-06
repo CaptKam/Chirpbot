@@ -173,11 +173,14 @@ export abstract class BaseSportEngine {
     try {
       const fs = await import('fs');
       const path = await import('path');
+      const { fileURLToPath } = await import('url');
       
-      const cylinderPath = path.join(__dirname, `alert-cylinders/${this.sport.toLowerCase()}`);
+      // Get the directory path in ES modules
+      const currentDir = path.dirname(fileURLToPath(import.meta.url));
+      const cylinderPath = path.join(currentDir, `alert-cylinders/${this.sport.toLowerCase()}`);
       
       if (!fs.existsSync(cylinderPath)) {
-        console.log(`⚠️ No cylinder directory found for ${this.sport}`);
+        console.log(`⚠️ No cylinder directory found for ${this.sport} at ${cylinderPath}`);
         return [];
       }
 
