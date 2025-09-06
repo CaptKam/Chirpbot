@@ -27,7 +27,7 @@ export class AlertGenerator {
     this.mlbApi = new MLBApiService();
     this.ncaafApi = new NCAAFApiService();
     this.alertDeduplication = new AlertDeduplication();
-    this.settingsCache = new SettingsCache();
+    this.settingsCache = new SettingsCache(storage);
   }
 
   async generateAlert(
@@ -55,31 +55,42 @@ export class AlertGenerator {
       const alertKey = `${type}-${gameId || 'general'}-${Date.now()}`;
 
       // Check for duplicates
-      const isDuplicate = await this.alertDeduplication.isDuplicate(alertKey);
-      if (isDuplicate) {
+      const shouldSend = this.alertDeduplication.shouldSendAlert({
+        gameId: gameId || 'general',
+        type,
+        inning: context?.inning,
+        half: context?.isTopInning ? 'Top' : 'Bottom'
+      });
+      if (!shouldSend) {
         console.log(`🔄 Skipping duplicate alert: ${alertKey}`);
         return null;
       }
 
       // Check if user has this alert type enabled
       if (userId) {
-        const userPreferences = await this.settingsCache.getUserPreferences(userId);
-        const alertTypeKey = `${sport}_${type}`;
-
-        if (!userPreferences[alertTypeKey]) {
-          console.log(`🔕 User ${userId} has ${alertTypeKey} disabled`);
-          return null;
+        try {
+          const globalSettings = await this.settingsCache.getGlobalSettings(sport);
+          const alertTypeKey = `${sport}_${type}`;
+          
+          if (globalSettings && !globalSettings[alertTypeKey]) {
+            console.log(`🔕 Alert type ${alertTypeKey} disabled globally`);
+            return null;
+          }
+        } catch (error) {
+          console.warn('Could not check settings, allowing alert:', error);
         }
       }
 
       // Store alert in database
-      const [alert] = await db.execute(sql`
+      const result = await db.execute(sql`
         INSERT INTO alerts (type, message, context, priority, created_at, user_id, game_id, sport)
-        VALUES (${type}, ${message}, ${JSON.stringify(context)}, ${finalPriority}, datetime('now'), ${userId || null}, ${gameId || null}, ${sport})
-        RETURNING *
+        VALUES (${type}, ${message}, ${JSON.stringify(context)}, ${finalPriority}, NOW(), ${userId || null}, ${gameId || null}, ${sport})
+        RETURNING id
       `);
+      
+      // Get the alert ID from the result
+      const alertId = (result.rows && result.rows[0] && (result.rows[0] as any).id) || 'unknown';
 
-      const alertId = (alert as any).id;
       console.log(`✅ Generated ${type} alert: ${alertId} (Priority: ${finalPriority})`);
 
       // Send Telegram notification if configured
@@ -100,17 +111,16 @@ export class AlertGenerator {
 
   private async sendTelegramNotification(userId: string, type: string, message: string, context: any) {
     try {
-      // Get user's Telegram config
-      const userSettings = await this.settingsCache.getUserSettings(userId);
-      const telegramConfig: TelegramConfig = {
-        botToken: userSettings.TELEGRAM_BOT_TOKEN,
-        chatId: userSettings.TELEGRAM_CHAT_ID,
-        enabled: userSettings.TELEGRAM_ENABLED === 'true'
-      };
-
-      if (!telegramConfig.enabled || !telegramConfig.botToken || !telegramConfig.chatId) {
+      // Get user from storage to access Telegram settings
+      const user = await storage.getUserById(userId);
+      if (!user || !user.telegramEnabled || !user.telegramBotToken || !user.telegramChatId) {
         return; // Telegram not configured for this user
       }
+
+      const telegramConfig: TelegramConfig = {
+        botToken: user.telegramBotToken,
+        chatId: user.telegramChatId
+      };
 
       await sendTelegramAlert(message, telegramConfig);
       console.log(`📱 Telegram notification sent for ${type} alert`);
@@ -156,12 +166,12 @@ export class AlertGenerator {
         todayQuery = sql`${todayQuery} AND user_id = ${userId}`;
       }
 
-      const [totalResult] = await db.execute(totalQuery);
-      const [todayResult] = await db.execute(todayQuery);
+      const totalResult = await db.execute(totalQuery);
+      const todayResult = await db.execute(todayQuery);
 
       return {
-        totalAlerts: (totalResult as any).count,
-        todayAlerts: (todayResult as any).count,
+        totalAlerts: (totalResult.rows && totalResult.rows[0] && (totalResult.rows[0] as any).count) || 0,
+        todayAlerts: (todayResult.rows && todayResult.rows[0] && (todayResult.rows[0] as any).count) || 0,
         liveGames: 0 // Will be populated by actual game monitoring
       };
     } catch (error) {
