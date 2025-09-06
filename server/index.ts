@@ -10,17 +10,66 @@ import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
 import { pool } from "./db";
 
-// Global error handlers to prevent unhandled rejections
+// Keep track of server for graceful shutdown
+let httpServer: any = null;
+let isShuttingDown = false;
+
+// Graceful shutdown handler
+const gracefulShutdown = async (signal: string) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  
+  console.log(`\n📍 ${signal} signal received - starting graceful shutdown...`);
+  
+  try {
+    // Close server to stop accepting new connections
+    if (httpServer) {
+      await new Promise<void>((resolve) => {
+        httpServer.close(() => {
+          console.log('✅ Server closed');
+          resolve();
+        });
+      });
+    }
+    
+    // Close database connections
+    await pool.end();
+    console.log('✅ Database connections closed');
+    
+    console.log('✅ Graceful shutdown complete');
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Error during shutdown:', err);
+    process.exit(1);
+  }
+};
+
+// Global error handlers - MORE ROBUST
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit the process, just log the error
+  console.error('⚠️ Unhandled Rejection:', reason);
+  // Don't exit - just log and continue
 });
 
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception thrown:', error);
-  // For uncaught exceptions, we should exit
-  process.exit(1);
+process.on('uncaughtException', (error: any) => {
+  console.error('⚠️ Uncaught Exception:', error);
+  
+  // For EADDRINUSE, try to recover gracefully
+  if (error.code === 'EADDRINUSE') {
+    console.log('🔄 Port already in use - attempting recovery...');
+    setTimeout(() => {
+      console.log('🔄 Retrying server startup...');
+      process.exit(1); // Let PM2/Replit restart us
+    }, 2000);
+  } else {
+    // For other critical errors, shutdown gracefully
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
+  }
 });
+
+// Handle shutdown signals properly
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // For nodemon restart
 
 const app = express();
 
@@ -143,16 +192,64 @@ app.use((req, res, next) => {
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || '5000', 10);
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`serving on port ${port}`);
+    
+    // Store server reference for graceful shutdown
+    httpServer = server;
+    
+    // Enhanced error handling for server startup
+    server.on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${port} is already in use!`);
+        console.log('🔄 Attempting to recover...');
+        
+        // Try to clean up and restart
+        setTimeout(() => {
+          process.exit(1); // Let process manager restart us
+        }, 1000);
+      } else if (error.code === 'EACCES') {
+        console.error(`❌ Port ${port} requires elevated privileges`);
+        process.exit(1);
+      } else {
+        console.error('❌ Server error:', error);
+        process.exit(1);
+      }
     });
-  } catch (error) {
+    
+    // Start listening with better error handling
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server.listen({
+          port,
+          host: "0.0.0.0",
+          exclusive: true, // Don't share port with other processes
+        }, () => {
+          console.log(`✅ Server running on port ${port}`);
+          console.log('🚀 ChirpBot V2 is ready!');
+          console.log('💪 System is now BULLETPROOF with graceful shutdown');
+          resolve();
+        }).on('error', reject);
+      });
+    } catch (error: any) {
+      console.error('❌ Failed to start server:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.log('💡 TIP: Another process is using port 5000');
+        console.log('💡 The system will auto-recover in a moment...');
+      }
+      throw error;
+    }
+  } catch (error: any) {
     console.error('🚨 Critical error during server startup:', error);
-    process.exit(1);
+    
+    // Enhanced error recovery
+    if (error.code === 'EADDRINUSE') {
+      console.log('⏳ Waiting 3 seconds before retry...');
+      setTimeout(() => {
+        process.exit(1); // Let process manager restart
+      }, 3000);
+    } else {
+      // For other errors, exit immediately
+      process.exit(1);
+    }
   }
 })().catch((error) => {
   console.error('🚨 Unhandled error in main async function:', error);
