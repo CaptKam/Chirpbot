@@ -314,8 +314,8 @@ export class NCAAFEngine extends BaseSportEngine {
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
-      // Get user's enabled alert types
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'ncaaf');
+      // Get user's enabled alert types - use 'NCAAF' to match database case
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'NCAAF');
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
