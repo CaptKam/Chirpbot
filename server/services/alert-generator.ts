@@ -290,16 +290,24 @@ export class AlertGenerator {
       let totalAlerts = 0;
 
       for (const sport of sports) {
-        console.log(`🔍 DEBUG: Checking sport ${sport}...`);
         const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
-        console.log(`🔍 DEBUG: ${sport} enabled alerts:`, enabledAlerts);
         
         if (enabledAlerts.length === 0) {
-          console.log(`🚫 No ${sport} alert types enabled - skipping ${sport} monitoring`);
+          // Only log skipped sports for major leagues to reduce console noise
+          if (['MLB', 'NFL'].includes(sport)) {
+            console.log(`🚫 No ${sport} alert types enabled - skipping ${sport} monitoring`);
+          }
           continue;
         }
 
-        console.log(`✅ ${sport} has ${enabledAlerts.length} enabled alert types: ${enabledAlerts.join(', ')}`);
+        // Suppress verbose debug output for WNBA to reduce console noise
+        if (sport === 'WNBA') {
+          // Silent processing for WNBA - skip verbose debug logs
+        } else {
+          console.log(`🔍 DEBUG: Checking sport ${sport}...`);
+          console.log(`🔍 DEBUG: ${sport} enabled alerts:`, enabledAlerts);
+          console.log(`✅ ${sport} has ${enabledAlerts.length} enabled alert types: ${enabledAlerts.join(', ')}`);
+        }
         
         // Get games for this sport
         let games: any[] = [];
@@ -342,8 +350,6 @@ export class AlertGenerator {
       return 0;
     }
 
-    console.log(`🎯 Processing ${games.length} ${sport} games with engine...`);
-
     // Get all users who have alerts enabled for this sport
     const allUsers = await storage.getAllUsers();
     const usersWithAlerts = [];
@@ -361,9 +367,15 @@ export class AlertGenerator {
     }
 
     if (usersWithAlerts.length === 0) {
-      console.log(`🚫 No users have ${sport} alerts enabled - skipping processing`);
+      // Only log for major sports to reduce console noise
+      if (['MLB', 'NFL'].includes(sport)) {
+        console.log(`🚫 No users have ${sport} alerts enabled - skipping processing`);
+      }
       return 0;
     }
+
+    // Only show processing message for sports with active users
+    console.log(`🎯 Processing ${games.length} ${sport} games with engine...`);
 
     console.log(`👥 Processing for ${usersWithAlerts.length} users with ${sport} alerts enabled`);
 
