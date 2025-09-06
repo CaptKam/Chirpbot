@@ -241,7 +241,7 @@ export const storage = {
       .where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitMonitoredGame(gameData: InsertUserMonitoredTeam): Promise<void> {
+  async addUserMonitoredGame(gameData: InsertUserMonitoredTeam): Promise<void> {
     try {
       console.log(`💾 Inserting monitored game into database:`, gameData);
 

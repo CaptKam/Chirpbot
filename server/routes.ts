@@ -33,35 +33,88 @@ async function requireAuthentication(req: any, res: any, next: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // Add route debugging middleware with duplicate detection
+  // Enhanced request deduplication and caching system
+  const requestCache = new Map();
   const recentRequests = new Map();
+  
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) {
       const now = Date.now();
       const requestKey = `${req.method}:${req.path}:${req.ip}`;
-      const lastRequest = recentRequests.get(requestKey);
+      const cacheKey = `${req.method}:${req.path}:${JSON.stringify(req.query)}`;
+      
+      const lastRequestTime = recentRequests.get(requestKey);
+      const cachedResponse = requestCache.get(cacheKey);
 
-      if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
-        console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
-      } else {
-        console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
+      // Check for duplicate requests within 200ms
+      if (lastRequestTime && (now - lastRequestTime) < 200) {
+        console.log(`🚫 BLOCKED DUPLICATE: ${req.method} ${req.path} - ${now - lastRequestTime}ms since last`);
+        
+        // If we have a cached response, return it immediately
+        if (cachedResponse && (now - cachedResponse.timestamp) < 5000) { // 5 second cache
+          console.log(`📦 SERVING CACHED: ${req.method} ${req.path}`);
+          return res.status(cachedResponse.status).json(cachedResponse.data);
+        } else {
+          // No cache available, return 429 Too Many Requests
+          return res.status(429).json({ 
+            error: 'Too many requests', 
+            message: 'Please wait before making another request',
+            retryAfter: '200ms'
+          });
+        }
       }
 
+      // Store the original res.json to intercept and cache responses
+      const originalJson = res.json;
+      res.json = function(data: any) {
+        // Cache successful responses for certain endpoints
+        if (res.statusCode === 200 || res.statusCode === 304) {
+          const shouldCache = req.path.includes('/weather') || 
+                             req.path.includes('/games') || 
+                             req.path.includes('/alerts/stats');
+          
+          if (shouldCache) {
+            requestCache.set(cacheKey, {
+              data: data,
+              status: res.statusCode,
+              timestamp: now
+            });
+          }
+        }
+        
+        return originalJson.call(this, data);
+      };
+
+      console.log(`🔧 PROCESSING: ${req.method} ${req.path}`);
       recentRequests.set(requestKey, now);
-      // Clean up old entries periodically
+      
+      // Enhanced cleanup - keep cache and recent requests lean
+      if (requestCache.size > 200) {
+        const cleanupTime = now - 30000; // Clean entries older than 30 seconds
+        for (const [key, entry] of Array.from(requestCache.entries())) {
+          if (entry.timestamp < cleanupTime) requestCache.delete(key);
+        }
+      }
+      
       if (recentRequests.size > 100) {
-        const oldestTime = now - 10000; // 10 seconds
-        for (const [key, time] of recentRequests.entries()) {
-          if (time < oldestTime) recentRequests.delete(key);
+        const cleanupTime = now - 5000; // Clean requests older than 5 seconds
+        for (const [key, time] of Array.from(recentRequests.entries())) {
+          if (time < cleanupTime) recentRequests.delete(key);
         }
       }
     }
     next();
   });
 
-  // Setup WebSocket server with heartbeat
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  // Enhanced WebSocket server with robust heartbeat and health monitoring
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    clientTracking: true,
+    perMessageDeflate: false // Disable compression for better performance with small messages
+  });
   const clients = new Set<WebSocket>();
+  let heartbeatInterval: NodeJS.Timeout;
 
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
@@ -70,23 +123,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     this.isAlive = true;
   }
 
+  // Enhanced connection health monitoring
+  function checkAliveConnections() {
+    const deadConnections: WebSocket[] = [];
+    
+    clients.forEach((ws: any) => {
+      if (ws.isAlive === false) {
+        deadConnections.push(ws);
+        return;
+      }
+      
+      ws.isAlive = false;
+      try {
+        ws.ping();
+      } catch (error) {
+        console.error('Error pinging WebSocket client:', error);
+        deadConnections.push(ws);
+      }
+    });
+
+    // Clean up dead connections
+    deadConnections.forEach(ws => {
+      try {
+        clients.delete(ws);
+        ws.terminate();
+        console.log('🧹 Cleaned up dead WebSocket connection');
+      } catch (error) {
+        console.error('Error terminating dead connection:', error);
+      }
+    });
+
+    if (deadConnections.length > 0) {
+      console.log(`💔 Removed ${deadConnections.length} dead connections. Active: ${clients.size}`);
+    }
+  }
+
+  // Start heartbeat interval (every 30 seconds)
+  heartbeatInterval = setInterval(checkAliveConnections, 30000);
+
   wss.on('connection', (ws: any) => {
     ws.isAlive = true;
     clients.add(ws);
-    console.log('WebSocket client connected');
+    console.log(`💚 WebSocket client connected. Total clients: ${clients.size}`);
+
+    // Send connection acknowledgment
+    try {
+      ws.send(JSON.stringify({
+        type: 'connection_ack',
+        timestamp: new Date().toISOString(),
+        message: 'ChirpBot V2 connected successfully'
+      }));
+    } catch (error) {
+      console.error('Error sending connection ack:', error);
+    }
 
     ws.on('pong', heartbeat);
 
-    ws.on('close', () => {
+    ws.on('ping', () => {
+      try {
+        ws.pong();
+      } catch (error) {
+        console.error('Error responding to ping:', error);
+      }
+    });
+
+    ws.on('close', (code: number, reason: Buffer) => {
       clients.delete(ws);
-      console.log('WebSocket client disconnected');
+      const reasonStr = reason.toString() || 'Unknown';
+      console.log(`🔌 WebSocket disconnected (${code}): ${reasonStr}. Remaining: ${clients.size}`);
     });
 
     ws.on('error', (error: Error) => {
-      console.error('WebSocket error:', error);
+      console.error('💥 WebSocket error:', error.message);
       clients.delete(ws);
+      
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1011, 'Server error');
+        }
+      } catch (closeError) {
+        console.error('Error closing WebSocket after error:', closeError);
+      }
+    });
+
+    // Handle client messages for better bidirectional communication
+    ws.on('message', (data: Buffer) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        // Handle client heartbeat responses
+        if (message.type === 'heartbeat_response') {
+          ws.isAlive = true;
+        }
+        
+        // Log unexpected messages for debugging
+        if (message.type !== 'heartbeat_response') {
+          console.log('📨 Received WebSocket message:', message.type);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
     });
   });
+
+  // Graceful shutdown handling
+  const gracefulShutdown = () => {
+    console.log('🛑 Shutting down WebSocket server...');
+    
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+    }
+    
+    // Close all client connections gracefully
+    clients.forEach(ws => {
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1001, 'Server shutting down');
+        }
+      } catch (error) {
+        console.error('Error closing WebSocket during shutdown:', error);
+      }
+    });
+    
+    clients.clear();
+    
+    wss.close(() => {
+      console.log('✅ WebSocket server closed gracefully');
+    });
+  };
+
+  // Register shutdown handlers
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
@@ -135,23 +303,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Heartbeat interval to detect zombie connections
-  const heartbeatInterval = setInterval(() => {
-    wss.clients.forEach((ws: any) => {
-      if (ws.isAlive === false) {
-        return ws.terminate();
-      }
-      ws.isAlive = false;
-      ws.ping();
-    });
-  }, 30000);
-
-  // Ensure cleanup on server shutdown
-  process.on('SIGINT', () => {
-    console.log('🛑 Server shutting down, cleaning up intervals...');
-    clearInterval(heartbeatInterval);
-    process.exit(0);
-  });
 
   // Broadcast function with backpressure handling
   function broadcast(data: any) {
@@ -166,9 +317,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export broadcast function for use by other services
   (global as any).wsBroadcast = broadcast;
 
-  // Basic health check
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  // Enhanced health monitoring system
+  app.get('/health', async (req, res) => {
+    try {
+      const healthStatus = {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        connections: {
+          websocket: clients.size,
+          database: 'testing...'
+        },
+        cache: {
+          requests: recentRequests.size,
+          responses: requestCache.size
+        }
+      };
+
+      // Test database connection
+      try {
+        await db.execute(sql`SELECT 1 as test`);
+        (healthStatus.connections as any).database = 'ok';
+      } catch (dbError) {
+        (healthStatus.connections as any).database = 'error';
+        healthStatus.status = 'degraded';
+      }
+
+      // Check memory usage
+      const memUsed = healthStatus.memory.heapUsed / 1024 / 1024;
+      if (memUsed > 500) { // Over 500MB
+        healthStatus.status = 'warning';
+      }
+
+      res.json(healthStatus);
+    } catch (error) {
+      res.status(500).json({ 
+        status: 'error', 
+        timestamp: new Date().toISOString(),
+        error: (error as any).message 
+      });
+    }
+  });
+
+  // Detailed system health endpoint
+  app.get('/health/detailed', async (req, res) => {
+    try {
+      const detailed = {
+        system: {
+          uptime: process.uptime(),
+          memory: process.memoryUsage(),
+          cpu: process.cpuUsage(),
+          version: process.version,
+          platform: process.platform
+        },
+        application: {
+          cacheStats: {
+            requestCache: requestCache.size,
+            recentRequests: recentRequests.size
+          },
+          connections: {
+            websockets: clients.size,
+            activeConnections: Array.from(clients).filter((ws: any) => ws.readyState === 1).length
+          }
+        },
+        external: {
+          database: 'testing...',
+          apis: {
+            weather: 'unknown',
+            sports: 'unknown'
+          }
+        },
+        performance: {
+          requestsPerMinute: 0, // Could be calculated from recent requests
+          averageResponseTime: 0
+        }
+      };
+
+      // Test database
+      try {
+        const start = Date.now();
+        await db.execute(sql`SELECT 1 as test`);
+        (detailed.external as any).database = {
+          status: 'ok',
+          responseTime: `${Date.now() - start}ms`
+        };
+      } catch (dbError) {
+        (detailed.external as any).database = {
+          status: 'error',
+          error: (dbError as any).message
+        };
+      }
+
+      res.json(detailed);
+    } catch (error) {
+      res.status(500).json({ error: (error as any).message });
+    }
   });
 
   // Teams routes
@@ -452,7 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sport, alertType, enabled } = req.body;
 
       // Verify user can only modify their own preferences
-      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+      if ((req as any).user?.id !== userId && (req as any).user?.role !== 'admin') {
         return res.status(403).json({ message: 'Can only modify your own alert preferences' });
       }
 
@@ -474,7 +718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sport, preferences } = req.body;
 
       // Verify user can only modify their own preferences
-      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+      if ((req as any).user?.id !== userId && (req as any).user?.role !== 'admin') {
         return res.status(403).json({ message: 'Can only modify your own alert preferences' });
       }
 
@@ -859,7 +1103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await storage.getAllUsers();
       
       // Get detailed breakdown
-      const userBreakdown = {};
+      const userBreakdown: any = {};
       for (const game of allMonitoredGames) {
         const user = allUsers.find(u => u.id === game.userId);
         const username = user?.username || `Unknown-${game.userId}`;
@@ -887,7 +1131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error debugging monitored games:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: (error as any).message });
     }
   });
 
@@ -1027,7 +1271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const currentUser = req.user; // from requireAdmin middleware
+      const currentUser = (req as any).user; // from requireAdmin middleware
 
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
 
@@ -1081,7 +1325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/users/:userId/force', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const currentUser = req.user;
+      const currentUser = (req as any).user;
 
       console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
 
@@ -1296,7 +1540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      if (result.rowsAffected === 0) {
+      if ((result as any).rowsAffected === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1378,6 +1622,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       timestamp: new Date().toISOString(),
       source: 'Generic Fallback - Use team-specific endpoint'
     });
+  });
+
+  // NEW: Batch weather endpoint for multiple teams (STABILITY IMPROVEMENT)
+  app.post('/api/weather/batch', async (req, res) => {
+    try {
+      const { teams } = req.body;
+      
+      if (!Array.isArray(teams)) {
+        return res.status(400).json({ error: 'Teams must be an array' });
+      }
+
+      if (teams.length > 30) {
+        return res.status(400).json({ error: 'Maximum 30 teams per batch request' });
+      }
+
+      console.log(`🌦️ BATCH WEATHER REQUEST: ${teams.length} teams`);
+      
+      const { weatherService } = await import('./services/weather-service');
+      const results: Record<string, any> = {};
+      
+      // Process teams in smaller batches to avoid overwhelming the external API
+      const batchSize = 5;
+      const batches = [];
+      
+      for (let i = 0; i < teams.length; i += batchSize) {
+        batches.push(teams.slice(i, i + batchSize));
+      }
+
+      // Process batches with a small delay between them
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        console.log(`🌦️ Processing weather batch ${i + 1}/${batches.length} (${batch.length} teams)`);
+        
+        const batchPromises = batch.map(async (teamName: string) => {
+          try {
+            const weather = await weatherService.getWeatherForTeam(teamName);
+            return { teamName, weather };
+          } catch (error) {
+            console.error(`Error getting weather for ${teamName}:`, error);
+            return { 
+              teamName, 
+              weather: null, 
+              error: (error as any).message || 'Unknown error'
+            };
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        
+        // Store results
+        batchResults.forEach(({ teamName, weather, error }) => {
+          if (weather) {
+            results[teamName] = weather;
+          } else {
+            results[teamName] = { 
+              error: error || 'Failed to fetch weather',
+              fallback: true,
+              temperature: 72,
+              condition: 'Unknown',
+              windSpeed: 0,
+              windDirection: 0,
+              humidity: 50,
+              pressure: 1013
+            };
+          }
+        });
+
+        // Small delay between batches to be respectful to external APIs
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      console.log(`✅ BATCH WEATHER COMPLETE: ${Object.keys(results).length} teams processed`);
+      
+      res.json({
+        results,
+        timestamp: new Date().toISOString(),
+        cached: Object.keys(results).length,
+        batchSize: teams.length
+      });
+      
+    } catch (error) {
+      console.error('Batch weather error:', error);
+      res.status(500).json({ error: 'Failed to fetch batch weather data' });
+    }
   });
 
   // Test NCAAF two-minute warning logic
@@ -1496,7 +1826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults = {
+      const debugResults: any = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
@@ -1669,7 +1999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus = {
+      const dbStatus: any = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -1793,7 +2123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         monitoringStatus.monitoring = {
           status: 'OK',
           userMonitoredGames: monitoredGames.length,
-          uniqueUsers: [...new Set(monitoredGames.map(g => g.userId))].length
+          uniqueUsers: Array.from(new Set(monitoredGames.map(g => g.userId))).length
         };
       } catch (error: any) {
         monitoringStatus.monitoring = { status: 'ERROR', error: error.message };

@@ -85,36 +85,6 @@ export default function Settings() {
     enabled: !!user?.id && isAuthenticated,
   });
 
-  // Alert preferences mutation
-  const updateAlertPreferencesMutation = useMutation({
-    mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
-      const response = await apiRequest("POST", `/api/user/${user?.id}/alert-preferences`, {
-        sport: activeSport,
-        alertType,
-        enabled
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`] });
-      toast({
-        title: "Alert preference updated",
-        description: "Your alert preference has been saved.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update alert preference. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle alert toggle
-  const handleAlertToggle = (alertType: string, enabled: boolean) => {
-    updateAlertPreferencesMutation.mutate({ alertType, enabled });
-  };
 
   // Helper function to get category icons
   const getCategoryIcon = (category: string) => {
@@ -309,19 +279,6 @@ export default function Settings() {
   };
 
 
-  // Helper function to get category icon
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Game Situations":
-        return <Target className="w-4 h-4 text-emerald-400" />;
-      case "Scoring Events":
-        return <Trophy className="w-4 h-4 text-yellow-400" />;
-      case "At-Bat Situations":
-        return <Clock className="w-4 h-4 text-blue-400" />;
-      default:
-        return <Bell className="w-4 h-4 text-slate-400" />;
-    }
-  };
 
   if (isAuthLoading) {
     return <AuthLoading />;
@@ -461,7 +418,7 @@ export default function Settings() {
                                     <Switch
                                       checked={isEnabled}
                                       onCheckedChange={(enabled) => handleAlertToggle(alert.key, enabled)}
-                                      disabled={updateAlertPreferencesMutation.isPending}
+                                      disabled={updateAlertPreferenceMutation.isPending}
                                       className="data-[state=checked]:bg-emerald-500"
                                     />
                                   </div>
