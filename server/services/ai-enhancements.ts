@@ -43,6 +43,36 @@ export class AIEnhancementService {
     return originalMessage;
   }
 
+  private async predictAtBatOutcome(gameContext: GameContext): Promise<string | null> {
+    return null; // Disabled
+  }
+
+  private async calculateScoringProbability(gameContext: GameContext): Promise<string | null> {
+    return null; // Disabled
+  }
+
+  private async analyzeSituation(gameContext: GameContext): Promise<string | null> {
+    return null; // Disabled
+  }
+
+  private isROISituation(gameContext: GameContext): boolean {
+    return false; // Disabled
+  }
+
+  private async generateROIAnalysis(gameContext: GameContext): Promise<string | null> {
+    return null; // Disabled
+  }
+
+  // Disabled method - keeping structure for future use
+  private async enhanceAlertDisabled(
+    alertType: string, 
+    originalMessage: string, 
+    gameContext: GameContext,
+    userPreferences: AIEnhancementConfig
+  ): Promise<string> {
+    try {
+      let enhancedMessage = originalMessage;
+
       // 2. Predictive At-Bat Analysis
       if (userPreferences.AI_PREDICTIVE_AT_BAT && gameContext.batter) {
         const prediction = await this.predictAtBatOutcome(gameContext);
