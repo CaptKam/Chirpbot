@@ -270,7 +270,7 @@ export function GameCardTemplate({
           </div>
 
           {/* Enhanced MLB Display with Baseball Diamond */}
-          {sport === 'MLB' && (status === 'live' || showEnhancedMLB) && (
+          {sport === 'MLB' && showEnhancedMLB && (
             <div className="mt-3 flex justify-center">
               <EnhancedGameDisplay 
                 gameId={gameId}
@@ -362,20 +362,30 @@ export function GameCardTemplate({
 // Enhanced game display component that fetches live MLB data
 const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
   // Fetch live MLB game data for enhanced display
-  const { data: liveGameData } = useQuery({
+  const { data: liveGameData, error: liveDataError } = useQuery({
     queryKey: ['liveGame', gameId],
     queryFn: async () => {
       const response = await fetch(`/api/mlb/live/${gameId}`, {
         credentials: 'include'
       });
-      if (!response.ok) throw new Error('Failed to fetch live game data');
-      return response.json();
+      if (!response.ok) {
+        console.error(`Failed to fetch live game data for ${gameId}:`, response.status);
+        throw new Error(`Failed to fetch live game data: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log(`🔍 Enhanced game data for ${gameId}:`, data);
+      return data;
     },
     staleTime: 10 * 1000, // Cache for 10 seconds
     refetchInterval: isLive ? 10 * 1000 : false, // Refetch every 10 seconds if live
     retry: 1,
     enabled: !!gameId && isLive // Only fetch if we have a gameId and game is live
   });
+
+  // Log any errors for debugging
+  if (liveDataError) {
+    console.error(`❌ Live data error for game ${gameId}:`, liveDataError);
+  }
 
   // Use live data if available, otherwise fallback to default values
   const runners = liveGameData?.runners || { first: false, second: false, third: false };
@@ -384,6 +394,17 @@ const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: 
   const strikes = liveGameData?.strikes || 0;
   const actualInning = liveGameData?.inning || inning;
   const actualIsTopInning = liveGameData?.isTopInning !== undefined ? liveGameData.isTopInning : isTopInning;
+
+  // Debug logging for runners data
+  console.log(`🔍 EnhancedGameDisplay runners for game ${gameId}:`, {
+    liveGameData,
+    runners,
+    outs,
+    balls,
+    strikes,
+    isLive,
+    hasData: !!liveGameData
+  });
 
   return (
     <BaseballDiamond
