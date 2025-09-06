@@ -1,8 +1,23 @@
+
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
+import { SettingsCache } from '../settings-cache';
+import { storage } from '../../storage';
 
 export class NFLEngine extends BaseSportEngine {
+  private settingsCache: SettingsCache;
+
   constructor() {
     super('NFL');
+    this.settingsCache = new SettingsCache(storage);
+  }
+
+  async isAlertEnabled(alertType: string): Promise<boolean> {
+    try {
+      return await this.settingsCache.isAlertEnabled(this.sport, alertType);
+    } catch (error) {
+      console.error(`NFL Settings cache error for ${alertType}:`, error);
+      return true;
+    }
   }
 
   async calculateProbability(gameState: GameState): Promise<number> {
@@ -34,80 +49,193 @@ export class NFLEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
-  private alertModules: Map<string, any> = new Map();
-
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
-    
-    // Process each initialized alert module
-    for (const [alertType, module] of this.alertModules.entries()) {
-      try {
-        const result = await module.checkAlert(gameState);
-        if (result.shouldAlert) {
-          alerts.push({
-            alertKey: `${gameState.gameId}-${alertType}-${Date.now()}`,
-            type: alertType,
-            message: result.message,
-            priority: result.priority || 50,
-            context: result.context || gameState
-          });
-        }
-      } catch (error) {
-        console.error(`❌ Error processing ${alertType} alert:`, error);
-      }
+
+    try {
+      // Generate NFL-specific alerts
+      alerts.push(...await this.generateGameStartAlerts(gameState));
+      alerts.push(...await this.generateHalftimeKickoffAlerts(gameState));
+      alerts.push(...await this.generateRedZoneAlerts(gameState));
+      alerts.push(...await this.generateFourthDownAlerts(gameState));
+      alerts.push(...await this.generateTwoMinuteWarningAlerts(gameState));
+
+    } catch (error) {
+      console.error(`Error generating NFL alerts for game ${gameState.gameId}:`, error);
     }
-    
+
     return alerts;
   }
 
-  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    console.log(`🔧 Loading ${enabledAlertTypes.length} NFL alert modules...`);
-    
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ NFL module loaded: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Failed to load NFL module: ${alertType}`, error);
+  private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { quarter, timeRemaining } = gameState;
+
+    // Game start - first quarter kickoff
+    if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
+      // No filtering - always enabled
+      {
+        const alertKey = `${gameState.gameId}_NFL_GAME_START`;
+        const message = `🏈 GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
+
+        alerts.push({
+          alertKey,
+          type: 'NFL_GAME_START',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter,
+            timeRemaining,
+            isGameStart: true
+          },
+          priority: 100
+        });
       }
     }
-    
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} NFL alert modules`);
+
+    return alerts;
   }
 
-  async loadAlertModule(alertType: string): Promise<any | null> {
-    const moduleMap: Record<string, string> = {
-      'GAME_START': 'game-start-module',
-      'RED_ZONE': 'red-zone-module',
-      'FOURTH_DOWN': 'fourth-down-module',
-      'TWO_MINUTE_WARNING': 'two-minute-warning-module',
-      'CLUTCH_TIME': 'clutch-time-module',
-      'OVERTIME': 'overtime-module'
-    };
+  private async generateHalftimeKickoffAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { quarter, timeRemaining } = gameState;
 
-    const moduleName = moduleMap[alertType];
-    if (!moduleName) {
-      console.log(`❌ No NFL module found for: ${alertType}`);
-      return null;
+    // Second half kickoff
+    if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
+      // No filtering - always enabled
+      {
+        const alertKey = `${gameState.gameId}_NFL_SECOND_HALF_KICKOFF`;
+        const message = `🏈 SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
+
+        alerts.push({
+          alertKey,
+          type: 'NFL_SECOND_HALF_KICKOFF',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter,
+            timeRemaining,
+            isSecondHalf: true
+          },
+          priority: 95
+        });
+      }
     }
 
-    try {
-      const modulePath = `./alert-cylinders/nfl/${moduleName}`;
-      const module = await import(modulePath);
-      return module;
-    } catch (error) {
-      console.error(`❌ Failed to load NFL alert module ${alertType}:`, error);
-      return null;
+    return alerts;
+  }
+
+  private async generateRedZoneAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { fieldPosition, down, yardsToGo } = gameState;
+
+    // Red zone detection (within 20 yards of goal line)
+    if (fieldPosition <= 20) {
+      // No filtering - always enabled
+      {
+        const probability = await this.calculateProbability(gameState);
+        const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
+        const message = `🎯 RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line`;
+
+        alerts.push({
+          alertKey,
+          type: 'RED_ZONE',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            down,
+            yardsToGo,
+            fieldPosition,
+            probability
+          },
+          priority: probability > 70 ? 90 : 85
+        });
+      }
     }
+
+    return alerts;
+  }
+
+  private async generateFourthDownAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { down, yardsToGo, fieldPosition } = gameState;
+
+    // Fourth down situations
+    if (down === 4) {
+      // No filtering - always enabled
+      {
+        const probability = await this.calculateProbability(gameState);
+        const alertKey = `${gameState.gameId}_FOURTH_DOWN_${yardsToGo}_${fieldPosition}`;
+        const message = `🏈 FOURTH DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 4th & ${yardsToGo} at ${fieldPosition} yard line`;
+
+        alerts.push({
+          alertKey,
+          type: 'FOURTH_DOWN',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            down,
+            yardsToGo,
+            fieldPosition,
+            probability
+          },
+          priority: yardsToGo <= 3 ? 95 : 85
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  private async generateTwoMinuteWarningAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { quarter, timeRemaining } = gameState;
+
+    // Two-minute warning (end of 2nd and 4th quarters)
+    if ((quarter === 2 || quarter === 4) && this.isTwoMinuteWarning(timeRemaining)) {
+      // No filtering - always enabled
+      {
+        const isEndOfGame = quarter === 4;
+        const alertKey = `${gameState.gameId}_TWO_MINUTE_WARNING_Q${quarter}`;
+        const message = `⏰ TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+
+        alerts.push({
+          alertKey,
+          type: 'TWO_MINUTE_WARNING',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter,
+            timeRemaining,
+            isEndOfGame
+          },
+          priority: isEndOfGame ? 95 : 88
+        });
+      }
+    }
+
+    return alerts;
   }
 
   private isKickoffTime(timeRemaining: string): boolean {
     // Kickoff typically happens at start of quarter (15:00 or close to it)
     if (!timeRemaining) return false;
-
+    
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds >= 880 && totalSeconds <= 900; // Between 14:40 and 15:00
@@ -118,7 +246,7 @@ export class NFLEngine extends BaseSportEngine {
 
   private isTwoMinuteWarning(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
-
+    
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds <= 125 && totalSeconds >= 115; // Around 2:00 mark

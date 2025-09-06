@@ -160,20 +160,6 @@ export class AlertGenerator {
     return await this.settingsCache.isAlertEnabled(sport, alertType);
   }
 
-  // Check if ANY alert types are globally enabled across all sports
-  private async hasAnyGloballyEnabledAlerts(): Promise<boolean> {
-    const sports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
-    
-    for (const sport of sports) {
-      const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
-      if (enabledAlerts.length > 0) {
-        return true;
-      }
-    }
-    
-    return false;
-  }
-
   // Generate realistic alerts from today's completed games
   async generateAlertsFromCompletedGames(): Promise<void> {
     // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
@@ -271,99 +257,15 @@ export class AlertGenerator {
 
   // Method to generate alerts for live games (when they're happening)
   async generateLiveGameAlerts(): Promise<void> {
+    // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
     console.log('🚫 Alert generation is completely disabled - no alerts will be generated');
     return;
   }
 
   private async processGamesWithEngine(sport: string, games: any[]): Promise<number> {
-    let alertCount = 0;
-    const engine = this.sportEngines.get(sport);
-    
-    if (!engine) {
-      console.log(`❌ No engine found for sport: ${sport}`);
-      return 0;
-    }
-
-    console.log(`🎯 Processing ${games.length} ${sport} games with engine...`);
-
-    // Get all users who have alerts enabled for this sport
-    const allUsers = await storage.getAllUsers();
-    const usersWithAlerts = [];
-    
-    for (const user of allUsers) {
-      try {
-        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
-        const hasEnabledAlerts = userPrefs.some(pref => pref.enabled);
-        if (hasEnabledAlerts) {
-          usersWithAlerts.push(user);
-        }
-      } catch (error) {
-        console.error(`❌ Error checking user ${user.username} preferences:`, error);
-      }
-    }
-
-    if (usersWithAlerts.length === 0) {
-      console.log(`🚫 No users have ${sport} alerts enabled - skipping processing`);
-      return 0;
-    }
-
-    console.log(`👥 Processing for ${usersWithAlerts.length} users with ${sport} alerts enabled`);
-
-    // Initialize alert cylinders for users with enabled alerts
-    for (const user of usersWithAlerts) {
-      try {
-        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
-        const enabledAlertTypes = userPrefs
-          .filter(pref => pref.enabled)
-          .map(pref => pref.alertType);
-        
-        // Initialize user-specific alert cylinders for this sport
-        await engine.initializeUserAlertModules(enabledAlertTypes);
-        console.log(`🔧 Loaded ${enabledAlertTypes.length} alert cylinders for user ${user.username} in ${sport}`);
-      } catch (error) {
-        console.error(`❌ Error initializing alert cylinders for user ${user.username}:`, error);
-      }
-    }
-
-    for (const game of games) {
-      try {
-        // Process each games live games
-        if (!game.isLive) continue;
-
-        const gameState = this.normalizeGameState(game, sport);
-        
-        // Process alerts for each user with their specific enabled alert types
-        for (const user of usersWithAlerts) {
-          try {
-            // Initialize engine with this user's specific alert modules
-            if ('initializeForUser' in engine) {
-              await (engine as any).initializeForUser(user.id);
-            }
-            
-            const alerts = await engine.generateLiveAlerts(gameState);
-            
-            for (const alert of alerts) {
-              const saved = await this.saveRealTimeAlert(
-                alert.alertKey,
-                alert.type,
-                gameState.gameId,
-                alert.message,
-                alert.context,
-                alert.priority,
-                sport
-              );
-              alertCount += saved;
-            }
-          } catch (userError) {
-            console.error(`❌ Error processing ${sport} alerts for user ${user.username}:`, userError);
-          }
-        }
-      } catch (error) {
-        console.error(`❌ Error processing ${sport} game ${game.gameId}:`, error);
-      }
-    }
-
-    return alertCount;
+    // ALL ALERT GENERATION DISABLED BY USER REQUEST
+    console.log(`🚫 Alert generation completely disabled - no ${sport} alerts will be generated`);
+    return 0;
   }
 
   private normalizeGameState(game: any, sport: string): GameState {
@@ -633,7 +535,10 @@ export class AlertGenerator {
 
       console.log(`🚨 REAL-TIME ALERT: ${message}`);
 
-      // Broadcast alert immediately to web clients via WebSocket
+      // DISABLED: Broadcast alert immediately to web clients via WebSocket
+      // ALL WEBSOCKET ALERT BROADCASTING HAS BEEN DISABLED
+      console.log(`🚫 WebSocket broadcasting disabled for ${type} alert`);
+      /*
       try {
         const wsBroadcast = (global as any).wsBroadcast;
         if (wsBroadcast && typeof wsBroadcast === 'function') {
@@ -660,6 +565,7 @@ export class AlertGenerator {
       } catch (broadcastError) {
         console.error('📡 WebSocket broadcast failed:', broadcastError);
       }
+      */
 
       // DISABLED: Send to Telegram for users monitoring this game
       // ALL TELEGRAM NOTIFICATIONS HAVE BEEN DISABLED

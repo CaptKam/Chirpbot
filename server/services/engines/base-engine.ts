@@ -8,7 +8,7 @@ export interface GameState {
   awayScore: number;
   status: string;
   isLive: boolean;
-  [key: string]: any; // Allow additional sport-specific fields
+  [key: string]: any; // Allow sport-specific fields
 }
 
 export interface AlertResult {
@@ -26,19 +26,7 @@ export abstract class BaseSportEngine {
     this.sport = sport;
   }
 
-  // Always return empty array - no alerts will be generated
-  async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    console.log(`🚫 Alert generation disabled for ${this.sport} - returning empty array`);
-    return [];
-  }
-
-  // Empty initialization methods
-  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    console.log(`🚫 Alert modules disabled for ${this.sport}`);
-  }
-
-  async loadAlertModule(alertType: string): Promise<any | null> {
-    console.log(`🚫 Alert module loading disabled for ${alertType} in ${this.sport}`);
-    return null;
-  }
+  abstract generateLiveAlerts(gameState: GameState): Promise<AlertResult[]>;
+  abstract isAlertEnabled(alertType: string): Promise<boolean>;
+  abstract calculateProbability(gameState: GameState): Promise<number>;
 }

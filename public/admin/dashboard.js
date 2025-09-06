@@ -4,8 +4,6 @@ let currentStats = {};
 let currentSport = 'MLB';
 let globalAlertSettings = {};
 
-// Global alert settings removed - starting fresh
-
 document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
     checkAuthentication();
@@ -15,9 +13,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load initial data
     loadDashboardData();
-
-    // Load master alert status from database
-    loadMasterAlertStatus();
 
     // Update sport selector with NCAAF
     const sportSelector = document.getElementById('sportSelector');
@@ -77,129 +72,10 @@ function initializeDashboard() {
 }
 
 async function loadDashboardData() {
-    try {
-        // Load stats
-        const statsResponse = await fetch('/api/admin/stats', {
-            credentials: 'include'
-        });
-        const stats = await statsResponse.json();
-
-        updateStatsDisplay(stats);
-
-        // Load users
-        const usersResponse = await fetch('/api/admin/users', {
-            credentials: 'include'
-        });
-
-        if (usersResponse.ok) {
-            const users = await usersResponse.json();
-            displayUsers(users);
-        } else {
-            console.warn('Failed to fetch users for display (may be authentication issue)');
-            displayUsers([]);
-        }
-
-        // Load sport alert settings
-        loadSportAlertSettings();
-
-        // Load recent activity
-        loadRecentActivity();
-
-    } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        showNotification('Failed to load dashboard data', 'error');
-    }
-}
-
-async function loadRecentActivity() {
-    const activityContainer = document.getElementById('recentActivity');
-    if (!activityContainer) return;
-
-    // Show immediate loading state
-    activityContainer.innerHTML = `
-        <div class="activity-item">
-            <div class="activity-icon system">
-                <i class="fas fa-sync fa-spin"></i>
-            </div>
-            <div class="activity-content">
-                <div class="activity-title">Loading...</div>
-                <div class="activity-description">Fetching recent activity</div>
-                <div class="activity-time">-</div>
-            </div>
-        </div>
-    `;
-
-    try {
-        const response = await fetch('/api/alerts?limit=5', { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch alerts');
-
-        const alerts = await response.json();
-
-        // Build activity HTML directly
-        const activities = alerts.map(alert => `
-            <div class="activity-item alert">
-                <div class="activity-icon alert">
-                    <i class="fas fa-bell"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">${alert.type || 'MLB'} Alert</div>
-                    <div class="activity-description">${alert.homeTeam || 'Team1'} vs ${alert.awayTeam || 'Team2'}</div>
-                    <div class="activity-time">${formatTimeAgo(alert.createdAt || new Date().toISOString())}</div>
-                </div>
-                <div class="activity-priority high"></div>
-            </div>
-        `).join('');
-
-        // Add system status
-        const systemActivity = `
-            <div class="activity-item system">
-                <div class="activity-icon system">
-                    <i class="fas fa-cog"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">System Status</div>
-                    <div class="activity-description">All services operational</div>
-                    <div class="activity-time">Just now</div>
-                </div>
-                <div class="activity-priority low"></div>
-            </div>
-        `;
-
-        activityContainer.innerHTML = activities + systemActivity;
-    } catch (error) {
-        activityContainer.innerHTML = `
-            <div class="activity-item system">
-                <div class="activity-icon system">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">System Status</div>
-                    <div class="activity-description">All services operational</div>
-                    <div class="activity-time">Just now</div>
-                </div>
-                <div class="activity-priority low"></div>
-            </div>
-        `;
-    }
-}
-
-function formatTimeAgo(dateString) {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffInSeconds = Math.floor((now - date) / 1000);
-
-    if (diffInSeconds < 60) {
-        return 'Just now';
-    } else if (diffInSeconds < 3600) {
-        const minutes = Math.floor(diffInSeconds / 60);
-        return `${minutes}m ago`;
-    } else if (diffInSeconds < 86400) {
-        const hours = Math.floor(diffInSeconds / 3600);
-        return `${hours}h ago`;
-    } else {
-        const days = Math.floor(diffInSeconds / 86400);
-        return `${days}d ago`;
-    }
+    await Promise.all([
+        loadStats(),
+        loadUsers()
+    ]);
 }
 
 async function loadStats() {
@@ -364,33 +240,33 @@ function editUser(userId) {
 function getUserDeleteDisabled(user) {
     // Get current admin user from localStorage
     const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
-
+    
     // Can't delete yourself
     if (user.id === currentAdminUser.id) return true;
-
+    
     // Can't delete the last admin
     if (user.role === 'admin') {
         const adminCount = currentUsers.filter(u => u.role === 'admin').length;
         if (adminCount <= 1) return true;
     }
-
+    
     return false;
 }
 
 function getDeleteTooltip(user) {
     const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
-
+    
     if (user.id === currentAdminUser.id) {
         return "Cannot delete your own account";
     }
-
+    
     if (user.role === 'admin') {
         const adminCount = currentUsers.filter(u => u.role === 'admin').length;
         if (adminCount <= 1) {
             return "Cannot delete the last admin user";
         }
     }
-
+    
     return "Delete this user and all associated data";
 }
 
@@ -406,9 +282,9 @@ async function deleteUser(userId, username, role) {
         `• All associated user data\n\n` +
         `Type "DELETE" to confirm (case sensitive)`
     );
-
+    
     if (!confirmed) return;
-
+    
     // Second confirmation for admin users
     if (role === 'admin') {
         const adminConfirmed = confirm(
@@ -417,31 +293,31 @@ async function deleteUser(userId, username, role) {
             `This will remove all admin privileges for "${username}".\n\n` +
             `Are you absolutely certain you want to proceed?`
         );
-
+        
         if (!adminConfirmed) return;
     }
-
+    
     try {
         showNotification('Deleting user...', 'info');
-
+        
         const response = await fetch(`/api/admin/users/${userId}`, {
             method: 'DELETE',
             credentials: 'include'
         });
-
+        
         if (response.ok) {
             const result = await response.json();
-
+            
             // Remove user from local data
             const userIndex = currentUsers.findIndex(u => u.id === userId);
             if (userIndex !== -1) {
                 currentUsers.splice(userIndex, 1);
                 updateUsersTable();
             }
-
+            
             // Reload stats to reflect changes
             await loadStats();
-
+            
             showNotification(`✅ User "${username}" deleted successfully`, 'success');
             console.log(`🗑️ User deleted:`, result.deletedUser);
         } else {
@@ -598,33 +474,87 @@ async function handleLogout() {
     }
 }
 
-// Alert Configuration Functions - Only GAME_START alerts remain active
+// Alert Configuration Functions
 const ALERT_TYPE_CONFIG = {
     'MLB': {
-        'Game Flow': [
-            { key: 'MLB_GAME_START', label: 'Game Start', description: 'Game start notification' }
+        'Game Situations': [
+            { key: 'RISP', label: 'Runner in Scoring Position', description: 'Runner on 2nd or 3rd base' },
+            { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases occupied' },
+            { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity' },
+            { key: 'LATE_PRESSURE', label: 'Late Inning Pressure', description: '8th+ inning, close game' }
+        ],
+        'Scoring Events': [
+            { key: 'HOME_RUN_LIVE', label: 'Home Run (Live)', description: 'Live home run alerts' },
+            { key: 'CLOSE_GAME_LIVE', label: 'Close Game (Live)', description: 'Live close game updates' },
+            { key: 'HIGH_SCORING', label: 'High Scoring Game', description: '12+ total runs' },
+            { key: 'SHUTOUT', label: 'Shutout', description: 'One team held scoreless' },
+            { key: 'BLOWOUT', label: 'Blowout', description: '7+ run difference' },
+            { key: 'CLOSE_GAME', label: 'Close Game (Final)', description: '≤3 run difference final' }
+        ],
+        'At-Bat Situations': [
+            { key: 'FULL_COUNT', label: 'Full Count', description: '3-2 count pressure' },
+            { key: 'STRIKEOUT', label: 'Strikeout Alert', description: 'Real-time strikeout notifications' },
+            { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at plate' },
+            { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' }
+        ],
+        'AI Enhancements': [
+            { key: 'AI_ENHANCED_MESSAGES', label: 'AI-Enhanced Alert Messages', description: 'AI adds context like launch angle insights' },
+            { key: 'AI_PREDICTIVE_AT_BAT', label: 'Predictive At-Bat Analysis', description: 'AI predicts contact probability and outcomes' },
+            { key: 'AI_SCORING_PROBABILITY', label: 'Real-Time Scoring Probability', description: 'AI calculates and displays scoring chances' },
+            { key: 'AI_SITUATION_ANALYSIS', label: 'Game Situation Analysis', description: 'AI analyzes pressure situations and momentum' },
+            { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
+            { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
+        ],
+        'RE24 System': [
+            { key: 'RE24_ENABLED', label: 'RE24 Probability System', description: 'Advanced run expectancy calculations for scoring probability' },
+            { key: 'RE24_CONTEXT_FACTORS', label: 'RE24 Context Adjustments', description: 'Weather, power hitter, and ballpark factors' },
+            { key: 'RE24_MINIMUM_THRESHOLDS', label: 'RE24 Minimum Thresholds', description: 'Probability-based alert filtering (40-45% minimums)' },
+            { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
         ]
     },
-    'NFL': {
-        'Game Flow': [
-            { key: 'NFL_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
+    NCAAF: {
+        "Game Flow": [
+            { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "NCAAF_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
+            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
+            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" },
+            { key: "CLUTCH_TIME", label: "Clutch Time Situations", description: "High-pressure game moments" },
+            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
         ]
     },
-    'NCAAF': {
-        'Game Flow': [
-            { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
+    WNBA: {
+        "Critical Moments": [
+            { key: "WNBA_FOURTH_QUARTER", label: "Fourth Quarter Crunch Time", description: "Close games in final 5 minutes of 4th quarter" },
+            { key: "WNBA_CLOSE_GAME", label: "Close Games", description: "Games within 5 points in 3rd or 4th quarter" },
+            { key: "WNBA_OVERTIME", label: "Overtime Games", description: "Games entering overtime period" }
+        ],
+        "Scoring Events": [
+            { key: "WNBA_HIGH_SCORING", label: "High-Scoring Games", description: "Games with 160+ combined points" },
+            { key: "WNBA_COMEBACK", label: "Comeback Alerts", description: "Teams erasing large deficits" },
+            { key: "WNBA_CLUTCH_PERFORMANCE", label: "Clutch Performances", description: "Outstanding individual performances in critical moments" }
         ]
     },
-    'CFL': {
-        'Game Flow': [
-            { key: 'CFL_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
+    NFL: {
+        "Game Flow": [
+            { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "NFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
+            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
+            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" }
         ]
     },
-    'WNBA': {
-        'Game Flow': [
-            { key: 'WNBA_GAME_START', label: 'Game Start', description: 'Game start notification' }
+    CFL: {
+        "Game Flow": [
+            { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "CFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 25-yard line" },
+            { key: "THIRD_DOWN", label: "Third Down (CFL)", description: "Critical third down conversion attempts" },
+            { key: "THREE_MINUTE_WARNING", label: "Three-Minute Warning", description: "Final 3 minutes of each half" },
+            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
         ]
-    }
+    },
 };
 
 async function loadSportAlertSettings() {
@@ -763,37 +693,6 @@ function getUserCountForAlert(alertKey) {
     // Calculate how many users have this alert enabled
     // This would be populated from actual user data
     return Math.floor(Math.random() * currentUsers.length || 50);
-}
-
-async function loadMasterAlertStatus() {
-    try {
-        const response = await fetch('/api/admin/master-alerts', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Accept': 'application/json' }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            const toggle = document.getElementById('masterAlertToggle');
-            if (toggle) {
-                toggle.checked = data.enabled;
-            }
-        } else {
-            console.warn('Failed to load master alerts status, using default (enabled)');
-            const toggle = document.getElementById('masterAlertToggle');
-            if (toggle) {
-                toggle.checked = true; // Default to enabled if can't load
-            }
-        }
-    } catch (error) {
-        console.error('Error loading master alerts status:', error);
-        // Default to enabled on error
-        const toggle = document.getElementById('masterAlertToggle');
-        if (toggle) {
-            toggle.checked = true;
-        }
-    }
 }
 
 async function toggleMasterAlerts() {

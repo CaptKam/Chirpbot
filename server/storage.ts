@@ -53,21 +53,21 @@ export const storage = {
   async deleteUser(userId: string) {
     try {
       console.log(`🗑️ Deleting user ${userId} and all related data...`);
-
+      
       // Execute each deletion step separately to avoid multiple command error
-
+      
       // Step 1: Delete user alert preferences
       await db.execute(sql`DELETE FROM user_alert_preferences WHERE user_id = ${userId}`);
       console.log(`🗑️ Deleted alert preferences for user ${userId}`);
-
+      
       // Step 2: Delete user monitored teams  
       await db.execute(sql`DELETE FROM user_monitored_teams WHERE user_id = ${userId}`);
       console.log(`🗑️ Deleted monitored teams for user ${userId}`);
-
+      
       // Step 3: Clear global alert settings references
       await db.execute(sql`UPDATE global_alert_settings SET updated_by = NULL WHERE updated_by = ${userId}`);
       console.log(`🗑️ Cleared global alert settings references for user ${userId}`);
-
+      
       // Step 4: Delete audit logs if they exist (table may not exist, so wrap in try-catch)
       try {
         await db.execute(sql`DELETE FROM audit_logs WHERE user_id = ${userId}`);
@@ -75,11 +75,11 @@ export const storage = {
       } catch (auditError) {
         console.log(`📝 No audit logs table found or no logs to delete for user ${userId}`);
       }
-
+      
       // Step 5: Delete the user
       await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
       console.log(`🗑️ Deleted user ${userId} from users table`);
-
+      
       console.log(`✅ Successfully deleted user ${userId} and all related data`);
       return true;
     } catch (error) {
@@ -91,13 +91,13 @@ export const storage = {
   async forceDeleteUser(userId: string) {
     try {
       console.log(`💀 FORCE DELETE: Completely removing user ${userId} from all tables...`);
-
+      
       // Get user info first for logging
       const userInfo = await db.execute(sql`SELECT username, email FROM users WHERE id = ${userId}`);
       const username = userInfo.rows[0]?.username || 'Unknown';
-
+      
       console.log(`💀 Force deleting user: ${username} (${userId})`);
-
+      
       // Force delete from ALL possible tables that might reference the user
       const deletionSteps = [
         { table: 'user_alert_preferences', condition: `user_id = '${userId}'` },
@@ -108,16 +108,16 @@ export const storage = {
         { table: 'user_preferences', condition: `user_id = '${userId}'` },
         { table: 'user_settings', condition: `user_id = '${userId}'` },
       ];
-
+      
       for (const step of deletionSteps) {
         try {
           const result = await db.execute(sql.raw(`DELETE FROM ${step.table} WHERE ${step.condition}`));
-          console.log(`💀 Deleted from ${step.table}: ${(result as any).rowsAffected || 0} rows`);
+          console.log(`💀 Deleted from ${step.table}: ${result.rowsAffected || 0} rows`);
         } catch (error) {
           console.log(`📝 Table ${step.table} not found or no data - continuing`);
         }
       }
-
+      
       // Clear any references in other tables
       try {
         await db.execute(sql`UPDATE global_alert_settings SET updated_by = NULL WHERE updated_by = ${userId}`);
@@ -125,16 +125,16 @@ export const storage = {
       } catch (error) {
         console.log(`📝 No global_alert_settings to update`);
       }
-
+      
       // Final deletion of the user record
       const finalResult = await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
-      console.log(`💀 Final user deletion: ${(finalResult as any).rowsAffected || 0} user records removed`);
-
-      if ((finalResult as any).rowsAffected === 0) {
+      console.log(`💀 Final user deletion: ${finalResult.rowsAffected || 0} user records removed`);
+      
+      if (finalResult.rowsAffected === 0) {
         console.log(`⚠️ User ${userId} was not found in users table - may have been already deleted`);
         return false;
       }
-
+      
       console.log(`✅ FORCE DELETE COMPLETE: User ${username} (${userId}) has been completely removed`);
       return true;
     } catch (error) {
@@ -241,30 +241,9 @@ export const storage = {
       .where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitoredGame(gameData: InsertUserMonitoredTeam): Promise<void> {
-    try {
-      console.log(`💾 Inserting monitored game into database:`, gameData);
-
-      // Check if already exists to prevent duplicates
-      const existing = await db.select().from(userMonitoredTeams)
-        .where(sql`user_id = ${gameData.userId} AND game_id = ${gameData.gameId}`);
-
-      if (existing.length > 0) {
-        console.log(`⚠️ Game already monitored by user: ${gameData.gameId}`);
-        return;
-      }
-
-      const result = await db.insert(userMonitoredTeams).values(gameData);
-      console.log(`✅ Successfully inserted monitored game:`, {
-        userId: gameData.userId,
-        gameId: gameData.gameId,
-        teams: `${gameData.awayTeamName} @ ${gameData.homeTeamName}`
-      });
-    } catch (error) {
-      console.error(`❌ Database error inserting monitored game:`, error);
-      console.error(`❌ Failed gameData:`, gameData);
-      throw error;
-    }
+  async addUserMonitoredGame(gameData: InsertUserMonitoredTeam) {
+    const result = await db.insert(userMonitoredTeams).values(gameData).returning();
+    return result[0];
   },
 
   async removeUserMonitoredGame(userId: string, gameId: string) {
@@ -314,7 +293,7 @@ export const storage = {
     return await db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
+  async addUserMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
     const result = await db.insert(userMonitoredTeams)
       .values({ userId, gameId, sport, homeTeamName, awayTeamName })
       .returning();
@@ -380,7 +359,135 @@ export const storage = {
     return results;
   },
 
-  // Global alert settings removed - starting fresh
+  // Global alert settings for admin management - FIXED ARCHITECTURE
+  async getGlobalAlertSettings(sport: string) {
+    try {
+      // Use the proper globalAlertSettings table instead of admin personal preferences
+      const globalSettings = await db.select()
+        .from(globalAlertSettings)
+        .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
+
+      // Build settings directly from database, defaulting to disabled if not in DB
+      const defaultSettings: Record<string, boolean> = {};
+      
+      // Apply actual global settings from the database
+      globalSettings.forEach(setting => {
+        defaultSettings[setting.alertType] = setting.enabled;
+      });
+
+      // Architecture fixed: Now using proper globalAlertSettings table instead of admin preferences
+      return defaultSettings;
+    } catch (error) {
+      console.error('Error getting global alert settings:', error);
+      // SECURITY FIX: Fail closed - return all DISABLED defaults on error
+      return {};
+    }
+  },
+
+  async updateGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy: string) {
+    try {
+      console.log(`🔧 FIXED ARCHITECTURE: Global setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
+
+      // Use upsert pattern - check if global setting exists
+      const existing = await db.select().from(globalAlertSettings)
+        .where(and(
+          eq(globalAlertSettings.sport, sport.toLowerCase()),
+          eq(globalAlertSettings.alertType, alertType)
+        ));
+
+      if (existing.length > 0) {
+        // Update existing global setting
+        const result = await db.update(globalAlertSettings)
+          .set({ enabled, updatedAt: new Date(), updatedBy })
+          .where(and(
+            eq(globalAlertSettings.sport, sport.toLowerCase()),
+            eq(globalAlertSettings.alertType, alertType)
+          ))
+          .returning();
+        console.log(`✅ ARCHITECTURE FIX: Updated global setting ${sport}.${alertType} = ${enabled}`);
+        return result[0];
+      } else {
+        // Create new global setting
+        const result = await db.insert(globalAlertSettings)
+          .values({ sport: sport.toLowerCase(), alertType, enabled, updatedBy })
+          .returning();
+        console.log(`✅ ARCHITECTURE FIX: Created global setting ${sport}.${alertType} = ${enabled}`);
+        return result[0];
+      }
+    } catch (error) {
+      console.error('Error updating global alert setting:', error);
+      throw error;
+    }
+  },
+
+  async updateGlobalAlertCategory(sport: string, alertKeys: string[], enabled: boolean, updatedBy: string) {
+    try {
+      console.log(`Global alert category updated: ${sport} [${alertKeys.join(',')}] = ${enabled} by admin ${updatedBy}`);
+
+      // Apply each alert key change
+      for (const alertKey of alertKeys) {
+        await this.updateGlobalAlertSetting(sport, alertKey, enabled, updatedBy);
+      }
+
+      return;
+    } catch (error) {
+      console.error('Error updating global alert category:', error);
+      throw error;
+    }
+  },
+
+  async applyGlobalSettingsToAllUsers(sport: string, settings: Record<string, boolean>, updatedBy: string) {
+    try {
+      const users = await this.getAllUsers();
+      let updatedCount = 0;
+
+      for (const user of users) {
+        try {
+          // Convert settings to preferences format
+          const preferences = Object.entries(settings).map(([alertType, enabled]) => ({
+            alertType,
+            enabled: enabled === true
+          }));
+
+          // Apply each preference
+          for (const pref of preferences) {
+            await this.setUserAlertPreference(user.id, sport.toLowerCase(), pref.alertType, pref.enabled);
+          }
+
+          updatedCount++;
+        } catch (userError) {
+          console.error(`Failed to update settings for user ${user.id}:`, userError);
+        }
+      }
+
+      console.log(`Applied global ${sport} alert settings to ${updatedCount} users by admin ${updatedBy}`);
+      return { usersUpdated: updatedCount, totalUsers: users.length };
+    } catch (error) {
+      console.error('Error applying global settings to all users:', error);
+      throw error;
+    }
+  },
+
+  async getMasterAlertEnabled() {
+    try {
+      // For now, return true by default
+      return true;
+    } catch (error) {
+      console.error('Error getting master alert enabled:', error);
+      return true;
+    }
+  },
+
+  async setMasterAlertEnabled(enabled: boolean, updatedBy: string) {
+    try {
+      console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin ${updatedBy}`);
+      // For now, just log the change. In a full implementation, this would update the database
+      return;
+    } catch (error) {
+      console.error('Error setting master alert enabled:', error);
+      throw error;
+    }
+  },
 
   // Get user's AI enhancement preferences
   async getUserAIPreferences(userId: string): Promise<any> {
@@ -433,121 +540,10 @@ export const storage = {
   async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
     try {
       const globalSettings = await this.getGlobalAlertSettings(sport);
-      return globalSettings[alertType] !== false; // Default to enabled
+      return globalSettings[alertType] === true;
     } catch (error) {
       console.error(`Error checking if alert ${alertType} is globally enabled for ${sport}:`, error);
-      return true; // Default to true if error occurs
-    }
-  },
-
-  // Get global alert settings for a specific sport
-  async getGlobalAlertSettings(sport: string): Promise<Record<string, boolean>> {
-    try {
-      const results = await db.select().from(globalAlertSettings)
-        .where(eq(globalAlertSettings.sport, sport));
-      
-      const settings: Record<string, boolean> = {};
-      results.forEach(setting => {
-        settings[setting.alertType] = setting.enabled;
-      });
-      
-      return settings;
-    } catch (error) {
-      console.error(`Error fetching global alert settings for ${sport}:`, error);
-      return {}; // Return empty object on error
-    }
-  },
-
-  // Set global alert setting for a specific sport and alert type
-  async setGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy?: string): Promise<void> {
-    try {
-      // Check if setting already exists
-      const existing = await db.select().from(globalAlertSettings)
-        .where(and(
-          eq(globalAlertSettings.sport, sport),
-          eq(globalAlertSettings.alertType, alertType)
-        ));
-
-      if (existing.length > 0) {
-        // Update existing setting
-        await db.update(globalAlertSettings)
-          .set({ 
-            enabled, 
-            updatedAt: new Date(),
-            updatedBy: updatedBy || null 
-          })
-          .where(and(
-            eq(globalAlertSettings.sport, sport),
-            eq(globalAlertSettings.alertType, alertType)
-          ));
-      } else {
-        // Insert new setting
-        await db.insert(globalAlertSettings)
-          .values({
-            sport,
-            alertType,
-            enabled,
-            updatedBy: updatedBy || null
-          });
-      }
-      
-      console.log(`🔧 ADMIN: Global alert setting ${sport}.${alertType} = ${enabled}`);
-    } catch (error) {
-      console.error(`Error setting global alert setting ${sport}.${alertType}:`, error);
-      throw error;
-    }
-  },
-
-  // Get master alert enabled status (global on/off switch)
-  async getMasterAlertEnabled(): Promise<boolean> {
-    try {
-      // Check if there's a global setting for master alerts
-      const masterSetting = await db.select().from(globalAlertSettings)
-        .where(and(
-          eq(globalAlertSettings.sport, 'GLOBAL'),
-          eq(globalAlertSettings.alertType, 'MASTER_ALERTS_ENABLED')
-        ));
-
-      if (masterSetting.length > 0) {
-        return masterSetting[0].enabled;
-      }
-      
-      // Default to enabled if no setting exists
-      return true;
-    } catch (error) {
-      console.error('Error fetching master alert enabled status:', error);
-      return true; // Default to enabled on error
-    }
-  },
-
-  // Set master alert enabled status
-  async setMasterAlertEnabled(enabled: boolean, updatedBy?: string): Promise<void> {
-    try {
-      await this.setGlobalAlertSetting('GLOBAL', 'MASTER_ALERTS_ENABLED', enabled, updatedBy);
-      console.log(`🔧 ADMIN: Master alerts ${enabled ? 'ENABLED' : 'DISABLED'}`);
-    } catch (error) {
-      console.error('Error setting master alert enabled status:', error);
-      throw error;
-    }
-  },
-
-  // Get all global alert settings across all sports
-  async getAllGlobalAlertSettings(): Promise<Record<string, Record<string, boolean>>> {
-    try {
-      const results = await db.select().from(globalAlertSettings);
-      
-      const settings: Record<string, Record<string, boolean>> = {};
-      results.forEach(setting => {
-        if (!settings[setting.sport]) {
-          settings[setting.sport] = {};
-        }
-        settings[setting.sport][setting.alertType] = setting.enabled;
-      });
-      
-      return settings;
-    } catch (error) {
-      console.error('Error fetching all global alert settings:', error);
-      return {};
+      return false; // Default to false if error occurs
     }
   }
 };

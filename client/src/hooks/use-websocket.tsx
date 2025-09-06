@@ -43,42 +43,28 @@ export function useWebSocket() {
           // Handle 'new_alert' specifically with enhanced error handling
           if (message.type === 'new_alert') {
             try {
-              const alertData = message.alert || message.data;
-              if (alertData && typeof alertData === 'object') {
-                // Transform backend alert structure to frontend Alert type
-                const transformedAlert = {
-                  id: alertData.id || alertData.alertKey,
-                  alertKey: alertData.alertKey,
-                  type: alertData.alertType || alertData.type,
-                  sport: alertData.sport,
-                  gameId: alertData.gameId,
-                  message: alertData.payload?.message || 'New alert',
-                  homeTeam: alertData.payload?.context?.homeTeam,
-                  awayTeam: alertData.payload?.context?.awayTeam,
-                  homeScore: alertData.payload?.context?.homeScore,
-                  awayScore: alertData.payload?.context?.awayScore,
-                  priority: alertData.score || 50,
-                  confidence: alertData.score || 50,
-                  createdAt: alertData.createdAt,
-                  seen: false,
-                  sentToTelegram: false,
-                  context: alertData.payload?.context || {}
-                };
+              const data = message.data;
+              if (data && typeof data === 'object' && 'type' in data && 'sport' in data && 'title' in data && 'id' in data) {
+                const newAlert = data as unknown as Alert; // Assuming Alert type is correctly defined elsewhere
 
                 // Update the alerts list in the query cache
                 queryClient.setQueryData<Alert[]>(["/api/alerts"], (oldAlerts) => {
                   try {
-                    if (!oldAlerts) return [transformedAlert];
+                    // Add default properties for WebSocket alert data
+                    const alertWithDefaults = { ...newAlert, seen: false, sentToTelegram: false };
 
-                    // Check if alert already exists to prevent duplicates
+                    if (!oldAlerts) return [alertWithDefaults];
+
+                    // Check if alert already exists to prevent duplicates (check by ID and timestamp)
                     const exists = oldAlerts.some(alert =>
-                      alert.id === transformedAlert.id ||
-                      alert.alertKey === transformedAlert.alertKey
+                      alert.id === alertWithDefaults.id ||
+                      (alert.title === alertWithDefaults.title &&
+                       alert.timestamp === alertWithDefaults.timestamp)
                     );
                     if (exists) return oldAlerts;
 
                     // Add new alert at the beginning of the list
-                    return [transformedAlert, ...oldAlerts];
+                    return [alertWithDefaults, ...oldAlerts];
                   } catch (error) {
                     console.error('Error updating alerts cache:', error);
                     return oldAlerts || [];

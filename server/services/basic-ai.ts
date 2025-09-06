@@ -35,8 +35,8 @@ export class BasicAI {
 
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
-    // AI functionality enabled when API key is present
-    this.isConfigured = !!this.apiKey && this.apiKey.startsWith('sk-');
+    // In a real scenario, you'd check if the API key is valid or if other configs are present
+    this.isConfigured = !!this.apiKey;
   }
 
   // Public getter for isConfigured

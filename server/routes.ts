@@ -33,88 +33,35 @@ async function requireAuthentication(req: any, res: any, next: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // Enhanced request deduplication and caching system
-  const requestCache = new Map();
+  // Add route debugging middleware with duplicate detection
   const recentRequests = new Map();
-
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) {
       const now = Date.now();
       const requestKey = `${req.method}:${req.path}:${req.ip}`;
-      const cacheKey = `${req.method}:${req.path}:${JSON.stringify(req.query)}`;
-
-      const lastRequestTime = recentRequests.get(requestKey);
-      const cachedResponse = requestCache.get(cacheKey);
-
-      // Check for duplicate requests within 200ms
-      if (lastRequestTime && (now - lastRequestTime) < 200) {
-        console.log(`🚫 BLOCKED DUPLICATE: ${req.method} ${req.path} - ${now - lastRequestTime}ms since last`);
-
-        // If we have a cached response, return it immediately
-        if (cachedResponse && (now - cachedResponse.timestamp) < 5000) { // 5 second cache
-          console.log(`📦 SERVING CACHED: ${req.method} ${req.path}`);
-          return res.status(cachedResponse.status).json(cachedResponse.data);
-        } else {
-          // No cache available, return 429 Too Many Requests
-          return res.status(429).json({
-            error: 'Too many requests',
-            message: 'Please wait before making another request',
-            retryAfter: '200ms'
-          });
-        }
+      const lastRequest = recentRequests.get(requestKey);
+      
+      if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
+        console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
+      } else {
+        console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
       }
-
-      // Store the original res.json to intercept and cache responses
-      const originalJson = res.json;
-      res.json = function(data: any) {
-        // Cache successful responses for certain endpoints
-        if (res.statusCode === 200 || res.statusCode === 304) {
-          const shouldCache = req.path.includes('/weather') ||
-                             req.path.includes('/games') ||
-                             req.path.includes('/alerts/stats');
-
-          if (shouldCache) {
-            requestCache.set(cacheKey, {
-              data: data,
-              status: res.statusCode,
-              timestamp: now
-            });
-          }
-        }
-
-        return originalJson.call(this, data);
-      };
-
-      console.log(`🔧 PROCESSING: ${req.method} ${req.path}`);
+      
       recentRequests.set(requestKey, now);
-
-      // Enhanced cleanup - keep cache and recent requests lean
-      if (requestCache.size > 200) {
-        const cleanupTime = now - 30000; // Clean entries older than 30 seconds
-        for (const [key, entry] of Array.from(requestCache.entries())) {
-          if (entry.timestamp < cleanupTime) requestCache.delete(key);
-        }
-      }
-
+      // Clean up old entries periodically
       if (recentRequests.size > 100) {
-        const cleanupTime = now - 5000; // Clean requests older than 5 seconds
-        for (const [key, time] of Array.from(recentRequests.entries())) {
-          if (time < cleanupTime) recentRequests.delete(key);
+        const oldestTime = now - 10000; // 10 seconds
+        for (const [key, time] of recentRequests.entries()) {
+          if (time < oldestTime) recentRequests.delete(key);
         }
       }
     }
     next();
   });
 
-  // Enhanced WebSocket server with robust heartbeat and health monitoring
-  const wss = new WebSocketServer({
-    server: httpServer,
-    path: '/ws',
-    clientTracking: true,
-    perMessageDeflate: false // Disable compression for better performance with small messages
-  });
+  // Setup WebSocket server with heartbeat
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const clients = new Set<WebSocket>();
-  let heartbeatInterval: NodeJS.Timeout;
 
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
@@ -123,148 +70,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     this.isAlive = true;
   }
 
-  // Enhanced connection health monitoring
-  function checkAliveConnections() {
-    const deadConnections: WebSocket[] = [];
-
-    clients.forEach((ws: any) => {
-      if (ws.isAlive === false) {
-        deadConnections.push(ws);
-        return;
-      }
-
-      ws.isAlive = false;
-      try {
-        ws.ping();
-      } catch (error) {
-        console.error('Error pinging WebSocket client:', error);
-        deadConnections.push(ws);
-      }
-    });
-
-    // Clean up dead connections
-    deadConnections.forEach(ws => {
-      try {
-        clients.delete(ws);
-        ws.terminate();
-        console.log('🧹 Cleaned up dead WebSocket connection');
-      } catch (error) {
-        console.error('Error terminating dead connection:', error);
-      }
-    });
-
-    if (deadConnections.length > 0) {
-      console.log(`💔 Removed ${deadConnections.length} dead connections. Active: ${clients.size}`);
-    }
-  }
-
-  // Start heartbeat interval (every 30 seconds)
-  heartbeatInterval = setInterval(checkAliveConnections, 30000);
-
   wss.on('connection', (ws: any) => {
     ws.isAlive = true;
     clients.add(ws);
-    console.log(`💚 WebSocket client connected. Total clients: ${clients.size}`);
-
-    // Send connection acknowledgment
-    try {
-      ws.send(JSON.stringify({
-        type: 'connection_ack',
-        timestamp: new Date().toISOString(),
-        message: 'ChirpBot V2 connected successfully'
-      }));
-    } catch (error) {
-      console.error('Error sending connection ack:', error);
-    }
+    console.log('WebSocket client connected');
 
     ws.on('pong', heartbeat);
 
-    ws.on('ping', () => {
-      try {
-        ws.pong();
-      } catch (error) {
-        console.error('Error responding to ping:', error);
-      }
-    });
-
-    ws.on('close', (code: number, reason: Buffer) => {
+    ws.on('close', () => {
       clients.delete(ws);
-      const reasonStr = reason.toString() || 'Unknown';
-      console.log(`🔌 WebSocket disconnected (${code}): ${reasonStr}. Remaining: ${clients.size}`);
+      console.log('WebSocket client disconnected');
     });
 
     ws.on('error', (error: Error) => {
-      console.error('💥 WebSocket error:', error.message);
+      console.error('WebSocket error:', error);
       clients.delete(ws);
-
-      try {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.close(1011, 'Server error');
-        }
-      } catch (closeError) {
-        console.error('Error closing WebSocket after error:', closeError);
-      }
-    });
-
-    // Handle client messages for better bidirectional communication
-    ws.on('message', (data: Buffer) => {
-      try {
-        const message = JSON.parse(data.toString());
-
-        // Handle client heartbeat responses
-        if (message.type === 'heartbeat_response') {
-          ws.isAlive = true;
-        }
-
-        // Log unexpected messages for debugging
-        if (message.type !== 'heartbeat_response') {
-          console.log('📨 Received WebSocket message:', message.type);
-        }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
     });
   });
 
-  // Graceful shutdown handling
-  const gracefulShutdown = () => {
-    console.log('🛑 Shutting down WebSocket server...');
+  // Wind speed test for specific stadiums
+  app.get('/api/test-wind-speeds', async (req, res) => {
+    try {
+      const { weatherService } = await import('./services/weather-service');
 
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
+      // Test a few different stadiums
+      const testStadiums = [
+        'Boston Red Sox',
+        'Chicago Cubs',
+        'San Francisco Giants',
+        'Colorado Rockies',
+        'Houston Astros'
+      ];
+
+      const windData = [];
+
+      for (const team of testStadiums) {
+        const weather = await weatherService.getWeatherForTeam(team);
+        const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
+        const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+
+        windData.push({
+          team,
+          stadium: team === 'Boston Red Sox' ? 'Fenway Park' :
+                  team === 'Chicago Cubs' ? 'Wrigley Field' :
+                  team === 'San Francisco Giants' ? 'Oracle Park' :
+                  team === 'Colorado Rockies' ? 'Coors Field' : 'Minute Maid Park',
+          windSpeed: weather.windSpeed,
+          windDirection: weather.windDirection,
+          windDescription: windDesc,
+          temperature: weather.temperature,
+          homeRunFactor: homeRunFactor,
+          weatherImpact: homeRunFactor > 1.1 ? 'Favorable for HRs' :
+                        homeRunFactor < 0.9 ? 'Hurts HR distance' : 'Neutral'
+        });
+      }
+
+      res.json({
+        timestamp: new Date().toISOString(),
+        source: process.env.OPENWEATHERMAP_API_KEY ? 'Live OpenWeatherMap API' : 'Fallback Data',
+        stadiumWindData: windData
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
+  });
 
-    // Close all client connections gracefully
-    clients.forEach(ws => {
-      try {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.close(1001, 'Server shutting down');
-        }
-      } catch (error) {
-        console.error('Error closing WebSocket during shutdown:', error);
+  // Heartbeat interval to detect zombie connections
+  const heartbeatInterval = setInterval(() => {
+    wss.clients.forEach((ws: any) => {
+      if (ws.isAlive === false) {
+        return ws.terminate();
       }
+      ws.isAlive = false;
+      ws.ping();
     });
+  }, 30000);
 
-    clients.clear();
-
-    wss.close(() => {
-      console.log('✅ WebSocket server closed gracefully');
-    });
-  };
-
-  // Register shutdown handlers
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
-
-  // Block ALL weather endpoints - no processing
-  app.all('/api/weather*', async (req, res) => {
-    res.status(410).json({ error: 'Weather system permanently removed' });
+  // Ensure cleanup on server shutdown
+  process.on('SIGINT', () => {
+    console.log('🛑 Server shutting down, cleaning up intervals...');
+    clearInterval(heartbeatInterval);
+    process.exit(0);
   });
-
-  app.all('/api/test-wind-speeds*', async (req, res) => {
-    res.status(410).json({ error: 'Weather system permanently removed' });
-  });
-
 
   // Broadcast function with backpressure handling
   function broadcast(data: any) {
@@ -279,102 +166,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export broadcast function for use by other services
   (global as any).wsBroadcast = broadcast;
 
-  // Enhanced health monitoring system
-  app.get('/health', async (req, res) => {
-    try {
-      const healthStatus = {
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        connections: {
-          websocket: clients.size,
-          database: 'testing...'
-        },
-        cache: {
-          requests: recentRequests.size,
-          responses: requestCache.size
-        }
-      };
-
-      // Test database connection
-      try {
-        await db.execute(sql`SELECT 1 as test`);
-        (healthStatus.connections as any).database = 'ok';
-      } catch (dbError) {
-        (healthStatus.connections as any).database = 'error';
-        healthStatus.status = 'degraded';
-      }
-
-      // Check memory usage
-      const memUsed = healthStatus.memory.heapUsed / 1024 / 1024;
-      if (memUsed > 500) { // Over 500MB
-        healthStatus.status = 'warning';
-      }
-
-      res.json(healthStatus);
-    } catch (error) {
-      res.status(500).json({
-        status: 'error',
-        timestamp: new Date().toISOString(),
-        error: (error as any).message
-      });
-    }
-  });
-
-  // Detailed system health endpoint
-  app.get('/health/detailed', async (req, res) => {
-    try {
-      const detailed = {
-        system: {
-          uptime: process.uptime(),
-          memory: process.memoryUsage(),
-          cpu: process.cpuUsage(),
-          version: process.version,
-          platform: process.platform
-        },
-        application: {
-          cacheStats: {
-            requestCache: requestCache.size,
-            recentRequests: recentRequests.size
-          },
-          connections: {
-            websockets: clients.size,
-            activeConnections: Array.from(clients).filter((ws: any) => ws.readyState === 1).length
-          }
-        },
-        external: {
-          database: 'testing...',
-          apis: {
-            weather: 'unknown',
-            sports: 'unknown'
-          }
-        },
-        performance: {
-          requestsPerMinute: 0, // Could be calculated from recent requests
-          averageResponseTime: 0
-        }
-      };
-
-      // Test database
-      try {
-        const start = Date.now();
-        await db.execute(sql`SELECT 1 as test`);
-        (detailed.external as any).database = {
-          status: 'ok',
-          responseTime: `${Date.now() - start}ms`
-        };
-      } catch (dbError) {
-        (detailed.external as any).database = {
-          status: 'error',
-          error: (dbError as any).message
-        };
-      }
-
-      res.json(detailed);
-    } catch (error) {
-      res.status(500).json({ error: (error as any).message });
-    }
+  // Basic health check
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
   // Teams routes
@@ -527,17 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport } = req.query;
-
-      // Verify user exists and is authenticated
-      const user = await storage.getUserById(userId);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      console.log(`📊 Fetching monitored games for user: ${user.username} (${userId})`);
       const games = await storage.getUserMonitoredGames(userId);
-      console.log(`📊 Found ${games.length} monitored games for user ${user.username}`);
-
       res.json(games);
     } catch (error) {
       console.error('Error fetching monitored games:', error);
@@ -550,27 +334,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { gameId, sport, homeTeamName, awayTeamName } = req.body;
 
-      console.log(`📊 ADDING MONITORED GAME:`, {
-        userId,
-        gameId,
-        sport: sport || 'MLB',
-        homeTeamName: homeTeamName || '',
-        awayTeamName: awayTeamName || ''
-      });
-
-      // Verify user exists
-      const user = await storage.getUserById(userId);
-      if (!user) {
-        console.error(`❌ User not found: ${userId}`);
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      // Validate required fields
-      if (!gameId) {
-        console.error(`❌ Missing gameId for user ${user.username}`);
-        return res.status(400).json({ message: 'gameId is required' });
-      }
-
       const gameData = {
         userId,
         gameId,
@@ -581,16 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       await storage.addUserMonitoredGame(gameData);
-      console.log(`✅ Successfully added monitored game for ${user.username}: ${homeTeamName} vs ${awayTeamName}`);
-
-      res.json({
-        message: 'Game monitoring enabled',
-        gameData: {
-          gameId,
-          sport: gameData.sport,
-          teams: `${awayTeamName} @ ${homeTeamName}`
-        }
-      });
+      res.json({ message: 'Game monitoring enabled' });
     } catch (error) {
       console.error('Error adding monitored game:', error);
       res.status(500).json({ message: 'Failed to enable game monitoring' });
@@ -652,15 +406,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/user/:userId/alert-preferences', requireAuthentication, async (req, res) => {
+  app.post('/api/user/:userId/alert-preferences', async (req, res) => {
     try {
       const { userId } = req.params;
       const { sport, alertType, enabled } = req.body;
-
-      // Verify user can only modify their own preferences
-      if ((req as any).user?.id !== userId && (req as any).user?.role !== 'admin') {
-        return res.status(403).json({ message: 'Can only modify your own alert preferences' });
-      }
 
       if (!sport || !alertType || typeof enabled !== 'boolean') {
         return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
@@ -674,25 +423,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/user/:userId/alert-preferences/bulk', requireAuthentication, async (req, res) => {
+  app.post('/api/user/:userId/alert-preferences/bulk', async (req, res) => {
     try {
       const { userId } = req.params;
       const { sport, preferences } = req.body;
-
-      // Verify user can only modify their own preferences
-      if ((req as any).user?.id !== userId && (req as any).user?.role !== 'admin') {
-        return res.status(403).json({ message: 'Can only modify your own alert preferences' });
-      }
 
       if (!sport || !preferences || !Array.isArray(preferences)) {
         return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
       }
 
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
-      res.json({
-        message: 'Alert preferences updated successfully',
-        count: result.length
-      });
+      res.json({ message: 'Alert preferences updated successfully', count: result.length });
     } catch (error) {
       console.error('Error setting bulk alert preferences:', error);
       res.status(500).json({ message: 'Failed to set bulk alert preferences' });
@@ -865,7 +606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug all Telegram configurations
-  app.get('/api/telegram/debug', requireAdmin, async (req, res) => {
+  app.get('/api/telegram/debug', requireAuthentication, async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       const telegramDebug = allUsers.map(user => ({
@@ -892,7 +633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         readyForAlerts: validUsers.length > 0,
         nextSteps: validUsers.length === 0 ? [
           "1. Go to Settings → Telegram Notifications",
-          "2. Create a bot with @BotFather on Telegram",
+          "2. Create a bot with @BotFather on Telegram", 
           "3. Get your chat ID from @userinfobot",
           "4. Enter real credentials and test connection"
         ] : ["Telegram is properly configured and ready!"]
@@ -922,36 +663,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Debug: Test specific alert generation
-  app.post('/api/debug/test-alerts', requireAdmin, async (req, res) => {
+  // Generate test live alerts - RULE COMPLIANT VERSION
+  app.post('/api/alerts/force-generate', async (req, res) => {
     try {
-      console.log('🧪 Testing alert generation system...');
-
-      const alertGenerator = new AlertGenerator();
-
-      // Force generate alerts for live games
-      await alertGenerator.generateLiveGameAlerts();
-
-      res.json({
-        message: 'Test alert generation completed - check server logs',
-        note: 'This forces the alert generation process to run immediately'
-      });
-    } catch (error) {
-      console.error('Error in test alert generation:', error);
-      res.status(500).json({ error: 'Failed to test alert generation' });
-    }
-  });
-
-  // Generate test live alerts - RULE COMPLIANT VERSION - ADMIN ONLY
-  app.post('/api/alerts/force-generate', requireAdmin, async (req, res) => {
-    try {
-      console.log('🧪 ADMIN FORCING RULE-COMPLIANT TEST LIVE ALERTS');
+      console.log('🧪 FORCING RULE-COMPLIANT TEST LIVE ALERTS');
       console.log('🛡️ NOTE: All generated alerts will respect global admin settings and user preferences');
 
       const alertGenerator = new AlertGenerator();
       const alertCount = await alertGenerator.generateLiveGameAlerts();
 
-      res.json({
+      res.json({ 
         message: `Generated ${alertCount} rule-compliant alerts (filtered by admin settings)`,
         alertCount,
         note: 'All alerts respect global admin settings and user preferences'
@@ -962,8 +683,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Force send test Telegram alert - RULE COMPLIANT VERSION - ADMIN ONLY
-  app.post('/api/telegram/force-test', requireAdmin, async (req, res) => {
+  // Force send test Telegram alert - RULE COMPLIANT VERSION
+  app.post('/api/telegram/force-test', async (req, res) => {
     try {
       console.log('🧪 TESTING TELEGRAM ALERT (Rule-Compliant)');
 
@@ -982,7 +703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 🛡️ RULE COMPLIANCE: Check if TEST_STRIKEOUT is globally enabled
         const alertGenerator = new AlertGenerator();
         const isGloballyEnabled = await (alertGenerator as any).isAlertGloballyEnabled('MLB', 'TEST_STRIKEOUT');
-
+        
         if (!isGloballyEnabled) {
           console.log(`🚫 RULE COMPLIANT: TEST_STRIKEOUT globally disabled - skipping user ${user.username}`);
           errorCount++;
@@ -1042,7 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({
+      res.json({ 
         message: 'Rule-compliant test alerts completed',
         userCount: telegramUsers.length,
         successCount,
@@ -1055,55 +776,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Debug monitored games database operations
-  app.get('/api/debug/monitored-games', async (req, res) => {
-    try {
-      // Get all monitored games from database
-      const allMonitoredGames = await storage.getAllMonitoredGames();
-
-      // Get user count
-      const allUsers = await storage.getAllUsers();
-
-      // Get detailed breakdown
-      const userBreakdown: any = {};
-      for (const game of allMonitoredGames) {
-        const user = allUsers.find(u => u.id === game.userId);
-        const username = user?.username || `Unknown-${game.userId}`;
-
-        if (!userBreakdown[username]) {
-          userBreakdown[username] = [];
-        }
-        userBreakdown[username].push({
-          gameId: game.gameId,
-          sport: game.sport,
-          teams: `${game.awayTeamName} @ ${game.homeTeamName}`,
-          createdAt: game.createdAt
-        });
-      }
-
-      res.json({
-        timestamp: new Date().toISOString(),
-        summary: {
-          totalUsers: allUsers.length,
-          totalMonitoredGames: allMonitoredGames.length,
-          uniqueUsersWithGames: Object.keys(userBreakdown).length
-        },
-        userBreakdown,
-        rawData: allMonitoredGames.slice(0, 10) // First 10 for inspection
-      });
-    } catch (error) {
-      console.error('Error debugging monitored games:', error);
-      res.status(500).json({ error: (error as any).message });
-    }
-  });
-
   // Debug endpoint to detect rule bypasses
-  app.get('/api/debug/telegram-bypasses', requireAdmin, async (req, res) => {
+  app.get('/api/debug/telegram-bypasses', requireAuthentication, async (req, res) => {
     try {
       console.log('🔍 SCANNING FOR TELEGRAM BYPASS ROUTES');
-
+      
       const bypasses = [];
-
+      
       // Check for direct telegram calls in the codebase
       const potentialBypasses = [
         {
@@ -1112,7 +791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           risk: 'LOW'
         },
         {
-          route: '/api/alerts/force-generate',
+          route: '/api/alerts/force-generate', 
           status: 'PATCHED - Now rule-compliant',
           risk: 'LOW'
         },
@@ -1154,7 +833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check for admin session (adminUserId) first, then fall back to regular session
       const userId = req.session?.adminUserId || req.session?.userId;
-
+      
       if (!userId) {
         console.log('🔒 Admin middleware: No session found');
         return res.status(401).json({ message: 'Authentication required' });
@@ -1233,39 +912,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const currentUser = (req as any).user; // from requireAdmin middleware
-
+      const currentUser = req.user; // from requireAdmin middleware
+      
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
-
+      
       // Prevent self-deletion
       if (userId === currentUser.id) {
-        return res.status(400).json({
-          message: 'Cannot delete your own account'
+        return res.status(400).json({ 
+          message: 'Cannot delete your own account' 
         });
       }
-
+      
       // Check if user exists
       const userToDelete = await storage.getUserById(userId);
       if (!userToDelete) {
         return res.status(404).json({ message: 'User not found' });
       }
-
+      
       // Prevent deleting the last admin
       if (userToDelete.role === 'admin') {
         const allAdmins = await storage.getUsersByRole('admin');
         if (allAdmins.length <= 1) {
-          return res.status(400).json({
-            message: 'Cannot delete the last admin user'
+          return res.status(400).json({ 
+            message: 'Cannot delete the last admin user' 
           });
         }
       }
-
+      
       // Delete user and all related data
       const deleted = await storage.deleteUser(userId);
-
+      
       if (deleted) {
         console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser.username}`);
-        res.json({
+        res.json({ 
           message: `User ${userToDelete.username} deleted successfully`,
           deletedUser: {
             id: userToDelete.id,
@@ -1287,29 +966,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/users/:userId/force', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const currentUser = (req as any).user;
-
-      console.log(`💀 Admin ${currentUser.username} attempting to FORCE DELETE of user ${userId}`);
-
+      const currentUser = req.user;
+      
+      console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
+      
       // Prevent self-deletion
       if (userId === currentUser.id) {
-        return res.status(400).json({
-          message: 'Cannot delete your own account'
+        return res.status(400).json({ 
+          message: 'Cannot delete your own account' 
         });
       }
-
+      
       // Force delete using the aggressive method
       const deleted = await storage.forceDeleteUser(userId);
-
+      
       if (deleted) {
         console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser.username}`);
-        res.json({
+        res.json({ 
           message: `User ${userId} has been completely removed from the system`,
           method: 'FORCE_DELETE',
           deletedUserId: userId
         });
       } else {
-        res.json({
+        res.json({ 
           message: `User ${userId} was not found or already deleted`,
           method: 'FORCE_DELETE',
           deletedUserId: userId
@@ -1382,14 +1061,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alerts routes
   app.get("/api/alerts", async (req, res) => {
     try {
-      // Check if master alerts are disabled
-      const masterAlertsEnabled = await storage.getMasterAlertEnabled();
-      if (!masterAlertsEnabled) {
-        // Return empty array if master alerts are disabled
-        res.json([]);
-        return;
-      }
-
       const limit = parseInt(req.query.limit as string) || 50;
 
       // Get alerts from database
@@ -1406,7 +1077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sport = String(row.sport || 'MLB');
         const alertType = String(row.type || '');
 
-        // Process alerts normally when master alerts are enabled
+        // Always include alerts - no filtering
         try {
           let payload: any = {};
           try {
@@ -1417,7 +1088,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           alerts.push({
             id: row.id,
-            alertKey: `${row.game_id}_${row.type}`,
             type: row.type,
             message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
             gameId: row.game_id,
@@ -1429,9 +1099,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             confidence: row.score || 85,
             priority: row.score || 80,
             createdAt: row.created_at,
-            timestamp: row.created_at,
-            seen: false,
-            sentToTelegram: false,
             // Add context data for footer
             context: payload.context || {},
             inning: payload.context?.inning,
@@ -1498,11 +1165,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Delete the alert from database
       const result = await db.execute(sql`
-        DELETE FROM alerts
+        DELETE FROM alerts 
         WHERE id = ${alertId}
       `);
 
-      if ((result as any).rowsAffected === 0) {
+      if (result.rowsAffected === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1518,6 +1185,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('🌴 ChirpBot V2 - Using Pacific Timezone (PST/PDT)');
   console.log(`📅 Current Pacific Date: ${getPacificDate()}`);
   console.log(`🕐 Current Pacific Time: ${formatPacificTime()}`);
+
+  // Weather test endpoint
+  app.get('/api/test-weather/:team', async (req, res) => {
+    try {
+      const { weatherService } = await import('./services/weather-service');
+      const weather = await weatherService.getWeatherForTeam(req.params.team);
+      const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
+      const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+
+      res.json({
+        team: req.params.team,
+        weather,
+        analysis: {
+          homeRunFactor,
+          windDescription: windDesc,
+          weatherSource: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data (Set OPENWEATHERMAP_API_KEY for live data)'
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Weather endpoint for calendar games
+  app.get('/api/weather/team/:teamName', async (req, res) => {
+    try {
+      const { weatherService } = await import('./services/weather-service');
+      const teamName = decodeURIComponent(req.params.teamName);
+      const weather = await weatherService.getWeatherForTeam(teamName);
+      const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
+      const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
+
+      res.json({
+        temperature: weather.temperature,
+        condition: weather.condition,
+        windSpeed: weather.windSpeed,
+        windDirection: weather.windDirection,
+        windDescription: windDesc,
+        homeRunFactor,
+        humidity: weather.humidity,
+        pressure: weather.pressure,
+        timestamp: weather.timestamp,
+        source: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data'
+      });
+    } catch (error: any) {
+      console.error(`Weather API error for team ${req.params.teamName}:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Test NCAAF two-minute warning logic
+  app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
+    try {
+      const { AlertGenerator } = await import('./services/alert-generator');
+      const generator = new AlertGenerator();
+
+      const testTime = req.params.time;
+
+      // Test the two-minute detection logic
+      const isWithin2Min = (generator as any).isWithinTwoMinutes(testTime);
+
+      // Create mock game data
+      const mockGame = {
+        gameId: 'test-game',
+        awayTeam: 'Test Team A',
+        homeTeam: 'Test Team B',
+        awayScore: 14,
+        homeScore: 21,
+        timeRemaining: testTime,
+        quarter: 4,
+        status: 'live',
+        isLive: true
+      };
+
+      res.json({
+        inputTime: testTime,
+        isWithinTwoMinutes: isWithin2Min,
+        mockGame,
+        testResults: {
+          '1:30': (generator as any).isWithinTwoMinutes('1:30'),
+          '2:30': (generator as any).isWithinTwoMinutes('2:30'),
+          '0:45': (generator as any).isWithinTwoMinutes('0:45'),
+          '3:00': (generator as any).isWithinTwoMinutes('3:00')
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Admin Authentication Routes
   app.post('/api/admin-auth/login', async (req, res) => {
@@ -1595,7 +1351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults: any = {
+      const debugResults = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
@@ -1645,9 +1401,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Test Telegram Service
       try {
         const telegramUsers = await storage.getAllUsers();
-        const validTelegramUsers = telegramUsers.filter(u =>
-          u.telegramEnabled &&
-          u.telegramBotToken &&
+        const validTelegramUsers = telegramUsers.filter(u => 
+          u.telegramEnabled && 
+          u.telegramBotToken && 
           u.telegramBotToken !== 'default_key' &&
           u.telegramChatId &&
           u.telegramChatId !== 'default_key'
@@ -1675,6 +1431,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error: any) {
         debugResults.services.mlbApi = { status: 'FAIL', error: error.message };
         debugResults.errors.push(`MLB API: ${error.message}`);
+      }
+
+      // Test Weather Service
+      try {
+        const { weatherService } = await import('./services/weather-service');
+        const testWeather = await weatherService.getWeatherForTeam('Boston Red Sox');
+        debugResults.services.weather = {
+          status: 'OK',
+          source: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data',
+          temperature: testWeather.temperature,
+          condition: testWeather.condition
+        };
+      } catch (error: any) {
+        debugResults.services.weather = { status: 'FAIL', error: error.message };
+        debugResults.errors.push(`Weather service: ${error.message}`);
+      }
+
+      // Test Alert Generator
+      try {
+        const alertGenerator = new AlertGenerator();
+        debugResults.services.alertGenerator = {
+          status: 'INITIALIZED',
+          class: 'AlertGenerator'
+        };
+      } catch (error: any) {
+        debugResults.services.alertGenerator = { status: 'FAIL', error: error.message };
+        debugResults.errors.push(`Alert Generator: ${error.message}`);
       }
 
       // Test Environment Variables
@@ -1712,8 +1495,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Overall Health Score
-      const totalChecks = Object.keys(debugResults.database).length +
-                         Object.keys(debugResults.services).length +
+      const totalChecks = Object.keys(debugResults.database).length + 
+                         Object.keys(debugResults.services).length + 
                          Object.keys(debugResults.endpoints).length;
       const errorCount = debugResults.errors.length;
       const healthScore = Math.max(0, Math.round(((totalChecks - errorCount) / totalChecks) * 100));
@@ -1722,15 +1505,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         healthScore: `${healthScore}%`,
         totalErrors: errorCount,
         status: errorCount === 0 ? 'HEALTHY' : errorCount < 5 ? 'DEGRADED' : 'CRITICAL',
-        recommendation: errorCount === 0 ? 'System is operating normally' :
-                       errorCount < 5 ? 'Minor issues detected, monitor closely' :
+        recommendation: errorCount === 0 ? 'System is operating normally' : 
+                       errorCount < 5 ? 'Minor issues detected, monitor closely' : 
                        'Critical issues require immediate attention'
       };
 
       res.json(debugResults);
     } catch (error: any) {
       console.error('Debug endpoint error:', error);
-      res.status(500).json({
+      res.status(500).json({ 
         error: 'Debug endpoint failed',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -1741,7 +1524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus: any = {
+      const dbStatus = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -1787,7 +1570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const recentAlerts = await db.execute(sql`
           SELECT type, COUNT(*) as count, MAX(created_at) as latest
-          FROM alerts
+          FROM alerts 
           WHERE created_at > NOW() - INTERVAL '1 hour'
           GROUP BY type
         `);
@@ -1865,7 +1648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         monitoringStatus.monitoring = {
           status: 'OK',
           userMonitoredGames: monitoredGames.length,
-          uniqueUsers: Array.from(new Set(monitoredGames.map(g => g.userId))).length
+          uniqueUsers: [...new Set(monitoredGames.map(g => g.userId))].length
         };
       } catch (error: any) {
         monitoringStatus.monitoring = { status: 'ERROR', error: error.message };
@@ -1897,14 +1680,306 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Global alert settings routes removed - starting fresh
+  // Global Alert Management Endpoints
+  app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport } = req.params;
+
+      // Get the global settings from storage
+      const settings = await storage.getGlobalAlertSettings(sport);
+
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching global alert settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global alert settings' });
+    }
+  });
+
+  app.put('/api/admin/master-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { enabled } = req.body;
+
+      // In a full implementation, this would update a global master switch in the database
+      // For now, we'll just acknowledge the request
+      console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin`);
+
+      res.json({
+        message: `Master alerts ${enabled ? 'enabled' : 'disabled'} successfully`,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating master alerts:', error);
+      res.status(500).json({ message: 'Failed to update master alerts' });
+    }
+  });
+
+  app.put('/api/admin/global-alert-category', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, category, alertKeys, enabled } = req.body;
+
+      // Update the category settings which will apply to all users
+      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
+
+      res.json({
+        message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
+        sport,
+        category,
+        alertKeys,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating category settings:', error);
+      res.status(500).json({ message: 'Failed to update category settings' });
+    }
+  });
+
+  app.put('/api/admin/global-alert-setting', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, alertType, enabled } = req.body;
+
+      // Update the global setting which will apply to all users
+      await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
+
+      res.json({
+        message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
+        sport,
+        alertType,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating alert setting:', error);
+      res.status(500).json({ message: 'Failed to update alert setting' });
+    }
+  });
+
+  // Global settings endpoint for user settings page
+  app.get('/api/admin/global-settings', async (req, res) => {
+    try {
+      // This endpoint should return the same data as the sport-specific endpoint
+      // but for all sports. For now, return MLB settings since that's what's being used
+      const mlbSettings = await storage.getGlobalAlertSettings('MLB');
+      res.json(mlbSettings);
+    } catch (error) {
+      console.error('Error fetching global settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global settings' });
+    }
+  });
+
+  // Quick fix endpoint to enable critical MLB alerts
+  app.post('/api/admin/quick-enable-mlb', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const criticalAlerts = [
+        'BASES_LOADED',
+        'HOME_RUN_LIVE',
+        'HIGH_SCORING',
+        'SHUTOUT',
+        'BLOWOUT',
+        'STRIKEOUT',  // Enable this for testing
+        'FULL_COUNT'  // Enable this for testing
+      ];
+
+      const results = [];
+      for (const alertType of criticalAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'Critical MLB alerts enabled successfully (including STRIKEOUT for testing)',
+        enabledAlerts: results,
+        nextStep: 'Alerts should start generating within 15 seconds if you have valid Telegram credentials'
+      });
+    } catch (error) {
+      console.error('Error enabling critical alerts:', error);
+      res.status(500).json({ message: 'Failed to enable critical alerts' });
+    }
+  });
+
+  // Enable all alerts for testing
+  app.post('/api/admin/enable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const allAlerts = [
+        'RISP', 'BASES_LOADED', 'RUNNERS_1ST_2ND', 'CLOSE_GAME', 'CLOSE_GAME_LIVE',
+        'LATE_PRESSURE', 'HOME_RUN_LIVE', 'HIGH_SCORING', 'SHUTOUT', 'BLOWOUT',
+        'FULL_COUNT', 'STRIKEOUT', 'POWER_HITTER', 'HOT_HITTER'
+      ];
+
+      const results = [];
+      for (const alertType of allAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'All MLB alerts enabled for testing',
+        enabledAlerts: results,
+        count: results.length
+      });
+    } catch (error) {
+      console.error('Error enabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to enable all alerts' });
+    }
+  });
+
+  // Disable ALL alerts across entire system
+  app.post('/api/admin/disable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      console.log('🚫 ADMIN REQUEST: Disabling all alerts globally');
+
+      // Define all alert types across all sports
+      const allAlertTypes = {
+        'MLB': [
+          'RISP', 'BASES_LOADED', 'RUNNERS_1ST_2ND', 'CLOSE_GAME', 'CLOSE_GAME_LIVE',
+          'LATE_PRESSURE', 'HOME_RUN_LIVE', 'HIGH_SCORING', 'SHUTOUT', 'BLOWOUT',
+          'FULL_COUNT', 'STRIKEOUT', 'POWER_HITTER', 'HOT_HITTER',
+          'AI_ENHANCED_MESSAGES', 'AI_PREDICTIVE_AT_BAT', 'AI_SCORING_PROBABILITY',
+          'AI_SITUATION_ANALYSIS', 'AI_EVENT_SUMMARIES', 'AI_ROI_ALERTS',
+          'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
+        ],
+        'NFL': [
+          'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'NCAAF': [
+          'NCAAF_GAME_START', 'NCAAF_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'CFL': [
+          'CFL_GAME_START', 'CFL_SECOND_HALF_KICKOFF', 'THIRD_DOWN', 'THREE_MINUTE_WARNING'
+        ],
+        'WNBA': [
+          'WNBA_FOURTH_QUARTER', 'WNBA_CLOSE_GAME', 'WNBA_OVERTIME',
+          'WNBA_HIGH_SCORING', 'WNBA_COMEBACK', 'WNBA_CLUTCH_PERFORMANCE'
+        ],
+        'NBA': [
+          'NBA_FOURTH_QUARTER', 'NBA_CLOSE_GAME', 'NBA_OVERTIME',
+          'NBA_HIGH_SCORING', 'NBA_COMEBACK', 'NBA_CLUTCH_PERFORMANCE'
+        ],
+        'NHL': [
+          'NHL_THIRD_PERIOD', 'NHL_CLOSE_GAME', 'NHL_OVERTIME',
+          'NHL_POWER_PLAY', 'NHL_PENALTY_KILL', 'NHL_CLUTCH_PERFORMANCE'
+        ]
+      };
+
+      let totalDisabled = 0;
+      const results = [];
+
+      // Disable all alert types globally
+      for (const [sport, alertTypes] of Object.entries(allAlertTypes)) {
+        for (const alertType of alertTypes) {
+          try {
+            await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
+            results.push({ sport, alertType, disabled: true });
+            totalDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable ${sport}.${alertType}:`, error);
+            results.push({ sport, alertType, disabled: false, error: error.message });
+          }
+        }
+      }
+
+      // Disable Telegram for all users
+      const allUsers = await storage.getAllUsers();
+      let telegramDisabled = 0;
+      
+      for (const user of allUsers) {
+        if (user.telegramEnabled) {
+          try {
+            await storage.updateUserTelegramSettings(user.id, '', '', false);
+            telegramDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable Telegram for user ${user.username}:`, error);
+          }
+        }
+      }
+
+      res.json({
+        message: 'ALL alert features disabled globally',
+        summary: {
+          alertTypesDisabled: totalDisabled,
+          telegramUsersDisabled: telegramDisabled,
+          totalUsers: allUsers.length
+        },
+        details: results,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`✅ Successfully disabled ${totalDisabled} alert types and ${telegramDisabled} Telegram configurations`);
+
+    } catch (error) {
+      console.error('Error disabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to disable all alerts' });
+    }
+  });
+
+  app.put('/api/admin/apply-global-settings', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, settings } = req.body;
+
+      // Use the storage method to apply settings to all users
+      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
+
+      res.json({
+        message: `Global settings applied to ${result.usersUpdated} users successfully`,
+        sport,
+        ...result
+      });
+    } catch (error) {
+      console.error('Error applying global settings:', error);
+      res.status(500).json({ message: 'Failed to apply global settings' });
+    }
+  });
 
 
-  // Generate alerts from today's completed games
-  const alertGenerator = new AlertGenerator();
-  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
+  // DISABLED: Generate alerts from today's completed games
+  // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
+  // const alertGenerator = new AlertGenerator();
+  // alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
-  console.log('🚫 Alert system is disabled - no live monitoring or alert generation');
+  // DISABLED: Start live game monitoring every 15 seconds for real-time alerts
+  // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
+  // setInterval(async () => {
+  //   try {
+  //     console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+  //     await alertGenerator.generateLiveGameAlerts();
+  //   } catch (error) {
+  //     console.error('Error in live monitoring:', error);
+  //   }
+  // }, 15000); // Check every 15 seconds for real-time updates
+  
+  console.log('🚫 ALL ALERTS DISABLED - No monitoring will occur');
 
   return httpServer;
 }

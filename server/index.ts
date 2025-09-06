@@ -10,55 +10,16 @@ import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
 import { pool } from "./db";
 
-// Global error handlers with recovery mechanisms
-let shutdownInProgress = false;
-let server: any = null;
-
-// Track critical errors to determine if restart is needed
-let criticalErrorCount = 0;
-const MAX_CRITICAL_ERRORS = 3;
-const ERROR_RESET_INTERVAL = 60000; // Reset error count every minute
-
-setInterval(() => {
-  if (criticalErrorCount > 0) {
-    console.log('🔄 Resetting critical error count');
-    criticalErrorCount = 0;
-  }
-}, ERROR_RESET_INTERVAL);
-
+// Global error handlers to prevent unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
-  
-  // Log to error tracking but don't crash
-  criticalErrorCount++;
-  
-  if (criticalErrorCount >= MAX_CRITICAL_ERRORS) {
-    console.error('🚨 Too many critical errors, initiating graceful restart...');
-    gracefulShutdown('Too many unhandled rejections');
-  }
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit the process, just log the error
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('🚨 Uncaught Exception:', error);
-  
-  // Try to recover from non-critical errors
-  const errorString = error.toString();
-  const isRecoverable = 
-    errorString.includes('ECONNRESET') ||
-    errorString.includes('EPIPE') ||
-    errorString.includes('ETIMEDOUT');
-  
-  if (isRecoverable) {
-    console.log('📝 Attempting to recover from error...');
-    criticalErrorCount++;
-    
-    if (criticalErrorCount >= MAX_CRITICAL_ERRORS) {
-      gracefulShutdown('Too many errors');
-    }
-  } else {
-    // For truly critical errors, initiate graceful shutdown
-    gracefulShutdown('Critical error');
-  }
+  console.error('Uncaught Exception thrown:', error);
+  // For uncaught exceptions, we should exit
+  process.exit(1);
 });
 
 const app = express();
@@ -141,7 +102,7 @@ app.use((req, res, next) => {
       // Continue anyway - the database might already be seeded
     }
 
-    server = await registerRoutes(app);
+    const server = await registerRoutes(app);
 
     // Initialize alert generator and AI system
     const alertGenerator = new AlertGenerator();
@@ -188,116 +149,18 @@ app.use((req, res, next) => {
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || '5000', 10);
-    
-    // Create HTTP server with better error handling
-    const httpServer = server;
-    
-    // Handle server errors
-    httpServer.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${port} is already in use`);
-        console.log('💡 Tip: Another instance might be running');
-        
-        // Try to kill any zombie processes
-        console.log('🔍 Checking for zombie processes...');
-        setTimeout(() => {
-          gracefulShutdown('Port conflict');
-        }, 1000);
-      } else if (error.code === 'EACCES') {
-        console.error(`❌ Permission denied to use port ${port}`);
-        gracefulShutdown('Permission denied');
-      } else {
-        console.error('❌ Server error:', error);
-        gracefulShutdown('Server error');
-      }
-    });
-    
-    // Listen with improved error handling
-    httpServer.listen({
+    server.listen({
       port,
       host: "0.0.0.0",
-      exclusive: false,  // Allow port reuse in development
+      reusePort: true,
     }, () => {
-      log(`✅ Server running on port ${port}`);
-      console.log(`📍 http://0.0.0.0:${port}`);
-      console.log('🚀 ChirpBot V2 is ready!');
-      
-      // Reset error count on successful startup
-      criticalErrorCount = 0;
+      log(`serving on port ${port}`);
     });
-    // Store server reference for graceful shutdown
-    server = httpServer;
-    
-    // Setup graceful shutdown handlers
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-    
-  } catch (error: any) {
-    console.error('🚨 Critical error during server startup:', error);
-    
-    // Try alternative port if port is in use
-    if (error.code === 'EADDRINUSE') {
-      console.log('⚠️ Port is already in use, attempting cleanup...');
-      
-      // Wait a moment for port to be released
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Try to restart once
-      if (!shutdownInProgress) {
-        console.log('🔄 Retrying server startup...');
-        setTimeout(() => {
-          process.exit(1); // Let the process manager restart the app
-        }, 1000);
-      }
-    } else {
-      // For other startup errors, exit after logging
-      await gracefulShutdown('Startup failure');
-    }
-  }
-})().catch(async (error) => {
-  console.error('🚨 Unhandled error in main async function:', error);
-  await gracefulShutdown('Unhandled async error');
-});
-
-// Graceful shutdown function
-async function gracefulShutdown(reason: string) {
-  if (shutdownInProgress) {
-    console.log('⏳ Shutdown already in progress...');
-    return;
-  }
-  
-  shutdownInProgress = true;
-  console.log(`\n🛑 Starting graceful shutdown (${reason})...`);
-  
-  try {
-    // Close server to stop accepting new connections
-    if (server) {
-      await new Promise<void>((resolve) => {
-        server.close(() => {
-          console.log('✅ HTTP server closed');
-          resolve();
-        });
-        
-        // Force close after 10 seconds
-        setTimeout(() => {
-          console.log('⚠️ Forcing server close after timeout');
-          resolve();
-        }, 10000);
-      });
-    }
-    
-    // Close database connections
-    try {
-      await pool.end();
-      console.log('✅ Database connections closed');
-    } catch (error) {
-      console.error('⚠️ Error closing database:', error);
-    }
-    
-    console.log('👋 Graceful shutdown complete');
-    process.exit(0);
   } catch (error) {
-    console.error('❌ Error during shutdown:', error);
+    console.error('🚨 Critical error during server startup:', error);
     process.exit(1);
   }
-}
+})().catch((error) => {
+  console.error('🚨 Unhandled error in main async function:', error);
+  process.exit(1);
+});
