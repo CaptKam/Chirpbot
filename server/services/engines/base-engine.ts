@@ -130,15 +130,23 @@ export abstract class BaseSportEngine {
     return alerts;
   }
 
-  // Load alert modules dynamically
+  // Load alert modules dynamically from sport-specific cylinders
   async loadAlertModule(alertType: string): Promise<BaseAlertModule | null> {
     try {
-      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${alertType.toLowerCase().replace('_', '-')}-module`;
+      // Convert alert type to module filename (e.g., MLB_GAME_START -> game-start-module)
+      const moduleFileName = alertType
+        .toLowerCase()
+        .replace(`${this.sport.toLowerCase()}_`, '') // Remove sport prefix
+        .replace(/_/g, '-') + '-module';
+      
+      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
+      console.log(`🔧 Loading module from: ${modulePath}`);
+      
       const module = await import(modulePath);
       const ModuleClass = module.default;
       return new ModuleClass();
     } catch (error) {
-      console.error(`Failed to load alert module ${alertType} for ${this.sport}:`, error);
+      console.error(`❌ Failed to load alert module ${alertType} for ${this.sport}:`, error);
       return null;
     }
   }
@@ -147,12 +155,49 @@ export abstract class BaseSportEngine {
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
 
+    console.log(`🔧 Initializing ${enabledAlertTypes.length} alert modules for ${this.sport}:`, enabledAlertTypes);
+
     for (const alertType of enabledAlertTypes) {
       const module = await this.loadAlertModule(alertType);
       if (module) {
         this.alertModules.set(alertType, module);
         console.log(`✅ Loaded alert module: ${alertType}`);
+      } else {
+        console.log(`❌ Failed to load alert module: ${alertType}`);
       }
+    }
+  }
+
+  // Get available alert types for this sport from the cylinder directory
+  async getAvailableAlertTypes(): Promise<string[]> {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const cylinderPath = path.join(__dirname, `alert-cylinders/${this.sport.toLowerCase()}`);
+      
+      if (!fs.existsSync(cylinderPath)) {
+        console.log(`⚠️ No cylinder directory found for ${this.sport}`);
+        return [];
+      }
+
+      const files = fs.readdirSync(cylinderPath);
+      const alertTypes = files
+        .filter(file => file.endsWith('-module.ts'))
+        .map(file => {
+          // Convert filename back to alert type (e.g., game-start-module.ts -> MLB_GAME_START)
+          const alertName = file
+            .replace('-module.ts', '')
+            .replace(/-/g, '_')
+            .toUpperCase();
+          return `${this.sport}_${alertName}`;
+        });
+
+      console.log(`🔍 Found ${alertTypes.length} available alert types for ${this.sport}:`, alertTypes);
+      return alertTypes;
+    } catch (error) {
+      console.error(`❌ Error getting available alert types for ${this.sport}:`, error);
+      return [];
     }
   }
 }

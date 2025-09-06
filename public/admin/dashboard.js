@@ -726,17 +726,93 @@ async function loadSportAlertSettings() {
     }
 }
 
-function renderAlertConfiguration() {
+async function renderAlertConfiguration() {
     const alertConfigContainer = document.getElementById('alertConfigContainer');
     
-    // Simple message - alert configuration toggles removed
-    alertConfigContainer.innerHTML = `
-        <div style="text-align: center; color: #94a3b8; padding: 40px;">
-            <i class="fas fa-cogs" style="font-size: 32px; margin-bottom: 15px;"></i>
-            <h3>${currentSport} Alert Configuration</h3>
-            <p>Alert configuration settings will be displayed here.<br>Individual alert toggles have been removed pending new system implementation.</p>
-        </div>
-    `;
+    // Show loading
+    alertConfigContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    
+    try {
+        // Get available alerts from cylinders
+        const response = await fetch(`/api/admin/available-alerts/${currentSport}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const availableAlerts = await response.json();
+            
+            if (availableAlerts.length === 0) {
+                alertConfigContainer.innerHTML = `
+                    <div style="text-align: center; color: #94a3b8; padding: 40px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 32px; margin-bottom: 15px;"></i>
+                        <h3>No Alert Cylinders Found</h3>
+                        <p>No alert modules found for ${currentSport}.<br>Create alert cylinders in <code>server/services/engines/alert-cylinders/${currentSport.toLowerCase()}/</code></p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Render alert toggles
+            let html = `
+                <div class="alert-controls-header">
+                    <h3>${currentSport} Alert Configuration</h3>
+                    <p>Enable/disable alerts globally. Users can only activate alerts that are enabled here.</p>
+                </div>
+                <div class="alert-types-container">
+            `;
+
+            availableAlerts.forEach(alert => {
+                const isEnabled = isAlertGloballyEnabled(alert.key);
+                html += `
+                    <div class="alert-type-item">
+                        <div class="alert-info">
+                            <h4>${alert.label}</h4>
+                            <p>${alert.description}</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" 
+                                   ${isEnabled ? 'checked' : ''} 
+                                   onchange="toggleAlertSetting('${alert.key}', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                `;
+            });
+
+            html += `
+                </div>
+                <div class="alert-controls-footer">
+                    <button onclick="refreshAlertSettings()" class="btn btn-secondary">
+                        <i class="fas fa-sync"></i> Refresh Settings
+                    </button>
+                </div>
+            `;
+
+            alertConfigContainer.innerHTML = html;
+        } else {
+            alertConfigContainer.innerHTML = `
+                <div style="text-align: center; color: #ef4444; padding: 40px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 32px; margin-bottom: 15px;"></i>
+                    <h3>Error Loading Alerts</h3>
+                    <p>Failed to load available alerts for ${currentSport}.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading available alerts:', error);
+        alertConfigContainer.innerHTML = `
+            <div style="text-align: center; color: #ef4444; padding: 40px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 32px; margin-bottom: 15px;"></i>
+                <h3>Error Loading Alerts</h3>
+                <p>Failed to load alert configuration.</p>
+            </div>
+        `;
+    }
 }
 
 function getCategoryIcon(category) {

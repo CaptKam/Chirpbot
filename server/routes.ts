@@ -1784,6 +1784,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available alert types from cylinders
+  app.get('/api/admin/available-alerts/:sport', async (req, res) => {
+    try {
+      if (!req.session.adminUserId && !req.session.userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { sport } = req.params;
+
+      try {
+        // Get available alert types from the sport engine
+        const { BaseSportEngine } = await import('./services/engines/base-engine');
+        
+        // Create a temporary engine instance to get available alerts
+        const tempEngine = new (class extends BaseSportEngine {
+          async calculateProbability() { return 0; }
+        })(sport.toUpperCase());
+
+        const availableAlerts = await tempEngine.getAvailableAlertTypes();
+        
+        // Convert to the format expected by the frontend
+        const alertConfig = availableAlerts.map(alertType => {
+          const displayName = alertType
+            .replace(`${sport.toUpperCase()}_`, '')
+            .split('_')
+            .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+            .join(' ');
+            
+          return {
+            key: alertType,
+            label: displayName,
+            description: `${displayName} alerts for ${sport.toUpperCase()} games`
+          };
+        });
+
+        res.json(alertConfig);
+      } catch (error) {
+        console.error(`Error getting available alerts for ${sport}:`, error);
+        res.json([]); // Return empty array if no cylinders found
+      }
+    } catch (error) {
+      console.error('Error fetching available alerts:', error);
+      res.status(500).json({ message: 'Failed to fetch available alerts' });
+    }
+  });
+
   app.get('/api/admin/master-alerts', async (req, res) => {
     try {
       if (!req.session.adminUserId) {
