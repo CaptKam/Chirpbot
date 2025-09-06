@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { AlertFooter } from "./AlertFooter";
+import AlertFooter from "./AlertFooter";
 import { WeatherImpactVisualizer } from "./WeatherImpactVisualizer";
 
 interface SwipeableCardProps {

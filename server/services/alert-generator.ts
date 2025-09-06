@@ -169,4 +169,68 @@ export class AlertGenerator {
       return { totalAlerts: 0, todayAlerts: 0, liveGames: 0 };
     }
   }
+
+  async generateLiveGameAlerts(): Promise<void> {
+    try {
+      console.log('🔍 Generating live game alerts...');
+      
+      // Get today's games from MLB API
+      const games = await this.mlbApi.getTodayGames();
+      
+      if (!games || games.length === 0) {
+        console.log('📄 No games found for today');
+        return;
+      }
+
+      // Filter for live games only
+      const liveGames = games.filter((game: any) => 
+        game.status?.abstractGameState === 'Live' || 
+        game.status?.statusCode === 'I' ||
+        game.status?.detailedState?.includes('In Progress')
+      );
+
+      console.log(`🎮 Found ${liveGames.length} live games out of ${games.length} total games`);
+
+      for (const game of liveGames) {
+        await this.processLiveGame(game);
+      }
+    } catch (error) {
+      console.error('❌ Error generating live game alerts:', error);
+    }
+  }
+
+  private async processLiveGame(game: any): Promise<void> {
+    try {
+      // Extract game information
+      const gameId = game.gamePk?.toString() || game.id?.toString();
+      const homeTeam = game.teams?.home?.team?.name || 'Home';
+      const awayTeam = game.teams?.away?.team?.name || 'Away';
+      
+      // Basic alert context
+      const context = {
+        gameId,
+        homeTeam,
+        awayTeam,
+        homeScore: game.teams?.home?.score || 0,
+        awayScore: game.teams?.away?.score || 0,
+        inning: game.liveData?.linescore?.currentInning || 1,
+        isTopInning: game.liveData?.linescore?.isTopInning || false
+      };
+
+      // Generate alerts based on game situation
+      const message = `${awayTeam} vs ${homeTeam} - Live game in progress`;
+      
+      await this.generateAlert(
+        'LIVE_GAME',
+        message,
+        context,
+        60, // Default priority
+        undefined, // No specific user
+        gameId,
+        'MLB'
+      );
+    } catch (error) {
+      console.error('❌ Error processing live game:', error);
+    }
+  }
 }
