@@ -359,19 +359,40 @@ export function GameCardTemplate({
   );
 }
 
-// Mock EnhancedGameDisplay for demonstration. Replace with actual component if available.
+// Enhanced game display component that fetches live MLB data
 const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
-  // This is a placeholder. In a real scenario, this component would render the BaseballDiamond
-  // and potentially other enhanced game details.
-  // The logic for showing the baseball diamond is now handled in the GameCardTemplate itself.
+  // Fetch live MLB game data for enhanced display
+  const { data: liveGameData } = useQuery({
+    queryKey: ['liveGame', gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/mlb/live/${gameId}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch live game data');
+      return response.json();
+    },
+    staleTime: 10 * 1000, // Cache for 10 seconds
+    refetchInterval: isLive ? 10 * 1000 : false, // Refetch every 10 seconds if live
+    retry: 1,
+    enabled: !!gameId && isLive // Only fetch if we have a gameId and game is live
+  });
+
+  // Use live data if available, otherwise fallback to default values
+  const runners = liveGameData?.runners || { first: false, second: false, third: false };
+  const outs = liveGameData?.outs || 0;
+  const balls = liveGameData?.balls || 0;
+  const strikes = liveGameData?.strikes || 0;
+  const actualInning = liveGameData?.inning || inning;
+  const actualIsTopInning = liveGameData?.isTopInning !== undefined ? liveGameData.isTopInning : isTopInning;
+
   return (
     <BaseballDiamond
-      runners={{ first: true, second: false, third: true }} // Example data
-      inning={inning}
-      isTopInning={isTopInning}
-      outs={1} // Example data
-      balls={2} // Example data
-      strikes={1} // Example data
+      runners={runners}
+      inning={actualInning}
+      isTopInning={actualIsTopInning}
+      outs={outs}
+      balls={balls}
+      strikes={strikes}
       size="sm"
       showCount={isLive}
     />
