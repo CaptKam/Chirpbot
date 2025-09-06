@@ -598,8 +598,34 @@ async function handleLogout() {
     }
 }
 
-// Alert configuration loaded from shared config
-import { ALERT_TYPE_CONFIG } from '../shared/alert-config.js';
+// Alert Configuration Functions - Only GAME_START alerts remain active
+const ALERT_TYPE_CONFIG = {
+    'MLB': {
+        'Game Flow': [
+            { key: 'MLB_GAME_START', label: 'Game Start', description: 'Game start notification' }
+        ]
+    },
+    'NFL': {
+        'Game Flow': [
+            { key: 'NFL_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
+        ]
+    },
+    'NCAAF': {
+        'Game Flow': [
+            { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
+        ]
+    },
+    'CFL': {
+        'Game Flow': [
+            { key: 'CFL_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
+        ]
+    },
+    'WNBA': {
+        'Game Flow': [
+            { key: 'WNBA_GAME_START', label: 'Game Start', description: 'Game start notification' }
+        ]
+    }
+};
 
 async function loadSportAlertSettings() {
     const sportSelector = document.getElementById('sportSelector');

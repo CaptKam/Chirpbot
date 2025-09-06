@@ -13,9 +13,46 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { ALERT_TYPE_CONFIG, type AlertConfigKey } from '../../shared/alert-config';
-
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+
+// Alert configuration removed - starting fresh
+const ALERT_TYPE_CONFIG = {
+  MLB: {
+    "Game Flow": [
+      { key: "MLB_GAME_START", label: "Game Start", description: "Game start notification" }
+    ]
+  },
+  NFL: {
+    "Game Flow": [
+      { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
+    ]
+  },
+  NCAAF: {
+    "Game Flow": [
+      { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" }
+    ]
+  },
+  CFL: {
+    "Game Flow": [
+      { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
+    ]
+  },
+  WNBA: {
+    "Game Flow": [
+      { key: "WNBA_GAME_START", label: "Game Start", description: "Game start notification" }
+    ]
+  },
+  NBA: {
+    "Game Flow": [
+      { key: "NBA_GAME_START", label: "Game Start", description: "Game start notification" }
+    ]
+  },
+  NHL: {
+    "Game Flow": [
+      { key: "NHL_GAME_START", label: "Game Start", description: "Game start notification" }
+    ]
+  }
+};
 
 export default function Settings() {
   const [activeSport, setActiveSport] = useState(() => {
@@ -48,6 +85,36 @@ export default function Settings() {
     enabled: !!user?.id && isAuthenticated,
   });
 
+  // Alert preferences mutation
+  const updateAlertPreferencesMutation = useMutation({
+    mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
+      const response = await apiRequest("POST", `/api/user/${user?.id}/alert-preferences`, {
+        sport: activeSport,
+        alertType,
+        enabled
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`] });
+      toast({
+        title: "Alert preference updated",
+        description: "Your alert preference has been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update alert preference. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle alert toggle
+  const handleAlertToggle = (alertType: string, enabled: boolean) => {
+    updateAlertPreferencesMutation.mutate({ alertType, enabled });
+  };
 
   // Helper function to get category icons
   const getCategoryIcon = (category: string) => {
@@ -242,6 +309,19 @@ export default function Settings() {
   };
 
 
+  // Helper function to get category icon
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "Game Situations":
+        return <Target className="w-4 h-4 text-emerald-400" />;
+      case "Scoring Events":
+        return <Trophy className="w-4 h-4 text-yellow-400" />;
+      case "At-Bat Situations":
+        return <Clock className="w-4 h-4 text-blue-400" />;
+      default:
+        return <Bell className="w-4 h-4 text-slate-400" />;
+    }
+  };
 
   if (isAuthLoading) {
     return <AuthLoading />;
@@ -381,7 +461,7 @@ export default function Settings() {
                                     <Switch
                                       checked={isEnabled}
                                       onCheckedChange={(enabled) => handleAlertToggle(alert.key, enabled)}
-                                      disabled={updateAlertPreferenceMutation.isPending}
+                                      disabled={updateAlertPreferencesMutation.isPending}
                                       className="data-[state=checked]:bg-emerald-500"
                                     />
                                   </div>
