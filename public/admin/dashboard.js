@@ -598,87 +598,33 @@ async function handleLogout() {
     }
 }
 
-// Alert Configuration Functions
+// Alert Configuration Functions - Only GAME_START alerts remain active
 const ALERT_TYPE_CONFIG = {
     'MLB': {
-        'Game Situations': [
-            { key: 'RISP', label: 'Runner in Scoring Position', description: 'Runner on 2nd or 3rd base' },
-            { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases occupied' },
-            { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity' },
-            { key: 'LATE_PRESSURE', label: 'Late Inning Pressure', description: '8th+ inning, close game' }
-        ],
-        'Scoring Events': [
-            { key: 'HOME_RUN_LIVE', label: 'Home Run (Live)', description: 'Live home run alerts' },
-            { key: 'CLOSE_GAME_LIVE', label: 'Close Game (Live)', description: 'Live close game updates' },
-            { key: 'HIGH_SCORING', label: 'High Scoring Game', description: '12+ total runs' },
-            { key: 'SHUTOUT', label: 'Shutout', description: 'One team held scoreless' },
-            { key: 'BLOWOUT', label: 'Blowout', description: '7+ run difference' },
-            { key: 'CLOSE_GAME', label: 'Close Game (Final)', description: '≤3 run difference final' }
-        ],
-        'At-Bat Situations': [
-            { key: 'FULL_COUNT', label: 'Full Count', description: '3-2 count pressure' },
-            { key: 'STRIKEOUT', label: 'Strikeout Alert', description: 'Real-time strikeout notifications' },
-            { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at plate' },
-            { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' }
-        ],
-        'AI Enhancements': [
-            { key: 'AI_ENHANCED_MESSAGES', label: 'AI-Enhanced Alert Messages', description: 'AI adds context like launch angle insights' },
-            { key: 'AI_PREDICTIVE_AT_BAT', label: 'Predictive At-Bat Analysis', description: 'AI predicts contact probability and outcomes' },
-            { key: 'AI_SCORING_PROBABILITY', label: 'Real-Time Scoring Probability', description: 'AI calculates and displays scoring chances' },
-            { key: 'AI_SITUATION_ANALYSIS', label: 'Game Situation Analysis', description: 'AI analyzes pressure situations and momentum' },
-            { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
-            { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
-        ],
-        'RE24 System': [
-            { key: 'RE24_ENABLED', label: 'RE24 Probability System', description: 'Advanced run expectancy calculations for scoring probability' },
-            { key: 'RE24_CONTEXT_FACTORS', label: 'RE24 Context Adjustments', description: 'Weather, power hitter, and ballpark factors' },
-            { key: 'RE24_MINIMUM_THRESHOLDS', label: 'RE24 Minimum Thresholds', description: 'Probability-based alert filtering (40-45% minimums)' },
-            { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
+        'Game Flow': [
+            { key: 'MLB_GAME_START', label: 'Game Start', description: 'Game start notification' }
         ]
     },
-    NCAAF: {
-        "Game Flow": [
-            { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" },
-            { key: "NCAAF_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
-            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
-            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
-            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" },
-            { key: "CLUTCH_TIME", label: "Clutch Time Situations", description: "High-pressure game moments" },
-            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
+    'NFL': {
+        'Game Flow': [
+            { key: 'NFL_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
         ]
     },
-    WNBA: {
-        "Critical Moments": [
-            { key: "WNBA_FOURTH_QUARTER", label: "Fourth Quarter Crunch Time", description: "Close games in final 5 minutes of 4th quarter" },
-            { key: "WNBA_CLOSE_GAME", label: "Close Games", description: "Games within 5 points in 3rd or 4th quarter" },
-            { key: "WNBA_OVERTIME", label: "Overtime Games", description: "Games entering overtime period" }
-        ],
-        "Scoring Events": [
-            { key: "WNBA_HIGH_SCORING", label: "High-Scoring Games", description: "Games with 160+ combined points" },
-            { key: "WNBA_COMEBACK", label: "Comeback Alerts", description: "Teams erasing large deficits" },
-            { key: "WNBA_CLUTCH_PERFORMANCE", label: "Clutch Performances", description: "Outstanding individual performances in critical moments" }
+    'NCAAF': {
+        'Game Flow': [
+            { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
         ]
     },
-    NFL: {
-        "Game Flow": [
-            { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
-            { key: "NFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
-            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
-            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
-            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" }
+    'CFL': {
+        'Game Flow': [
+            { key: 'CFL_GAME_START', label: 'Game Start', description: 'Game kickoff notification' }
         ]
     },
-    CFL: {
-        "Game Flow": [
-            { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
-            { key: "CFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
-            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 25-yard line" },
-            { key: "THIRD_DOWN", label: "Third Down (CFL)", description: "Critical third down conversion attempts" },
-            { key: "THREE_MINUTE_WARNING", label: "Three-Minute Warning", description: "Final 3 minutes of each half" },
-            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
+    'WNBA': {
+        'Game Flow': [
+            { key: 'WNBA_GAME_START', label: 'Game Start', description: 'Game start notification' }
         ]
-    },
+    }
 };
 
 async function loadSportAlertSettings() {

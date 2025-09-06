@@ -16,7 +16,43 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 
 // Alert configuration removed - starting fresh
-const ALERT_TYPE_CONFIG = {};
+const ALERT_TYPE_CONFIG = {
+  MLB: {
+    "Game Flow": [
+      { key: "MLB_GAME_START", label: "Game Start", description: "Game start notification" }
+    ]
+  },
+  NFL: {
+    "Game Flow": [
+      { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
+    ]
+  },
+  NCAAF: {
+    "Game Flow": [
+      { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" }
+    ]
+  },
+  CFL: {
+    "Game Flow": [
+      { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
+    ]
+  },
+  WNBA: {
+    "Game Flow": [
+      { key: "WNBA_GAME_START", label: "Game Start", description: "Game start notification" }
+    ]
+  },
+  NBA: {
+    "Game Flow": [
+      { key: "NBA_GAME_START", label: "Game Start", description: "Game start notification" }
+    ]
+  },
+  NHL: {
+    "Game Flow": [
+      { key: "NHL_GAME_START", label: "Game Start", description: "Game start notification" }
+    ]
+  }
+};
 
 export default function Settings() {
   const [activeSport, setActiveSport] = useState(() => {
@@ -35,8 +71,6 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Global settings removed - all alerts available to users
-
   // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
@@ -50,6 +84,53 @@ export default function Settings() {
     queryKey: [`/api/user/${user?.id}/telegram`],
     enabled: !!user?.id && isAuthenticated,
   });
+
+  // Alert preferences mutation
+  const updateAlertPreferencesMutation = useMutation({
+    mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
+      const response = await apiRequest("POST", `/api/user/${user?.id}/alert-preferences`, {
+        sport: activeSport,
+        alertType,
+        enabled
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`] });
+      toast({
+        title: "Alert preference updated",
+        description: "Your alert preference has been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update alert preference. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle alert toggle
+  const handleAlertToggle = (alertType: string, enabled: boolean) => {
+    updateAlertPreferencesMutation.mutate({ alertType, enabled });
+  };
+
+  // Helper function to get category icons
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "Game Flow":
+        return <Target className="w-4 h-4 text-emerald-400" />;
+      case "Game Situations":
+        return <Target className="w-4 h-4 text-emerald-400" />;
+      case "Scoring Events":
+        return <Trophy className="w-4 h-4 text-yellow-400" />;
+      case "At-Bat Situations":
+        return <Clock className="w-4 h-4 text-blue-400" />;
+      default:
+        return <Bell className="w-4 h-4 text-slate-400" />;
+    }
+  };
 
   // Create a map of current preferences for easy lookup
   const preferenceMap = new Map();
@@ -313,7 +394,7 @@ export default function Settings() {
           </div>
         </Card>
 
-        {/* Alert Configuration Section Removed - Starting Fresh */}
+        {/* Alert Configuration */}
         {isAuthenticated && (
           <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
             <div className="flex items-center space-x-3 mb-6">
@@ -322,17 +403,87 @@ export default function Settings() {
               </div>
               <div>
                 <h2 className="text-lg font-black uppercase tracking-wide text-slate-100">
-                  Alert System Ready
+                  Alert Preferences
                 </h2>
                 <p className="text-sm text-slate-300">
-                  Clean slate - ready for new alert configurations
+                  Configure which types of alerts you want to receive
                 </p>
               </div>
             </div>
-            <div className="text-center py-8">
-              <p className="text-slate-400">All previous alert configurations have been removed.</p>
-              <p className="text-slate-400 mt-2">The system is ready for fresh alert implementations.</p>
-            </div>
+
+            {/* Sport Selection Tabs */}
+            <Tabs value={activeSport} onValueChange={(value) => {
+              setActiveSport(value);
+              localStorage.setItem('settings-active-sport', value);
+            }}>
+              <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 bg-slate-800/50 mb-6">
+                {SPORTS.map((sport) => (
+                  <TabsTrigger
+                    key={sport}
+                    value={sport}
+                    className="text-xs data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400"
+                  >
+                    {sport}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {SPORTS.map((sport) => (
+                <TabsContent key={sport} value={sport}>
+                  {preferencesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {ALERT_TYPE_CONFIG[sport as keyof typeof ALERT_TYPE_CONFIG] ? (
+                        Object.entries(ALERT_TYPE_CONFIG[sport as keyof typeof ALERT_TYPE_CONFIG]).map(([category, alerts]) => (
+                          <div key={category} className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                              {getCategoryIcon(category)}
+                              <h3 className="text-md font-bold text-slate-100 uppercase tracking-wide">
+                                {category}
+                              </h3>
+                            </div>
+                            <div className="space-y-3 ml-6">
+                              {alerts.map((alert) => {
+                                const preference = (alertPreferences as any[] || []).find((p: any) => 
+                                  p.alertType === alert.key && p.sport === activeSport
+                                );
+                                const isEnabled = preference?.enabled ?? true;
+                                
+                                return (
+                                  <div key={alert.key} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                                    <div className="flex-1">
+                                      <h4 className="text-sm font-semibold text-slate-100 mb-1">{alert.label}</h4>
+                                      <p className="text-xs text-slate-400">{alert.description}</p>
+                                    </div>
+                                    <Switch
+                                      checked={isEnabled}
+                                      onCheckedChange={(enabled) => handleAlertToggle(alert.key, enabled)}
+                                      disabled={updateAlertPreferencesMutation.isPending}
+                                      className="data-[state=checked]:bg-emerald-500"
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {Object.keys(ALERT_TYPE_CONFIG[sport as keyof typeof ALERT_TYPE_CONFIG]).indexOf(category) < 
+                             Object.keys(ALERT_TYPE_CONFIG[sport as keyof typeof ALERT_TYPE_CONFIG]).length - 1 && (
+                              <Separator className="bg-white/10 my-4" />
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-slate-400 text-sm">No alert types configured for {sport} yet.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
           </Card>
         )}
 

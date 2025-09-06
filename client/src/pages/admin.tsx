@@ -28,61 +28,41 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 
-// Alert configuration from settings.tsx
+// Alert configuration - Only GAME_START alerts remain active
 const ALERT_TYPE_CONFIG = {
   MLB: {
-    "Game Situations": [
-      { key: "RISP", label: "RISP (Runners in Scoring Position)", description: "Alert when runners are on 2nd or 3rd base" },
-      { key: "BASES_LOADED", label: "Bases Loaded", description: "Alert when all three bases are occupied" },
-      { key: "RUNNERS_1ST_2ND", label: "Runners on 1st & 2nd", description: "Prime scoring opportunity alert" },
-      { key: "CLOSE_GAME", label: "Close Game", description: "Games with score difference ≤ 3 runs" },
-      { key: "CLOSE_GAME_LIVE", label: "Live Close Game", description: "Real-time close game situations" },
-      { key: "LATE_PRESSURE", label: "Late Inning Pressure", description: "8th inning or later with close score" },
-    ],
-    "Scoring Events": [
-      { key: "HOME_RUN_LIVE", label: "Home Run (Live)", description: "Real-time home run alerts as they happen" },
-      { key: "HIGH_SCORING", label: "High-Scoring Game", description: "Games with 12+ total runs" },
-      { key: "SHUTOUT", label: "Shutout Alert", description: "When a team gets shut out (0 runs)" },
-      { key: "BLOWOUT", label: "Blowout Game", description: "Games with 7+ run difference" },
-    ],
-    "At-Bat Situations": [
-      { key: "FULL_COUNT", label: "Full Count (3-2)", description: "Maximum pressure at-bat situations" },
-      { key: "STRIKEOUT", label: "Strikeout Alert", description: "Real-time strikeout notifications" },
+    "Game Flow": [
+      { key: "MLB_GAME_START", label: "Game Start", description: "Game start notification" }
     ]
   },
   NFL: {
-    "Game Situations": [
-      { key: "RED_ZONE", label: "Red Zone Situations", description: "Team inside the 20-yard line" },
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical 4th down conversion attempts" },
-      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-half pressure situations" },
+    "Game Flow": [
+      { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
     ]
   },
   NBA: {
-    "Game Situations": [
-      { key: "CLUTCH_TIME", label: "Clutch Time", description: "Final 5 minutes with close score" },
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "OVERTIME", label: "Overtime", description: "Games going to overtime" },
+    "Game Flow": [
+      { key: "NBA_GAME_START", label: "Game Start", description: "Game start notification" }
     ]
   },
   NHL: {
-    "Game Situations": [
-      { key: "POWER_PLAY", label: "Power Play", description: "Man advantage situations" },
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "EMPTY_NET", label: "Empty Net", description: "Goalie pulled situations" },
+    "Game Flow": [
+      { key: "NHL_GAME_START", label: "Game Start", description: "Game start notification" }
     ]
   },
   CFL: {
-    "Game Situations": [
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Third Down (CFL)", description: "Critical down conversion attempts" },
+    "Game Flow": [
+      { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" }
     ]
   },
   NCAAF: {
-    "Game Situations": [
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical conversion attempts" },
-      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-quarter/half pressure situations" },
+    "Game Flow": [
+      { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" }
+    ]
+  },
+  WNBA: {
+    "Game Flow": [
+      { key: "WNBA_GAME_START", label: "Game Start", description: "Game start notification" }
     ]
   }
 };
