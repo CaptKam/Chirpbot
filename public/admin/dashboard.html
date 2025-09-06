@@ -18,7 +18,7 @@
                     <p>System Management & User Control</p>
                 </div>
             </div>
-            
+
             <div class="header-actions">
                 <div class="admin-info">
                     <div class="admin-avatar" id="adminAvatar">A</div>
@@ -27,7 +27,7 @@
                         <p>Admin Access</p>
                     </div>
                 </div>
-                
+
                 <button class="logout-btn" onclick="handleLogout()">
                     <i class="fas fa-sign-out-alt"></i>
                     Logout
@@ -134,7 +134,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <table class="users-table">
                     <thead class="table-header">
                         <tr>
@@ -175,7 +175,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <div style="padding: 30px;">
                     <div class="stats-grid" style="margin-bottom: 30px;">
                         <div class="stat-card">
@@ -195,7 +195,7 @@
                                 </label>
                             </div>
                         </div>
-                        
+
                         <div class="stat-card">
                             <div class="stat-header">
                                 <div class="stat-icon users">
@@ -205,7 +205,7 @@
                             <div class="stat-value" id="activeUsersCount">Loading...</div>
                             <div class="stat-label">Users with Alerts Enabled</div>
                         </div>
-                        
+
                         <div class="stat-card">
                             <div class="stat-header">
                                 <div class="stat-icon total">
@@ -216,7 +216,7 @@
                             <div class="stat-label">Active Alert Types</div>
                         </div>
                     </div>
-                    
+
                     <!-- Sport Selection -->
                     <div style="margin-bottom: 30px;">
                         <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #e2e8f0;">Select Sport for Configuration:</label>
@@ -227,6 +227,7 @@
                             <option value="NHL">NHL</option>
                             <option value="CFL">CFL</option>
                             <option value="NCAAF">NCAAF</option>
+                            <option value="WNBA">WNBA</option>
                         </select>
                     </div>
                 </div>
@@ -240,13 +241,10 @@
                         <span id="sportTitle">MLB</span> Alert Configuration
                     </h2>
                     <div class="search-bar">
-                        <button class="action-btn edit" onclick="applyToAllUsers()" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2);">
-                            <i class="fas fa-users"></i>
-                            Apply to All Users
-                        </button>
+                        <span style="color: #94a3b8; font-style: italic;">Changes automatically apply to all users</span>
                     </div>
                 </div>
-                
+
                 <div id="alertConfigContainer" style="padding: 30px;">
                     <div class="loading">
                         <div class="spinner"></div>

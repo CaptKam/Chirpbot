@@ -182,6 +182,13 @@ function updateUsersTable() {
                         <i class="fas fa-edit"></i>
                         Edit
                     </button>
+                    <button class="action-btn delete ${getUserDeleteDisabled(user) ? 'disabled' : ''}" 
+                            onclick="deleteUser('${user.id}', '${user.username || 'Unknown'}', '${user.role || 'user'}')"
+                            ${getUserDeleteDisabled(user) ? 'disabled' : ''}
+                            title="${getDeleteTooltip(user)}">
+                        <i class="fas fa-trash"></i>
+                        Delete
+                    </button>
                 </div>
             </td>
         </tr>
@@ -227,6 +234,100 @@ function editUser(userId) {
 
     // For now, just show user details
     alert(`User Details:\n\nUsername: ${user.username}\nEmail: ${user.email}\nRole: ${user.role}\nCreated: ${new Date(user.createdAt).toLocaleDateString()}`);
+}
+
+// Helper functions for delete button state
+function getUserDeleteDisabled(user) {
+    // Get current admin user from localStorage
+    const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    
+    // Can't delete yourself
+    if (user.id === currentAdminUser.id) return true;
+    
+    // Can't delete the last admin
+    if (user.role === 'admin') {
+        const adminCount = currentUsers.filter(u => u.role === 'admin').length;
+        if (adminCount <= 1) return true;
+    }
+    
+    return false;
+}
+
+function getDeleteTooltip(user) {
+    const currentAdminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    
+    if (user.id === currentAdminUser.id) {
+        return "Cannot delete your own account";
+    }
+    
+    if (user.role === 'admin') {
+        const adminCount = currentUsers.filter(u => u.role === 'admin').length;
+        if (adminCount <= 1) {
+            return "Cannot delete the last admin user";
+        }
+    }
+    
+    return "Delete this user and all associated data";
+}
+
+async function deleteUser(userId, username, role) {
+    // Double confirmation dialog
+    const confirmed = confirm(
+        `⚠️ DELETE USER CONFIRMATION\n\n` +
+        `Are you sure you want to delete user "${username}"?\n\n` +
+        `This action CANNOT be undone and will permanently remove:\n` +
+        `• User account and login access\n` +
+        `• All alert preferences\n` +
+        `• All monitored teams\n` +
+        `• All associated user data\n\n` +
+        `Type "DELETE" to confirm (case sensitive)`
+    );
+    
+    if (!confirmed) return;
+    
+    // Second confirmation for admin users
+    if (role === 'admin') {
+        const adminConfirmed = confirm(
+            `🚨 ADMIN DELETION WARNING\n\n` +
+            `You are about to delete an ADMIN user!\n\n` +
+            `This will remove all admin privileges for "${username}".\n\n` +
+            `Are you absolutely certain you want to proceed?`
+        );
+        
+        if (!adminConfirmed) return;
+    }
+    
+    try {
+        showNotification('Deleting user...', 'info');
+        
+        const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            
+            // Remove user from local data
+            const userIndex = currentUsers.findIndex(u => u.id === userId);
+            if (userIndex !== -1) {
+                currentUsers.splice(userIndex, 1);
+                updateUsersTable();
+            }
+            
+            // Reload stats to reflect changes
+            await loadStats();
+            
+            showNotification(`✅ User "${username}" deleted successfully`, 'success');
+            console.log(`🗑️ User deleted:`, result.deletedUser);
+        } else {
+            const error = await response.json();
+            showNotification(`❌ ${error.message}`, 'error');
+        }
+    } catch (error) {
+        console.error('Delete user error:', error);
+        showNotification('❌ Failed to delete user', 'error');
+    }
 }
 
 function filterUsers() {
@@ -293,6 +394,13 @@ function filterUsers() {
                     <button class="action-btn edit" onclick="editUser('${user.id}')">
                         <i class="fas fa-edit"></i>
                         Edit
+                    </button>
+                    <button class="action-btn delete ${getUserDeleteDisabled(user) ? 'disabled' : ''}" 
+                            onclick="deleteUser('${user.id}', '${user.username || 'Unknown'}', '${user.role || 'user'}')"
+                            ${getUserDeleteDisabled(user) ? 'disabled' : ''}
+                            title="${getDeleteTooltip(user)}">
+                        <i class="fas fa-trash"></i>
+                        Delete
                     </button>
                 </div>
             </td>
@@ -396,20 +504,57 @@ const ALERT_TYPE_CONFIG = {
             { key: 'AI_SITUATION_ANALYSIS', label: 'Game Situation Analysis', description: 'AI analyzes pressure situations and momentum' },
             { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
             { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
+        ],
+        'RE24 System': [
+            { key: 'RE24_ENABLED', label: 'RE24 Probability System', description: 'Advanced run expectancy calculations for scoring probability' },
+            { key: 'RE24_CONTEXT_FACTORS', label: 'RE24 Context Adjustments', description: 'Weather, power hitter, and ballpark factors' },
+            { key: 'RE24_MINIMUM_THRESHOLDS', label: 'RE24 Minimum Thresholds', description: 'Probability-based alert filtering (40-45% minimums)' },
+            { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
         ]
     },
-    'NCAAF': {
-        'Game Flow': [
-            { key: 'NCAAF_KICKOFF', name: 'Kickoff', description: 'Game start and 2nd half kickoffs' },
-            { key: 'NCAAF_HALFTIME', name: 'Halftime', description: 'End of 2nd quarter, score update' },
-            { key: 'TWO_MINUTE_WARNING', name: 'Two Minute Warning', description: 'Final 2 minutes of any quarter' }
-        ],
-        'Critical Moments': [
-            { key: 'FOURTH_DOWN', name: 'Fourth Down', description: 'Make-or-break plays' },
-            { key: 'RED_ZONE', name: 'Red Zone', description: 'Inside the 20-yard line' },
-            { key: 'OVERTIME', name: 'Overtime', description: 'Extra period alerts' }
+    NCAAF: {
+        "Game Flow": [
+            { key: "NCAAF_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "NCAAF_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
+            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
+            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" },
+            { key: "CLUTCH_TIME", label: "Clutch Time Situations", description: "High-pressure game moments" },
+            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
         ]
-    }
+    },
+    WNBA: {
+        "Critical Moments": [
+            { key: "WNBA_FOURTH_QUARTER", label: "Fourth Quarter Crunch Time", description: "Close games in final 5 minutes of 4th quarter" },
+            { key: "WNBA_CLOSE_GAME", label: "Close Games", description: "Games within 5 points in 3rd or 4th quarter" },
+            { key: "WNBA_OVERTIME", label: "Overtime Games", description: "Games entering overtime period" }
+        ],
+        "Scoring Events": [
+            { key: "WNBA_HIGH_SCORING", label: "High-Scoring Games", description: "Games with 160+ combined points" },
+            { key: "WNBA_COMEBACK", label: "Comeback Alerts", description: "Teams erasing large deficits" },
+            { key: "WNBA_CLUTCH_PERFORMANCE", label: "Clutch Performances", description: "Outstanding individual performances in critical moments" }
+        ]
+    },
+    NFL: {
+        "Game Flow": [
+            { key: "NFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "NFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 20-yard line" },
+            { key: "FOURTH_DOWN", label: "Fourth Down Situations", description: "Critical fourth down attempts" },
+            { key: "TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" }
+        ]
+    },
+    CFL: {
+        "Game Flow": [
+            { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
+            { key: "CFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
+            { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 25-yard line" },
+            { key: "THIRD_DOWN", label: "Third Down (CFL)", description: "Critical third down conversion attempts" },
+            { key: "THREE_MINUTE_WARNING", label: "Three-Minute Warning", description: "Final 3 minutes of each half" },
+            { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+            { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
+        ]
+    },
 };
 
 async function loadSportAlertSettings() {
@@ -606,7 +751,7 @@ async function toggleCategory(category) {
 
             // Re-render configuration
             renderAlertConfiguration();
-            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} and applied to all users`, 'success');
+            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} globally`, 'success');
         } else {
             showNotification('Failed to update category settings', 'error');
         }
@@ -636,9 +781,9 @@ async function toggleGlobalAlert(alertKey) {
             globalAlertSettings[alertKey] = isEnabled;
 
             // Automatically apply this change to all users
-            await applyGlobalSettingToAllUsers(alertKey, isEnabled);
+            await applyGlobalSettingsToAllUsers();
 
-            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally and applied to all users`, 'success');
+            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally`, 'success');
         } else {
             toggle.checked = !isEnabled;
             showNotification('Failed to update alert setting', 'error');
@@ -650,15 +795,7 @@ async function toggleGlobalAlert(alertKey) {
     }
 }
 
-async function applyToAllUsers() {
-    if (!confirm('This will apply the current global alert settings to ALL users. Are you sure?')) {
-        return;
-    }
-
-    await applyGlobalSettingsToAllUsers();
-}
-
-// Helper function to apply global settings without confirmation
+// Auto-apply function - simplified to always apply changes
 async function applyGlobalSettingsToAllUsers() {
     try {
         const response = await fetch('/api/admin/apply-global-settings', {
@@ -672,36 +809,12 @@ async function applyGlobalSettingsToAllUsers() {
         });
 
         if (response.ok) {
-            console.log('Global settings applied to all users successfully');
+            console.log('Global settings automatically applied to all users');
         } else {
             console.error('Failed to apply settings to all users');
         }
     } catch (error) {
         console.error('Error applying settings:', error);
-    }
-}
-
-// Helper function to apply a single setting to all users
-async function applyGlobalSettingToAllUsers(alertKey, enabled) {
-    try {
-        const singleSetting = { [alertKey]: enabled };
-        const response = await fetch('/api/admin/apply-global-settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ 
-                sport: currentSport,
-                settings: singleSetting 
-            })
-        });
-
-        if (response.ok) {
-            console.log(`Global setting ${alertKey}=${enabled} applied to all users successfully`);
-        } else {
-            console.error(`Failed to apply setting ${alertKey}=${enabled} to all users`);
-        }
-    } catch (error) {
-        console.error('Error applying single setting:', error);
     }
 }
 
@@ -770,4 +883,74 @@ if (sportSelector) {
     sportSelector.addEventListener('change', function() {
         switchSport(this.value);
     });
+}
+
+async function enableAllAlerts() {
+    try {
+        showNotification('Enabling all alerts...', 'info');
+
+        const response = await fetch('/api/admin/enable-all-alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification(`Enabled ${result.count} alert types`, 'success');
+            // Reload settings to reflect changes
+            setTimeout(() => {
+                loadGlobalAlertSettings();
+            }, 1000);
+        } else {
+            showNotification(result.message || 'Failed to enable alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Error enabling all alerts:', error);
+        showNotification('Failed to enable all alerts', 'error');
+    }
+}
+
+async function disableAllAlerts() {
+    // Double confirmation for this destructive action
+    const confirmed = confirm('⚠️ WARNING: This will disable ALL alert features across the entire system for ALL users.\n\nThis includes:\n- All MLB, NFL, NBA, NHL, WNBA, CFL, NCAAF alerts\n- All Telegram notifications\n- All AI enhancements\n- All RE24 features\n\nAre you absolutely sure?');
+
+    if (!confirmed) return;
+
+    const doubleConfirmed = confirm('🚫 FINAL CONFIRMATION: This action will completely shut down all alert functionality system-wide. Users will receive NO notifications until manually re-enabled.\n\nProceed?');
+
+    if (!doubleConfirmed) return;
+
+    try {
+        showNotification('🚫 Disabling ALL alerts globally...', 'warning');
+
+        const response = await fetch('/api/admin/disable-all-alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification(
+                `🚫 ALL ALERTS DISABLED: ${result.summary.alertTypesDisabled} alert types disabled, ${result.summary.telegramUsersDisabled} Telegram configs disabled`, 
+                'success'
+            );
+
+            // Show summary
+            console.log('Disable All Alerts Result:', result);
+
+            // Reload settings to reflect changes
+            setTimeout(() => {
+                loadGlobalAlertSettings();
+            }, 1000);
+        } else {
+            showNotification(result.message || 'Failed to disable all alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Error disabling all alerts:', error);
+        showNotification('Failed to disable all alerts', 'error');
+    }
 }

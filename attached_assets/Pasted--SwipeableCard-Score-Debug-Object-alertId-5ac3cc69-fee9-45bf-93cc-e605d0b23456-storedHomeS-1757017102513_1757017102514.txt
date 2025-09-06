@@ -1,0 +1,51 @@
+🔍 SwipeableCard Score Debug: 
+Object {alertId: "5ac3cc69-fee9-45bf-93cc-e605d0b23456", storedHomeScore: 6, storedAwayScore: 10, liveHomeScore: undefined, liveAwayScore: undefined, …}
+🔍 SwipeableCard Score Debug: 
+Object {alertId: "55816a3b-fa4e-4363-b030-8e9d23ed8bb7", storedHomeScore: 5, storedAwayScore: 10, liveHomeScore: undefined, liveAwayScore: undefined, …}
+🔍 SwipeableCard Score Debug: 
+Object {alertId: "613bd9e1-7597-4c58-a9fa-b8f327cff6e6", storedHomeScore: 5, storedAwayScore: 10, liveHomeScore: undefined, liveAwayScore: undefined, …}
+Failed fetch, not 2xx response
+Unhandled promise rejection: 
+Error {}
+
+at t.value (https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Stack trace: Error: Failed fetch, not 2xx response
+    at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/:126:2768
+at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/:126:2768
+at t.value (https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Failed fetch, not 2xx response
+Unhandled promise rejection: 
+Error {}
+
+Stack trace: Error: Failed fetch, not 2xx response
+    at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/:126:2768
+Failed fetch, not 2xx response
+Unhandled promise rejection: 
+Error {}
+
+Stack trace: Error: Failed fetch, not 2xx response
+    at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/:126:2768
+Failed fetch, not 2xx response
+Unhandled promise rejection: 
+Error {}
+
+Stack trace: Error: Failed fetch, not 2xx response
+    at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/:126:2768
+Failed fetch, not 2xx response
+Unhandled promise rejection: 
+Error {}
+
+Stack trace: Error: Failed fetch, not 2xx response
+    at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/:126:2768
+Failed fetch, not 2xx response
+Unhandled promise rejection: 
+Error {}
+
+Stack trace: Error: Failed fetch, not 2xx response
+    at https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/:126:2768

@@ -125,8 +125,13 @@ export function WeatherDisplay({
     <div className={`flex items-center space-x-1 ${textSize}`}>
       <motion.span
         className={`${getWindColor(windSpeed)} font-mono`}
-        animate={{ rotate: windSpeed > 10 ? 360 : 0 }}
-        transition={{ duration: windSpeed > 10 ? 2 : 0, repeat: windSpeed > 10 ? Infinity : 0, ease: 'linear' }}
+        animate={{ rotate: windSpeed > 20 ? [0, 5, -5, 0] : 0 }}
+        transition={{ 
+          duration: windSpeed > 20 ? 1.5 : 0, 
+          repeat: windSpeed > 20 ? Infinity : 0, 
+          ease: 'easeInOut',
+          repeatDelay: 0.5
+        }}
       >
         {getWindIcon(windDirection)}
       </motion.span>

@@ -144,7 +144,7 @@ function Hero() {
 
 function LogosStrip() {
   const logos = ['ESPN', 'MLB', 'NFL', 'NBA', 'NHL', 'OpenAI'];
-  
+
   return (
     <section className="py-12 border-y border-slate-800/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -470,7 +470,7 @@ function Pricing() {
 
 function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  
+
   const faqs = [
     {
       question: "How fast are the alerts?",

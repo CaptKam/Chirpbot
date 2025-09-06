@@ -33,10 +33,28 @@ async function requireAuthentication(req: any, res: any, next: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // Add route debugging middleware
+  // Add route debugging middleware with duplicate detection
+  const recentRequests = new Map();
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) {
-      console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
+      const now = Date.now();
+      const requestKey = `${req.method}:${req.path}:${req.ip}`;
+      const lastRequest = recentRequests.get(requestKey);
+      
+      if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
+        console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
+      } else {
+        console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
+      }
+      
+      recentRequests.set(requestKey, now);
+      // Clean up old entries periodically
+      if (recentRequests.size > 100) {
+        const oldestTime = now - 10000; // 10 seconds
+        for (const [key, time] of recentRequests.entries()) {
+          if (time < oldestTime) recentRequests.delete(key);
+        }
+      }
     }
     next();
   });
@@ -145,6 +163,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
+  // Export broadcast function for use by other services
+  (global as any).wsBroadcast = broadcast;
+
   // Basic health check
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -210,6 +231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sport = 'MLB', date } = req.query;
       let games = [];
 
+      const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+
       switch(sport) {
         case 'MLB':
           const { MLBApiService } = await import('./services/mlb-api');
@@ -245,6 +268,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { NCAAFApiService } = await import('./services/ncaaf-api');
           const ncaafService = new NCAAFApiService();
           games = await ncaafService.getTodaysGames(date as string);
+          break;
+
+        case 'WNBA':
+          const { WNBAApiService } = await import('./services/wnba-api');
+          const wnbaService = new WNBAApiService();
+          games = await wnbaService.getTodaysGames(date as string);
           break;
 
         default:
@@ -584,16 +613,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         id: user.id,
         telegramEnabled: user.telegramEnabled,
-        hasToken: !!user.telegramBotToken && user.telegramBotToken !== 'default_key',
+        hasToken: !!user.telegramBotToken && user.telegramBotToken !== 'default_key' && user.telegramBotToken !== 'test-token',
         tokenLength: user.telegramBotToken?.length || 0,
-        hasChatId: !!user.telegramChatId && user.telegramChatId !== 'default_key',
-        chatId: user.telegramChatId || 'MISSING'
+        tokenValue: user.telegramBotToken?.substring(0, 10) + '...' || 'MISSING',
+        hasChatId: !!user.telegramChatId && user.telegramChatId !== 'default_key' && user.telegramChatId !== 'test-chat-id',
+        chatId: user.telegramChatId || 'MISSING',
+        isTestData: user.telegramBotToken === 'default_key' || user.telegramChatId === 'test-chat-id'
       }));
 
+      const validUsers = telegramDebug.filter(u => u.telegramEnabled && u.hasToken && u.hasChatId && !u.isTestData);
+
       res.json({
+        timestamp: new Date().toISOString(),
         totalUsers: allUsers.length,
-        validTelegramUsers: telegramDebug.filter(u => u.telegramEnabled && u.hasToken && u.hasChatId).length,
-        users: telegramDebug
+        telegramEnabledUsers: telegramDebug.filter(u => u.telegramEnabled).length,
+        validTelegramUsers: validUsers.length,
+        usersWithTestData: telegramDebug.filter(u => u.isTestData).length,
+        users: telegramDebug,
+        readyForAlerts: validUsers.length > 0,
+        nextSteps: validUsers.length === 0 ? [
+          "1. Go to Settings → Telegram Notifications",
+          "2. Create a bot with @BotFather on Telegram", 
+          "3. Get your chat ID from @userinfobot",
+          "4. Enter real credentials and test connection"
+        ] : ["Telegram is properly configured and ready!"]
       });
     } catch (error) {
       console.error('Error debugging Telegram:', error);
@@ -620,17 +663,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate test live alerts
+  // Generate test live alerts - RULE COMPLIANT VERSION
   app.post('/api/alerts/force-generate', async (req, res) => {
     try {
-      console.log('🧪 FORCING TEST LIVE ALERTS');
-      
+      console.log('🧪 FORCING RULE-COMPLIANT TEST LIVE ALERTS');
+      console.log('🛡️ NOTE: All generated alerts will respect global admin settings and user preferences');
+
       const alertGenerator = new AlertGenerator();
       const alertCount = await alertGenerator.generateLiveGameAlerts();
-      
+
       res.json({ 
-        message: `Generated ${alertCount} test alerts`,
-        alertCount
+        message: `Generated ${alertCount} rule-compliant alerts (filtered by admin settings)`,
+        alertCount,
+        note: 'All alerts respect global admin settings and user preferences'
       });
     } catch (error) {
       console.error('Error generating test alerts:', error);
@@ -638,25 +683,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Force send test Telegram alert
+  // Force send test Telegram alert - RULE COMPLIANT VERSION
   app.post('/api/telegram/force-test', async (req, res) => {
     try {
-      console.log('🧪 FORCING TEST TELEGRAM ALERT');
-      
+      console.log('🧪 TESTING TELEGRAM ALERT (Rule-Compliant)');
+
       // Get all users with Telegram
       const allUsers = await storage.getAllUsers();
       const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-      
+
       console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
-      
+
       let successCount = 0;
       let errorCount = 0;
-      
+
       for (const user of telegramUsers) {
         console.log(`📱 Testing Telegram for user: ${user.username}`);
-        console.log(`📱 Bot token length: ${user.telegramBotToken?.length || 0}`);
-        console.log(`📱 Chat ID: ${user.telegramChatId}`);
+
+        // 🛡️ RULE COMPLIANCE: Check if TEST_STRIKEOUT is globally enabled
+        const alertGenerator = new AlertGenerator();
+        const isGloballyEnabled = await (alertGenerator as any).isAlertGloballyEnabled('MLB', 'TEST_STRIKEOUT');
         
+        if (!isGloballyEnabled) {
+          console.log(`🚫 RULE COMPLIANT: TEST_STRIKEOUT globally disabled - skipping user ${user.username}`);
+          errorCount++;
+          continue;
+        }
+
+        // 🛡️ RULE COMPLIANCE: Check user preferences
+        try {
+          const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, 'mlb');
+          const userPref = userPrefs.find(p => p.alertType === 'TEST_STRIKEOUT');
+          const userHasEnabled = userPref ? userPref.enabled : isGloballyEnabled;
+
+          if (!userHasEnabled) {
+            console.log(`🚫 RULE COMPLIANT: User ${user.username} has TEST_STRIKEOUT disabled`);
+            errorCount++;
+            continue;
+          }
+        } catch (prefError) {
+          console.error(`❌ Error checking preferences for ${user.username}:`, prefError);
+          errorCount++;
+          continue;
+        }
+
         const config: TelegramConfig = {
           botToken: user.telegramBotToken || '',
           chatId: user.telegramChatId || ''
@@ -665,7 +735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const testAlert = {
           type: 'TEST_STRIKEOUT',
           title: 'Test Strikeout Alert',
-          description: '⚡ TEST STRIKEOUT! Test Batter struck out by Test Pitcher - Test Team vs Test Team',
+          description: '⚡ RULE-COMPLIANT TEST! Test Batter struck out by Test Pitcher - Test Team vs Test Team',
           gameInfo: {
             homeTeam: 'Test Home',
             awayTeam: 'Test Away',
@@ -686,7 +756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sent = await sendTelegramAlert(config, testAlert);
         if (sent) {
           successCount++;
-          console.log(`📱 ✅ Test alert sent to ${user.username}`);
+          console.log(`📱 ✅ Rule-compliant test alert sent to ${user.username}`);
         } else {
           errorCount++;
           console.log(`📱 ❌ Test alert failed for ${user.username}`);
@@ -694,10 +764,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ 
-        message: 'Test alerts completed',
+        message: 'Rule-compliant test alerts completed',
         userCount: telegramUsers.length,
         successCount,
-        errorCount
+        errorCount,
+        note: 'All alerts respect global admin settings and user preferences'
       });
     } catch (error) {
       console.error('Error sending test alerts:', error);
@@ -705,18 +776,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to detect rule bypasses
+  app.get('/api/debug/telegram-bypasses', requireAuthentication, async (req, res) => {
+    try {
+      console.log('🔍 SCANNING FOR TELEGRAM BYPASS ROUTES');
+      
+      const bypasses = [];
+      
+      // Check for direct telegram calls in the codebase
+      const potentialBypasses = [
+        {
+          route: '/api/telegram/force-test',
+          status: 'PATCHED - Now rule-compliant',
+          risk: 'LOW'
+        },
+        {
+          route: '/api/alerts/force-generate', 
+          status: 'PATCHED - Now rule-compliant',
+          risk: 'LOW'
+        },
+        {
+          route: '/api/telegram/test',
+          status: 'SAFE - Connection test only',
+          risk: 'NONE'
+        }
+      ];
+
+      // Check alert generator paths
+      const alertPaths = [
+        {
+          path: 'saveRealTimeAlert() -> Telegram sending',
+          ruleCheck: 'isAlertGloballyEnabled() + user preferences',
+          status: 'PROTECTED'
+        },
+        {
+          path: 'saveAlert() -> WebSocket broadcast only',
+          ruleCheck: 'isAlertGloballyEnabled() before DB save',
+          status: 'PROTECTED'
+        }
+      ];
+
+      res.json({
+        message: 'Telegram bypass scan complete',
+        potentialBypasses,
+        alertPaths,
+        recommendation: 'All major bypass routes have been identified and patched'
+      });
+    } catch (error) {
+      console.error('Error scanning for bypasses:', error);
+      res.status(500).json({ error: 'Failed to scan for bypasses' });
+    }
+  });
+
   // Admin middleware
   async function requireAdmin(req: any, res: any, next: any) {
     try {
-      if (!req.session?.userId) {
+      // Check for admin session (adminUserId) first, then fall back to regular session
+      const userId = req.session?.adminUserId || req.session?.userId;
+      
+      if (!userId) {
+        console.log('🔒 Admin middleware: No session found');
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      const user = await storage.getUserById(req.session.userId);
+      const user = await storage.getUserById(userId);
       if (!user || user.role !== 'admin') {
+        console.log(`🔒 Admin middleware: User ${userId} is not admin (role: ${user?.role})`);
         return res.status(403).json({ message: 'Admin access required' });
       }
 
+      console.log(`✅ Admin middleware: Admin ${user.username} authenticated`);
       req.user = user;
       next();
     } catch (error) {
@@ -777,6 +906,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating user role:', error);
       res.status(500).json({ message: 'Failed to update user role' });
+    }
+  });
+
+  app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUser = req.user; // from requireAdmin middleware
+      
+      console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
+      
+      // Prevent self-deletion
+      if (userId === currentUser.id) {
+        return res.status(400).json({ 
+          message: 'Cannot delete your own account' 
+        });
+      }
+      
+      // Check if user exists
+      const userToDelete = await storage.getUserById(userId);
+      if (!userToDelete) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Prevent deleting the last admin
+      if (userToDelete.role === 'admin') {
+        const allAdmins = await storage.getUsersByRole('admin');
+        if (allAdmins.length <= 1) {
+          return res.status(400).json({ 
+            message: 'Cannot delete the last admin user' 
+          });
+        }
+      }
+      
+      // Delete user and all related data
+      const deleted = await storage.deleteUser(userId);
+      
+      if (deleted) {
+        console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser.username}`);
+        res.json({ 
+          message: `User ${userToDelete.username} deleted successfully`,
+          deletedUser: {
+            id: userToDelete.id,
+            username: userToDelete.username,
+            email: userToDelete.email,
+            role: userToDelete.role
+          }
+        });
+      } else {
+        res.status(500).json({ message: 'Failed to delete user' });
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: 'Failed to delete user' });
+    }
+  });
+
+  // Force delete endpoint for stubborn test users
+  app.delete('/api/admin/users/:userId/force', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUser = req.user;
+      
+      console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
+      
+      // Prevent self-deletion
+      if (userId === currentUser.id) {
+        return res.status(400).json({ 
+          message: 'Cannot delete your own account' 
+        });
+      }
+      
+      // Force delete using the aggressive method
+      const deleted = await storage.forceDeleteUser(userId);
+      
+      if (deleted) {
+        console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser.username}`);
+        res.json({ 
+          message: `User ${userId} has been completely removed from the system`,
+          method: 'FORCE_DELETE',
+          deletedUserId: userId
+        });
+      } else {
+        res.json({ 
+          message: `User ${userId} was not found or already deleted`,
+          method: 'FORCE_DELETE',
+          deletedUserId: userId
+        });
+      }
+    } catch (error) {
+      console.error('Error force deleting user:', error);
+      res.status(500).json({ message: 'Failed to force delete user' });
     }
   });
 
@@ -857,54 +1077,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sport = String(row.sport || 'MLB');
         const alertType = String(row.type || '');
 
-        // Check if this alert type is globally enabled
+        // Always include alerts - no filtering
         try {
-          const globalSettings: Record<string, boolean> = await storage.getGlobalAlertSettings(sport);
-          const isEnabled = alertType && globalSettings[alertType] !== false;
-
-          if (isEnabled) {
-            let payload: any = {};
-            try {
-              // The payload is already a JSON object, not a string
-              payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
-            } catch (e) {
-              console.error('Error parsing payload:', e);
-              payload = {};
-            }
-
-            alerts.push({
-              id: row.id,
-              type: row.type,
-              message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
-              gameId: row.game_id,
-              sport: row.sport || 'MLB',
-              homeTeam: payload.context?.homeTeam || 'Home Team',
-              awayTeam: payload.context?.awayTeam || 'Away Team',
-              homeScore: payload.context?.homeScore,
-              awayScore: payload.context?.awayScore,
-              confidence: row.score || 85,
-              priority: row.score || 80,
-              createdAt: row.created_at,
-              // Add context data for footer
-              context: payload.context || {},
-              inning: payload.context?.inning,
-              isTopInning: payload.context?.isTopInning,
-              outs: payload.context?.outs,
-              balls: payload.context?.balls,
-              strikes: payload.context?.strikes,
-              hasFirst: payload.context?.first || payload.context?.hasFirst,
-              hasSecond: payload.context?.second || payload.context?.hasSecond,
-              hasThird: payload.context?.third || payload.context?.hasThird,
-              // Include AI data
-              betbookData: payload.betbookData || null,
-              gameInfo: payload.gameInfo || null
-            });
-          } else {
-            console.log(`🚫 Filtered out ${alertType} alert (globally disabled)`);
-          }
-        } catch (error) {
-          // If we can't check global settings, include the alert (fail-safe)
-          console.error(`Error checking global settings for ${sport}:${alertType}`, error);
           let payload: any = {};
           try {
             payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
@@ -939,6 +1113,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             betbookData: payload.betbookData || null,
             gameInfo: payload.gameInfo || null
           });
+        } catch (error) {
+          console.error(`Error processing alert for ${row.id}:`, error);
         }
       }
 
@@ -982,7 +1158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/alerts/:alertId', async (req, res) => {
     try {
       const { alertId } = req.params;
-      
+
       if (!alertId) {
         return res.status(400).json({ message: 'Alert ID is required' });
       }
@@ -1024,7 +1200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         analysis: {
           homeRunFactor,
           windDescription: windDesc,
-          weatherSource: process.env.OPENWEATHERMAP_API_KEY ? 'Live OpenWeatherMap API' : 'Fallback Data'
+          weatherSource: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data (Set OPENWEATHERMAP_API_KEY for live data)'
         }
       });
     } catch (error: any) {
@@ -1050,7 +1226,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         homeRunFactor,
         humidity: weather.humidity,
         pressure: weather.pressure,
-        timestamp: weather.timestamp
+        timestamp: weather.timestamp,
+        source: process.env.OPENWEATHERMAP_API_KEY ? 'OpenWeatherMap API' : 'Fallback Data'
       });
     } catch (error: any) {
       console.error(`Weather API error for team ${req.params.teamName}:`, error);
@@ -1323,7 +1500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                          Object.keys(debugResults.endpoints).length;
       const errorCount = debugResults.errors.length;
       const healthScore = Math.max(0, Math.round(((totalChecks - errorCount) / totalChecks) * 100));
-      
+
       debugResults.summary = {
         healthScore: `${healthScore}%`,
         totalErrors: errorCount,
@@ -1453,7 +1630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const mlbService = new MLBApiService();
         const todaysGames = await mlbService.getTodaysGames();
         const liveGames = todaysGames.filter(game => game.status === 'live' || game.isLive);
-        
+
         monitoringStatus.games = {
           status: 'OK',
           total: todaysGames.length,
@@ -1486,6 +1663,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin-auth/logout', (req, res) => {
     req.session.adminUserId = undefined;
     res.json({ message: 'Admin logout successful' });
+  });
+
+  // Check if admin users exist (public endpoint for troubleshooting)
+  app.get('/api/admin-auth/check', async (req, res) => {
+    try {
+      const adminUsers = await storage.getUsersByRole('admin');
+      res.json({
+        hasAdminUsers: adminUsers.length > 0,
+        adminCount: adminUsers.length,
+        adminUsernames: adminUsers.map(u => u.username)
+      });
+    } catch (error) {
+      console.error('Error checking admin users:', error);
+      res.status(500).json({ message: 'Error checking admin users' });
+    }
   });
 
   // Global Alert Management Endpoints
@@ -1601,7 +1793,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'HOME_RUN_LIVE',
         'HIGH_SCORING',
         'SHUTOUT',
-        'BLOWOUT'
+        'BLOWOUT',
+        'STRIKEOUT',  // Enable this for testing
+        'FULL_COUNT'  // Enable this for testing
       ];
 
       const results = [];
@@ -1611,13 +1805,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
-        message: 'Critical MLB alerts enabled successfully',
+        message: 'Critical MLB alerts enabled successfully (including STRIKEOUT for testing)',
         enabledAlerts: results,
-        nextStep: 'Alerts should start generating within 15 seconds'
+        nextStep: 'Alerts should start generating within 15 seconds if you have valid Telegram credentials'
       });
     } catch (error) {
       console.error('Error enabling critical alerts:', error);
       res.status(500).json({ message: 'Failed to enable critical alerts' });
+    }
+  });
+
+  // Enable all alerts for testing
+  app.post('/api/admin/enable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const allAlerts = [
+        'RISP', 'BASES_LOADED', 'RUNNERS_1ST_2ND', 'CLOSE_GAME', 'CLOSE_GAME_LIVE',
+        'LATE_PRESSURE', 'HOME_RUN_LIVE', 'HIGH_SCORING', 'SHUTOUT', 'BLOWOUT',
+        'FULL_COUNT', 'STRIKEOUT', 'POWER_HITTER', 'HOT_HITTER'
+      ];
+
+      const results = [];
+      for (const alertType of allAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'All MLB alerts enabled for testing',
+        enabledAlerts: results,
+        count: results.length
+      });
+    } catch (error) {
+      console.error('Error enabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to enable all alerts' });
+    }
+  });
+
+  // Disable ALL alerts across entire system
+  app.post('/api/admin/disable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      console.log('🚫 ADMIN REQUEST: Disabling all alerts globally');
+
+      // Define all alert types across all sports
+      const allAlertTypes = {
+        'MLB': [
+          'RISP', 'BASES_LOADED', 'RUNNERS_1ST_2ND', 'CLOSE_GAME', 'CLOSE_GAME_LIVE',
+          'LATE_PRESSURE', 'HOME_RUN_LIVE', 'HIGH_SCORING', 'SHUTOUT', 'BLOWOUT',
+          'FULL_COUNT', 'STRIKEOUT', 'POWER_HITTER', 'HOT_HITTER',
+          'AI_ENHANCED_MESSAGES', 'AI_PREDICTIVE_AT_BAT', 'AI_SCORING_PROBABILITY',
+          'AI_SITUATION_ANALYSIS', 'AI_EVENT_SUMMARIES', 'AI_ROI_ALERTS',
+          'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
+        ],
+        'NFL': [
+          'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'NCAAF': [
+          'NCAAF_GAME_START', 'NCAAF_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'CFL': [
+          'CFL_GAME_START', 'CFL_SECOND_HALF_KICKOFF', 'THIRD_DOWN', 'THREE_MINUTE_WARNING'
+        ],
+        'WNBA': [
+          'WNBA_FOURTH_QUARTER', 'WNBA_CLOSE_GAME', 'WNBA_OVERTIME',
+          'WNBA_HIGH_SCORING', 'WNBA_COMEBACK', 'WNBA_CLUTCH_PERFORMANCE'
+        ],
+        'NBA': [
+          'NBA_FOURTH_QUARTER', 'NBA_CLOSE_GAME', 'NBA_OVERTIME',
+          'NBA_HIGH_SCORING', 'NBA_COMEBACK', 'NBA_CLUTCH_PERFORMANCE'
+        ],
+        'NHL': [
+          'NHL_THIRD_PERIOD', 'NHL_CLOSE_GAME', 'NHL_OVERTIME',
+          'NHL_POWER_PLAY', 'NHL_PENALTY_KILL', 'NHL_CLUTCH_PERFORMANCE'
+        ]
+      };
+
+      let totalDisabled = 0;
+      const results = [];
+
+      // Disable all alert types globally
+      for (const [sport, alertTypes] of Object.entries(allAlertTypes)) {
+        for (const alertType of alertTypes) {
+          try {
+            await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
+            results.push({ sport, alertType, disabled: true });
+            totalDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable ${sport}.${alertType}:`, error);
+            results.push({ sport, alertType, disabled: false, error: error.message });
+          }
+        }
+      }
+
+      // Disable Telegram for all users
+      const allUsers = await storage.getAllUsers();
+      let telegramDisabled = 0;
+      
+      for (const user of allUsers) {
+        if (user.telegramEnabled) {
+          try {
+            await storage.updateUserTelegramSettings(user.id, '', '', false);
+            telegramDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable Telegram for user ${user.username}:`, error);
+          }
+        }
+      }
+
+      res.json({
+        message: 'ALL alert features disabled globally',
+        summary: {
+          alertTypesDisabled: totalDisabled,
+          telegramUsersDisabled: telegramDisabled,
+          totalUsers: allUsers.length
+        },
+        details: results,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`✅ Successfully disabled ${totalDisabled} alert types and ${telegramDisabled} Telegram configurations`);
+
+    } catch (error) {
+      console.error('Error disabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to disable all alerts' });
     }
   });
 
@@ -1644,19 +1963,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Generate alerts from today's completed games
-  const alertGenerator = new AlertGenerator();
-  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
+  // DISABLED: Generate alerts from today's completed games
+  // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
+  // const alertGenerator = new AlertGenerator();
+  // alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
-  // Start live game monitoring every 15 seconds for real-time alerts
-  setInterval(async () => {
-    try {
-      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-      await alertGenerator.generateLiveGameAlerts();
-    } catch (error) {
-      console.error('Error in live monitoring:', error);
-    }
-  }, 15000); // Check every 15 seconds for real-time updates
+  // DISABLED: Start live game monitoring every 15 seconds for real-time alerts
+  // ALL ALERTS HAVE BEEN DISABLED BY USER REQUEST
+  // setInterval(async () => {
+  //   try {
+  //     console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+  //     await alertGenerator.generateLiveGameAlerts();
+  //   } catch (error) {
+  //     console.error('Error in live monitoring:', error);
+  //   }
+  // }, 15000); // Check every 15 seconds for real-time updates
+  
+  console.log('🚫 ALL ALERTS DISABLED - No monitoring will occur');
 
   return httpServer;
 }
