@@ -55,6 +55,19 @@ interface AlertStats {
 export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF'>('all');
 
+  // Handle swipe actions for SwipeableCard
+  const handleSwipe = (alertId: string, direction: 'left' | 'right') => {
+    console.log(`Alert ${alertId} swiped ${direction}`);
+    // Add your swipe logic here (e.g., mark as read, delete, etc.)
+    if (direction === 'left') {
+      // Handle left swipe (e.g., dismiss)
+      console.log('Dismissing alert');
+    } else if (direction === 'right') {
+      // Handle right swipe (e.g., mark as favorite)
+      console.log('Marking alert as favorite');
+    }
+  };
+
   // Fetch alerts using React Query
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
     queryKey: ['/api/alerts'],
@@ -220,8 +233,8 @@ export default function AlertsPage() {
               ) : (
                 // Use Complex Card for detailed game state alerts
                 <SwipeableCard 
-                  alertId={alert.id}
-                  children={null}
+                  onSwipe={handleSwipe}
+                  isActive={true}
                   alertData={{
                     id: alert.id,
                     type: alert.type,
