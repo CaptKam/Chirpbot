@@ -205,7 +205,6 @@ export class MLBApiService {
       error: 'Failed to fetch live data'
     };
   }
-  }
 
   private mapGameStatus(detailedState: string): string {
     const lowerState = detailedState.toLowerCase();
