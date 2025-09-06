@@ -88,7 +88,7 @@ async function loadDashboardData() {
         const usersResponse = await fetch('/api/admin/users', {
             credentials: 'include'
         });
-        
+
         if (usersResponse.ok) {
             const users = await usersResponse.json();
             displayUsers(users);
@@ -130,9 +130,9 @@ async function loadRecentActivity() {
     try {
         const response = await fetch('/api/alerts?limit=5', { credentials: 'include' });
         if (!response.ok) throw new Error('Failed to fetch alerts');
-        
+
         const alerts = await response.json();
-        
+
         // Build activity HTML directly
         const activities = alerts.map(alert => `
             <div class="activity-item alert">
@@ -728,204 +728,294 @@ async function loadSportAlertSettings() {
 
 function renderAlertConfiguration() {
     const alertConfigContainer = document.getElementById('alertConfigContainer');
+    const sportConfig = ALERT_TYPE_CONFIG[currentSport];
     
-    // Simple message - alert configuration toggles removed
-    alertConfigContainer.innerHTML = `
-        <div style="text-align: center; color: #94a3b8; padding: 40px;">
-            <i class="fas fa-cogs" style="font-size: 32px; margin-bottom: 15px;"></i>
-            <h3>${currentSport} Alert Configuration</h3>
-            <p>Alert configuration settings will be displayed here.<br>Individual alert toggles have been removed pending new system implementation.</p>
+    if (!sportConfig) {
+        alertConfigContainer.innerHTML = `<p>No alert configuration available for ${currentSport}.</p>`;
+        return;
+    }
+
+    let html = `
+        <div class="alert-config-header">
+            <h3 class="text-lg font-semibold mb-4">${currentSport} Alert Configuration</h3>
+            <div class="mb-4 flex items-center space-x-4">
+                <button onclick="enableAllAlerts()" class="btn btn-primary-outline">Enable All</button>
+                <button onclick="disableAllAlerts()" class="btn btn-danger-outline">Disable All</button>
+                <button onclick="refreshSettings()" class="btn btn-secondary-outline">Refresh</button>
+                <button onclick="applyToAllUsers()" class="btn btn-secondary">Apply to All Users</button>
+            </div>
         </div>
+        <div class="space-y-6">
     `;
+
+    // Render categories and alerts
+    Object.entries(sportConfig).forEach(([category, alerts]) => {
+        const categoryId = `category-${category.replace(/\s+/g, '-').toLowerCase()}`;
+        const isCategoryFullyEnabled = alerts.every(alert => globalAlertSettings[alert.key] !== false);
+
+        html += `
+            <div class="alert-category">
+                <div class="category-header flex items-center justify-between p-3 bg-gray-100 rounded-t">
+                    <div class="flex items-center space-x-3">
+                        ${getCategoryIcon(category)}
+                        <span class="font-medium text-gray-700">${category}</span>
+                    </div>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="${categoryId}" class="form-checkbox h-5 w-5 text-blue-600" 
+                               onchange="toggleCategory('${category}')" ${isCategoryFullyEnabled ? 'checked' : ''}>
+                    </label>
+                </div>
+                <div class="category-alerts bg-white p-4 rounded-b border border-t-0 border-gray-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        `;
+
+        alerts.forEach(alert => {
+            const alertId = `alert-${alert.key}`;
+            const isEnabled = globalAlertSettings[alert.key] !== false;
+            html += `
+                <div class="alert-item flex items-center justify-between p-3 border rounded ${isEnabled ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50'}">
+                    <div class="flex flex-col">
+                        <span class="font-medium text-sm text-gray-800">${alert.label}</span>
+                        <p class="text-xs text-gray-500">${alert.description}</p>
+                    </div>
+                    <label class="inline-flex items-center cursor-pointer ml-4">
+                        <input type="checkbox" id="${alertId}" class="form-checkbox h-5 w-5 text-blue-600" 
+                               onchange="toggleAlert('${alert.key}')" ${isEnabled ? 'checked' : ''}>
+                    </label>
+                </div>
+            `;
+        });
+
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `</div>`; // Close space-y-6
+    alertConfigContainer.innerHTML = html;
 }
 
+// Utility functions for alert configuration
 function getCategoryIcon(category) {
     switch (category) {
-        case "Game Situations": return "fas fa-gamepad text-emerald-400";
-        case "Scoring Events": return "fas fa-trophy text-yellow-400";
-        case "At-Bat Situations": return "fas fa-clock text-blue-400";
-        case "Game Flow": return "fas fa-random text-teal-400";
-        case "Critical Moments": return "fas fa-exclamation-triangle text-red-400";
-        default: return "fas fa-bell text-slate-400";
+        case 'Game Situations':
+            return '<i class="fas fa-crosshairs" style="color: #10b981;"></i>';
+        case 'Scoring Events':
+            return '<i class="fas fa-trophy" style="color: #fbbf24;"></i>';
+        case 'At-Bat Situations':
+            return '<i class="fas fa-clock" style="color: #3b82f6;"></i>';
+        default:
+            return '<i class="fas fa-bell" style="color: #94a3b8;"></i>';
     }
 }
 
-function isCategoryEnabled(category) {
-    const sportConfig = ALERT_TYPE_CONFIG[currentSport];
-    if (!sportConfig || !sportConfig[category]) return false;
-
-    return sportConfig[category].every(alert => 
-        isAlertGloballyEnabled(alert.key)
-    );
-}
-
-function isAlertGloballyEnabled(alertKey) {
-    return globalAlertSettings[alertKey] !== false;
-}
-
-function getUserCountForAlert(alertKey) {
-    // Calculate how many users have this alert enabled
-    // This would be populated from actual user data
-    return Math.floor(Math.random() * currentUsers.length || 50);
-}
-
-async function loadMasterAlertStatus() {
-    try {
-        const response = await fetch('/api/admin/master-alerts', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Accept': 'application/json' }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            const toggle = document.getElementById('masterAlertToggle');
-            if (toggle) {
-                toggle.checked = data.enabled;
-            }
-        } else {
-            console.warn('Failed to load master alerts status, using default (enabled)');
-            const toggle = document.getElementById('masterAlertToggle');
-            if (toggle) {
-                toggle.checked = true; // Default to enabled if can't load
-            }
-        }
-    } catch (error) {
-        console.error('Error loading master alerts status:', error);
-        // Default to enabled on error
-        const toggle = document.getElementById('masterAlertToggle');
-        if (toggle) {
-            toggle.checked = true;
-        }
-    }
-}
-
-async function toggleMasterAlerts() {
-    const toggle = document.getElementById('masterAlertToggle');
-    const isEnabled = toggle.checked;
+async function toggleAlert(alertKey) {
+    const checkbox = document.getElementById(`alert-${alertKey}`);
+    const enabled = checkbox.checked;
 
     try {
-        const response = await fetch('/api/admin/master-alerts', {
+        const response = await fetch(`/api/admin/global-alert-setting`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ enabled: isEnabled })
-        });
-
-        if (response.ok) {
-            showNotification(`Master alerts ${isEnabled ? 'enabled' : 'disabled'}`, 'success');
-        } else {
-            toggle.checked = !isEnabled; // Revert on error
-            showNotification('Failed to update master alerts', 'error');
-        }
-    } catch (error) {
-        console.error('Error toggling master alerts:', error);
-        toggle.checked = !isEnabled;
-        showNotification('Failed to update master alerts', 'error');
-    }
-}
-
-async function toggleCategory(category) {
-    const sportConfig = ALERT_TYPE_CONFIG[currentSport];
-    if (!sportConfig || !sportConfig[category]) return;
-
-    const shouldEnable = !isCategoryEnabled(category);
-    const alertKeys = sportConfig[category].map(alert => alert.key);
-
-    try {
-        const response = await fetch('/api/admin/global-alert-category', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ 
-                sport: currentSport,
-                category: category,
-                alertKeys: alertKeys,
-                enabled: shouldEnable 
-            })
-        });
-
-        if (response.ok) {
-            // Update local state
-            alertKeys.forEach(key => {
-                globalAlertSettings[key] = shouldEnable;
-            });
-
-            // Automatically apply these changes to all users
-            await applyGlobalSettingsToAllUsers();
-
-            // Re-render configuration
-            renderAlertConfiguration();
-            showNotification(`${category} alerts ${shouldEnable ? 'enabled' : 'disabled'} globally`, 'success');
-        } else {
-            showNotification('Failed to update category settings', 'error');
-        }
-    } catch (error) {
-        console.error('Error toggling category:', error);
-        showNotification('Failed to update category settings', 'error');
-    }
-}
-
-async function toggleGlobalAlert(alertKey) {
-    const toggle = document.getElementById(`alert-${alertKey}`);
-    const isEnabled = toggle.checked;
-
-    try {
-        const response = await fetch('/api/admin/global-alert-setting', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ 
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
                 sport: currentSport,
                 alertType: alertKey,
-                enabled: isEnabled 
+                enabled: enabled
             })
         });
 
-        if (response.ok) {
-            globalAlertSettings[alertKey] = isEnabled;
-
-            // Automatically apply this change to all users
-            await applyGlobalSettingsToAllUsers();
-
-            showNotification(`Alert ${isEnabled ? 'enabled' : 'disabled'} globally`, 'success');
-        } else {
-            toggle.checked = !isEnabled;
-            showNotification('Failed to update alert setting', 'error');
+        if (!response.ok) {
+            throw new Error('Failed to update alert setting');
         }
+
+        // Update UI feedback
+        showNotification(`${alertKey} ${enabled ? 'enabled' : 'disabled'}`, enabled ? 'success' : 'info');
+        // Update category checkbox if needed
+        updateCategoryCheckbox(alertKey, enabled);
+
     } catch (error) {
         console.error('Error toggling alert:', error);
-        toggle.checked = !isEnabled;
+        // Revert checkbox state
+        checkbox.checked = !enabled;
         showNotification('Failed to update alert setting', 'error');
     }
 }
 
-// Auto-apply function - simplified to always apply changes
-async function applyGlobalSettingsToAllUsers() {
+async function toggleCategory(category) {
+    const categoryId = `category-${category.replace(/\s+/g, '-').toLowerCase()}`;
+    const checkbox = document.getElementById(categoryId);
+    const enabled = checkbox.checked;
+
+    // Get all alert keys in this category
+    const alertKeys = ALERT_TYPE_CONFIG[currentSport][category].map(alert => alert.key);
+
     try {
-        const response = await fetch('/api/admin/apply-global-settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ 
+        const response = await fetch(`/api/admin/global-alert-category`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
                 sport: currentSport,
-                settings: globalAlertSettings 
+                category: category,
+                alertKeys: alertKeys,
+                enabled: enabled
             })
         });
 
-        if (response.ok) {
-            console.log('Global settings automatically applied to all users');
-        } else {
-            console.error('Failed to apply settings to all users');
+        if (!response.ok) {
+            throw new Error('Failed to update category');
         }
+
+        // Update individual checkboxes
+        alertKeys.forEach(alertKey => {
+            const alertCheckbox = document.getElementById(`alert-${alertKey}`);
+            if (alertCheckbox) {
+                alertCheckbox.checked = enabled;
+                // Update globalAlertSettings locally for immediate UI feedback
+                globalAlertSettings[alertKey] = enabled; 
+            }
+        });
+
+        showNotification(`${category} ${enabled ? 'enabled' : 'disabled'}`, enabled ? 'success' : 'info');
+
     } catch (error) {
-        console.error('Error applying settings:', error);
+        console.error('Error toggling category:', error);
+        checkbox.checked = !enabled;
+        showNotification('Failed to update category', 'error');
     }
 }
 
-async function refreshAlertSettings() {
-    await loadSportAlertSettings();
-    showNotification('Alert settings refreshed', 'success');
+async function enableAllAlerts() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="alert-"]');
+    const updatePromises = [];
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            checkbox.checked = true;
+            updatePromises.push(toggleAlert(checkbox.id.replace('alert-', '')));
+        }
+    });
+    await Promise.all(updatePromises);
+    showNotification('All alerts enabled', 'success');
+}
+
+async function disableAllAlerts() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="alert-"]');
+    const updatePromises = [];
+    checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            checkbox.checked = false;
+            updatePromises.push(toggleAlert(checkbox.id.replace('alert-', '')));
+        }
+    });
+    await Promise.all(updatePromises);
+    showNotification('All alerts disabled', 'info');
+}
+
+async function loadCurrentSettings() {
+    try {
+        const response = await fetch(`/api/admin/global-alert-settings/${currentSport}`);
+        if (!response.ok) {
+            throw new Error('Failed to load settings');
+        }
+
+        const settings = await response.json();
+        globalAlertSettings = settings; // Update global state
+
+        // Update checkboxes based on current settings
+        Object.entries(settings).forEach(([alertKey, enabled]) => {
+            const checkbox = document.getElementById(`alert-${alertKey}`);
+            if (checkbox) {
+                checkbox.checked = enabled;
+            }
+        });
+
+        // Update category checkboxes
+        Object.keys(ALERT_TYPE_CONFIG[currentSport] || {}).forEach(category => {
+            updateCategoryCheckboxStatus(category);
+        });
+
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showNotification('Failed to load current settings', 'error');
+    }
+}
+
+// Helper to update a single category checkbox based on its alerts
+function updateCategoryCheckboxStatus(category) {
+    const categoryId = `category-${category.replace(/\s+/g, '-').toLowerCase()}`;
+    const categoryCheckbox = document.getElementById(categoryId);
+    if (!categoryCheckbox) return;
+
+    const alerts = ALERT_TYPE_CONFIG[currentSport][category];
+    if (!alerts) return;
+    
+    // Check if all alerts in the category are enabled
+    const allEnabled = alerts.every(alert => globalAlertSettings[alert.key] !== false);
+    categoryCheckbox.checked = allEnabled;
+}
+
+// Helper to update a category checkbox when an individual alert changes
+function updateCategoryCheckbox(alertKey, alertIsEnabled) {
+    // Find which category this alert belongs to
+    for (const category in ALERT_TYPE_CONFIG[currentSport]) {
+        const alertsInCategory = ALERT_TYPE_CONFIG[currentSport][category];
+        if (alertsInCategory.some(alert => alert.key === alertKey)) {
+            updateCategoryCheckboxStatus(category);
+            break; // Found the category, no need to check further
+        }
+    }
+}
+
+async function applyToAllUsers() {
+    if (!confirm('This will apply current settings to all users. Continue?')) {
+        return;
+    }
+
+    const currentSettings = getCurrentSettings();
+
+    try {
+        const response = await fetch(`/api/admin/apply-global-settings`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sport: currentSport,
+                settings: currentSettings
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to apply settings');
+        }
+
+        const result = await response.json();
+        showNotification(`Settings applied to ${result.usersUpdated} users`, 'success');
+
+    } catch (error) {
+        console.error('Error applying settings:', error);
+        showNotification('Failed to apply settings to users', 'error');
+    }
+}
+
+function getCurrentSettings() {
+    const settings = {};
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="alert-"]');
+    checkboxes.forEach(checkbox => {
+        const alertKey = checkbox.id.replace('alert-', '');
+        settings[alertKey] = checkbox.checked;
+    });
+    return settings;
+}
+
+async function refreshSettings() {
+    await loadCurrentSettings();
+    showNotification('Settings refreshed', 'info');
 }
 
 function showNotification(message, type = 'info') {
@@ -935,44 +1025,23 @@ function showNotification(message, type = 'info') {
         position: fixed;
         top: 20px;
         right: 20px;
-        padding: 15px 20px;
+        padding: 12px 20px;
         border-radius: 8px;
         color: white;
-        font-weight: 500;
+        font-weight: 600;
         z-index: 1000;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
+        animation: slideIn 0.3s ease-out;
+        ${type === 'success' ? 'background: #10b981;' : ''}
+        ${type === 'error' ? 'background: #ef4444;' : ''}
+        ${type === 'info' ? 'background: #3b82f6;' : ''}
     `;
-
-    // Set background color based on type
-    switch (type) {
-        case 'success':
-            notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-            break;
-        case 'error':
-            notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
-            break;
-        default:
-            notification.style.background = 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
-    }
-
     notification.textContent = message;
+
     document.body.appendChild(notification);
 
-    // Animate in
+    // Remove after 3 seconds
     setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-    }, 100);
-
-    // Remove after delay
-    setTimeout(() => {
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
+        notification.remove();
     }, 3000);
 }
 
@@ -991,30 +1060,16 @@ if (sportSelector) {
 }
 
 async function enableAllAlerts() {
-    try {
-        showNotification('Enabling all alerts...', 'info');
-
-        const response = await fetch('/api/admin/enable-all-alerts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            showNotification(`Enabled ${result.count} alert types`, 'success');
-            // Reload settings to reflect changes
-            setTimeout(() => {
-                loadGlobalAlertSettings();
-            }, 1000);
-        } else {
-            showNotification(result.message || 'Failed to enable alerts', 'error');
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="alert-"]');
+    const updatePromises = [];
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            checkbox.checked = true;
+            updatePromises.push(toggleAlert(checkbox.id.replace('alert-', '')));
         }
-    } catch (error) {
-        console.error('Error enabling all alerts:', error);
-        showNotification('Failed to enable all alerts', 'error');
-    }
+    });
+    await Promise.all(updatePromises);
+    showNotification('All alerts enabled', 'success');
 }
 
 async function disableAllAlerts() {
@@ -1027,35 +1082,18 @@ async function disableAllAlerts() {
 
     if (!doubleConfirmed) return;
 
-    try {
-        showNotification('🚫 Disabling ALL alerts globally...', 'warning');
-
-        const response = await fetch('/api/admin/disable-all-alerts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            showNotification(
-                `🚫 ALL ALERTS DISABLED: ${result.summary.alertTypesDisabled} alert types disabled, ${result.summary.telegramUsersDisabled} Telegram configs disabled`, 
-                'success'
-            );
-
-            // Show summary
-            console.log('Disable All Alerts Result:', result);
-
-            // Reload settings to reflect changes
-            setTimeout(() => {
-                loadGlobalAlertSettings();
-            }, 1000);
-        } else {
-            showNotification(result.message || 'Failed to disable all alerts', 'error');
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="alert-"]');
+    const updatePromises = [];
+    checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            checkbox.checked = false;
+            updatePromises.push(toggleAlert(checkbox.id.replace('alert-', '')));
         }
-    } catch (error) {
-        console.error('Error disabling all alerts:', error);
-        showNotification('Failed to disable all alerts', 'error');
-    }
+    });
+    await Promise.all(updatePromises);
+    showNotification('🚫 ALL ALERTS DISABLED GLOBALLY', 'success');
+}
+
+async function loadGlobalAlertSettings() { // Renamed from loadSportAlertSettings to avoid confusion if called elsewhere
+    await loadSportAlertSettings();
 }
