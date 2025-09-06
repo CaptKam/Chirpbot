@@ -75,8 +75,8 @@ interface SimpleAlert {
   type: string;
   message: string;
   sport: string;
-  homeTeam?: string;
-  awayTeam?: string;
+  homeTeam?: string | { id?: string; name?: string; score?: number; abbreviation?: string };
+  awayTeam?: string | { id?: string; name?: string; score?: number; abbreviation?: string };
   priority: number;
   confidence?: number;
   createdAt: string;
@@ -388,11 +388,11 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           <GameCardTemplate
             gameId={alert.id}
             homeTeam={{
-              name: alert.homeTeam || 'Home',
+              name: typeof alert.homeTeam === 'object' ? alert.homeTeam?.name || 'Home' : alert.homeTeam || 'Home',
               score: alert.context?.homeScore
             }}
             awayTeam={{
-              name: alert.awayTeam || 'Away', 
+              name: typeof alert.awayTeam === 'object' ? alert.awayTeam?.name || 'Away' : alert.awayTeam || 'Away', 
               score: alert.context?.awayScore
             }}
             sport={alert.sport}
@@ -483,7 +483,9 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
             {/* Team info */}
             <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>{alert.awayTeam || 'Away'} @ {alert.homeTeam || 'Home'}</span>
+              <span>
+                {typeof alert.awayTeam === 'object' ? alert.awayTeam?.name || 'Away' : alert.awayTeam || 'Away'} @ {typeof alert.homeTeam === 'object' ? alert.homeTeam?.name || 'Home' : alert.homeTeam || 'Home'}
+              </span>
               <span>{formatTime(alert.createdAt)}</span>
             </div>
           </div>
