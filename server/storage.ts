@@ -241,9 +241,30 @@ export const storage = {
       .where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitMonitoredGame(gameData: InsertUserMonitoredTeam) {
-    const result = await db.insert(userMonitoredTeams).values(gameData).returning();
-    return result[0];
+  async addUserMonitMonitoredGame(gameData: InsertUserMonitoredTeam): Promise<void> {
+    try {
+      console.log(`💾 Inserting monitored game into database:`, gameData);
+
+      // Check if already exists to prevent duplicates
+      const existing = await db.select().from(userMonitoredTeams)
+        .where(sql`user_id = ${gameData.userId} AND game_id = ${gameData.gameId}`);
+
+      if (existing.length > 0) {
+        console.log(`⚠️ Game already monitored by user: ${gameData.gameId}`);
+        return;
+      }
+
+      const result = await db.insert(userMonitoredTeams).values(gameData);
+      console.log(`✅ Successfully inserted monitored game:`, {
+        userId: gameData.userId,
+        gameId: gameData.gameId,
+        teams: `${gameData.awayTeamName} @ ${gameData.homeTeamName}`
+      });
+    } catch (error) {
+      console.error(`❌ Database error inserting monitored game:`, error);
+      console.error(`❌ Failed gameData:`, gameData);
+      throw error;
+    }
   },
 
   async removeUserMonitoredGame(userId: string, gameId: string) {
@@ -293,7 +314,7 @@ export const storage = {
     return await db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
+  async addUserMonitMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
     const result = await db.insert(userMonitoredTeams)
       .values({ userId, gameId, sport, homeTeamName, awayTeamName })
       .returning();
@@ -368,89 +389,87 @@ export const storage = {
       // Convert to object with defaults for missing keys
       const result: Record<string, boolean> = {};
 
-      // Define sport-specific default settings
-      const sportDefaults: Record<string, Record<string, boolean>> = {
-        'mlb': {
-          'MLB_GAME_START': true,
-          'MLB_SEVENTH_INNING_STRETCH': true,
-          'RISP': true,
-          'BASES_LOADED': true,
-          'RUNNERS_1ST_2ND': true,
-          'CLOSE_GAME': true,
-          'CLOSE_GAME_LIVE': true,
-          'LATE_PRESSURE': true,
-          'HOME_RUN_LIVE': true,
-          'HIGH_SCORING': true,
-          'SHUTOUT': true,
-          'BLOWOUT': true,
-          'FULL_COUNT': true,
-          'STRIKEOUT': true,
-          'POWER_HITTER': true,
-          'HOT_HITTER': true,
-          // AI Enhancement alerts (available for MLB)
-          'AI_ENHANCED_MESSAGES': true,
-          'AI_PREDICTIVE_AT_BAT': true,
-          'AI_SCORING_PROBABILITY': true,
-          'AI_SITUATION_ANALYSIS': true,
-          'AI_EVENT_SUMMARIES': true,
-          'AI_ROI_ALERTS': true,
-          // RE24 System alerts (MLB specific)
-          'RE24_ENABLED': true,
-          'RE24_CONTEXT_FACTORS': true,
-          'RE24_MINIMUM_THRESHOLDS': true,
-          'RE24_DYNAMIC_PRIORITY': true
-        },
-        'nfl': {
-          'NFL_GAME_START': true,
-          'NFL_SECOND_HALF_KICKOFF': true,
-          'NFL_TWO_MINUTE_WARNING': true,
-          'RED_ZONE': true,
-          'FOURTH_DOWN': true,
-          'CLUTCH_TIME': true,
-          'OVERTIME': true
-        },
-        'ncaaf': {
-          'NCAAF_GAME_START': true,
-          'NCAAF_SECOND_HALF_KICKOFF': true,
-          'NCAAF_TWO_MINUTE_WARNING': true
-        },
-        'cfl': {
-          'CFL_GAME_START': true,
-          'CFL_SECOND_HALF_KICKOFF': true,
-          'CFL_TWO_MINUTE_WARNING': true,
-          'THIRD_DOWN': true,
-          'THREE_MINUTE_WARNING': true
-        },
-        'wnba': {
-          'WNBA_GAME_START': true,
-          'WNBA_TWO_MINUTE_WARNING': true,
-          'FINAL_MINUTES': true,
-          'HIGH_SCORING_QUARTER': true,
-          'LOW_SCORING_QUARTER': true,
-          'FOURTH_QUARTER': true
-        },
-        'nba': {
-          'NBA_FOURTH_QUARTER': true,
-          'NBA_CLOSE_GAME': true,
-          'NBA_OVERTIME': true,
-          'NBA_HIGH_SCORING': true,
-          'NBA_COMEBACK': true,
-          'NBA_CLUTCH_PERFORMANCE': true
-        },
-        'nhl': {
-          'NHL_THIRD_PERIOD': true,
-          'NHL_CLOSE_GAME': true,
-          'NHL_OVERTIME': true,
-          'NHL_POWER_PLAY': true,
-          'NHL_PENALTY_KILL': true,
-          'NHL_CLUTCH_PERFORMANCE': true,
-          'POWER_PLAY': true,
-          'EMPTY_NET': true
-        }
-      };
+      // Define default settings for all known alert types
+      const defaultSettings: Record<string, boolean> = {
+        // MLB alerts
+        'MLB_GAME_START': true,
+        'MLB_SEVENTH_INNING_STRETCH': true,
+        'RISP': true,
+        'BASES_LOADED': true,
+        'RUNNERS_1ST_2ND': true,
+        'CLOSE_GAME': true,
+        'CLOSE_GAME_LIVE': true,
+        'LATE_PRESSURE': true,
+        'HOME_RUN_LIVE': true,
+        'HIGH_SCORING': true,
+        'SHUTOUT': true,
+        'BLOWOUT': true,
+        'FULL_COUNT': true,
+        'STRIKEOUT': true,
+        'POWER_HITTER': true,
+        'HOT_HITTER': true,
 
-      // Get sport-specific defaults
-      const defaultSettings = sportDefaults[sport.toLowerCase()] || {};
+        // AI Enhancement alerts
+        'AI_ENHANCED_MESSAGES': true,
+        'AI_PREDICTIVE_AT_BAT': true,
+        'AI_SCORING_PROBABILITY': true,
+        'AI_SITUATION_ANALYSIS': true,
+        'AI_EVENT_SUMMARIES': true,
+        'AI_ROI_ALERTS': true,
+
+        // RE24 System alerts
+        'RE24_ENABLED': true,
+        'RE24_CONTEXT_FACTORS': true,
+        'RE24_MINIMUM_THRESHOLDS': true,
+        'RE24_DYNAMIC_PRIORITY': true,
+
+        // NFL alerts
+        'NFL_GAME_START': true,
+        'NFL_SECOND_HALF_KICKOFF': true,
+        'NFL_TWO_MINUTE_WARNING': true,
+        'RED_ZONE': true,
+        'FOURTH_DOWN': true,
+        'CLUTCH_TIME': true,
+        'OVERTIME': true,
+
+        // NCAAF alerts
+        'NCAAF_GAME_START': true,
+        'NCAAF_SECOND_HALF_KICKOFF': true,
+        'NCAAF_TWO_MINUTE_WARNING': true,
+
+        // CFL alerts
+        'CFL_GAME_START': true,
+        'CFL_SECOND_HALF_KICKOFF': true,
+        'CFL_TWO_MINUTE_WARNING': true,
+        'THIRD_DOWN': true,
+        'THREE_MINUTE_WARNING': true,
+
+        // WNBA alerts
+        'WNBA_GAME_START': true,
+        'WNBA_TWO_MINUTE_WARNING': true,
+        'FINAL_MINUTES': true,
+        'HIGH_SCORING_QUARTER': true,
+        'LOW_SCORING_QUARTER': true,
+        'FOURTH_QUARTER': true,
+
+        // NBA alerts
+        'NBA_FOURTH_QUARTER': true,
+        'NBA_CLOSE_GAME': true,
+        'NBA_OVERTIME': true,
+        'NBA_HIGH_SCORING': true,
+        'NBA_COMEBACK': true,
+        'NBA_CLUTCH_PERFORMANCE': true,
+
+        // NHL alerts
+        'NHL_THIRD_PERIOD': true,
+        'NHL_CLOSE_GAME': true,
+        'NHL_OVERTIME': true,
+        'NHL_POWER_PLAY': true,
+        'NHL_PENALTY_KILL': true,
+        'NHL_CLUTCH_PERFORMANCE': true,
+        'POWER_PLAY': true,
+        'EMPTY_NET': true
+      };
 
       // Apply fetched settings, overriding defaults
       settings.forEach(setting => {

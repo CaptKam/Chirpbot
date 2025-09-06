@@ -321,7 +321,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport } = req.query;
-      const games = await storage.getUserMonitoredTeams(userId);
+      
+      // Verify user exists and is authenticated
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      console.log(`📊 Fetching monitored games for user: ${user.username} (${userId})`);
+      const games = await storage.getUserMonitoredGames(userId);
+      console.log(`📊 Found ${games.length} monitored games for user ${user.username}`);
+      
       res.json(games);
     } catch (error) {
       console.error('Error fetching monitored games:', error);
@@ -334,6 +344,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { gameId, sport, homeTeamName, awayTeamName } = req.body;
 
+      console.log(`📊 ADDING MONITORED GAME:`, {
+        userId,
+        gameId,
+        sport: sport || 'MLB',
+        homeTeamName: homeTeamName || '',
+        awayTeamName: awayTeamName || ''
+      });
+
+      // Verify user exists
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        console.error(`❌ User not found: ${userId}`);
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Validate required fields
+      if (!gameId) {
+        console.error(`❌ Missing gameId for user ${user.username}`);
+        return res.status(400).json({ message: 'gameId is required' });
+      }
+
       const gameData = {
         userId,
         gameId,
@@ -343,8 +374,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date()
       };
 
-      await storage.addUserMonitoredTeam(userId, gameId, sport || 'MLB', homeTeamName || '', awayTeamName || '');
-      res.json({ message: 'Game monitoring enabled' });
+      await storage.addUserMonitoredGame(gameData);
+      console.log(`✅ Successfully added monitored game for ${user.username}: ${homeTeamName} vs ${awayTeamName}`);
+      
+      res.json({ 
+        message: 'Game monitoring enabled',
+        gameData: {
+          gameId,
+          sport: gameData.sport,
+          teams: `${awayTeamName} @ ${homeTeamName}`
+        }
+      });
     } catch (error) {
       console.error('Error adding monitored game:', error);
       res.status(500).json({ message: 'Failed to enable game monitoring' });
@@ -354,7 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
     try {
       const { userId, gameId } = req.params;
-      await storage.removeUserMonitoredTeam(userId, gameId);
+      await storage.removeUserMonitoredGame(userId, gameId);
       res.json({ message: 'Game monitoring disabled' });
     } catch (error) {
       console.error('Error removing monitored game:', error);
@@ -828,6 +868,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error sending test alerts:', error);
       res.status(500).json({ error: 'Failed to send test alerts' });
+    }
+  });
+
+  // Debug monitored games database operations
+  app.get('/api/debug/monitored-games', async (req, res) => {
+    try {
+      // Get all monitored games from database
+      const allMonitoredGames = await storage.getAllMonitoredGames();
+      
+      // Get user count
+      const allUsers = await storage.getAllUsers();
+      
+      // Get detailed breakdown
+      const userBreakdown = {};
+      for (const game of allMonitoredGames) {
+        const user = allUsers.find(u => u.id === game.userId);
+        const username = user?.username || `Unknown-${game.userId}`;
+        
+        if (!userBreakdown[username]) {
+          userBreakdown[username] = [];
+        }
+        userBreakdown[username].push({
+          gameId: game.gameId,
+          sport: game.sport,
+          teams: `${game.awayTeamName} @ ${game.homeTeamName}`,
+          createdAt: game.createdAt
+        });
+      }
+      
+      res.json({
+        timestamp: new Date().toISOString(),
+        summary: {
+          totalUsers: allUsers.length,
+          totalMonitoredGames: allMonitoredGames.length,
+          uniqueUsersWithGames: Object.keys(userBreakdown).length
+        },
+        userBreakdown,
+        rawData: allMonitoredGames.slice(0, 10) // First 10 for inspection
+      });
+    } catch (error) {
+      console.error('Error debugging monitored games:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 

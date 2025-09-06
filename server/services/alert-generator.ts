@@ -274,10 +274,6 @@ export class AlertGenerator {
     console.log('⚡ Real-time monitoring: Checking for live game alerts...');
     
     try {
-      // Clear settings cache to ensure fresh sport-specific configurations
-      this.settingsCache.clearAll();
-      console.log('🔄 Cleared settings cache to load sport-specific alert types');
-      
       // Check if any alerts are globally enabled before proceeding
       const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts();
       if (!hasAnyEnabledAlerts) {
@@ -290,10 +286,7 @@ export class AlertGenerator {
       let totalAlerts = 0;
 
       for (const sport of sports) {
-        console.log(`🔍 DEBUG: Checking sport ${sport}...`);
         const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
-        console.log(`🔍 DEBUG: ${sport} enabled alerts:`, enabledAlerts);
-        
         if (enabledAlerts.length === 0) {
           console.log(`🚫 No ${sport} alert types enabled - skipping ${sport} monitoring`);
           continue;

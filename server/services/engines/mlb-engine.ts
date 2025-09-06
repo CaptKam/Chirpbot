@@ -16,7 +16,7 @@ export class MLBEngine extends BaseSportEngine {
       const validMLBAlerts = [
         'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
         'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT'
+        'MLB_SEVENTH_INNING_STRETCH', 'TEST_ALERT'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -109,11 +109,11 @@ export class MLBEngine extends BaseSportEngine {
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
 
-      // Filter to only valid MLB alerts  
+      // Filter to only valid MLB alerts
       const validMLBAlerts = [
         'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
         'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT'
+        'MLB_SEVENTH_INNING_STRETCH', 'TEST_ALERT'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
@@ -154,12 +154,7 @@ export class MLBEngine extends BaseSportEngine {
         'FULL_COUNT': 'full-count-module',
         'MLB_GAME_START': 'game-start-module',
         'MLB_SEVENTH_INNING_STRETCH': 'seventh-inning-stretch-module',
-        'STRIKEOUT': 'strikeout-module',
-        'TEST_ALERT': 'test-alert-module',
-        'RE24_ENABLED': 're24-enabled-module',
-        'RE24_CONTEXT_FACTORS': 're24-context-factors-module',
-        'RE24_MINIMUM_THRESHOLDS': 're24-minimum-thresholds-module',
-        'RE24_DYNAMIC_PRIORITY': 're24-dynamic-priority-module'
+        'TEST_ALERT': 'test-alert-module'
       };
 
       const moduleFileName = moduleMap[alertType];
