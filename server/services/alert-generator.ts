@@ -271,59 +271,8 @@ export class AlertGenerator {
 
   // Method to generate alerts for live games (when they're happening)
   async generateLiveGameAlerts(): Promise<void> {
-    console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-    
-    try {
-      // Check if any alerts are globally enabled before proceeding
-      const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts();
-      if (!hasAnyEnabledAlerts) {
-        console.log('🚫 No alert types are globally enabled by admin - skipping all alert generation');
-        return;
-      }
-
-      // Process each sport only if it has enabled alert types
-      const sports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
-      let totalAlerts = 0;
-
-      for (const sport of sports) {
-        const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
-        if (enabledAlerts.length === 0) {
-          console.log(`🚫 No ${sport} alert types enabled - skipping ${sport} monitoring`);
-          continue;
-        }
-
-        console.log(`✅ ${sport} has ${enabledAlerts.length} enabled alert types: ${enabledAlerts.join(', ')}`);
-        
-        // Get games for this sport
-        let games: any[] = [];
-        switch (sport) {
-          case 'MLB':
-            games = await this.mlbApi.getTodaysGames();
-            break;
-          case 'NFL':
-            games = await this.getNFLGames();
-            break;
-          case 'NCAAF':
-            games = await this.ncaafApi.getTodaysGames();
-            break;
-          case 'WNBA':
-            games = await this.getWNBAGames();
-            break;
-          case 'CFL':
-            games = await this.getCFLGames();
-            break;
-        }
-
-        if (games.length > 0) {
-          const alerts = await this.processGamesWithEngine(sport, games);
-          totalAlerts += alerts;
-        }
-      }
-
-      console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
-    } catch (error) {
-      console.error('❌ Error in live game alert generation:', error);
-    }
+    console.log('🚫 Alert generation is completely disabled - no alerts will be generated');
+    return;
   }
 
   private async processGamesWithEngine(sport: string, games: any[]): Promise<number> {
