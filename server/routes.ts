@@ -1821,7 +1821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(alertConfig);
       } catch (error) {
-        console.error(`Error getting available alerts for ${sport}:`, error);
+        console.error(`❌ Error getting available alerts for ${sport}:`, error);
         res.json([]); // Return empty array if no cylinders found
       }
     } catch (error) {
