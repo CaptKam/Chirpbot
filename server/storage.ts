@@ -397,7 +397,6 @@ export const storage = {
         },
         'ncaaf': {
           'NCAAF_GAME_START': true,
-          'NCAAF_SECOND_HALF_KICKOFF': true,
           'NCAAF_TWO_MINUTE_WARNING': true
         },
         'cfl': {
