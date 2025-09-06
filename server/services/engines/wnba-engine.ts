@@ -61,6 +61,80 @@ export class WNBAEngine extends BaseSportEngine {
     return super.generateLiveAlerts(gameState);
   }
 
+  private async generateFourthQuarterAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { quarter, timeRemaining } = gameState;
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+
+    // Fourth quarter with less than 5 minutes remaining and close score
+    if (quarter === 4 && this.isWithinMinutes(timeRemaining, 5) && scoreDiff <= 10) {
+      // Check if WNBA_FOURTH_QUARTER alerts are enabled
+      if (await this.isAlertEnabled('WNBA_FOURTH_QUARTER')) {
+        const alertKey = `${gameState.gameId}_WNBA_FOURTH_QUARTER_${timeRemaining.replace(/[:\s]/g, '')}`;
+        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
+                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
+                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+        
+        const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${timeRemaining} left`;
+
+        alerts.push({
+          alertKey,
+          type: 'WNBA_FOURTH_QUARTER',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter,
+            timeRemaining,
+            scoreDiff
+          },
+          priority: scoreDiff <= 5 ? 95 : 88
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  private async generateCloseGameAlerts(gameState: GameState): Promise<AlertResult[]> {
+    const alerts: AlertResult[] = [];
+    const { quarter } = gameState;
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+
+    // Close games in 3rd or 4th quarter
+    if ((quarter >= 3) && scoreDiff <= 5 && (gameState.homeScore > 0 || gameState.awayScore > 0)) {
+      // Check if WNBA_CLOSE_GAME alerts are enabled
+      if (await this.isAlertEnabled('WNBA_CLOSE_GAME')) {
+        const alertKey = `${gameState.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
+        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
+                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
+                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+        
+        const message = `🔥 CLOSE WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
+
+        alerts.push({
+          alertKey,
+          type: 'WNBA_CLOSE_GAME',
+          message,
+          context: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter,
+            scoreDiff
+          },
+          priority: 90
+        });
+      }
+    }
+
+    return alerts;
+  }
 
   private async generateOvertimeAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
@@ -165,8 +239,8 @@ export class WNBAEngine extends BaseSportEngine {
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
-      // Get user's enabled alert types - use 'WNBA' to match database case
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'WNBA');
+      // Get user's enabled alert types
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'wnba');
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
