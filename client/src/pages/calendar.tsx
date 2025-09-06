@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, CheckCircle, UserPlus, LogOut, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
-import { GameCardTemplate } from "@/components/GameCardTemplate";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -129,8 +128,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
       if (!response.ok) throw new Error('Weather fetch failed');
       return response.json();
     },
-    staleTime: 60 * 1000, // Cache for 1 minute
-    refetchInterval: 60 * 1000, // Refetch every minute
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     retry: 1
   });
 
@@ -539,38 +537,124 @@ export default function Calendar() {
 
               return (
                 <div key={gameId} className="relative">
-                  <GameCardTemplate
-                    gameId={gameId}
-                    homeTeam={{
-                      name: homeTeamName,
-                      abbreviation: homeTeamAbbr,
-                      score: game.homeTeam?.score
-                    }}
-                    awayTeam={{
-                      name: awayTeamName,
-                      abbreviation: awayTeamAbbr,
-                      score: game.awayTeam?.score
-                    }}
-                    sport={activeSport}
-                    status={game.status === 'live' ? 'live' : game.status === 'final' ? 'final' : 'scheduled'}
-                    startTime={game.startTime}
-                    venue={game.venue}
-                    inning={game.inning}
-                    quarter={game.quarter}
-                    period={game.period}
-                    isTopInning={game.inningState === 'Top'}
-                    runners={game.runners}
-                    balls={game.balls}
-                    strikes={game.strikes}
-                    outs={game.outs}
-                    isSelected={isSelected}
-                    onSelect={() => toggleGameSelection(game.id)}
-                    size="lg"
-                    showWeather={true}
-                    showVenue={true}
-                    showEnhancedMLB={activeSport === 'MLB' && game.status === 'live'}
-                  />
-                </div>
+                  <Card 
+                    className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 min-h-[160px] hover:bg-white/10 ${
+                      isSelected 
+                        ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
+                        : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
+                    }`}
+                    style={{ borderRadius: '12px' }}
+                    onClick={() => toggleGameSelection(game.id)}
+                    data-testid={`game-card-${game.id}`}
+                  >
+                    {/* Main Game Layout */}
+                    <div className="flex items-center justify-between mb-4">
+                      {/* Away Team - Left Side */}
+                      <div className="flex items-center space-x-3">
+                        <div className="text-center">
+                          <TeamLogo
+                            teamName={removeCity(awayTeamName)}
+                            abbreviation={awayTeamAbbr}
+                            sport={activeSport}
+                            size="lg"
+                            className="shadow-sm"
+                          />
+                          <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
+                            {removeCity(awayTeamName)}
+                          </div>
+                        </div>
+                        {(game.status === 'live' || game.status === 'final') && (
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-slate-200">
+                              {game.awayTeam?.score || 0}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Center - Baseball Diamond & Game Info */}
+                      <div className="flex-1 flex flex-col items-center space-y-3">
+                        {/* Status & Selection Indicator */}
+                        <div className="flex items-center space-x-2">
+                          {(game.status === 'live' || game.status === 'final') && (
+                            <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                              game.status === 'live' 
+                                ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
+                                : 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
+                            }`}>
+                              {game.status === 'live' && <Play className="w-3 h-3 mr-1" />}
+                              {game.status === 'live' ? 'LIVE' : 'FINAL'}
+                            </Badge>
+                          )}
+                          {isSelected && (
+                            <CheckCircle className="w-5 h-5 text-emerald-400" data-testid={`game-selected-${game.id}`} />
+                          )}
+                        </div>
+                        
+                        {/* Baseball Diamond for Live/Final MLB Games */}
+                        {activeSport === 'MLB' && (game.status === 'live' || game.status === 'final') && game.id && (
+                          <EnhancedGameDisplay 
+                            gameId={game.id}
+                            inning={game.inning || 1}
+                            isTopInning={game.inningState === 'Top'}
+                            isLive={game.status === 'live'}
+                          />
+                        )}
+                        
+                        {/* Game Info for Non-MLB or Scheduled Games - Venue removed to avoid duplication */}
+                      </div>
+
+                      {/* Home Team - Right Side */}
+                      <div className="flex items-center space-x-3">
+                        {(game.status === 'live' || game.status === 'final') && (
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-slate-200">
+                              {game.homeTeam?.score || 0}
+                            </div>
+                          </div>
+                        )}
+                        <div className="text-center">
+                          <TeamLogo
+                            teamName={removeCity(homeTeamName)}
+                            abbreviation={homeTeamAbbr}
+                            sport={activeSport}
+                            size="lg"
+                            className="shadow-sm"
+                          />
+                          <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
+                            {removeCity(homeTeamName)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Row - Weather & Venue Info */}
+                    <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                      <GameWeatherDisplay 
+                        teamName={homeTeamName}
+                        size="sm"
+                      />
+                      
+                      <div className="flex items-center space-x-3">
+                        {game.status === 'scheduled' && (
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span className="text-sm text-slate-300 font-medium">
+                              {formattedTime}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {game.venue && (
+                          <div className="text-xs text-slate-400 text-right">
+                            {game.venue.length > 25 ? `${game.venue.substring(0, 25)}...` : game.venue}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                </Card>
+                
+              </div>
               );
             })}
             </div>
@@ -611,29 +695,88 @@ export default function Calendar() {
 
                   return (
                     <div key={gameId} className="relative">
-                      <GameCardTemplate
-                        gameId={gameId}
-                        homeTeam={{
-                          name: homeTeamName,
-                          abbreviation: homeTeamAbbr,
-                          score: undefined // Tomorrow's games don't have scores
-                        }}
-                        awayTeam={{
-                          name: awayTeamName,
-                          abbreviation: awayTeamAbbr,
-                          score: undefined
-                        }}
-                        sport={activeSport}
-                        status="scheduled"
-                        startTime={game.startTime}
-                        venue={game.venue}
-                        isSelected={isSelected}
-                        onSelect={() => toggleGameSelection(game.id)}
-                        size="lg"
-                        showWeather={true}
-                        showVenue={true}
-                        showEnhancedMLB={game.status === 'live'} // Don't show baseball diamond for tomorrow's games
-                      />
+                      <Card 
+                        className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 min-h-[160px] hover:bg-white/10 ${
+                          isSelected 
+                            ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
+                            : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
+                        }`}
+                        style={{ borderRadius: '12px' }}
+                        onClick={() => toggleGameSelection(game.id)}
+                        data-testid={`tomorrow-game-card-${game.id}`}
+                      >
+                        {/* Main Game Layout */}
+                        <div className="flex items-center justify-between mb-4">
+                          {/* Away Team - Left Side */}
+                          <div className="flex items-center space-x-3">
+                            <div className="text-center">
+                              <TeamLogo
+                                teamName={removeCity(awayTeamName)}
+                                abbreviation={awayTeamAbbr}
+                                sport={activeSport}
+                                size="lg"
+                                className="shadow-sm"
+                              />
+                              <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
+                                {removeCity(awayTeamName)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Center - Game Info */}
+                          <div className="flex-1 flex flex-col items-center space-y-3">
+                            {/* Selection Indicator */}
+                            <div className="flex items-center space-x-2">
+                              <Badge className="px-3 py-1.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/30">
+                                <Clock className="w-3 h-3 mr-1" />
+                                SCHEDULED
+                              </Badge>
+                              {isSelected && (
+                                <CheckCircle className="w-5 h-5 text-emerald-400" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Home Team - Right Side */}
+                          <div className="flex items-center space-x-3">
+                            <div className="text-center">
+                              <TeamLogo
+                                teamName={removeCity(homeTeamName)}
+                                abbreviation={homeTeamAbbr}
+                                sport={activeSport}
+                                size="lg"
+                                className="shadow-sm"
+                              />
+                              <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
+                                {removeCity(homeTeamName)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bottom Row - Time & Venue Info */}
+                        <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                          <GameWeatherDisplay 
+                            teamName={homeTeamName}
+                            size="sm"
+                          />
+                          
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span className="text-sm text-slate-300 font-medium">
+                                {formattedTime}
+                              </span>
+                            </div>
+                            
+                            {game.venue && (
+                              <div className="text-xs text-slate-400 text-right">
+                                {game.venue.length > 25 ? `${game.venue.substring(0, 25)}...` : game.venue}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
                     </div>
                   );
                 })}

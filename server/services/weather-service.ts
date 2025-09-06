@@ -5,11 +5,9 @@ interface WeatherData {
   condition: string;
   windSpeed: number;
   windDirection: number;
-  windGust?: number;
   humidity: number;
   pressure: number;
   timestamp: string;
-  stadiumWindContext?: string;
 }
 
 interface StadiumCoordinates {
@@ -17,49 +15,44 @@ interface StadiumCoordinates {
   lon: number;
   city: string;
   stadium: string;
-  homePlateDirection?: number; // Degrees from north to center field
-  isDome?: boolean;
-  elevation?: number; // Feet above sea level
 }
 
-// MLB Stadium coordinates with home plate orientations (degrees from north to center field)
+// MLB Stadium coordinates for weather lookups
 const STADIUMS: Record<string, StadiumCoordinates> = {
-  'Arizona Diamondbacks': { lat: 33.4453, lon: -112.0667, city: 'Phoenix', stadium: 'Chase Field', homePlateDirection: 95, isDome: true },
-  'Atlanta Braves': { lat: 33.8902, lon: -84.4677, city: 'Atlanta', stadium: 'Truist Park', homePlateDirection: 95 },
-  'Baltimore Orioles': { lat: 39.2837, lon: -76.6218, city: 'Baltimore', stadium: 'Oriole Park', homePlateDirection: 62 },
-  'Boston Red Sox': { lat: 42.3467, lon: -71.0972, city: 'Boston', stadium: 'Fenway Park', homePlateDirection: 95 },
-  'Chicago Cubs': { lat: 41.9484, lon: -87.6553, city: 'Chicago', stadium: 'Wrigley Field', homePlateDirection: 95 },
-  'Chicago White Sox': { lat: 41.8299, lon: -87.6338, city: 'Chicago', stadium: 'Guaranteed Rate Field', homePlateDirection: 176 },
-  'Cincinnati Reds': { lat: 39.0974, lon: -84.5068, city: 'Cincinnati', stadium: 'Great American Ball Park', homePlateDirection: 95 },
-  'Cleveland Guardians': { lat: 41.4958, lon: -81.6852, city: 'Cleveland', stadium: 'Progressive Field', homePlateDirection: 169 },
-  'Colorado Rockies': { lat: 39.7559, lon: -104.9942, city: 'Denver', stadium: 'Coors Field', homePlateDirection: 95, elevation: 5200 },
-  'Detroit Tigers': { lat: 42.3391, lon: -83.0485, city: 'Detroit', stadium: 'Comerica Park', homePlateDirection: 95 },
-  'Houston Astros': { lat: 29.7572, lon: -95.3555, city: 'Houston', stadium: 'Minute Maid Park', homePlateDirection: 107, isDome: true },
-  'Kansas City Royals': { lat: 39.0517, lon: -94.4803, city: 'Kansas City', stadium: 'Kauffman Stadium', homePlateDirection: 95 },
-  'Los Angeles Angels': { lat: 33.8003, lon: -117.8827, city: 'Anaheim', stadium: 'Angel Stadium', homePlateDirection: 95 },
-  'Los Angeles Dodgers': { lat: 34.0739, lon: -118.2400, city: 'Los Angeles', stadium: 'Dodger Stadium', homePlateDirection: 95 },
-  'Miami Marlins': { lat: 25.7781, lon: -80.2197, city: 'Miami', stadium: 'loanDepot park', homePlateDirection: 95, isDome: true },
-  'Milwaukee Brewers': { lat: 43.0280, lon: -87.9712, city: 'Milwaukee', stadium: 'American Family Field', homePlateDirection: 95, isDome: true },
-  'Minnesota Twins': { lat: 44.9817, lon: -93.2776, city: 'Minneapolis', stadium: 'Target Field', homePlateDirection: 104 },
-  'New York Mets': { lat: 40.7571, lon: -73.8458, city: 'New York', stadium: 'Citi Field', homePlateDirection: 95 },
-  'New York Yankees': { lat: 40.8296, lon: -73.9262, city: 'New York', stadium: 'Yankee Stadium', homePlateDirection: 95 },
-  'Oakland Athletics': { lat: 37.7516, lon: -122.2005, city: 'Oakland', stadium: 'Oakland Coliseum', homePlateDirection: 95 },
-  'Philadelphia Phillies': { lat: 39.9061, lon: -75.1665, city: 'Philadelphia', stadium: 'Citizens Bank Park', homePlateDirection: 95 },
-  'Pittsburgh Pirates': { lat: 40.4469, lon: -80.0057, city: 'Pittsburgh', stadium: 'PNC Park', homePlateDirection: 95 },
-  'San Diego Padres': { lat: 32.7073, lon: -117.1566, city: 'San Diego', stadium: 'Petco Park', homePlateDirection: 95 },
-  'San Francisco Giants': { lat: 37.7786, lon: -122.3893, city: 'San Francisco', stadium: 'Oracle Park', homePlateDirection: 95 },
-  'Seattle Mariners': { lat: 47.5914, lon: -122.3326, city: 'Seattle', stadium: 'T-Mobile Park', homePlateDirection: 95, isDome: true },
-  'St. Louis Cardinals': { lat: 38.6226, lon: -90.1928, city: 'St. Louis', stadium: 'Busch Stadium', homePlateDirection: 95 },
-  'Tampa Bay Rays': { lat: 27.7682, lon: -82.6534, city: 'St. Petersburg', stadium: 'Tropicana Field', homePlateDirection: 95, isDome: true },
-  'Texas Rangers': { lat: 32.7472, lon: -97.0833, city: 'Arlington', stadium: 'Globe Life Field', homePlateDirection: 95, isDome: true },
-  'Toronto Blue Jays': { lat: 43.6414, lon: -79.3894, city: 'Toronto', stadium: 'Rogers Centre', homePlateDirection: 95, isDome: true },
-  'Washington Nationals': { lat: 38.8730, lon: -77.0074, city: 'Washington', stadium: 'Nationals Park', homePlateDirection: 95 }
+  'Arizona Diamondbacks': { lat: 33.4453, lon: -112.0667, city: 'Phoenix', stadium: 'Chase Field' },
+  'Atlanta Braves': { lat: 33.8902, lon: -84.4677, city: 'Atlanta', stadium: 'Truist Park' },
+  'Baltimore Orioles': { lat: 39.2837, lon: -76.6218, city: 'Baltimore', stadium: 'Oriole Park' },
+  'Boston Red Sox': { lat: 42.3467, lon: -71.0972, city: 'Boston', stadium: 'Fenway Park' },
+  'Chicago Cubs': { lat: 41.9484, lon: -87.6553, city: 'Chicago', stadium: 'Wrigley Field' },
+  'Chicago White Sox': { lat: 41.8299, lon: -87.6338, city: 'Chicago', stadium: 'Guaranteed Rate Field' },
+  'Cincinnati Reds': { lat: 39.0974, lon: -84.5068, city: 'Cincinnati', stadium: 'Great American Ball Park' },
+  'Cleveland Guardians': { lat: 41.4958, lon: -81.6852, city: 'Cleveland', stadium: 'Progressive Field' },
+  'Colorado Rockies': { lat: 39.7559, lon: -104.9942, city: 'Denver', stadium: 'Coors Field' },
+  'Detroit Tigers': { lat: 42.3391, lon: -83.0485, city: 'Detroit', stadium: 'Comerica Park' },
+  'Houston Astros': { lat: 29.7572, lon: -95.3555, city: 'Houston', stadium: 'Minute Maid Park' },
+  'Kansas City Royals': { lat: 39.0517, lon: -94.4803, city: 'Kansas City', stadium: 'Kauffman Stadium' },
+  'Los Angeles Angels': { lat: 33.8003, lon: -117.8827, city: 'Anaheim', stadium: 'Angel Stadium' },
+  'Los Angeles Dodgers': { lat: 34.0739, lon: -118.2400, city: 'Los Angeles', stadium: 'Dodger Stadium' },
+  'Miami Marlins': { lat: 25.7781, lon: -80.2197, city: 'Miami', stadium: 'loanDepot park' },
+  'Milwaukee Brewers': { lat: 43.0280, lon: -87.9712, city: 'Milwaukee', stadium: 'American Family Field' },
+  'Minnesota Twins': { lat: 44.9817, lon: -93.2776, city: 'Minneapolis', stadium: 'Target Field' },
+  'New York Mets': { lat: 40.7571, lon: -73.8458, city: 'New York', stadium: 'Citi Field' },
+  'New York Yankees': { lat: 40.8296, lon: -73.9262, city: 'New York', stadium: 'Yankee Stadium' },
+  'Oakland Athletics': { lat: 37.7516, lon: -122.2005, city: 'Oakland', stadium: 'Oakland Coliseum' },
+  'Philadelphia Phillies': { lat: 39.9061, lon: -75.1665, city: 'Philadelphia', stadium: 'Citizens Bank Park' },
+  'Pittsburgh Pirates': { lat: 40.4469, lon: -80.0057, city: 'Pittsburgh', stadium: 'PNC Park' },
+  'San Diego Padres': { lat: 32.7073, lon: -117.1566, city: 'San Diego', stadium: 'Petco Park' },
+  'San Francisco Giants': { lat: 37.7786, lon: -122.3893, city: 'San Francisco', stadium: 'Oracle Park' },
+  'Seattle Mariners': { lat: 47.5914, lon: -122.3326, city: 'Seattle', stadium: 'T-Mobile Park' },
+  'St. Louis Cardinals': { lat: 38.6226, lon: -90.1928, city: 'St. Louis', stadium: 'Busch Stadium' },
+  'Tampa Bay Rays': { lat: 27.7682, lon: -82.6534, city: 'St. Petersburg', stadium: 'Tropicana Field' },
+  'Texas Rangers': { lat: 32.7472, lon: -97.0833, city: 'Arlington', stadium: 'Globe Life Field' },
+  'Toronto Blue Jays': { lat: 43.6414, lon: -79.3894, city: 'Toronto', stadium: 'Rogers Centre' },
+  'Washington Nationals': { lat: 38.8730, lon: -77.0074, city: 'Washington', stadium: 'Nationals Park' }
 };
 
 export class WeatherService {
   private apiKey: string;
-  private weatherCache: Map<string, { data: WeatherData; timestamp: number }> = new Map();
-  private readonly CACHE_DURATION = 60 * 1000; // 1 minute cache
 
   constructor() {
     this.apiKey = process.env.OPENWEATHERMAP_API_KEY || '';
@@ -70,27 +63,15 @@ export class WeatherService {
   }
 
   async getWeatherForTeam(teamName: string): Promise<WeatherData> {
-    const now = Date.now();
-    const cached = this.weatherCache.get(teamName);
-    
-    // Return cached data if it's less than 1 minute old
-    if (cached && (now - cached.timestamp) < this.CACHE_DURATION) {
-      return cached.data;
-    }
-
     const stadium = STADIUMS[teamName];
     
     if (!stadium) {
       console.warn(`🌤️ No stadium coordinates found for ${teamName}, using fallback`);
-      const fallbackData = this.getFallbackWeather();
-      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
-      return fallbackData;
+      return this.getFallbackWeather();
     }
 
     if (!this.apiKey) {
-      const fallbackData = this.getFallbackWeather();
-      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
-      return fallbackData;
+      return this.getFallbackWeather();
     }
 
     try {
@@ -104,27 +85,18 @@ export class WeatherService {
 
       const data = await response.json();
       
-      const weatherData = {
+      return {
         temperature: Math.round(data.main.temp),
         condition: data.weather[0].main,
         windSpeed: Math.round(data.wind?.speed || 0),
         windDirection: data.wind?.deg || 0,
-        windGust: data.wind?.gust ? Math.round(data.wind.gust) : undefined,
         humidity: data.main.humidity,
         pressure: data.main.pressure,
-        timestamp: new Date().toISOString(),
-        stadiumWindContext: this.getStadiumWindContext(data.wind?.deg || 0, data.wind?.speed || 0, stadium)
+        timestamp: new Date().toISOString()
       };
-
-      // Cache the fresh data
-      this.weatherCache.set(teamName, { data: weatherData, timestamp: now });
-      
-      return weatherData;
     } catch (error) {
       console.error(`🌤️ Weather API error for ${teamName}:`, error);
-      const fallbackData = this.getFallbackWeather();
-      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
-      return fallbackData;
+      return this.getFallbackWeather();
     }
   }
 
@@ -177,44 +149,6 @@ export class WeatherService {
     if (windSpeed < 5) return 'Light winds';
     if (windSpeed < 15) return `${windSpeed}mph ${direction}`;
     return `Strong ${windSpeed}mph ${direction} winds`;
-  }
-
-  // Get wind direction relative to stadium layout
-  getStadiumWindContext(windDirection: number, windSpeed: number, stadium: StadiumCoordinates): string {
-    if (stadium.isDome) {
-      return 'Dome - No wind impact';
-    }
-
-    if (windSpeed < 5) {
-      return 'Light winds';
-    }
-
-    const homePlateDirection = stadium.homePlateDirection || 95;
-    
-    // Calculate relative wind direction to stadium
-    let relativeDegree = windDirection - homePlateDirection;
-    if (relativeDegree < 0) relativeDegree += 360;
-    if (relativeDegree >= 360) relativeDegree -= 360;
-
-    // Determine field impact
-    let fieldContext = '';
-    if (relativeDegree >= 315 || relativeDegree < 45) {
-      fieldContext = 'to center field';
-    } else if (relativeDegree >= 45 && relativeDegree < 135) {
-      fieldContext = 'to left field';
-    } else if (relativeDegree >= 135 && relativeDegree < 225) {
-      fieldContext = 'in from center field';
-    } else {
-      fieldContext = 'to right field';
-    }
-
-    // Add elevation context for Coors Field
-    let elevationNote = '';
-    if (stadium.elevation && stadium.elevation > 3000) {
-      elevationNote = ' (high altitude)';
-    }
-
-    return `${windSpeed}mph ${fieldContext}${elevationNote}`;
   }
 
   // Check if using live weather data

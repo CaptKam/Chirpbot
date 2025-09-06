@@ -1,3 +1,4 @@
+
 export interface GameState {
   gameId: string;
   sport: string;
@@ -25,11 +26,7 @@ export abstract class BaseSportEngine {
     this.sport = sport;
   }
 
+  abstract generateLiveAlerts(gameState: GameState): Promise<AlertResult[]>;
+  abstract isAlertEnabled(alertType: string): Promise<boolean>;
   abstract calculateProbability(gameState: GameState): Promise<number>;
-
-  // Simplified alert generation without modules
-  async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    console.log(`🔍 Alert generation disabled - no modules loaded for ${gameState.gameId}`);
-    return [];
-  }
 }

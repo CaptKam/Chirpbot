@@ -30,49 +30,6 @@ function formatTime(date: string | Date): string {
   return alertTime.toLocaleDateString();
 }
 
-function getAlertStatus(alertType: string, createdAt: string, gameStatus?: string): { status: 'ACTIVE' | 'EXPIRED', minutesAgo: number } {
-  const alertTime = new Date(createdAt);
-  const now = new Date();
-  const minutesAgo = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
-
-  // If game is final, all alerts are expired
-  if (gameStatus === 'final') {
-    return { status: 'EXPIRED', minutesAgo };
-  }
-
-  // Time-sensitive alert types and their expiration times (in minutes)
-  const alertExpirationTimes: Record<string, number> = {
-    'BASES_LOADED': 15,        // Bases loaded situation typically lasts 3-5 at-bats
-    'RISP': 12,                // Runners in scoring position
-    'FULL_COUNT': 3,           // Full count expires very quickly
-    'POWER_HITTER': 8,         // Power hitter at bat
-    'HOT_HITTER': 8,           // Hot hitter at bat
-    'RUNNERS_1ST_2ND': 12,     // Runners on 1st and 2nd
-    'RED_ZONE': 8,             // Football red zone opportunity
-    'FOURTH_DOWN': 2,          // Fourth down decision
-    'TWO_MINUTE_WARNING': 5,   // Two minute warning context
-    'POWER_PLAY': 4,           // Hockey power play (typically 2 minutes)
-    'EMPTY_NET': 3,            // Hockey empty net situation
-    'CLUTCH_TIME': 10,         // Basketball clutch time
-    // Game state alerts last longer
-    'CLOSE_GAME': 30,
-    'CLOSE_GAME_LIVE': 30,
-    'HIGH_SCORING': 45,
-    'LATE_PRESSURE': 20,
-    'OVERTIME': 60,
-    'BLOWOUT': 60,
-    'SHUTOUT': 60
-  };
-
-  const expirationMinutes = alertExpirationTimes[alertType] || 10; // Default 10 minutes
-  const isActive = minutesAgo <= expirationMinutes;
-
-  return { 
-    status: isActive ? 'ACTIVE' : 'EXPIRED', 
-    minutesAgo 
-  };
-}
-
 function getAlertColor(priority: number): string {
   if (priority >= 90) return 'bg-red-400';
   if (priority >= 80) return 'bg-orange-400';
@@ -173,24 +130,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     refetchInterval: 15000, // Refresh every 15 seconds for live scores
     staleTime: 10000,
   });
-
-  // Fetch live weather data for the game
-  const { data: weatherData } = useQuery({
-    queryKey: ["/api/weather", { gameId: alertData?.id, sport: alertData?.sport }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch weather");
-      return response.json();
-    },
-    enabled: !!alertData?.id && !!alertData?.sport, // Only fetch if we have alert data
-    refetchInterval: 60000, // Refresh every minute
-    staleTime: 60000, // Cache data for 1 minute
-  });
-
 
   // Find the matching game for this alert to get live scores
   const liveGameData = React.useMemo(() => {
@@ -395,7 +334,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* AI Betting Insights Panel (Left Swipe) - Only show when swiped left */}
-      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
+      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent backdrop-blur-sm transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         {false && (alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
@@ -650,7 +589,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         )}
       </div>
       {/* Delete Menu (Right Swipe) - Only show when swiped right */}
-      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent flex items-center justify-start pl-4 transition-opacity duration-300 ${
+      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent backdrop-blur-sm flex items-center justify-start pl-4 transition-opacity duration-300 ${
         dragX > 30 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         <Button
@@ -659,7 +598,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             handleDeleteAlert();
             setDragX(0); // Return to center after click
           }}
-          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 ring-1 ring-red-500/30 transition-all hover:scale-110 active:scale-95"
+          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 backdrop-blur-sm ring-1 ring-red-500/30 transition-all hover:scale-110 active:scale-95"
           data-testid={`delete-alert-${alertId}`}
           disabled={isDeleting}
         >
@@ -686,24 +625,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <Card className={`${className} ${(() => {
-          const alertStatus = getAlertStatus(
-            alertData?.type || '', 
-            alertData?.createdAt || '', 
-            liveGameData?.status || displayScores.isLive ? 'live' : 'final'
-          );
-          const baseClasses = alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
-          const borderClasses = alertStatus.status === 'ACTIVE' 
-            ? 'border-2 border-emerald-500 shadow-emerald-500/20 shadow-lg' 
-            : 'border-2 border-red-500 shadow-red-500/20 shadow-lg';
-          return `${baseClasses} ${borderClasses}`;
-        })()}`} {...props}>
+        <Card className={className} {...props}>
           {/* Render the redesigned alert card content here */}
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-6 relative" key={`alert-${alertData.id}-${Date.now()}`}>
-
+            <div className="p-6" key={`alert-${alertData.id}-${Date.now()}`}>
               {/* Clean Header - Calendar Page Style */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
@@ -736,32 +663,23 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-6">
                 <GameCardTemplate
-                  gameId={alertData.id}
-                  homeTeam={{
-                    name: typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'Home Team',
-                    score: displayScores.homeScore
-                  }}
-                  awayTeam={{
-                    name: typeof alertData.awayTeam === 'string' ? alertData.awayTeam : (alertData.awayTeam as any)?.name || 'Away Team',
-                    score: displayScores.awayScore
-                  }}
+                  homeTeam={typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'TBD'}
+                  awayTeam={typeof alertData.awayTeam === 'string' ? alertData.awayTeam : (alertData.awayTeam as any)?.name || 'TBD'}
+                  homeScore={displayScores.homeScore}
+                  awayScore={displayScores.awayScore}
                   sport={alertData.sport}
                   status={displayScores.isLive ? "live" : "final"}
                   inning={alertData.context?.inning || liveGameData?.inning}
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
-                  weather={weatherData}
                   size="lg"
-                  showWeather={true}
-                  showVenue={false}
-                  showEnhancedMLB={false}
                   className="shadow-lg"
                 />
               </div>
 
               {/* Alert Message - Clean Layout */}
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 mb-6">
                 <div className="flex items-start space-x-3">
                   <div className="flex-1">
                     {/* Message Display */}
@@ -797,6 +715,128 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               )}
 
+              {/* Game Situation Grid - Calendar Page Clean Style */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10">
+                <div className="grid grid-cols-5 gap-6 items-center">
+                  {/* MLB Specific Data */}
+                  {alertData.sport === 'MLB' && (
+                    <>
+                      {/* Inning with Top/Bottom */}
+                      {alertData.context?.inning && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">INNING</div>
+                          <div className="text-lg font-bold text-white bg-slate-800/50 px-3 py-2 rounded-lg shadow-sm">
+                            {alertData.context?.isTopInning ? '▲' : '▼'} {alertData.context.inning}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Outs */}
+                      {alertData.context?.outs !== undefined && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">OUTS</div>
+                          <div className="text-2xl font-bold text-white">{alertData.context.outs}</div>
+                        </div>
+                      )}
+
+                      {/* Ball-Strike Count */}
+                      {(alertData.context?.balls !== undefined || alertData.context?.strikes !== undefined) && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">COUNT</div>
+                          <div className="text-xl font-bold text-white">
+                            {alertData.context?.balls ?? 0}-{alertData.context?.strikes ?? 0}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Baseball Diamond - Enhanced */}
+                      {(alertData.context?.hasFirst || alertData.context?.hasSecond || alertData.context?.hasThird) ? (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">BASES</div>
+                          <div className="relative w-10 h-10 mx-auto">
+                            <div className="absolute inset-0 rotate-45 border-2 border-slate-600 bg-slate-800/30 rounded-lg shadow-sm"></div>
+                            <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasSecond ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasFirst ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 ${alertData.context?.hasThird ? 'bg-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-sm' : 'bg-slate-700 border-slate-600'}`}></div>
+                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-slate-600 border-2 border-slate-500"></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">BASES</div>
+                          <div className="text-sm text-slate-500 font-medium">Empty</div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Football Specific Data */}
+                  {(alertData.sport === 'NFL' || alertData.sport === 'NCAAF' || alertData.sport === 'CFL') && (
+                    <>
+                      {alertData.context?.quarter && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">QUARTER</div>
+                          <div className="text-lg font-bold text-white bg-slate-800/50 px-3 py-2 rounded-lg shadow-sm">
+                            Q{alertData.context.quarter}
+                          </div>
+                        </div>
+                      )}
+
+                      {alertData.context?.down && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">DOWN</div>
+                          <div className="text-xl font-bold text-white">
+                            {alertData.context.down}&{alertData.context.yardsToGo || 10}
+                          </div>
+                        </div>
+                      )}
+
+                      {alertData.context?.timeRemaining && (
+                        <div className="text-center">
+                          <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">TIME</div>
+                          <div className="text-lg font-bold text-white">{alertData.context.timeRemaining}</div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Basketball Specific Data */}
+                  {alertData.sport === 'NBA' && alertData.context?.quarter && (
+                    <div className="text-center">
+                      <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">QUARTER</div>
+                      <div className="text-lg font-bold text-white bg-slate-800/50 px-3 py-2 rounded-lg shadow-sm">
+                        Q{alertData.context.quarter}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hockey Specific Data */}
+                  {alertData.sport === 'NHL' && alertData.context?.period && (
+                    <div className="text-center">
+                      <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">PERIOD</div>
+                      <div className="text-lg font-bold text-white bg-slate-800/50 px-3 py-2 rounded-lg shadow-sm">
+                        P{alertData.context.period}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Universal Time (if not sport-specific) */}
+                  {!alertData.context?.quarter && !alertData.context?.period && !alertData.context?.inning && alertData.context?.timeRemaining && (
+                    <div className="text-center">
+                      <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">TIME</div>
+                      <div className="text-lg font-bold text-white">{alertData.context.timeRemaining}</div>
+                    </div>
+                  )}
+
+                  {/* Priority - Always show in last column */}
+                  <div className="text-center">
+                    <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">PRIORITY</div>
+                    <div className={`text-2xl font-bold ${(alertData.priority ?? 0) >= 90 ? 'text-red-400' : (alertData.priority ?? 0) >= 80 ? 'text-orange-400' : (alertData.priority ?? 0) >= 70 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                      {alertData.priority ?? 0}%
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             children // Fallback to rendering children if alertData is not available

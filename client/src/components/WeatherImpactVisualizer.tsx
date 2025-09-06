@@ -61,6 +61,10 @@ export function WeatherImpactVisualizer({
         <Wind className="w-3 h-3" />
         <span className="text-slate-300">{windSpeed} {windDirection}</span>
       </div>
+      <div className={`w-2 h-2 rounded-full ${
+        impactLevel === 'high' ? 'bg-red-400' : 
+        impactLevel === 'medium' ? 'bg-yellow-400' : 'bg-green-400'
+      }`} />
     </div>
   );
 }

@@ -35,13 +35,13 @@ export class BasicAI {
 
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
-    // AI functionality enabled when API key is present
-    this.isConfigured = !!this.apiKey && this.apiKey.startsWith('sk-');
+    // AI functionality disabled - always return false
+    this.isConfigured = false;
   }
 
-  // Public getter for isConfigured
+  // Public getter for isConfigured - AI disabled
   get configured(): boolean {
-    return this.isConfigured;
+    return false;
   }
 
   // Simple AI enhancement for high-value alerts
