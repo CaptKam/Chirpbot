@@ -125,7 +125,7 @@ export default function Settings() {
     }
   });
 
-  const getAlertPreferenceWithRE24 = (sport: string, alertKey: string) => {
+  const getAlertPreference = (sport: string, alertKey: string) => {
     if (!userPreferences) return false;
     
     // Remove sport prefix if it exists in the key
@@ -156,7 +156,7 @@ export default function Settings() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-          <p className="text-slate-400">Configure your alert preferences and integrations</p>
+          <p className="text-slate-400">Configure your alert preferences</p>
         </div>
 
         {/* Alert Preferences */}
@@ -173,7 +173,7 @@ export default function Settings() {
           <CardContent className="space-y-6">
             {Object.entries(ALERT_TYPE_CONFIG).map(([sportCategory, alertTypes]) => (
               <div key={sportCategory} className="space-y-3">
-                <h3 className="text-md font-bold text-blue-400 uppercase tracking-wide">
+                <h3 className="text-lg font-semibold text-blue-400 uppercase tracking-wide">
                   {sportCategory.includes('MLB') && '⚾'} 
                   {sportCategory.includes('NFL') && '🏈'} 
                   {sportCategory.includes('NCAAF') && '🏈'} 
@@ -181,7 +181,7 @@ export default function Settings() {
                   {sportCategory.includes('CFL') && '🏈'} 
                   {sportCategory}
                 </h3>
-                <div className="space-y-3">
+                <div className="grid gap-3">
                   {alertTypes.filter((alertType) => {
                     // Filter out disabled alerts from global settings
                     return globalSettings && typeof globalSettings === 'object' 
@@ -189,20 +189,20 @@ export default function Settings() {
                       : true;
                   }).map((alertType) => {
                     const sport = sportCategory.split(' ')[0]; // Extract sport (MLB, NFL, etc.)
-                    const isEnabled = getAlertPreferenceWithRE24(sport, alertType.key);
+                    const isEnabled = getAlertPreference(sport, alertType.key);
                     
                     return (
-                      <div key={alertType.key} className="flex items-center justify-between p-3 bg-slate-500/10 rounded-lg border border-slate-500/20 hover:bg-slate-500/20 transition-colors">
+                      <div key={alertType.key} className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg border border-slate-600/30">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <h4 className="text-sm font-semibold text-slate-100">
+                            <h4 className="font-medium text-slate-100">
                               {alertType.label}
                             </h4>
                             {updateAlertPreferenceMutation.isPending && (
                               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>
                             )}
                           </div>
-                          <p className="text-xs text-slate-400 mt-1">
+                          <p className="text-sm text-slate-400 mt-1">
                             {alertType.description}
                           </p>
                         </div>
