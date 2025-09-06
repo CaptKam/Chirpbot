@@ -432,13 +432,122 @@ export const storage = {
   // Check if alert is globally enabled by admin
   async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
     try {
-      // Assuming getGlobalAlertSettings would be called here if it existed.
-      // Since it's removed, we default to true, meaning alerts are enabled by default
-      // until a new system for global toggles is implemented.
-      return true;
+      const globalSettings = await this.getGlobalAlertSettings(sport);
+      return globalSettings[alertType] !== false; // Default to enabled
     } catch (error) {
       console.error(`Error checking if alert ${alertType} is globally enabled for ${sport}:`, error);
       return true; // Default to true if error occurs
+    }
+  },
+
+  // Get global alert settings for a specific sport
+  async getGlobalAlertSettings(sport: string): Promise<Record<string, boolean>> {
+    try {
+      const results = await db.select().from(globalAlertSettings)
+        .where(eq(globalAlertSettings.sport, sport));
+      
+      const settings: Record<string, boolean> = {};
+      results.forEach(setting => {
+        settings[setting.alertType] = setting.enabled;
+      });
+      
+      return settings;
+    } catch (error) {
+      console.error(`Error fetching global alert settings for ${sport}:`, error);
+      return {}; // Return empty object on error
+    }
+  },
+
+  // Set global alert setting for a specific sport and alert type
+  async setGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy?: string): Promise<void> {
+    try {
+      // Check if setting already exists
+      const existing = await db.select().from(globalAlertSettings)
+        .where(and(
+          eq(globalAlertSettings.sport, sport),
+          eq(globalAlertSettings.alertType, alertType)
+        ));
+
+      if (existing.length > 0) {
+        // Update existing setting
+        await db.update(globalAlertSettings)
+          .set({ 
+            enabled, 
+            updatedAt: new Date(),
+            updatedBy: updatedBy || null 
+          })
+          .where(and(
+            eq(globalAlertSettings.sport, sport),
+            eq(globalAlertSettings.alertType, alertType)
+          ));
+      } else {
+        // Insert new setting
+        await db.insert(globalAlertSettings)
+          .values({
+            sport,
+            alertType,
+            enabled,
+            updatedBy: updatedBy || null
+          });
+      }
+      
+      console.log(`🔧 ADMIN: Global alert setting ${sport}.${alertType} = ${enabled}`);
+    } catch (error) {
+      console.error(`Error setting global alert setting ${sport}.${alertType}:`, error);
+      throw error;
+    }
+  },
+
+  // Get master alert enabled status (global on/off switch)
+  async getMasterAlertEnabled(): Promise<boolean> {
+    try {
+      // Check if there's a global setting for master alerts
+      const masterSetting = await db.select().from(globalAlertSettings)
+        .where(and(
+          eq(globalAlertSettings.sport, 'GLOBAL'),
+          eq(globalAlertSettings.alertType, 'MASTER_ALERTS_ENABLED')
+        ));
+
+      if (masterSetting.length > 0) {
+        return masterSetting[0].enabled;
+      }
+      
+      // Default to enabled if no setting exists
+      return true;
+    } catch (error) {
+      console.error('Error fetching master alert enabled status:', error);
+      return true; // Default to enabled on error
+    }
+  },
+
+  // Set master alert enabled status
+  async setMasterAlertEnabled(enabled: boolean, updatedBy?: string): Promise<void> {
+    try {
+      await this.setGlobalAlertSetting('GLOBAL', 'MASTER_ALERTS_ENABLED', enabled, updatedBy);
+      console.log(`🔧 ADMIN: Master alerts ${enabled ? 'ENABLED' : 'DISABLED'}`);
+    } catch (error) {
+      console.error('Error setting master alert enabled status:', error);
+      throw error;
+    }
+  },
+
+  // Get all global alert settings across all sports
+  async getAllGlobalAlertSettings(): Promise<Record<string, Record<string, boolean>>> {
+    try {
+      const results = await db.select().from(globalAlertSettings);
+      
+      const settings: Record<string, Record<string, boolean>> = {};
+      results.forEach(setting => {
+        if (!settings[setting.sport]) {
+          settings[setting.sport] = {};
+        }
+        settings[setting.sport][setting.alertType] = setting.enabled;
+      });
+      
+      return settings;
+    } catch (error) {
+      console.error('Error fetching all global alert settings:', error);
+      return {};
     }
   }
 };
