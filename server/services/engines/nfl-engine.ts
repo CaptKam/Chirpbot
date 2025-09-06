@@ -34,10 +34,74 @@ export class NFLEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
-  // Alert processing is now handled by the base class using alert cylinders
+  private alertModules: Map<string, any> = new Map();
+
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    console.log(`🚫 NFL alert generation is disabled - no alerts will be generated`);
-    return [];
+    const alerts: AlertResult[] = [];
+    
+    // Process each initialized alert module
+    for (const [alertType, module] of this.alertModules.entries()) {
+      try {
+        const result = await module.checkAlert(gameState);
+        if (result.shouldAlert) {
+          alerts.push({
+            alertKey: `${gameState.gameId}-${alertType}-${Date.now()}`,
+            type: alertType,
+            message: result.message,
+            priority: result.priority || 50,
+            context: result.context || gameState
+          });
+        }
+      } catch (error) {
+        console.error(`❌ Error processing ${alertType} alert:`, error);
+      }
+    }
+    
+    return alerts;
+  }
+
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    console.log(`🔧 Loading ${enabledAlertTypes.length} NFL alert modules...`);
+    
+    for (const alertType of enabledAlertTypes) {
+      try {
+        const module = await this.loadAlertModule(alertType);
+        if (module) {
+          this.alertModules.set(alertType, module);
+          console.log(`✅ NFL module loaded: ${alertType}`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to load NFL module: ${alertType}`, error);
+      }
+    }
+    
+    console.log(`🎯 Successfully initialized ${this.alertModules.size} NFL alert modules`);
+  }
+
+  async loadAlertModule(alertType: string): Promise<any | null> {
+    const moduleMap: Record<string, string> = {
+      'GAME_START': 'game-start-module',
+      'RED_ZONE': 'red-zone-module',
+      'FOURTH_DOWN': 'fourth-down-module',
+      'TWO_MINUTE_WARNING': 'two-minute-warning-module',
+      'CLUTCH_TIME': 'clutch-time-module',
+      'OVERTIME': 'overtime-module'
+    };
+
+    const moduleName = moduleMap[alertType];
+    if (!moduleName) {
+      console.log(`❌ No NFL module found for: ${alertType}`);
+      return null;
+    }
+
+    try {
+      const modulePath = `./alert-cylinders/nfl/${moduleName}`;
+      const module = await import(modulePath);
+      return module;
+    } catch (error) {
+      console.error(`❌ Failed to load NFL alert module ${alertType}:`, error);
+      return null;
+    }
   }
 
   private isKickoffTime(timeRemaining: string): boolean {

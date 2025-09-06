@@ -44,9 +44,75 @@ export class WNBAEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 5), 95);
   }
 
+  private alertModules: Map<string, any> = new Map();
+
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    console.log(`🚫 WNBA alert generation is disabled - no alerts will be generated`);
-    return [];
+    const alerts: AlertResult[] = [];
+    
+    // Process each initialized alert module
+    for (const [alertType, module] of this.alertModules.entries()) {
+      try {
+        const result = await module.checkAlert(gameState);
+        if (result.shouldAlert) {
+          alerts.push({
+            alertKey: `${gameState.gameId}-${alertType}-${Date.now()}`,
+            type: alertType,
+            message: result.message,
+            priority: result.priority || 50,
+            context: result.context || gameState
+          });
+        }
+      } catch (error) {
+        console.error(`❌ Error processing ${alertType} alert:`, error);
+      }
+    }
+    
+    return alerts;
+  }
+
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    console.log(`🔧 Loading ${enabledAlertTypes.length} WNBA alert modules...`);
+    
+    for (const alertType of enabledAlertTypes) {
+      try {
+        const module = await this.loadAlertModule(alertType);
+        if (module) {
+          this.alertModules.set(alertType, module);
+          console.log(`✅ WNBA module loaded: ${alertType}`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to load WNBA module: ${alertType}`, error);
+      }
+    }
+    
+    console.log(`🎯 Successfully initialized ${this.alertModules.size} WNBA alert modules`);
+  }
+
+  async loadAlertModule(alertType: string): Promise<any | null> {
+    const moduleMap: Record<string, string> = {
+      'GAME_START': 'game-start-module',
+      'FOURTH_QUARTER': 'fourth-quarter-module',
+      'CLOSE_GAME': 'close-game-module',
+      'OVERTIME': 'overtime-module',
+      'HIGH_SCORING': 'high-scoring-module',
+      'COMEBACK': 'comeback-module',
+      'CLUTCH_PERFORMANCE': 'clutch-performance-module'
+    };
+
+    const moduleName = moduleMap[alertType];
+    if (!moduleName) {
+      console.log(`❌ No WNBA module found for: ${alertType}`);
+      return null;
+    }
+
+    try {
+      const modulePath = `./alert-cylinders/wnba/${moduleName}`;
+      const module = await import(modulePath);
+      return module;
+    } catch (error) {
+      console.error(`❌ Failed to load WNBA alert module ${alertType}:`, error);
+      return null;
+    }
   }
 
   private isWithinMinutes(timeRemaining: string, minutes: number): boolean {
