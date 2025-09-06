@@ -11,58 +11,12 @@ import { Badge } from '@/components/ui/badge';
 import { TeamLogo } from '@/components/team-logo';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { Alert } from '@/types';
-import { BaseballDiamond } from '@/components/baseball-diamond';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
 import draftkingsLogo from '@assets/draftkings.png';
 import fanaticsLogo from '@assets/fanatics.png';
 import fanduelLogo from '@assets/fanduel.png';
-
-// Import date-fns for date manipulation
-import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
-
-// Enhanced Game Display Component for Live MLB Games
-function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
-  gameId: string; 
-  inning: number; 
-  isTopInning: boolean; 
-  isLive: boolean 
-}) {
-  const { data: enhancedData } = useQuery({
-    queryKey: ['enhanced-game', gameId],
-    queryFn: async () => {
-      const response = await fetch(`/api/games/${gameId}/live`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch live game data");
-      return response.json();
-    },
-    enabled: isLive,
-    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
-    staleTime: 8000,
-    retry: 3,
-    retryDelay: 1000
-  });
-
-  return (
-    <BaseballDiamond 
-      runners={enhancedData?.runners || {
-        first: false,
-        second: false,
-        third: false
-      }}
-      inning={enhancedData?.inning || inning}
-      isTopInning={enhancedData?.isTopInning ?? isTopInning}
-      outs={enhancedData?.outs || 0}
-      balls={enhancedData?.balls || 0}
-      strikes={enhancedData?.strikes || 0}
-      size="sm"
-      showCount={isLive}
-    />
-  );
-}
-
 
 // Utility functions
 function formatTime(date: string | Date): string {
@@ -815,18 +769,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
 
-                    {/* Enhanced Baseball Diamond for MLB live games - Integrated within message */}
-                    {alertData.sport === 'MLB' && displayScores.isLive && (
-                      <div className="flex justify-center mt-4 mb-3">
-                        <EnhancedGameDisplay 
-                          gameId={alertData.id} // Using alertData.id as gameId
-                          inning={alertData.context?.inning || liveGameData?.inning || 1}
-                          isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning ?? true}
-                          isLive={displayScores.isLive}
-                        />
-                      </div>
-                    )}
-
                     {/* AI Insights */}
                     {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
                       <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/30">
@@ -854,7 +796,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </p>
                 </div>
               )}
-
 
             </div>
           ) : (
