@@ -317,9 +317,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export broadcast function for use by other services
   (global as any).wsBroadcast = broadcast;
 
-  // Basic health check
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  // Enhanced health monitoring system
+  app.get('/health', async (req, res) => {
+    try {
+      const healthStatus = {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        connections: {
+          websocket: clients.size,
+          database: 'testing...'
+        },
+        cache: {
+          requests: recentRequests.size,
+          responses: requestCache.size
+        }
+      };
+
+      // Test database connection
+      try {
+        await db.execute(sql`SELECT 1 as test`);
+        (healthStatus.connections as any).database = 'ok';
+      } catch (dbError) {
+        (healthStatus.connections as any).database = 'error';
+        healthStatus.status = 'degraded';
+      }
+
+      // Check memory usage
+      const memUsed = healthStatus.memory.heapUsed / 1024 / 1024;
+      if (memUsed > 500) { // Over 500MB
+        healthStatus.status = 'warning';
+      }
+
+      res.json(healthStatus);
+    } catch (error) {
+      res.status(500).json({ 
+        status: 'error', 
+        timestamp: new Date().toISOString(),
+        error: (error as any).message 
+      });
+    }
+  });
+
+  // Detailed system health endpoint
+  app.get('/health/detailed', async (req, res) => {
+    try {
+      const detailed = {
+        system: {
+          uptime: process.uptime(),
+          memory: process.memoryUsage(),
+          cpu: process.cpuUsage(),
+          version: process.version,
+          platform: process.platform
+        },
+        application: {
+          cacheStats: {
+            requestCache: requestCache.size,
+            recentRequests: recentRequests.size
+          },
+          connections: {
+            websockets: clients.size,
+            activeConnections: Array.from(clients).filter((ws: any) => ws.readyState === 1).length
+          }
+        },
+        external: {
+          database: 'testing...',
+          apis: {
+            weather: 'unknown',
+            sports: 'unknown'
+          }
+        },
+        performance: {
+          requestsPerMinute: 0, // Could be calculated from recent requests
+          averageResponseTime: 0
+        }
+      };
+
+      // Test database
+      try {
+        const start = Date.now();
+        await db.execute(sql`SELECT 1 as test`);
+        (detailed.external as any).database = {
+          status: 'ok',
+          responseTime: `${Date.now() - start}ms`
+        };
+      } catch (dbError) {
+        (detailed.external as any).database = {
+          status: 'error',
+          error: (dbError as any).message
+        };
+      }
+
+      res.json(detailed);
+    } catch (error) {
+      res.status(500).json({ error: (error as any).message });
+    }
   });
 
   // Teams routes
