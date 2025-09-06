@@ -270,12 +270,12 @@ export function GameCardTemplate({
           </div>
 
           {/* Enhanced MLB Display with Baseball Diamond */}
-          {sport === 'MLB' && (status === 'live' || showEnhancedMLB) && (
+          {showEnhancedMLB && sport === 'MLB' && status === 'live' && (
             <div className="mt-3 flex justify-center">
               <EnhancedGameDisplay 
                 gameId={gameId}
                 inning={inning || 1}
-                isTopInning={isTopInning || false}
+                isTopInning={isTopInning ?? true}
                 isLive={status === 'live'}
               />
             </div>
@@ -359,40 +359,43 @@ export function GameCardTemplate({
   );
 }
 
-// Enhanced Game Display with live data fetching
-const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
-  // Fetch live game data for this specific game using the dedicated endpoint
-  const { data: liveGameData } = useQuery({
-    queryKey: ['/api/games/live', gameId],
+// Enhanced Game Display Component for Live MLB Games
+function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
+  gameId: string; 
+  inning: number; 
+  isTopInning: boolean; 
+  isLive: boolean 
+}) {
+  const { data: enhancedData } = useQuery({
+    queryKey: ['enhanced-game', gameId],
     queryFn: async () => {
       const response = await fetch(`/api/games/${gameId}/live`, {
-        credentials: 'include'
+        credentials: "include",
       });
-      if (!response.ok) throw new Error('Failed to fetch live game data');
+      if (!response.ok) throw new Error("Failed to fetch live game data");
       return response.json();
     },
-    enabled: isLive && !!gameId,
-    refetchInterval: isLive ? 30000 : false, // Refetch every 30 seconds for live games
-    staleTime: 10000, // Consider data stale after 10 seconds
-    retry: 1
+    enabled: isLive,
+    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
+    staleTime: 8000,
+    retry: 3,
+    retryDelay: 1000
   });
 
-  // Use live data if available, otherwise fallback to defaults
-  const runners = liveGameData?.runners || { first: false, second: false, third: false };
-  const outs = liveGameData?.outs || 0;
-  const balls = liveGameData?.balls || 0;
-  const strikes = liveGameData?.strikes || 0;
-
   return (
-    <BaseballDiamond
-      runners={runners}
-      inning={inning}
-      isTopInning={isTopInning}
-      outs={outs}
-      balls={balls}
-      strikes={strikes}
+    <BaseballDiamond 
+      runners={enhancedData?.runners || {
+        first: false,
+        second: false,
+        third: false
+      }}
+      inning={enhancedData?.inning || inning}
+      isTopInning={enhancedData?.isTopInning ?? isTopInning}
+      outs={enhancedData?.outs || 0}
+      balls={enhancedData?.balls || 0}
+      strikes={enhancedData?.strikes || 0}
       size="sm"
       showCount={isLive}
     />
   );
-};
+}

@@ -386,7 +386,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         })()}`}>
 
           <GameCardTemplate
-            gameId={alert.gameId || alert.id}
+            gameId={alert.id}
             homeTeam={{
               name: alert.homeTeam || 'Home',
               score: alert.context?.homeScore
@@ -401,14 +401,6 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             quarter={alert.context?.quarter}
             period={alert.context?.period}
             isTopInning={alert.context?.isTopInning}
-            runners={{
-              first: alert.context?.hasFirst || false,
-              second: alert.context?.hasSecond || false,
-              third: alert.context?.hasThird || false
-            }}
-            balls={alert.context?.balls}
-            strikes={alert.context?.strikes}
-            outs={alert.context?.outs}
             weather={weatherData ? {
               windSpeed: weatherData.windSpeed,
               windDirection: getCardinalDirection(weatherData.windDirection)
@@ -416,7 +408,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             size="md"
             showWeather={alert.sport === 'MLB'}
             showVenue={false}
-            showEnhancedMLB={alert.sport === 'MLB'}
+            showEnhancedMLB={false}
             className="bg-white/5 border-white/10"
           >
             {/* Weather for MLB games */}
