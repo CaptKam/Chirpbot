@@ -213,79 +213,21 @@ export default function AlertsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              {shouldUseSimpleCard(alert.type) ? (
-                // Use Simple Card for basic alerts
-                <SimpleAlertCard 
-                  alert={{
-                    id: alert.id,
-                    type: alert.type,
-                    message: alert.message,
-                    sport: alert.sport,
-                    homeTeam: alert.homeTeam,
-                    awayTeam: alert.awayTeam,
-                    priority: alert.priority,
-                    confidence: alert.confidence,
-                    createdAt: alert.createdAt,
-                    context: alert.context
-                  }}
-                  className="hover:border-emerald-500/30 transition-all duration-200"
-                />
-              ) : (
-                // Use Complex Card for detailed game state alerts
-                <SwipeableCard 
-                  alertId={alert.id}
-                  onSwipe={handleSwipe}
-                  isActive={true}
-                  alertData={{
-                    id: alert.id,
-                    type: alert.type,
-                    sport: alert.sport,
-                    title: alert.title || '',
-                    description: alert.description || '',
-                    homeTeam: alert.homeTeam,
-                    awayTeam: alert.awayTeam,
-                    homeScore: alert.context?.homeScore || alert.homeScore || alert.context?.scores?.home || 0,
-                    awayScore: alert.context?.awayScore || alert.awayScore || alert.context?.scores?.away || 0,
-                    probability: alert.confidence,
-                    priority: alert.priority,
-                    confidence: alert.confidence,
-                    message: alert.message,
-                    createdAt: alert.createdAt,
-                    timestamp: alert.timestamp || alert.createdAt || new Date().toISOString(),
-                    sentToTelegram: alert.sentToTelegram || false,
-                    context: {
-                      ...alert.context,
-                      // MLB specific
-                      inning: alert.context?.inning || alert.inning,
-                      isTopInning: alert.context?.isTopInning || alert.isTopInning,
-                      balls: alert.context?.balls || alert.balls,
-                      strikes: alert.context?.strikes || alert.strikes,
-                      outs: alert.context?.outs || alert.outs,
-                      hasFirst: alert.context?.hasFirst || alert.hasFirst,
-                      hasSecond: alert.context?.hasSecond || alert.hasSecond,
-                      hasThird: alert.context?.hasThird || alert.hasThird,
-                      // Football specific (NFL, NCAAF, CFL)
-                      quarter: alert.context?.quarter,
-                      down: alert.context?.down,
-                      yardsToGo: alert.context?.yardsToGo,
-                      timeRemaining: alert.context?.timeRemaining,
-                      fieldPosition: alert.context?.fieldPosition,
-                      // Basketball specific (NBA)
-                      courtPosition: alert.context?.courtPosition,
-                      // Hockey specific (NHL)
-                      period: alert.context?.period,
-                      rinkPosition: alert.context?.rinkPosition,
-                      // Weather (all sports)
-                      weather: alert.context?.weather || alert.weather || alert.weatherData
-                    },
-                    betbookData: alert.context?.betbookData,
-                    gameInfo: alert.context?.gameInfo
-                  }}
-                  className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
-                >
-                  {null}
-                </SwipeableCard>
-              )}
+              <SimpleAlertCard 
+                alert={{
+                  id: alert.id,
+                  type: alert.type,
+                  message: alert.message,
+                  sport: alert.sport,
+                  homeTeam: alert.homeTeam,
+                  awayTeam: alert.awayTeam,
+                  priority: alert.priority,
+                  confidence: alert.confidence,
+                  createdAt: alert.createdAt,
+                  context: alert.context
+                }}
+                className="hover:border-emerald-500/30 transition-all duration-200"
+              />
             </motion.div>
           ))
         )}
