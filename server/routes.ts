@@ -225,12 +225,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { gameId, sport, homeTeamName, awayTeamName } = req.body;
       
+      // Validate required fields
+      if (!gameId || typeof gameId !== 'string' || gameId.trim() === '') {
+        console.error('Invalid gameId received:', gameId);
+        return res.status(400).json({ message: 'Invalid or missing gameId' });
+      }
+      
+      if (!homeTeamName || typeof homeTeamName !== 'string' || homeTeamName.trim() === '') {
+        console.error('Invalid homeTeamName received:', homeTeamName);
+        return res.status(400).json({ message: 'Invalid or missing homeTeamName' });
+      }
+      
+      if (!awayTeamName || typeof awayTeamName !== 'string' || awayTeamName.trim() === '') {
+        console.error('Invalid awayTeamName received:', awayTeamName);
+        return res.status(400).json({ message: 'Invalid or missing awayTeamName' });
+      }
+      
       const gameData = {
         userId,
-        gameId,
+        gameId: gameId.trim(),
         sport: sport || 'MLB',
-        homeTeamName: homeTeamName || '',
-        awayTeamName: awayTeamName || '',
+        homeTeamName: homeTeamName.trim(),
+        awayTeamName: awayTeamName.trim(),
         createdAt: new Date()
       };
       

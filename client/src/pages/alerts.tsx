@@ -10,6 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Clock, TrendingUp, Users, Bell, Activity } from 'lucide-react';
 import { AlertLoading } from '@/components/sports-loading';
 
+// Helper function to extract team name from either string or object format
+const getTeamNameFromAlert = (team: string | { name: string } | undefined): string => {
+  if (!team) return 'Unknown Team';
+  if (typeof team === 'string') return team;
+  if (typeof team === 'object' && team.name) return team.name;
+  return 'Unknown Team';
+};
+
 interface Alert {
   id: string;
   type: string;
@@ -180,9 +188,9 @@ export default function AlertsPage() {
                   {/* ✨ REDESIGNED: Team matchup - clean, single display (no duplicates) */}
                   <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-4">
-                      <span className="text-base font-bold text-slate-200 tracking-wide">{alert.homeTeam}</span>
+                      <span className="text-base font-bold text-slate-200 tracking-wide">{getTeamNameFromAlert(alert.homeTeam)}</span>
                       <span className="text-slate-400 text-sm font-black bg-slate-700/40 px-2 py-1 rounded">VS</span>
-                      <span className="text-base font-bold text-slate-200 tracking-wide">{alert.awayTeam}</span>
+                      <span className="text-base font-bold text-slate-200 tracking-wide">{getTeamNameFromAlert(alert.awayTeam)}</span>
                     </div>
                     <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full tracking-wider">
                       {alert.sport}
@@ -203,7 +211,7 @@ export default function AlertsPage() {
                       hasSecond={!!(alert.context?.hasSecond || alert.hasSecond)}
                       hasThird={!!(alert.context?.hasThird || alert.hasThird)}
                       // Weather data
-                      weather={alert.context?.weather || alert.weather}
+                      weather={alert.context?.weather}
                       // Other sports specific
                       quarter={alert.context?.quarter}
                       timeRemaining={alert.context?.timeRemaining}

@@ -60,6 +60,14 @@ interface Sportsbook {
   color: string;
 }
 
+// Helper function to extract team name from either string or object format
+const getTeamName = (team: string | { name: string } | undefined): string => {
+  if (!team) return '';
+  if (typeof team === 'string') return team;
+  if (typeof team === 'object' && team.name) return team.name;
+  return '';
+};
+
 const sportsbooks: Sportsbook[] = [
   {
     name: 'Bet365',
@@ -285,7 +293,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="text-center">
-                    <div className="text-slate-300">{alertData.homeTeam?.split(' ').pop()}</div>
+                    <div className="text-slate-300">{getTeamName(alertData.homeTeam)?.split(' ').pop()}</div>
                     <div className="text-white font-mono">{alertData.betbookData.odds.home > 0 ? '+' : ''}{alertData.betbookData.odds.home}</div>
                   </div>
                   <div className="text-center">
@@ -293,7 +301,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <div className="text-white font-mono">{alertData.betbookData.odds.total}</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-slate-300">{alertData.awayTeam?.split(' ').pop()}</div>
+                    <div className="text-slate-300">{getTeamName(alertData.awayTeam)?.split(' ').pop()}</div>
                     <div className="text-white font-mono">{alertData.betbookData.odds.away > 0 ? '+' : ''}{alertData.betbookData.odds.away}</div>
                   </div>
                 </div>

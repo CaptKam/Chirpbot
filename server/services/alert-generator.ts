@@ -703,7 +703,7 @@ export class AlertGenerator {
         if (event.details?.event === 'Home Run') {
           // Check for Grand Slam by looking at runners
           const runners = lastPlay.runners || [];
-          const runsScored = runners.filter(r => r.details?.isScoringEvent).length;
+          const runsScored = runners.filter((r: any) => r.details?.isScoringEvent).length;
           const isGrandSlam = runsScored >= 4;
           
           const alertKey = `${game.gameId}_HOME_RUN_${lastPlay.about?.atBatIndex}`;
