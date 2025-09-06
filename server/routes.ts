@@ -2157,15 +2157,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
-  // Start live game monitoring every 15 seconds for real-time alerts
-  setInterval(async () => {
+  // Start live game monitoring with robust error handling
+  const monitoringInterval = setInterval(async () => {
     try {
       console.log('⚡ Real-time monitoring: Checking for live game alerts...');
       await alertGenerator.generateLiveGameAlerts();
-    } catch (error) {
-      console.error('Error in live monitoring:', error);
+    } catch (error: any) {
+      console.error('⚠️ Non-critical error in live monitoring:', error.message);
+      // Don't crash - just continue monitoring
     }
-  }, 15000); // Check every 15 seconds for real-time updates
+  }, 15000); // Check every 15 seconds
+  
+  // Clean up monitoring on server shutdown
+  process.on('beforeExit', () => {
+    clearInterval(monitoringInterval);
+    console.log('✅ Alert monitoring stopped cleanly');
+  })
 
   console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 

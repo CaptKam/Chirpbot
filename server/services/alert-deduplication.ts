@@ -22,9 +22,14 @@ export class AlertDeduplication {
   private cleanupTimer: NodeJS.Timeout;
 
   constructor() {
-    // Cleanup old alerts periodically
+    // Cleanup old alerts periodically with error handling
     this.cleanupTimer = setInterval(() => {
-      this.cleanup();
+      try {
+        this.cleanup();
+      } catch (error) {
+        console.error('⚠️ Non-critical error in dedup cleanup:', error);
+        // Don't crash - just continue
+      }
     }, this.CLEANUP_INTERVAL);
   }
 
@@ -102,13 +107,25 @@ export class AlertDeduplication {
 
   // Clean up old entries - more aggressive for real-time
   private cleanup(): void {
-    const now = Date.now();
-    const maxAge = 30000; // 30 seconds only - we want fresh data
+    try {
+      const now = Date.now();
+      const maxAge = 30000; // 30 seconds only - we want fresh data
+      let deleted = 0;
 
-    for (const [key, alert] of Array.from(this.recentAlerts.entries())) {
-      if (now - alert.timestamp > maxAge) {
-        this.recentAlerts.delete(key);
+      for (const [key, alert] of Array.from(this.recentAlerts.entries())) {
+        if (now - alert.timestamp > maxAge) {
+          this.recentAlerts.delete(key);
+          deleted++;
+        }
       }
+      
+      if (deleted > 0) {
+        console.log(`🧹 DEDUP: Cleaned ${deleted} expired entries`);
+      }
+    } catch (error) {
+      console.error('⚠️ Error during dedup cleanup:', error);
+      // Clear everything on error to prevent memory leak
+      this.recentAlerts.clear();
     }
   }
 
