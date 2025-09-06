@@ -14,7 +14,8 @@ export class NCAAFEngine extends BaseSportEngine {
     try {
       // Only check settings for actual NCAAF alert types
       const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN'
+        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN',
+        'NCAAF_SECOND_HALF_KICKOFF', 'OVERTIME', 'CLUTCH_TIME'
       ];
 
       if (!validNCAAFAlerts.includes(alertType)) {
@@ -322,7 +323,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
       // Filter to only valid NCAAF alerts  
       const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN'
+        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN',
+        'NCAAF_SECOND_HALF_KICKOFF', 'OVERTIME', 'CLUTCH_TIME'
       ];
 
       const ncaafEnabledTypes = enabledTypes.filter(alertType =>
