@@ -12,10 +12,21 @@ export class NFLEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
+      // Only check settings for actual NFL alert types
+      const validNFLAlerts = [
+        'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
+        'RED_ZONE', 'FOURTH_DOWN'
+      ];
+
+      if (!validNFLAlerts.includes(alertType)) {
+        console.log(`❌ ${alertType} is not a valid NFL alert type - rejecting`);
+        return false;
+      }
+
       return await this.settingsCache.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`NFL Settings cache error for ${alertType}:`, error);
-      return true;
+      return true; // Default to true if cache fails
     }
   }
 
@@ -48,9 +59,10 @@ export class NFLEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
-  // Alert processing is now handled by the base class using alert cylinders
+  // Override to delegate to base class modular system
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    return [];
+    // Use the parent class method which properly calls all loaded modules
+    return super.generateLiveAlerts(gameState);
   }
 
   private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
@@ -264,5 +276,94 @@ export class NFLEngine extends BaseSportEngine {
     const suffixes = ['th', 'st', 'nd', 'rd'];
     const remainder = num % 100;
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
+  }
+
+  // Initialize alert modules based on user's enabled preferences
+  async initializeForUser(userId: string): Promise<void> {
+    try {
+      // Get user's enabled alert types
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'nfl');
+      const enabledTypes = userPrefs
+        .filter(pref => pref.enabled)
+        .map(pref => pref.alertType);
+
+      // Filter to only valid NFL alerts  
+      const validNFLAlerts = [
+        'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
+        'RED_ZONE', 'FOURTH_DOWN'
+      ];
+
+      const nflEnabledTypes = enabledTypes.filter(alertType =>
+        validNFLAlerts.includes(alertType)
+      );
+
+      // Check global settings for these NFL alerts
+      const globallyEnabledTypes = [];
+      for (const alertType of nflEnabledTypes) {
+        const isGloballyEnabled = await this.isAlertEnabled(alertType);
+        if (isGloballyEnabled) {
+          globallyEnabledTypes.push(alertType);
+        }
+      }
+
+      console.log(`🎯 Initializing NFL engine for user ${userId} with ${globallyEnabledTypes.length} NFL alerts: ${globallyEnabledTypes.join(', ')}`);
+
+      // Initialize the NFL alert modules using parent class method
+      await this.initializeUserAlertModules(globallyEnabledTypes);
+
+    } catch (error) {
+      console.error(`❌ Failed to initialize NFL engine for user ${userId}:`, error);
+    }
+  }
+
+  // Load alert modules dynamically - NFL only
+  async loadAlertModule(alertType: string): Promise<any | null> {
+    try {
+      // Map NFL alert types to actual module files
+      const moduleMap: Record<string, string> = {
+        'NFL_GAME_START': 'nfl-game-start-module',
+        'NFL_SECOND_HALF_KICKOFF': 'second-half-kickoff-module',
+        'NFL_TWO_MINUTE_WARNING': 'two-minute-warning-module',
+        'RED_ZONE': 'red-zone-module',
+        'FOURTH_DOWN': 'fourth-down-module'
+      };
+
+      const moduleFileName = moduleMap[alertType];
+      if (!moduleFileName) {
+        console.log(`❌ No NFL module found for: ${alertType}`);
+        return null;
+      }
+
+      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
+      const module = await import(modulePath);
+      const ModuleClass = module.default;
+      return new ModuleClass();
+    } catch (error) {
+      console.error(`❌ Failed to load NFL alert module ${alertType}:`, error);
+      return null;
+    }
+  }
+
+  // Initialize alert modules for enabled alert types - NFL only
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    this.alertModules.clear();
+
+    console.log(`🔧 Loading ${enabledAlertTypes.length} NFL alert modules...`);
+
+    for (const alertType of enabledAlertTypes) {
+      try {
+        const module = await this.loadAlertModule(alertType);
+        if (module) {
+          this.alertModules.set(alertType, module);
+          console.log(`✅ Loaded NFL alert module: ${alertType}`);
+        } else {
+          console.log(`❌ Failed to load NFL module: ${alertType}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error loading NFL ${alertType}:`, error);
+      }
+    }
+
+    console.log(`🎯 Successfully initialized ${this.alertModules.size} NFL alert modules`);
   }
 }

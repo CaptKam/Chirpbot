@@ -16,7 +16,8 @@ export class MLBEngine extends BaseSportEngine {
       const validMLBAlerts = [
         'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
         'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 'TEST_ALERT'
+        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT',
+        'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -109,11 +110,12 @@ export class MLBEngine extends BaseSportEngine {
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
 
-      // Filter to only valid MLB alerts
+      // Filter to only valid MLB alerts  
       const validMLBAlerts = [
         'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
         'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 'TEST_ALERT'
+        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT',
+        'RE24_ENABLED', 'RE24_CONTEXT_FACTORS', 'RE24_MINIMUM_THRESHOLDS', 'RE24_DYNAMIC_PRIORITY'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
@@ -154,7 +156,12 @@ export class MLBEngine extends BaseSportEngine {
         'FULL_COUNT': 'full-count-module',
         'MLB_GAME_START': 'game-start-module',
         'MLB_SEVENTH_INNING_STRETCH': 'seventh-inning-stretch-module',
-        'TEST_ALERT': 'test-alert-module'
+        'STRIKEOUT': 'strikeout-module',
+        'TEST_ALERT': 'test-alert-module',
+        'RE24_ENABLED': 're24-enabled-module',
+        'RE24_CONTEXT_FACTORS': 're24-context-factors-module',
+        'RE24_MINIMUM_THRESHOLDS': 're24-minimum-thresholds-module',
+        'RE24_DYNAMIC_PRIORITY': 're24-dynamic-priority-module'
       };
 
       const moduleFileName = moduleMap[alertType];
@@ -194,5 +201,95 @@ export class MLBEngine extends BaseSportEngine {
     }
 
     console.log(`🎯 Successfully initialized ${this.alertModules.size} MLB alert modules`);
+  }
+
+  // This function is intended to process a list of games and return a GameState for each.
+  // It's a placeholder for game processing logic that might involve fetching more data or transforming it.
+  async processGames(games: any[]): Promise<GameState[]> {
+    const gameStates: GameState[] = [];
+
+    for (const game of games) {
+      // Normalize runner data for consistent display
+      const normalizeRunners = (gameData: any) => {
+        const runners = {
+          first: false,
+          second: false,
+          third: false
+        };
+
+        // Primary: Check runners object
+        if (gameData.runners) {
+          runners.first = Boolean(gameData.runners.first);
+          runners.second = Boolean(gameData.runners.second);
+          runners.third = Boolean(gameData.runners.third);
+        }
+
+        // Secondary: Check has* properties
+        if (gameData.hasFirst !== undefined) runners.first = Boolean(gameData.hasFirst);
+        if (gameData.hasSecond !== undefined) runners.second = Boolean(gameData.hasSecond);
+        if (gameData.hasThird !== undefined) runners.third = Boolean(gameData.hasThird);
+
+        // Tertiary: Check baseRunners array (ESPN format)
+        if (gameData.baseRunners && Array.isArray(gameData.baseRunners)) {
+          gameData.baseRunners.forEach((runner: any) => {
+            if (runner.base === 1 || runner.base === '1') runners.first = true;
+            if (runner.base === 2 || runner.base === '2') runners.second = true;
+            if (runner.base === 3 || runner.base === '3') runners.third = true;
+          });
+        }
+
+        // Quaternary: Check situation.onFirst, onSecond, onThird
+        if (gameData.situation) {
+          if (gameData.situation.onFirst !== undefined) runners.first = Boolean(gameData.situation.onFirst);
+          if (gameData.situation.onSecond !== undefined) runners.second = Boolean(gameData.situation.onSecond);
+          if (gameData.situation.onThird !== undefined) runners.third = Boolean(gameData.situation.onThird);
+        }
+
+        return runners;
+      };
+
+      const gameState: GameState = {
+        gameId: game.id.toString(),
+        sport: 'MLB',
+        homeTeam: game.homeTeam?.name || game.home?.name || 'Unknown',
+        awayTeam: game.awayTeam?.name || game.away?.name || 'Unknown',
+        homeScore: game.homeTeam?.score || game.home?.score || 0,
+        awayScore: game.awayTeam?.score || game.away?.score || 0,
+        status: game.status || 'unknown',
+        isLive: game.status === 'in' || game.status === 'live',
+
+        // MLB-specific fields with proper fallbacks
+        inning: game.inning || 1,
+        topBottom: game.topBottom || 'top',
+        isTopInning: game.topBottom === 'top',
+        outs: Math.max(0, Math.min(2, game.outs || 0)), // Validate outs (0-2)
+        balls: Math.max(0, Math.min(3, game.balls || 0)), // Validate balls (0-3)
+        strikes: Math.max(0, Math.min(2, game.strikes || 0)), // Validate strikes (0-2)
+
+        // Normalize runners using our helper function
+        ...normalizeRunners(game),
+        runners: normalizeRunners(game),
+
+        // Keep original data for debugging
+        originalData: game
+      };
+
+      // Log runner data for debugging
+      const runners = normalizeRunners(game);
+      console.log(`🔍 Live data for game ${game.id}:`, {
+        runners,
+        balls: gameState.balls,
+        strikes: gameState.strikes,
+        outs: gameState.outs,
+        inning: gameState.inning,
+        isTopInning: gameState.isTopInning,
+        homeScore: gameState.homeScore,
+        awayScore: gameState.awayScore
+      });
+
+      gameStates.push(gameState);
+    }
+
+    return gameStates;
   }
 }
