@@ -12,20 +12,10 @@ export class CFLEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only check settings for actual CFL alert types
-      const validCFLAlerts = [
-        'CFL_GAME_START', 'CFL_TWO_MINUTE_WARNING', 'RED_ZONE', 'THIRD_DOWN'
-      ];
-
-      if (!validCFLAlerts.includes(alertType)) {
-        console.log(`❌ ${alertType} is not a valid CFL alert type - rejecting`);
-        return false;
-      }
-
       return await this.settingsCache.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`CFL Settings cache error for ${alertType}:`, error);
-      return true; // Default to true if cache fails
+      return true;
     }
   }
 
@@ -58,9 +48,8 @@ export class CFLEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 5), 95);
   }
 
-  // Override to delegate to base class modular system
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    // Use the parent class method which properly calls all loaded modules
+    // Alert processing is now handled by the base class using alert cylinders
     return super.generateLiveAlerts(gameState);
   }
 
@@ -309,92 +298,5 @@ export class CFLEngine extends BaseSportEngine {
     const suffixes = ['th', 'st', 'nd', 'rd'];
     const remainder = num % 100;
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
-  }
-
-  // Initialize alert modules based on user's enabled preferences
-  async initializeForUser(userId: string): Promise<void> {
-    try {
-      // Get user's enabled alert types
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'cfl');
-      const enabledTypes = userPrefs
-        .filter(pref => pref.enabled)
-        .map(pref => pref.alertType);
-
-      // Filter to only valid CFL alerts  
-      const validCFLAlerts = [
-        'CFL_GAME_START', 'CFL_TWO_MINUTE_WARNING', 'RED_ZONE', 'THIRD_DOWN'
-      ];
-
-      const cflEnabledTypes = enabledTypes.filter(alertType =>
-        validCFLAlerts.includes(alertType)
-      );
-
-      // Check global settings for these CFL alerts
-      const globallyEnabledTypes = [];
-      for (const alertType of cflEnabledTypes) {
-        const isGloballyEnabled = await this.isAlertEnabled(alertType);
-        if (isGloballyEnabled) {
-          globallyEnabledTypes.push(alertType);
-        }
-      }
-
-      console.log(`🎯 Initializing CFL engine for user ${userId} with ${globallyEnabledTypes.length} CFL alerts: ${globallyEnabledTypes.join(', ')}`);
-
-      // Initialize the CFL alert modules using parent class method
-      await this.initializeUserAlertModules(globallyEnabledTypes);
-
-    } catch (error) {
-      console.error(`❌ Failed to initialize CFL engine for user ${userId}:`, error);
-    }
-  }
-
-  // Load alert modules dynamically - CFL only
-  async loadAlertModule(alertType: string): Promise<any | null> {
-    try {
-      // Map CFL alert types to actual module files
-      const moduleMap: Record<string, string> = {
-        'CFL_GAME_START': 'cfl-game-start-module',
-        'CFL_TWO_MINUTE_WARNING': 'two-minute-warning-module',
-        'RED_ZONE': 'red-zone-module',
-        'THIRD_DOWN': 'third-down-module'
-      };
-
-      const moduleFileName = moduleMap[alertType];
-      if (!moduleFileName) {
-        console.log(`❌ No CFL module found for: ${alertType}`);
-        return null;
-      }
-
-      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
-      const module = await import(modulePath);
-      const ModuleClass = module.default;
-      return new ModuleClass();
-    } catch (error) {
-      console.error(`❌ Failed to load CFL alert module ${alertType}:`, error);
-      return null;
-    }
-  }
-
-  // Initialize alert modules for enabled alert types - CFL only
-  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    this.alertModules.clear();
-
-    console.log(`🔧 Loading ${enabledAlertTypes.length} CFL alert modules...`);
-
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ Loaded CFL alert module: ${alertType}`);
-        } else {
-          console.log(`❌ Failed to load CFL module: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error loading CFL ${alertType}:`, error);
-      }
-    }
-
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} CFL alert modules`);
   }
 }

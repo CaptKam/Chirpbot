@@ -12,20 +12,10 @@ export class NCAAFEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only check settings for actual NCAAF alert types
-      const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN'
-      ];
-
-      if (!validNCAAFAlerts.includes(alertType)) {
-        console.log(`❌ ${alertType} is not a valid NCAAF alert type - rejecting`);
-        return false;
-      }
-
       return await this.settingsCache.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`NCAAF Settings cache error for ${alertType}:`, error);
-      return true; // Default to true if cache fails
+      return true;
     }
   }
 
@@ -309,92 +299,5 @@ export class NCAAFEngine extends BaseSportEngine {
     const suffixes = ['th', 'st', 'nd', 'rd'];
     const remainder = num % 100;
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
-  }
-
-  // Initialize alert modules based on user's enabled preferences
-  async initializeForUser(userId: string): Promise<void> {
-    try {
-      // Get user's enabled alert types
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'ncaaf');
-      const enabledTypes = userPrefs
-        .filter(pref => pref.enabled)
-        .map(pref => pref.alertType);
-
-      // Filter to only valid NCAAF alerts  
-      const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN'
-      ];
-
-      const ncaafEnabledTypes = enabledTypes.filter(alertType =>
-        validNCAAFAlerts.includes(alertType)
-      );
-
-      // Check global settings for these NCAAF alerts
-      const globallyEnabledTypes = [];
-      for (const alertType of ncaafEnabledTypes) {
-        const isGloballyEnabled = await this.isAlertEnabled(alertType);
-        if (isGloballyEnabled) {
-          globallyEnabledTypes.push(alertType);
-        }
-      }
-
-      console.log(`🎯 Initializing NCAAF engine for user ${userId} with ${globallyEnabledTypes.length} NCAAF alerts: ${globallyEnabledTypes.join(', ')}`);
-
-      // Initialize the NCAAF alert modules using parent class method
-      await this.initializeUserAlertModules(globallyEnabledTypes);
-
-    } catch (error) {
-      console.error(`❌ Failed to initialize NCAAF engine for user ${userId}:`, error);
-    }
-  }
-
-  // Load alert modules dynamically - NCAAF only
-  async loadAlertModule(alertType: string): Promise<any | null> {
-    try {
-      // Map NCAAF alert types to actual module files
-      const moduleMap: Record<string, string> = {
-        'NCAAF_GAME_START': 'ncaaf-game-start-module',
-        'NCAAF_TWO_MINUTE_WARNING': 'two-minute-warning-module',
-        'RED_ZONE': 'red-zone-module',
-        'FOURTH_DOWN': 'fourth-down-module'
-      };
-
-      const moduleFileName = moduleMap[alertType];
-      if (!moduleFileName) {
-        console.log(`❌ No NCAAF module found for: ${alertType}`);
-        return null;
-      }
-
-      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
-      const module = await import(modulePath);
-      const ModuleClass = module.default;
-      return new ModuleClass();
-    } catch (error) {
-      console.error(`❌ Failed to load NCAAF alert module ${alertType}:`, error);
-      return null;
-    }
-  }
-
-  // Initialize alert modules for enabled alert types - NCAAF only
-  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    this.alertModules.clear();
-
-    console.log(`🔧 Loading ${enabledAlertTypes.length} NCAAF alert modules...`);
-
-    for (const alertType of enabledAlertTypes) {
-      try {
-        const module = await this.loadAlertModule(alertType);
-        if (module) {
-          this.alertModules.set(alertType, module);
-          console.log(`✅ Loaded NCAAF alert module: ${alertType}`);
-        } else {
-          console.log(`❌ Failed to load NCAAF module: ${alertType}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error loading NCAAF ${alertType}:`, error);
-      }
-    }
-
-    console.log(`🎯 Successfully initialized ${this.alertModules.size} NCAAF alert modules`);
   }
 }
