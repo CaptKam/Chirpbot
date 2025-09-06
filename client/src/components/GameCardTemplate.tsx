@@ -149,8 +149,8 @@ export function GameCardTemplate({
   const formatTime = (dateString?: string) => {
     if (!dateString) return 'TBD';
     const date = new Date(dateString);
-    return isNaN(date.getTime()) 
-      ? 'TBD' 
+    return isNaN(date.getTime())
+      ? 'TBD'
       : date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
@@ -192,18 +192,21 @@ export function GameCardTemplate({
 
   // Fetch weather data for the home team
   const { data: weatherData } = useQuery({
-    queryKey: ['weather', homeTeam.name],
+    queryKey: ['weather', homeTeam?.name],
     queryFn: async () => {
+      if (!homeTeam?.name) return null;
       const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeam.name)}`, {
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Weather fetch failed');
       return response.json();
     },
-    staleTime: 60 * 1000, // Cache for 1 minute
-    refetchInterval: 60 * 1000, // Refetch every minute
+    enabled: !!homeTeam?.name && showWeather && sport === 'MLB', // Only fetch for MLB games when weather is shown
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: 10 * 60 * 1000, // Refetch every 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on component mount if data exists
     retry: 1,
-    enabled: showWeather && sport === 'MLB' // Only fetch for MLB games when weather is shown
   });
 
   // Convert wind direction degrees to cardinal direction
@@ -214,10 +217,10 @@ export function GameCardTemplate({
   };
 
   return (
-    <Card 
+    <Card
       className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 ${cardHeight} hover:bg-white/10 ${
-        isSelected 
-          ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
+        isSelected
+          ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20'
           : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
       } ${className}`}
       style={{ borderRadius: '12px' }}
@@ -256,8 +259,8 @@ export function GameCardTemplate({
           <div className="flex items-center space-x-2">
             {(status === 'live' || status === 'final') && (
               <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                status === 'live' 
-                  ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
+                status === 'live'
+                  ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
                   : 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
               }`}>
                 {status === 'live' && <Play className="w-3 h-3 mr-1" />}
@@ -272,7 +275,7 @@ export function GameCardTemplate({
           {/* Enhanced MLB Display with Baseball Diamond */}
           {sport === 'MLB' && (status === 'live' || showEnhancedMLB) && (
             <div className="mt-3 flex justify-center">
-              <BaseballDiamond 
+              <BaseballDiamond
                 runners={runners || {
                   first: false,
                   second: false,
@@ -322,7 +325,7 @@ export function GameCardTemplate({
       <div className="flex items-center justify-between pt-3 border-t border-white/10">
         {/* Weather Display - Use real weather data from API */}
         {showWeather && sport === 'MLB' && weatherData && (
-          <WeatherDisplay 
+          <WeatherDisplay
             windSpeed={weatherData.windSpeed}
             windDirection={getCardinalDirection(weatherData.windDirection)}
             windGust={weatherData.windGust}
@@ -334,7 +337,7 @@ export function GameCardTemplate({
 
         {/* Fallback weather display for non-MLB or when no data */}
         {showWeather && (sport !== 'MLB' || !weatherData) && (
-          <WeatherDisplay 
+          <WeatherDisplay
             windSpeed={weather?.windSpeed || 5}
             windDirection={weather?.windDirection || "N"}
             size="sm"
