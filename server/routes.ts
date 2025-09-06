@@ -2002,9 +2002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const allAlerts = [
-        'RISP', 'BASES_LOADED', 'RUNNERS_1ST_2ND', 'CLOSE_GAME', 'CLOSE_GAME_LIVE',
-        'LATE_PRESSURE', 'HOME_RUN_LIVE', 'HIGH_SCORING', 'SHUTOUT', 'BLOWOUT',
-        'FULL_COUNT', 'STRIKEOUT', 'POWER_HITTER', 'HOT_HITTER'
+        'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'
       ];
 
       const results = [];

@@ -109,11 +109,10 @@ export class MLBEngine extends BaseSportEngine {
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
 
-      // Filter to only valid MLB alerts  
+      // Filter to only valid MLB alerts that have corresponding module files
       const validMLBAlerts = [
-        'BASES_LOADED', 'FULL_COUNT', 'RISP', 'CLOSE_GAME', 'LATE_PRESSURE',
-        'POWER_HITTER', 'HOT_HITTER', 'RUNNERS_1ST_2ND', 'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 'STRIKEOUT', 'TEST_ALERT'
+        'MLB_GAME_START',
+        'MLB_SEVENTH_INNING_STRETCH'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
