@@ -25,29 +25,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function checkAuthentication() {
-    try {
-        const response = await fetch('/api/admin-auth/verify', {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            redirectToLogin();
-            return;
-        }
-
-        const data = await response.json();
-        if (!data.authenticated) {
-            redirectToLogin();
-            return;
-        }
-
-        // Update admin info
-        updateAdminInfo(data.user);
-    } catch (error) {
-        console.error('Auth check error:', error);
-        redirectToLogin();
-    }
+    // Skip authentication check to prevent conflicts with React admin
+    // This HTML admin panel is deprecated in favor of the React admin interface
+    console.log('HTML admin panel deprecated - use React admin interface at /admin');
+    return;
 }
 
 function redirectToLogin() {
