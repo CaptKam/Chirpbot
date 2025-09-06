@@ -171,7 +171,27 @@
 
         <!-- Alerts Tab -->
         <div id="alertsContent" class="tab-content" style="display: none;">
-            <!-- Global alert controls removed - starting fresh -->
+            <!-- Master Alert Control -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-power-off"></i>
+                        Master Alert Control
+                    </h2>
+                </div>
+                <div class="master-control">
+                    <div class="master-toggle">
+                        <div class="toggle-info">
+                            <h3>System-Wide Alert Control</h3>
+                            <p>Enable or disable ALL alert functionality across the entire system</p>
+                        </div>
+                        <label class="switch master">
+                            <input type="checkbox" id="masterAlertToggle" onchange="toggleMasterAlerts()">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
 
             <!-- Sport-Specific Alert Configuration -->
             <div class="content-section">
@@ -181,7 +201,16 @@
                         <span id="sportTitle">MLB</span> Alert Configuration
                     </h2>
                     <div class="search-bar">
-                        <span style="color: #94a3b8; font-style: italic;">Changes automatically apply to all users</span>
+                        <select id="sportSelector" class="sport-selector" onchange="switchSport(this.value)">
+                            <option value="MLB">⚾ MLB - Major League Baseball</option>
+                            <option value="NFL">🏈 NFL - National Football League</option>
+                            <option value="NBA">🏀 NBA - National Basketball Association</option>
+                            <option value="NHL">🏒 NHL - National Hockey League</option>
+                            <option value="WNBA">🏀 WNBA - Women's National Basketball Association</option>
+                            <option value="CFL">🏈 CFL - Canadian Football League</option>
+                            <option value="NCAAF">🏈 NCAAF - College Football</option>
+                        </select>
+                        <span style="color: #94a3b8; font-style: italic; margin-left: 15px;">Changes automatically apply to all users</span>
                     </div>
                 </div>
 
