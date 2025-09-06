@@ -9,6 +9,8 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
+// AI services removed
+
 // Extend session data interface
 declare module 'express-session' {
   interface SessionData {
@@ -423,9 +425,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if alert type is globally enabled first
       const isGloballyEnabled = await storage.isAlertGloballyEnabled(sport.toUpperCase(), alertType);
       if (!isGloballyEnabled && enabled) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: `Alert type ${alertType} is globally disabled by admin`,
-          globallyDisabled: true 
+          globallyDisabled: true
         });
       }
 
@@ -464,10 +466,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), filteredPreferences);
-      res.json({ 
-        message: 'Alert preferences updated successfully', 
+      res.json({
+        message: 'Alert preferences updated successfully',
         count: result.length,
-        filtered: preferences.length - filteredPreferences.length 
+        filtered: preferences.length - filteredPreferences.length
       });
     } catch (error) {
       console.error('Error setting bulk alert preferences:', error);
@@ -702,12 +704,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/debug/test-alerts', requireAdmin, async (req, res) => {
     try {
       console.log('🧪 Testing alert generation system...');
-      
+
       const alertGenerator = new AlertGenerator();
-      
+
       // Force generate alerts for live games
       await alertGenerator.generateLiveGameAlerts();
-      
+
       res.json({
         message: 'Test alert generation completed - check server logs',
         note: 'This forces the alert generation process to run immediately'

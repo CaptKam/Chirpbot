@@ -1,973 +1,326 @@
-import { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { AuthLoading, StatsLoading } from '@/components/sports-loading';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+import React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../hooks/useAuth';
+import { Switch } from '../components/ui/switch';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
+import { Badge } from '../components/ui/badge';
+import { useToast } from '../hooks/use-toast';
 
-// Comprehensive alert configuration for all sports
+// Alert type configurations
 const ALERT_TYPE_CONFIG = {
-  MLB: [
-    { key: 'MLB_GAME_START', label: 'Game Start', description: 'Alert when MLB game begins' },
-    { key: 'MLB_SEVENTH_INNING_STRETCH', label: 'Seventh Inning Stretch', description: 'Traditional 7th inning stretch alert' },
-    { key: 'RISP', label: 'Runner in Scoring Position', description: 'Alerts when a runner reaches 2nd or 3rd base' },
-    { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases are occupied' },
-    { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity setup' },
-    { key: 'CLOSE_GAME', label: 'Close Game', description: 'Games with score difference ≤ 3 runs' },
-    { key: 'CLOSE_GAME_LIVE', label: 'Live Close Game', description: 'Real-time close game situations' },
-    { key: 'LATE_PRESSURE', label: 'Late Inning Pressure', description: '8th inning or later with close score' },
-    { key: 'HOME_RUN_LIVE', label: 'Home Run (Live)', description: 'Real-time home run alerts as they happen' },
-    { key: 'HIGH_SCORING', label: 'High-Scoring Game', description: 'Games with 12+ total runs' },
-    { key: 'SHUTOUT', label: 'Shutout Alert', description: 'When a team gets shut out (0 runs)' },
-    { key: 'BLOWOUT', label: 'Blowout Game', description: 'Games with 7+ run difference' },
-    { key: 'FULL_COUNT', label: 'Full Count (3-2)', description: 'Maximum pressure at-bat situations' },
-    { key: 'STRIKEOUT', label: 'Strikeout Alert', description: 'Real-time strikeout notifications' },
-    { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at bat' },
-    { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' }
+  'MLB Alerts': [
+    { key: 'MLB_BASES_LOADED', label: 'Bases Loaded', description: 'High scoring opportunity' },
+    { key: 'MLB_RISP', label: 'Runner in Scoring Position', description: 'Runner on 2nd or 3rd base' },
+    { key: 'MLB_CLOSE_GAME', label: 'Close Game', description: 'Game within 2 runs in late innings' },
+    { key: 'MLB_LATE_PRESSURE', label: 'Late Pressure', description: '7th inning or later tension' },
+    { key: 'MLB_HOT_HITTER', label: 'Hot Hitter', description: 'Batter on a hitting streak' },
+    { key: 'MLB_POWER_HITTER', label: 'Power Hitter At Bat', description: '20+ HR hitter batting' },
+    { key: 'MLB_GAME_START', label: 'Game Start', description: 'Game beginning notification' },
+    { key: 'MLB_SEVENTH_INNING_STRETCH', label: 'Seventh Inning Stretch', description: 'Classic baseball moment' }
   ],
-  'AI Enhancements': [
-    { key: 'AI_ENHANCED_MESSAGES', label: 'AI-Enhanced Alert Messages', description: 'AI adds context like launch angle insights' },
-    { key: 'AI_PREDICTIVE_AT_BAT', label: 'Predictive At-Bat Analysis', description: 'AI predicts contact probability and outcomes' },
-    { key: 'AI_SCORING_PROBABILITY', label: 'Real-Time Scoring Probability', description: 'AI calculates and displays scoring chances' },
-    { key: 'AI_SITUATION_ANALYSIS', label: 'Game Situation Analysis', description: 'AI analyzes pressure situations and momentum' },
-    { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
-    { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
+  'NFL Alerts': [
+    { key: 'NFL_RED_ZONE', label: 'Red Zone', description: 'Team inside 20-yard line' },
+    { key: 'NFL_FOURTH_DOWN', label: 'Fourth Down', description: 'Critical down conversion' },
+    { key: 'NFL_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Final 2 minutes of half' },
+    { key: 'NFL_GAME_START', label: 'Game Start', description: 'Game beginning notification' }
   ],
-  'RE24 System': [
-    { key: 'RE24_ENABLED', label: 'RE24 Probability System', description: 'Advanced run expectancy calculations for scoring probability' },
-    { key: 'RE24_CONTEXT_FACTORS', label: 'RE24 Context Adjustments', description: 'Weather, power hitter, and ballpark factors' },
-    { key: 'RE24_MINIMUM_THRESHOLDS', label: 'RE24 Minimum Thresholds', description: 'Probability-based alert filtering (40-45% minimums)' },
-    { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
+  'NCAAF Alerts': [
+    { key: 'NCAAF_RED_ZONE', label: 'Red Zone', description: 'Team inside 25-yard line' },
+    { key: 'NCAAF_FOURTH_DOWN', label: 'Fourth Down', description: 'Critical down conversion' },
+    { key: 'NCAAF_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Final 2 minutes of half' },
+    { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Game beginning notification' }
   ],
-  NCAAF: [
-    { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Game kickoff notification' },
-    { key: 'NCAAF_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Second half begins notification' },
-    { key: 'RED_ZONE', label: 'Red Zone Opportunities', description: 'Team advances inside the 20-yard line' },
-    { key: 'FOURTH_DOWN', label: 'Fourth Down Situations', description: 'Critical fourth down attempts' },
-    { key: 'NCAAF_TWO_MINUTE_WARNING', label: 'Two-Minute Warning', description: 'Final 2 minutes of each half' },
-    { key: 'CLUTCH_TIME', label: 'Clutch Time Situations', description: 'High-pressure game moments' },
-    { key: 'OVERTIME', label: 'Overtime Play', description: 'Games entering overtime' }
+  'WNBA Alerts': [
+    { key: 'WNBA_GAME_START', label: 'Game Start', description: 'Game beginning notification' },
+    { key: 'WNBA_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Final 2 minutes of quarter' },
+    { key: 'WNBA_FINAL_MINUTES', label: 'Final Minutes', description: 'Clutch time situations' },
+    { key: 'WNBA_HIGH_SCORING_QUARTER', label: 'High Scoring Quarter', description: 'Explosive offensive quarter' },
+    { key: 'WNBA_LOW_SCORING_QUARTER', label: 'Low Scoring Quarter', description: 'Defensive battle quarter' },
+    { key: 'WNBA_FOURTH_QUARTER', label: 'Fourth Quarter', description: 'Final quarter action' }
   ],
-  NFL: [
-    { key: 'NFL_GAME_START', label: 'Game Start', description: 'Game kickoff notification' },
-    { key: 'NFL_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Second half begins notification' },
-    { key: 'RED_ZONE', label: 'Red Zone', description: 'Team inside 20-yard line' },
-    { key: 'FOURTH_DOWN', label: 'Fourth Down', description: 'Critical conversion attempts' },
-    { key: 'NFL_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'End of half situations' }
-  ],
-  NBA: [
-      { key: "CLUTCH_TIME", label: "Clutch Time", description: "Final 5 minutes with close score" },
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "OVERTIME", label: "Overtime", description: "Games going to overtime" },
-    ],
-    NHL: [
-      { key: "POWER_PLAY", label: "Power Play", description: "Man advantage situations" },
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "EMPTY_NET", label: "Empty Net", description: "Goalie pulled situations" },
-    ],
-    CFL: [
-      { key: "CFL_GAME_START", label: "Game Start", description: "Game kickoff notification" },
-      { key: "CFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Second half begins notification" },
-      { key: "RED_ZONE", label: "Red Zone Opportunities", description: "Team advances inside the 25-yard line" },
-      { key: "THIRD_DOWN", label: "Third Down (CFL)", description: "Critical third down conversion attempts" },
-      { key: "CFL_TWO_MINUTE_WARNING", label: "Two-Minute Warning", description: "Final 2 minutes of each half" },
-      { key: "THREE_MINUTE_WARNING", label: "Three-Minute Warning", description: "Final 3 minutes of each half" },
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "OVERTIME", label: "Overtime Play", description: "Games entering overtime" }
-    ],
-    WNBA: [
-    { key: 'WNBA_GAME_START', label: 'Game Start', description: 'Game tipoff notification' },
-    { key: 'WNBA_TWO_MINUTE_WARNING', label: 'Two-Minute Warning', description: 'Final 2 minutes of each quarter' },
-    { key: 'CLOSE_GAME', label: 'Close Game Alert', description: 'Games with tight scores' },
-    { key: 'OVERTIME', label: 'Overtime', description: 'Games going to overtime' },
-    { key: 'FINAL_MINUTES', label: 'Final Minutes', description: 'Alerts in the last 2 minutes of the game' },
-    { key: 'HIGH_SCORING_QUARTER', label: 'High-Scoring Quarter', description: 'Quarters with 25+ points' },
-    { key: 'LOW_SCORING_QUARTER', label: 'Low-Scoring Quarter', description: 'Quarters with 10 or fewer points' },
-    { key: 'FOURTH_QUARTER', label: 'Fourth Quarter Crunch Time', description: 'Critical final quarter moments' }
-  ],
+  'CFL Alerts': [
+    { key: 'CFL_RED_ZONE', label: 'Red Zone', description: 'Team inside 25-yard line' },
+    { key: 'CFL_THIRD_DOWN', label: 'Third Down', description: 'Final down conversion' },
+    { key: 'CFL_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Final 2 minutes of half' },
+    { key: 'CFL_GAME_START', label: 'Game Start', description: 'Game beginning notification' }
+  ]
 };
 
 export default function Settings() {
-  const [activeSport, setActiveSport] = useState(() => {
-    // Persist active sport selection in localStorage
-    return localStorage.getItem('settings-active-sport') || "MLB";
-  });
+  const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Authentication
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  // Fetch user preferences
+  const { data: userPreferences, isLoading: preferencesLoading } = useQuery({
+    queryKey: ['user-preferences', user?.id],
+    queryFn: async () => {
+      const response = await fetch('/api/user/preferences');
+      if (!response.ok) throw new Error('Failed to fetch preferences');
+      return response.json();
+    },
+    enabled: !!user?.id
+  });
 
-  // Telegram settings state
-  const [telegramBotToken, setTelegramBotToken] = useState("");
-  const [telegramChatId, setTelegramChatId] = useState("");
-  const [telegramEnabled, setTelegramEnabled] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
-
-  // Global settings query to check admin-disabled alerts
+  // Fetch global settings
   const { data: globalSettings } = useQuery({
-    queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
-    enabled: !!user?.id && isAuthenticated,
-  });
-
-  // Alert preferences query
-  const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
-    queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
-    enabled: !!user?.id && isAuthenticated,
-    staleTime: 30 * 1000, // 30 seconds for alert preferences to show admin changes quickly
-    refetchInterval: 60 * 1000, // Refetch every minute to catch admin changes
-  });
-
-  // Telegram settings query
-  const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
-    queryKey: [`/api/user/${user?.id}/telegram`],
-    enabled: !!user?.id && isAuthenticated,
-  });
-
-  // Create a map of current preferences for easy lookup
-  const preferenceMap = new Map();
-  if (alertPreferences && Array.isArray(alertPreferences)) {
-    alertPreferences.forEach((pref: any) => {
-      preferenceMap.set(pref.alertType, pref.enabled);
-    });
-  }
-
-  // Helper to get alert preference, defaulting to true if not found or not loaded
-  const getAlertPreference = (sport: string, alertType: string): boolean => {
-    if (preferencesLoading) return true; // Default to true while loading to avoid brief disablings
-
-    // Check if the alert is globally disabled by admin
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false;
-    }
-
-    // For AI Enhancement alerts, look up in MLB preferences (since they're MLB-specific)
-    if (alertType.startsWith('AI_')) {
-      return preferenceMap.get(alertType) ?? true;
-    }
-
-    return preferenceMap.get(alertType) ?? true;
-  };
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/logout", {});
+    queryKey: ['global-settings'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/global-settings');
+      if (!response.ok) throw new Error('Failed to fetch global settings');
       return response.json();
-    },
-    onSuccess: () => {
-      queryClient.clear();
-      window.location.reload();
-    },
+    }
   });
 
-  // Alert preferences mutation
+  // Update alert preference mutation
   const updateAlertPreferenceMutation = useMutation({
-    mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
-      const response = await apiRequest("POST", `/api/user/${user?.id}/alert-preferences`, {
-        sport: activeSport,
-        alertType,
-        enabled
+    mutationFn: async ({ sport, alertType, enabled }: { sport: string; alertType: string; enabled: boolean }) => {
+      const response = await fetch('/api/user/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          [`${sport}_${alertType}`]: enabled
+        })
       });
+      if (!response.ok) throw new Error('Failed to update preference');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
-      });
+      queryClient.invalidateQueries({ queryKey: ['user-preferences'] });
       toast({
-        title: "Alert preference updated",
-        description: "Your alert settings have been saved.",
+        title: "Settings Updated",
+        description: "Your alert preferences have been saved.",
       });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to update alert preference. Please try again.",
+        description: "Failed to update preferences. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
-  // Telegram settings mutation
-  const updateTelegramMutation = useMutation({
-    mutationFn: async ({ botToken, chatId, enabled }: { botToken: string; chatId: string; enabled: boolean }) => {
-      const response = await apiRequest("POST", `/api/user/${user?.id}/telegram`, {
-        botToken,
-        chatId,
-        enabled
+  // Update user settings mutation
+  const updateUserSettingsMutation = useMutation({
+    mutationFn: async (settings: Record<string, string>) => {
+      const response = await fetch('/api/user/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
       });
+      if (!response.ok) throw new Error('Failed to update settings');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [`/api/user/${user?.id}/telegram`]
-      });
       toast({
-        title: "Telegram settings updated",
-        description: "Your Telegram configuration has been saved.",
+        title: "Settings Updated",
+        description: "Your settings have been saved.",
       });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update Telegram settings. Please try again.",
-        variant: "destructive",
-      });
-    },
+    }
   });
 
-  // Test Telegram connection
-  const testTelegramConnection = async () => {
-    if (!telegramBotToken || !telegramChatId) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both bot token and chat ID before testing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setTestingConnection(true);
-    setConnectionTestResult(null);
-
-    try {
-      const response = await apiRequest("POST", "/api/telegram/test", {
-        botToken: telegramBotToken,
-        chatId: telegramChatId
-      });
-      const result = await response.json();
-
-      if (response.ok && result) {
-        setConnectionTestResult('success');
-        toast({
-          title: "Connection Successful",
-          description: "Your Telegram bot is working correctly!",
-        });
-      } else {
-        setConnectionTestResult('error');
-        toast({
-          title: "Connection Failed",
-          description: "Please check your bot token and chat ID.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      setConnectionTestResult('error');
-      toast({
-        title: "Connection Failed",
-        description: "Please check your bot token and chat ID.",
-        variant: "destructive",
-      });
-    } finally {
-      setTestingConnection(false);
-    }
+  const getAlertPreferenceWithRE24 = (sport: string, alertKey: string) => {
+    if (!userPreferences) return false;
+    
+    // Remove sport prefix if it exists in the key
+    const cleanKey = alertKey.startsWith(`${sport}_`) ? alertKey : `${sport}_${alertKey}`;
+    return userPreferences[cleanKey] || false;
   };
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
+  const handleAlertToggle = (sport: string, alertKey: string, enabled: boolean) => {
+    const cleanAlertType = alertKey.replace(`${sport}_`, '');
+    updateAlertPreferenceMutation.mutate({ sport, alertType: cleanAlertType, enabled });
   };
 
-  const handleAlertToggle = (alertType: string, enabled: boolean) => {
-    updateAlertPreferenceMutation.mutate({ alertType, enabled });
+  const handleSettingsUpdate = (settings: Record<string, string>) => {
+    updateUserSettingsMutation.mutate(settings);
   };
 
-  // Populate Telegram settings from query data
-  useEffect(() => {
-    if (telegramSettings && typeof telegramSettings === 'object') {
-      const settings = telegramSettings as any;
-      setTelegramEnabled(settings.telegramEnabled || false);
-      setTelegramChatId(settings.telegramChatId || "");
-      // Don't populate token for security (backend returns "***")
-      if (settings.telegramBotToken && settings.telegramBotToken !== "***") {
-        setTelegramBotToken(settings.telegramBotToken);
-      }
-    }
-  }, [telegramSettings]);
-
-  const handleTelegramSave = () => {
-    updateTelegramMutation.mutate({
-      botToken: telegramBotToken,
-      chatId: telegramChatId,
-      enabled: telegramEnabled
-    });
-  };
-
-  // Helper function to get alert preference, considering RE24 specific logic
-  const getAlertPreferenceWithRE24 = (sport: string, alertType: string): boolean => {
-    if (preferencesLoading) return true;
-
-    // Check if the alert is globally disabled by admin
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false;
-    }
-
-    // Handle AI Enhancements and RE24 System separately
-    if (alertType.startsWith('AI_') || alertType.startsWith('RE24_')) {
-      // Assuming AI and RE24 settings are associated with MLB for configuration purposes if not sport-specific
-      return preferenceMap.get(alertType) ?? true;
-    }
-
-    return preferenceMap.get(alertType) ?? true;
-  };
-
-
-  // Helper function to get category icon
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Game Situations":
-        return <Target className="w-4 h-4 text-emerald-400" />;
-      case "Scoring Events":
-        return <Trophy className="w-4 h-4 text-yellow-400" />;
-      case "At-Bat Situations":
-        return <Clock className="w-4 h-4 text-blue-400" />;
-      default:
-        return <Bell className="w-4 h-4 text-slate-400" />;
-    }
-  };
-
-  if (isAuthLoading) {
-    return <AuthLoading />;
+  if (preferencesLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-      {/* Header */}
-      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-            <Zap className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
-            <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
-          </div>
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
+          <p className="text-slate-400">Configure your alert preferences and integrations</p>
         </div>
-        {isAuthenticated && (
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            size="sm"
-            className="text-slate-300 hover:text-slate-100 hover:bg-white/10"
-            data-testid="logout-button"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
-        )}
-      </header>
-
-      {/* Sport Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
-        <div className="flex overflow-x-auto">
-          {SPORTS.map((sport) => (
-            <button
-              key={sport}
-              onClick={() => {
-                setActiveSport(sport);
-                localStorage.setItem('settings-active-sport', sport);
-              }}
-              data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors ${
-                activeSport === sport
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {sport}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Settings Content */}
-      <div className="p-4 space-y-6">
-        {/* Selected Sport Display */}
-        <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-          <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-2">
-            Selected Sport
-          </h2>
-          <div className="flex items-center space-x-3">
-            <div className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg font-bold uppercase tracking-wide ring-1 ring-emerald-500/30">
-              {activeSport}
-            </div>
-            <p className="text-sm text-slate-300">
-              Configure settings for {activeSport} alerts and notifications.
-            </p>
-          </div>
-        </Card>
 
         {/* Alert Preferences */}
-        {isAuthenticated && (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-                <Bell className="w-5 h-5 text-emerald-400" />
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-slate-100 flex items-center space-x-2">
+              <span>🚨</span>
+              <span>Alert Preferences</span>
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Choose which types of alerts you want to receive for each sport
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {Object.entries(ALERT_TYPE_CONFIG).map(([sportCategory, alertTypes]) => (
+              <div key={sportCategory} className="space-y-3">
+                <h3 className="text-md font-bold text-blue-400 uppercase tracking-wide">
+                  {sportCategory.includes('MLB') && '⚾'} 
+                  {sportCategory.includes('NFL') && '🏈'} 
+                  {sportCategory.includes('NCAAF') && '🏈'} 
+                  {sportCategory.includes('WNBA') && '🏀'} 
+                  {sportCategory.includes('CFL') && '🏈'} 
+                  {sportCategory}
+                </h3>
+                <div className="space-y-3">
+                  {alertTypes.filter((alertType) => {
+                    // Filter out disabled alerts from global settings
+                    return globalSettings && typeof globalSettings === 'object' 
+                      ? (globalSettings as Record<string, boolean>)[alertType.key] !== false 
+                      : true;
+                  }).map((alertType) => {
+                    const sport = sportCategory.split(' ')[0]; // Extract sport (MLB, NFL, etc.)
+                    const isEnabled = getAlertPreferenceWithRE24(sport, alertType.key);
+                    
+                    return (
+                      <div key={alertType.key} className="flex items-center justify-between p-3 bg-slate-500/10 rounded-lg border border-slate-500/20 hover:bg-slate-500/20 transition-colors">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <h4 className="text-sm font-semibold text-slate-100">
+                              {alertType.label}
+                            </h4>
+                            {updateAlertPreferenceMutation.isPending && (
+                              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {alertType.description}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={isEnabled}
+                          onCheckedChange={(enabled) => handleAlertToggle(sport, alertType.key, enabled)}
+                          disabled={updateAlertPreferenceMutation.isPending}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                {sportCategory !== Object.keys(ALERT_TYPE_CONFIG)[Object.keys(ALERT_TYPE_CONFIG).length - 1] && (
+                  <Separator className="bg-slate-600/30" />
+                )}
               </div>
-              <div>
-                <h2 className="text-lg font-black uppercase tracking-wide text-slate-100">
-                  {activeSport} Alert Preferences
-                </h2>
-                <p className="text-sm text-slate-300">
-                  Toggle individual alert types for {activeSport} games
-                </p>
-              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Telegram Integration */}
+        <TelegramSettings onUpdate={handleSettingsUpdate} userPreferences={userPreferences} />
+
+        {/* System Information */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-slate-100 flex items-center space-x-2">
+              <span>ℹ️</span>
+              <span>System Information</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">User ID</span>
+              <Badge variant="outline" className="text-slate-300 border-slate-600">
+                {user?.id}
+              </Badge>
             </div>
-
-            {preferencesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : (
-              <div className="w-full">
-                {/* MLB Section */}
-                {activeSport === 'MLB' && (
-                  <div className="space-y-6">
-                    {/* MLB Core Alerts */}
-                    <div className="space-y-3">
-                      <h3 className="text-md font-bold text-emerald-400 uppercase tracking-wide">⚾ MLB Game Alerts</h3>
-                      <div className="space-y-3">
-                        {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
-                          // Only show alerts that are not globally disabled by admin
-                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                        }).map((alertType) => {
-                          const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key);
-                          return (
-                            <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="text-sm font-semibold text-slate-100">
-                                    {alertType.label}
-                                  </h4>
-                                  {updateAlertPreferenceMutation.isPending && (
-                                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                                  )}
-                                </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {alertType.description}
-                                </p>
-                              </div>
-                              <Switch
-                                checked={isEnabled}
-                                onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                                disabled={updateAlertPreferenceMutation.isPending}
-                                data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                                className="data-[state=checked]:bg-emerald-500"
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* AI Enhancement Alerts */}
-                    <div className="space-y-3">
-                      <h3 className="text-md font-bold text-blue-400 uppercase tracking-wide">🤖 AI Enhancements</h3>
-                      <div className="space-y-3">
-                        {ALERT_TYPE_CONFIG['AI Enhancements']?.filter((alertType) => {
-                          // Only show AI alerts that are not globally disabled by admin
-                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                        }).map((alertType) => {
-                          const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key);
-                          return (
-                            <div key={alertType.key} className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 hover:bg-blue-500/20 transition-colors">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="text-sm font-semibold text-slate-100">
-                                    {alertType.label}
-                                  </h4>
-                                  {updateAlertPreferenceMutation.isPending && (
-                                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                  )}
-                                </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {alertType.description}
-                                </p>
-                              </div>
-                              <Switch
-                                checked={isEnabled}
-                                onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                                disabled={updateAlertPreferenceMutation.isPending}
-                                data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                                className="data-[state=checked]:bg-blue-500"
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                     {/* RE24 System Alerts */}
-                    <div className="space-y-3">
-                      <h3 className="text-md font-bold text-purple-400 uppercase tracking-wide">📊 RE24 System</h3>
-                      <div className="space-y-3">
-                        {ALERT_TYPE_CONFIG['RE24 System']?.filter((alertType) => {
-                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                        }).map((alertType) => {
-                          const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key); // Assuming RE24 is configured under MLB
-                          return (
-                            <div key={alertType.key} className="flex items-center justify-between p-3 bg-purple-500/10 rounded-lg border border-purple-500/20 hover:bg-purple-500/20 transition-colors">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="text-sm font-semibold text-slate-100">
-                                    {alertType.label}
-                                  </h4>
-                                  {updateAlertPreferenceMutation.isPending && (
-                                    <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                                  )}
-                                </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {alertType.description}
-                                </p>
-                              </div>
-                              <Switch
-                                checked={isEnabled}
-                                onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                                disabled={updateAlertPreferenceMutation.isPending}
-                                data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                                className="data-[state=checked]:bg-purple-500"
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Show message when all alerts are disabled */}
-                    {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && ALERT_TYPE_CONFIG['AI Enhancements']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && ALERT_TYPE_CONFIG['RE24 System']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-slate-400">All MLB, AI, and RE24 alert types have been disabled by your administrator.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* NCAAF Section */}
-                {activeSport === 'NCAAF' && (
-                  <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
-                      const isEnabled = getAlertPreferenceWithRE24('NCAAF', alertType.key);
-                      return (
-                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="text-sm font-semibold text-slate-100">
-                                {alertType.label}
-                              </h4>
-                              {updateAlertPreferenceMutation.isPending && (
-                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-1">
-                              {alertType.description}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                            disabled={updateAlertPreferenceMutation.isPending}
-                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
-                      );
-                    })}
-
-                    {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-slate-400">All NCAAF alert types have been disabled by your administrator.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* NFL Section */}
-                {activeSport === 'NFL' && (
-                  <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
-                      const isEnabled = getAlertPreferenceWithRE24('NFL', alertType.key);
-                      return (
-                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="text-sm font-semibold text-slate-100">
-                                {alertType.label}
-                              </h4>
-                              {updateAlertPreferenceMutation.isPending && (
-                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-1">
-                              {alertType.description}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                            disabled={updateAlertPreferenceMutation.isPending}
-                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
-                      );
-                    })}
-
-                    {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-slate-400">All NFL alert types have been disabled by your administrator.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* NBA Section */}
-                {activeSport === 'NBA' && (
-                  <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NBA']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
-                      const isEnabled = getAlertPreferenceWithRE24('NBA', alertType.key);
-                      return (
-                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="text-sm font-semibold text-slate-100">
-                                {alertType.label}
-                              </h4>
-                              {updateAlertPreferenceMutation.isPending && (
-                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-1">
-                              {alertType.description}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                            disabled={updateAlertPreferenceMutation.isPending}
-                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
-                      );
-                    })}
-
-                    {ALERT_TYPE_CONFIG['NBA']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-slate-400">All NBA alert types have been disabled by your administrator.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* NHL Section */}
-                {activeSport === 'NHL' && (
-                  <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NHL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
-                      const isEnabled = getAlertPreferenceWithRE24('NHL', alertType.key);
-                      return (
-                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="text-sm font-semibold text-slate-100">
-                                {alertType.label}
-                              </h4>
-                              {updateAlertPreferenceMutation.isPending && (
-                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-1">
-                              {alertType.description}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                            disabled={updateAlertPreferenceMutation.isPending}
-                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
-                      );
-                    })}
-
-                    {ALERT_TYPE_CONFIG['NHL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-slate-400">All NHL alert types have been disabled by your administrator.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* CFL Section */}
-                {activeSport === 'CFL' && (
-                  <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['CFL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
-                      const isEnabled = getAlertPreferenceWithRE24('CFL', alertType.key);
-                      return (
-                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="text-sm font-semibold text-slate-100">
-                                {alertType.label}
-                              </h4>
-                              {updateAlertPreferenceMutation.isPending && (
-                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-1">
-                              {alertType.description}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                            disabled={updateAlertPreferenceMutation.isPending}
-                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
-                      );
-                    })}
-
-                    {ALERT_TYPE_CONFIG['CFL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-slate-400">All CFL alert types have been disabled by your administrator.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* WNBA Section */}
-                {activeSport === 'WNBA' && (
-                  <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['WNBA']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
-                      const isEnabled = getAlertPreferenceWithRE24('WNBA', alertType.key);
-                      return (
-                        <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="text-sm font-semibold text-slate-100">
-                                {alertType.label}
-                              </h4>
-                              {updateAlertPreferenceMutation.isPending && (
-                                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-1">
-                              {alertType.description}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                            disabled={updateAlertPreferenceMutation.isPending}
-                            data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
-                      );
-                    })}
-
-                    {ALERT_TYPE_CONFIG['WNBA']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-slate-400">All WNBA alert types have been disabled by your administrator.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* User Info Section */}
-        {isAuthenticated && user && (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-                <SettingsIcon className="w-6 h-6 text-emerald-400" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-100">Account Settings</h2>
-                <p className="text-sm text-slate-300">
-                  Logged in as <span className="text-emerald-400 font-medium">{user.username}</span>
-                </p>
-                {user.email && (
-                  <p className="text-xs text-slate-400">{user.email}</p>
-                )}
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Account Type</span>
+              <Badge variant="outline" className="text-slate-300 border-slate-600">
+                {user?.role || 'Standard'}
+              </Badge>
             </div>
-          </Card>
-        )}
-
-        {/* Telegram Configuration Section */}
-        {isAuthenticated && user && (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="w-12 h-12 bg-blue-500/20 ring-1 ring-blue-500/30 rounded-full flex items-center justify-center">
-                <Send className="w-6 h-6 text-blue-400" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-100">Telegram Notifications</h2>
-                <p className="text-sm text-slate-300">
-                  Configure your personal Telegram bot for alert notifications
-                </p>
-              </div>
-            </div>
-
-            {telegramLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Enable/Disable Toggle */}
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-100">Enable Telegram Notifications</h4>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Receive real-time alerts via your personal Telegram bot
-                    </p>
-                  </div>
-                  <Switch
-                    checked={telegramEnabled}
-                    onCheckedChange={setTelegramEnabled}
-                    data-testid="toggle-telegram-enabled"
-                    className="data-[state=checked]:bg-blue-500"
-                  />
-                </div>
-
-                {/* Bot Configuration */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="bot-token" className="text-sm font-medium text-slate-200">
-                      Bot Token
-                    </Label>
-                    <Input
-                      id="bot-token"
-                      type="password"
-                      placeholder="Enter your Telegram bot token"
-                      value={telegramBotToken}
-                      onChange={(e) => setTelegramBotToken(e.target.value)}
-                      data-testid="input-telegram-bot-token"
-                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-slate-400 mt-1">
-                      Get this from @BotFather on Telegram
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="chat-id" className="text-sm font-medium text-slate-200">
-                      Chat ID
-                    </Label>
-                    <Input
-                      id="chat-id"
-                      placeholder="Enter your Telegram chat ID"
-                      value={telegramChatId}
-                      onChange={(e) => setTelegramChatId(e.target.value)}
-                      data-testid="input-telegram-chat-id"
-                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-slate-400 mt-1">
-                      Send /start to your bot, then message @userinfobot to get your chat ID
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex space-x-3">
-                  <Button
-                    onClick={testTelegramConnection}
-                    disabled={testingConnection || !telegramBotToken || !telegramChatId}
-                    variant="outline"
-                    size="sm"
-                    data-testid="button-test-telegram"
-                    className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
-                  >
-                    {testingConnection ? (
-                      <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mr-2" />
-                    ) : connectionTestResult === 'success' ? (
-                      <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
-                    ) : connectionTestResult === 'error' ? (
-                      <XCircle className="w-4 h-4 mr-2 text-red-400" />
-                    ) : (
-                      <Send className="w-4 h-4 mr-2" />
-                    )}
-                    Test Connection
-                  </Button>
-
-                  <Button
-                    onClick={handleTelegramSave}
-                    disabled={updateTelegramMutation.isPending}
-                    size="sm"
-                    data-testid="button-save-telegram"
-                    className="bg-blue-500 hover:bg-blue-600 text-white"
-                  >
-                    {updateTelegramMutation.isPending ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                    )}
-                    Save Settings
-                  </Button>
-                </div>
-
-                {/* Help Text */}
-                <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                  <h4 className="text-sm font-semibold text-blue-300 mb-2">How to Set Up Your Telegram Bot:</h4>
-                  <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
-                    <li>Open Telegram and search for @BotFather</li>
-                    <li>Send /newbot and follow the instructions to create your bot</li>
-                    <li>Copy the bot token provided by BotFather</li>
-                    <li>Send /start to your new bot to activate it</li>
-                    <li>Message @userinfobot to get your chat ID</li>
-                    <li>Enter both values above and test the connection</li>
-                  </ol>
-                </div>
-              </div>
-            )}
-          </Card>
-        )}
+          </CardContent>
+        </Card>
       </div>
     </div>
+  );
+}
+
+// Telegram Settings Component
+function TelegramSettings({ onUpdate, userPreferences }: { 
+  onUpdate: (settings: Record<string, string>) => void;
+  userPreferences: any;
+}) {
+  const [botToken, setBotToken] = React.useState(userPreferences?.TELEGRAM_BOT_TOKEN || '');
+  const [chatId, setChatId] = React.useState(userPreferences?.TELEGRAM_CHAT_ID || '');
+  const [enabled, setEnabled] = React.useState(userPreferences?.TELEGRAM_ENABLED === 'true');
+
+  const handleSave = () => {
+    onUpdate({
+      TELEGRAM_BOT_TOKEN: botToken,
+      TELEGRAM_CHAT_ID: chatId,
+      TELEGRAM_ENABLED: enabled.toString()
+    });
+  };
+
+  return (
+    <Card className="bg-slate-800/50 border-slate-700">
+      <CardHeader>
+        <CardTitle className="text-slate-100 flex items-center space-x-2">
+          <span>📱</span>
+          <span>Telegram Integration</span>
+        </CardTitle>
+        <CardDescription className="text-slate-400">
+          Get instant notifications on Telegram
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={enabled}
+            onCheckedChange={setEnabled}
+          />
+          <Label className="text-slate-300">Enable Telegram Notifications</Label>
+        </div>
+        
+        {enabled && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="botToken" className="text-slate-300">Bot Token</Label>
+              <Input
+                id="botToken"
+                placeholder="Your Telegram bot token"
+                value={botToken}
+                onChange={(e) => setBotToken(e.target.value)}
+                className="bg-slate-700/50 border-slate-600 text-slate-100"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="chatId" className="text-slate-300">Chat ID</Label>
+              <Input
+                id="chatId"
+                placeholder="Your Telegram chat ID"
+                value={chatId}
+                onChange={(e) => setChatId(e.target.value)}
+                className="bg-slate-700/50 border-slate-600 text-slate-100"
+              />
+            </div>
+            
+            <Button onClick={handleSave} className="w-full">
+              Save Telegram Settings
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
