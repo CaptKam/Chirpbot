@@ -43,16 +43,17 @@ export function useWebSocket() {
           // Handle 'new_alert' specifically with enhanced error handling
           if (message.type === 'new_alert') {
             try {
-              const alertData = message.alert || message.data;
+              const alertData = (message as any).alert || (message as any).data;
               if (alertData && typeof alertData === 'object') {
                 // Transform backend alert structure to frontend Alert type
-                const transformedAlert = {
+                const transformedAlert: any = {
                   id: alertData.id || alertData.alertKey,
-                  alertKey: alertData.alertKey,
                   type: alertData.alertType || alertData.type,
                   sport: alertData.sport,
                   gameId: alertData.gameId,
                   message: alertData.payload?.message || 'New alert',
+                  title: alertData.payload?.message || 'New alert',
+                  description: alertData.payload?.message || 'New alert', 
                   homeTeam: alertData.payload?.context?.homeTeam,
                   awayTeam: alertData.payload?.context?.awayTeam,
                   homeScore: alertData.payload?.context?.homeScore,
@@ -60,20 +61,20 @@ export function useWebSocket() {
                   priority: alertData.score || 50,
                   confidence: alertData.score || 50,
                   createdAt: alertData.createdAt,
+                  timestamp: alertData.createdAt,
                   seen: false,
                   sentToTelegram: false,
                   context: alertData.payload?.context || {}
                 };
 
                 // Update the alerts list in the query cache
-                queryClient.setQueryData<Alert[]>(["/api/alerts"], (oldAlerts) => {
+                queryClient.setQueryData<any[]>(["/api/alerts"], (oldAlerts) => {
                   try {
                     if (!oldAlerts) return [transformedAlert];
 
                     // Check if alert already exists to prevent duplicates
                     const exists = oldAlerts.some(alert =>
-                      alert.id === transformedAlert.id ||
-                      alert.alertKey === transformedAlert.alertKey
+                      alert.id === transformedAlert.id
                     );
                     if (exists) return oldAlerts;
 
