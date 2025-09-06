@@ -398,7 +398,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/user/:userId/alert-preferences/:sport', async (req, res) => {
     try {
       const { userId, sport } = req.params;
+      console.log(`🔍 Fetching alert preferences for user ${userId}, sport ${sport}`);
       const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toUpperCase());
+      console.log(`📋 Found ${preferences.length} preferences for user ${userId} in ${sport}:`, preferences.map(p => `${p.alertType}=${p.enabled}`));
       res.json(preferences);
     } catch (error) {
       console.error('Error fetching alert preferences for sport:', error);
@@ -828,6 +830,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error sending test alerts:', error);
       res.status(500).json({ error: 'Failed to send test alerts' });
+    }
+  });
+
+  // Debug endpoint to check user alert preferences
+  app.get('/api/debug/user-preferences/:userId', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Get user info
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get all alert preferences for this user
+      const allPreferences = await storage.getUserAlertPreferences(userId);
+      
+      // Group by sport
+      const preferencesBySport = {};
+      allPreferences.forEach(pref => {
+        if (!preferencesBySport[pref.sport]) {
+          preferencesBySport[pref.sport] = [];
+        }
+        preferencesBySport[pref.sport].push({
+          alertType: pref.alertType,
+          enabled: pref.enabled,
+          updatedAt: pref.updatedAt
+        });
+      });
+
+      // Get global settings for comparison
+      const globalMLB = await storage.getGlobalAlertSettings('MLB');
+      const globalNFL = await storage.getGlobalAlertSettings('NFL');
+
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        },
+        userPreferences: preferencesBySport,
+        globalSettings: {
+          MLB: globalMLB,
+          NFL: globalNFL
+        },
+        totalPreferences: allPreferences.length,
+        preferencesSummary: Object.keys(preferencesBySport).map(sport => ({
+          sport,
+          count: preferencesBySport[sport].length,
+          enabled: preferencesBySport[sport].filter(p => p.enabled).length
+        }))
+      });
+    } catch (error) {
+      console.error('Error checking user preferences:', error);
+      res.status(500).json({ error: 'Failed to check user preferences' });
     }
   });
 

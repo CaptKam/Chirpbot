@@ -354,23 +354,41 @@ export class AlertGenerator {
     const allUsers = await storage.getAllUsers();
     const usersWithAlerts = [];
     
+    console.log(`🔍 Checking ${allUsers.length} total users for ${sport} alert preferences...`);
+    
     for (const user of allUsers) {
       try {
         const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
-        const hasEnabledAlerts = userPrefs.some(pref => pref.enabled);
-        if (hasEnabledAlerts) {
-          usersWithAlerts.push(user);
+        console.log(`👤 User ${user.username}: Found ${userPrefs.length} ${sport} preferences`);
+        
+        if (userPrefs.length > 0) {
+          const enabledPrefs = userPrefs.filter(pref => pref.enabled);
+          console.log(`👤 User ${user.username}: ${enabledPrefs.length} enabled ${sport} alerts: ${enabledPrefs.map(p => p.alertType).join(', ')}`);
+          
+          if (enabledPrefs.length > 0) {
+            usersWithAlerts.push(user);
+          }
+        } else {
+          console.log(`👤 User ${user.username}: No ${sport} preferences found, checking if they should inherit defaults`);
+          
+          // Check if this user should inherit global defaults
+          const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
+          const hasAnyEnabledGlobally = Object.values(globalSettings).some(enabled => enabled === true);
+          
+          if (hasAnyEnabledGlobally) {
+            console.log(`👤 User ${user.username}: Inheriting global ${sport} settings as defaults`);
+            usersWithAlerts.push(user);
+          }
         }
       } catch (error) {
         console.error(`❌ Error checking user ${user.username} preferences:`, error);
       }
     }
 
+    console.log(`✅ Found ${usersWithAlerts.length} users with ${sport} alerts enabled: ${usersWithAlerts.map(u => u.username).join(', ')}`);
+
     if (usersWithAlerts.length === 0) {
-      // Only log for major sports to reduce console noise
-      if (['MLB', 'NFL'].includes(sport)) {
-        console.log(`🚫 No users have ${sport} alerts enabled - skipping processing`);
-      }
+      console.log(`🚫 No users have ${sport} alerts enabled - skipping processing`);
       return 0;
     }
 
