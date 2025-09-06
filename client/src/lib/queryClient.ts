@@ -50,12 +50,24 @@ export const queryClient = new QueryClient({
       staleTime: 0, // Make data immediately stale for debugging
       cacheTime: 1000, // Keep cache for only 1 second
       retry: false,
+      onError: (error) => {
+        console.error('Query error:', error);
+        // Don't show toast for expected 401 errors during auth checks
+        if (!error.message?.includes('401')) {
+          console.warn('Unexpected query error:', error.message);
+        }
+      },
     },
     mutations: {
       retry: false,
       onSuccess: () => {
         // Invalidate all queries on any mutation success
-        queryClient.invalidateQueries();
+        queryClient.invalidateQueries().catch(error => {
+          console.error('Error invalidating queries:', error);
+        });
+      },
+      onError: (error) => {
+        console.error('Mutation error:', error);
       }
     },
   },
