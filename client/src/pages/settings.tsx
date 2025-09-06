@@ -43,7 +43,6 @@ const ALERT_TYPE_CONFIG = {
     { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
     { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' }
   ],
-  ],
   NCAAF: [
     { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Game kickoff notification' },
     { key: 'NCAAF_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Second half begins notification' },
@@ -297,20 +296,6 @@ export default function Settings() {
     });
   };
 
-    if (preferencesLoading) return true;
-
-    // Check if the alert is globally disabled by admin
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false;
-    }
-
-      return preferenceMap.get(alertType) ?? true;
-    }
-
-    return preferenceMap.get(alertType) ?? true;
-  };
-
-
   // Helper function to get category icon
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -487,37 +472,6 @@ export default function Settings() {
                                 disabled={updateAlertPreferenceMutation.isPending}
                                 data-testid={`toggle-${alertType.key.toLowerCase()}`}
                                 className="data-[state=checked]:bg-blue-500"
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="space-y-3">
-                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                        }).map((alertType) => {
-                          return (
-                            <div key={alertType.key} className="flex items-center justify-between p-3 bg-purple-500/10 rounded-lg border border-purple-500/20 hover:bg-purple-500/20 transition-colors">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="text-sm font-semibold text-slate-100">
-                                    {alertType.label}
-                                  </h4>
-                                  {updateAlertPreferenceMutation.isPending && (
-                                    <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                                  )}
-                                </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {alertType.description}
-                                </p>
-                              </div>
-                              <Switch
-                                checked={isEnabled}
-                                onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                                disabled={updateAlertPreferenceMutation.isPending}
-                                data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                                className="data-[state=checked]:bg-purple-500"
                               />
                             </div>
                           );

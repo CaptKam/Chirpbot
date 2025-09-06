@@ -54,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clean up old entries periodically
       if (recentRequests.size > 100) {
         const oldestTime = now - 10000; // 10 seconds
-        for (const [key, time] of recentRequests.entries()) {
+        for (const [key, time] of Array.from(recentRequests.entries())) {
           if (time < oldestTime) recentRequests.delete(key);
         }
       }
