@@ -246,11 +246,6 @@ export const storage = {
     return result[0];
   },
 
-  async addUserMonitoredGame(gameData: InsertUserMonitoredTeam) {
-    const result = await db.insert(userMonitoredTeams).values(gameData).returning();
-    return result[0];
-  },
-
   async removeUserMonitoredGame(userId: string, gameId: string) {
     const result = await db.delete(userMonitoredTeams)
       .where(and(eq(userMonitoredTeams.userId, userId), eq(userMonitoredTeams.gameId, gameId)))
