@@ -1531,6 +1531,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // NEW: Batch weather endpoint for multiple teams (STABILITY IMPROVEMENT)
+  app.post('/api/weather/batch', async (req, res) => {
+    try {
+      const { teams } = req.body;
+      
+      if (!Array.isArray(teams)) {
+        return res.status(400).json({ error: 'Teams must be an array' });
+      }
+
+      if (teams.length > 30) {
+        return res.status(400).json({ error: 'Maximum 30 teams per batch request' });
+      }
+
+      console.log(`🌦️ BATCH WEATHER REQUEST: ${teams.length} teams`);
+      
+      const { weatherService } = await import('./services/weather-service');
+      const results: Record<string, any> = {};
+      
+      // Process teams in smaller batches to avoid overwhelming the external API
+      const batchSize = 5;
+      const batches = [];
+      
+      for (let i = 0; i < teams.length; i += batchSize) {
+        batches.push(teams.slice(i, i + batchSize));
+      }
+
+      // Process batches with a small delay between them
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        console.log(`🌦️ Processing weather batch ${i + 1}/${batches.length} (${batch.length} teams)`);
+        
+        const batchPromises = batch.map(async (teamName: string) => {
+          try {
+            const weather = await weatherService.getWeatherForTeam(teamName);
+            return { teamName, weather };
+          } catch (error) {
+            console.error(`Error getting weather for ${teamName}:`, error);
+            return { 
+              teamName, 
+              weather: null, 
+              error: (error as any).message || 'Unknown error'
+            };
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        
+        // Store results
+        batchResults.forEach(({ teamName, weather, error }) => {
+          if (weather) {
+            results[teamName] = weather;
+          } else {
+            results[teamName] = { 
+              error: error || 'Failed to fetch weather',
+              fallback: true,
+              temperature: 72,
+              condition: 'Unknown',
+              windSpeed: 0,
+              windDirection: 0,
+              humidity: 50,
+              pressure: 1013
+            };
+          }
+        });
+
+        // Small delay between batches to be respectful to external APIs
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      console.log(`✅ BATCH WEATHER COMPLETE: ${Object.keys(results).length} teams processed`);
+      
+      res.json({
+        results,
+        timestamp: new Date().toISOString(),
+        cached: Object.keys(results).length,
+        batchSize: teams.length
+      });
+      
+    } catch (error) {
+      console.error('Batch weather error:', error);
+      res.status(500).json({ error: 'Failed to fetch batch weather data' });
+    }
+  });
+
   // Test NCAAF two-minute warning logic
   app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
     try {
