@@ -203,7 +203,7 @@ export function GameCardTemplate({
     staleTime: 60 * 1000, // Cache for 1 minute
     refetchInterval: 60 * 1000, // Refetch every minute
     retry: 1,
-    enabled: showWeather && sport === 'MLB' // Only fetch for MLB games when weather is shown
+    enabled: false // Temporarily disabled during development
   });
 
   // Convert wind direction degrees to cardinal direction

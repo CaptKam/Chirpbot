@@ -129,7 +129,8 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
     },
     staleTime: 60 * 1000, // Cache for 1 minute
     refetchInterval: 60 * 1000, // Refetch every minute
-    retry: 1
+    retry: 1,
+    enabled: false // Temporarily disabled during development
   });
 
   if (!weather) {
