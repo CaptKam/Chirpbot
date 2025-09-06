@@ -36,7 +36,7 @@ export class AlertDeduplication {
       alert.inning || 0,
       alert.half || ''
     ].join(':');
-    
+
     return `${alert.gameId}:${alert.type}:${alert.inning}:${alert.half}:${alert.outs}:${basesHash}:${alert.batter}:${alert.paId}`;
   }
 
@@ -48,7 +48,7 @@ export class AlertDeduplication {
 
     // For real-time sports alerts, we only prevent EXACT duplicates
     // Different plate appearances, different batters, etc. should always go through
-    
+
     if (!cached) {
       // First occurrence - always allow
       console.log(`🟢 DEDUP: Allowing first occurrence of ${alertKey.type} for game ${alertKey.gameId}`);
@@ -104,7 +104,7 @@ export class AlertDeduplication {
   private cleanup(): void {
     const now = Date.now();
     const maxAge = 30000; // 30 seconds only - we want fresh data
-    
+
     for (const [key, alert] of Array.from(this.recentAlerts.entries())) {
       if (now - alert.timestamp > maxAge) {
         this.recentAlerts.delete(key);
@@ -131,5 +131,21 @@ export class AlertDeduplication {
       clearInterval(this.cleanupTimer);
     }
     this.recentAlerts.clear();
+  }
+
+  // Helper to determine if game state has changed significantly
+  private hasSignificantGameStateChange(prevAlertContext: AlertKey, currentAlertKey: AlertKey): boolean {
+    if (prevAlertContext.inning !== currentAlertKey.inning || prevAlertContext.half !== currentAlertKey.half) {
+      return true; // Inning or half changed
+    }
+    if (prevAlertContext.outs !== currentAlertKey.outs) {
+      return true; // Outs changed
+    }
+    if (prevAlertContext.bases !== currentAlertKey.bases) {
+      return true; // Bases changed
+    }
+    // Consider score changes if available in context (assuming context has score info)
+    // Example: if (prevAlertContext.score !== currentAlertKey.score) return true;
+    return false;
   }
 }

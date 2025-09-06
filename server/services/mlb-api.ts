@@ -2,11 +2,53 @@ import { getPacificDate } from '../utils/timezone';
 
 export class MLBApiService {
   private baseUrl = 'https://statsapi.mlb.com/api/v1';
+  private lastCall: { [key: string]: number } = {};
+  private cache: { [key: string]: { data: any, timestamp: number } } = {};
+  private readonly RATE_LIMIT_MS = 5000; // 5 seconds between calls
+  private readonly CACHE_TTL_MS = 30000; // 30 second cache
+
+  private canMakeCall(endpoint: string): boolean {
+    const now = Date.now();
+    const lastCallTime = this.lastCall[endpoint] || 0;
+    
+    if (now - lastCallTime < this.RATE_LIMIT_MS) {
+      console.log(`🚫 MLB API: Rate limited ${endpoint} (${this.RATE_LIMIT_MS}ms cooldown)`);
+      return false;
+    }
+    
+    this.lastCall[endpoint] = now;
+    return true;
+  }
+
+  private getCached(key: string): any | null {
+    const cached = this.cache[key];
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
+      console.log(`📋 MLB API: Using cached data for ${key}`);
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setCache(key: string, data: any): void {
+    this.cache[key] = { data, timestamp: Date.now() };
+  }
 
   async getTodaysGames(date?: string): Promise<any[]> {
     try {
       const targetDate = date || getPacificDate();
+      const cacheKey = `games_${targetDate}`;
+      
+      // Check cache first
+      const cached = this.getCached(cacheKey);
+      if (cached) return cached;
+      
+      // Rate limiting
+      if (!this.canMakeCall('getTodaysGames')) {
+        return this.getCached(cacheKey) || [];
+      }
+      
       const url = `${this.baseUrl}/schedule?sportId=1&date=${targetDate}&hydrate=team,linescore,venue,game(content(summary))`;
+      console.log(`🔄 MLB API: Fetching today's games for ${targetDate}`);
 
       const response = await fetch(url);
       if (!response.ok) {
@@ -21,7 +63,7 @@ export class MLBApiService {
 
       const games = data.dates[0].games || [];
 
-      return games.map((game: any) => {
+      const processedGames = games.map((game: any) => {
         
         // Extract live scores from linescore data for live games, fallback to team score for others
         const homeScore = game.linescore?.teams?.home?.runs ?? game.teams.home.score ?? 0;
@@ -39,9 +81,14 @@ export class MLBApiService {
           isLive: game.status.abstractGameState === 'Live'
         };
       });
+
+      // Cache the result
+      this.setCache(cacheKey, processedGames);
+      return processedGames;
     } catch (error) {
       console.error('Error fetching MLB games:', error);
-      return [];
+      // Return cached data if available during error
+      return this.getCached(cacheKey) || [];
     }
   }
 
@@ -61,6 +108,18 @@ export class MLBApiService {
 
   async getEnhancedGameData(gameId: string): Promise<any> {
     try {
+      const cacheKey = `enhanced_${gameId}`;
+      
+      // Check cache first
+      const cached = this.getCached(cacheKey);
+      if (cached) return cached;
+      
+      // Rate limiting
+      if (!this.canMakeCall(`getEnhancedGameData_${gameId}`)) {
+        return this.getCached(cacheKey) || this.getFallbackGameData();
+      }
+
+      console.log(`🔄 MLB API: Fetching enhanced data for game ${gameId}`);
       const response = await fetch(
         `https://statsapi.mlb.com/api/v1.1/game/${gameId}/feed/live`
       );
@@ -113,7 +172,7 @@ export class MLBApiService {
         runners, balls, strikes, outs, inning, isTopInning, homeScore, awayScore
       });
 
-      return {
+      const enhancedData = {
         runners,
         balls,
         strikes,
@@ -125,18 +184,27 @@ export class MLBApiService {
         gameState: liveData.gameState,
         lastUpdated: new Date().toISOString()
       };
+
+      // Cache the result
+      this.setCache(cacheKey, enhancedData);
+      return enhancedData;
     } catch (error) {
       console.error('Error fetching enhanced game data:', error);
-      return {
-        runners: { first: false, second: false, third: false },
-        balls: 0,
-        strikes: 0,
-        outs: 0,
-        inning: 1,
-        isTopInning: true,
-        error: 'Failed to fetch live data'
-      };
+      return this.getCached(cacheKey) || this.getFallbackGameData();
     }
+  }
+
+  private getFallbackGameData() {
+    return {
+      runners: { first: false, second: false, third: false },
+      balls: 0,
+      strikes: 0,
+      outs: 0,
+      inning: 1,
+      isTopInning: true,
+      error: 'Failed to fetch live data'
+    };
+  }
   }
 
   private mapGameStatus(detailedState: string): string {
