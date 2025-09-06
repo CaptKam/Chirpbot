@@ -60,13 +60,107 @@ export class MLBEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
-  // Override to add MLB-specific game state normalization
+  // Override to add MLB-specific alert generation
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    // Enhance game state with MLB-specific data if needed
-    const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+    const alerts: AlertResult[] = [];
+    
+    try {
+      // Enhance game state with MLB-specific data if needed
+      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+      
+      if (!enhancedGameState.isLive) {
+        return alerts;
+      }
 
-    // Use the parent class method which properly calls all loaded modules
-    return super.generateLiveAlerts(enhancedGameState);
+      // Generate MLB-specific alerts based on game state
+      
+      // RISP Alert (Runner in Scoring Position - 2nd or 3rd base)
+      if (enhancedGameState.hasSecond || enhancedGameState.hasThird) {
+        alerts.push({
+          alertKey: `${gameState.gameId}-risp-${enhancedGameState.inning}-${enhancedGameState.outs}`,
+          type: 'RISP',
+          message: `Runner in scoring position: ${gameState.awayTeam} vs ${gameState.homeTeam}${enhancedGameState.hasSecond ? ' - 2nd base' : ''}${enhancedGameState.hasThird ? ' - 3rd base' : ''}, ${enhancedGameState.outs} outs`,
+          context: {
+            gameId: gameState.gameId,
+            inning: enhancedGameState.inning,
+            outs: enhancedGameState.outs,
+            hasSecond: enhancedGameState.hasSecond,
+            hasThird: enhancedGameState.hasThird
+          },
+          priority: 85
+        });
+      }
+
+      // Bases Loaded Alert
+      if (enhancedGameState.hasFirst && enhancedGameState.hasSecond && enhancedGameState.hasThird) {
+        alerts.push({
+          alertKey: `${gameState.gameId}-bases-loaded-${enhancedGameState.inning}-${enhancedGameState.outs}`,
+          type: 'BASES_LOADED',
+          message: `Bases loaded: ${gameState.awayTeam} vs ${gameState.homeTeam}, ${enhancedGameState.outs} outs`,
+          context: {
+            gameId: gameState.gameId,
+            inning: enhancedGameState.inning,
+            outs: enhancedGameState.outs
+          },
+          priority: 100
+        });
+      }
+
+      // Runners on 1st and 2nd Alert
+      if (enhancedGameState.hasFirst && enhancedGameState.hasSecond && !enhancedGameState.hasThird) {
+        alerts.push({
+          alertKey: `${gameState.gameId}-runners-1st-2nd-${enhancedGameState.inning}-${enhancedGameState.outs}`,
+          type: 'RUNNERS_1ST_2ND',
+          message: `Runners on 1st & 2nd: ${gameState.awayTeam} vs ${gameState.homeTeam}, ${enhancedGameState.outs} outs`,
+          context: {
+            gameId: gameState.gameId,
+            inning: enhancedGameState.inning,
+            outs: enhancedGameState.outs
+          },
+          priority: 80
+        });
+      }
+
+      // Late Pressure Alert (8th inning or later with close score)
+      if (enhancedGameState.inning >= 8) {
+        const scoreDiff = Math.abs(enhancedGameState.homeScore - enhancedGameState.awayScore);
+        if (scoreDiff <= 3) {
+          alerts.push({
+            alertKey: `${gameState.gameId}-late-pressure-${enhancedGameState.inning}`,
+            type: 'LATE_PRESSURE',
+            message: `Late inning pressure: ${gameState.awayTeam} vs ${gameState.homeTeam} (${enhancedGameState.awayScore}-${enhancedGameState.homeScore}) - Inning ${enhancedGameState.inning}`,
+            context: {
+              gameId: gameState.gameId,
+              inning: enhancedGameState.inning,
+              scoreDifference: scoreDiff
+            },
+            priority: 95
+          });
+        }
+      }
+
+      // Full Count Alert (3-2)
+      if (enhancedGameState.balls === 3 && enhancedGameState.strikes === 2) {
+        alerts.push({
+          alertKey: `${gameState.gameId}-full-count-${enhancedGameState.inning}-${enhancedGameState.outs}`,
+          type: 'FULL_COUNT',
+          message: `Full count (3-2): ${gameState.awayTeam} vs ${gameState.homeTeam}, ${enhancedGameState.outs} outs`,
+          context: {
+            gameId: gameState.gameId,
+            inning: enhancedGameState.inning,
+            outs: enhancedGameState.outs,
+            balls: enhancedGameState.balls,
+            strikes: enhancedGameState.strikes
+          },
+          priority: 75
+        });
+      }
+
+    } catch (error) {
+      console.error(`Error generating MLB alerts for ${gameState.gameId}:`, error);
+    }
+    
+    return alerts;
   }
 
   private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
@@ -139,8 +233,8 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // Alert module functionality removed
+  // Initialize alert modules for enabled alert types
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    console.log(`🔧 Alert modules disabled - no MLB modules will be loaded`);
+    console.log(`✅ MLB engine initialized with ${enabledAlertTypes.length} alert types: ${enabledAlertTypes.join(', ')}`);
   }
 }

@@ -431,7 +431,7 @@ export default function Settings() {
                                 </p>
                               </div>
                               <Switch
-                                checked={isEnabled}
+                                checked={getAlertPreference(activeSport, alertType.key)}
                                 onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                                 disabled={updateAlertPreferenceMutation.isPending}
                                 data-testid={`toggle-${alertType.key.toLowerCase()}`}
@@ -467,7 +467,7 @@ export default function Settings() {
                                 </p>
                               </div>
                               <Switch
-                                checked={isEnabled}
+                                checked={getAlertPreference(activeSport, alertType.key)}
                                 onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                                 disabled={updateAlertPreferenceMutation.isPending}
                                 data-testid={`toggle-${alertType.key.toLowerCase()}`}
@@ -514,7 +514,7 @@ export default function Settings() {
                             </p>
                           </div>
                           <Switch
-                            checked={isEnabled}
+                            checked={getAlertPreference(activeSport, alertType.key)}
                             onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                             disabled={updateAlertPreferenceMutation.isPending}
                             data-testid={`toggle-${alertType.key.toLowerCase()}`}
@@ -556,7 +556,7 @@ export default function Settings() {
                             </p>
                           </div>
                           <Switch
-                            checked={isEnabled}
+                            checked={getAlertPreference(activeSport, alertType.key)}
                             onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                             disabled={updateAlertPreferenceMutation.isPending}
                             data-testid={`toggle-${alertType.key.toLowerCase()}`}
@@ -598,7 +598,7 @@ export default function Settings() {
                             </p>
                           </div>
                           <Switch
-                            checked={isEnabled}
+                            checked={getAlertPreference(activeSport, alertType.key)}
                             onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                             disabled={updateAlertPreferenceMutation.isPending}
                             data-testid={`toggle-${alertType.key.toLowerCase()}`}
@@ -640,7 +640,7 @@ export default function Settings() {
                             </p>
                           </div>
                           <Switch
-                            checked={isEnabled}
+                            checked={getAlertPreference(activeSport, alertType.key)}
                             onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                             disabled={updateAlertPreferenceMutation.isPending}
                             data-testid={`toggle-${alertType.key.toLowerCase()}`}
@@ -682,7 +682,7 @@ export default function Settings() {
                             </p>
                           </div>
                           <Switch
-                            checked={isEnabled}
+                            checked={getAlertPreference(activeSport, alertType.key)}
                             onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                             disabled={updateAlertPreferenceMutation.isPending}
                             data-testid={`toggle-${alertType.key.toLowerCase()}`}
@@ -724,7 +724,7 @@ export default function Settings() {
                             </p>
                           </div>
                           <Switch
-                            checked={isEnabled}
+                            checked={getAlertPreference(activeSport, alertType.key)}
                             onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                             disabled={updateAlertPreferenceMutation.isPending}
                             data-testid={`toggle-${alertType.key.toLowerCase()}`}
