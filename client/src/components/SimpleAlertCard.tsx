@@ -386,7 +386,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         })()}`}>
 
           <GameCardTemplate
-            gameId={alert.id}
+            gameId={alert.gameId || alert.id}
             homeTeam={{
               name: alert.homeTeam || 'Home',
               score: alert.context?.homeScore

@@ -736,7 +736,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-6">
                 <GameCardTemplate
-                  gameId={alertData.id}
+                  gameId={alertData.gameId || alertData.id}
                   homeTeam={{
                     name: typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'Home Team',
                     score: displayScores.homeScore
