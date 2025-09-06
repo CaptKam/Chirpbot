@@ -4,6 +4,8 @@ let currentStats = {};
 let currentSport = 'MLB';
 let globalAlertSettings = {};
 
+// Global alert settings removed - starting fresh
+
 document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
     checkAuthentication();
@@ -88,7 +90,7 @@ async function loadDashboardData() {
         const usersResponse = await fetch('/api/admin/users', {
             credentials: 'include'
         });
-        
+
         if (usersResponse.ok) {
             const users = await usersResponse.json();
             displayUsers(users);
@@ -130,9 +132,9 @@ async function loadRecentActivity() {
     try {
         const response = await fetch('/api/alerts?limit=5', { credentials: 'include' });
         if (!response.ok) throw new Error('Failed to fetch alerts');
-        
+
         const alerts = await response.json();
-        
+
         // Build activity HTML directly
         const activities = alerts.map(alert => `
             <div class="activity-item alert">

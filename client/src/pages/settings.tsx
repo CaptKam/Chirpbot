@@ -114,11 +114,7 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Global settings query to check admin-disabled alerts
-  const { data: globalSettings } = useQuery({
-    queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
-    enabled: !!user?.id && isAuthenticated,
-  });
+  // Global settings removed - all alerts available to users
 
   // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
@@ -145,11 +141,6 @@ export default function Settings() {
   // Helper to get alert preference, defaulting to true if not found or not loaded
   const getAlertPreference = (sport: string, alertType: string): boolean => {
     if (preferencesLoading) return true; // Default to true while loading to avoid brief disablings
-
-    // Check if the alert is globally disabled by admin
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false;
-    }
 
     // For AI Enhancement alerts, look up in MLB preferences (since they're MLB-specific)
     if (alertType.startsWith('AI_')) {
@@ -306,11 +297,6 @@ export default function Settings() {
   const getAlertPreferenceWithRE24 = (sport: string, alertType: string): boolean => {
     if (preferencesLoading) return true;
 
-    // Check if the alert is globally disabled by admin
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false;
-    }
-
     // Handle AI Enhancements and RE24 System separately
     if (alertType.startsWith('AI_') || alertType.startsWith('RE24_')) {
       // Assuming AI and RE24 settings are associated with MLB for configuration purposes if not sport-specific
@@ -436,10 +422,7 @@ export default function Settings() {
                     <div className="space-y-3">
                       <h3 className="text-md font-bold text-emerald-400 uppercase tracking-wide">⚾ MLB Game Alerts</h3>
                       <div className="space-y-3">
-                        {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
-                          // Only show alerts that are not globally disabled by admin
-                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                        }).map((alertType) => {
+                        {ALERT_TYPE_CONFIG['MLB']?.map((alertType) => {
                           const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key);
                           return (
                             <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -473,10 +456,7 @@ export default function Settings() {
                     <div className="space-y-3">
                       <h3 className="text-md font-bold text-blue-400 uppercase tracking-wide">🤖 AI Enhancements</h3>
                       <div className="space-y-3">
-                        {ALERT_TYPE_CONFIG['AI Enhancements']?.filter((alertType) => {
-                          // Only show AI alerts that are not globally disabled by admin
-                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                        }).map((alertType) => {
+                        {ALERT_TYPE_CONFIG['AI Enhancements']?.map((alertType) => {
                           const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key);
                           return (
                             <div key={alertType.key} className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 hover:bg-blue-500/20 transition-colors">
@@ -509,9 +489,7 @@ export default function Settings() {
                     <div className="space-y-3">
                       <h3 className="text-md font-bold text-purple-400 uppercase tracking-wide">📊 RE24 System</h3>
                       <div className="space-y-3">
-                        {ALERT_TYPE_CONFIG['RE24 System']?.filter((alertType) => {
-                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                        }).map((alertType) => {
+                        {ALERT_TYPE_CONFIG['RE24 System']?.map((alertType) => {
                           const isEnabled = getAlertPreferenceWithRE24('MLB', alertType.key); // Assuming RE24 is configured under MLB
                           return (
                             <div key={alertType.key} className="flex items-center justify-between p-3 bg-purple-500/10 rounded-lg border border-purple-500/20 hover:bg-purple-500/20 transition-colors">
@@ -542,13 +520,7 @@ export default function Settings() {
                     </div>
 
                     {/* Show message when all alerts are disabled */}
-                    {ALERT_TYPE_CONFIG['MLB']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && ALERT_TYPE_CONFIG['AI Enhancements']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && ALERT_TYPE_CONFIG['RE24 System']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
+                    {ALERT_TYPE_CONFIG['MLB']?.length === 0 && ALERT_TYPE_CONFIG['AI Enhancements']?.length === 0 && ALERT_TYPE_CONFIG['RE24 System']?.length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All MLB, AI, and RE24 alert types have been disabled by your administrator.</p>
                       </div>
@@ -559,9 +531,7 @@ export default function Settings() {
                 {/* NCAAF Section */}
                 {activeSport === 'NCAAF' && (
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
+                    {ALERT_TYPE_CONFIG['NCAAF']?.map((alertType) => {
                       const isEnabled = getAlertPreferenceWithRE24('NCAAF', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -589,9 +559,7 @@ export default function Settings() {
                       );
                     })}
 
-                    {ALERT_TYPE_CONFIG['NCAAF']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
+                    {ALERT_TYPE_CONFIG['NCAAF']?.length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All NCAAF alert types have been disabled by your administrator.</p>
                       </div>
@@ -602,9 +570,7 @@ export default function Settings() {
                 {/* NFL Section */}
                 {activeSport === 'NFL' && (
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
+                    {ALERT_TYPE_CONFIG['NFL']?.map((alertType) => {
                       const isEnabled = getAlertPreferenceWithRE24('NFL', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -632,9 +598,7 @@ export default function Settings() {
                       );
                     })}
 
-                    {ALERT_TYPE_CONFIG['NFL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
+                    {ALERT_TYPE_CONFIG['NFL']?.length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All NFL alert types have been disabled by your administrator.</p>
                       </div>
@@ -645,9 +609,7 @@ export default function Settings() {
                 {/* NBA Section */}
                 {activeSport === 'NBA' && (
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NBA']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
+                    {ALERT_TYPE_CONFIG['NBA']?.map((alertType) => {
                       const isEnabled = getAlertPreferenceWithRE24('NBA', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -675,9 +637,7 @@ export default function Settings() {
                       );
                     })}
 
-                    {ALERT_TYPE_CONFIG['NBA']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
+                    {ALERT_TYPE_CONFIG['NBA']?.length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All NBA alert types have been disabled by your administrator.</p>
                       </div>
@@ -688,9 +648,7 @@ export default function Settings() {
                 {/* NHL Section */}
                 {activeSport === 'NHL' && (
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['NHL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
+                    {ALERT_TYPE_CONFIG['NHL']?.map((alertType) => {
                       const isEnabled = getAlertPreferenceWithRE24('NHL', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -718,9 +676,7 @@ export default function Settings() {
                       );
                     })}
 
-                    {ALERT_TYPE_CONFIG['NHL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
+                    {ALERT_TYPE_CONFIG['NHL']?.length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All NHL alert types have been disabled by your administrator.</p>
                       </div>
@@ -731,9 +687,7 @@ export default function Settings() {
                 {/* CFL Section */}
                 {activeSport === 'CFL' && (
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['CFL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
+                    {ALERT_TYPE_CONFIG['CFL']?.map((alertType) => {
                       const isEnabled = getAlertPreferenceWithRE24('CFL', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -761,9 +715,7 @@ export default function Settings() {
                       );
                     })}
 
-                    {ALERT_TYPE_CONFIG['CFL']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
+                    {ALERT_TYPE_CONFIG['CFL']?.length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All CFL alert types have been disabled by your administrator.</p>
                       </div>
@@ -774,9 +726,7 @@ export default function Settings() {
                 {/* WNBA Section */}
                 {activeSport === 'WNBA' && (
                   <div className="space-y-4">
-                    {ALERT_TYPE_CONFIG['WNBA']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).map((alertType) => {
+                    {ALERT_TYPE_CONFIG['WNBA']?.map((alertType) => {
                       const isEnabled = getAlertPreferenceWithRE24('WNBA', alertType.key);
                       return (
                         <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
@@ -804,9 +754,7 @@ export default function Settings() {
                       );
                     })}
 
-                    {ALERT_TYPE_CONFIG['WNBA']?.filter((alertType) => {
-                      return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : true;
-                    }).length === 0 && (
+                    {ALERT_TYPE_CONFIG['WNBA']?.length === 0 && (
                       <div className="text-center py-8">
                         <p className="text-slate-400">All WNBA alert types have been disabled by your administrator.</p>
                       </div>

@@ -105,14 +105,14 @@ export abstract class BaseSportEngine {
     const alerts: AlertResult[] = [];
 
     console.log(`🔍 Generating alerts for game ${gameState.gameId} with ${this.alertModules.size} loaded modules`);
-    
+
     for (const [alertType, module] of this.alertModules) {
       try {
         console.log(`🧪 Checking ${alertType} module for game ${gameState.gameId}`);
-        
+
         if (module.isTriggered(gameState)) {
           console.log(`✅ ${alertType} triggered for game ${gameState.gameId}`);
-          
+
           const alert = module.generateAlert(gameState);
           if (alert) {
             console.log(`📢 Generated ${alertType} alert: ${alert.message}`);
@@ -155,4 +155,6 @@ export abstract class BaseSportEngine {
       }
     }
   }
+
+  // Global alert settings removed - all alerts available
 }

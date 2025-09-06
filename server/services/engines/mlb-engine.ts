@@ -1,4 +1,4 @@
-import { BaseSportEngine, GameState, AlertResult } from './base-engine';
+import { BaseSportEngine } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
 
@@ -120,19 +120,11 @@ export class MLBEngine extends BaseSportEngine {
         validMLBAlerts.includes(alertType)
       );
 
-      // Check global settings for these MLB alerts
-      const globallyEnabledTypes = [];
-      for (const alertType of mlbEnabledTypes) {
-        const isGloballyEnabled = await this.isAlertEnabled(alertType);
-        if (isGloballyEnabled) {
-          globallyEnabledTypes.push(alertType);
-        }
-      }
-
-      console.log(`🎯 Initializing MLB engine for user ${userId} with ${globallyEnabledTypes.length} MLB alerts: ${globallyEnabledTypes.join(', ')}`);
+      // Process all alerts - no global filtering
+      console.log(`🎯 Initializing MLB engine for user ${userId} with ${mlbEnabledTypes.length} MLB alerts: ${mlbEnabledTypes.join(', ')}`);
 
       // Initialize the MLB alert modules using parent class method
-      await this.initializeUserAlertModules(globallyEnabledTypes);
+      await this.initializeUserAlertModules(mlbEnabledTypes);
 
     } catch (error) {
       console.error(`❌ Failed to initialize MLB engine for user ${userId}:`, error);
