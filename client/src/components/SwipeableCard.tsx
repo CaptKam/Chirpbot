@@ -815,6 +815,18 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
 
+                    {/* Enhanced Baseball Diamond for MLB live games - Integrated within message */}
+                    {alertData.sport === 'MLB' && displayScores.isLive && (
+                      <div className="flex justify-center mt-4 mb-3">
+                        <EnhancedGameDisplay 
+                          gameId={alertData.id} // Using alertData.id as gameId
+                          inning={alertData.context?.inning || liveGameData?.inning || 1}
+                          isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning ?? true}
+                          isLive={displayScores.isLive}
+                        />
+                      </div>
+                    )}
+
                     {/* AI Insights */}
                     {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
                       <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/30">
@@ -843,17 +855,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               )}
 
-              {/* Enhanced Baseball Diamond for MLB live games */}
-              {alertData.sport === 'MLB' && displayScores.isLive && (
-                <div className="flex justify-center mt-4">
-                  <EnhancedGameDisplay 
-                    gameId={alertData.id} // Using alertData.id as gameId
-                    inning={alertData.context?.inning || liveGameData?.inning || 1}
-                    isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning ?? true}
-                    isLive={displayScores.isLive}
-                  />
-                </div>
-              )}
 
             </div>
           ) : (
