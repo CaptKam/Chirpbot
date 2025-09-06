@@ -151,16 +151,19 @@ export default function Settings() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <div className="space-y-6">
+    <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center">
+        <div className="p-4 text-center">
           <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
           <p className="text-slate-400">Configure your alert preferences and integrations</p>
         </div>
 
-        {/* Alert Preferences */}
-        <Card className="bg-slate-800/50 border-slate-700">
+        {/* Settings Content */}
+        <div className="p-4 space-y-6">
+
+          {/* Alert Preferences */}
+          <Card className="bg-white/5 backdrop-blur-sm border-white/10">
           <CardHeader>
             <CardTitle className="text-slate-100 flex items-center space-x-2">
               <span>🚨</span>
@@ -223,11 +226,11 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Telegram Integration */}
-        <TelegramSettings onUpdate={handleSettingsUpdate} userPreferences={userPreferences} />
+          {/* Telegram Integration */}
+          <TelegramSettings onUpdate={handleSettingsUpdate} userPreferences={userPreferences} />
 
-        {/* System Information */}
-        <Card className="bg-slate-800/50 border-slate-700">
+          {/* System Information */}
+          <Card className="bg-white/5 backdrop-blur-sm border-white/10">
           <CardHeader>
             <CardTitle className="text-slate-100 flex items-center space-x-2">
               <span>ℹ️</span>
@@ -248,7 +251,8 @@ export default function Settings() {
               </Badge>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );
@@ -272,7 +276,7 @@ function TelegramSettings({ onUpdate, userPreferences }: {
   };
 
   return (
-    <Card className="bg-slate-800/50 border-slate-700">
+    <Card className="bg-white/5 backdrop-blur-sm border-white/10">
       <CardHeader>
         <CardTitle className="text-slate-100 flex items-center space-x-2">
           <span>📱</span>
