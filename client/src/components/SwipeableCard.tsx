@@ -174,22 +174,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     staleTime: 10000,
   });
 
-  // Fetch live weather data for the game
-  const { data: weatherData } = useQuery({
-    queryKey: ["/api/weather", { gameId: alertData?.id, sport: alertData?.sport }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch weather");
-      return response.json();
-    },
-    enabled: !!alertData?.id && !!alertData?.sport, // Only fetch if we have alert data
-    refetchInterval: 60000, // Refresh every minute
-    staleTime: 60000, // Cache data for 1 minute
-  });
 
 
   // Find the matching game for this alert to get live scores
@@ -230,24 +214,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     };
   }, [liveGameData, alertData]);
 
-  // Debug score data
-  React.useEffect(() => {
-    if (alertData) {
-      console.log('🔍 SwipeableCard Score Debug:', {
-        alertId: alertData.id,
-        storedHomeScore: alertData.homeScore,
-        storedAwayScore: alertData.awayScore,
-        liveHomeScore: liveGameData?.homeTeam?.score,
-        liveAwayScore: liveGameData?.awayTeam?.score,
-        displayHomeScore: displayScores.homeScore,
-        displayAwayScore: displayScores.awayScore,
-        hasLiveGame: !!liveGameData,
-        gameStatus: liveGameData?.status,
-        homeTeam: alertData.homeTeam,
-        awayTeam: alertData.awayTeam
-      });
-    }
-  }, [alertData, liveGameData, displayScores]);
 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
     // Try to open the app first, with better fallback handling
@@ -736,7 +702,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-6">
                 <GameCardTemplate
-                  gameId={alertData.gameId || alertData.id}
+                  gameId={alertData.gameId || ''}
                   homeTeam={{
                     name: typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'Home Team',
                     score: displayScores.homeScore
@@ -759,9 +725,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   balls={alertData.context?.balls || liveGameData?.balls}
                   strikes={alertData.context?.strikes || liveGameData?.strikes}
                   outs={alertData.context?.outs || liveGameData?.outs}
-                  weather={weatherData}
+                  weather={null}
                   size="lg"
-                  showWeather={true}
+                  showWeather={false}
                   showVenue={false}
                   showEnhancedMLB={alertData.sport === 'MLB'}
                   className="shadow-lg"
