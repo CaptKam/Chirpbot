@@ -17,6 +17,11 @@ interface AlertFooterProps {
   outs?: number;
   balls?: number;
   strikes?: number;
+  runners?: {
+    first: boolean;
+    second: boolean;
+    third: boolean;
+  };
   // Weather data
   weather?: {
     temperature?: number;
@@ -91,6 +96,7 @@ export default function AlertFooter({
   outs = 0,
   balls = 0,
   strikes = 0,
+  runners,
   weather,
   quarter,
   timeRemaining,
@@ -145,11 +151,7 @@ export default function AlertFooter({
 
             {/* Baseball Diamond */}
             <BaseballDiamond
-              runners={{
-                first: false, // Placeholder, should be dynamic
-                second: false, // Placeholder, should be dynamic
-                third: false   // Placeholder, should be dynamic
-              }}
+              runners={runners || { first: false, second: false, third: false }}
             />
           </>
         );
