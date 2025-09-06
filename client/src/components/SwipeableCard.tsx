@@ -213,13 +213,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     const storedHomeScore = alertData?.context?.homeScore ?? alertData?.homeScore ?? 0;
     const storedAwayScore = alertData?.context?.awayScore ?? alertData?.awayScore ?? 0;
 
-    // Use live scores if we have live game data
-    if (liveGameData) {
+    // Use live scores if we have live game data and it's a live or final game
+    if (liveGameData && (liveGameData.status === 'live' || liveGameData.status === 'final')) {
       return {
         homeScore: liveGameData.homeTeam?.score ?? storedHomeScore,
         awayScore: liveGameData.awayTeam?.score ?? storedAwayScore,
-        isLive: liveGameData.status === 'live',
-        status: liveGameData.status
+        isLive: true
       };
     }
 
@@ -227,8 +226,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     return {
       homeScore: storedHomeScore,
       awayScore: storedAwayScore,
-      isLive: false,
-      status: 'final'
+      isLive: false
     };
   }, [liveGameData, alertData]);
 
@@ -244,7 +242,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         displayHomeScore: displayScores.homeScore,
         displayAwayScore: displayScores.awayScore,
         hasLiveGame: !!liveGameData,
-        gameStatus: displayScores.status,
+        gameStatus: liveGameData?.status,
         homeTeam: alertData.homeTeam,
         awayTeam: alertData.awayTeam
       });
@@ -692,7 +690,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           const alertStatus = getAlertStatus(
             alertData?.type || '', 
             alertData?.createdAt || '', 
-            displayScores.status || 'final'
+            liveGameData?.status || displayScores.isLive ? 'live' : 'final'
           );
           const baseClasses = alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
           const borderClasses = alertStatus.status === 'ACTIVE' 
@@ -741,37 +739,23 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   gameId={alertData.id}
                   homeTeam={{
                     name: typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'Home Team',
-                    score: displayScores.homeScore,
-                    abbreviation: typeof alertData.homeTeam === 'string' ? 
-                      alertData.homeTeam.replace(/[^A-Z]/g, '').substring(0, 3) : 
-                      (alertData.homeTeam as any)?.abbreviation || (alertData.homeTeam as any)?.name?.replace(/[^A-Z]/g, '').substring(0, 3) || 'HOME'
+                    score: displayScores.homeScore
                   }}
                   awayTeam={{
                     name: typeof alertData.awayTeam === 'string' ? alertData.awayTeam : (alertData.awayTeam as any)?.name || 'Away Team',
-                    score: displayScores.awayScore,
-                    abbreviation: typeof alertData.awayTeam === 'string' ? 
-                      alertData.awayTeam.replace(/[^A-Z]/g, '').substring(0, 3) : 
-                      (alertData.awayTeam as any)?.abbreviation || (alertData.awayTeam as any)?.name?.replace(/[^A-Z]/g, '').substring(0, 3) || 'AWAY'
+                    score: displayScores.awayScore
                   }}
                   sport={alertData.sport}
-                  status={displayScores.status || "final"}
+                  status={displayScores.isLive ? "live" : "final"}
                   inning={alertData.context?.inning || liveGameData?.inning}
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
-                  runners={{
-                    first: alertData.context?.hasFirst || false,
-                    second: alertData.context?.hasSecond || false,
-                    third: alertData.context?.hasThird || false
-                  }}
-                  balls={alertData.context?.balls || 0}
-                  strikes={alertData.context?.strikes || 0}
-                  outs={alertData.context?.outs || 0}
                   weather={weatherData}
                   size="lg"
                   showWeather={true}
                   showVenue={false}
-                  showEnhancedMLB={alertData.sport === 'MLB'}
+                  showEnhancedMLB={false}
                   className="shadow-lg"
                 />
               </div>

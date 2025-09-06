@@ -272,11 +272,19 @@ export function GameCardTemplate({
           {/* Enhanced MLB Display with Baseball Diamond */}
           {sport === 'MLB' && (status === 'live' || showEnhancedMLB) && (
             <div className="mt-3 flex justify-center">
-              <EnhancedGameDisplay 
-                gameId={gameId}
+              <BaseballDiamond 
+                runners={runners || {
+                  first: false,
+                  second: false,
+                  third: false
+                }}
                 inning={inning || 1}
                 isTopInning={isTopInning || false}
-                isLive={status === 'live'}
+                outs={outs}
+                balls={balls}
+                strikes={strikes}
+                size="sm"
+                showCount={status === 'live'}
               />
             </div>
           )}
@@ -358,39 +366,3 @@ export function GameCardTemplate({
     </Card>
   );
 }
-
-// Enhanced Game Display with real live data
-const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
-  const { data: enhancedData } = useQuery({
-    queryKey: ['enhanced-game', gameId],
-    queryFn: async () => {
-      const response = await fetch(`/api/games/${gameId}/live`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch live game data");
-      return response.json();
-    },
-    enabled: isLive,
-    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
-    staleTime: 8000,
-    retry: 3,
-    retryDelay: 1000
-  });
-
-  return (
-    <BaseballDiamond
-      runners={enhancedData?.runners || {
-        first: false,
-        second: false,
-        third: false
-      }}
-      inning={enhancedData?.inning || inning}
-      isTopInning={enhancedData?.isTopInning ?? isTopInning}
-      outs={enhancedData?.outs || 0}
-      balls={enhancedData?.balls || 0}
-      strikes={enhancedData?.strikes || 0}
-      size="sm"
-      showCount={isLive}
-    />
-  );
-};

@@ -370,7 +370,7 @@ export default function Admin() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700 text-slate-100">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
-              {selectedUser && getRoleIcon(selectedUser.role)}
+              {selectedUser && getRoleIcon(selectedUser?.role || 'user')}
               <span>Manage User: {selectedUser?.username}</span>
             </DialogTitle>
           </DialogHeader>
@@ -383,22 +383,22 @@ export default function Admin() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-400">Email:</span>
-                    <span className="text-slate-100 ml-2">{selectedUser.email}</span>
+                    <span className="text-slate-100 ml-2">{selectedUser?.email}</span>
                   </div>
                   <div>
                     <span className="text-slate-400">Role:</span>
-                    <Badge className={`ml-2 ${getRoleBadgeColor(selectedUser.role)}`}>
-                      {selectedUser.role.toUpperCase()}
+                    <Badge className={`ml-2 ${getRoleBadgeColor(selectedUser?.role || 'user')}`}>
+                      {selectedUser?.role?.toUpperCase()}
                     </Badge>
                   </div>
                   <div>
                     <span className="text-slate-400">Auth Method:</span>
-                    <span className="text-slate-100 ml-2">{selectedUser.authMethod}</span>
+                    <span className="text-slate-100 ml-2">{selectedUser?.authMethod}</span>
                   </div>
                   <div>
                     <span className="text-slate-400">Telegram:</span>
-                    <span className={`ml-2 ${selectedUser.telegramEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                      {selectedUser.telegramEnabled ? 'Enabled' : 'Disabled'}
+                    <span className={`ml-2 ${selectedUser?.telegramEnabled ? 'text-green-400' : 'text-red-400'}`}>
+                      {selectedUser?.telegramEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
                 </div>
@@ -459,11 +459,13 @@ export default function Admin() {
                                         enabled: a.key === alert.key ? enabled : 
                                           (userAlertPreferences as any[] || []).find((p: any) => p.alertType === a.key && p.sport === selectedSport)?.enabled ?? true
                                       }));
-                                      updateAlertPreferencesMutation.mutate({
-                                        userId: selectedUser.id,
-                                        sport: selectedSport,
-                                        preferences: updatedPreferences
-                                      });
+                                      if (selectedUser) {
+                                        updateAlertPreferencesMutation.mutate({
+                                          userId: selectedUser.id,
+                                          sport: selectedSport,
+                                          preferences: updatedPreferences
+                                        });
+                                      }
                                     }}
                                     disabled={updateAlertPreferencesMutation.isPending}
                                     className="data-[state=checked]:bg-emerald-500"
