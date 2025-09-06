@@ -71,9 +71,8 @@ import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, is
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
-import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
 // Enhanced Game Display Component for Live MLB Games
@@ -164,11 +163,8 @@ export default function Calendar() {
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
-  const { hasGamesWithinTwoDays, hasTomorrowGames } = useGamesAvailability();
 
-  // Fetch today's games
-  const { data: todayGamesData, isLoading: isLoadingToday } = useQuery<GameDay>({
+  const { data: gamesData, isLoading } = useQuery<GameDay>({
     queryKey: ["/api/games/today", { sport: activeSport, date: format(selectedDate, 'yyyy-MM-dd') }],
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
@@ -181,25 +177,7 @@ export default function Calendar() {
     },
   });
 
-  // Fetch tomorrow's games when there are games within two days
-  const { data: tomorrowGamesData, isLoading: isLoadingTomorrow } = useQuery<GameDay>({
-    queryKey: ["/api/games/today", { sport: activeSport, date: format(addDays(selectedDate, 1), 'yyyy-MM-dd') }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch games");
-      return response.json();
-    },
-    enabled: hasGamesWithinTwoDays && hasTomorrowGames && isSameDay(selectedDate, new Date()),
-  });
-
-  const todayGames = todayGamesData?.games || [];
-  const tomorrowGames = tomorrowGamesData?.games || [];
-  const games = todayGames; // Keep existing behavior for main games list
-  const isLoading = isLoadingToday || (hasGamesWithinTwoDays && hasTomorrowGames && isLoadingTomorrow);
+  const games = gamesData?.games || [];
 
   // Fetch alerts for badge count
   const { data: alerts } = useQuery({
@@ -376,13 +354,12 @@ export default function Calendar() {
                 {isSameDay(selectedDate, new Date()) ? "Today's Games" : format(selectedDate, 'MMMM d, yyyy')}
               </h2>
               <Button
-                variant="outline"
-                size="default"
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30 hover:text-emerald-200 hover:border-emerald-400 transition-all duration-200 font-semibold"
+                className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
               >
-                <CalendarIcon className="w-4 h-4 mr-2" />
-                Pick Date
+                <CalendarIcon className="w-4 h-4" />
               </Button>
             </div>
             <div className="flex items-center space-x-4 mt-1">
@@ -503,22 +480,20 @@ export default function Calendar() {
             <p className="text-sm mt-2 text-slate-400">Check back later or try a different sport</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Today's Games */}
-            <div className="space-y-3">
-              {/* Sort games to show live games first, then scheduled, then final */}
-              {games
-                .sort((a, b) => {
-                  // Live games first
-                  if (a.status === 'live' && b.status !== 'live') return -1;
-                  if (b.status === 'live' && a.status !== 'live') return 1;
-                  // Then scheduled games
-                  if (a.status === 'scheduled' && b.status === 'final') return -1;
-                  if (b.status === 'scheduled' && a.status === 'final') return 1;
-                  // Then by start time
-                  return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-                })
-                .map((game, index) => {
+          <div className="space-y-3">
+            {/* Sort games to show live games first, then scheduled, then final */}
+            {games
+              .sort((a, b) => {
+                // Live games first
+                if (a.status === 'live' && b.status !== 'live') return -1;
+                if (b.status === 'live' && a.status !== 'live') return 1;
+                // Then scheduled games
+                if (a.status === 'scheduled' && b.status === 'final') return -1;
+                if (b.status === 'scheduled' && a.status === 'final') return 1;
+                // Then by start time
+                return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+              })
+              .map((game, index) => {
               const isSelected = selectedGames.has(game.id);
               const startTime = new Date(game.startTime);
               const formattedTime = isNaN(startTime.getTime()) 
@@ -657,131 +632,6 @@ export default function Calendar() {
               </div>
               );
             })}
-            </div>
-
-            {/* Tomorrow's Games Section */}
-            {hasGamesWithinTwoDays && hasTomorrowGames && isSameDay(selectedDate, new Date()) && tomorrowGames.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 pt-4 border-t border-white/10">
-                  <h2 className="text-lg font-black uppercase tracking-wider text-slate-100">
-                    Tomorrow's Games
-                  </h2>
-                  <span className="text-sm font-semibold text-slate-300">
-                    {format(addDays(selectedDate, 1), 'MMMM d, yyyy')}
-                  </span>
-                </div>
-                
-                {tomorrowGames
-                  .sort((a, b) => {
-                    // Sort by start time
-                    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-                  })
-                  .map((game, index) => {
-                  const isSelected = selectedGames.has(game.id);
-                  const startTime = new Date(game.startTime);
-                  const formattedTime = isNaN(startTime.getTime()) 
-                    ? 'TBD'
-                    : startTime.toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit' 
-                      });
-
-                  // Validate game data before rendering
-                  const gameId = game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-tomorrow-game-${index}`;
-                  const awayTeamName = game.awayTeam?.name || 'TBD';
-                  const homeTeamName = game.homeTeam?.name || 'TBD';
-                  const awayTeamAbbr = extractTeamAbbreviation(awayTeamName);
-                  const homeTeamAbbr = extractTeamAbbreviation(homeTeamName);
-
-                  return (
-                    <div key={gameId} className="relative">
-                      <Card 
-                        className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 min-h-[160px] hover:bg-white/10 ${
-                          isSelected 
-                            ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
-                            : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
-                        }`}
-                        style={{ borderRadius: '12px' }}
-                        onClick={() => toggleGameSelection(game.id)}
-                        data-testid={`tomorrow-game-card-${game.id}`}
-                      >
-                        {/* Main Game Layout */}
-                        <div className="flex items-center justify-between mb-4">
-                          {/* Away Team - Left Side */}
-                          <div className="flex items-center space-x-3">
-                            <div className="text-center">
-                              <TeamLogo
-                                teamName={removeCity(awayTeamName)}
-                                abbreviation={awayTeamAbbr}
-                                sport={activeSport}
-                                size="lg"
-                                className="shadow-sm"
-                              />
-                              <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
-                                {removeCity(awayTeamName)}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Center - Game Info */}
-                          <div className="flex-1 flex flex-col items-center space-y-3">
-                            {/* Selection Indicator */}
-                            <div className="flex items-center space-x-2">
-                              <Badge className="px-3 py-1.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/30">
-                                <Clock className="w-3 h-3 mr-1" />
-                                SCHEDULED
-                              </Badge>
-                              {isSelected && (
-                                <CheckCircle className="w-5 h-5 text-emerald-400" />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Home Team - Right Side */}
-                          <div className="flex items-center space-x-3">
-                            <div className="text-center">
-                              <TeamLogo
-                                teamName={removeCity(homeTeamName)}
-                                abbreviation={homeTeamAbbr}
-                                sport={activeSport}
-                                size="lg"
-                                className="shadow-sm"
-                              />
-                              <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
-                                {removeCity(homeTeamName)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Bottom Row - Time & Venue Info */}
-                        <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                          <GameWeatherDisplay 
-                            teamName={homeTeamName}
-                            size="sm"
-                          />
-                          
-                          <div className="flex items-center space-x-3">
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-3 h-3 text-slate-400" />
-                              <span className="text-sm text-slate-300 font-medium">
-                                {formattedTime}
-                              </span>
-                            </div>
-                            
-                            {game.venue && (
-                              <div className="text-xs text-slate-400 text-right">
-                                {game.venue.length > 25 ? `${game.venue.substring(0, 25)}...` : game.venue}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         )}
       </div>

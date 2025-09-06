@@ -47,9 +47,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const navItems = [
-    { path: "/admin", icon: BarChart3, label: "Dashboard", exact: true },
-    { path: "/admin/users", icon: Users, label: "User Management" },
-    { path: "/admin/settings", icon: Settings, label: "System Settings" },
+    { path: "/admin-panel", icon: BarChart3, label: "Dashboard", exact: true },
+    { path: "/admin-panel/users", icon: Users, label: "User Management" },
+    { path: "/admin-panel/settings", icon: Settings, label: "System Settings" },
   ];
 
   return (
