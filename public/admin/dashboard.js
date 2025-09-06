@@ -728,63 +728,15 @@ async function loadSportAlertSettings() {
 
 function renderAlertConfiguration() {
     const alertConfigContainer = document.getElementById('alertConfigContainer');
-    const sportConfig = ALERT_TYPE_CONFIG[currentSport];
-
-    if (!sportConfig) {
-        alertConfigContainer.innerHTML = `
-            <div style="text-align: center; color: #94a3b8; padding: 40px;">
-                <i class="fas fa-info-circle" style="font-size: 32px; margin-bottom: 15px;"></i>
-                <h3>No Configuration Available</h3>
-                <p>Alert configuration for ${currentSport} is not yet available.</p>
-            </div>
-        `;
-        return;
-    }
-
-    let html = '';
-
-    Object.entries(sportConfig).forEach(([category, alerts]) => {
-        html += `
-            <div class="alert-category">
-                <div class="category-header">
-                    <div class="category-title">
-                        <i class="${getCategoryIcon(category)}"></i>
-                        ${category}
-                    </div>
-                    <div class="category-toggle">
-                        <span>Enable All</span>
-                        <label class="switch">
-                            <input type="checkbox" onchange="toggleCategory('${category}')" 
-                                   ${isCategoryEnabled(category) ? 'checked' : ''}>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                </div>
-                <div class="alert-list">
-                    ${alerts.map(alert => `
-                        <div class="alert-item">
-                            <div class="alert-info">
-                                <div class="alert-title">${alert.label}</div>
-                                <div class="alert-description">${alert.description}</div>
-                            </div>
-                            <div class="alert-controls">
-                                <div class="user-count">${getUserCountForAlert(alert.key)} users</div>
-                                <label class="switch">
-                                    <input type="checkbox" 
-                                           id="alert-${alert.key}"
-                                           onchange="toggleGlobalAlert('${alert.key}')"
-                                           ${isAlertGloballyEnabled(alert.key) ? 'checked' : ''}>
-                                    <span class="slider round"></span>
-                                </label>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    });
-
-    alertConfigContainer.innerHTML = html;
+    
+    // Simple message - alert configuration toggles removed
+    alertConfigContainer.innerHTML = `
+        <div style="text-align: center; color: #94a3b8; padding: 40px;">
+            <i class="fas fa-cogs" style="font-size: 32px; margin-bottom: 15px;"></i>
+            <h3>${currentSport} Alert Configuration</h3>
+            <p>Alert configuration settings will be displayed here.<br>Individual alert toggles have been removed pending new system implementation.</p>
+        </div>
+    `;
 }
 
 function getCategoryIcon(category) {
