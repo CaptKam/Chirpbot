@@ -36,20 +36,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced request deduplication and caching system
   const requestCache = new Map();
   const recentRequests = new Map();
-  
+
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) {
       const now = Date.now();
       const requestKey = `${req.method}:${req.path}:${req.ip}`;
       const cacheKey = `${req.method}:${req.path}:${JSON.stringify(req.query)}`;
-      
+
       const lastRequestTime = recentRequests.get(requestKey);
       const cachedResponse = requestCache.get(cacheKey);
 
       // Check for duplicate requests within 200ms
       if (lastRequestTime && (now - lastRequestTime) < 200) {
         console.log(`🚫 BLOCKED DUPLICATE: ${req.method} ${req.path} - ${now - lastRequestTime}ms since last`);
-        
+
         // If we have a cached response, return it immediately
         if (cachedResponse && (now - cachedResponse.timestamp) < 5000) { // 5 second cache
           console.log(`📦 SERVING CACHED: ${req.method} ${req.path}`);
@@ -72,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const shouldCache = req.path.includes('/weather') || 
                              req.path.includes('/games') || 
                              req.path.includes('/alerts/stats');
-          
+
           if (shouldCache) {
             requestCache.set(cacheKey, {
               data: data,
@@ -81,13 +81,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
-        
+
         return originalJson.call(this, data);
       };
 
       console.log(`🔧 PROCESSING: ${req.method} ${req.path}`);
       recentRequests.set(requestKey, now);
-      
+
       // Enhanced cleanup - keep cache and recent requests lean
       if (requestCache.size > 200) {
         const cleanupTime = now - 30000; // Clean entries older than 30 seconds
@@ -95,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (entry.timestamp < cleanupTime) requestCache.delete(key);
         }
       }
-      
+
       if (recentRequests.size > 100) {
         const cleanupTime = now - 5000; // Clean requests older than 5 seconds
         for (const [key, time] of Array.from(recentRequests.entries())) {
@@ -126,13 +126,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced connection health monitoring
   function checkAliveConnections() {
     const deadConnections: WebSocket[] = [];
-    
+
     clients.forEach((ws: any) => {
       if (ws.isAlive === false) {
         deadConnections.push(ws);
         return;
       }
-      
+
       ws.isAlive = false;
       try {
         ws.ping();
@@ -196,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('error', (error: Error) => {
       console.error('💥 WebSocket error:', error.message);
       clients.delete(ws);
-      
+
       try {
         if (ws.readyState === WebSocket.OPEN) {
           ws.close(1011, 'Server error');
@@ -210,12 +210,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('message', (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
-        
+
         // Handle client heartbeat responses
         if (message.type === 'heartbeat_response') {
           ws.isAlive = true;
         }
-        
+
         // Log unexpected messages for debugging
         if (message.type !== 'heartbeat_response') {
           console.log('📨 Received WebSocket message:', message.type);
@@ -229,11 +229,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Graceful shutdown handling
   const gracefulShutdown = () => {
     console.log('🛑 Shutting down WebSocket server...');
-    
+
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval);
     }
-    
+
     // Close all client connections gracefully
     clients.forEach(ws => {
       try {
@@ -244,9 +244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error closing WebSocket during shutdown:', error);
       }
     });
-    
+
     clients.clear();
-    
+
     wss.close(() => {
       console.log('✅ WebSocket server closed gracefully');
     });
@@ -258,49 +258,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
-    try {
-      const { weatherService } = await import('./services/weather-service');
-
-      // Test a few different stadiums
-      const testStadiums = [
-        'Boston Red Sox',
-        'Chicago Cubs',
-        'San Francisco Giants',
-        'Colorado Rockies',
-        'Houston Astros'
-      ];
-
-      const windData = [];
-
-      for (const team of testStadiums) {
-        const weather = await weatherService.getWeatherForTeam(team);
-        const homeRunFactor = weatherService.calculateHomeRunFactor(weather);
-        const windDesc = weatherService.getWindDescription(weather.windSpeed, weather.windDirection);
-
-        windData.push({
-          team,
-          stadium: team === 'Boston Red Sox' ? 'Fenway Park' :
-                  team === 'Chicago Cubs' ? 'Wrigley Field' :
-                  team === 'San Francisco Giants' ? 'Oracle Park' :
-                  team === 'Colorado Rockies' ? 'Coors Field' : 'Minute Maid Park',
-          windSpeed: weather.windSpeed,
-          windDirection: weather.windDirection,
-          windDescription: windDesc,
-          temperature: weather.temperature,
-          homeRunFactor: homeRunFactor,
-          weatherImpact: homeRunFactor > 1.1 ? 'Favorable for HRs' :
-                        homeRunFactor < 0.9 ? 'Hurts HR distance' : 'Neutral'
-        });
-      }
-
-      res.json({
-        timestamp: new Date().toISOString(),
-        source: process.env.OPENWEATHERMAP_API_KEY ? 'Live OpenWeatherMap API' : 'Fallback Data',
-        stadiumWindData: windData
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
+    console.log('🚫 WEATHER API DISABLED: /api/test-wind-speeds');
+    res.status(503).json({
+      error: 'Weather API temporarily disabled',
+      message: 'Weather functionality is disabled to prevent API flooding'
+    });
   });
 
 
@@ -565,17 +527,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { sport } = req.query;
-      
+
       // Verify user exists and is authenticated
       const user = await storage.getUserById(userId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      
+
       console.log(`📊 Fetching monitored games for user: ${user.username} (${userId})`);
       const games = await storage.getUserMonitoredGames(userId);
       console.log(`📊 Found ${games.length} monitored games for user ${user.username}`);
-      
+
       res.json(games);
     } catch (error) {
       console.error('Error fetching monitored games:', error);
@@ -620,7 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.addUserMonitoredGame(gameData);
       console.log(`✅ Successfully added monitored game for ${user.username}: ${homeTeamName} vs ${awayTeamName}`);
-      
+
       res.json({ 
         message: 'Game monitoring enabled',
         gameData: {
@@ -964,12 +926,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/debug/test-alerts', requireAdmin, async (req, res) => {
     try {
       console.log('🧪 Testing alert generation system...');
-      
+
       const alertGenerator = new AlertGenerator();
-      
+
       // Force generate alerts for live games
       await alertGenerator.generateLiveGameAlerts();
-      
+
       res.json({
         message: 'Test alert generation completed - check server logs',
         note: 'This forces the alert generation process to run immediately'
@@ -1098,16 +1060,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get all monitored games from database
       const allMonitoredGames = await storage.getAllMonitoredGames();
-      
+
       // Get user count
       const allUsers = await storage.getAllUsers();
-      
+
       // Get detailed breakdown
       const userBreakdown: any = {};
       for (const game of allMonitoredGames) {
         const user = allUsers.find(u => u.id === game.userId);
         const username = user?.username || `Unknown-${game.userId}`;
-        
+
         if (!userBreakdown[username]) {
           userBreakdown[username] = [];
         }
@@ -1118,7 +1080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: game.createdAt
         });
       }
-      
+
       res.json({
         timestamp: new Date().toISOString(),
         summary: {
@@ -1609,7 +1571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Weather endpoint - temporarily disabled during development
   app.get('/api/weather', async (req, res) => {
     console.log('🚫 WEATHER DISABLED: GET /api/weather blocked during development');
-    
+
     // Return immediate response to prevent flooding
     res.status(503).json({
       error: 'Weather service temporarily disabled during development',
@@ -1629,7 +1591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/weather/batch', async (req, res) => {
     try {
       const { teams } = req.body;
-      
+
       if (!Array.isArray(teams)) {
         return res.status(400).json({ error: 'Teams must be an array' });
       }
@@ -1639,14 +1601,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`🌦️ BATCH WEATHER REQUEST: ${teams.length} teams`);
-      
+
       const { weatherService } = await import('./services/weather-service');
       const results: Record<string, any> = {};
-      
+
       // Process teams in smaller batches to avoid overwhelming the external API
       const batchSize = 5;
       const batches = [];
-      
+
       for (let i = 0; i < teams.length; i += batchSize) {
         batches.push(teams.slice(i, i + batchSize));
       }
@@ -1655,7 +1617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
         console.log(`🌦️ Processing weather batch ${i + 1}/${batches.length} (${batch.length} teams)`);
-        
+
         const batchPromises = batch.map(async (teamName: string) => {
           try {
             const weather = await weatherService.getWeatherForTeam(teamName);
@@ -1671,7 +1633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         const batchResults = await Promise.all(batchPromises);
-        
+
         // Store results
         batchResults.forEach(({ teamName, weather, error }) => {
           if (weather) {
@@ -1697,14 +1659,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`✅ BATCH WEATHER COMPLETE: ${Object.keys(results).length} teams processed`);
-      
+
       res.json({
         results,
         timestamp: new Date().toISOString(),
         cached: Object.keys(results).length,
         batchSize: teams.length
       });
-      
+
     } catch (error) {
       console.error('Batch weather error:', error);
       res.status(500).json({ error: 'Failed to fetch batch weather data' });

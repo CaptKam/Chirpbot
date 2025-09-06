@@ -190,28 +190,7 @@ export function GameCardTemplate({
   const homeAbbr = homeTeam.abbreviation || extractTeamAbbreviation(homeTeam.name);
   const awayAbbr = awayTeam.abbreviation || extractTeamAbbreviation(awayTeam.name);
 
-  // Fetch weather data for the home team
-  const { data: weatherData } = useQuery({
-    queryKey: ['weather', homeTeam.name],
-    queryFn: async () => {
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeam.name)}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Weather fetch failed');
-      return response.json();
-    },
-    staleTime: 60 * 1000, // Cache for 1 minute
-    refetchInterval: 60 * 1000, // Refetch every minute
-    retry: 1,
-    enabled: false // Temporarily disabled during development
-  });
-
-  // Convert wind direction degrees to cardinal direction
-  const getCardinalDirection = (degrees: number) => {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-    const index = Math.round(degrees / 22.5) % 16;
-    return directions[index];
-  };
+  // Weather functionality temporarily removed
 
   return (
     <Card 
@@ -310,29 +289,9 @@ export function GameCardTemplate({
         </div>
       </div>
 
-      {/* Bottom Row - Weather, Time & Venue Info */}
+      {/* Bottom Row - Time & Venue Info (Weather temporarily removed) */}
       <div className="flex items-center justify-between pt-3 border-t border-white/10">
-        {/* Weather Display - Use real weather data from API */}
-        {showWeather && sport === 'MLB' && weatherData && (
-          <WeatherDisplay 
-            windSpeed={weatherData.windSpeed}
-            windDirection={getCardinalDirection(weatherData.windDirection)}
-            windGust={weatherData.windGust}
-            temperature={weatherData.temperature}
-            stadiumWindContext={weatherData.stadiumWindContext}
-            size="sm"
-          />
-        )}
-
-        {/* Fallback weather display for non-MLB or when no data */}
-        {showWeather && (sport !== 'MLB' || !weatherData) && (
-          <WeatherDisplay 
-            windSpeed={weather?.windSpeed || 5}
-            windDirection={weather?.windDirection || "N"}
-            size="sm"
-          />
-        )}
-
+        <div className="flex items-center space-x-3"></div>
         <div className="flex items-center space-x-3">
           {/* Time for scheduled games */}
           {status === 'scheduled' && (

@@ -21,7 +21,7 @@ const removeCity = (teamName: string) => {
 
 const extractTeamAbbreviation = (teamName: string) => {
   if (!teamName || teamName.trim() === '') return 'TBD';
-  
+
   // Full team name mappings (check these first)
   const fullTeamMappings: Record<string, string> = {
     'San Diego Padres': 'SD',
@@ -35,16 +35,16 @@ const extractTeamAbbreviation = (teamName: string) => {
     'TCU Horned Frogs': 'TCU',
     'North Carolina Tar Heels': 'UNC'
   };
-  
+
   // Check full team name first
   if (fullTeamMappings[teamName]) {
     return fullTeamMappings[teamName];
   }
-  
+
   // Extract abbreviation from team name
   const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington', 'Kansas City'];
   let cleanName = teamName;
-  
+
   // Remove city prefixes
   for (const prefix of cityPrefixes) {
     if (teamName.startsWith(prefix)) {
@@ -52,7 +52,7 @@ const extractTeamAbbreviation = (teamName: string) => {
       break;
     }
   }
-  
+
   // Common team abbreviations
   const abbreviations: Record<string, string> = {
     'Yankees': 'NYY', 'Mets': 'NYM', 'Dodgers': 'LAD', 'Angels': 'LAA',
@@ -64,7 +64,7 @@ const extractTeamAbbreviation = (teamName: string) => {
     'Braves': 'ATL', 'Pirates': 'PIT', 'Reds': 'CIN', 'Brewers': 'MIL',
     'Diamondbacks': 'ARI', 'Rockies': 'COL'
   };
-  
+
   return abbreviations[cleanName] || cleanName.slice(0, 3).toUpperCase();
 };
 
@@ -165,7 +165,7 @@ export default function Calendar() {
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
+
   const { hasGamesWithinTwoDays, hasTomorrowGames } = useGamesAvailability();
 
   // Fetch today's games
@@ -219,7 +219,7 @@ export default function Calendar() {
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  
+
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -231,11 +231,11 @@ export default function Calendar() {
       window.location.reload();
     },
   });
-  
+
 
   // Load persisted monitored games - ONLY use authenticated user ID
   const userId = user?.id;
-  
+
   // Don't render calendar if not authenticated
   if (isAuthLoading) {
     return (
@@ -247,7 +247,7 @@ export default function Calendar() {
       </div>
     );
   }
-  
+
   if (!isAuthenticated || !userId) {
     return (
       <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen flex items-center justify-center">
@@ -353,8 +353,8 @@ export default function Calendar() {
 
   return (
     <>
-      
-    
+
+
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
       <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
@@ -453,7 +453,7 @@ export default function Calendar() {
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
-              
+
               {/* Week View */}
               <div className="grid grid-cols-7 gap-1">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -461,7 +461,7 @@ export default function Calendar() {
                     {day}
                   </div>
                 ))}
-                
+
                 {eachDayOfInterval({
                   start: startOfWeek(selectedDate),
                   end: endOfWeek(selectedDate)
@@ -486,7 +486,7 @@ export default function Calendar() {
                   </Button>
                 ))}
               </div>
-              
+
               {/* Quick Navigation */}
               <div className="flex space-x-2 mt-4">
                 <Button
@@ -586,7 +586,7 @@ export default function Calendar() {
                     isSelected={isSelected}
                     onSelect={() => toggleGameSelection(game.id)}
                     size="lg"
-                    showWeather={true}
+                    showWeather={false}
                     showVenue={true}
                     showEnhancedMLB={false}
                   />
@@ -606,7 +606,7 @@ export default function Calendar() {
                     {format(addDays(selectedDate, 1), 'MMMM d, yyyy')}
                   </span>
                 </div>
-                
+
                 {tomorrowGames
                   .sort((a, b) => {
                     // Sort by start time
@@ -650,7 +650,7 @@ export default function Calendar() {
                         isSelected={isSelected}
                         onSelect={() => toggleGameSelection(game.id)}
                         size="lg"
-                        showWeather={true}
+                        showWeather={false}
                         showVenue={true}
                         showEnhancedMLB={game.status === 'live'} // Don't show baseball diamond for tomorrow's games
                       />
