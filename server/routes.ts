@@ -859,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await storage.getAllUsers();
       
       // Get detailed breakdown
-      const userBreakdown = {};
+      const userBreakdown: any = {};
       for (const game of allMonitoredGames) {
         const user = allUsers.find(u => u.id === game.userId);
         const username = user?.username || `Unknown-${game.userId}`;
@@ -887,7 +887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error debugging monitored games:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: (error as any).message });
     }
   });
 
@@ -1669,7 +1669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus = {
+      const dbStatus: any = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -1793,7 +1793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         monitoringStatus.monitoring = {
           status: 'OK',
           userMonitoredGames: monitoredGames.length,
-          uniqueUsers: [...new Set(monitoredGames.map(g => g.userId))].length
+          uniqueUsers: Array.from(new Set(monitoredGames.map(g => g.userId))).length
         };
       } catch (error: any) {
         monitoringStatus.monitoring = { status: 'ERROR', error: error.message };
