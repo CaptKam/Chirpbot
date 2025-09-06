@@ -1606,21 +1606,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Weather endpoint - redirect to team-specific endpoint
+  // Weather endpoint - temporarily disabled during development
   app.get('/api/weather', async (req, res) => {
-    console.log('🔧 ROUTE DEBUG: GET /api/weather - Body:', req.body);
-    console.log('⚠️ Generic weather endpoint called - should use /api/weather/team/:teamName');
-
-    // Return fallback data with clear indication it's generic
-    res.json({
-      temperature: 72,
-      condition: 'Clear',
-      windSpeed: 5,
-      windDirection: 0, // North
-      humidity: 50,
-      pressure: 1013,
-      timestamp: new Date().toISOString(),
-      source: 'Generic Fallback - Use team-specific endpoint'
+    console.log('🚫 WEATHER DISABLED: GET /api/weather blocked during development');
+    
+    // Return immediate response to prevent flooding
+    res.status(503).json({
+      error: 'Weather service temporarily disabled during development',
+      message: 'Weather functionality is disabled to prevent API flooding',
+      fallback: {
+        temperature: 72,
+        condition: 'Clear',
+        windSpeed: 5,
+        windDirection: 0,
+        humidity: 50,
+        pressure: 1013
+      }
     });
   });
 
