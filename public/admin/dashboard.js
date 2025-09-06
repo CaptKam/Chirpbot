@@ -5,6 +5,12 @@ let currentSport = 'MLB';
 let globalAlertSettings = {};
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Check for existing session first
+    const isLoggedIn = localStorage.getItem('adminLoggedIn');
+    const adminUser = localStorage.getItem('adminUser');
+    
+    console.log('📱 Page load - checking stored session:', { isLoggedIn, hasUser: !!adminUser });
+
     // Check authentication
     checkAuthentication();
 
@@ -28,22 +34,33 @@ async function checkAuthentication() {
     try {
         const response = await fetch('/api/admin-auth/verify', {
             method: 'GET',
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
         });
 
         if (!response.ok) {
+            console.log('Auth check failed with status:', response.status);
             redirectToLogin();
             return;
         }
 
         const data = await response.json();
         if (!data.authenticated) {
+            console.log('Not authenticated according to server');
             redirectToLogin();
             return;
         }
 
+        // Store admin session data for persistence
+        localStorage.setItem('adminLoggedIn', 'true');
+        localStorage.setItem('adminUser', JSON.stringify(data.user));
+
         // Update admin info
         updateAdminInfo(data.user);
+        console.log('✅ Admin authenticated:', data.user.username);
     } catch (error) {
         console.error('Auth check error:', error);
         redirectToLogin();

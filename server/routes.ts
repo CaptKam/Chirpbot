@@ -1372,11 +1372,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find user by username
       const user = await storage.getUserByUsername(username);
       if (!user) {
+        console.log('❌ Admin login failed: user not found:', username);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
       // Check if user is admin
       if (user.role !== 'admin') {
+        console.log('❌ Admin login failed: not admin:', username);
         return res.status(403).json({ message: 'Admin access required' });
       }
 
@@ -1387,12 +1389,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
+        console.log('❌ Admin login failed: invalid password:', username);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      // Store admin session
+      // Store both admin and regular session for flexibility
       req.session.adminUserId = user.id;
+      req.session.userId = user.id;
 
+      // Force session save to ensure persistence
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+        } else {
+          console.log('✅ Admin session saved for:', username);
+        }
+      });
+
+      console.log('✅ Admin login successful:', username);
       res.json({
         message: 'Admin login successful',
         user: {
@@ -1409,16 +1423,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin-auth/verify', async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
+      // Check admin session first, then fall back to regular session
+      const adminUserId = req.session?.adminUserId;
+      const regularUserId = req.session?.userId;
+      const userId = adminUserId || regularUserId;
+
+      console.log('🔍 Admin verify check:', { 
+        hasAdminSession: !!adminUserId, 
+        hasRegularSession: !!regularUserId,
+        sessionId: req.sessionID?.slice(0, 8) 
+      });
+
+      if (!userId) {
+        console.log('❌ No user session found');
         return res.status(401).json({ authenticated: false });
       }
 
-      const user = await storage.getUserById(req.session.adminUserId);
+      const user = await storage.getUserById(userId);
       if (!user || user.role !== 'admin') {
+        console.log('❌ User not admin or not found:', { userId, role: user?.role });
+        // Clear invalid sessions
         req.session.adminUserId = undefined;
+        req.session.userId = undefined;
         return res.status(401).json({ authenticated: false });
       }
 
+      // Ensure admin session is properly set
+      if (!req.session.adminUserId && user.role === 'admin') {
+        req.session.adminUserId = user.id;
+      }
+
+      console.log('✅ Admin verified:', user.username);
       res.json({
         authenticated: true,
         user: {
