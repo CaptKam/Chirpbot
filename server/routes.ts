@@ -2067,7 +2067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
-  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
+  // alertGenerator.generateAlertsFromCompletedGames().catch(console.error); // Method doesn't exist - disabled
 
   // Start live game monitoring every 15 seconds for real-time alerts
   setInterval(async () => {
