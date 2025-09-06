@@ -316,14 +316,40 @@ export class NFLEngine extends BaseSportEngine {
     }
   }
 
-  // Alert cylinders removed - no module loading functionality
+  // Load alert cylinder module for specific alert type
   async loadAlertModule(alertType: string): Promise<any | null> {
-    return null;
+    try {
+      const moduleMap: Record<string, string> = {
+        'NFL_GAME_START': './alert-cylinders/nfl/game-start-module.ts',
+        'NFL_TWO_MINUTE_WARNING': './alert-cylinders/nfl/two-minute-warning-module.ts'
+      };
+
+      const modulePath = moduleMap[alertType];
+      if (!modulePath) {
+        console.log(`❌ No NFL module found for alert type: ${alertType}`);
+        return null;
+      }
+
+      const module = await import(modulePath);
+      return new module.default();
+    } catch (error) {
+      console.error(`❌ Failed to load NFL alert module ${alertType}:`, error);
+      return null;
+    }
   }
 
-  // Alert cylinders removed - no module initialization
+  // Initialize alert cylinder modules for enabled alert types
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
-    console.log(`🚫 NFL alert cylinders removed - no modules to initialize`);
+    
+    for (const alertType of enabledAlertTypes) {
+      const module = await this.loadAlertModule(alertType);
+      if (module) {
+        this.alertModules.set(alertType, module);
+        console.log(`✅ Loaded NFL alert cylinder: ${alertType}`);
+      }
+    }
+    
+    console.log(`🔧 Initialized ${this.alertModules.size} NFL alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
   }
 }
