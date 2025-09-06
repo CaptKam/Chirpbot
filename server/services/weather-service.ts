@@ -63,9 +63,38 @@ export class WeatherService {
 
   constructor() {
     this.apiKey = process.env.OPENWEATHERMAP_API_KEY || '';
+    
+    // Check for disable flags first
+    if (!this.checkIfEnabled()) {
+      this.apiKey = ''; // Disable weather API calls
+      console.log('🚫 Weather System: DISABLED via disable flags');
+      return;
+    }
+    
     if (!this.apiKey) {
       console.warn('⚠️ OpenWeatherMap API key not configured - using fallback data');
       console.warn('⚠️ Set OPENWEATHERMAP_API_KEY in Secrets for live weather data');
+    }
+  }
+
+  // Check if Weather system is enabled via disable flags
+  private checkIfEnabled(): boolean {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const disableFlagsPath = path.join(__dirname, '../.disable-flags');
+      
+      if (fs.existsSync(disableFlagsPath)) {
+        const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
+        if (flags.weather_disabled) {
+          console.log('🚫 Weather System: DISABLED via disable flags');
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.warn('⚠️ Could not check disable flags, assuming enabled');
+      return true;
     }
   }
 

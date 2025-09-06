@@ -35,8 +35,29 @@ export class BasicAI {
 
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
-    // AI functionality enabled when API key is present
-    this.isConfigured = !!this.apiKey && this.apiKey.startsWith('sk-');
+    // Check for disable flags first
+    this.isConfigured = this.checkIfEnabled() && !!this.apiKey && this.apiKey.startsWith('sk-');
+  }
+
+  // Check if AI system is enabled via disable flags
+  private checkIfEnabled(): boolean {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const disableFlagsPath = path.join(__dirname, '../.disable-flags');
+      
+      if (fs.existsSync(disableFlagsPath)) {
+        const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
+        if (flags.ai_disabled) {
+          console.log('🚫 AI System: DISABLED via disable flags');
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.warn('⚠️ Could not check disable flags, assuming enabled');
+      return true;
+    }
   }
 
   // Public getter for isConfigured
