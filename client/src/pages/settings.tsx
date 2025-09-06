@@ -151,20 +151,16 @@ export default function Settings() {
   }
 
   return (
-    <div className="bg-gradient-to-b from-[#0B1220] to-[#0F1A32] min-h-screen text-slate-100 antialiased">
-      <div className="max-w-md mx-auto bg-transparent min-h-screen relative">
-        
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="pt-8 pb-4 px-4 text-center">
-          <h1 className="text-2xl font-bold text-white mb-2 uppercase tracking-wide">Settings</h1>
-          <p className="text-slate-400 text-sm">Configure your alert preferences and integrations</p>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
+          <p className="text-slate-400">Configure your alert preferences and integrations</p>
         </div>
 
-        {/* Settings Content - Scrollable */}
-        <div className="px-4 pb-24 space-y-4">
-
-          {/* Alert Preferences */}
-          <Card className="bg-white/5 backdrop-blur-sm border-white/10 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
+        {/* Alert Preferences */}
+        <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-slate-100 flex items-center space-x-2">
               <span>🚨</span>
@@ -227,11 +223,11 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-          {/* Telegram Integration */}
-          <TelegramSettings onUpdate={handleSettingsUpdate} userPreferences={userPreferences} />
+        {/* Telegram Integration */}
+        <TelegramSettings onUpdate={handleSettingsUpdate} userPreferences={userPreferences} />
 
-          {/* System Information */}
-          <Card className="bg-white/5 backdrop-blur-sm border-white/10 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
+        {/* System Information */}
+        <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-slate-100 flex items-center space-x-2">
               <span>ℹ️</span>
@@ -252,15 +248,7 @@ export default function Settings() {
               </Badge>
             </div>
           </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Fixed Bottom Navigation Space */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50">
-        <div className="h-20 flex items-center justify-center">
-          <div className="w-12 h-1 bg-white/20 rounded-full"></div>
-        </div>
+        </Card>
       </div>
     </div>
   );
@@ -284,7 +272,7 @@ function TelegramSettings({ onUpdate, userPreferences }: {
   };
 
   return (
-    <Card className="bg-white/5 backdrop-blur-sm border-white/10 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
+    <Card className="bg-slate-800/50 border-slate-700">
       <CardHeader>
         <CardTitle className="text-slate-100 flex items-center space-x-2">
           <span>📱</span>
