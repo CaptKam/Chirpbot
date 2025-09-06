@@ -141,7 +141,7 @@ app.use((req, res, next) => {
       // Continue anyway - the database might already be seeded
     }
 
-    const server = await registerRoutes(app);
+    server = await registerRoutes(app);
 
     // Initialize alert generator and AI system
     const alertGenerator = new AlertGenerator();
