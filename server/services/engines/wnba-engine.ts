@@ -1,4 +1,3 @@
-
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
@@ -76,7 +75,7 @@ export class WNBAEngine extends BaseSportEngine {
                             gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
                             gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
+
         const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${timeRemaining} left`;
 
         alerts.push({
@@ -114,7 +113,7 @@ export class WNBAEngine extends BaseSportEngine {
                             gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
                             gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
+
         const message = `🔥 CLOSE WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
 
         alerts.push({
@@ -151,7 +150,7 @@ export class WNBAEngine extends BaseSportEngine {
                             gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
                             gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
+
         const message = `⚡ WNBA OVERTIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
 
         alerts.push({
@@ -188,7 +187,7 @@ export class WNBAEngine extends BaseSportEngine {
                             gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
                             gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
+
         const message = `🎯 HIGH-SCORING WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${totalScore} combined points`;
 
         alerts.push({
@@ -213,7 +212,7 @@ export class WNBAEngine extends BaseSportEngine {
 
   private isWithinMinutes(timeRemaining: string, minutes: number): boolean {
     if (!timeRemaining || timeRemaining === '0:00') return false;
-    
+
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
       return totalSeconds <= (minutes * 60) && totalSeconds > 0;
@@ -235,5 +234,10 @@ export class WNBAEngine extends BaseSportEngine {
     const suffixes = ['th', 'st', 'nd', 'rd'];
     const remainder = num % 100;
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
+  }
+
+  // Initialize alert modules for enabled alert types
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    console.log(`🔧 Alert modules disabled - no WNBA modules will be loaded`);
   }
 }

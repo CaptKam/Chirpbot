@@ -54,6 +54,11 @@ export class NCAAFEngine extends BaseSportEngine {
     return super.generateLiveAlerts(gameState);
   }
 
+  // Initialize alert modules for enabled alert types
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    console.log(`🔧 Alert modules disabled - no NCAAF modules will be loaded`);
+  }
+
   private async generateTwoMinuteWarningAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
     const { quarter, timeRemaining } = gameState;
