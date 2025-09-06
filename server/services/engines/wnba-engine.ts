@@ -1,3 +1,4 @@
+
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
@@ -12,10 +13,20 @@ export class WNBAEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
+      // Only check settings for actual WNBA alert types
+      const validWNBAAlerts = [
+        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING'
+      ];
+
+      if (!validWNBAAlerts.includes(alertType)) {
+        console.log(`❌ ${alertType} is not a valid WNBA alert type - rejecting`);
+        return false;
+      }
+
       return await this.settingsCache.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`WNBA Settings cache error for ${alertType}:`, error);
-      return true;
+      return true; // Default to true if cache fails
     }
   }
 
@@ -44,97 +55,12 @@ export class WNBAEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 5), 95);
   }
 
+  // Override to delegate to base class modular system
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-
-    try {
-      // Generate WNBA-specific alerts
-      alerts.push(...await this.generateFourthQuarterAlerts(gameState));
-      alerts.push(...await this.generateCloseGameAlerts(gameState));
-      alerts.push(...await this.generateOvertimeAlerts(gameState));
-      alerts.push(...await this.generateHighScoringAlerts(gameState));
-
-    } catch (error) {
-      console.error(`Error generating WNBA alerts for game ${gameState.gameId}:`, error);
-    }
-
-    return alerts;
+    // Use the parent class method which properly calls all loaded modules
+    return super.generateLiveAlerts(gameState);
   }
 
-  private async generateFourthQuarterAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter, timeRemaining } = gameState;
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-
-    // Fourth quarter with less than 5 minutes remaining and close score
-    if (quarter === 4 && this.isWithinMinutes(timeRemaining, 5) && scoreDiff <= 10) {
-      // Check if WNBA_FOURTH_QUARTER alerts are enabled
-      if (await this.isAlertEnabled('WNBA_FOURTH_QUARTER')) {
-        const alertKey = `${gameState.gameId}_WNBA_FOURTH_QUARTER_${timeRemaining.replace(/[:\s]/g, '')}`;
-        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
-        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
-        const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${timeRemaining} left`;
-
-        alerts.push({
-          alertKey,
-          type: 'WNBA_FOURTH_QUARTER',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            timeRemaining,
-            scoreDiff
-          },
-          priority: scoreDiff <= 5 ? 95 : 88
-        });
-      }
-    }
-
-    return alerts;
-  }
-
-  private async generateCloseGameAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter } = gameState;
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-
-    // Close games in 3rd or 4th quarter
-    if ((quarter >= 3) && scoreDiff <= 5 && (gameState.homeScore > 0 || gameState.awayScore > 0)) {
-      // Check if WNBA_CLOSE_GAME alerts are enabled
-      if (await this.isAlertEnabled('WNBA_CLOSE_GAME')) {
-        const alertKey = `${gameState.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
-        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
-        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
-        const message = `🔥 CLOSE WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
-
-        alerts.push({
-          alertKey,
-          type: 'WNBA_CLOSE_GAME',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            scoreDiff
-          },
-          priority: 90
-        });
-      }
-    }
-
-    return alerts;
-  }
 
   private async generateOvertimeAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
@@ -234,5 +160,90 @@ export class WNBAEngine extends BaseSportEngine {
     const suffixes = ['th', 'st', 'nd', 'rd'];
     const remainder = num % 100;
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
+  }
+
+  // Initialize alert modules based on user's enabled preferences
+  async initializeForUser(userId: string): Promise<void> {
+    try {
+      // Get user's enabled alert types - use 'WNBA' to match database case
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'WNBA');
+      const enabledTypes = userPrefs
+        .filter(pref => pref.enabled)
+        .map(pref => pref.alertType);
+
+      // Filter to only valid WNBA alerts  
+      const validWNBAAlerts = [
+        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING'
+      ];
+
+      const wnbaEnabledTypes = enabledTypes.filter(alertType =>
+        validWNBAAlerts.includes(alertType)
+      );
+
+      // Check global settings for these WNBA alerts
+      const globallyEnabledTypes = [];
+      for (const alertType of wnbaEnabledTypes) {
+        const isGloballyEnabled = await this.isAlertEnabled(alertType);
+        if (isGloballyEnabled) {
+          globallyEnabledTypes.push(alertType);
+        }
+      }
+
+      console.log(`🎯 Initializing WNBA engine for user ${userId} with ${globallyEnabledTypes.length} WNBA alerts: ${globallyEnabledTypes.join(', ')}`);
+
+      // Initialize the WNBA alert modules using parent class method
+      await this.initializeUserAlertModules(globallyEnabledTypes);
+
+    } catch (error) {
+      console.error(`❌ Failed to initialize WNBA engine for user ${userId}:`, error);
+    }
+  }
+
+  // Load alert modules dynamically - WNBA only
+  async loadAlertModule(alertType: string): Promise<any | null> {
+    try {
+      // Map WNBA alert types to actual module files
+      const moduleMap: Record<string, string> = {
+        'WNBA_GAME_START': 'wnba-game-start-module',
+        'WNBA_TWO_MINUTE_WARNING': 'two-minute-warning-module'
+      };
+
+      const moduleFileName = moduleMap[alertType];
+      if (!moduleFileName) {
+        console.log(`❌ No WNBA module found for: ${alertType}`);
+        return null;
+      }
+
+      const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
+      const module = await import(modulePath);
+      const ModuleClass = module.default;
+      return new ModuleClass();
+    } catch (error) {
+      console.error(`❌ Failed to load WNBA alert module ${alertType}:`, error);
+      return null;
+    }
+  }
+
+  // Initialize alert modules for enabled alert types - WNBA only
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    this.alertModules.clear();
+
+    console.log(`🔧 Loading ${enabledAlertTypes.length} WNBA alert modules...`);
+
+    for (const alertType of enabledAlertTypes) {
+      try {
+        const module = await this.loadAlertModule(alertType);
+        if (module) {
+          this.alertModules.set(alertType, module);
+          console.log(`✅ Loaded WNBA alert module: ${alertType}`);
+        } else {
+          console.log(`❌ Failed to load WNBA module: ${alertType}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error loading WNBA ${alertType}:`, error);
+      }
+    }
+
+    console.log(`🎯 Successfully initialized ${this.alertModules.size} WNBA alert modules`);
   }
 }

@@ -272,19 +272,11 @@ export function GameCardTemplate({
           {/* Enhanced MLB Display with Baseball Diamond */}
           {sport === 'MLB' && (status === 'live' || showEnhancedMLB) && (
             <div className="mt-3 flex justify-center">
-              <BaseballDiamond 
-                runners={runners || {
-                  first: false,
-                  second: false,
-                  third: false
-                }}
+              <EnhancedGameDisplay 
+                gameId={gameId}
                 inning={inning || 1}
                 isTopInning={isTopInning || false}
-                outs={outs}
-                balls={balls}
-                strikes={strikes}
-                size="sm"
-                showCount={status === 'live'}
+                isLive={status === 'live'}
               />
             </div>
           )}
@@ -366,3 +358,41 @@ export function GameCardTemplate({
     </Card>
   );
 }
+
+// Enhanced Game Display with live data fetching
+const EnhancedGameDisplay = ({ gameId, inning, isTopInning, isLive }: { gameId: string; inning: number; isTopInning: boolean; isLive: boolean }) => {
+  // Fetch live game data for this specific game using the dedicated endpoint
+  const { data: liveGameData } = useQuery({
+    queryKey: ['/api/games/live', gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/${gameId}/live`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch live game data');
+      return response.json();
+    },
+    enabled: isLive && !!gameId,
+    refetchInterval: isLive ? 30000 : false, // Refetch every 30 seconds for live games
+    staleTime: 10000, // Consider data stale after 10 seconds
+    retry: 1
+  });
+
+  // Use live data if available, otherwise fallback to defaults
+  const runners = liveGameData?.runners || { first: false, second: false, third: false };
+  const outs = liveGameData?.outs || 0;
+  const balls = liveGameData?.balls || 0;
+  const strikes = liveGameData?.strikes || 0;
+
+  return (
+    <BaseballDiamond
+      runners={runners}
+      inning={inning}
+      isTopInning={isTopInning}
+      outs={outs}
+      balls={balls}
+      strikes={strikes}
+      size="sm"
+      showCount={isLive}
+    />
+  );
+};

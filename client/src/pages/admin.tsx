@@ -22,32 +22,76 @@ import {
   ChevronRight,
   Target,
   Trophy,
-  Clock,
-  Bot
+  Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 
-// Empty alert configuration - system has been reset
-const ALERT_TYPE_CONFIG = {
-  MLB: {
-    // No alert types configured yet
-  },
-  NFL: {
-    // No alert types configured yet
+// Comprehensive alert configuration for all sports
+  const ALERT_TYPE_CONFIG = {
+    MLB: [
+      { key: 'MLB_GAME_START', label: 'Game Start', description: 'Alert when MLB game begins' },
+      { key: 'MLB_SEVENTH_INNING_STRETCH', label: 'Seventh Inning Stretch', description: 'Traditional 7th inning stretch alert' },
+      { key: 'RISP', label: 'Runner in Scoring Position', description: 'Alerts when a runner reaches 2nd or 3rd base' },
+      { key: 'BASES_LOADED', label: 'Bases Loaded', description: 'All three bases are occupied' },
+      { key: 'RUNNERS_1ST_2ND', label: 'Runners on 1st & 2nd', description: 'Prime scoring opportunity setup' },
+      { key: 'CLOSE_GAME', label: 'Close Game', description: 'Games with score difference ≤ 3 runs' },
+      { key: 'CLOSE_GAME_LIVE', label: 'Live Close Game', description: 'Real-time close game situations' },
+      { key: 'LATE_PRESSURE', label: 'Late Inning Pressure', description: '8th inning or later with close score' },
+      { key: 'HOME_RUN_LIVE', label: 'Home Run (Live)', description: 'Real-time home run alerts as they happen' },
+      { key: 'HIGH_SCORING', label: 'High-Scoring Game', description: 'Games with 12+ total runs' },
+      { key: 'SHUTOUT', label: 'Shutout Alert', description: 'When a team gets shut out (0 runs)' },
+      { key: 'BLOWOUT', label: 'Blowout Game', description: 'Games with 7+ run difference' },
+      { key: 'FULL_COUNT', label: 'Full Count (3-2)', description: 'Maximum pressure at-bat situations' },
+      { key: 'STRIKEOUT', label: 'Strikeout Alert', description: 'Real-time strikeout notifications' },
+      { key: 'POWER_HITTER', label: 'Power Hitter', description: '20+ HR batter at bat' },
+      { key: 'HOT_HITTER', label: 'Hot Hitter', description: 'Already homered today' },
+      { key: 'AI_ENHANCED_MESSAGES', label: 'AI-Enhanced Alert Messages', description: 'AI adds context like launch angle insights' },
+      { key: 'AI_PREDICTIVE_AT_BAT', label: 'Predictive At-Bat Analysis', description: 'AI predicts contact probability and outcomes' },
+      { key: 'AI_SCORING_PROBABILITY', label: 'Real-Time Scoring Probability', description: 'AI calculates and displays scoring chances' },
+      { key: 'AI_SITUATION_ANALYSIS', label: 'Game Situation Analysis', description: 'AI analyzes pressure situations and momentum' },
+      { key: 'AI_EVENT_SUMMARIES', label: 'AI Event Summaries', description: 'AI summarizes recent game developments' },
+      { key: 'AI_ROI_ALERTS', label: 'Advanced ROI Analysis', description: 'AI provides betting-focused insights and ROI analysis' },
+      { key: 'RE24_ENABLED', label: 'RE24 Probability System', description: 'Advanced run expectancy calculations for scoring probability' },
+      { key: 'RE24_CONTEXT_FACTORS', label: 'RE24 Context Adjustments', description: 'Weather, power hitter, and ballpark factors' },
+      { key: 'RE24_MINIMUM_THRESHOLDS', label: 'RE24 Minimum Thresholds', description: 'Probability-based alert filtering (40-45% minimums)' },
+      { key: 'RE24_DYNAMIC_PRIORITY', label: 'RE24 Dynamic Priorities', description: 'Priority scaling based on calculated probabilities' }
+    ],
+    NFL: {
+    "Game Situations": [
+      { key: "RED_ZONE", label: "Red Zone Situations", description: "Team inside the 20-yard line" },
+      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+      { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical 4th down conversion attempts" },
+      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-half pressure situations" },
+    ]
   },
   NBA: {
-    // No alert types configured yet
+    "Game Situations": [
+      { key: "CLUTCH_TIME", label: "Clutch Time", description: "Final 5 minutes with close score" },
+      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+      { key: "OVERTIME", label: "Overtime", description: "Games going to overtime" },
+    ]
   },
   NHL: {
-    // No alert types configured yet
+    "Game Situations": [
+      { key: "POWER_PLAY", label: "Power Play", description: "Man advantage situations" },
+      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+      { key: "EMPTY_NET", label: "Empty Net", description: "Goalie pulled situations" },
+    ]
   },
   CFL: {
-    // No alert types configured yet
+    "Game Situations": [
+      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+      { key: "FOURTH_DOWN", label: "Third Down (CFL)", description: "Critical down conversion attempts" },
+    ]
   },
   NCAAF: {
-    // No alert types configured yet
+    "Game Situations": [
+      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
+      { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical conversion attempts" },
+      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-quarter/half pressure situations" },
+    ]
   }
 };
 
@@ -68,9 +112,28 @@ export default function Admin() {
   const { toast } = useToast();
   const { user: currentUser, isAuthenticated } = useAuth();
 
-  // Redirect to web admin panel
-  if (isAuthenticated && currentUser && currentUser.role === 'admin') {
-    window.location.href = '/admin-panel';
+  // Check if user is admin and redirect once
+  useEffect(() => {
+    if (isAuthenticated && currentUser && currentUser.role === 'admin') {
+      window.location.href = '/admin-panel';
+    }
+  }, [isAuthenticated, currentUser]);
+
+  // Show loading while checking auth
+  if (!isAuthenticated || !currentUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
+        <div className="text-center">
+          <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-pulse" />
+          <h1 className="text-2xl font-bold text-slate-100 mb-2">Checking Access...</h1>
+          <p className="text-slate-400">Please wait...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show redirect message for admins
+  if (currentUser.role === 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
         <div className="text-center">
@@ -89,6 +152,7 @@ export default function Admin() {
         <Shield className="w-16 h-16 text-red-400 mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-slate-100 mb-2">Access Denied</h1>
         <p className="text-slate-400">You need admin privileges to access this page.</p>
+        <p className="text-slate-400 mt-2">Please log in with an admin account at <a href="/admin-panel" className="text-blue-400 underline">/admin-panel</a></p>
       </div>
     </div>
   );
@@ -334,11 +398,11 @@ export default function Admin() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700 text-slate-100">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
-              {selectedUser && getRoleIcon(selectedUser?.role || 'user')}
+              {selectedUser && getRoleIcon(selectedUser.role)}
               <span>Manage User: {selectedUser?.username}</span>
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedUser && (
             <div className="space-y-6">
               {/* User Info */}
@@ -347,22 +411,22 @@ export default function Admin() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-400">Email:</span>
-                    <span className="text-slate-100 ml-2">{selectedUser?.email}</span>
+                    <span className="text-slate-100 ml-2">{selectedUser.email}</span>
                   </div>
                   <div>
                     <span className="text-slate-400">Role:</span>
-                    <Badge className={`ml-2 ${getRoleBadgeColor(selectedUser?.role || 'user')}`}>
-                      {selectedUser?.role?.toUpperCase()}
+                    <Badge className={`ml-2 ${getRoleBadgeColor(selectedUser.role)}`}>
+                      {selectedUser.role.toUpperCase()}
                     </Badge>
                   </div>
                   <div>
                     <span className="text-slate-400">Auth Method:</span>
-                    <span className="text-slate-100 ml-2">{selectedUser?.authMethod}</span>
+                    <span className="text-slate-100 ml-2">{selectedUser.authMethod}</span>
                   </div>
                   <div>
                     <span className="text-slate-400">Telegram:</span>
-                    <span className={`ml-2 ${selectedUser?.telegramEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                      {selectedUser?.telegramEnabled ? 'Enabled' : 'Disabled'}
+                    <span className={`ml-2 ${selectedUser.telegramEnabled ? 'text-green-400' : 'text-red-400'}`}>
+                      {selectedUser.telegramEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
                 </div>
@@ -408,7 +472,7 @@ export default function Admin() {
                                 p.alertType === alert.key && p.sport === selectedSport
                               );
                               const isEnabled = preference?.enabled ?? true;
-                              
+
                               return (
                                 <div key={alert.key} className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10">
                                   <div className="flex-1">
@@ -423,13 +487,11 @@ export default function Admin() {
                                         enabled: a.key === alert.key ? enabled : 
                                           (userAlertPreferences as any[] || []).find((p: any) => p.alertType === a.key && p.sport === selectedSport)?.enabled ?? true
                                       }));
-                                      if (selectedUser) {
-                                        updateAlertPreferencesMutation.mutate({
-                                          userId: selectedUser.id,
-                                          sport: selectedSport,
-                                          preferences: updatedPreferences
-                                        });
-                                      }
+                                      updateAlertPreferencesMutation.mutate({
+                                        userId: selectedUser.id,
+                                        sport: selectedSport,
+                                        preferences: updatedPreferences
+                                      });
                                     }}
                                     disabled={updateAlertPreferencesMutation.isPending}
                                     className="data-[state=checked]:bg-emerald-500"
