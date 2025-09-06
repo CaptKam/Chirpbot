@@ -739,23 +739,37 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   gameId={alertData.id}
                   homeTeam={{
                     name: typeof alertData.homeTeam === 'string' ? alertData.homeTeam : (alertData.homeTeam as any)?.name || 'Home Team',
-                    score: displayScores.homeScore
+                    score: displayScores.homeScore,
+                    abbreviation: typeof alertData.homeTeam === 'string' ? 
+                      alertData.homeTeam.replace(/[^A-Z]/g, '').substring(0, 3) : 
+                      (alertData.homeTeam as any)?.abbreviation || (alertData.homeTeam as any)?.name?.replace(/[^A-Z]/g, '').substring(0, 3) || 'HOME'
                   }}
                   awayTeam={{
                     name: typeof alertData.awayTeam === 'string' ? alertData.awayTeam : (alertData.awayTeam as any)?.name || 'Away Team',
-                    score: displayScores.awayScore
+                    score: displayScores.awayScore,
+                    abbreviation: typeof alertData.awayTeam === 'string' ? 
+                      alertData.awayTeam.replace(/[^A-Z]/g, '').substring(0, 3) : 
+                      (alertData.awayTeam as any)?.abbreviation || (alertData.awayTeam as any)?.name?.replace(/[^A-Z]/g, '').substring(0, 3) || 'AWAY'
                   }}
                   sport={alertData.sport}
-                  status={displayScores.isLive ? "live" : "final"}
+                  status={liveGameData?.status || (displayScores.isLive ? "live" : "final")}
                   inning={alertData.context?.inning || liveGameData?.inning}
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
+                  runners={{
+                    first: alertData.context?.hasFirst || false,
+                    second: alertData.context?.hasSecond || false,
+                    third: alertData.context?.hasThird || false
+                  }}
+                  balls={alertData.context?.balls || 0}
+                  strikes={alertData.context?.strikes || 0}
+                  outs={alertData.context?.outs || 0}
                   weather={weatherData}
                   size="lg"
                   showWeather={true}
                   showVenue={false}
-                  showEnhancedMLB={false}
+                  showEnhancedMLB={alertData.sport === 'MLB'}
                   className="shadow-lg"
                 />
               </div>
