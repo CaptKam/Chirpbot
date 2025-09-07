@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { TeamLogo } from '@/components/team-logo';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { Alert } from '@/types';
-import BaseballDiamond from '@/components/BaseballDiamond'; // Assuming BaseballDiamond is in this path
+import { BaseballDiamond } from '@/components/baseball-diamond';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
