@@ -44,6 +44,7 @@ const STADIUMS: Record<string, StadiumCoordinates> = {
   'New York Mets': { lat: 40.7571, lon: -73.8458, city: 'New York', stadium: 'Citi Field', homePlateDirection: 95 },
   'New York Yankees': { lat: 40.8296, lon: -73.9262, city: 'New York', stadium: 'Yankee Stadium', homePlateDirection: 95 },
   'Oakland Athletics': { lat: 37.7516, lon: -122.2005, city: 'Oakland', stadium: 'Oakland Coliseum', homePlateDirection: 95 },
+  'Athletics': { lat: 37.7516, lon: -122.2005, city: 'Oakland', stadium: 'Oakland Coliseum', homePlateDirection: 95 }, // Alias for Oakland Athletics
   'Philadelphia Phillies': { lat: 39.9061, lon: -75.1665, city: 'Philadelphia', stadium: 'Citizens Bank Park', homePlateDirection: 95 },
   'Pittsburgh Pirates': { lat: 40.4469, lon: -80.0057, city: 'Pittsburgh', stadium: 'PNC Park', homePlateDirection: 95 },
   'San Diego Padres': { lat: 32.7073, lon: -117.1566, city: 'San Diego', stadium: 'Petco Park', homePlateDirection: 95 },
