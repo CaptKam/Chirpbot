@@ -17,8 +17,17 @@ declare module 'express-session' {
   }
 }
 
+// Extend Express Request interface to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: any;
+    }
+  }
+}
+
 // Middleware to ensure user is authenticated
-async function requireAuthentication(req: any, res: any, next: any) {
+async function requireAuthentication(req: express.Request, res: express.Response, next: express.NextFunction) {
   if (req.session?.userId) {
     const user = await storage.getUserById(req.session.userId);
     if (user) {
