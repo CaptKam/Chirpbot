@@ -113,7 +113,7 @@ function getBetbookData(context: any): BetbookData {
     },
     aiAdvice,
     sportsbookLinks: [
-      { name: 'FanDuel', url: 'https://sportsbook.fanduel.com' },
+      { name: 'FanDuel', url: 'https://sportsbook. FanDuel.com' },
       { name: 'DraftKings', url: 'https://sportsbook.draftkings.com' },
       { name: 'Bet365', url: 'https://www.bet365.com' },
       { name: 'BetMGM', url: 'https://sports.betmgm.com' }
@@ -361,14 +361,7 @@ export class AlertGenerator {
         const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
         console.log(`👤 User ${user.username}: Found ${userPrefs.length} ${sport} preferences`);
 
-        if (userPrefs.length > 0) {
-          const enabledPrefs = userPrefs.filter(pref => pref.enabled);
-          console.log(`👤 User ${user.username}: ${enabledPrefs.length} enabled ${sport} alerts: ${enabledPrefs.map(p => p.alertType).join(', ')}`);
-
-          if (enabledPrefs.length > 0) {
-            usersWithAlerts.push(user);
-          }
-        } else {
+        if (userPrefs.length === 0) {
           console.log(`👤 User ${user.username}: No ${sport} preferences found`);
 
           // CRITICAL FIX: Only inherit global defaults for MLB, not other sports
@@ -383,6 +376,12 @@ export class AlertGenerator {
             }
           } else {
             console.log(`👤 User ${user.username}: ${sport} requires explicit opt-in - not inheriting defaults`);
+          }
+        } else {
+          // SAFETY CHECK: Ensure user has minimum expected alerts
+          const enabledCount = userPrefs.filter(p => p.enabled).length;
+          if (sport === 'MLB' && enabledCount < 9) {
+            console.log(`⚠️ User ${user.username}: Only has ${enabledCount}/9 MLB alerts enabled - may need preference fix`);
           }
         }
       } catch (error) {
