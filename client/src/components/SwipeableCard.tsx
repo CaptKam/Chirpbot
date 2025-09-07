@@ -801,7 +801,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
 
-                    {/* AI Insights */}
+                    {/* AI Insights - Show if available */}
                     {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
                       <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/30">
                         <div className="flex items-center gap-1 mb-2">
@@ -814,6 +814,18 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                             </p>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Betting AI Insights - Available on ALL alerts */}
+                    {alertData.betbookData?.aiAdvice && !alertData.context?.aiInsights && (
+                      <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/30">
+                        <div className="flex items-center gap-1 mb-2">
+                          <span className="text-green-400 text-xs">🎯 AI Betting Analysis</span>
+                        </div>
+                        <p className="text-xs text-slate-200">
+                          {alertData.betbookData.aiAdvice}
+                        </p>
                       </div>
                     )}
                   </div>

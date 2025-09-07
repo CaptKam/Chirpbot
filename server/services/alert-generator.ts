@@ -656,11 +656,12 @@ export class AlertGenerator {
         }
       }
 
-      // AI Context Controller enhances ALL alerts (no priority restriction)
-      try {
-        console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${finalPriority})`);
+      // AI Context Controller takes full control for high-value alerts
+      if (finalPriority >= 70) {
+        try {
+          console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${finalPriority})`);
 
-        const alertContext: AlertContext = {
+          const alertContext: AlertContext = {
             gameId,
             sport,
             alertType: type,
@@ -711,8 +712,9 @@ export class AlertGenerator {
             console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${finalPriority})`);
           }
 
-      } catch (error) {
-        console.error('❌ AI Context Controller failed:', error);
+        } catch (error) {
+          console.error('❌ AI Context Controller failed:', error);
+        }
       }
 
       // Enhanced payload with AI insights
