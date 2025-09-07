@@ -15,7 +15,14 @@ export class MLBEngine extends BaseSportEngine {
       // Only check settings for actual MLB alert types that have corresponding modules
       const validMLBAlerts = [
         'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH'
+        'MLB_SEVENTH_INNING_STRETCH',
+        'MLB_RUNNER_ON_THIRD_NO_OUTS',
+        'MLB_FIRST_AND_THIRD_NO_OUTS',
+        'MLB_SECOND_AND_THIRD_NO_OUTS',
+        'MLB_BASES_LOADED_NO_OUTS',
+        'MLB_RUNNER_ON_THIRD_ONE_OUT',
+        'MLB_SECOND_AND_THIRD_ONE_OUT',
+        'MLB_BASES_LOADED_ONE_OUT'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -111,7 +118,14 @@ export class MLBEngine extends BaseSportEngine {
       // Filter to only valid MLB alerts that have corresponding module files
       const validMLBAlerts = [
         'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH'
+        'MLB_SEVENTH_INNING_STRETCH',
+        'MLB_RUNNER_ON_THIRD_NO_OUTS',
+        'MLB_FIRST_AND_THIRD_NO_OUTS',
+        'MLB_SECOND_AND_THIRD_NO_OUTS',
+        'MLB_BASES_LOADED_NO_OUTS',
+        'MLB_RUNNER_ON_THIRD_ONE_OUT',
+        'MLB_SECOND_AND_THIRD_ONE_OUT',
+        'MLB_BASES_LOADED_ONE_OUT'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
