@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('adminLoggedIn', 'true');
                 localStorage.setItem('adminUser', JSON.stringify(data.user));
 
-                // Redirect to dashboard
-                window.location.href = '/admin/dashboard.html';
+                // Show dashboard instead of redirecting
+                showDashboard(data.user);
             } else {
                 showError(data.message || 'Invalid credentials. Please try again.');
             }
@@ -77,7 +77,78 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Removed checkExistingSession to prevent redirect loops
+    // Function to show dashboard after login
+    function showDashboard(user) {
+        console.log('📊 Showing dashboard for user:', user);
+        
+        // Hide login form
+        document.querySelector('.login-container').style.display = 'none';
+        
+        // Show dashboard
+        const dashboard = document.getElementById('adminDashboard');
+        if (dashboard) {
+            dashboard.style.display = 'block';
+            
+            // Set admin username
+            const adminUsernameEl = document.getElementById('adminUsername');
+            if (adminUsernameEl) {
+                adminUsernameEl.textContent = user.username;
+            }
+            
+            // Trigger dashboard load
+            if (typeof loadDashboardData === 'function') {
+                loadDashboardData();
+            }
+            
+            // Set up tab switching
+            setupTabs();
+        }
+    }
+    
+    // Tab switching functionality
+    function setupTabs() {
+        console.log('🗂️ Setting up tabs');
+        
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        console.log('📋 Found elements:', {
+            tabs: tabs.length,
+            tabContents: tabContents.length
+        });
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                console.log('🖱️ Tab clicked:', targetTab);
+                
+                // Remove active class from all tabs and contents
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                const targetContent = document.getElementById(targetTab);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                    console.log('✅ Tab switched to:', targetTab);
+                    
+                    // Load specific tab data
+                    if (targetTab === 'users') {
+                        if (typeof loadUsers === 'function') {
+                            loadUsers();
+                        }
+                    } else if (targetTab === 'alerts') {
+                        if (typeof loadSportAlertSettings === 'function') {
+                            loadSportAlertSettings();
+                        }
+                    }
+                } else {
+                    console.error('❌ Tab content not found:', targetTab);
+                }
+            });
+        });
+    }
 
     function showError(message) {
         errorMessage.textContent = message;
