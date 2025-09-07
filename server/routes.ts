@@ -17,19 +17,6 @@ declare module 'express-session' {
   }
 }
 
-// Extend Express Request interface to include user property
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        username: string;
-        role?: string;
-      };
-    }
-  }
-}
-
 // Middleware to ensure user is authenticated
 async function requireAuthentication(req: any, res: any, next: any) {
   if (req.session?.userId) {
@@ -861,7 +848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPreferences = await storage.getUserAlertPreferences(userId);
       
       // Group by sport
-      const preferencesBySport: Record<string, Array<{alertType: string; enabled: boolean; updatedAt: Date}>> = {};
+      const preferencesBySport = {};
       allPreferences.forEach(pref => {
         if (!preferencesBySport[pref.sport]) {
           preferencesBySport[pref.sport] = [];
@@ -1038,9 +1025,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user; // from requireAdmin middleware
-      if (!currentUser) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
 
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
 
@@ -1071,7 +1055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.deleteUser(userId);
 
       if (deleted) {
-        console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser!.username}`);
+        console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser.username}`);
         res.json({
           message: `User ${userToDelete.username} deleted successfully`,
           deletedUser: {
@@ -1095,9 +1079,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user;
-      if (!currentUser) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
 
       console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
 
@@ -1112,7 +1093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.forceDeleteUser(userId);
 
       if (deleted) {
-        console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser!.username}`);
+        console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser.username}`);
         res.json({
           message: `User ${userId} has been completely removed from the system`,
           method: 'FORCE_DELETE',
@@ -1333,9 +1314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      // Check if any rows were affected (handle different DB result formats)
-      const rowCount = result.rowCount || (result as any).rowsAffected || 0;
-      if (rowCount === 0) {
+      if (result.rowsAffected === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1570,15 +1549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults: {
-        timestamp: string;
-        endpoints: Record<string, any>;
-        database: Record<string, any>;
-        services: Record<string, any>;
-        configuration: Record<string, any>;
-        errors: string[];
-        summary?: Record<string, any>;
-      } = {
+      const debugResults = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
@@ -1751,13 +1722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus: {
-        connection: string;
-        tables: Record<string, any>;
-        indexes: Record<string, any>;
-        performance: Record<string, any>;
-        connectionTime?: number;
-      } = {
+      const dbStatus = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -2204,7 +2169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalDisabled++;
           } catch (error) {
             console.error(`Failed to disable ${sport}.${alertType}:`, error);
-            results.push({ sport, alertType, disabled: false, error: (error as Error).message });
+            results.push({ sport, alertType, disabled: false, error: error.message });
           }
         }
       }
