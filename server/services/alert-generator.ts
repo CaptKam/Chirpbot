@@ -353,7 +353,7 @@ export class AlertGenerator {
 
     for (const user of allUsers) {
       try {
-        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
+        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
         console.log(`👤 User ${user.username}: Found ${userPrefs.length} ${sport} preferences`);
 
         if (userPrefs.length === 0) {
@@ -399,7 +399,7 @@ export class AlertGenerator {
     // Initialize alert cylinders for users with enabled alerts
     for (const user of usersWithAlerts) {
       try {
-        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
+        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
         const enabledAlertTypes = userPrefs
           .filter(pref => pref.enabled)
           .map(pref => pref.alertType);
@@ -778,7 +778,7 @@ export class AlertGenerator {
 
           // RULE 1: Check individual user preferences  
           try {
-            const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
+            const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
             const userPref = userPrefs.find(p => p.alertType === type);
             // CRITICAL FIX: If user has no preference, default to FALSE (opt-in required!)
             const userHasEnabled = userPref ? userPref.enabled : false;
