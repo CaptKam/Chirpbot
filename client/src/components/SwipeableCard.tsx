@@ -767,6 +767,39 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   showEnhancedMLB={false}
                   className="shadow-lg"
                 />
+
+                {/* Game Status and Inning/Quarter Info */}
+                {(alertData.context?.inning || liveGameData?.inning || alertData.context?.quarter || liveGameData?.quarter) && (
+                  <div className="mt-3 text-center">
+                    <span className="text-sm text-slate-400 font-medium">
+                      {alertData.sport === 'MLB' ? (
+                        `${alertData.context?.isTopInning ?? liveGameData?.isTopInning ? 'Top' : 'Bottom'} ${alertData.context?.inning || liveGameData?.inning || 1}`
+                      ) : (
+                        `Quarter ${alertData.context?.quarter || liveGameData?.quarter || 1}`
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                {/* Baseball Diamond for MLB alerts */}
+                {alertData.sport === 'MLB' && (
+                  <div className="mt-4">
+                    <BaseballDiamond
+                      runners={{
+                        first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
+                        second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
+                        third: alertData.context?.hasThird || liveGameData?.runners?.third || false
+                      }}
+                      inning={alertData.context?.inning || liveGameData?.inning}
+                      isTopInning={alertData.context?.isTopInning !== undefined ? alertData.context.isTopInning : liveGameData?.isTopInning}
+                      outs={alertData.context?.outs !== undefined ? alertData.context.outs : liveGameData?.outs}
+                      balls={liveGameData?.balls}
+                      strikes={liveGameData?.strikes}
+                      size="sm"
+                      showCount={true}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Alert Message - Clean Layout */}
@@ -777,26 +810,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <p className="text-slate-100 text-base leading-relaxed font-medium">
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
-
-                    {/* Baseball Diamond for MLB alerts */}
-                    {alertData.sport === 'MLB' && (
-                      <div className="mt-3">
-                        <BaseballDiamond
-                          runners={{
-                            first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
-                            second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
-                            third: alertData.context?.hasThird || liveGameData?.runners?.third || false
-                          }}
-                          inning={alertData.context?.inning || liveGameData?.inning}
-                          isTopInning={alertData.context?.isTopInning !== undefined ? alertData.context.isTopInning : liveGameData?.isTopInning}
-                          outs={alertData.context?.outs !== undefined ? alertData.context.outs : liveGameData?.outs}
-                          balls={liveGameData?.balls}
-                          strikes={liveGameData?.strikes}
-                          size="sm"
-                          showCount={true}
-                        />
-                      </div>
-                    )}
 
                     {/* AI Insights */}
                     {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
