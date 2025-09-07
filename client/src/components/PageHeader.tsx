@@ -27,8 +27,8 @@ export function PageHeader({
           <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
         <div>
-          <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">{title}</h1>
-          <p className="text-emerald-300/80 text-xs font-medium">{subtitle}</p>
+          <h1 className="text-xl font-black uppercase tracking-wider text-slate-100">{title}</h1>
+          <p className="text-emerald-300/80 text-xs font-semibold">{subtitle}</p>
         </div>
       </div>
       {children}
