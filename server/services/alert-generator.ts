@@ -373,10 +373,19 @@ export class AlertGenerator {
             console.log(`👤 User ${user.username}: ${sport} requires explicit opt-in - not inheriting defaults`);
           }
         } else {
-          // SAFETY CHECK: Ensure user has minimum expected alerts
+          // User has preferences - check if any are enabled
           const enabledCount = userPrefs.filter(p => p.enabled).length;
-          if (sport === 'MLB' && enabledCount < 9) {
-            console.log(`⚠️ User ${user.username}: Only has ${enabledCount}/9 MLB alerts enabled - may need preference fix`);
+          
+          if (enabledCount > 0) {
+            // User has enabled preferences - add them to the list!
+            usersWithAlerts.push(user);
+            console.log(`✅ User ${user.username}: Has ${enabledCount} ${sport} alerts enabled`);
+            
+            if (sport === 'MLB' && enabledCount < 9) {
+              console.log(`⚠️ User ${user.username}: Only has ${enabledCount}/9 MLB alerts enabled - may need preference fix`);
+            }
+          } else {
+            console.log(`❌ User ${user.username}: Has ${sport} preferences but none are enabled`);
           }
         }
       } catch (error) {
