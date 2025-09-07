@@ -12,11 +12,24 @@ document.addEventListener('DOMContentLoaded', function() {
         loginBtn: !!loginBtn
     });
 
-    // Removed auto-check to prevent redirect loops
-    // Clear any stuck session data
-    sessionStorage.removeItem('adminAuthFailed');
-    localStorage.removeItem('adminLoggedIn');
-    localStorage.removeItem('adminUser');
+    // Check if already authenticated
+    checkExistingAuth();
+
+    async function checkExistingAuth() {
+        try {
+            const response = await fetch('/api/admin-auth/verify', {
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                // Already authenticated, redirect to dashboard
+                window.location.href = '/admin/dashboard.html';
+            }
+        } catch (error) {
+            // Not authenticated, stay on login page
+            console.log('Not authenticated, showing login form');
+        }
+    }
 
     if (loginForm) {
         loginForm.addEventListener('submit', async function(e) {
@@ -64,8 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('adminLoggedIn', 'true');
                 localStorage.setItem('adminUser', JSON.stringify(data.user));
 
-                // Show dashboard instead of redirecting
-                showDashboard(data.user);
+                // Redirect to dashboard
+                window.location.href = '/admin/dashboard.html';
             } else {
                 showError(data.message || 'Invalid credentials. Please try again.');
             }

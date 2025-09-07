@@ -1,33 +1,53 @@
-// Admin Dashboard - Authentication Disabled to Fix Redirect Loop
+// Admin Dashboard
 
 let globalUsers = [];
 let globalAlertSettings = {};
 
 document.addEventListener('DOMContentLoaded', function() {
-    // AUTHENTICATION DISABLED - Just load the dashboard
-    console.log('🚀 Dashboard loaded - authentication disabled');
-    
-    // Clear any stuck session data
-    sessionStorage.clear();
-    localStorage.clear();
-    
-    // Load dashboard data without auth
-    loadDashboardData();
-    loadStatistics();
-    loadSystemStatus();
-    
-    // Set up sport selector if it exists
-    const sportSelector = document.getElementById('sportSelector');
-    if (sportSelector) {
-        loadSportAlertSettings();
-    }
-    
-    // Set up logout button
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', handleLogout);
-    }
+    // Check authentication status first
+    checkAuthentication();
 });
+
+// Check authentication and load dashboard if authenticated
+async function checkAuthentication() {
+    try {
+        const response = await fetch('/api/admin-auth/verify', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Admin authenticated:', data.user?.username);
+            
+            // Load dashboard data
+            loadDashboardData();
+            loadStatistics();
+            loadSystemStatus();
+            
+            // Set up sport selector if it exists
+            const sportSelector = document.getElementById('sportSelector');
+            if (sportSelector) {
+                loadSportAlertSettings();
+                sportSelector.addEventListener('change', () => {
+                    loadSportAlertSettings();
+                });
+            }
+            
+            // Set up logout button
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+        } else {
+            // Not authenticated, redirect to login
+            console.log('🔒 Not authenticated, redirecting to login...');
+            window.location.href = '/admin/login.html';
+        }
+    } catch (error) {
+        console.error('Authentication check failed:', error);
+        window.location.href = '/admin/login.html';
+    }
+}
 
 // Dashboard data loading functions
 async function loadDashboardData() {
@@ -83,7 +103,7 @@ async function loadUsers() {
 
 async function loadStatistics() {
     try {
-        const response = await fetch('/api/admin/statistics', {
+        const response = await fetch('/api/admin/stats', {
             credentials: 'include'
         });
         
@@ -94,9 +114,10 @@ async function loadStatistics() {
         
         const stats = await response.json();
         
-        document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
-        document.getElementById('activeAlerts').textContent = stats.activeAlerts || 0;
-        document.getElementById('todayAlerts').textContent = stats.todayAlerts || 0;
+        // Map backend structure to frontend elements
+        document.getElementById('totalUsers').textContent = stats.users?.total || 0;
+        document.getElementById('activeAlerts').textContent = stats.alerts?.total || 0;
+        document.getElementById('todayAlerts').textContent = stats.alerts?.today || 0;
         document.getElementById('monitoredTeams').textContent = stats.monitoredTeams || 0;
     } catch (error) {
         console.error('Error loading statistics:', error);
