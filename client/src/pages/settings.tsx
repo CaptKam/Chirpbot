@@ -242,23 +242,6 @@ export default function Settings() {
     });
   };
 
-  // Helper function to get alert preference
-  const getAlertPreference = (sport: string, alertType: string): boolean => {
-    if (preferencesLoading) return true;
-
-    // Check if the alert is globally disabled by admin
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false;
-    }
-
-    // Handle AI Enhancements separately
-    if (alertType.startsWith('AI_')) {
-      // Assuming AI settings are associated with MLB for configuration purposes if not sport-specific
-      return preferenceMap.get(alertType) ?? true;
-    }
-
-    return preferenceMap.get(alertType) ?? true;
-  };
 
 
   // Helper function to get category icon

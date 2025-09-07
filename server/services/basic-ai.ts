@@ -44,20 +44,31 @@ export class BasicAI {
     try {
       const fs = require('fs');
       const path = require('path');
-      const disableFlagsPath = path.join(__dirname, '../.disable-flags');
+      // Try multiple possible locations for the disable flags file
+      const possiblePaths = [
+        path.join(__dirname, '../.disable-flags'),
+        path.join(process.cwd(), 'server/.disable-flags'),
+        path.join(process.cwd(), '.disable-flags')
+      ];
       
-      if (fs.existsSync(disableFlagsPath)) {
-        const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
-        if (flags.ai_disabled || flags.openai_disabled) {
-          console.log('🚫 AI System: DISABLED via disable flags');
-          return false;
+      for (const disableFlagsPath of possiblePaths) {
+        if (fs.existsSync(disableFlagsPath)) {
+          const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
+          if (flags.ai_disabled || flags.openai_disabled) {
+            console.log('🚫 AI System: DISABLED via disable flags');
+            return false;
+          }
+          console.log('✅ OpenAI: ENABLED via disable flags');
+          return true;
         }
       }
-      console.log('✅ OpenAI: ENABLED');
+      
+      // If no disable flags file found, default to enabled
+      console.log('✅ OpenAI: ENABLED (no disable flags file found)');
       return true;
     } catch (error) {
-      console.warn('⚠️ Could not check disable flags, force disabling AI');
-      return false; // Force disable on error
+      console.warn('⚠️ Could not check disable flags, defaulting to enabled:', error.message);
+      return true; // Default to enabled on error
     }
   }
 
