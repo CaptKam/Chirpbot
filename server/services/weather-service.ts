@@ -77,25 +77,11 @@ export class WeatherService {
     }
   }
 
-  // Check if Weather system is enabled via disable flags
+  // Check if Weather system is enabled
   private checkIfEnabled(): boolean {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const disableFlagsPath = path.join(__dirname, '../.disable-flags');
-      
-      if (fs.existsSync(disableFlagsPath)) {
-        const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
-        if (flags.weather_disabled) {
-          console.log('🚫 Weather System: DISABLED via disable flags');
-          return false;
-        }
-      }
-      return true;
-    } catch (error) {
-      console.warn('⚠️ Could not check disable flags, assuming enabled');
-      return true;
-    }
+    // Weather system is enabled by default
+    // Could add environment variable check here if needed
+    return true;
   }
 
   async getWeatherForTeam(teamName: string): Promise<WeatherData> {
