@@ -388,11 +388,6 @@ export const storage = {
           'AI_SITUATION_ANALYSIS': true,
           'AI_EVENT_SUMMARIES': true,
           'AI_ROI_ALERTS': true,
-          // RE24 System alerts (MLB specific)
-          'RE24_ENABLED': true,
-          'RE24_CONTEXT_FACTORS': true,
-          'RE24_MINIMUM_THRESHOLDS': true,
-          'RE24_DYNAMIC_PRIORITY': true
         },
         'nfl': {
           'NFL_GAME_START': true,
