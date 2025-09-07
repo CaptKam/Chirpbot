@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { TeamLogo } from '@/components/team-logo';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { Alert } from '@/types';
-import BaseballDiamond from '@/components/BaseballDiamond'; // Assuming BaseballDiamond is in this path
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -769,26 +768,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <p className="text-slate-100 text-base leading-relaxed font-medium">
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
-
-                    {/* Baseball Diamond for MLB alerts */}
-                    {alertData.sport === 'MLB' && (
-                      <div className="mt-3">
-                        <BaseballDiamond
-                          runners={{
-                            first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
-                            second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
-                            third: alertData.context?.hasThird || liveGameData?.runners?.third || false
-                          }}
-                          inning={alertData.context?.inning || liveGameData?.inning}
-                          isTopInning={alertData.context?.isTopInning !== undefined ? alertData.context.isTopInning : liveGameData?.isTopInning}
-                          outs={alertData.context?.outs !== undefined ? alertData.context.outs : liveGameData?.outs}
-                          balls={liveGameData?.balls}
-                          strikes={liveGameData?.strikes}
-                          size="sm"
-                          showCount={true}
-                        />
-                      </div>
-                    )}
 
                     {/* AI Insights */}
                     {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
