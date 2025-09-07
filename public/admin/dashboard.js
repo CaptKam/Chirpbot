@@ -3,6 +3,8 @@ let currentUsers = [];
 let currentStats = {};
 let currentSport = 'MLB';
 let globalAlertSettings = {};
+let authCheckInProgress = false;
+let redirectInProgress = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Check for existing session first
@@ -11,26 +13,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('📱 Page load - checking stored session:', { isLoggedIn, hasUser: !!adminUser });
 
-    // Check authentication
+    // Only check authentication - don't load data until authenticated
     checkAuthentication();
-
-    // Initialize dashboard
-    initializeDashboard();
-
-    // Load initial data
-    loadDashboardData();
-
-    // Load master alert status from database
-    loadMasterAlertStatus();
-
-    // Update sport selector with NCAAF
-    const sportSelector = document.getElementById('sportSelector');
-    if (sportSelector) {
-        loadSportAlertSettings(); // Load settings for the default sport on load
-    }
 });
 
 async function checkAuthentication() {
+    // Prevent multiple authentication attempts
+    if (authCheckInProgress || redirectInProgress) {
+        console.log('🚫 Auth check already in progress, skipping...');
+        return;
+    }
+
+    authCheckInProgress = true;
+
     try {
         const response = await fetch('/api/admin-auth/verify', {
             method: 'GET',
@@ -61,16 +56,40 @@ async function checkAuthentication() {
         // Update admin info
         updateAdminInfo(data.user);
         console.log('✅ Admin authenticated:', data.user.username);
+
+        // NOW load dashboard data after successful authentication
+        initializeDashboard();
+        loadDashboardData();
+        loadMasterAlertStatus();
+        
+        // Update sport selector with NCAAF
+        const sportSelector = document.getElementById('sportSelector');
+        if (sportSelector) {
+            loadSportAlertSettings(); // Load settings for the default sport on load
+        }
     } catch (error) {
         console.error('Auth check error:', error);
         redirectToLogin();
+    } finally {
+        authCheckInProgress = false;
     }
 }
 
 function redirectToLogin() {
+    // Prevent multiple redirects
+    if (redirectInProgress) {
+        console.log('🚫 Redirect already in progress, skipping...');
+        return;
+    }
+
+    redirectInProgress = true;
+    console.log('🔄 Redirecting to login page...');
+    
     localStorage.removeItem('adminLoggedIn');
     localStorage.removeItem('adminUser');
-    window.location.href = '/admin/login.html';
+    
+    // Immediate redirect
+    window.location.replace('/admin/login.html');
 }
 
 function updateAdminInfo(user) {
