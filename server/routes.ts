@@ -861,7 +861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPreferences = await storage.getUserAlertPreferences(userId);
       
       // Group by sport
-      const preferencesBySport = {};
+      const preferencesBySport: Record<string, Array<{alertType: string; enabled: boolean; updatedAt: Date}>> = {};
       allPreferences.forEach(pref => {
         if (!preferencesBySport[pref.sport]) {
           preferencesBySport[pref.sport] = [];
@@ -1038,6 +1038,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user; // from requireAdmin middleware
+      if (!currentUser) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
 
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
 
@@ -1068,7 +1071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.deleteUser(userId);
 
       if (deleted) {
-        console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser.username}`);
+        console.log(`✅ User ${userToDelete.username} deleted successfully by admin ${currentUser!.username}`);
         res.json({
           message: `User ${userToDelete.username} deleted successfully`,
           deletedUser: {
@@ -1092,6 +1095,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const currentUser = req.user;
+      if (!currentUser) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
 
       console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
 
@@ -1106,7 +1112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.forceDeleteUser(userId);
 
       if (deleted) {
-        console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser.username}`);
+        console.log(`✅ User ${userId} FORCE DELETED by admin ${currentUser!.username}`);
         res.json({
           message: `User ${userId} has been completely removed from the system`,
           method: 'FORCE_DELETE',
@@ -1327,7 +1333,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      if (result.rowsAffected === 0) {
+      // Check if any rows were affected (handle different DB result formats)
+      const rowCount = result.rowCount || (result as any).rowsAffected || 0;
+      if (rowCount === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1569,6 +1577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         services: Record<string, any>;
         configuration: Record<string, any>;
         errors: string[];
+        summary?: Record<string, any>;
       } = {
         timestamp: new Date().toISOString(),
         endpoints: {},
@@ -1742,7 +1751,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus = {
+      const dbStatus: {
+        connection: string;
+        tables: Record<string, any>;
+        indexes: Record<string, any>;
+        performance: Record<string, any>;
+        connectionTime?: number;
+      } = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -2189,7 +2204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalDisabled++;
           } catch (error) {
             console.error(`Failed to disable ${sport}.${alertType}:`, error);
-            results.push({ sport, alertType, disabled: false, error: error.message });
+            results.push({ sport, alertType, disabled: false, error: (error as Error).message });
           }
         }
       }
