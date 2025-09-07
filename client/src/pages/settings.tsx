@@ -4,6 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -335,85 +336,226 @@ export default function Settings() {
 
         {/* Alert Preferences */}
         {isAuthenticated && (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-                <Bell className="w-5 h-5 text-emerald-400" />
+          <Card className="bg-gradient-to-br from-white/8 to-white/4 backdrop-blur-sm ring-1 ring-white/20 rounded-xl p-6 shadow-xl">
+            <div className="flex items-center space-x-4 mb-8">
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-400/20 to-emerald-600/20 ring-2 ring-emerald-500/30 rounded-xl flex items-center justify-center shadow-lg">
+                <Bell className="w-6 h-6 text-emerald-400" />
               </div>
-              <div>
-                <h2 className="text-lg font-black uppercase tracking-wide text-slate-100">
+              <div className="flex-1">
+                <h2 className="text-xl font-black uppercase tracking-wide text-slate-100 mb-1">
                   {activeSport} Alert Preferences
                 </h2>
-                <p className="text-sm text-slate-300">
-                  Toggle individual alert types for {activeSport} games
+                <p className="text-sm text-emerald-300/80 font-medium">
+                  Customize your {activeSport} game notifications and alerts
                 </p>
+              </div>
+              <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-emerald-500/10 rounded-lg ring-1 ring-emerald-500/20">
+                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide">Live</span>
               </div>
             </div>
 
             {preferencesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex items-center justify-center py-12">
+                <div className="relative">
+                  <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                  <div className="absolute inset-0 w-12 h-12 border-4 border-transparent border-r-emerald-300 rounded-full animate-spin animation-delay-300"></div>
+                </div>
               </div>
             ) : (
-              <div className="w-full">
-                {/* Dynamic Alert Types Section */}
-                <div className="space-y-6">
-                  {/* Core Game Alerts */}
-                  <div className="space-y-3">
-                    <h3 className="text-md font-bold text-emerald-400 uppercase tracking-wide">
-                      {activeSport === 'MLB' ? '⚾' : activeSport === 'NFL' ? '🏈' : activeSport === 'NCAAF' ? '🏈' : activeSport === 'WNBA' ? '🏀' : activeSport === 'CFL' ? '🏈' : '🏀'} {activeSport} Game Alerts
-                    </h3>
-                    <div className="space-y-3">
-                      {(availableAlerts as any[] || []).filter((alertType) => {
-                        // Only show alerts that are globally enabled by admin
-                        return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
-                      }).map((alertType) => {
-                        const isEnabled = getAlertPreferenceWithRE24(activeSport, alertType.key);
-                        return (
-                          <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <h4 className="text-sm font-semibold text-slate-100">
-                                  {alertType.label}
-                                </h4>
-                                {updateAlertPreferenceMutation.isPending && (
-                                  <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                                )}
+              <div className="space-y-6">
+                {/* Alert Categories */}
+                {(availableAlerts as any[] || []).filter((alertType) => {
+                  return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
+                }).length > 0 ? (
+                  <>
+                    {/* Game Events Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3 pb-2 border-b border-white/10">
+                        <div className="w-8 h-8 bg-blue-500/20 ring-1 ring-blue-500/30 rounded-lg flex items-center justify-center">
+                          {activeSport === 'MLB' ? '⚾' : activeSport === 'NFL' ? '🏈' : activeSport === 'NCAAF' ? '🏈' : activeSport === 'WNBA' ? '🏀' : activeSport === 'CFL' ? '🏈' : '🏀'}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-slate-100 uppercase tracking-wide">
+                            {activeSport} Game Events
+                          </h3>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Real-time notifications for key game moments
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="bg-slate-600/30 text-slate-300 text-xs">
+                          {(availableAlerts as any[] || []).filter((alertType) => {
+                            return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
+                          }).length} alerts
+                        </Badge>
+                      </div>
+
+                      <div className="grid gap-3">
+                        {(availableAlerts as any[] || []).filter((alertType) => {
+                          return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
+                        }).map((alertType, index) => {
+                          const isEnabled = getAlertPreferenceWithRE24(activeSport, alertType.key);
+                          const isHighProbability = alertType.key.includes('THIRD') || alertType.key.includes('BASES_LOADED');
+                          
+                          return (
+                            <div 
+                              key={alertType.key} 
+                              className={`
+                                group relative p-4 rounded-xl border transition-all duration-200 hover:scale-[1.01]
+                                ${isEnabled 
+                                  ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30 ring-1 ring-emerald-500/20' 
+                                  : 'bg-white/3 border-white/10 hover:border-white/20'
+                                }
+                                ${isHighProbability ? 'ring-2 ring-amber-500/20' : ''}
+                              `}
+                            >
+                              {/* High Probability Badge */}
+                              {isHighProbability && (
+                                <div className="absolute -top-2 -right-2 px-2 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full shadow-lg">
+                                  🔥 HIGH
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1 min-w-0 pr-4">
+                                  <div className="flex items-center space-x-3 mb-2">
+                                    <div className={`
+                                      w-3 h-3 rounded-full transition-all duration-200
+                                      ${isEnabled ? 'bg-emerald-400 shadow-lg shadow-emerald-400/50' : 'bg-slate-500'}
+                                    `}></div>
+                                    <h4 className={`
+                                      text-sm font-bold transition-colors duration-200
+                                      ${isEnabled ? 'text-slate-100' : 'text-slate-300'}
+                                    `}>
+                                      {alertType.label}
+                                    </h4>
+                                    {updateAlertPreferenceMutation.isPending && (
+                                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                    )}
+                                  </div>
+                                  
+                                  <p className={`
+                                    text-xs leading-relaxed transition-colors duration-200
+                                    ${isEnabled ? 'text-emerald-200/80' : 'text-slate-400'}
+                                  `}>
+                                    {alertType.description}
+                                  </p>
+                                  
+                                  {/* Probability indicator for MLB scoring situations */}
+                                  {alertType.description.includes('%') && (
+                                    <div className="mt-2 flex items-center space-x-2">
+                                      <div className="flex items-center space-x-1">
+                                        <Trophy className="w-3 h-3 text-amber-400" />
+                                        <span className="text-xs font-semibold text-amber-400">
+                                          {alertType.description.match(/\d+%/)?.[0]} scoring chance
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="flex items-center space-x-3">
+                                  {/* Enhanced Switch */}
+                                  <Switch
+                                    checked={isEnabled}
+                                    onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
+                                    disabled={updateAlertPreferenceMutation.isPending}
+                                    data-testid={`toggle-${alertType.key.toLowerCase()}`}
+                                    className={`
+                                      transition-all duration-300 scale-110
+                                      ${isEnabled 
+                                        ? 'data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-emerald-500 data-[state=checked]:to-emerald-600' 
+                                        : 'data-[state=unchecked]:bg-slate-600'
+                                      }
+                                    `}
+                                  />
+                                </div>
                               </div>
-                              <p className="text-xs text-slate-400 mt-1">
-                                {alertType.description}
-                              </p>
+                              
+                              {/* Hover effect overlay */}
+                              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"></div>
                             </div>
-                            <Switch
-                              checked={isEnabled}
-                              onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={updateAlertPreferenceMutation.isPending}
-                              data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                              className="data-[state=checked]:bg-emerald-500"
-                            />
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
+
+                    {/* Quick Actions */}
+                    <div className="pt-4 border-t border-white/10">
+                      <div className="flex flex-wrap gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            (availableAlerts as any[] || []).forEach((alertType) => {
+                              if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType.key] !== false) {
+                                handleAlertToggle(alertType.key, true);
+                              }
+                            });
+                          }}
+                          className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-xs font-semibold"
+                          disabled={updateAlertPreferenceMutation.isPending}
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1.5" />
+                          Enable All
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            (availableAlerts as any[] || []).forEach((alertType) => {
+                              if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType.key] !== false) {
+                                handleAlertToggle(alertType.key, false);
+                              }
+                            });
+                          }}
+                          className="border-slate-500/30 text-slate-400 hover:bg-slate-500/10 text-xs font-semibold"
+                          disabled={updateAlertPreferenceMutation.isPending}
+                        >
+                          <XCircle className="w-3 h-3 mr-1.5" />
+                          Disable All
+                        </Button>
+                        
+                        {activeSport === 'MLB' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              (availableAlerts as any[] || []).forEach((alertType) => {
+                                const isHighProb = alertType.key.includes('THIRD') || alertType.key.includes('BASES_LOADED');
+                                if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType.key] !== false) {
+                                  handleAlertToggle(alertType.key, isHighProb);
+                                }
+                              });
+                            }}
+                            className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-xs font-semibold"
+                            disabled={updateAlertPreferenceMutation.isPending}
+                          >
+                            🔥 High Probability Only
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-slate-600/20 rounded-full flex items-center justify-center">
+                      <Bell className="w-8 h-8 text-slate-400" />
+                    </div>
+                    {(!availableAlerts || (availableAlerts as any[]).length === 0) ? (
+                      <>
+                        <h3 className="text-lg font-semibold text-slate-300 mb-2">No Alert Modules</h3>
+                        <p className="text-slate-400 text-sm">No alert cylinders available for {activeSport}.</p>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-lg font-semibold text-slate-300 mb-2">All Alerts Disabled</h3>
+                        <p className="text-slate-400 text-sm">All {activeSport} alert types have been disabled by your administrator.</p>
+                      </>
+                    )}
                   </div>
-
-                  {/* Show message when no alerts are available or all are disabled */}
-                  {(!availableAlerts || (availableAlerts as any[]).length === 0) && (
-                    <div className="text-center py-8">
-                      <p className="text-slate-400">No alert cylinders available for {activeSport}.</p>
-                    </div>
-                  )}
-
-                  {(availableAlerts as any[] || []).filter((alertType) => {
-                    return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
-                  }).length === 0 && (availableAlerts as any[] || []).length > 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-slate-400">All {activeSport} alert types have been disabled by your administrator.</p>
-                    </div>
-                  )}
-                </div>
-
-                    
+                )}
               </div>
             )}
           </Card>
