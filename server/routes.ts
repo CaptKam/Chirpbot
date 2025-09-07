@@ -1183,31 +1183,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const limit = parseInt(req.query.limit as string) || 50;
 
-      // Get current user from session
-      const currentUserId = req.session?.userId;
-      
-      // If user is not authenticated, return empty array
-      if (!currentUserId) {
-        res.json([]);
-        return;
-      }
-
-      // Get user's monitored games
-      const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
-      const monitoredGameIds = monitoredGames.map(game => game.gameId);
-
-      // If user has no monitored games, return empty array
-      if (monitoredGameIds.length === 0) {
-        res.json([]);
-        return;
-      }
-
-      // Get alerts from database - filter by monitored game IDs
-      const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
+      // Get alerts from database without filtering
       const result = await db.execute(sql`
         SELECT id, type, game_id, sport, score, payload, created_at
         FROM alerts
-        WHERE game_id IN (${sql.raw(monitoredGameIds.map(id => `'${id}'`).join(','))})
         ORDER BY created_at DESC
         LIMIT ${limit}
       `);

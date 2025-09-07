@@ -428,20 +428,6 @@ export class AlertGenerator {
         // Process alerts for each user with their specific enabled alert types
         for (const user of usersWithAlerts) {
           try {
-            // 🎯 CRITICAL FIX: Check if this user is monitoring this specific game
-            const userMonitoredGames = await storage.getUserMonitoredTeams(user.id);
-            const isGameMonitored = userMonitoredGames.some(monitoredGame => 
-              monitoredGame.gameId === gameState.gameId && 
-              monitoredGame.sport === sport
-            );
-
-            if (!isGameMonitored) {
-              console.log(`⏭️ User ${user.username} not monitoring ${sport} game ${gameState.gameId} - skipping alerts`);
-              continue;
-            }
-
-            console.log(`✅ User ${user.username} is monitoring ${sport} game ${gameState.gameId} - processing alerts`);
-
             // Initialize engine with this user's specific alert modules
             if ('initializeForUser' in engine) {
               await (engine as any).initializeForUser(user.id);
