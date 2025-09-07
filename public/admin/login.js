@@ -4,8 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMessage = document.getElementById('errorMessage');
     const loginBtn = document.getElementById('loginBtn');
 
-    // Check if already logged in
-    checkExistingSession();
+    // Removed auto-check to prevent redirect loops
+    // Clear any stuck session data
+    sessionStorage.removeItem('adminAuthFailed');
+    localStorage.removeItem('adminLoggedIn');
+    localStorage.removeItem('adminUser');
 
     loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -54,25 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function checkExistingSession() {
-        try {
-            const response = await fetch('/api/admin-auth/verify', {
-                method: 'GET',
-                credentials: 'include'
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.authenticated) {
-                    localStorage.setItem('adminLoggedIn', 'true');
-                    localStorage.setItem('adminUser', JSON.stringify(data.user));
-                    window.location.href = '/admin/dashboard.html';
-                }
-            }
-        } catch (error) {
-            console.error('Session check error:', error);
-        }
-    }
+    // Removed checkExistingSession to prevent redirect loops
 
     function showError(message) {
         errorMessage.textContent = message;
