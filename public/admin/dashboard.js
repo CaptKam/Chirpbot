@@ -432,6 +432,51 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+// System settings functions
+window.loadSystemSettings = async function() {
+    try {
+        // Load AI settings
+        const aiResponse = await fetch('/api/admin/ai-settings', {
+            credentials: 'include'
+        });
+        
+        if (aiResponse.ok) {
+            const aiSettings = await aiResponse.json();
+            const aiSettingsList = document.getElementById('aiSettingsList');
+            if (aiSettingsList) {
+                aiSettingsList.innerHTML = `
+                    <div class="settings-section">
+                        <h3>AI Configuration</h3>
+                        <div class="setting-item">
+                            <label>OpenAI API Status</label>
+                            <span class="${aiSettings.openAiEnabled ? 'status-active' : 'status-inactive'}">
+                                ${aiSettings.openAiEnabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Weather API Status</label>
+                            <span class="${aiSettings.weatherEnabled ? 'status-active' : 'status-inactive'}">
+                                ${aiSettings.weatherEnabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Telegram Integration</label>
+                            <span class="${aiSettings.telegramEnabled ? 'status-active' : 'status-inactive'}">
+                                ${aiSettings.telegramEnabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading system settings:', error);
+    }
+}
+
+// Make showNotification globally accessible
+window.showNotification = showNotification;
+
 // Functions for HTML onclick handlers
 window.toggleMasterAlerts = async function() {
     const toggle = document.getElementById('masterAlertToggle');
