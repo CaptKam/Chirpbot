@@ -49,6 +49,42 @@ async function checkAuthentication() {
     }
 }
 
+// Tab switching functionality
+function showTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Remove active class from all tabs
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Show the selected tab content
+    const selectedContent = document.getElementById(tabName + 'Content');
+    if (selectedContent) {
+        selectedContent.style.display = 'block';
+    }
+    
+    // Add active class to the selected tab button
+    const selectedTab = document.getElementById(tabName + 'Tab');
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Load data specific to the tab if needed
+    if (tabName === 'users') {
+        loadUsers();
+    } else if (tabName === 'alerts') {
+        loadAlertSettings();
+    } else if (tabName === 'system') {
+        loadSystemSettings();
+    }
+}
+
 // Dashboard data loading functions
 async function loadDashboardData() {
     try {
@@ -171,6 +207,17 @@ async function loadSystemStatus() {
     } catch (error) {
         console.error('Error loading system status:', error);
     }
+}
+
+// Load alert settings when switching to alerts tab
+async function loadAlertSettings() {
+    loadSportAlertSettings();
+}
+
+// Load system settings when switching to system tab  
+async function loadSystemSettings() {
+    console.log('Loading system settings...');
+    // System settings functionality can be expanded here
 }
 
 async function loadSportAlertSettings() {
