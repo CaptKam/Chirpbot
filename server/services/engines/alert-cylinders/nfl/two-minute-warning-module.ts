@@ -27,7 +27,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`,
       type: this.alertType,
-      message: `⏱️ Two Minute Warning - ${halfText}: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+      message: `⏱️ Two Minute Warning - ${halfText}: ${gameState.awayTeam?.name || gameState.awayTeam} @ ${gameState.homeTeam?.name || gameState.homeTeam}`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
