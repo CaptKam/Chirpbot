@@ -150,6 +150,14 @@ const sportsbooks: Sportsbook[] = [
   }
 ];
 
+// Helper function to safely extract team name
+const getTeamName = (team: string | { name?: string } | undefined | null): string => {
+  if (!team) return '';
+  if (typeof team === 'string') return team;
+  if (typeof team === 'object' && team.name) return team.name;
+  return '';
+};
+
 export function SwipeableCard({ children, alertId, className, onTap, alertData, ...props }: SwipeableCardProps) {
   const [dragX, setDragX] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -177,9 +185,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   // Fetch live weather data for the game
   const homeTeamName = React.useMemo(() => {
-    if (!alertData) return '';
-    if (typeof alertData.homeTeam === 'string') return alertData.homeTeam;
-    return alertData.homeTeam?.name || '';
+    return getTeamName(alertData?.homeTeam);
   }, [alertData]);
   
   const { data: weatherData } = useQuery({
@@ -205,8 +211,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       // Match by team names (both home and away combinations)
       const gameHomeTeam = game.homeTeam?.name || '';
       const gameAwayTeam = game.awayTeam?.name || '';
-      const alertHomeTeam = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
-      const alertAwayTeam = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
+      const alertHomeTeam = getTeamName(alertData?.homeTeam);
+      const alertAwayTeam = getTeamName(alertData?.awayTeam);
 
       return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
              (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
@@ -381,8 +387,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   // Construct a display message for sharing/copying
   const displayMessage = React.useMemo(() => {
-    const homeTeamName = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
-    const awayTeamName = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
+    const homeTeamName = getTeamName(alertData?.homeTeam);
+    const awayTeamName = getTeamName(alertData?.awayTeam);
     let message = `ChirpBot Alert: ${homeTeamName} vs ${awayTeamName}`;
     if (alertData?.sport) message += ` (${alertData.sport})`;
     if (alertData?.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
@@ -465,10 +471,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 {/* Win Probability */}
                 <div className="flex justify-between text-xs mb-2">
                   <span className="text-purple-300">
-                    {typeof alertData?.context?.homeTeam === 'string' ? alertData.context.homeTeam : alertData?.context?.homeTeam?.name || 'Home'}: {(alertData.context as any).aiGameProjection?.winProbability?.home}%
+                    {getTeamName(alertData?.context?.homeTeam) || 'Home'}: {(alertData.context as any).aiGameProjection?.winProbability?.home}%
                   </span>
                   <span className="text-purple-300">
-                    {typeof alertData?.context?.awayTeam === 'string' ? alertData.context.awayTeam : alertData?.context?.awayTeam?.name || 'Away'}: {(alertData.context as any).aiGameProjection?.winProbability?.away}%
+                    {getTeamName(alertData?.context?.awayTeam) || 'Away'}: {(alertData.context as any).aiGameProjection?.winProbability?.away}%
                   </span>
                 </div>
 
