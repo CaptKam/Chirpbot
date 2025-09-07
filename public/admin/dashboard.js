@@ -49,8 +49,8 @@ async function checkAuthentication() {
     }
 }
 
-// Tab switching functionality
-function showTab(tabName) {
+// Tab switching functionality - make it globally available
+window.showTab = function(tabName) {
     // Hide all tab contents
     const tabContents = document.querySelectorAll('.tab-content');
     tabContents.forEach(content => {
@@ -220,7 +220,7 @@ async function loadSystemSettings() {
     // System settings functionality can be expanded here
 }
 
-async function loadSportAlertSettings() {
+window.loadSportAlertSettings = async function() {
     const sport = document.getElementById('sportSelector')?.value || 'MLB';
     
     try {
@@ -260,7 +260,7 @@ async function loadSportAlertSettings() {
     }
 }
 
-async function toggleAlertSetting(alertKey, enabled, sport) {
+window.toggleAlertSetting = async function(alertKey, enabled, sport) {
     try {
         const response = await fetch('/api/admin/global-alert-settings', {
             method: 'POST',
@@ -286,7 +286,7 @@ async function toggleAlertSetting(alertKey, enabled, sport) {
     }
 }
 
-async function editUser(userId) {
+window.editUser = async function(userId) {
     const user = globalUsers.find(u => u.id === userId);
     if (!user) return;
     
@@ -315,7 +315,7 @@ async function editUser(userId) {
     }
 }
 
-async function deleteUser(userId) {
+window.deleteUser = async function(userId) {
     if (!confirm('Are you sure you want to delete this user?')) return;
     
     try {
@@ -336,11 +336,11 @@ async function deleteUser(userId) {
     }
 }
 
-async function viewUserAlerts(userId) {
+window.viewUserAlerts = async function(userId) {
     window.location.href = `/user-settings.html?userId=${userId}`;
 }
 
-function handleLogout() {
+window.handleLogout = function() {
     localStorage.clear();
     sessionStorage.clear();
     window.location.href = '/admin/login.html';
@@ -365,30 +365,35 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Tab switching
-const tabs = document.querySelectorAll('.tab');
-const tabContents = document.querySelectorAll('.tab-content');
-
-tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        const targetTab = tab.dataset.tab;
+// Functions for HTML onclick handlers
+window.toggleMasterAlerts = async function() {
+    const toggle = document.getElementById('masterAlertToggle');
+    if (!toggle) return;
+    
+    try {
+        const response = await fetch('/api/admin/master-alerts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ enabled: toggle.checked })
+        });
         
-        tabs.forEach(t => t.classList.remove('active'));
-        tabContents.forEach(tc => tc.classList.remove('active'));
-        
-        tab.classList.add('active');
-        document.getElementById(targetTab).classList.add('active');
-        
-        if (targetTab === 'alerts') {
-            loadSportAlertSettings();
+        if (response.ok) {
+            showNotification(`Master alerts ${toggle.checked ? 'enabled' : 'disabled'}`, 'success');
+        } else {
+            showNotification('Failed to update master alerts', 'error');
+            toggle.checked = !toggle.checked;
         }
-    });
-});
+    } catch (error) {
+        console.error('Error toggling master alerts:', error);
+        showNotification('Error updating master alerts', 'error');
+        toggle.checked = !toggle.checked;
+    }
+}
 
-// Sport selector change
-const sportSelector = document.getElementById('sportSelector');
-if (sportSelector) {
-    sportSelector.addEventListener('change', () => {
-        loadSportAlertSettings();
-    });
+window.refreshAlertSettings = function() {
+    loadSportAlertSettings();
+    showNotification('Alert settings refreshed', 'success');
 }
