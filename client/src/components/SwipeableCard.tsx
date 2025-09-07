@@ -760,11 +760,19 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
+                  runners={{
+                    first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
+                    second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
+                    third: alertData.context?.hasThird || liveGameData?.runners?.third || false
+                  }}
+                  outs={alertData.context?.outs !== undefined ? alertData.context.outs : liveGameData?.outs}
+                  balls={liveGameData?.balls}
+                  strikes={liveGameData?.strikes}
                   weather={weatherData}
                   size="lg"
                   showWeather={true}
                   showVenue={false}
-                  showEnhancedMLB={false}
+                  showEnhancedMLB={true}
                   className="shadow-lg"
                 />
 
@@ -781,25 +789,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                 )}
 
-                {/* Baseball Diamond for MLB alerts */}
-                {alertData.sport === 'MLB' && (
-                  <div className="mt-4">
-                    <BaseballDiamond
-                      runners={{
-                        first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
-                        second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
-                        third: alertData.context?.hasThird || liveGameData?.runners?.third || false
-                      }}
-                      inning={alertData.context?.inning || liveGameData?.inning}
-                      isTopInning={alertData.context?.isTopInning !== undefined ? alertData.context.isTopInning : liveGameData?.isTopInning}
-                      outs={alertData.context?.outs !== undefined ? alertData.context.outs : liveGameData?.outs}
-                      balls={liveGameData?.balls}
-                      strikes={liveGameData?.strikes}
-                      size="sm"
-                      showCount={true}
-                    />
-                  </div>
-                )}
+                
               </div>
 
               {/* Alert Message - Clean Layout */}
