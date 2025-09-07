@@ -369,15 +369,20 @@ export class AlertGenerator {
             usersWithAlerts.push(user);
           }
         } else {
-          console.log(`👤 User ${user.username}: No ${sport} preferences found, checking if they should inherit defaults`);
+          console.log(`👤 User ${user.username}: No ${sport} preferences found`);
 
-          // Check if this user should inherit global defaults
-          const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
-          const hasAnyEnabledGlobally = Object.values(globalSettings).some(enabled => enabled === true);
+          // CRITICAL FIX: Only inherit global defaults for MLB, not other sports
+          if (sport === 'MLB') {
+            // Check if this user should inherit global defaults
+            const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
+            const hasAnyEnabledGlobally = Object.values(globalSettings).some(enabled => enabled === true);
 
-          if (hasAnyEnabledGlobally) {
-            console.log(`👤 User ${user.username}: Inheriting global ${sport} settings as defaults`);
-            usersWithAlerts.push(user);
+            if (hasAnyEnabledGlobally) {
+              console.log(`👤 User ${user.username}: Inheriting global ${sport} settings as defaults`);
+              usersWithAlerts.push(user);
+            }
+          } else {
+            console.log(`👤 User ${user.username}: ${sport} requires explicit opt-in - not inheriting defaults`);
           }
         }
       } catch (error) {
