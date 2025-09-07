@@ -17,6 +17,19 @@ declare module 'express-session' {
   }
 }
 
+// Extend Express Request interface to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        username: string;
+        role?: string;
+      };
+    }
+  }
+}
+
 // Middleware to ensure user is authenticated
 async function requireAuthentication(req: any, res: any, next: any) {
   if (req.session?.userId) {
@@ -1549,7 +1562,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults = {
+      const debugResults: {
+        timestamp: string;
+        endpoints: Record<string, any>;
+        database: Record<string, any>;
+        services: Record<string, any>;
+        configuration: Record<string, any>;
+        errors: string[];
+      } = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
