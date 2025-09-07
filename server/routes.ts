@@ -1183,63 +1183,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const limit = parseInt(req.query.limit as string) || 50;
 
-      // Get current user from session  
+      // Get current user from session
       const currentUserId = req.session?.userId;
       
-      // 🎯 SELECTIVE FILTERING: Apply same logic as alert generation
-      let result;
-      
-      if (currentUserId) {
-        // Get user's monitored games for sports that require game selection
-        const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
-        const sportsRequiringGameSelection = ['NCAAF', 'WNBA', 'CFL'];
-        
-        // Build dynamic WHERE clause
-        const whereConditions = [];
-        const sportsWithoutFilter = ['MLB', 'NFL']; // Sports that don't require game selection
-        
-        // Include all alerts from sports that don't require filtering
-        if (sportsWithoutFilter.length > 0) {
-          whereConditions.push(`sport IN (${sportsWithoutFilter.map(s => `'${s}'`).join(',')})`);
-        }
-        
-        // Include alerts from filtered sports only if user monitors those games
-        const filteredGameIds = monitoredGames
-          .filter(game => sportsRequiringGameSelection.includes(game.sport.toUpperCase()))
-          .map(game => game.gameId);
-          
-        if (filteredGameIds.length > 0) {
-          whereConditions.push(`(sport IN (${sportsRequiringGameSelection.map(s => `'${s}'`).join(',')}) AND game_id IN (${filteredGameIds.map(id => `'${id}'`).join(',')}))`);
-        }
-        
-        if (whereConditions.length > 0) {
-          const whereClause = whereConditions.join(' OR ');
-          result = await db.execute(sql`
-            SELECT id, type, game_id, sport, score, payload, created_at
-            FROM alerts
-            WHERE ${sql.raw(whereClause)}
-            ORDER BY created_at DESC
-            LIMIT ${limit}
-          `);
-        } else {
-          // If no conditions, only show non-filtered sports
-          result = await db.execute(sql`
-            SELECT id, type, game_id, sport, score, payload, created_at
-            FROM alerts
-            WHERE sport IN (${sql.raw(sportsWithoutFilter.map(s => `'${s}'`).join(','))})
-            ORDER BY created_at DESC
-            LIMIT ${limit}
-          `);
-        }
-      } else {
-        // If not authenticated, show all alerts (fallback)
-        result = await db.execute(sql`
-          SELECT id, type, game_id, sport, score, payload, created_at
-          FROM alerts
-          ORDER BY created_at DESC
-          LIMIT ${limit}
-        `);
+      // If user is not authenticated, return empty array
+      if (!currentUserId) {
+        res.json([]);
+        return;
       }
+
+      // Get user's monitored games
+      const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
+      const monitoredGameIds = monitoredGames.map(game => game.gameId);
+
+      // If user has no monitored games, return empty array
+      if (monitoredGameIds.length === 0) {
+        res.json([]);
+        return;
+      }
+
+      // Get alerts from database - filter by monitored game IDs
+      const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
+      const result = await db.execute(sql`
+        SELECT id, type, game_id, sport, score, payload, created_at
+        FROM alerts
+        WHERE game_id IN (${sql.raw(monitoredGameIds.map(id => `'${id}'`).join(','))})
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      `);
 
       const alerts = [];
 
