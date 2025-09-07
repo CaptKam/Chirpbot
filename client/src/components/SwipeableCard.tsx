@@ -407,7 +407,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
-        {false && (alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
+        {(alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
           <div className="h-full flex flex-col justify-center p-4 space-y-3">
             {/* AI Insights Header */}
             <div className="flex items-center space-x-2 mb-2">
@@ -420,8 +420,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
             </div>
 
-            {/* AI Betting Advice - DISABLED */}
-            {false && alertData?.context?.aiBettingAdvice && (
+            {/* AI Betting Advice */}
+            {alertData?.context?.aiBettingAdvice && (
               <div className="mt-3 p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/30">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 AI Betting Analysis</span>
