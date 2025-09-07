@@ -210,22 +210,19 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   // Calculate scores to display - use live scores if available, fallback to stored scores
   const displayScores = React.useMemo(() => {
-    const storedHomeScore = alertData?.context?.homeScore ?? alertData?.homeScore ?? 0;
-    const storedAwayScore = alertData?.context?.awayScore ?? alertData?.awayScore ?? 0;
-
     // Use live scores if we have live game data and it's a live or final game
     if (liveGameData && (liveGameData.status === 'live' || liveGameData.status === 'final')) {
       return {
-        homeScore: liveGameData.homeTeam?.score ?? storedHomeScore,
-        awayScore: liveGameData.awayTeam?.score ?? storedAwayScore,
+        homeScore: liveGameData.homeTeam?.score ?? alertData?.homeTeam?.score ?? 0,
+        awayScore: liveGameData.awayTeam?.score ?? alertData?.awayTeam?.score ?? 0,
         isLive: true
       };
     }
 
     // Fallback to stored scores
     return {
-      homeScore: storedHomeScore,
-      awayScore: storedAwayScore,
+      homeScore: alertData?.context?.homeScore || alertData?.homeScore || alertData?.context?.scores?.home || alertData?.homeTeam?.score || 0,
+      awayScore: alertData?.context?.awayScore || alertData?.awayScore || alertData?.context?.scores?.away || alertData?.awayTeam?.score || 0,
       isLive: false
     };
   }, [liveGameData, alertData]);
