@@ -276,7 +276,7 @@ export class AlertGenerator {
     try {
       // Clear settings cache to ensure fresh sport-specific configurations
       this.settingsCache.clearAll();
-      console.log('🔄 Cleared settings cache to load sport-specific alert types');
+      // Cache cleared silently to reduce log noise
 
       // Check if any alerts are globally enabled before proceeding
       const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts();
@@ -300,14 +300,9 @@ export class AlertGenerator {
           continue;
         }
 
-        // Suppress verbose debug output for WNBA to reduce console noise
-        if (sport === 'WNBA') {
-          // Silent processing for WNBA - skip verbose debug logs
-        } else {
-          console.log(`🔍 DEBUG: Checking sport ${sport}...`);
-          console.log(`🔍 DEBUG: ${sport} enabled alerts:`, enabledAlerts);
-          console.log(`✅ ${sport} has ${enabledAlerts.length} enabled alert types: ${enabledAlerts.join(', ')}`);
-        }
+        // Reduce verbosity during routine monitoring cycles
+        // Only show essential sport processing information
+        console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled`);
 
         // Get games for this sport
         let games: any[] = [];
