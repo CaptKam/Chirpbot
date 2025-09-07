@@ -14,8 +14,19 @@ async function enableUserAlerts() {
     
     console.log(`✅ Found user: ${user.username} (ID: ${user.id})`);
     
-    // Enable MLB alerts
-    const mlbAlerts = ['MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'];
+    // Enable ALL 9 MLB alerts (including runner alerts)
+    const mlbAlerts = [
+      'MLB_GAME_START',
+      'MLB_SEVENTH_INNING_STRETCH',
+      'MLB_RUNNER_ON_THIRD_NO_OUTS',
+      'MLB_FIRST_AND_THIRD_NO_OUTS',
+      'MLB_SECOND_AND_THIRD_NO_OUTS',
+      'MLB_BASES_LOADED_NO_OUTS',
+      'MLB_RUNNER_ON_THIRD_ONE_OUT',
+      'MLB_SECOND_AND_THIRD_ONE_OUT',
+      'MLB_BASES_LOADED_ONE_OUT'
+    ];
+    
     for (const alertType of mlbAlerts) {
       await storage.setUserAlertPreference(user.id, 'MLB', alertType, true);
       console.log(`✅ Enabled ${alertType} for ${user.username}`);
@@ -35,8 +46,8 @@ async function enableUserAlerts() {
       console.log(`✅ Enabled ${alertType} for ${user.username}`);
     }
     
-    console.log('🚀 User is now ready to receive alerts!');
-    console.log('🔔 Alerts will start generating within 15 seconds for live games');
+    console.log('🚀 User now has ALL 9 MLB alert types enabled!');
+    console.log('🔔 Runner alerts will start generating within 15 seconds for live games');
     
   } catch (error) {
     console.error('❌ Error enabling user alerts:', error);
