@@ -73,6 +73,7 @@ import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 import { useGamesAvailability } from '@/hooks/useGamesAvailability';
+import { SportTabs } from '@/components/SportTabs';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
@@ -346,28 +347,15 @@ export default function Calendar() {
       </header>
 
       {/* Sport Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
-        <div className="flex overflow-x-auto">
-          {SPORTS.map((sport) => (
-            <button
-              key={sport}
-              onClick={() => {
-                setActiveSport(sport);
-                // Clear cache when switching sports to ensure fresh data
-                queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
-              }}
-              data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
-                activeSport === sport
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {sport}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SportTabs
+        sports={SPORTS}
+        activeSport={activeSport}
+        onSportChange={setActiveSport}
+        onSportChangeCallback={() => {
+          // Clear cache when switching sports to ensure fresh data
+          queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
+        }}
+      />
 
       {/* Teams List */}
       <div className="p-4 space-y-3">

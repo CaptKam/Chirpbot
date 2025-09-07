@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Clock, TrendingUp, Users, Bell, Activity } from 'lucide-react';
 import { AlertLoading } from '@/components/sports-loading';
+import { SportTabs } from '@/components/SportTabs';
 
 interface Alert {
   id: string;
@@ -158,23 +159,11 @@ export default function AlertsPage() {
       <div className="max-w-4xl mx-auto space-y-6">
 
       {/* Filter Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
-        <div className="flex overflow-x-auto">
-          {(['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF'] as const).map((sport) => (
-            <button
-              key={sport}
-              onClick={() => setFilter(sport)}
-              className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
-                filter === sport
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {sport === 'all' ? 'All' : sport}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SportTabs 
+        sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
+        selectedSport={filter} 
+        onSportChange={setFilter} 
+      />
 
       {/* Alerts Content */}
       <div className="p-4 space-y-4">
