@@ -13,8 +13,9 @@ import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
 import { BottomNavigation } from "@/components/bottom-navigation";
+import { SportTabs } from "@/components/SportTabs";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { AuthLoading } from "@/components/sports-loading";
@@ -52,6 +53,9 @@ function RegularAppContent() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const { lastMessage } = useWebSocket();
+  const [activeSport, setActiveSport] = useState('MLB');
+  
+  const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'CFL', 'NCAAF', 'WNBA'];
 
   // Get settings to check if push notifications are enabled
   const { data: settings } = useQuery({
@@ -74,6 +78,18 @@ function RegularAppContent() {
 
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
+      {isAuthenticated && (
+        <SportTabs
+          sports={SPORTS}
+          activeSport={activeSport}
+          onSportChange={setActiveSport}
+          onSportChangeCallback={() => {
+            // Clear cache when switching sports to ensure fresh data
+            queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+          }}
+        />
+      )}
       <Switch>
         <Route path="/" component={() => <PublicRoute component={Landing} />} />
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
