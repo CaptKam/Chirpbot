@@ -24,19 +24,13 @@ async function checkAuthentication() {
             loadStatistics();
             loadSystemStatus();
             
+            // Set up all event listeners
+            setupEventListeners();
+            
             // Set up sport selector if it exists
             const sportSelector = document.getElementById('sportSelector');
             if (sportSelector) {
                 loadSportAlertSettings();
-                sportSelector.addEventListener('change', () => {
-                    loadSportAlertSettings();
-                });
-            }
-            
-            // Set up logout button
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', handleLogout);
             }
         } else {
             // Not authenticated, redirect to login
@@ -50,6 +44,62 @@ async function checkAuthentication() {
 }
 
 // Tab switching functionality - make it globally available
+// Set up all event listeners after DOM is ready
+function setupEventListeners() {
+    // Tab navigation buttons
+    const navTabs = document.querySelectorAll('.nav-tab');
+    navTabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            const tabName = e.currentTarget.getAttribute('data-tab');
+            if (tabName) {
+                showTab(tabName);
+            }
+        });
+    });
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+    
+    // Refresh activity button
+    const refreshActivityBtn = document.getElementById('refreshActivityBtn');
+    if (refreshActivityBtn) {
+        refreshActivityBtn.addEventListener('click', loadRecentActivity);
+    }
+    
+    // User search input
+    const userSearch = document.getElementById('userSearch');
+    if (userSearch) {
+        userSearch.addEventListener('keyup', filterUsers);
+    }
+    
+    // Refresh users button
+    const refreshUsersBtn = document.getElementById('refreshUsersBtn');
+    if (refreshUsersBtn) {
+        refreshUsersBtn.addEventListener('click', refreshUsers);
+    }
+    
+    // Refresh alert settings button
+    const refreshAlertSettingsBtn = document.getElementById('refreshAlertSettingsBtn');
+    if (refreshAlertSettingsBtn) {
+        refreshAlertSettingsBtn.addEventListener('click', refreshAlertSettings);
+    }
+    
+    // Master alert toggle
+    const masterAlertToggle = document.getElementById('masterAlertToggle');
+    if (masterAlertToggle) {
+        masterAlertToggle.addEventListener('change', toggleMasterAlerts);
+    }
+    
+    // Sport selector
+    const sportSelector = document.getElementById('sportSelector');
+    if (sportSelector) {
+        sportSelector.addEventListener('change', loadSportAlertSettings);
+    }
+}
+
 window.showTab = function(tabName) {
     // Hide all tab contents
     const tabContents = document.querySelectorAll('.tab-content');
@@ -93,6 +143,35 @@ async function loadDashboardData() {
         console.error('Error loading dashboard data:', error);
     }
 }
+
+// Add missing function definitions to prevent errors
+window.filterUsers = function() {
+    const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+    const userRows = document.querySelectorAll('#usersTableBody tr');
+    
+    userRows.forEach(row => {
+        const username = row.cells[0]?.textContent.toLowerCase() || '';
+        if (username.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+};
+
+window.refreshUsers = function() {
+    loadUsers();
+};
+
+window.refreshAlertSettings = function() {
+    loadAlertSettings();
+};
+
+window.toggleMasterAlerts = function() {
+    const toggle = document.getElementById('masterAlertToggle');
+    console.log('Master alerts toggled:', toggle.checked);
+    // Add actual toggle logic here
+};
 
 window.loadRecentActivity = async function() {
     try {

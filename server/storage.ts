@@ -293,7 +293,7 @@ export const storage = {
     return await db.select().from(userMonitoredTeams).where(eq(userMonitoredTeams.userId, userId));
   },
 
-  async addUserMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
+  async addUserMonitMonitoredTeam(userId: string, gameId: string, sport: string, homeTeamName: string, awayTeamName: string) {
     const result = await db.insert(userMonitoredTeams)
       .values({ userId, gameId, sport, homeTeamName, awayTeamName })
       .returning();
@@ -373,7 +373,6 @@ export const storage = {
         'mlb': {
           'MLB_GAME_START': true,
           'MLB_SEVENTH_INNING_STRETCH': true,
-          // High-probability scoring situations
           'MLB_RUNNER_ON_THIRD_NO_OUTS': true,
           'MLB_FIRST_AND_THIRD_NO_OUTS': true,
           'MLB_SECOND_AND_THIRD_NO_OUTS': true,
@@ -381,18 +380,6 @@ export const storage = {
           'MLB_RUNNER_ON_THIRD_ONE_OUT': true,
           'MLB_SECOND_AND_THIRD_ONE_OUT': true,
           'MLB_BASES_LOADED_ONE_OUT': true,
-          // AI Enhancement alerts (available for MLB)
-          'AI_ENHANCED_MESSAGES': true,
-          'AI_PREDICTIVE_AT_BAT': true,
-          'AI_SCORING_PROBABILITY': true,
-          'AI_SITUATION_ANALYSIS': true,
-          'AI_EVENT_SUMMARIES': true,
-          'AI_ROI_ALERTS': true,
-          // RE24 System alerts (MLB specific)
-          'RE24_ENABLED': true,
-          'RE24_CONTEXT_FACTORS': true,
-          'RE24_MINIMUM_THRESHOLDS': true,
-          'RE24_DYNAMIC_PRIORITY': true
         },
         'nfl': {
           'NFL_GAME_START': true,
@@ -582,52 +569,7 @@ export const storage = {
     }
   },
 
-  // Get user's AI enhancement preferences
-  async getUserAIPreferences(userId: string): Promise<any> {
-    try {
-      // System-level defaults for all AI features
-      const aiPrefs = {
-        AI_ENHANCED_MESSAGES: true,  // Default enabled
-        AI_PREDICTIVE_AT_BAT: true,  // Default enabled
-        AI_SCORING_PROBABILITY: true,  // Default enabled
-        AI_SITUATION_ANALYSIS: true,  // Default enabled
-        AI_EVENT_SUMMARIES: true,  // Default enabled
-        AI_ROI_ALERTS: true  // Default enabled
-      };
-
-      // For system user, return defaults
-      if (userId === 'system') {
-        console.log(`🤖 AI Preferences for system: all enabled`);
-        return aiPrefs;
-      }
-
-      const preferences = await db.select()
-        .from(userAlertPreferences)
-        .where(and(
-          eq(userAlertPreferences.userId, userId),
-          eq(userAlertPreferences.sport, 'mlb')
-        ));
-
-      preferences.forEach(pref => {
-        if (pref.alertType.startsWith('AI_')) {
-          aiPrefs[pref.alertType as keyof typeof aiPrefs] = pref.enabled;
-        }
-      });
-
-      console.log(`🤖 AI Preferences for user ${userId}:`, aiPrefs);
-      return aiPrefs;
-    } catch (error) {
-      console.error('Error getting user AI preferences:', error);
-      return {
-        AI_ENHANCED_MESSAGES: true,  // Fallback to enabled
-        AI_PREDICTIVE_AT_BAT: true,
-        AI_SCORING_PROBABILITY: true,
-        AI_SITUATION_ANALYSIS: true,
-        AI_EVENT_SUMMARIES: true,
-        AI_ROI_ALERTS: true
-      };
-    }
-  },
+  // AI preferences removed - system cleaned
 
   // Check if alert is globally enabled by admin
   async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
