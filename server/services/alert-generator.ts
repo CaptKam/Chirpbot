@@ -59,7 +59,7 @@ function getBetbookData(context: any): BetbookData {
   // Calculate realistic live betting lines based on current game state
   const currentInning = inning || 5;
   const gameProgress = Math.min(currentInning / 9, 1); // How far through the game
-  
+
   // Dynamic total calculation based on current pace
   let totalLine: number;
   if (sport === 'MLB') {
@@ -74,7 +74,7 @@ function getBetbookData(context: any): BetbookData {
   // Dynamic odds calculation
   let homeOdds = -110;
   let awayOdds = -110;
-  
+
   // Adjust for current score difference and game situation
   if (scoreDiff > 0) {
     const advantage = Math.min(scoreDiff * 25 + (gameProgress * 50), 150);
@@ -90,7 +90,7 @@ function getBetbookData(context: any): BetbookData {
   const awayTeamName = typeof awayTeam === 'string' ? awayTeam : awayTeam?.name || 'Away';
   const homeTeamName = typeof homeTeam === 'string' ? homeTeam : homeTeam?.name || 'Home';
   let aiAdvice = `${awayTeamName.split(' ').pop()} ${awayScore}-${homeScore} ${homeTeamName.split(' ').pop()}`;
-  
+
   if (type === 'BASES_LOADED') {
     aiAdvice += ` | BASES LOADED: Strong over ${totalLine} value. Historical 75%+ scoring rate.`;
   } else if (type === 'RISP') {
@@ -163,14 +163,14 @@ export class AlertGenerator {
   // Check if ANY alert types are globally enabled across all sports
   private async hasAnyGloballyEnabledAlerts(): Promise<boolean> {
     const sports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
-    
+
     for (const sport of sports) {
       const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
       if (enabledAlerts.length > 0) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -255,7 +255,7 @@ export class AlertGenerator {
               createdAt: new Date().toISOString()
             }
           };
-          
+
           wsBroadcast(wsAlertData);
           console.log(`📡 WebSocket broadcast sent for ${alertData.type} alert (saveAlert method)`);
         } else {
@@ -272,12 +272,12 @@ export class AlertGenerator {
   // Method to generate alerts for live games (when they're happening)
   async generateLiveGameAlerts(): Promise<void> {
     console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-    
+
     try {
       // Clear settings cache to ensure fresh sport-specific configurations
       this.settingsCache.clearAll();
       console.log('🔄 Cleared settings cache to load sport-specific alert types');
-      
+
       // Check if any alerts are globally enabled before proceeding
       const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts();
       if (!hasAnyEnabledAlerts) {
@@ -291,7 +291,7 @@ export class AlertGenerator {
 
       for (const sport of sports) {
         const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
-        
+
         if (enabledAlerts.length === 0) {
           // Only log skipped sports for major leagues to reduce console noise
           if (['MLB', 'NFL'].includes(sport)) {
@@ -308,7 +308,7 @@ export class AlertGenerator {
           console.log(`🔍 DEBUG: ${sport} enabled alerts:`, enabledAlerts);
           console.log(`✅ ${sport} has ${enabledAlerts.length} enabled alert types: ${enabledAlerts.join(', ')}`);
         }
-        
+
         // Get games for this sport
         let games: any[] = [];
         switch (sport) {
@@ -344,7 +344,7 @@ export class AlertGenerator {
   private async processGamesWithEngine(sport: string, games: any[]): Promise<number> {
     let alertCount = 0;
     const engine = this.sportEngines.get(sport);
-    
+
     if (!engine) {
       console.log(`❌ No engine found for sport: ${sport}`);
       return 0;
@@ -353,28 +353,28 @@ export class AlertGenerator {
     // Get all users who have alerts enabled for this sport
     const allUsers = await storage.getAllUsers();
     const usersWithAlerts = [];
-    
+
     console.log(`🔍 Checking ${allUsers.length} total users for ${sport} alert preferences...`);
-    
+
     for (const user of allUsers) {
       try {
         const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
         console.log(`👤 User ${user.username}: Found ${userPrefs.length} ${sport} preferences`);
-        
+
         if (userPrefs.length > 0) {
           const enabledPrefs = userPrefs.filter(pref => pref.enabled);
           console.log(`👤 User ${user.username}: ${enabledPrefs.length} enabled ${sport} alerts: ${enabledPrefs.map(p => p.alertType).join(', ')}`);
-          
+
           if (enabledPrefs.length > 0) {
             usersWithAlerts.push(user);
           }
         } else {
           console.log(`👤 User ${user.username}: No ${sport} preferences found, checking if they should inherit defaults`);
-          
+
           // Check if this user should inherit global defaults
           const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
           const hasAnyEnabledGlobally = Object.values(globalSettings).some(enabled => enabled === true);
-          
+
           if (hasAnyEnabledGlobally) {
             console.log(`👤 User ${user.username}: Inheriting global ${sport} settings as defaults`);
             usersWithAlerts.push(user);
@@ -404,7 +404,7 @@ export class AlertGenerator {
         const enabledAlertTypes = userPrefs
           .filter(pref => pref.enabled)
           .map(pref => pref.alertType);
-        
+
         // Initialize user-specific alert cylinders for this sport
         await engine.initializeUserAlertModules(enabledAlertTypes);
         console.log(`🔧 Loaded ${enabledAlertTypes.length} alert cylinders for user ${user.username} in ${sport}`);
@@ -419,7 +419,7 @@ export class AlertGenerator {
         if (!game.isLive) continue;
 
         const gameState = this.normalizeGameState(game, sport);
-        
+
         // Process alerts for each user with their specific enabled alert types
         for (const user of usersWithAlerts) {
           try {
@@ -427,9 +427,9 @@ export class AlertGenerator {
             if ('initializeForUser' in engine) {
               await (engine as any).initializeForUser(user.id);
             }
-            
+
             const alerts = await engine.generateLiveAlerts(gameState);
-            
+
             for (const alert of alerts) {
               const saved = await this.saveRealTimeAlert(
                 alert.alertKey,
@@ -457,11 +457,11 @@ export class AlertGenerator {
   private normalizeGameState(game: any, sport: string): GameState {
     // Extract common fields and normalize them
     const gameId = game.gameId || game.id;
-    
+
     // Enhanced team name extraction with multiple fallback strategies
     let homeTeam = 'Home Team';
     let awayTeam = 'Away Team';
-    
+
     if (typeof game.homeTeam === 'string') {
       homeTeam = game.homeTeam;
     } else if (game.homeTeam && typeof game.homeTeam === 'object') {
@@ -472,7 +472,7 @@ export class AlertGenerator {
                  game.homeTeam.abbreviation ||
                  'Home Team';
     }
-    
+
     if (typeof game.awayTeam === 'string') {
       awayTeam = game.awayTeam;
     } else if (game.awayTeam && typeof game.awayTeam === 'object') {
@@ -483,17 +483,17 @@ export class AlertGenerator {
                  game.awayTeam.abbreviation ||
                  'Away Team';
     }
-    
+
     // Enhanced score extraction
     let homeScore = 0;
     let awayScore = 0;
-    
+
     if (typeof game.homeScore === 'number') {
       homeScore = game.homeScore;
     } else if (game.homeScore && typeof game.homeScore === 'object') {
       homeScore = game.homeScore.score || game.homeScore.value || 0;
     }
-    
+
     if (typeof game.awayScore === 'number') {
       awayScore = game.awayScore;
     } else if (game.awayScore && typeof game.awayScore === 'object') {
@@ -601,7 +601,7 @@ export class AlertGenerator {
     try {
       // Ensure priority has a default value
       let finalPriority = priority || 50;
-      
+
       // Check if alert already exists (conflict check)
       const existingAlert = await db.execute(sql`
         SELECT 1 FROM alerts WHERE alert_key = ${alertKey}
@@ -638,7 +638,7 @@ export class AlertGenerator {
       if (finalPriority >= 70) {
         try {
           console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${finalPriority})`);
-          
+
           const alertContext: AlertContext = {
             gameId,
             sport,
@@ -667,7 +667,7 @@ export class AlertGenerator {
           };
 
           const aiEnhancedAlert = await this.aiContextController.enhanceAlertWithFullControl(alertContext);
-          
+
           if (aiEnhancedAlert.confidenceScore > finalPriority) {
             // AI has enhanced the alert - use AI-controlled content
             message = aiEnhancedAlert.message;
@@ -681,15 +681,15 @@ export class AlertGenerator {
             context.aiFollowUpActions = aiEnhancedAlert.followUpActions;
             context.aiConfidenceScore = aiEnhancedAlert.confidenceScore;
             context.aiProcessingTime = aiEnhancedAlert.aiProcessingTime;
-            
+
             // Update priority with AI confidence
             finalPriority = Math.min(95, aiEnhancedAlert.confidenceScore);
-            
+
             console.log(`✅ AI Context Controller: Enhanced ${type} alert - New priority: ${finalPriority}, Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
           } else {
             console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${finalPriority})`);
           }
-          
+
         } catch (error) {
           console.error('❌ AI Context Controller failed:', error);
         }
@@ -736,7 +736,7 @@ export class AlertGenerator {
               createdAt: new Date().toISOString()
             }
           };
-          
+
           wsBroadcast(alertData);
           console.log(`📡 WebSocket broadcast sent for ${type} alert`);
         } else {

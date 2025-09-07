@@ -6,6 +6,64 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
   alertType = 'NCAAF_TWO_MINUTE_WARNING';
   sport = 'NCAAF';
 
+  isTriggered(gameState: GameState): boolean {
+    // Must be a live game
+    if (gameState.status !== 'live') return false;
+    
+    // Must be in 2nd or 4th quarter (end of half situations)
+    if (gameState.quarter !== 2 && gameState.quarter !== 4) return false;
+    
+    // Must be within 2 minutes
+    if (!this.isWithinTwoMinutes(gameState.timeRemaining)) return false;
+    
+    // Must be a close game to be interesting
+    return this.isCloseGame(gameState);
+  }
+
+  generateAlert(gameState: GameState): AlertResult | null {
+    if (!this.isTriggered(gameState)) return null;
+
+    const isEndOfGame = gameState.quarter === 4;
+    const alertKey = `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`;
+    
+    return {
+      alertKey,
+      type: this.alertType,
+      message: `⏰ TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${gameState.timeRemaining} left in ${isEndOfGame ? '4th quarter' : '2nd quarter'}`,
+      context: {
+        gameId: gameState.gameId,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        homeScore: gameState.homeScore,
+        awayScore: gameState.awayScore,
+        quarter: gameState.quarter,
+        timeRemaining: gameState.timeRemaining,
+        isEndOfHalf: gameState.quarter === 2,
+        isEndOfGame: gameState.quarter === 4,
+        scoreDifferential: Math.abs(gameState.homeScore - gameState.awayScore)
+      },
+      priority: isEndOfGame ? 95 : 85
+    };
+  }
+
+  calculateProbability(gameState: GameState): number {
+    if (!this.isTriggered(gameState)) return 0;
+    
+    let probability = 70; // Base probability for two-minute situations
+    
+    // Higher probability for end of game
+    if (gameState.quarter === 4) {
+      probability += 20;
+    }
+    
+    // Higher probability for closer games
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    if (scoreDiff <= 3) probability += 10;
+    else if (scoreDiff <= 7) probability += 5;
+    
+    return Math.min(probability, 100);
+  }
+
   private isWithinTwoMinutes(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
     
