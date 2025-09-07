@@ -6,8 +6,9 @@ import { storage } from "../storage";
 import { AlertDeduplication } from "./alert-deduplication";
 import { sendTelegramAlert, type TelegramConfig } from "./telegram";
 import { SettingsCache } from "./settings-cache";
-
-// AI services removed - system cleaned
+import { BasicAI } from "./basic-ai";
+import { AIEnhancementService, GameContext } from './ai-enhancements';
+import { AIContextController, AlertContext } from './ai-context-controller';
 
 // Import sport engines
 import { MLBEngine } from './engines/mlb-engine';
@@ -128,7 +129,10 @@ export class AlertGenerator {
   private cflApi: any; // Will be initialized dynamically
   private deduplication: AlertDeduplication;
   private settingsCache: SettingsCache;
-  
+  private ai: BasicAI;
+  private aiEnhancementService: AIEnhancementService;
+  private aiContextController: AIContextController;
+
   // Sport-specific engines
   private sportEngines: Map<string, BaseSportEngine>;
 
@@ -137,6 +141,9 @@ export class AlertGenerator {
     this.ncaafApi = new NCAAFApiService();
     this.deduplication = new AlertDeduplication();
     this.settingsCache = new SettingsCache(storage);
+    this.ai = new BasicAI();
+    this.aiEnhancementService = new AIEnhancementService();
+    this.aiContextController = new AIContextController();
 
     // Initialize sport engines
     this.sportEngines = new Map();
@@ -368,12 +375,12 @@ export class AlertGenerator {
         } else {
           // User has preferences - check if any are enabled
           const enabledCount = userPrefs.filter(p => p.enabled).length;
-
+          
           if (enabledCount > 0) {
             // User has enabled preferences - add them to the list!
             usersWithAlerts.push(user);
             console.log(`✅ User ${user.username}: Has ${enabledCount} ${sport} alerts enabled`);
-
+            
             if (sport === 'MLB' && enabledCount < 9) {
               console.log(`⚠️ User ${user.username}: Only has ${enabledCount}/9 MLB alerts enabled - may need preference fix`);
             }
