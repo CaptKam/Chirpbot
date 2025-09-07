@@ -7,6 +7,14 @@ let authCheckInProgress = false;
 let redirectInProgress = false;
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if we've already tried to authenticate and failed
+    const authFailed = sessionStorage.getItem('adminAuthFailed');
+    if (authFailed) {
+        console.log('🚫 Previous auth failed, redirecting immediately to login');
+        window.location.replace('/admin/login.html');
+        return;
+    }
+
     // Check for existing session first
     const isLoggedIn = localStorage.getItem('adminLoggedIn');
     const adminUser = localStorage.getItem('adminUser');
@@ -38,6 +46,8 @@ async function checkAuthentication() {
 
         if (!response.ok) {
             console.log('Auth check failed with status:', response.status);
+            // Mark auth as failed to prevent future attempts in this session
+            sessionStorage.setItem('adminAuthFailed', 'true');
             redirectToLogin();
             return;
         }
@@ -45,6 +55,8 @@ async function checkAuthentication() {
         const data = await response.json();
         if (!data.authenticated) {
             console.log('Not authenticated according to server');
+            // Mark auth as failed to prevent future attempts in this session
+            sessionStorage.setItem('adminAuthFailed', 'true');
             redirectToLogin();
             return;
         }
@@ -69,6 +81,8 @@ async function checkAuthentication() {
         }
     } catch (error) {
         console.error('Auth check error:', error);
+        // Mark auth as failed to prevent future attempts in this session
+        sessionStorage.setItem('adminAuthFailed', 'true');
         redirectToLogin();
     } finally {
         authCheckInProgress = false;
