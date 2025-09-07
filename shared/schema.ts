@@ -49,39 +49,6 @@ export const settings = pgTable("settings", {
   pushNotificationsEnabled: boolean("push_notifications_enabled").notNull().default(false),
 });
 
-// Alerts table for storing real-time sports alerts
-export const alerts = pgTable("alerts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  alertKey: text("alert_key").notNull().unique(),
-  sport: text("sport").notNull(),
-  gameId: text("game_id").notNull(),
-  type: text("type").notNull(),
-  state: text("state").notNull().default("NEW"),
-  score: integer("score").notNull().default(0), // Used for priority
-  payload: jsonb("payload").$type<{
-    title?: string;
-    message?: string;
-    description?: string;
-    priority?: number;
-    probability?: number;
-    homeTeam?: string | { id?: string; name?: string; abbreviation?: string; score?: number };
-    awayTeam?: string | { id?: string; name?: string; abbreviation?: string; score?: number };
-    homeScore?: number;
-    awayScore?: number;
-    timestamp?: string;
-    gameInfo?: any;
-    context?: any;
-    betbookData?: any;
-    weatherData?: any;
-    aiContext?: any;
-    aiConfidence?: number;
-    v3Analysis?: any;
-    seen?: boolean;
-    sentToTelegram?: boolean;
-  }>().notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
 // User monitored teams for persistent game selection
 export const userMonitoredTeams = pgTable("user_monitored_teams", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -136,11 +103,6 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
 });
 
-export const insertAlertsSchema = createInsertSchema(alerts).omit({
-  id: true,
-  createdAt: true,
-});
-
 export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTeams).omit({
   id: true,
   createdAt: true,
@@ -158,8 +120,6 @@ export type User = typeof users.$inferSelect;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type Team = typeof teams.$inferSelect;
 
-export type InsertAlert = z.infer<typeof insertAlertsSchema>;
-export type Alert = typeof alerts.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;

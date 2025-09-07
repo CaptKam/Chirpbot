@@ -36,7 +36,7 @@ export class BasicAI {
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
     // Check for disable flags first
-    this.isConfigured = this.checkIfEnabled() && !!this.apiKey;
+    this.isConfigured = false; // Force disable OpenAI
   }
 
   // Check if AI system is enabled via disable flags
@@ -44,31 +44,20 @@ export class BasicAI {
     try {
       const fs = require('fs');
       const path = require('path');
-      // Try multiple possible locations for the disable flags file
-      const possiblePaths = [
-        path.join(__dirname, '../.disable-flags'),
-        path.join(process.cwd(), 'server/.disable-flags'),
-        path.join(process.cwd(), '.disable-flags')
-      ];
+      const disableFlagsPath = path.join(__dirname, '../.disable-flags');
       
-      for (const disableFlagsPath of possiblePaths) {
-        if (fs.existsSync(disableFlagsPath)) {
-          const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
-          if (flags.ai_disabled || flags.openai_disabled) {
-            console.log('🚫 AI System: DISABLED via disable flags');
-            return false;
-          }
-          console.log('✅ OpenAI: ENABLED via disable flags');
-          return true;
+      if (fs.existsSync(disableFlagsPath)) {
+        const flags = JSON.parse(fs.readFileSync(disableFlagsPath, 'utf8'));
+        if (flags.ai_disabled || flags.openai_disabled) {
+          console.log('🚫 AI System: DISABLED via disable flags');
+          return false;
         }
       }
-      
-      // If no disable flags file found, default to enabled
-      console.log('✅ OpenAI: ENABLED (no disable flags file found)');
-      return true;
+      console.log('🚫 OpenAI: FORCE DISABLED');
+      return false; // Force disable OpenAI
     } catch (error) {
-      console.warn('⚠️ Could not check disable flags, defaulting to enabled:', error.message);
-      return true; // Default to enabled on error
+      console.warn('⚠️ Could not check disable flags, force disabling AI');
+      return false; // Force disable on error
     }
   }
 
@@ -179,7 +168,7 @@ Keep response under 100 words. Focus on immediate betting value.
     };
   }
 
-  // Quick confidence boost for high-probability alerts
+  // Quick confidence boost for RE24-enhanced alerts
   calculateAIConfidence(baseConfidence: number, situation: string): number {
     let boost = 0;
 
