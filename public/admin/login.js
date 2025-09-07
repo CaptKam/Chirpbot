@@ -1,8 +1,16 @@
 // Admin Login JavaScript
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 Login page JavaScript loaded');
+    
     const loginForm = document.getElementById('adminLoginForm');
     const errorMessage = document.getElementById('errorMessage');
     const loginBtn = document.getElementById('loginBtn');
+    
+    console.log('🔍 Elements found:', {
+        loginForm: !!loginForm,
+        errorMessage: !!errorMessage,
+        loginBtn: !!loginBtn
+    });
 
     // Removed auto-check to prevent redirect loops
     // Clear any stuck session data
@@ -10,14 +18,26 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.removeItem('adminLoggedIn');
     localStorage.removeItem('adminUser');
 
-    loginForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        await handleLogin();
-    });
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            console.log('📝 Form submitted');
+            e.preventDefault();
+            await handleLogin();
+        });
+        console.log('✅ Form submit listener attached');
+    } else {
+        console.error('❌ Login form not found!');
+    }
 
     async function handleLogin() {
+        console.log('🔐 handleLogin called');
         const username = document.getElementById('adminUsername').value;
         const password = document.getElementById('adminPassword').value;
+        
+        console.log('📊 Login attempt:', { 
+            username: username ? 'provided' : 'missing',
+            password: password ? 'provided' : 'missing'
+        });
 
         if (!username || !password) {
             showError('Please enter both username and password');
@@ -80,8 +100,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function togglePassword() {
+    console.log('👁️ Toggle password called');
     const passwordInput = document.getElementById('adminPassword');
     const toggleIcon = document.getElementById('toggleIcon');
+    
+    console.log('🔍 Toggle elements:', {
+        passwordInput: !!passwordInput,
+        toggleIcon: !!toggleIcon
+    });
 
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
