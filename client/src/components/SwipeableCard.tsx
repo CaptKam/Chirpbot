@@ -176,7 +176,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   });
 
   // Fetch live weather data for the game
-  const homeTeamName = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
+  const homeTeamName = React.useMemo(() => {
+    if (!alertData) return '';
+    if (typeof alertData.homeTeam === 'string') return alertData.homeTeam;
+    return alertData.homeTeam?.name || '';
+  }, [alertData]);
+  
   const { data: weatherData } = useQuery({
     queryKey: ['weather', homeTeamName],
     queryFn: async () => {
@@ -200,8 +205,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       // Match by team names (both home and away combinations)
       const gameHomeTeam = game.homeTeam?.name || '';
       const gameAwayTeam = game.awayTeam?.name || '';
-      const alertHomeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || '';
-      const alertAwayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || '';
+      const alertHomeTeam = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
+      const alertAwayTeam = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
 
       return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
              (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
@@ -234,17 +239,17 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   React.useEffect(() => {
     if (alertData) {
       console.log('🔍 SwipeableCard Score Debug:', {
-        alertId: alertData.id,
-        storedHomeScore: alertData.homeScore,
-        storedAwayScore: alertData.awayScore,
+        alertId: alertData?.id,
+        storedHomeScore: alertData?.homeScore,
+        storedAwayScore: alertData?.awayScore,
         liveHomeScore: liveGameData?.homeTeam?.score,
         liveAwayScore: liveGameData?.awayTeam?.score,
         displayHomeScore: displayScores.homeScore,
         displayAwayScore: displayScores.awayScore,
         hasLiveGame: !!liveGameData,
         gameStatus: liveGameData?.status,
-        homeTeam: alertData.homeTeam,
-        awayTeam: alertData.awayTeam
+        homeTeam: alertData?.homeTeam,
+        awayTeam: alertData?.awayTeam
       });
     }
   }, [alertData, liveGameData, displayScores]);
@@ -391,6 +396,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     return message;
   }, [alertData]);
 
+  // Early null check to help TypeScript understand alertData is defined
+  if (!alertData) {
+    return <div className="p-4 text-gray-500">No alert data available</div>;
+  }
 
   return (
     <div className="relative overflow-hidden rounded-xl">
