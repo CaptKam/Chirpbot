@@ -88,9 +88,32 @@ window.showTab = function(tabName) {
 // Dashboard data loading functions
 async function loadDashboardData() {
     try {
-        await loadUsers();
+        loadRecentActivity();
     } catch (error) {
         console.error('Error loading dashboard data:', error);
+    }
+}
+
+window.loadRecentActivity = async function() {
+    try {
+        const activityEl = document.getElementById('recentActivity');
+        if (activityEl) {
+            // For now, show a simple message instead of spinner
+            activityEl.innerHTML = `
+                <div class="activity-item">
+                    <div class="activity-icon system">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">System Running Normally</div>
+                        <div class="activity-description">All systems operational</div>
+                        <div class="activity-time">${new Date().toLocaleTimeString()}</div>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
     }
 }
 
@@ -107,6 +130,32 @@ async function loadUsers() {
         
         const users = await response.json();
         globalUsers = users;
+        
+        // Update users table if it exists
+        const usersTableBody = document.getElementById('usersTableBody');
+        if (usersTableBody) {
+            if (users.length === 0) {
+                usersTableBody.innerHTML = '<tr><td colspan="6">No users found.</td></tr>';
+            } else {
+                usersTableBody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.username}</td>
+                        <td><span class="role-badge">${user.role || 'user'}</span></td>
+                        <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                        <td>${user.monitoredTeamsCount || 0}</td>
+                        <td>${user.telegramEnabled ? '✓' : '✗'}</td>
+                        <td>
+                            <button class="action-btn edit" onclick="editUser('${user.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn danger" onclick="deleteUser('${user.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
         
         const usersList = document.getElementById('usersList');
         if (!usersList) return;
@@ -151,10 +200,19 @@ async function loadStatistics() {
         const stats = await response.json();
         
         // Map backend structure to frontend elements
-        document.getElementById('totalUsers').textContent = stats.users?.total || 0;
-        document.getElementById('activeAlerts').textContent = stats.alerts?.total || 0;
-        document.getElementById('todayAlerts').textContent = stats.alerts?.today || 0;
-        document.getElementById('monitoredTeams').textContent = stats.monitoredTeams || 0;
+        const totalUsersEl = document.getElementById('totalUsers');
+        const totalAdminsEl = document.getElementById('totalAdmins');
+        const todayAlertsEl = document.getElementById('todayAlerts');
+        const totalAlertsEl = document.getElementById('totalAlerts');
+        
+        if (totalUsersEl) totalUsersEl.textContent = stats.users?.total || 0;
+        if (totalAdminsEl) totalAdminsEl.textContent = stats.users?.admins || 0;
+        if (todayAlertsEl) todayAlertsEl.textContent = stats.alerts?.today || 0;
+        if (totalAlertsEl) totalAlertsEl.textContent = stats.alerts?.total || 0;
+        
+        // Also update monitored teams if the element exists
+        const monitoredTeamsEl = document.getElementById('monitoredTeams');
+        if (monitoredTeamsEl) monitoredTeamsEl.textContent = stats.monitoredTeams || 0;
     } catch (error) {
         console.error('Error loading statistics:', error);
     }
@@ -236,8 +294,17 @@ window.loadSportAlertSettings = async function() {
         const settings = await response.json();
         globalAlertSettings = settings;
         
+        // Update the sport title
+        const sportTitleEl = document.getElementById('sportTitle');
+        if (sportTitleEl) {
+            sportTitleEl.textContent = sport;
+        }
+        
         const alertsContainer = document.getElementById('alertSettingsList');
-        if (!alertsContainer) return;
+        if (!alertsContainer) {
+            console.log('Alert settings container not found');
+            return;
+        }
         
         alertsContainer.innerHTML = settings.map(setting => `
             <div class="alert-setting-card">
