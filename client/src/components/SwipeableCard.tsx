@@ -182,9 +182,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     refetchInterval: 15000, // Refresh every 15 seconds for live scores
     staleTime: 10000,
     retry: false, // Don't retry failed requests to avoid spam
-    onError: (error) => {
-      console.warn('Games query error:', error);
-    },
   });
 
   // Helper function to safely extract team names
@@ -227,9 +224,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     refetchInterval: 60000, // Refresh every minute
     staleTime: 60000, // Cache data for 1 minute
     retry: false, // Don't retry failed requests
-    onError: (error) => {
-      console.warn('Weather query error:', error);
-    },
   });
 
 
@@ -238,7 +232,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     try {
       if (!todaysGames?.games || !alertData) return null;
 
-      return todaysGames.games.find((game: any) => {
+      const games = todaysGames?.games || [];
+      return games.find((game: any) => {
         // Match by team names (both home and away combinations)
         const gameHomeTeam = extractTeamName(game.homeTeam);
         const gameAwayTeam = extractTeamName(game.awayTeam);
