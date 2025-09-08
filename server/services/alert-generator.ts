@@ -113,7 +113,7 @@ function getBetbookData(context: any): BetbookData {
     },
     aiAdvice,
     sportsbookLinks: [
-      { name: 'FanDuel', url: 'https://sportsbook. FanDuel.com' },
+      { name: 'FanDuel', url: 'https://sportsbook.fanduel.com' },
       { name: 'DraftKings', url: 'https://sportsbook.draftkings.com' },
       { name: 'Bet365', url: 'https://www.bet365.com' },
       { name: 'BetMGM', url: 'https://sports.betmgm.com' }
@@ -276,7 +276,7 @@ export class AlertGenerator {
     try {
       // Clear settings cache to ensure fresh sport-specific configurations
       this.settingsCache.clearAll();
-      // Cache cleared silently to reduce log noise
+      console.log('🔄 Cleared settings cache to load sport-specific alert types');
 
       // Check if any alerts are globally enabled before proceeding
       const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts();
@@ -300,9 +300,14 @@ export class AlertGenerator {
           continue;
         }
 
-        // Reduce verbosity during routine monitoring cycles
-        // Only show essential sport processing information
-        console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled`);
+        // Suppress verbose debug output for WNBA to reduce console noise
+        if (sport === 'WNBA') {
+          // Silent processing for WNBA - skip verbose debug logs
+        } else {
+          console.log(`🔍 DEBUG: Checking sport ${sport}...`);
+          console.log(`🔍 DEBUG: ${sport} enabled alerts:`, enabledAlerts);
+          console.log(`✅ ${sport} has ${enabledAlerts.length} enabled alert types: ${enabledAlerts.join(', ')}`);
+        }
 
         // Get games for this sport
         let games: any[] = [];
@@ -353,10 +358,17 @@ export class AlertGenerator {
 
     for (const user of allUsers) {
       try {
-        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
+        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
         console.log(`👤 User ${user.username}: Found ${userPrefs.length} ${sport} preferences`);
 
-        if (userPrefs.length === 0) {
+        if (userPrefs.length > 0) {
+          const enabledPrefs = userPrefs.filter(pref => pref.enabled);
+          console.log(`👤 User ${user.username}: ${enabledPrefs.length} enabled ${sport} alerts: ${enabledPrefs.map(p => p.alertType).join(', ')}`);
+
+          if (enabledPrefs.length > 0) {
+            usersWithAlerts.push(user);
+          }
+        } else {
           console.log(`👤 User ${user.username}: No ${sport} preferences found`);
 
           // CRITICAL FIX: Only inherit global defaults for MLB, not other sports
@@ -371,21 +383,6 @@ export class AlertGenerator {
             }
           } else {
             console.log(`👤 User ${user.username}: ${sport} requires explicit opt-in - not inheriting defaults`);
-          }
-        } else {
-          // User has preferences - check if any are enabled
-          const enabledCount = userPrefs.filter(p => p.enabled).length;
-          
-          if (enabledCount > 0) {
-            // User has enabled preferences - add them to the list!
-            usersWithAlerts.push(user);
-            console.log(`✅ User ${user.username}: Has ${enabledCount} ${sport} alerts enabled`);
-            
-            if (sport === 'MLB' && enabledCount < 9) {
-              console.log(`⚠️ User ${user.username}: Only has ${enabledCount}/9 MLB alerts enabled - may need preference fix`);
-            }
-          } else {
-            console.log(`❌ User ${user.username}: Has ${sport} preferences but none are enabled`);
           }
         }
       } catch (error) {
@@ -408,7 +405,7 @@ export class AlertGenerator {
     // Initialize alert cylinders for users with enabled alerts
     for (const user of usersWithAlerts) {
       try {
-        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
+        const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
         const enabledAlertTypes = userPrefs
           .filter(pref => pref.enabled)
           .map(pref => pref.alertType);
@@ -787,7 +784,7 @@ export class AlertGenerator {
 
           // RULE 1: Check individual user preferences  
           try {
-            const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
+            const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toLowerCase());
             const userPref = userPrefs.find(p => p.alertType === type);
             // CRITICAL FIX: If user has no preference, default to FALSE (opt-in required!)
             const userHasEnabled = userPref ? userPref.enabled : false;

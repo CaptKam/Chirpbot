@@ -103,8 +103,7 @@ export function WeatherDisplay({
   stadiumWindContext,
   size = 'sm'
 }: WeatherDisplayProps) {
-  const getWindIcon = (direction: string | undefined | null) => {
-    if (!direction || typeof direction !== 'string') return '↑';
+  const getWindIcon = (direction: string) => {
     const directions: Record<string, string> = {
       'N': '↑', 'S': '↓', 'E': '→', 'W': '←',
       'NE': '↗', 'NW': '↖', 'SE': '↘', 'SW': '↙'

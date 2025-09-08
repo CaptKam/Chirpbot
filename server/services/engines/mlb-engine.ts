@@ -109,13 +109,11 @@ export class MLBEngine extends BaseSportEngine {
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
-      // Get user's enabled alert types - use uppercase 'MLB' to match database
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'MLB');
-      console.log(`📋 MLB User preferences for ${userId}: ${userPrefs.length} found`);
+      // Get user's enabled alert types
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'mlb');
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
-      console.log(`✅ MLB Enabled alert types: ${enabledTypes.join(', ')}`);
 
       // Filter to only valid MLB alerts that have corresponding module files
       const validMLBAlerts = [
@@ -138,7 +136,6 @@ export class MLBEngine extends BaseSportEngine {
       const globallyEnabledTypes = [];
       for (const alertType of mlbEnabledTypes) {
         const isGloballyEnabled = await this.isAlertEnabled(alertType);
-        console.log(`🔍 MLB Alert ${alertType}: globally enabled = ${isGloballyEnabled}`);
         if (isGloballyEnabled) {
           globallyEnabledTypes.push(alertType);
         }
