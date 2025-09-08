@@ -1,0 +1,72 @@
+<Card className={`${className} border-2 ${
+  getAlertStatus(alertData.type, alertData.createdAt || '', liveGameData?.status).status === 'ACTIVE' 
+    ? 'border-emerald-500 shadow-emerald-500/20' 
+    : 'border-gray-500 shadow-gray-500/20'
+} shadow-lg`}>
+  <div className="p-6 relative">
+    
+    {/* Header Section */}
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center space-x-4">
+        <div className={`w-3 h-3 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
+        <Badge variant="outline" className="px-3 py-1.5 text-sm font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10 rounded-full">
+          {alertData.sport}
+        </Badge>
+        <span className="text-slate-300 text-sm font-semibold uppercase tracking-wider">
+          {alertData.type.replace(/_/g, ' ')}
+        </span>
+      </div>
+      <div className="flex items-center space-x-4 text-sm">
+        <span className="text-emerald-400 font-bold">{alertData.confidence}%</span>
+        <span className="text-slate-400 font-medium">{formatTime(alertData.createdAt || '')}</span>
+      </div>
+    </div>
+    {/* AI-Enhanced Title (conditional) */}
+    {alertData?.context?.aiTitle && (
+      <div className="mb-2">
+        <h3 className="text-lg font-bold text-white">
+          {alertData.context.aiTitle}
+        </h3>
+      </div>
+    )}
+    {/* Game Card Template */}
+    <div className="mb-6">
+      <GameCardTemplate
+        /* props for team info, scores, game state */
+      />
+      
+      {/* Game Status Info (conditional) */}
+      {(alertData.context?.inning || liveGameData?.inning || alertData.context?.quarter || liveGameData?.quarter) && (
+        <div className="mt-3 text-center">
+          <span className="text-sm text-slate-400 font-medium">
+            {/* Inning/Quarter display logic */}
+          </span>
+        </div>
+      )}
+    </div>
+    {/* Alert Message */}
+    <div className="bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
+      <div className="flex items-start space-x-3">
+        <div className="flex-1">
+          <p className="text-slate-100 text-base leading-relaxed font-medium">
+            {/* Cleaned message text */}
+          </p>
+          {/* AI Insights (conditional) */}
+          {alertData.context?.aiInsights && (
+            <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/30">
+              {/* AI insights content */}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+    {/* AI Call to Action (conditional) */}
+    {alertData?.context?.aiCallToAction && (
+      <div className="mb-3 p-2 bg-green-500/10 rounded border border-green-500/30">
+        <p className="text-xs font-medium text-green-300">
+          {alertData.context.aiCallToAction}
+        </p>
+      </div>
+    )}
+  </div>
+</Card>
