@@ -1,8 +1,8 @@
 export interface GameState {
   gameId: string;
   sport: string;
-  homeTeam: string | { name: string; abbreviation?: string; id?: string; score?: number };
-  awayTeam: string | { name: string; abbreviation?: string; id?: string; score?: number };
+  homeTeam: string;
+  awayTeam: string;
   homeScore: number;
   awayScore: number;
   status: string;
