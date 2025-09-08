@@ -444,25 +444,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
               </p>
             </div>
 
-            {/* Baseball Diamond for MLB alerts */}
-            {alert.sport === 'MLB' && alert.context && (
-              <div className="flex justify-center py-2">
-                <BaseballDiamond 
-                  runners={{
-                    first: alert.context.hasFirst || false,
-                    second: alert.context.hasSecond || false,
-                    third: alert.context.hasThird || false
-                  }}
-                  inning={alert.context.inning}
-                  isTopInning={alert.context.isTopInning}
-                  outs={alert.context.outs}
-                  balls={alert.context.balls}
-                  strikes={alert.context.strikes}
-                  size="sm"
-                  showCount={true}
-                />
-              </div>
-            )}
+            
 
             {/* Team info */}
             <div className="flex items-center justify-between text-xs text-slate-400">
