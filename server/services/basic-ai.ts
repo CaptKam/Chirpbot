@@ -36,7 +36,7 @@ export class BasicAI {
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
     // Check for disable flags first
-    this.isConfigured = false; // Force disable OpenAI
+    this.isConfigured = this.checkIfEnabled() && !!this.apiKey;
   }
 
   // Check if AI system is enabled via disable flags
@@ -53,8 +53,8 @@ export class BasicAI {
           return false;
         }
       }
-      console.log('🚫 OpenAI: FORCE DISABLED');
-      return false; // Force disable OpenAI
+      console.log('✅ OpenAI: ENABLED');
+      return true;
     } catch (error) {
       console.warn('⚠️ Could not check disable flags, force disabling AI');
       return false; // Force disable on error
@@ -168,7 +168,7 @@ Keep response under 100 words. Focus on immediate betting value.
     };
   }
 
-  // Quick confidence boost for RE24-enhanced alerts
+  // Quick confidence boost for high-probability alerts
   calculateAIConfidence(baseConfidence: number, situation: string): number {
     let boost = 0;
 
