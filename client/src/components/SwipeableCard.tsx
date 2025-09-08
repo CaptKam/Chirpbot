@@ -159,20 +159,32 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   // Fetch live game data for MLB alerts to get current scores
-  const { data: todaysGames } = useQuery({
+  const { data: todaysGames, error: gamesError } = useQuery({
     queryKey: ["/api/games/today", { sport: alertData?.sport || "MLB" }],
     queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch games");
-      return response.json();
+      try {
+        const [url, params] = queryKey;
+        const searchParams = new URLSearchParams(params as Record<string, string>);
+        const response = await fetch(`${url}?${searchParams}`, {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          console.warn(`Games API error: ${response.status} ${response.statusText}`);
+          return { games: [] }; // Return empty games instead of throwing
+        }
+        return response.json();
+      } catch (error) {
+        console.warn('Games fetch failed:', error);
+        return { games: [] }; // Return fallback data
+      }
     },
     enabled: alertData?.sport === 'MLB', // Only fetch for MLB alerts
     refetchInterval: 15000, // Refresh every 15 seconds for live scores
     staleTime: 10000,
+    retry: false, // Don't retry failed requests to avoid spam
+    onError: (error) => {
+      console.warn('Games query error:', error);
+    },
   });
 
   // Fetch live weather data for the game
@@ -182,18 +194,30 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     return alertData.homeTeam?.name || '';
   }, [alertData]);
 
-  const { data: weatherData } = useQuery({
+  const { data: weatherData, error: weatherError } = useQuery({
     queryKey: ['weather', homeTeamName],
     queryFn: async () => {
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeamName)}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Weather fetch failed');
-      return response.json();
+      try {
+        const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeamName)}`, {
+          credentials: 'include'
+        });
+        if (!response.ok) {
+          console.warn(`Weather API error: ${response.status} ${response.statusText}`);
+          return null; // Return null instead of throwing
+        }
+        return response.json();
+      } catch (error) {
+        console.warn('Weather fetch failed:', error);
+        return null; // Return null on error
+      }
     },
     enabled: !!homeTeamName, // Only fetch if we have a team name
     refetchInterval: 60000, // Refresh every minute
     staleTime: 60000, // Cache data for 1 minute
+    retry: false, // Don't retry failed requests
+    onError: (error) => {
+      console.warn('Weather query error:', error);
+    },
   });
 
 
