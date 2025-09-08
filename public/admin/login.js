@@ -12,22 +12,33 @@ document.addEventListener('DOMContentLoaded', function() {
         loginBtn: !!loginBtn
     });
 
-    // Check if already authenticated
-    checkExistingAuth();
+    // Check if already authenticated (only once on page load)
+    let authCheckCompleted = false;
+    if (!authCheckCompleted) {
+        checkExistingAuth();
+    }
 
     async function checkExistingAuth() {
+        if (authCheckCompleted) return; // Prevent multiple calls
+        authCheckCompleted = true;
+        
         try {
+            console.log('🔍 Checking existing admin authentication...');
             const response = await fetch('/api/admin-auth/verify', {
                 credentials: 'include'
             });
             
             if (response.ok) {
+                console.log('✅ Already authenticated, redirecting to dashboard');
                 // Already authenticated, redirect to dashboard
                 window.location.href = '/admin/dashboard.html';
+            } else {
+                console.log('🔒 Not authenticated, showing login form');
+                // Not authenticated, stay on login page - this is normal
             }
         } catch (error) {
-            // Not authenticated, stay on login page
-            console.log('Not authenticated, showing login form');
+            console.log('🔒 Not authenticated, showing login form (error)');
+            // Network error or not authenticated, stay on login page
         }
     }
 
@@ -61,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
         hideError();
 
         try {
+            console.log('🔑 Attempting admin login...');
             const response = await fetch('/api/admin-auth/login', {
                 method: 'POST',
                 headers: {
@@ -71,8 +83,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             const data = await response.json();
+            console.log('📡 Login response:', { ok: response.ok, status: response.status });
 
             if (response.ok) {
+                console.log('✅ Admin login successful!');
                 // Store admin session
                 localStorage.setItem('adminLoggedIn', 'true');
                 localStorage.setItem('adminUser', JSON.stringify(data.user));
