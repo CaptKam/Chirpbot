@@ -161,7 +161,7 @@ export abstract class BaseSportEngine {
       const module = await this.loadAlertModule(alertType);
       if (module) {
         this.alertModules.set(alertType, module);
-        console.log(`✅ Loaded alert module: ${alertType}`);
+        // Only log in verbose mode - reduces spam
       } else {
         console.log(`❌ Failed to load alert module: ${alertType}`);
       }

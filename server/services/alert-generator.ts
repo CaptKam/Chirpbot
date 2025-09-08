@@ -86,7 +86,7 @@ function getBetbookData(context: any): BetbookData {
     homeOdds = Math.min(+200, -110 + advantage + 10);
   }
 
-  // Generate contextual AI advice based on actual game situation  
+  // Generate contextual AI advice based on actual game situation
   const awayTeamName = typeof awayTeam === 'string' ? awayTeam : awayTeam?.name || 'Away';
   const homeTeamName = typeof homeTeam === 'string' ? homeTeam : homeTeam?.name || 'Home';
   let aiAdvice = `${awayTeamName.split(' ').pop()} ${awayScore}-${homeScore} ${homeTeamName.split(' ').pop()}`;
@@ -132,6 +132,7 @@ export class AlertGenerator {
   private ai: BasicAI;
   private aiEnhancementService: AIEnhancementService;
   private aiContextController: AIContextController;
+  private logLevel: 'verbose' | 'quiet' = 'verbose'; // Default to verbose logging
 
   // Sport-specific engines
   private sportEngines: Map<string, BaseSportEngine>;
@@ -232,7 +233,7 @@ export class AlertGenerator {
 
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
-        VALUES (gen_random_uuid(), ${alertData.alertKey}, ${alertData.sport}, ${alertData.gameId}, 
+        VALUES (gen_random_uuid(), ${alertData.alertKey}, ${alertData.sport}, ${alertData.gameId},
                 ${alertData.type}, ${alertData.state}, ${alertData.score}, ${alertData.payload}, NOW())
         ON CONFLICT (alert_key) DO NOTHING
       `);
@@ -271,7 +272,9 @@ export class AlertGenerator {
 
   // Method to generate alerts for live games (when they're happening)
   async generateLiveGameAlerts(): Promise<void> {
-    console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+    if (this.logLevel !== 'quiet') {
+      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+    }
 
     try {
       // Clear settings cache to ensure fresh sport-specific configurations
@@ -283,7 +286,7 @@ export class AlertGenerator {
         console.error('❌ Error checking globally enabled alerts:', error);
         return false; // Fail safely
       });
-      
+
       if (!hasAnyEnabledAlerts) {
         console.log('🚫 No alert types are globally enabled by admin - skipping all alert generation');
         return;
@@ -299,7 +302,7 @@ export class AlertGenerator {
             console.error(`❌ Error getting ${sport} settings:`, error);
             return [];
           });
-          
+
           if (enabledAlerts.length === 0) {
             // Only log skipped sports for major leagues to reduce console noise
             if (['MLB', 'NFL'].includes(sport)) {
@@ -310,7 +313,9 @@ export class AlertGenerator {
 
           // Reduce verbosity during routine monitoring cycles
           // Only show essential sport processing information
-          console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled`);
+          if (this.logLevel !== 'quiet') {
+            console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled`);
+          }
 
           // Get games for this sport
           let games: any[] = [];
@@ -351,7 +356,9 @@ export class AlertGenerator {
         }
       }
 
-      console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
+      if (this.logLevel !== 'quiet') {
+        console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
+      }
     } catch (error) {
       console.error('❌ Critical error in generateLiveGameAlerts:', error);
       // Don't re-throw - this prevents crashes
@@ -359,8 +366,10 @@ export class AlertGenerator {
   }
 
   private async processSportAlerts(sport: string, enabledAlerts: Record<string, boolean>): Promise<void> {
-    console.log(`🔍 Processing ${sport} alerts...`);
-    
+    if (this.logLevel !== 'quiet') {
+      console.log(`🔍 Processing ${sport} alerts...`);
+    }
+
     try {
       const enabledAlertTypes = Object.keys(enabledAlerts).filter(key => enabledAlerts[key]);
 
@@ -374,7 +383,9 @@ export class AlertGenerator {
 
       // Reduce verbosity during routine monitoring cycles
       // Only show essential sport processing information
-      console.log(`✅ ${sport} monitoring: ${enabledAlertTypes.length} alerts enabled`);
+      if (this.logLevel !== 'quiet') {
+        console.log(`✅ ${sport} monitoring: ${enabledAlertTypes.length} alerts enabled`);
+      }
 
       // Get games for this sport
       let games: any[] = [];
@@ -404,7 +415,9 @@ export class AlertGenerator {
       if (games.length > 0) {
         try {
           const alerts = await this.processGamesWithEngine(sport, games);
-          console.log(`📊 Generated ${alerts} ${sport} alerts`);
+          if (this.logLevel !== 'quiet') {
+            console.log(`📊 Generated ${alerts} ${sport} alerts`);
+          }
         } catch (processError) {
           console.error(`❌ Error processing ${sport} games:`, processError);
         }
@@ -427,15 +440,21 @@ export class AlertGenerator {
     const allUsers = await storage.getAllUsers();
     const usersWithAlerts = [];
 
-    console.log(`🔍 Checking ${allUsers.length} total users for ${sport} alert preferences...`);
+    if (this.logLevel !== 'quiet') {
+      console.log(`🔍 Checking ${allUsers.length} total users for ${sport} alert preferences...`);
+    }
 
     for (const user of allUsers) {
       try {
         const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
-        console.log(`👤 User ${user.username}: Found ${userPrefs.length} ${sport} preferences`);
+        if (this.logLevel !== 'quiet') {
+          console.log(`👤 User ${user.username}: Found ${userPrefs.length} ${sport} preferences`);
+        }
 
         if (userPrefs.length === 0) {
-          console.log(`👤 User ${user.username}: No ${sport} preferences found`);
+          if (this.logLevel !== 'quiet') {
+            console.log(`👤 User ${user.username}: No ${sport} preferences found`);
+          }
 
           // CRITICAL FIX: Only inherit global defaults for MLB, not other sports
           if (sport === 'MLB') {
@@ -444,26 +463,36 @@ export class AlertGenerator {
             const hasAnyEnabledGlobally = Object.values(globalSettings).some(enabled => enabled === true);
 
             if (hasAnyEnabledGlobally) {
-              console.log(`👤 User ${user.username}: Inheriting global ${sport} settings as defaults`);
+              if (this.logLevel !== 'quiet') {
+                console.log(`👤 User ${user.username}: Inheriting global ${sport} settings as defaults`);
+              }
               usersWithAlerts.push(user);
             }
           } else {
-            console.log(`👤 User ${user.username}: ${sport} requires explicit opt-in - not inheriting defaults`);
+            if (this.logLevel !== 'quiet') {
+              console.log(`👤 User ${user.username}: ${sport} requires explicit opt-in - not inheriting defaults`);
+            }
           }
         } else {
           // User has preferences - check if any are enabled
           const enabledCount = userPrefs.filter(p => p.enabled).length;
-          
+
           if (enabledCount > 0) {
             // User has enabled preferences - add them to the list!
             usersWithAlerts.push(user);
-            console.log(`✅ User ${user.username}: Has ${enabledCount} ${sport} alerts enabled`);
-            
+            if (this.logLevel !== 'quiet') {
+              console.log(`✅ User ${user.username}: Has ${enabledCount} ${sport} alerts enabled`);
+            }
+
             if (sport === 'MLB' && enabledCount < 9) {
-              console.log(`⚠️ User ${user.username}: Only has ${enabledCount}/9 MLB alerts enabled - may need preference fix`);
+              if (this.logLevel !== 'quiet') {
+                console.log(`⚠️ User ${user.username}: Only has ${enabledCount}/9 MLB alerts enabled - may need preference fix`);
+              }
             }
           } else {
-            console.log(`❌ User ${user.username}: Has ${sport} preferences but none are enabled`);
+            if (this.logLevel !== 'quiet') {
+              console.log(`❌ User ${user.username}: Has ${sport} preferences but none are enabled`);
+            }
           }
         }
       } catch (error) {
@@ -471,7 +500,9 @@ export class AlertGenerator {
       }
     }
 
-    console.log(`✅ Found ${usersWithAlerts.length} users with ${sport} alerts enabled: ${usersWithAlerts.map(u => u.username).join(', ')}`);
+    if (this.logLevel !== 'quiet') {
+      console.log(`✅ Found ${usersWithAlerts.length} users with ${sport} alerts enabled: ${usersWithAlerts.map(u => u.username).join(', ')}`);
+    }
 
     if (usersWithAlerts.length === 0) {
       console.log(`🚫 No users have ${sport} alerts enabled - skipping processing`);
@@ -479,9 +510,10 @@ export class AlertGenerator {
     }
 
     // Only show processing message for sports with active users
-    console.log(`🎯 Processing ${games.length} ${sport} games with engine...`);
-
-    console.log(`👥 Processing for ${usersWithAlerts.length} users with ${sport} alerts enabled`);
+    if (this.logLevel !== 'quiet') {
+      console.log(`🎯 Processing ${games.length} ${sport} games with engine...`);
+      console.log(`👥 Processing for ${usersWithAlerts.length} users with ${sport} alerts enabled`);
+    }
 
     // Initialize alert cylinders for users with enabled alerts
     for (const user of usersWithAlerts) {
@@ -493,7 +525,9 @@ export class AlertGenerator {
 
         // Initialize user-specific alert cylinders for this sport
         await engine.initializeUserAlertModules(enabledAlertTypes);
-        console.log(`🔧 Loaded ${enabledAlertTypes.length} alert cylinders for user ${user.username} in ${sport}`);
+        if (this.logLevel !== 'quiet') {
+          console.log(`🔧 Loaded ${enabledAlertTypes.length} alert cylinders for user ${user.username} in ${sport}`);
+        }
       } catch (error) {
         console.error(`❌ Error initializing alert cylinders for user ${user.username}:`, error);
       }
@@ -511,17 +545,21 @@ export class AlertGenerator {
           try {
             // 🎯 CRITICAL FIX: Check if this user is monitoring this specific game
             const userMonitoredGames = await storage.getUserMonitoredTeams(user.id);
-            const isGameMonitored = userMonitoredGames.some(monitoredGame => 
-              monitoredGame.gameId === gameState.gameId && 
+            const isGameMonitored = userMonitoredGames.some(monitoredGame =>
+              monitoredGame.gameId === gameState.gameId &&
               monitoredGame.sport === sport
             );
 
             if (!isGameMonitored) {
-              console.log(`⏭️ User ${user.username} not monitoring ${sport} game ${gameState.gameId} - skipping alerts`);
+              if (this.logLevel !== 'quiet') {
+                console.log(`⏭️ User ${user.username} not monitoring ${sport} game ${gameState.gameId} - skipping alerts`);
+              }
               continue;
             }
 
-            console.log(`✅ User ${user.username} is monitoring ${sport} game ${gameState.gameId} - processing alerts`);
+            if (this.logLevel !== 'quiet') {
+              console.log(`✅ User ${user.username} is monitoring ${sport} game ${gameState.gameId} - processing alerts`);
+            }
 
             // Initialize engine with this user's specific alert modules
             if ('initializeForUser' in engine) {
@@ -565,9 +603,9 @@ export class AlertGenerator {
     if (typeof game.homeTeam === 'string') {
       homeTeam = game.homeTeam;
     } else if (game.homeTeam && typeof game.homeTeam === 'object') {
-      homeTeam = game.homeTeam.displayName || 
-                 game.homeTeam.name || 
-                 game.homeTeam.teamName || 
+      homeTeam = game.homeTeam.displayName ||
+                 game.homeTeam.name ||
+                 game.homeTeam.teamName ||
                  game.homeTeam.shortDisplayName ||
                  game.homeTeam.abbreviation ||
                  'Home Team';
@@ -576,9 +614,9 @@ export class AlertGenerator {
     if (typeof game.awayTeam === 'string') {
       awayTeam = game.awayTeam;
     } else if (game.awayTeam && typeof game.awayTeam === 'object') {
-      awayTeam = game.awayTeam.displayName || 
-                 game.awayTeam.name || 
-                 game.awayTeam.teamName || 
+      awayTeam = game.awayTeam.displayName ||
+                 game.awayTeam.name ||
+                 game.awayTeam.teamName ||
                  game.awayTeam.shortDisplayName ||
                  game.awayTeam.abbreviation ||
                  'Away Team';
@@ -728,7 +766,9 @@ export class AlertGenerator {
           });
 
           context.betbookData = betbookData;
-          console.log(`🤖 AI: Generated betting insights for ${type} alert (priority: ${finalPriority}) - ${betbookData.aiAdvice}`);
+          if (this.logLevel !== 'quiet') {
+            console.log(`🤖 AI: Generated betting insights for ${type} alert (priority: ${finalPriority}) - ${betbookData.aiAdvice}`);
+          }
         } catch (error) {
           console.error('❌ AI betting insights generation failed:', error);
         }
@@ -737,7 +777,9 @@ export class AlertGenerator {
       // AI Context Controller takes full control for high-value alerts
       if (finalPriority >= 70) {
         try {
-          console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${finalPriority})`);
+          if (this.logLevel !== 'quiet') {
+            console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${finalPriority})`);
+          }
 
           const alertContext: AlertContext = {
             gameId,
@@ -785,9 +827,13 @@ export class AlertGenerator {
             // Update priority with AI confidence
             finalPriority = Math.min(95, aiEnhancedAlert.confidenceScore);
 
-            console.log(`✅ AI Context Controller: Enhanced ${type} alert - New priority: ${finalPriority}, Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
+            if (this.logLevel !== 'quiet') {
+              console.log(`✅ AI Context Controller: Enhanced ${type} alert - New priority: ${finalPriority}, Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
+            }
           } else {
-            console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${finalPriority})`);
+            if (this.logLevel !== 'quiet') {
+              console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${finalPriority})`);
+            }
           }
 
         } catch (error) {
@@ -807,16 +853,20 @@ export class AlertGenerator {
 
       // No filtering - all alerts pass through
 
-      console.log(`💾 Saving alert: ${type} for game ${gameId}`);
+      if (this.logLevel !== 'quiet') {
+        console.log(`💾 Saving alert: ${type} for game ${gameId}`);
+      }
 
       // Insert new alert
       await db.execute(sql`
         INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
-        VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId}, 
+        VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId},
                 ${type}, 'NEW', ${finalPriority}, ${JSON.stringify(enhancedPayload)}, NOW())
       `);
 
-      console.log(`🚨 REAL-TIME ALERT: ${message}`);
+      if (this.logLevel !== 'quiet') {
+        console.log(`🚨 REAL-TIME ALERT: ${message}`);
+      }
 
       // Broadcast alert immediately to web clients via WebSocket
       try {
@@ -838,7 +888,9 @@ export class AlertGenerator {
           };
 
           wsBroadcast(alertData);
-          console.log(`📡 WebSocket broadcast sent for ${type} alert`);
+          if (this.logLevel !== 'quiet') {
+            console.log(`📡 WebSocket broadcast sent for ${type} alert`);
+          }
         } else {
           console.warn('📡 WebSocket broadcast function not available');
         }
@@ -863,7 +915,7 @@ export class AlertGenerator {
           // RULE 2: Check if globally enabled by admin first
           // No filtering - always send to Telegram
 
-          // RULE 1: Check individual user preferences  
+          // RULE 1: Check individual user preferences
           try {
             const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
             const userPref = userPrefs.find(p => p.alertType === type);
