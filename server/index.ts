@@ -6,31 +6,28 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
+import { AlertGenerator } from "./services/alert-generator";
+import { BasicAI } from "./services/basic-ai";
 import { pool } from "./db";
-import { WebSocketServer } from 'ws';
-
-// NEW WORKFLOW SYSTEM
-import { WorkflowManager, WorkflowManagerConfig } from "./workflow/workflow-manager";
 
 // Keep track of server and monitoring timer for graceful shutdown
 let httpServer: any = null;
-let workflowManager: WorkflowManager | null = null;
+let monitoringInterval: NodeJS.Timeout | null = null;
 let isShuttingDown = false;
+
+// Export monitoring interval setter for routes.ts
+(global as any).setMonitoringInterval = (interval: NodeJS.Timeout) => {
+  monitoringInterval = interval;
+};
 
 // Graceful shutdown handler
 const gracefulShutdown = async (signal: string) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
-
+  
   console.log(`\n📍 ${signal} signal received - starting graceful shutdown...`);
-
+  
   try {
-    // Stop workflow manager
-    if (workflowManager) {
-      await workflowManager.stop();
-      console.log('✅ Workflow manager stopped');
-    }
-
     // Close server to stop accepting new connections
     if (httpServer) {
       await new Promise<void>((resolve) => {
@@ -40,11 +37,18 @@ const gracefulShutdown = async (signal: string) => {
         });
       });
     }
-
+    
+    // Clear monitoring interval to prevent port binding issues
+    if (monitoringInterval) {
+      clearInterval(monitoringInterval);
+      monitoringInterval = null;
+      console.log('✅ Alert monitoring timer cleared');
+    }
+    
     // Close database connections
     await pool.end();
     console.log('✅ Database connections closed');
-
+    
     console.log('✅ Graceful shutdown complete');
     process.exit(0);
   } catch (err) {
@@ -61,19 +65,20 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error: any) => {
   console.error('⚠️ Uncaught Exception:', error);
-
+  
   // For EADDRINUSE, try to recover without exiting
   if (error.code === 'EADDRINUSE') {
     console.log('🔄 Port already in use - will retry in 5 seconds...');
+    // Don't exit - just wait and let the retry logic handle it
     return;
   }
-
+  
   // For database errors, try to reconnect
   if (error.message?.includes('database') || error.message?.includes('pool')) {
     console.log('🔄 Database error detected - continuing with degraded service');
     return;
   }
-
+  
   // For other non-critical errors, log and continue
   console.log('🔄 Continuing despite error - service may be degraded');
 });
@@ -87,7 +92,6 @@ const app = express();
 
 // Security and CORS
 app.set('trust proxy', 1);
-app.set('x-powered-by', false);
 app.use(helmet({
   contentSecurityPolicy: false, // Disabled for Vite dev mode
 }));
@@ -153,103 +157,6 @@ app.use((req, res, next) => {
   next();
 });
 
-/**
- * Initialize the new workflow system
- */
-async function initializeWorkflowSystem(wss: WebSocketServer): Promise<void> {
-  console.log('🚀 Initializing new workflow system...');
-
-  try {
-    // Get default configuration
-    const config: WorkflowManagerConfig = WorkflowManager.getDefaultConfig();
-    
-    // Override config based on environment
-    if (process.env.NODE_ENV === 'production') {
-      config.workflow.intervalMs = 10000; // Slower in production
-      config.aiEnhancement.enableOpenAI = !!process.env.OPENAI_API_KEY;
-      config.notification.enableTelegram = !!process.env.TELEGRAM_BOT_TOKEN;
-    }
-
-    // Create workflow manager
-    workflowManager = new WorkflowManager(config);
-
-    // Set up event logging
-    workflowManager.on('alertGenerated', (data) => {
-      console.log(`📢 Alert generated: ${data.alert.type} for ${data.job.sport} game ${data.job.gameId}`);
-    });
-
-    workflowManager.on('alertProcessed', (alert) => {
-      console.log(`✅ Alert processed: ${alert.type} (${alert.status})`);
-    });
-
-    workflowManager.on('notificationDelivered', (data) => {
-      const results = data.results;
-      const successful = results.filter((r: any) => r.success).length;
-      console.log(`📡 Notification delivered: ${successful}/${results.length} channels successful`);
-    });
-
-    // Set WebSocket server
-    workflowManager.setWebSocketServer(wss);
-
-    // Initialize and start the workflow system
-    await workflowManager.initialize();
-    await workflowManager.start();
-
-    console.log('✅ New workflow system initialized and started successfully');
-
-    // Log system status every 5 minutes
-    setInterval(() => {
-      const status = workflowManager!.getSystemStatus();
-      console.log(`📊 Workflow System Status: Running: ${status.isRunning}, Active Jobs: ${status.orchestrator.activeJobs}, Queue: ${status.orchestrator.queuedJobs}`);
-    }, 300000); // 5 minutes
-
-  } catch (error) {
-    console.error('❌ Failed to initialize workflow system:', error);
-    throw error;
-  }
-}
-
-/**
- * Add workflow status endpoint
- */
-function addWorkflowStatusEndpoint(): void {
-  // Add system status endpoint
-  app.get('/api/workflow/status', (req, res) => {
-    if (!workflowManager) {
-      return res.status(503).json({ error: 'Workflow system not initialized' });
-    }
-
-    const status = workflowManager.getSystemStatus();
-    res.json(status);
-  });
-
-  // Add system metrics endpoint
-  app.get('/api/workflow/metrics', (req, res) => {
-    if (!workflowManager) {
-      return res.status(503).json({ error: 'Workflow system not initialized' });
-    }
-
-    const metrics = workflowManager.getSystemMetrics();
-    res.json(metrics);
-  });
-
-  // Add test notification endpoint
-  app.post('/api/workflow/test-notification', async (req, res) => {
-    if (!workflowManager) {
-      return res.status(503).json({ error: 'Workflow system not initialized' });
-    }
-
-    try {
-      const results = await workflowManager.sendTestNotification();
-      res.json({ success: true, results });
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
-
-  console.log('✅ Workflow API endpoints added');
-}
-
 (async () => {
   try {
     // Initialize database with required seed data
@@ -263,8 +170,11 @@ function addWorkflowStatusEndpoint(): void {
 
     const server = await registerRoutes(app);
 
-    // Add workflow status endpoints
-    addWorkflowStatusEndpoint();
+    // Initialize alert generator and AI system
+    const alertGenerator = new AlertGenerator();
+    const aiEngine = new BasicAI();
+
+    // AI system status logging disabled
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -282,9 +192,12 @@ function addWorkflowStatusEndpoint(): void {
       if (!res.headersSent) {
         res.status(status).json({ message });
       }
+      // Don't throw err - this was causing unhandled rejections!
     });
 
-    // Setup vite in development and static serving in production
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
@@ -292,16 +205,21 @@ function addWorkflowStatusEndpoint(): void {
     }
 
     // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || '5000', 10);
-
+    
     // Store server reference for graceful shutdown
     httpServer = server;
-
+    
     // Enhanced error handling for server startup
     server.on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
         console.error(`❌ Port ${port} is already in use!`);
         console.log('🔄 Attempting to recover...');
+        
+        // Try to clean up and restart
         setTimeout(() => {
           process.exit(1); // Let process manager restart us
         }, 1000);
@@ -313,46 +231,50 @@ function addWorkflowStatusEndpoint(): void {
         process.exit(1);
       }
     });
-
-    // Start server with WebSocket support
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const httpServer = server.listen(port, "0.0.0.0", () => {
-          console.log(`✅ Server running on port ${port}`);
-          resolve();
-        }).on('error', (err: any) => {
-          if (err.code === 'EADDRINUSE') {
-            console.error(`❌ Port ${port} is already in use. Killing existing processes...`);
-            reject(err);
-          } else {
-            reject(err);
-          }
+    
+    // Start listening with ULTRA-robust error handling
+    let retryCount = 0;
+    const maxRetries = 10;
+    
+    while (retryCount < maxRetries) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const attemptListen = () => {
+            server.listen({
+              port,
+              host: "0.0.0.0",
+              exclusive: false, // Allow port sharing to avoid conflicts
+            }, () => {
+              console.log(`✅ Server running on port ${port}`);
+              console.log('🚀 ChirpBot V2 is ready!');
+              console.log('💪 System is now ULTRA-BULLETPROOF with auto-recovery');
+              resolve();
+            }).on('error', (err: any) => {
+              if (err.code === 'EADDRINUSE') {
+                // Don't reject, just retry
+                server.close();
+                setTimeout(() => {
+                  attemptListen();
+                }, 2000);
+              } else {
+                reject(err);
+              }
+            });
+          };
+          attemptListen();
         });
-
-        // Initialize WebSocket server
-        const wss = new WebSocketServer({ 
-          server: httpServer,
-          path: '/ws' 
-        });
-
-        console.log('📡 WebSocket server initialized on /ws');
-
-        // Initialize the new workflow system with WebSocket support
-        initializeWorkflowSystem(wss).then(() => {
-          console.log('🚀 ChirpBot V2 with NEW WORKFLOW SYSTEM is ready!');
-          console.log('🔥 COMPLETE WORKFLOW REWRITE ACTIVE!');
-        }).catch((error) => {
-          console.error('❌ Failed to initialize workflow system:', error);
-          console.log('⚠️ Server will continue running without workflow system');
-        });
-      });
-    } catch (error: any) {
-      if (error.code === 'EADDRINUSE') {
-        console.log('🔄 Attempting to kill existing processes and restart...');
-        process.exit(1); // Let the workflow handle restart
-      } else {
-        console.error('❌ Server startup failed:', error);
-        process.exit(1);
+        break; // Success! Exit the retry loop
+      } catch (error: any) {
+        retryCount++;
+        console.log(`⚠️ Server startup attempt ${retryCount}/${maxRetries} failed`);
+        
+        if (retryCount < maxRetries) {
+          console.log(`⏳ Retrying in 5 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } else {
+          console.error('❌ Max retries reached. Running in degraded mode.');
+          // Don't exit - keep the process alive
+        }
       }
     }
   } catch (error: any) {

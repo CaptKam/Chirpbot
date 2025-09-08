@@ -112,7 +112,7 @@ export const storage = {
       for (const step of deletionSteps) {
         try {
           const result = await db.execute(sql.raw(`DELETE FROM ${step.table} WHERE ${step.condition}`));
-          console.log(`💀 Deleted from ${step.table}: ${(result as any).rowsAffected || 0} rows`);
+          console.log(`💀 Deleted from ${step.table}: ${result.rowsAffected || 0} rows`);
         } catch (error) {
           console.log(`📝 Table ${step.table} not found or no data - continuing`);
         }
@@ -128,9 +128,9 @@ export const storage = {
 
       // Final deletion of the user record
       const finalResult = await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
-      console.log(`💀 Final user deletion: ${(finalResult as any).rowsAffected || 0} user records removed`);
+      console.log(`💀 Final user deletion: ${finalResult.rowsAffected || 0} user records removed`);
 
-      if ((finalResult as any).rowsAffected === 0) {
+      if (finalResult.rowsAffected === 0) {
         console.log(`⚠️ User ${userId} was not found in users table - may have been already deleted`);
         return false;
       }
@@ -357,52 +357,6 @@ export const storage = {
       results.push(result);
     }
     return results;
-  },
-
-  // Get users that have any alert preferences for a specific sport
-  async getUsersWithSportAlerts(sport: string) {
-    const userList = await db.select({
-      id: users.id,
-      username: users.username
-    })
-    .from(users)
-    .innerJoin(userAlertPreferences, eq(users.id, userAlertPreferences.userId))
-    .where(and(
-      eq(userAlertPreferences.sport, sport),
-      eq(userAlertPreferences.enabled, true)
-    ))
-    .groupBy(users.id, users.username);
-
-    return userList;
-  },
-
-  // Insert alert for new workflow system
-  async insertAlert(alertData: {
-    type: string;
-    sport: string;
-    gameId: string;
-    userId: string;
-    priority: number;
-    message: string;
-    payload: string;
-    alertKey: string;
-    state: string;
-    createdAt: Date;
-  }) {
-    // For now, use raw SQL since alerts table structure isn't in schema
-    const result = await db.execute(sql`
-      INSERT INTO alerts (
-        type, sport, game_id, user_id, priority, title, 
-        description, alert_key, state, created_at,
-        metadata, seen, sent_to_telegram
-      ) VALUES (
-        ${alertData.type}, ${alertData.sport}, ${alertData.gameId}, 
-        ${alertData.userId}, ${alertData.priority}, ${alertData.message},
-        ${alertData.message}, ${alertData.alertKey}, ${alertData.state},
-        ${alertData.createdAt}, ${alertData.payload}, false, false
-      ) RETURNING *
-    `);
-    return result.rows?.[0];
   },
 
   // Global alert settings for admin management - FIXED ARCHITECTURE

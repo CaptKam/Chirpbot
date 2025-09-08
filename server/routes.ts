@@ -857,7 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPreferences = await storage.getUserAlertPreferences(userId);
       
       // Group by sport
-      const preferencesBySport: Record<string, any[]> = {};
+      const preferencesBySport = {};
       allPreferences.forEach(pref => {
         if (!preferencesBySport[pref.sport]) {
           preferencesBySport[pref.sport] = [];
@@ -1369,7 +1369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      if (result.rowCount === 0) {
+      if (result.rowsAffected === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1604,7 +1604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults: Record<string, any> = {
+      const debugResults = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
@@ -1777,7 +1777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus: Record<string, any> = {
+      const dbStatus = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -2222,7 +2222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
             results.push({ sport, alertType, disabled: true });
             totalDisabled++;
-          } catch (error: any) {
+          } catch (error) {
             console.error(`Failed to disable ${sport}.${alertType}:`, error);
             results.push({ sport, alertType, disabled: false, error: error.message });
           }
@@ -2286,8 +2286,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // OLD ALERT SYSTEM DISABLED - Using new WorkflowManager system
-  console.log('ℹ️ Old alert system disabled - New WorkflowManager handles all alert generation');
+  // Generate alerts from today's completed games
+  const alertGenerator = new AlertGenerator();
+  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
+
+  // Start live game monitoring with robust error handling
+  const monitoringInterval = setInterval(async () => {
+    try {
+      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+      await alertGenerator.generateLiveGameAlerts();
+    } catch (error: any) {
+      console.error('⚠️ Non-critical error in live monitoring:', error.message);
+      // Don't crash - just continue monitoring
+    }
+  }, 15000); // Check every 15 seconds
+  
+  // Store monitoring interval globally for graceful shutdown cleanup
+  (global as any).setMonitoringInterval(monitoringInterval);
+
+  console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 
   return httpServer;
 }

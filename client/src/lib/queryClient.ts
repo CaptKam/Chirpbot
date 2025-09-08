@@ -48,7 +48,7 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: true, // Enable refetch on window focus for debugging
       staleTime: 0, // Make data immediately stale for debugging
-      gcTime: 1000, // Keep cache for only 1 second
+      cacheTime: 1000, // Keep cache for only 1 second
       retry: false,
       onError: (error) => {
         console.error('Query error:', error);
