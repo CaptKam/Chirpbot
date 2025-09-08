@@ -71,39 +71,6 @@ function formatTime(date: string | Date): string {
   return alertTime.toLocaleDateString();
 }
 
-function getAlertStatus(alertType: string, createdAt: string): { status: 'ACTIVE' | 'EXPIRED', minutesAgo: number } {
-  const alertTime = new Date(createdAt);
-  const now = new Date();
-  const minutesAgo = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
-
-  // Time-sensitive alert types and their expiration times (in minutes)
-  const alertExpirationTimes: Record<string, number> = {
-    'BASES_LOADED': 15,        // Bases loaded situation
-    'RISP': 12,                // Runners in scoring position
-    'FULL_COUNT': 3,           // Full count expires quickly
-    'POWER_HITTER': 8,         // Power hitter at bat
-    'HOT_HITTER': 8,           // Hot hitter at bat
-    'RUNNERS_1ST_2ND': 12,     // Runners on 1st and 2nd
-    'RED_ZONE': 8,             // Football red zone
-    'FOURTH_DOWN': 2,          // Fourth down decision
-    'TWO_MINUTE_WARNING': 5,   // Two minute warning
-    'POWER_PLAY': 4,           // Hockey power play
-    'EMPTY_NET': 3,            // Hockey empty net
-    'CLUTCH_TIME': 10,         // Basketball clutch time
-    'CLOSE_GAME': 30,
-    'HIGH_SCORING': 45,
-    'LATE_PRESSURE': 20,
-    'OVERTIME': 60
-  };
-
-  const expirationMinutes = alertExpirationTimes[alertType] || 10;
-  const isActive = minutesAgo <= expirationMinutes;
-
-  return { 
-    status: isActive ? 'ACTIVE' : 'EXPIRED', 
-    minutesAgo 
-  };
-}
 
 function getAlertColor(priority: number): string {
   if (priority >= 90) return 'bg-red-400';
@@ -422,7 +389,6 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
       >
         <div className={`${className} transition-all duration-200 relative border-2 ${
           getAlertStatus(alert.type, alert.createdAt, 
-            alert.context?.gameStatus || 
             (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
           ).status === 'ACTIVE' 
             ? 'border-emerald-500 shadow-emerald-500/20' 
