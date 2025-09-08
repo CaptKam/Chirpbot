@@ -14,7 +14,7 @@ export class NCAAFEngine extends BaseSportEngine {
     try {
       // Only check settings for actual NCAAF alert types
       const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN',
+        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE', 'FOURTH_DOWN',
         'NCAAF_SECOND_HALF_KICKOFF', 'OVERTIME', 'CLUTCH_TIME'
       ];
 
@@ -322,7 +322,7 @@ export class NCAAFEngine extends BaseSportEngine {
     try {
       // Get user's enabled alert types - use uppercase 'NCAAF' to match database
       const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'NCAAF');
-      
+
       // CRITICAL FIX: Only process if user has explicit NCAAF preferences
       if (userPrefs.length === 0) {
         console.log(`🚫 User ${userId} has no explicit NCAAF preferences - skipping NCAAF initialization`);
@@ -338,9 +338,9 @@ export class NCAAFEngine extends BaseSportEngine {
         return;
       }
 
-      // Filter to only valid NCAAF alerts  
+      // Filter to only valid NCAAF alerts
       const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'RED_ZONE', 'FOURTH_DOWN',
+        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE', 'FOURTH_DOWN',
         'NCAAF_SECOND_HALF_KICKOFF', 'OVERTIME', 'CLUTCH_TIME'
       ];
 
@@ -392,7 +392,7 @@ export class NCAAFEngine extends BaseSportEngine {
   // Initialize alert cylinder modules for enabled alert types
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
-    
+
     for (const alertType of enabledAlertTypes) {
       const module = await this.loadAlertModule(alertType);
       if (module) {
@@ -400,7 +400,7 @@ export class NCAAFEngine extends BaseSportEngine {
         console.log(`✅ Loaded NCAAF alert cylinder: ${alertType}`);
       }
     }
-    
+
     console.log(`🔧 Initialized ${this.alertModules.size} NCAAF alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
   }
 }

@@ -15,7 +15,7 @@ export class NFLEngine extends BaseSportEngine {
       // Only check settings for actual NFL alert types
       const validNFLAlerts = [
         'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
-        'RED_ZONE', 'FOURTH_DOWN'
+        'NFL_RED_ZONE', 'FOURTH_DOWN'
       ];
 
       if (!validNFLAlerts.includes(alertType)) {
@@ -290,7 +290,7 @@ export class NFLEngine extends BaseSportEngine {
       // Filter to only valid NFL alerts  
       const validNFLAlerts = [
         'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
-        'RED_ZONE', 'FOURTH_DOWN'
+        'NFL_RED_ZONE', 'FOURTH_DOWN'
       ];
 
       const nflEnabledTypes = enabledTypes.filter(alertType =>
@@ -341,7 +341,7 @@ export class NFLEngine extends BaseSportEngine {
   // Initialize alert cylinder modules for enabled alert types
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     this.alertModules.clear();
-    
+
     for (const alertType of enabledAlertTypes) {
       const module = await this.loadAlertModule(alertType);
       if (module) {
@@ -349,7 +349,7 @@ export class NFLEngine extends BaseSportEngine {
         console.log(`✅ Loaded NFL alert cylinder: ${alertType}`);
       }
     }
-    
+
     console.log(`🔧 Initialized ${this.alertModules.size} NFL alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
   }
 }
