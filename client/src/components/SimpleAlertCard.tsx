@@ -446,13 +446,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
             
 
-            {/* Team info */}
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>
-                {typeof alert.awayTeam === 'object' ? alert.awayTeam?.name || 'Away' : alert.awayTeam || 'Away'} @ {typeof alert.homeTeam === 'object' ? alert.homeTeam?.name || 'Home' : alert.homeTeam || 'Home'}
-              </span>
-              <span>{formatTime(alert.createdAt)}</span>
-            </div>
+            
           </div>
         </div>
       </motion.div>
