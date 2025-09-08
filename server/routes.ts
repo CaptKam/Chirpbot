@@ -1952,6 +1952,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Health check endpoint for monitoring and auto-recovery
+  app.get('/api/health', async (req, res) => {
+    try {
+      // Basic health check - server is responding
+      const healthStatus = {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        pid: process.pid
+      };
+      
+      res.status(200).json(healthStatus);
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(503).json({ 
+        status: 'unhealthy', 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Get available alert types from cylinders - accessible to all authenticated users
   app.get('/api/available-alerts/:sport', async (req, res) => {
     try {
