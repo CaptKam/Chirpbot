@@ -242,23 +242,6 @@ export default function Settings() {
     });
   };
 
-  // Helper function to get alert preference, considering RE24 specific logic
-  const getAlertPreferenceWithRE24 = (sport: string, alertType: string): boolean => {
-    if (preferencesLoading) return true;
-
-    // Check if the alert is globally disabled by admin
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false;
-    }
-
-    // Handle AI Enhancements and RE24 System separately
-    if (alertType.startsWith('AI_') || alertType.startsWith('RE24_')) {
-      // Assuming AI and RE24 settings are associated with MLB for configuration purposes if not sport-specific
-      return preferenceMap.get(alertType) ?? true;
-    }
-
-    return preferenceMap.get(alertType) ?? true;
-  };
 
 
   // Helper function to get category icon
@@ -368,7 +351,7 @@ export default function Settings() {
                         // Only show alerts that are globally enabled by admin
                         return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
                       }).map((alertType) => {
-                        const isEnabled = getAlertPreferenceWithRE24(activeSport, alertType.key);
+                        const isEnabled = getAlertPreference(activeSport, alertType.key);
                         return (
                           <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                             <div className="flex-1">
