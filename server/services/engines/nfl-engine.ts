@@ -321,7 +321,8 @@ export class NFLEngine extends BaseSportEngine {
     try {
       const moduleMap: Record<string, string> = {
         'NFL_GAME_START': './alert-cylinders/nfl/game-start-module.ts',
-        'NFL_TWO_MINUTE_WARNING': './alert-cylinders/nfl/two-minute-warning-module.ts'
+        'NFL_TWO_MINUTE_WARNING': './alert-cylinders/nfl/two-minute-warning-module.ts',
+        'NFL_RED_ZONE': './alert-cylinders/nfl/red-zone-module.ts'
       };
 
       const modulePath = moduleMap[alertType];

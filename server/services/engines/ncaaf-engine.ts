@@ -372,7 +372,8 @@ export class NCAAFEngine extends BaseSportEngine {
     try {
       const moduleMap: Record<string, string> = {
         'NCAAF_GAME_START': './alert-cylinders/ncaaf/game-start-module.ts',
-        'NCAAF_TWO_MINUTE_WARNING': './alert-cylinders/ncaaf/two-minute-warning-module.ts'
+        'NCAAF_TWO_MINUTE_WARNING': './alert-cylinders/ncaaf/two-minute-warning-module.ts',
+        'NCAAF_RED_ZONE': './alert-cylinders/ncaaf/red-zone-module.ts'
       };
 
       const modulePath = moduleMap[alertType];

@@ -154,5 +154,47 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
-  // MLB alert cylinders are now enabled - using base engine functionality
+  // Load alert cylinder module for specific alert type
+  async loadAlertModule(alertType: string): Promise<any | null> {
+    try {
+      const moduleMap: Record<string, string> = {
+        'MLB_GAME_START': './alert-cylinders/mlb/game-start-module.ts',
+        'MLB_SEVENTH_INNING_STRETCH': './alert-cylinders/mlb/seventh-inning-stretch-module.ts',
+        'MLB_BASES_LOADED_ONE_OUT': './alert-cylinders/mlb/bases-loaded-one-out-module.ts',
+        'MLB_RUNNER_ON_THIRD_NO_OUTS': './alert-cylinders/mlb/runner-on-third-no-outs-module.ts',
+        'MLB_FIRST_AND_THIRD_NO_OUTS': './alert-cylinders/mlb/first-and-third-no-outs-module.ts',
+        'MLB_SECOND_AND_THIRD_NO_OUTS': './alert-cylinders/mlb/second-and-third-no-outs-module.ts',
+        'MLB_BASES_LOADED_NO_OUTS': './alert-cylinders/mlb/bases-loaded-no-outs-module.ts',
+        'MLB_RUNNER_ON_THIRD_ONE_OUT': './alert-cylinders/mlb/runner-on-third-one-out-module.ts',
+        'MLB_SECOND_AND_THIRD_ONE_OUT': './alert-cylinders/mlb/second-and-third-one-out-module.ts'
+      };
+
+      const modulePath = moduleMap[alertType];
+      if (!modulePath) {
+        console.log(`❌ No MLB module found for alert type: ${alertType}`);
+        return null;
+      }
+
+      const module = await import(modulePath);
+      return new module.default();
+    } catch (error) {
+      console.error(`❌ Failed to load MLB alert module ${alertType}:`, error);
+      return null;
+    }
+  }
+
+  // Initialize alert cylinder modules for enabled alert types
+  async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    this.alertModules.clear();
+
+    for (const alertType of enabledAlertTypes) {
+      const module = await this.loadAlertModule(alertType);
+      if (module) {
+        this.alertModules.set(alertType, module);
+        console.log(`✅ Loaded MLB alert cylinder: ${alertType}`);
+      }
+    }
+
+    console.log(`🔧 Initialized ${this.alertModules.size} MLB alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
+  }
 }
