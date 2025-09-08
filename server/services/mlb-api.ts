@@ -88,6 +88,7 @@ export class MLBApiService {
     } catch (error) {
       console.error('Error fetching MLB games:', error);
       // Return cached data if available during error
+      const cacheKey = this.getCacheKey('games', date);
       return this.getCached(cacheKey) || [];
     }
   }
@@ -190,6 +191,7 @@ export class MLBApiService {
       return enhancedData;
     } catch (error) {
       console.error('Error fetching enhanced game data:', error);
+      const cacheKey = `enhanced_${gameId}`;
       return this.getCached(cacheKey) || this.getFallbackGameData();
     }
   }
