@@ -10,13 +10,26 @@ import { Label } from "@/components/ui/label";
 import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { SportTabs } from '@/components/SportTabs';
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 
 // Alert type configurations - now populated from cylinder modules via API
-const ALERT_TYPE_CONFIG: Record<string, any[]> = {};
+const ALERT_TYPE_CONFIG: Record<string, any[]> = {
+  MLB: [
+    { key: 'MLB_GAME_START', label: 'Game Start', description: 'Alert when MLB game begins' },
+    { key: 'MLB_SEVENTH_INNING_STRETCH', label: 'Seventh Inning Stretch', description: 'Traditional 7th inning stretch alert' },
+    { key: 'MLB_RUNNER_ON_THIRD_NO_OUTS', label: 'Runner on 3rd, 0 Outs', description: '84% scoring probability situation' },
+    { key: 'MLB_FIRST_AND_THIRD_NO_OUTS', label: '1st & 3rd, 0 Outs', description: '86% scoring probability situation' },
+    { key: 'MLB_SECOND_AND_THIRD_NO_OUTS', label: '2nd & 3rd, 0 Outs', description: '85% scoring probability situation' },
+    { key: 'MLB_BASES_LOADED_NO_OUTS', label: 'Bases Loaded, 0 Outs', description: '86% scoring probability situation' },
+    { key: 'MLB_RUNNER_ON_THIRD_ONE_OUT', label: 'Runner on 3rd, 1 Out', description: '66% scoring probability situation' },
+    { key: 'MLB_SECOND_AND_THIRD_ONE_OUT', label: '2nd & 3rd, 1 Out', description: '68% scoring probability situation' },
+    { key: 'MLB_BASES_LOADED_ONE_OUT', label: 'Bases Loaded, 1 Out', description: '66% scoring probability situation' }
+  ]
+};
 
 export default function Settings() {
   const [activeSport, setActiveSport] = useState(() => {
@@ -294,27 +307,14 @@ export default function Settings() {
       </header>
 
       {/* Sport Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
-        <div className="flex overflow-x-auto">
-          {SPORTS.map((sport) => (
-            <button
-              key={sport}
-              onClick={() => {
-                setActiveSport(sport);
-                localStorage.setItem('settings-active-sport', sport);
-              }}
-              data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors ${
-                activeSport === sport
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {sport}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SportTabs
+        sports={SPORTS}
+        activeSport={activeSport}
+        onSportChange={setActiveSport}
+        onSportChangeCallback={() => {
+          localStorage.setItem('settings-active-sport', activeSport);
+        }}
+      />
 
       {/* Settings Content */}
       <div className="p-4 space-y-6">

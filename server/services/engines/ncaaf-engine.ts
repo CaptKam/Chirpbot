@@ -320,11 +320,23 @@ export class NCAAFEngine extends BaseSportEngine {
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
-      // Get user's enabled alert types
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'ncaaf');
+      // Get user's enabled alert types - use uppercase 'NCAAF' to match database
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'NCAAF');
+      
+      // CRITICAL FIX: Only process if user has explicit NCAAF preferences
+      if (userPrefs.length === 0) {
+        console.log(`🚫 User ${userId} has no explicit NCAAF preferences - skipping NCAAF initialization`);
+        return;
+      }
+
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
+
+      if (enabledTypes.length === 0) {
+        console.log(`🚫 User ${userId} has no enabled NCAAF alerts - skipping NCAAF initialization`);
+        return;
+      }
 
       // Filter to only valid NCAAF alerts  
       const validNCAAFAlerts = [

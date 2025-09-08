@@ -17,8 +17,17 @@ declare module 'express-session' {
   }
 }
 
+// Extend Express Request interface to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: any;
+    }
+  }
+}
+
 // Middleware to ensure user is authenticated
-async function requireAuthentication(req: any, res: any, next: any) {
+async function requireAuthentication(req: express.Request, res: express.Response, next: express.NextFunction) {
   if (req.session?.userId) {
     const user = await storage.getUserById(req.session.userId);
     if (user) {
@@ -1150,6 +1159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
       const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
+      const monitoredTeamsResult = await db.execute(sql`SELECT COUNT(DISTINCT game_id) as count FROM user_monitored_teams`);
 
       res.json({
         users: {
@@ -1162,11 +1172,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         alerts: {
           total: parseInt(String(totalAlertsResult.rows[0]?.count || '0')),
           today: parseInt(String(todayAlertsResult.rows[0]?.count || '0'))
-        }
+        },
+        monitoredTeams: parseInt(String(monitoredTeamsResult.rows[0]?.count || '0'))
       });
     } catch (error) {
       console.error('Error fetching admin stats:', error);
       res.status(500).json({ message: 'Failed to fetch admin stats' });
+    }
+  });
+
+  // System status endpoint for admin dashboard
+  app.get('/api/admin/system-status', requireAdmin, async (req, res) => {
+    try {
+      // Check alert engine status
+      const masterAlertsEnabled = await storage.getMasterAlertEnabled();
+      
+      // Check database connectivity
+      let databaseConnected = false;
+      try {
+        await db.execute(sql`SELECT 1`);
+        databaseConnected = true;
+      } catch (error) {
+        databaseConnected = false;
+      }
+
+      // Check OpenAI integration status (based on env variable)
+      const openaiEnabled = !!process.env.OPENAI_API_KEY;
+
+      // Check Telegram bot status
+      let telegramConnected = false;
+      try {
+        const usersWithTelegram = await db.execute(sql`
+          SELECT COUNT(*) as count FROM users 
+          WHERE telegram_enabled = true 
+          AND telegram_bot_token IS NOT NULL 
+          AND telegram_chat_id IS NOT NULL
+        `);
+        telegramConnected = parseInt(String(usersWithTelegram.rows[0]?.count || '0')) > 0;
+      } catch (error) {
+        telegramConnected = false;
+      }
+
+      res.json({
+        alertEngine: masterAlertsEnabled,
+        database: databaseConnected,
+        openai: openaiEnabled,
+        telegram: telegramConnected
+      });
+    } catch (error) {
+      console.error('Error fetching system status:', error);
+      res.status(500).json({ message: 'Failed to fetch system status' });
     }
   });
 
@@ -1183,10 +1238,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const limit = parseInt(req.query.limit as string) || 50;
 
-      // Get alerts from database
+      // Get current user from session
+      const currentUserId = req.session?.userId;
+      
+      // If user is not authenticated, return empty array
+      if (!currentUserId) {
+        res.json([]);
+        return;
+      }
+
+      // Get user's monitored games
+      const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
+      const monitoredGameIds = monitoredGames.map(game => game.gameId);
+
+      // If user has no monitored games, return empty array
+      if (monitoredGameIds.length === 0) {
+        res.json([]);
+        return;
+      }
+
+      // Get alerts from database - filter by monitored game IDs
+      const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
       const result = await db.execute(sql`
         SELECT id, type, game_id, sport, score, payload, created_at
         FROM alerts
+        WHERE game_id IN (${sql.raw(monitoredGameIds.map(id => `'${id}'`).join(','))})
         ORDER BY created_at DESC
         LIMIT ${limit}
       `);
@@ -2225,11 +2301,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 15000); // Check every 15 seconds
   
-  // Clean up monitoring on server shutdown
-  process.on('beforeExit', () => {
-    clearInterval(monitoringInterval);
-    console.log('✅ Alert monitoring stopped cleanly');
-  })
+  // Store monitoring interval globally for graceful shutdown cleanup
+  (global as any).setMonitoringInterval(monitoringInterval);
 
   console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 

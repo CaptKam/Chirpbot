@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Clock, TrendingUp, Users, Bell, Activity } from 'lucide-react';
 import { AlertLoading } from '@/components/sports-loading';
+import { SportTabs } from '@/components/SportTabs';
+import { PageHeader } from '@/components/PageHeader';
 
 interface Alert {
   id: string;
@@ -143,38 +145,19 @@ export default function AlertsPage() {
 
   return (
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-      {/* Header */}
-      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-            <Bell className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">Live Alerts</h1>
-            <p className="text-emerald-300/80 text-xs font-medium">Real-time sports notifications</p>
-          </div>
-        </div>
-      </header>
+      <PageHeader 
+        title="Live Alerts" 
+        subtitle="Real-time sports notifications"
+        icon={Bell}
+      />
       <div className="max-w-4xl mx-auto space-y-6">
 
       {/* Filter Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
-        <div className="flex overflow-x-auto">
-          {(['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF'] as const).map((sport) => (
-            <button
-              key={sport}
-              onClick={() => setFilter(sport)}
-              className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
-                filter === sport
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {sport === 'all' ? 'All' : sport}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SportTabs 
+        sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
+        selectedSport={filter} 
+        onSportChange={setFilter} 
+      />
 
       {/* Alerts Content */}
       <div className="p-4 space-y-4">

@@ -89,8 +89,23 @@
         </div>
 
         <div class="dashboard-content">
-            <!-- Stats Grid -->
-            <div class="stats-grid">
+            <!-- Navigation Tabs -->
+            <div class="dashboard-nav">
+                <button class="tab active" data-tab="overview">
+                    <i class="fas fa-chart-bar"></i> Overview
+                </button>
+                <button class="tab" data-tab="users">
+                    <i class="fas fa-users"></i> User Management  
+                </button>
+                <button class="tab" data-tab="alerts">
+                    <i class="fas fa-bell"></i> Alert Settings
+                </button>
+            </div>
+            
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-header">
                         <h3>Total Users</h3>
@@ -127,9 +142,10 @@
                     <div class="stat-description">All time alerts</div>
                 </div>
             </div>
-
-            <!-- User Management Section -->
-            <div class="management-card">
+            
+            <!-- User Management Tab -->
+            <div id="users" class="tab-content">
+                <div class="management-card">
                 <div class="card-header">
                     <h2>User Management</h2>
                     <div class="search-container">
@@ -152,9 +168,10 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Alert Settings Section -->
-            <div class="management-card">
+            
+            <!-- Alert Settings Tab -->
+            <div id="alerts" class="tab-content">
+                <div class="management-card">
                 <div class="card-header">
                     <h2>Alert Settings Management</h2>
                     <select id="sportSelector" class="sport-selector">
