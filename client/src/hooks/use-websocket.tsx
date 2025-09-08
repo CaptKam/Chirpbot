@@ -15,12 +15,12 @@ export function useWebSocket(): UseWebSocketReturn {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const maxReconnectAttempts = 5;
+  const MAX_RECONNECT_ATTEMPTS = 5; // Defined constant for max attempts
   const isConnectingRef = useRef(false);
 
   const connect = useCallback(() => {
     // Prevent multiple simultaneous connection attempts
-    if (isConnectingRef.current || reconnectAttempts >= maxReconnectAttempts) {
+    if (isConnectingRef.current || reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       return;
     }
 
@@ -103,14 +103,16 @@ export function useWebSocket(): UseWebSocketReturn {
         wsRef.current = null;
 
         // Only reconnect on abnormal closures
-        if (event.code !== 1000 && event.code !== 1001 && reconnectAttempts < maxReconnectAttempts) {
+        if (event.code !== 1000 && event.code !== 1001 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-          console.log(`WebSocket reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+          console.log(`WebSocket reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
 
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connect();
           }, delay);
+        } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+           console.error('WebSocket max reconnection attempts reached');
         }
       };
 
@@ -123,8 +125,18 @@ export function useWebSocket(): UseWebSocketReturn {
       console.error('Failed to create WebSocket connection:', error);
       setIsConnected(false);
       isConnectingRef.current = false;
+      // Schedule a retry even if connection creation fails
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        const delay = 2000; // Initial retry delay
+        console.log(`WebSocket connection creation failed, retrying in ${delay}ms (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          setReconnectAttempts(prev => prev + 1);
+          connect();
+        }, delay);
+      }
     }
   }, [reconnectAttempts]);
+
 
   const sendMessage = useCallback((message: any) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

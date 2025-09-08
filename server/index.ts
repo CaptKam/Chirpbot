@@ -9,7 +9,7 @@ import { seedDatabase } from "./seed-database";
 import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
 import { pool } from "./db";
-import WebSocket from 'ws'; // Import WebSocket type
+import { WebSocketServer } from 'ws';
 
 // Keep track of server and monitoring timer for graceful shutdown
 let httpServer: any = null;
@@ -159,97 +159,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Utility function to parse session data from cookies
-// This needs to be adapted based on how your session IDs are structured and stored.
-// For simplicity, assuming a 'connect.sid' cookie format.
-function parseSessionFromCookies(cookieHeader: string | undefined): { userId?: string; username?: string } | null {
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const cookies = cookieHeader.split('; ').reduce((acc: Record<string, string>, cookie) => {
-    const [name, ...valueParts] = cookie.split('=');
-    acc[name] = valueParts.join('=');
-    return acc;
-  }, {});
-
-  const sessionId = cookies['connect.sid'];
-  if (!sessionId) {
-    return null;
-  }
-
-  // In a real application, you would fetch session data from your store (e.g., PostgreSQL)
-  // using the sessionId. For this example, we'll simulate fetching it.
-  // THIS IS A PLACEHOLDER AND NEEDS PROPER IMPLEMENTATION.
-  // For demonstration, we'll return dummy data.
-  console.log(`Simulating session fetch for sessionId: ${sessionId}`);
-  // Replace with actual session data retrieval logic
-  return { userId: 'user-123', username: 'demoUser' };
-}
-
-// Extended WebSocket interface with added properties
-interface ExtendedWebSocket extends WebSocket {
-  userId?: string;
-  username?: string;
-  isAlive?: boolean;
-}
-
-// Initialize WebSocket server
-const wss = new WebSocket.Server({ noServer: true });
-
-// WebSocket upgrade handling with error handling
-server.on('upgrade', (request, socket, head) => {
-  console.log('WebSocket upgrade request received');
-
-  try {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
-    });
-  } catch (error) {
-    console.error('WebSocket upgrade error:', error);
-    socket.destroy();
-  }
-});
-
-// WebSocket connection handling
-wss.on('connection', (ws: ExtendedWebSocket, request) => {
-  const sessionData = parseSessionFromCookies(request.headers.cookie || '');
-  ws.userId = sessionData?.userId;
-  ws.username = sessionData?.username;
-  ws.isAlive = true;
-
-  console.log(`WebSocket connected: ${ws.username || 'anonymous'} (${ws.userId || 'no-id'})`);
-
-  // Heartbeat
-  ws.on('pong', () => {
-    ws.isAlive = true;
-  });
-
-  ws.on('close', () => {
-    console.log(`WebSocket disconnected: ${ws.username || 'anonymous'}`);
-  });
-
-  ws.on('error', (error) => {
-    console.error(`WebSocket error for ${ws.username || 'anonymous'}:`, error);
-  });
-});
-
-// Heartbeat interval to detect broken connections
-const heartbeatInterval = setInterval(() => {
-  wss.clients.forEach((ws: ExtendedWebSocket) => {
-    if (!ws.isAlive) {
-      console.log(`Terminating dead WebSocket connection for ${ws.username || 'anonymous'}`);
-      return ws.terminate();
-    }
-    ws.isAlive = false;
-    ws.ping();
-  });
-}, 30000); // Check every 30 seconds
-
-// Clean up heartbeat on server close
-process.on('SIGTERM', () => {
-  clearInterval(heartbeatInterval);
-});
 
 
 (async () => {
