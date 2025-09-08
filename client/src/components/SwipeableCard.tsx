@@ -498,10 +498,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 {/* Win Probability */}
                 <div className="flex justify-between text-xs mb-2">
                   <span className="text-purple-300">
-                    {typeof alertData?.context?.homeTeam === 'string' ? alertData?.context?.homeTeam : alertData?.context?.homeTeam?.name || 'Home'}: {(alertData?.context as any)?.aiGameProjection?.winProbability?.home}%
+                    {typeof alertData?.context?.homeTeam === 'string' ? alertData?.context?.homeTeam : (alertData?.context?.homeTeam as any)?.name || 'Home'}: {(alertData?.context as any)?.aiGameProjection?.winProbability?.home}%
                   </span>
                   <span className="text-purple-300">
-                    {typeof alertData?.context?.awayTeam === 'string' ? alertData?.context?.awayTeam : alertData?.context?.awayTeam?.name || 'Away'}: {(alertData?.context as any)?.aiGameProjection?.winProbability?.away}%
+                    {typeof alertData?.context?.awayTeam === 'string' ? alertData?.context?.awayTeam : (alertData?.context?.awayTeam as any)?.name || 'Away'}: {(alertData?.context as any)?.aiGameProjection?.winProbability?.away}%
                   </span>
                 </div>
 
@@ -538,7 +538,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             )}
 
             {/* Betting Recommendations Based on Game Situation */}
-            {(alertData?.context?.reasons || (alertData?.priority && alertData?.priority >= 80)) && !alertData?.context?.aiBettingAdvice && (
+            {(alertData?.context?.reasons || (alertData?.priority !== undefined && alertData?.priority >= 80)) && !alertData?.context?.aiBettingAdvice && (
               <div className="space-y-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
                   <div className="flex items-center space-x-2 mb-2">
@@ -582,14 +582,14 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </div>
 
                     {/* AI Insights */}
-                    {alertData.context?.aiInsights && (
+                    {alertData?.context?.aiInsights && (
                       <div className="mb-2 p-2 bg-blue-500/10 rounded border-l-2 border-blue-400">
                         <p className="text-xs text-blue-200 font-medium">{alertData?.context?.aiInsights}</p>
                       </div>
                     )}
 
                     {/* Context Reasons */}
-                    {alertData.context?.reasons && (
+                    {alertData?.context?.reasons && (
                       <ul className="text-xs text-white/90 space-y-0.5">
                         {alertData?.context?.reasons?.slice(0, 2)?.map((reason, idx) => (
                           <li key={idx} className="flex items-start space-x-1">

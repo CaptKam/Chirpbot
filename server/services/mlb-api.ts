@@ -88,7 +88,7 @@ export class MLBApiService {
     } catch (error) {
       console.error('Error fetching MLB games:', error);
       // Return cached data if available during error
-      const cacheKey = this.getCacheKey('games', date);
+      const cacheKey = `games_${date}`;
       return this.getCached(cacheKey) || [];
     }
   }
