@@ -2288,23 +2288,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
-  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
-
-  // Start live game monitoring with robust error handling
-  const monitoringInterval = setInterval(async () => {
-    try {
-      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-      await alertGenerator.generateLiveGameAlerts();
-    } catch (error: any) {
-      console.error('⚠️ Non-critical error in live monitoring:', error.message);
-      // Don't crash - just continue monitoring
-    }
-  }, 15000); // Check every 15 seconds
   
-  // Store monitoring interval globally for graceful shutdown cleanup
-  (global as any).setMonitoringInterval(monitoringInterval);
+  // Defer alert system startup until after server is listening
+  setTimeout(() => {
+    console.log('🚀 Starting alert system...');
+    alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
-  console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
+    // Start live game monitoring with robust error handling
+    const monitoringInterval = setInterval(async () => {
+      try {
+        console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+        await alertGenerator.generateLiveGameAlerts();
+      } catch (error: any) {
+        console.error('⚠️ Non-critical error in live monitoring:', error.message);
+        // Don't crash - just continue monitoring
+      }
+    }, 15000); // Check every 15 seconds
+    
+    // Store monitoring interval globally for graceful shutdown cleanup
+    (global as any).setMonitoringInterval(monitoringInterval);
+
+    console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
+  }, 5000); // Start alert system 5 seconds after server starts
 
   return httpServer;
 }
