@@ -29,7 +29,11 @@ export class AIEnhancementService {
 
   constructor() {
     this.basicAI = new BasicAI();
-    console.log('🚫 AI Enhancements: DISABLED - OpenAI integration turned off');
+    if (this.basicAI.configured) {
+      console.log('✅ AI Enhancements: ENABLED - OpenAI integration active');
+    } else {
+      console.log('🚫 AI Enhancements: DISABLED - OpenAI not configured');
+    }
   }
 
   async enhanceAlert(
@@ -38,9 +42,14 @@ export class AIEnhancementService {
     gameContext: GameContext,
     userPreferences: AIEnhancementConfig
   ): Promise<string> {
-    // AI is disabled - return original message
-    console.log('🚫 AI Enhancement skipped - OpenAI disabled');
-    return originalMessage;
+    // Check if AI is configured
+    if (!this.basicAI.configured) {
+      console.log('🚫 AI Enhancement skipped - OpenAI not configured');
+      return originalMessage;
+    }
+
+    // AI is enabled - use the disabled method logic
+    return this.enhanceAlertDisabled(alertType, originalMessage, gameContext, userPreferences);
   }
 
 

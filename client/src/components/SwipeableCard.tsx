@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { TeamLogo } from '@/components/team-logo';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { Alert } from '@/types';
+import { BaseballDiamond } from '@/components/baseball-diamond';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -175,18 +176,22 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   });
 
   // Fetch live weather data for the game
+  const homeTeamName = React.useMemo(() => {
+    if (!alertData) return '';
+    if (typeof alertData.homeTeam === 'string') return alertData.homeTeam;
+    return alertData.homeTeam?.name || '';
+  }, [alertData]);
+  
   const { data: weatherData } = useQuery({
-    queryKey: ["/api/weather", { gameId: alertData?.id, sport: alertData?.sport }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
+    queryKey: ['weather', homeTeamName],
+    queryFn: async () => {
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeamName)}`, {
+        credentials: 'include'
       });
-      if (!response.ok) throw new Error("Failed to fetch weather");
+      if (!response.ok) throw new Error('Weather fetch failed');
       return response.json();
     },
-    enabled: !!alertData?.id && !!alertData?.sport, // Only fetch if we have alert data
+    enabled: !!homeTeamName, // Only fetch if we have a team name
     refetchInterval: 60000, // Refresh every minute
     staleTime: 60000, // Cache data for 1 minute
   });
@@ -200,8 +205,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       // Match by team names (both home and away combinations)
       const gameHomeTeam = game.homeTeam?.name || '';
       const gameAwayTeam = game.awayTeam?.name || '';
-      const alertHomeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || '';
-      const alertAwayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || '';
+      const alertHomeTeam = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
+      const alertAwayTeam = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
 
       return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
              (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
@@ -234,17 +239,17 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   React.useEffect(() => {
     if (alertData) {
       console.log('🔍 SwipeableCard Score Debug:', {
-        alertId: alertData.id,
-        storedHomeScore: alertData.homeScore,
-        storedAwayScore: alertData.awayScore,
+        alertId: alertData?.id,
+        storedHomeScore: alertData?.homeScore,
+        storedAwayScore: alertData?.awayScore,
         liveHomeScore: liveGameData?.homeTeam?.score,
         liveAwayScore: liveGameData?.awayTeam?.score,
         displayHomeScore: displayScores.homeScore,
         displayAwayScore: displayScores.awayScore,
         hasLiveGame: !!liveGameData,
         gameStatus: liveGameData?.status,
-        homeTeam: alertData.homeTeam,
-        awayTeam: alertData.awayTeam
+        homeTeam: alertData?.homeTeam,
+        awayTeam: alertData?.awayTeam
       });
     }
   }, [alertData, liveGameData, displayScores]);
@@ -391,6 +396,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     return message;
   }, [alertData]);
 
+  // Early null check to help TypeScript understand alertData is defined
+  if (!alertData) {
+    return <div className="p-4 text-gray-500">No alert data available</div>;
+  }
 
   return (
     <div className="relative overflow-hidden rounded-xl">
@@ -751,13 +760,36 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
+                  runners={{
+                    first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
+                    second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
+                    third: alertData.context?.hasThird || liveGameData?.runners?.third || false
+                  }}
+                  outs={alertData.context?.outs !== undefined ? alertData.context.outs : liveGameData?.outs}
+                  balls={liveGameData?.balls}
+                  strikes={liveGameData?.strikes}
                   weather={weatherData}
                   size="lg"
                   showWeather={true}
                   showVenue={false}
-                  showEnhancedMLB={false}
+                  showEnhancedMLB={true}
                   className="shadow-lg"
                 />
+
+                {/* Game Status and Inning/Quarter Info */}
+                {(alertData.context?.inning || liveGameData?.inning || alertData.context?.quarter || liveGameData?.quarter) && (
+                  <div className="mt-3 text-center">
+                    <span className="text-sm text-slate-400 font-medium">
+                      {alertData.sport === 'MLB' ? (
+                        `${alertData.context?.isTopInning ?? liveGameData?.isTopInning ? 'Top' : 'Bottom'} ${alertData.context?.inning || liveGameData?.inning || 1}`
+                      ) : (
+                        `Quarter ${alertData.context?.quarter || liveGameData?.quarter || 1}`
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                
               </div>
 
               {/* Alert Message - Clean Layout */}
