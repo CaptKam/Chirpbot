@@ -103,12 +103,6 @@ export default function AlertsPage() {
   // Determine which alert types should use the simple card
   const shouldUseSimpleCard = (alertType: string) => {
     const simpleAlertTypes = [
-      // Game Start Events (All Sports)
-      'MLB_GAME_START',
-      'NFL_GAME_START',
-      'NCAAF_GAME_START',
-      'CFL_GAME_START',
-      'WNBA_GAME_START',
       // Game Events
       'TWO_MINUTE_WARNING',
       'NCAAF_KICKOFF', 

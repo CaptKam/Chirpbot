@@ -32,9 +32,9 @@ interface GameCardTemplateProps {
 
   // Baseball specific (for enhanced display)
   runners?: {
-    first?: boolean;
-    second?: boolean;
-    third?: boolean;
+    first: boolean;
+    second: boolean;
+    third: boolean;
   };
   balls?: number;
   strikes?: number;
@@ -213,9 +213,6 @@ export function GameCardTemplate({
     return directions[index];
   };
 
-  const homeScore = homeTeam.score || 0;
-  const awayScore = awayTeam.score || 0;
-
   return (
     <Card 
       className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 ${cardHeight} hover:bg-white/10 ${
@@ -272,22 +269,20 @@ export function GameCardTemplate({
             )}
           </div>
 
+          {/* Enhanced MLB Display with Baseball Diamond */}
+          {sport === 'MLB' && showEnhancedMLB && (
+            <div className="mt-3 flex justify-center">
+              <EnhancedGameDisplay 
+                gameId={gameId}
+                inning={inning || 1}
+                isTopInning={isTopInning || false}
+                isLive={status === 'live'}
+              />
+            </div>
+          )}
+
           {/* Game State for other sports */}
           {(sport !== 'MLB' || !showEnhancedMLB) && getGameState()}
-
-          {/* Baseball Diamond for MLB games */}
-          {sport === 'MLB' && showEnhancedMLB && runners && (
-            <BaseballDiamond
-              runners={runners}
-              inning={inning}
-              isTopInning={isTopInning}
-              outs={outs}
-              balls={balls}
-              strikes={strikes}
-              size="sm"
-              showCount={status === 'live'}
-            />
-          )}
         </div>
 
         {/* Home Team - Right Side */}
@@ -357,8 +352,6 @@ export function GameCardTemplate({
           )}
         </div>
       </div>
-
-      
 
       {/* Render children if provided */}
       {children}

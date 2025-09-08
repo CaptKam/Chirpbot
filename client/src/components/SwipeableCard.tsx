@@ -150,14 +150,6 @@ const sportsbooks: Sportsbook[] = [
   }
 ];
 
-// Helper function to safely extract team name
-const getTeamName = (team: string | { name?: string } | undefined | null): string => {
-  if (!team) return '';
-  if (typeof team === 'string') return team;
-  if (typeof team === 'object' && team.name) return team.name;
-  return '';
-};
-
 export function SwipeableCard({ children, alertId, className, onTap, alertData, ...props }: SwipeableCardProps) {
   const [dragX, setDragX] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -185,7 +177,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   // Fetch live weather data for the game
   const homeTeamName = React.useMemo(() => {
-    return getTeamName(alertData?.homeTeam);
+    if (!alertData) return '';
+    if (typeof alertData.homeTeam === 'string') return alertData.homeTeam;
+    return alertData.homeTeam?.name || '';
   }, [alertData]);
   
   const { data: weatherData } = useQuery({
@@ -211,8 +205,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       // Match by team names (both home and away combinations)
       const gameHomeTeam = game.homeTeam?.name || '';
       const gameAwayTeam = game.awayTeam?.name || '';
-      const alertHomeTeam = getTeamName(alertData?.homeTeam);
-      const alertAwayTeam = getTeamName(alertData?.awayTeam);
+      const alertHomeTeam = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
+      const alertAwayTeam = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
 
       return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
              (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
@@ -387,8 +381,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   // Construct a display message for sharing/copying
   const displayMessage = React.useMemo(() => {
-    const homeTeamName = getTeamName(alertData?.homeTeam);
-    const awayTeamName = getTeamName(alertData?.awayTeam);
+    const homeTeamName = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
+    const awayTeamName = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
     let message = `ChirpBot Alert: ${homeTeamName} vs ${awayTeamName}`;
     if (alertData?.sport) message += ` (${alertData.sport})`;
     if (alertData?.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
@@ -413,7 +407,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
-        {(alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
+        {false && (alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
           <div className="h-full flex flex-col justify-center p-4 space-y-3">
             {/* AI Insights Header */}
             <div className="flex items-center space-x-2 mb-2">
@@ -426,8 +420,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
             </div>
 
-            {/* AI Betting Advice */}
-            {alertData?.context?.aiBettingAdvice && (
+            {/* AI Betting Advice - DISABLED */}
+            {false && alertData?.context?.aiBettingAdvice && (
               <div className="mt-3 p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/30">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 AI Betting Analysis</span>
@@ -471,10 +465,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 {/* Win Probability */}
                 <div className="flex justify-between text-xs mb-2">
                   <span className="text-purple-300">
-                    {getTeamName(alertData?.context?.homeTeam) || 'Home'}: {(alertData.context as any).aiGameProjection?.winProbability?.home}%
+                    {typeof alertData?.context?.homeTeam === 'string' ? alertData.context.homeTeam : alertData?.context?.homeTeam?.name || 'Home'}: {(alertData.context as any).aiGameProjection?.winProbability?.home}%
                   </span>
                   <span className="text-purple-300">
-                    {getTeamName(alertData?.context?.awayTeam) || 'Away'}: {(alertData.context as any).aiGameProjection?.winProbability?.away}%
+                    {typeof alertData?.context?.awayTeam === 'string' ? alertData.context.awayTeam : alertData?.context?.awayTeam?.name || 'Away'}: {(alertData.context as any).aiGameProjection?.winProbability?.away}%
                   </span>
                 </div>
 
@@ -766,19 +760,11 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   quarter={alertData.context?.quarter || liveGameData?.quarter}
                   period={alertData.context?.period || liveGameData?.period}
                   isTopInning={alertData.context?.isTopInning ?? liveGameData?.isTopInning}
-                  runners={{
-                    first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
-                    second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
-                    third: alertData.context?.hasThird || liveGameData?.runners?.third || false
-                  }}
-                  outs={alertData.context?.outs !== undefined ? alertData.context.outs : liveGameData?.outs}
-                  balls={liveGameData?.balls}
-                  strikes={liveGameData?.strikes}
                   weather={weatherData}
                   size="lg"
                   showWeather={true}
                   showVenue={false}
-                  showEnhancedMLB={true}
+                  showEnhancedMLB={false}
                   className="shadow-lg"
                 />
 
@@ -795,7 +781,25 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                 )}
 
-                
+                {/* Baseball Diamond for MLB alerts */}
+                {alertData.sport === 'MLB' && (
+                  <div className="mt-4">
+                    <BaseballDiamond
+                      runners={{
+                        first: alertData.context?.hasFirst || liveGameData?.runners?.first || false,
+                        second: alertData.context?.hasSecond || liveGameData?.runners?.second || false,
+                        third: alertData.context?.hasThird || liveGameData?.runners?.third || false
+                      }}
+                      inning={alertData.context?.inning || liveGameData?.inning}
+                      isTopInning={alertData.context?.isTopInning !== undefined ? alertData.context.isTopInning : liveGameData?.isTopInning}
+                      outs={alertData.context?.outs !== undefined ? alertData.context.outs : liveGameData?.outs}
+                      balls={liveGameData?.balls}
+                      strikes={liveGameData?.strikes}
+                      size="sm"
+                      showCount={true}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Alert Message - Clean Layout */}
@@ -807,7 +811,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
 
-                    {/* AI Insights - Show if available */}
+                    {/* AI Insights */}
                     {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
                       <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/30">
                         <div className="flex items-center gap-1 mb-2">
@@ -820,18 +824,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                             </p>
                           ))}
                         </div>
-                      </div>
-                    )}
-
-                    {/* Betting AI Insights - Available on ALL alerts */}
-                    {alertData.betbookData?.aiAdvice && !alertData.context?.aiInsights && (
-                      <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/30">
-                        <div className="flex items-center gap-1 mb-2">
-                          <span className="text-green-400 text-xs">🎯 AI Betting Analysis</span>
-                        </div>
-                        <p className="text-xs text-slate-200">
-                          {alertData.betbookData.aiAdvice}
-                        </p>
                       </div>
                     )}
                   </div>
