@@ -437,38 +437,11 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
           <div className="p-4 pt-0">
 
-            {/* Alert Message - Clean & Simple */}
-            <div className="bg-slate-900/50 rounded-lg p-3 border-l-2 border-emerald-500">
-              {/* Alert Header */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${getAlertColor(alert.priority)} animate-pulse`}></div>
-                  <div className="flex items-center gap-1 text-emerald-400">
-                    {getAlertIcon(alert.type)}
-                    <Badge variant="outline" className="px-2 py-0 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
-                      {alert.type}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  {(() => {
-                    const alertStatus = getAlertStatus(alert.type, alert.createdAt);
-                    return (
-                      <span className={`font-medium ${
-                        alertStatus.status === 'ACTIVE' ? 'text-emerald-400' : 'text-red-400'
-                      }`}>
-                        {formatTime(alert.createdAt)}
-                      </span>
-                    );
-                  })()}
-                  <span className="text-emerald-400 font-bold">{alert.priority}</span>
-                </div>
-              </div>
-
-              <p className="text-slate-100 text-sm font-medium leading-relaxed">
-                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').trim()}
+            {/* Alert Message - Simple */}
+            <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
+              <p className="text-slate-100 text-base font-medium leading-relaxed">
+                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
               </p>
-
             </div>
 
             {/* Baseball Diamond for MLB alerts */}
