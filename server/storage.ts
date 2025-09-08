@@ -359,6 +359,52 @@ export const storage = {
     return results;
   },
 
+  // Get users that have any alert preferences for a specific sport
+  async getUsersWithSportAlerts(sport: string) {
+    const userList = await db.select({
+      id: users.id,
+      username: users.username
+    })
+    .from(users)
+    .innerJoin(userAlertPreferences, eq(users.id, userAlertPreferences.userId))
+    .where(and(
+      eq(userAlertPreferences.sport, sport),
+      eq(userAlertPreferences.enabled, true)
+    ))
+    .groupBy(users.id, users.username);
+
+    return userList;
+  },
+
+  // Insert alert for new workflow system
+  async insertAlert(alertData: {
+    type: string;
+    sport: string;
+    gameId: string;
+    userId: string;
+    priority: number;
+    message: string;
+    payload: string;
+    alertKey: string;
+    state: string;
+    createdAt: Date;
+  }) {
+    // For now, use raw SQL since alerts table structure isn't in schema
+    const result = await db.execute(sql`
+      INSERT INTO alerts (
+        type, sport, game_id, user_id, priority, title, 
+        description, alert_key, state, created_at,
+        metadata, seen, sent_to_telegram
+      ) VALUES (
+        ${alertData.type}, ${alertData.sport}, ${alertData.gameId}, 
+        ${alertData.userId}, ${alertData.priority}, ${alertData.message},
+        ${alertData.message}, ${alertData.alertKey}, ${alertData.state},
+        ${alertData.createdAt}, ${alertData.payload}, false, false
+      ) RETURNING *
+    `);
+    return result.rows?.[0];
+  },
+
   // Global alert settings for admin management - FIXED ARCHITECTURE
   async getGlobalAlertSettings(sport: string): Promise<Record<string, boolean>> {
     try {
