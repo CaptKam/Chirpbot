@@ -166,7 +166,8 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   const { data: weatherData } = useQuery({
     queryKey: ['weather', alert.homeTeam],
     queryFn: async () => {
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(alert.homeTeam || '')}`, {
+      const homeTeamName = typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || '';
+      const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeamName)}`, {
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Weather fetch failed');

@@ -857,7 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPreferences = await storage.getUserAlertPreferences(userId);
       
       // Group by sport
-      const preferencesBySport = {};
+      const preferencesBySport: Record<string, any[]> = {};
       allPreferences.forEach(pref => {
         if (!preferencesBySport[pref.sport]) {
           preferencesBySport[pref.sport] = [];
@@ -888,7 +888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         preferencesSummary: Object.keys(preferencesBySport).map(sport => ({
           sport,
           count: preferencesBySport[sport].length,
-          enabled: preferencesBySport[sport].filter(p => p.enabled).length
+          enabled: preferencesBySport[sport].filter((p: any) => p.enabled).length
         }))
       });
     } catch (error) {
@@ -1369,7 +1369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      if (result.rowsAffected === 0) {
+      if (result.rowCount === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1604,13 +1604,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults = {
+      const debugResults: Record<string, any> = {
         timestamp: new Date().toISOString(),
-        endpoints: {},
-        database: {},
-        services: {},
-        configuration: {},
-        errors: []
+        endpoints: {} as Record<string, any>,
+        database: {} as Record<string, any>,
+        services: {} as Record<string, any>,
+        configuration: {} as Record<string, any>,
+        errors: [] as string[]
       };
 
       // Test Database Connection
@@ -1777,11 +1777,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus = {
+      const dbStatus: Record<string, any> = {
         connection: 'UNKNOWN',
-        tables: {},
-        indexes: {},
-        performance: {}
+        tables: {} as Record<string, any>,
+        indexes: {} as Record<string, any>,
+        performance: {} as Record<string, any>
       };
 
       // Test connection
@@ -1812,11 +1812,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/debug/alerts-system', async (req, res) => {
     try {
-      const alertsDebug = {
-        generation: {},
-        storage: {},
-        delivery: {},
-        configuration: {}
+      const alertsDebug: Record<string, any> = {
+        generation: {} as Record<string, any>,
+        storage: {} as Record<string, any>,
+        delivery: {} as Record<string, any>,
+        configuration: {} as Record<string, any>
       };
 
       // Check alert generation
@@ -2224,7 +2224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalDisabled++;
           } catch (error) {
             console.error(`Failed to disable ${sport}.${alertType}:`, error);
-            results.push({ sport, alertType, disabled: false, error: error.message });
+            results.push({ sport, alertType, disabled: false, error: (error as Error).message });
           }
         }
       }
