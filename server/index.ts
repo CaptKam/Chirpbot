@@ -24,9 +24,9 @@ let isShuttingDown = false;
 const gracefulShutdown = async (signal: string) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  
+
   console.log(`\n📍 ${signal} signal received - starting graceful shutdown...`);
-  
+
   try {
     // Close server to stop accepting new connections
     if (httpServer) {
@@ -37,18 +37,18 @@ const gracefulShutdown = async (signal: string) => {
         });
       });
     }
-    
+
     // Clear monitoring interval to prevent port binding issues
     if (monitoringInterval) {
       clearInterval(monitoringInterval);
       monitoringInterval = null;
       console.log('✅ Alert monitoring timer cleared');
     }
-    
+
     // Close database connections
     await pool.end();
     console.log('✅ Database connections closed');
-    
+
     console.log('✅ Graceful shutdown complete');
     process.exit(0);
   } catch (err) {
@@ -65,20 +65,20 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error: any) => {
   console.error('⚠️ Uncaught Exception:', error);
-  
+
   // For EADDRINUSE, try to recover without exiting
   if (error.code === 'EADDRINUSE') {
     console.log('🔄 Port already in use - will retry in 5 seconds...');
     // Don't exit - just wait and let the retry logic handle it
     return;
   }
-  
+
   // For database errors, try to reconnect
   if (error.message?.includes('database') || error.message?.includes('pool')) {
     console.log('🔄 Database error detected - continuing with degraded service');
     return;
   }
-  
+
   // For other non-critical errors, log and continue
   console.log('🔄 Continuing despite error - service may be degraded');
 });
@@ -209,16 +209,16 @@ app.use((req, res, next) => {
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || '5000', 10);
-    
+
     // Store server reference for graceful shutdown
     httpServer = server;
-    
+
     // Enhanced error handling for server startup
     server.on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
         console.error(`❌ Port ${port} is already in use!`);
         console.log('🔄 Attempting to recover...');
-        
+
         // Try to clean up and restart
         setTimeout(() => {
           process.exit(1); // Let process manager restart us
@@ -231,11 +231,11 @@ app.use((req, res, next) => {
         process.exit(1);
       }
     });
-    
+
     // Start listening with ULTRA-robust error handling
     let retryCount = 0;
     const maxRetries = 10;
-    
+
     while (retryCount < maxRetries) {
       try {
         await new Promise<void>((resolve, reject) => {
@@ -267,7 +267,7 @@ app.use((req, res, next) => {
       } catch (error: any) {
         retryCount++;
         console.log(`⚠️ Server startup attempt ${retryCount}/${maxRetries} failed`);
-        
+
         if (retryCount < maxRetries) {
           console.log(`⏳ Retrying in 5 seconds...`);
           await new Promise(resolve => setTimeout(resolve, 5000));
