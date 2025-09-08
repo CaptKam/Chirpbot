@@ -15,14 +15,7 @@ export class MLBEngine extends BaseSportEngine {
       // Only check settings for actual MLB alert types that have corresponding modules
       const validMLBAlerts = [
         'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH',
-        'MLB_RUNNER_ON_THIRD_NO_OUTS',
-        'MLB_FIRST_AND_THIRD_NO_OUTS',
-        'MLB_SECOND_AND_THIRD_NO_OUTS',
-        'MLB_BASES_LOADED_NO_OUTS',
-        'MLB_RUNNER_ON_THIRD_ONE_OUT',
-        'MLB_SECOND_AND_THIRD_ONE_OUT',
-        'MLB_BASES_LOADED_ONE_OUT'
+        'MLB_SEVENTH_INNING_STRETCH'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -109,25 +102,16 @@ export class MLBEngine extends BaseSportEngine {
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
-      // Get user's enabled alert types - use uppercase 'MLB' to match database
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'MLB');
-      console.log(`📋 MLB User preferences for ${userId}: ${userPrefs.length} found`);
+      // Get user's enabled alert types
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'mlb');
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
-      console.log(`✅ MLB Enabled alert types: ${enabledTypes.join(', ')}`);
 
       // Filter to only valid MLB alerts that have corresponding module files
       const validMLBAlerts = [
         'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH',
-        'MLB_RUNNER_ON_THIRD_NO_OUTS',
-        'MLB_FIRST_AND_THIRD_NO_OUTS',
-        'MLB_SECOND_AND_THIRD_NO_OUTS',
-        'MLB_BASES_LOADED_NO_OUTS',
-        'MLB_RUNNER_ON_THIRD_ONE_OUT',
-        'MLB_SECOND_AND_THIRD_ONE_OUT',
-        'MLB_BASES_LOADED_ONE_OUT'
+        'MLB_SEVENTH_INNING_STRETCH'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
@@ -138,7 +122,6 @@ export class MLBEngine extends BaseSportEngine {
       const globallyEnabledTypes = [];
       for (const alertType of mlbEnabledTypes) {
         const isGloballyEnabled = await this.isAlertEnabled(alertType);
-        console.log(`🔍 MLB Alert ${alertType}: globally enabled = ${isGloballyEnabled}`);
         if (isGloballyEnabled) {
           globallyEnabledTypes.push(alertType);
         }

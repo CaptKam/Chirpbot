@@ -17,17 +17,8 @@ declare module 'express-session' {
   }
 }
 
-// Extend Express Request interface to include user property
-declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-    }
-  }
-}
-
 // Middleware to ensure user is authenticated
-async function requireAuthentication(req: express.Request, res: express.Response, next: express.NextFunction) {
+async function requireAuthentication(req: any, res: any, next: any) {
   if (req.session?.userId) {
     const user = await storage.getUserById(req.session.userId);
     if (user) {
@@ -857,7 +848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPreferences = await storage.getUserAlertPreferences(userId);
       
       // Group by sport
-      const preferencesBySport: Record<string, any[]> = {};
+      const preferencesBySport = {};
       allPreferences.forEach(pref => {
         if (!preferencesBySport[pref.sport]) {
           preferencesBySport[pref.sport] = [];
@@ -1159,7 +1150,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const totalAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts`);
       const todayAlertsResult = await db.execute(sql`SELECT COUNT(*) as count FROM alerts WHERE DATE(created_at) = CURRENT_DATE`);
-      const monitoredTeamsResult = await db.execute(sql`SELECT COUNT(DISTINCT game_id) as count FROM user_monitored_teams`);
 
       res.json({
         users: {
@@ -1172,56 +1162,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         alerts: {
           total: parseInt(String(totalAlertsResult.rows[0]?.count || '0')),
           today: parseInt(String(todayAlertsResult.rows[0]?.count || '0'))
-        },
-        monitoredTeams: parseInt(String(monitoredTeamsResult.rows[0]?.count || '0'))
+        }
       });
     } catch (error) {
       console.error('Error fetching admin stats:', error);
       res.status(500).json({ message: 'Failed to fetch admin stats' });
-    }
-  });
-
-  // System status endpoint for admin dashboard
-  app.get('/api/admin/system-status', requireAdmin, async (req, res) => {
-    try {
-      // Check alert engine status
-      const masterAlertsEnabled = await storage.getMasterAlertEnabled();
-      
-      // Check database connectivity
-      let databaseConnected = false;
-      try {
-        await db.execute(sql`SELECT 1`);
-        databaseConnected = true;
-      } catch (error) {
-        databaseConnected = false;
-      }
-
-      // Check OpenAI integration status (based on env variable)
-      const openaiEnabled = !!process.env.OPENAI_API_KEY;
-
-      // Check Telegram bot status
-      let telegramConnected = false;
-      try {
-        const usersWithTelegram = await db.execute(sql`
-          SELECT COUNT(*) as count FROM users 
-          WHERE telegram_enabled = true 
-          AND telegram_bot_token IS NOT NULL 
-          AND telegram_chat_id IS NOT NULL
-        `);
-        telegramConnected = parseInt(String(usersWithTelegram.rows[0]?.count || '0')) > 0;
-      } catch (error) {
-        telegramConnected = false;
-      }
-
-      res.json({
-        alertEngine: masterAlertsEnabled,
-        database: databaseConnected,
-        openai: openaiEnabled,
-        telegram: telegramConnected
-      });
-    } catch (error) {
-      console.error('Error fetching system status:', error);
-      res.status(500).json({ message: 'Failed to fetch system status' });
     }
   });
 
@@ -1238,31 +1183,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const limit = parseInt(req.query.limit as string) || 50;
 
-      // Get current user from session
-      const currentUserId = req.session?.userId;
-      
-      // If user is not authenticated, return empty array
-      if (!currentUserId) {
-        res.json([]);
-        return;
-      }
-
-      // Get user's monitored games
-      const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
-      const monitoredGameIds = monitoredGames.map(game => game.gameId);
-
-      // If user has no monitored games, return empty array
-      if (monitoredGameIds.length === 0) {
-        res.json([]);
-        return;
-      }
-
-      // Get alerts from database - filter by monitored game IDs
-      const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
+      // Get alerts from database
       const result = await db.execute(sql`
         SELECT id, type, game_id, sport, score, payload, created_at
         FROM alerts
-        WHERE game_id IN (${sql.raw(monitoredGameIds.map(id => `'${id}'`).join(','))})
         ORDER BY created_at DESC
         LIMIT ${limit}
       `);
@@ -1369,7 +1293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      if (result.rowCount === 0) {
+      if (result.rowsAffected === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1604,7 +1528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults: Record<string, any> = {
+      const debugResults = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
@@ -1777,7 +1701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus: Record<string, any> = {
+      const dbStatus = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -2222,7 +2146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
             results.push({ sport, alertType, disabled: true });
             totalDisabled++;
-          } catch (error: any) {
+          } catch (error) {
             console.error(`Failed to disable ${sport}.${alertType}:`, error);
             results.push({ sport, alertType, disabled: false, error: error.message });
           }

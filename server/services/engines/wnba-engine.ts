@@ -239,8 +239,8 @@ export class WNBAEngine extends BaseSportEngine {
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
-      // Get user's enabled alert types - use uppercase 'WNBA' to match database
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'WNBA');
+      // Get user's enabled alert types
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'wnba');
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);

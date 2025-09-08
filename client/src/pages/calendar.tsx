@@ -73,8 +73,6 @@ import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 import { useGamesAvailability } from '@/hooks/useGamesAvailability';
-import { SportTabs } from '@/components/SportTabs';
-import { PageHeader } from '@/components/PageHeader';
 
 const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
@@ -334,21 +332,42 @@ export default function Calendar() {
       
     
     <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-      <PageHeader 
-        title="ChirpBot" 
-        subtitle="V2 Alert System" 
-      />
+      {/* Header */}
+      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
+            <Zap className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black uppercase tracking-wider text-slate-100">ChirpBot</h1>
+            <p className="text-emerald-300/80 text-xs font-semibold">V2 Alert System</p>
+          </div>
+        </div>
+      </header>
 
       {/* Sport Tabs */}
-      <SportTabs
-        sports={SPORTS}
-        activeSport={activeSport}
-        onSportChange={setActiveSport}
-        onSportChangeCallback={() => {
-          // Clear cache when switching sports to ensure fresh data
-          queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
-        }}
-      />
+      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
+        <div className="flex overflow-x-auto">
+          {SPORTS.map((sport) => (
+            <button
+              key={sport}
+              onClick={() => {
+                setActiveSport(sport);
+                // Clear cache when switching sports to ensure fresh data
+                queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
+              }}
+              data-testid={`sport-tab-${sport.toLowerCase()}`}
+              className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors ${
+                activeSport === sport
+                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/10"
+                  : "border-transparent text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {sport}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Teams List */}
       <div className="p-4 space-y-3">
