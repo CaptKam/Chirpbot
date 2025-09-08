@@ -2,7 +2,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import type { WebSocketMessage, Alert } from '@/types';
 import { queryClient } from '@/lib/queryClient';
 
-export function useWebSocket() {
+interface UseWebSocketReturn {
+  isConnected: boolean;
+  lastMessage: WebSocketMessage | null;
+  sendMessage: (message: any) => void;
+  reconnect: () => void;
+}
+
+export function useWebSocket(): UseWebSocketReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -162,6 +169,25 @@ export function useWebSocket() {
     }
   }, [reconnectAttempts]); // Depend on reconnectAttempts to manage retry logic
 
+  const sendMessage = useCallback((message: any) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+    } else {
+      console.warn('Cannot send message: WebSocket is not connected.');
+    }
+  }, []);
+
+  const reconnect = useCallback(() => {
+    console.log('Initiating manual WebSocket reconnection...');
+    setReconnectAttempts(0); // Reset attempts for manual reconnect
+    // Clear any existing timeout before attempting to connect
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    connectWithCleanup();
+  }, [connectWithCleanup]);
+
   useEffect(() => {
     connectWithCleanup();
 
@@ -189,5 +215,7 @@ export function useWebSocket() {
   return {
     isConnected,
     lastMessage,
+    sendMessage,
+    reconnect,
   };
 }
