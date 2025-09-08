@@ -695,18 +695,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <Card className={`${className} ${(() => {
-          const alertStatus = getAlertStatus(
-            alertData?.type || '', 
-            alertData?.createdAt || '', 
-            liveGameData?.status || displayScores.isLive ? 'live' : 'final'
-          );
-          const baseClasses = alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
-          const borderClasses = alertStatus.status === 'ACTIVE' 
-            ? 'border-2 border-emerald-500 shadow-emerald-500/20 shadow-lg' 
-            : 'border-2 border-red-500 shadow-red-500/20 shadow-lg';
-          return `${baseClasses} ${borderClasses}`;
-        })()}`} {...props}>
+        <Card className={`${className} border-2 border-emerald-500 shadow-emerald-500/20 shadow-lg`} {...props}>
           {/* Render the redesigned alert card content here */}
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}

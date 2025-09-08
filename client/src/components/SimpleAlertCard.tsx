@@ -377,14 +377,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <div className={`${className} transition-all duration-200 relative ${(() => {
-          const alertStatus = getAlertStatus(alert.type, alert.createdAt);
-          const baseClasses = alertStatus.status === 'EXPIRED' ? 'opacity-75' : '';
-          const borderClasses = alertStatus.status === 'ACTIVE' 
-            ? 'border-2 border-emerald-500 shadow-emerald-500/20 shadow-lg rounded-xl' 
-            : 'border-2 border-red-500 shadow-red-500/20 shadow-lg rounded-xl';
-          return `${baseClasses} ${borderClasses}`;
-        })()}`}>
+        <div className={`${className} transition-all duration-200 relative border-2 border-emerald-500 shadow-emerald-500/20 shadow-lg rounded-xl`}>
 
           <GameCardTemplate
             gameId={alert.id}
