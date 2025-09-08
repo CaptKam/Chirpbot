@@ -155,30 +155,30 @@ export function GameCardTemplate({
   };
 
   const getGameState = () => {
-    if (sport === 'MLB' && inning && inning > 0) {
+    if (sport === 'MLB' && inning) {
       return (
-        <div className="text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-md font-medium">
+        <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
           {isTopInning ? '▲' : '▼'} {inning}
         </div>
       );
     }
     if ((sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') && quarter) {
       return (
-        <div className="text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-md font-medium">
+        <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
           Q{quarter}
         </div>
       );
     }
     if ((sport === 'NBA' || sport === 'WNBA') && quarter) {
       return (
-        <div className="text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-md font-medium">
+        <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
           Q{quarter}
         </div>
       );
     }
     if (sport === 'NHL' && period) {
       return (
-        <div className="text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-md font-medium">
+        <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
           P{period}
         </div>
       );
@@ -272,9 +272,8 @@ export function GameCardTemplate({
             )}
           </div>
 
-          {/* Game State for other sports and MLB without enhanced display */}
-          {((sport !== 'MLB' || !showEnhancedMLB) && getGameState()) || 
-           (sport === 'MLB' && !showEnhancedMLB && getGameState())}
+          {/* Game State for other sports */}
+          {(sport !== 'MLB' || !showEnhancedMLB) && getGameState()}
 
           {/* Baseball Diamond for MLB games */}
           {sport === 'MLB' && showEnhancedMLB && runners && (
