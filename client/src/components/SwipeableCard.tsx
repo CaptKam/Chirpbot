@@ -181,7 +181,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     if (typeof alertData.homeTeam === 'string') return alertData.homeTeam;
     return alertData.homeTeam?.name || '';
   }, [alertData]);
-  
+
   const { data: weatherData } = useQuery({
     queryKey: ['weather', homeTeamName],
     queryFn: async () => {
@@ -234,25 +234,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       isLive: false
     };
   }, [liveGameData, alertData]);
-
-  // Debug score data
-  React.useEffect(() => {
-    if (alertData) {
-      console.log('🔍 SwipeableCard Score Debug:', {
-        alertId: alertData?.id,
-        storedHomeScore: alertData?.homeScore,
-        storedAwayScore: alertData?.awayScore,
-        liveHomeScore: liveGameData?.homeTeam?.score,
-        liveAwayScore: liveGameData?.awayTeam?.score,
-        displayHomeScore: displayScores.homeScore,
-        displayAwayScore: displayScores.awayScore,
-        hasLiveGame: !!liveGameData,
-        gameStatus: liveGameData?.status,
-        homeTeam: alertData?.homeTeam,
-        awayTeam: alertData?.awayTeam
-      });
-    }
-  }, [alertData, liveGameData, displayScores]);
 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
     // Try to open the app first, with better fallback handling
@@ -789,7 +770,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                 )}
 
-                
+
               </div>
 
               {/* Alert Message - Clean Layout */}
