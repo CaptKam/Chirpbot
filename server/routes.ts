@@ -857,7 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPreferences = await storage.getUserAlertPreferences(userId);
       
       // Group by sport
-      const preferencesBySport = {};
+      const preferencesBySport: Record<string, any[]> = {};
       allPreferences.forEach(pref => {
         if (!preferencesBySport[pref.sport]) {
           preferencesBySport[pref.sport] = [];
@@ -1369,7 +1369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = ${alertId}
       `);
 
-      if (result.rowsAffected === 0) {
+      if (result.rowCount === 0) {
         return res.status(404).json({ message: 'Alert not found' });
       }
 
@@ -1604,7 +1604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comprehensive App Debug Endpoint
   app.get('/api/debug/comprehensive', async (req, res) => {
     try {
-      const debugResults = {
+      const debugResults: Record<string, any> = {
         timestamp: new Date().toISOString(),
         endpoints: {},
         database: {},
@@ -1777,7 +1777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Individual Service Debug Endpoints
   app.get('/api/debug/database', async (req, res) => {
     try {
-      const dbStatus = {
+      const dbStatus: Record<string, any> = {
         connection: 'UNKNOWN',
         tables: {},
         indexes: {},
@@ -2222,7 +2222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
             results.push({ sport, alertType, disabled: true });
             totalDisabled++;
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Failed to disable ${sport}.${alertType}:`, error);
             results.push({ sport, alertType, disabled: false, error: error.message });
           }
