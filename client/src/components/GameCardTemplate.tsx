@@ -272,8 +272,8 @@ export function GameCardTemplate({
             )}
           </div>
 
-          {/* Game State for other sports and MLB without enhanced display */}
-          {(sport !== 'MLB' || !showEnhancedMLB) && getGameState()}
+          {/* Game State for all sports */}
+          {getGameState()}
 
           {/* Baseball Diamond for MLB games */}
           {sport === 'MLB' && showEnhancedMLB && runners && (
