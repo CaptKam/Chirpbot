@@ -59,8 +59,14 @@ const gracefulShutdown = async (signal: string) => {
 
 // Global error handlers - ULTRA ROBUST
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('⚠️ Unhandled Rejection:', reason);
+  console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('⚠️ Stack:', reason instanceof Error ? reason.stack : 'No stack trace');
   // Log but continue running - don't crash
+  
+  // If it's a database error, try to recover
+  if (reason instanceof Error && reason.message?.includes('pool')) {
+    console.log('🔄 Database connection issue detected - will retry on next operation');
+  }
 });
 
 process.on('uncaughtException', (error: any) => {

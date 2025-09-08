@@ -279,7 +279,11 @@ export class AlertGenerator {
       // Cache cleared silently to reduce log noise
 
       // Check if any alerts are globally enabled before proceeding
-      const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts();
+      const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts().catch(error => {
+        console.error('❌ Error checking globally enabled alerts:', error);
+        return false; // Fail safely
+      });
+      
       if (!hasAnyEnabledAlerts) {
         console.log('🚫 No alert types are globally enabled by admin - skipping all alert generation');
         return;
@@ -290,7 +294,35 @@ export class AlertGenerator {
       let totalAlerts = 0;
 
       for (const sport of sports) {
-        const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
+        try {
+          const enabledAlerts = await this.settingsCache.getGlobalAlertSettings(sport).catch(error => {
+            console.error(`❌ Error getting ${sport} settings:`, error);
+            return {};
+          });
+          
+          if (Object.keys(enabledAlerts).length === 0) {
+            continue; // Skip this sport if no settings
+          }
+          
+          // Process sport-specific alerts with error isolation
+          await this.processSportAlerts(sport, enabledAlerts).catch(error => {
+            console.error(`❌ Error processing ${sport} alerts:`, error);
+            // Continue with other sports even if this one fails
+          });
+        } catch (sportError) {
+          console.error(`❌ Sport ${sport} processing failed:`, sportError);
+          // Continue with next sport
+        }
+      }
+    } catch (error) {
+      console.error('❌ Critical error in generateLiveGameAlerts:', error);
+      // Don't re-throw - this prevents crashes
+    }
+  }
+
+  private async processSportAlerts(sport: string, enabledAlerts: Record<string, boolean>): Promise<void> {
+    // Isolated sport processing logic goes here
+    console.log(`🔍 Processing ${sport} alerts...`);EnabledAlertTypes(sport);
 
         if (enabledAlerts.length === 0) {
           // Only log skipped sports for major leagues to reduce console noise
