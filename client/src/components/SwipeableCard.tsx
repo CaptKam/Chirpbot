@@ -768,18 +768,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   className="shadow-lg"
                 />
 
-                {/* Game Status and Inning/Quarter Info */}
-                {(alertData.context?.inning || liveGameData?.inning || alertData.context?.quarter || liveGameData?.quarter) && (
-                  <div className="mt-3 text-center">
-                    <span className="text-sm text-slate-400 font-medium">
-                      {alertData.sport === 'MLB' ? (
-                        `${alertData.context?.isTopInning ?? liveGameData?.isTopInning ? 'Top' : 'Bottom'} ${alertData.context?.inning || liveGameData?.inning || 1}`
-                      ) : (
-                        `Quarter ${alertData.context?.quarter || liveGameData?.quarter || 1}`
-                      )}
-                    </span>
-                  </div>
-                )}
+                
 
                 
               </div>
