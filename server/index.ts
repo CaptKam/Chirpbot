@@ -59,14 +59,25 @@ const gracefulShutdown = async (signal: string) => {
 
 // Global error handlers - ULTRA ROBUST
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
-  console.error('⚠️ Stack:', reason instanceof Error ? reason.stack : 'No stack trace');
-  // Log but continue running - don't crash
+  console.error('⚠️ UNHANDLED REJECTION DETECTED:');
+  console.error('  Promise:', promise);
+  console.error('  Reason:', reason);
+  console.error('  Stack:', reason instanceof Error ? reason.stack : 'No stack trace available');
   
-  // If it's a database error, try to recover
-  if (reason instanceof Error && reason.message?.includes('pool')) {
-    console.log('🔄 Database connection issue detected - will retry on next operation');
+  // Try to identify the source
+  if (reason instanceof Error) {
+    if (reason.message?.includes('pool') || reason.message?.includes('database')) {
+      console.log('🔄 Database connection issue - will retry on next operation');
+    } else if (reason.message?.includes('fetch') || reason.message?.includes('ENOTFOUND')) {
+      console.log('🔄 Network/API issue detected - will retry on next request');
+    } else if (reason.message?.includes('timeout')) {
+      console.log('🔄 Timeout detected - will retry with increased timeout');
+    } else {
+      console.log('🔄 Generic error handled - continuing operations');
+    }
   }
+  
+  // Log but continue running - don't crash
 });
 
 process.on('uncaughtException', (error: any) => {

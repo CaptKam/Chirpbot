@@ -295,25 +295,63 @@ export class AlertGenerator {
 
       for (const sport of sports) {
         try {
-          const enabledAlerts = await this.settingsCache.getGlobalAlertSettings(sport).catch(error => {
+          const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport).catch(error => {
             console.error(`❌ Error getting ${sport} settings:`, error);
-            return {};
+            return [];
           });
           
-          if (Object.keys(enabledAlerts).length === 0) {
-            continue; // Skip this sport if no settings
+          if (enabledAlerts.length === 0) {
+            // Only log skipped sports for major leagues to reduce console noise
+            if (['MLB', 'NFL'].includes(sport)) {
+              console.log(`🚫 No ${sport} alert types enabled - skipping ${sport} monitoring`);
+            }
+            continue;
           }
-          
-          // Process sport-specific alerts with error isolation
-          await this.processSportAlerts(sport, enabledAlerts).catch(error => {
-            console.error(`❌ Error processing ${sport} alerts:`, error);
-            // Continue with other sports even if this one fails
-          });
+
+          // Reduce verbosity during routine monitoring cycles
+          // Only show essential sport processing information
+          console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled`);
+
+          // Get games for this sport
+          let games: any[] = [];
+          try {
+            switch (sport) {
+              case 'MLB':
+                games = await this.mlbApi.getTodaysGames();
+                break;
+              case 'NFL':
+                games = await this.getNFLGames();
+                break;
+              case 'NCAAF':
+                games = await this.ncaafApi.getTodaysGames();
+                break;
+              case 'WNBA':
+                games = await this.getWNBAGames();
+                break;
+              case 'CFL':
+                games = await this.getCFLGames();
+                break;
+            }
+          } catch (gameError) {
+            console.error(`❌ Error fetching ${sport} games:`, gameError);
+            continue; // Skip this sport if API fails
+          }
+
+          if (games.length > 0) {
+            try {
+              const alerts = await this.processGamesWithEngine(sport, games);
+              totalAlerts += alerts;
+            } catch (processError) {
+              console.error(`❌ Error processing ${sport} games:`, processError);
+            }
+          }
         } catch (sportError) {
           console.error(`❌ Sport ${sport} processing failed:`, sportError);
           // Continue with next sport
         }
       }
+
+      console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
     } catch (error) {
       console.error('❌ Critical error in generateLiveGameAlerts:', error);
       // Don't re-throw - this prevents crashes
