@@ -42,7 +42,7 @@ waitForPort = 5000
 [[workflows.workflow]]
 name = "Start ChirpBot"
 author = 44048571
-mode = "parallel"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

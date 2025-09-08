@@ -9,7 +9,6 @@ import { seedDatabase } from "./seed-database";
 import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
 import { pool } from "./db";
-import { WebSocketServer } from 'ws';
 
 // Keep track of server and monitoring timer for graceful shutdown
 let httpServer: any = null;
@@ -93,7 +92,6 @@ const app = express();
 
 // Security and CORS
 app.set('trust proxy', 1);
-app.set('x-powered-by', false); // Hide x-powered-by header
 app.use(helmet({
   contentSecurityPolicy: false, // Disabled for Vite dev mode
 }));
@@ -158,8 +156,6 @@ app.use((req, res, next) => {
 
   next();
 });
-
-
 
 (async () => {
   try {
