@@ -720,8 +720,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     {alertData.type.replace(/_/g, ' ')}
                   </span>
                 </div>
-                <div className="flex items-center space-x-4 text-sm">
-                  <span className="text-emerald-400 font-bold">{alertData.confidence}%</span>
+                <div className="flex items-center text-sm">
                   <span className="text-slate-400 font-medium">{formatTime(alertData.createdAt || '')}</span>
                 </div>
               </div>
