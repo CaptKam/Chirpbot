@@ -65,25 +65,4 @@ mode = "sequential"
 task = "shell.exec"
 args = "npm run validate-cylinders"
 
-[[workflows.workflow]]
-name = "Start ChirpBot Clean"
-author = 44048571
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pkill -f \"node.*server\" || true"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pkill -f \"tsx.*server\" || true"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "sleep 3"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-
 [agent]
