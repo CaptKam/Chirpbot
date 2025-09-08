@@ -359,23 +359,26 @@ export class AlertGenerator {
   }
 
   private async processSportAlerts(sport: string, enabledAlerts: Record<string, boolean>): Promise<void> {
-    // Isolated sport processing logic goes here
-    console.log(`🔍 Processing ${sport} alerts...`);EnabledAlertTypes(sport);
+    console.log(`🔍 Processing ${sport} alerts...`);
+    
+    try {
+      const enabledAlertTypes = Object.keys(enabledAlerts).filter(key => enabledAlerts[key]);
 
-        if (enabledAlerts.length === 0) {
-          // Only log skipped sports for major leagues to reduce console noise
-          if (['MLB', 'NFL'].includes(sport)) {
-            console.log(`🚫 No ${sport} alert types enabled - skipping ${sport} monitoring`);
-          }
-          continue;
+      if (enabledAlertTypes.length === 0) {
+        // Only log skipped sports for major leagues to reduce console noise
+        if (['MLB', 'NFL'].includes(sport)) {
+          console.log(`🚫 No ${sport} alert types enabled - skipping ${sport} monitoring`);
         }
+        return;
+      }
 
-        // Reduce verbosity during routine monitoring cycles
-        // Only show essential sport processing information
-        console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled`);
+      // Reduce verbosity during routine monitoring cycles
+      // Only show essential sport processing information
+      console.log(`✅ ${sport} monitoring: ${enabledAlertTypes.length} alerts enabled`);
 
-        // Get games for this sport
-        let games: any[] = [];
+      // Get games for this sport
+      let games: any[] = [];
+      try {
         switch (sport) {
           case 'MLB':
             games = await this.mlbApi.getTodaysGames();
@@ -393,16 +396,21 @@ export class AlertGenerator {
             games = await this.getCFLGames();
             break;
         }
-
-        if (games.length > 0) {
-          const alerts = await this.processGamesWithEngine(sport, games);
-          totalAlerts += alerts;
-        }
+      } catch (gameError) {
+        console.error(`❌ Error fetching ${sport} games:`, gameError);
+        return;
       }
 
-      console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
+      if (games.length > 0) {
+        try {
+          const alerts = await this.processGamesWithEngine(sport, games);
+          console.log(`📊 Generated ${alerts} ${sport} alerts`);
+        } catch (processError) {
+          console.error(`❌ Error processing ${sport} games:`, processError);
+        }
+      }
     } catch (error) {
-      console.error('❌ Error in live game alert generation:', error);
+      console.error(`❌ Error in ${sport} alert processing:`, error);
     }
   }
 
