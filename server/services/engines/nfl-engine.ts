@@ -281,8 +281,8 @@ export class NFLEngine extends BaseSportEngine {
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
-      // Get user's enabled alert types
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'nfl');
+      // Get user's enabled alert types - use uppercase 'NFL' to match database
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'NFL');
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);

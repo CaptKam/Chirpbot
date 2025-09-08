@@ -103,24 +103,17 @@ export default function AlertsPage() {
   // Determine which alert types should use the simple card
   const shouldUseSimpleCard = (alertType: string) => {
     const simpleAlertTypes = [
-      // Game Events
-      'TWO_MINUTE_WARNING',
-      'NCAAF_KICKOFF', 
-      'NCAAF_HALFTIME',
-      'GAME_START',
-      'GAME_END',
-      // Final Game Results
-      'HIGH_SCORING',
-      'SHUTOUT',
-      'BLOWOUT',
-      'CLOSE_GAME',
-      // Time-based
-      'OVERTIME',
-      'FINAL_DRIVE',
-      // Simple milestones
-      'TOUCHDOWN',
-      'FIELD_GOAL',
-      'SAFETY'
+      // Game Start Events (All Sports) - Now using SimpleAlertCard
+      'MLB_GAME_START',
+      'NFL_GAME_START', 
+      'NCAAF_GAME_START',
+      'CFL_GAME_START',
+      'WNBA_GAME_START',
+      // Two Minute Warning Events
+      'NFL_TWO_MINUTE_WARNING',
+      'NCAAF_TWO_MINUTE_WARNING', 
+      'CFL_TWO_MINUTE_WARNING',
+      'WNBA_TWO_MINUTE_WARNING'
     ];
     return simpleAlertTypes.includes(alertType);
   };
