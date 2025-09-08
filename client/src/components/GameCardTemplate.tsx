@@ -274,20 +274,6 @@ export function GameCardTemplate({
 
           {/* Game State for other sports */}
           {(sport !== 'MLB' || !showEnhancedMLB) && getGameState()}
-
-          {/* Baseball Diamond for MLB games */}
-          {sport === 'MLB' && showEnhancedMLB && runners && (
-            <BaseballDiamond
-              runners={runners}
-              inning={inning}
-              isTopInning={isTopInning}
-              outs={outs}
-              balls={balls}
-              strikes={strikes}
-              size="sm"
-              showCount={status === 'live'}
-            />
-          )}
         </div>
 
         {/* Home Team - Right Side */}
@@ -358,7 +344,21 @@ export function GameCardTemplate({
         </div>
       </div>
 
-      
+      {/* Baseball Diamond at bottom of center game info */}
+      {sport === 'MLB' && showEnhancedMLB && runners && (
+        <div className="mt-4 flex justify-center">
+          <BaseballDiamond
+            runners={runners}
+            inning={inning}
+            isTopInning={isTopInning}
+            outs={outs}
+            balls={balls}
+            strikes={strikes}
+            size="sm"
+            showCount={status === 'live'}
+          />
+        </div>
+      )}
 
       {/* Render children if provided */}
       {children}
