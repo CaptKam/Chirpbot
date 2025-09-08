@@ -159,100 +159,126 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   // Fetch live game data for MLB alerts to get current scores
-  const { data: todaysGames } = useQuery({
+  const { data: todaysGames, error: gamesError } = useQuery({
     queryKey: ["/api/games/today", { sport: alertData?.sport || "MLB" }],
     queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch games");
-      return response.json();
+      try {
+        const [url, params] = queryKey;
+        const searchParams = new URLSearchParams(params as Record<string, string>);
+        const response = await fetch(`${url}?${searchParams}`, {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          console.warn(`Games API error: ${response.status} ${response.statusText}`);
+          return { games: [] }; // Return empty games instead of throwing
+        }
+        return response.json();
+      } catch (error) {
+        console.warn('Games fetch failed:', error);
+        return { games: [] }; // Return fallback data
+      }
     },
     enabled: alertData?.sport === 'MLB', // Only fetch for MLB alerts
     refetchInterval: 15000, // Refresh every 15 seconds for live scores
     staleTime: 10000,
+    retry: false, // Don't retry failed requests to avoid spam
   });
+
+  // Helper function to safely extract team names
+  const extractTeamName = React.useCallback((team: any): string => {
+    if (!team) return '';
+    if (typeof team === 'string') return team;
+    if (typeof team === 'object' && team.name) return team.name;
+    return '';
+  }, []);
 
   // Fetch live weather data for the game
   const homeTeamName = React.useMemo(() => {
-    if (!alertData) return '';
-    if (typeof alertData.homeTeam === 'string') return alertData.homeTeam;
-    return alertData.homeTeam?.name || '';
-  }, [alertData]);
-  
-  const { data: weatherData } = useQuery({
+    try {
+      if (!alertData) return '';
+      return extractTeamName(alertData.homeTeam);
+    } catch (error) {
+      console.warn('Error extracting home team name:', error);
+      return '';
+    }
+  }, [alertData, extractTeamName]);
+
+  const { data: weatherData, error: weatherError } = useQuery({
     queryKey: ['weather', homeTeamName],
     queryFn: async () => {
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeamName)}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Weather fetch failed');
-      return response.json();
+      try {
+        const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeamName)}`, {
+          credentials: 'include'
+        });
+        if (!response.ok) {
+          console.warn(`Weather API error: ${response.status} ${response.statusText}`);
+          return null; // Return null instead of throwing
+        }
+        return response.json();
+      } catch (error) {
+        console.warn('Weather fetch failed:', error);
+        return null; // Return null on error
+      }
     },
     enabled: !!homeTeamName, // Only fetch if we have a team name
     refetchInterval: 60000, // Refresh every minute
     staleTime: 60000, // Cache data for 1 minute
+    retry: false, // Don't retry failed requests
   });
 
 
   // Find the matching game for this alert to get live scores
   const liveGameData = React.useMemo(() => {
-    if (!todaysGames?.games || !alertData) return null;
+    try {
+      if (!todaysGames?.games || !alertData) return null;
 
-    return todaysGames.games.find((game: any) => {
-      // Match by team names (both home and away combinations)
-      const gameHomeTeam = game.homeTeam?.name || '';
-      const gameAwayTeam = game.awayTeam?.name || '';
-      const alertHomeTeam = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
-      const alertAwayTeam = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
+      const games = todaysGames?.games || [];
+      return games.find((game: any) => {
+        // Match by team names (both home and away combinations)
+        const gameHomeTeam = extractTeamName(game.homeTeam);
+        const gameAwayTeam = extractTeamName(game.awayTeam);
+        const alertHomeTeam = extractTeamName(alertData.homeTeam);
+        const alertAwayTeam = extractTeamName(alertData.awayTeam);
 
-      return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
-             (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
-    });
-  }, [todaysGames, alertData]);
+        return (gameHomeTeam === alertHomeTeam && gameAwayTeam === alertAwayTeam) ||
+               (gameHomeTeam === alertAwayTeam && gameAwayTeam === alertHomeTeam);
+      });
+    } catch (error) {
+      console.warn('Error finding live game data:', error);
+      return null;
+    }
+  }, [todaysGames, alertData, extractTeamName]);
 
   // Calculate scores to display - use live scores if available, fallback to stored scores
   const displayScores = React.useMemo(() => {
-    const storedHomeScore = alertData?.context?.homeScore ?? alertData?.homeScore ?? 0;
-    const storedAwayScore = alertData?.context?.awayScore ?? alertData?.awayScore ?? 0;
+    try {
+      const storedHomeScore = alertData?.context?.homeScore ?? alertData?.homeScore ?? 0;
+      const storedAwayScore = alertData?.context?.awayScore ?? alertData?.awayScore ?? 0;
 
-    // Use live scores if we have live game data and it's a live or final game
-    if (liveGameData && (liveGameData.status === 'live' || liveGameData.status === 'final')) {
+      // Use live scores if we have live game data and it's a live or final game
+      if (liveGameData && (liveGameData.status === 'live' || liveGameData.status === 'final')) {
+        return {
+          homeScore: liveGameData.homeTeam?.score ?? storedHomeScore,
+          awayScore: liveGameData.awayTeam?.score ?? storedAwayScore,
+          isLive: true
+        };
+      }
+
+      // Fallback to stored scores
       return {
-        homeScore: liveGameData.homeTeam?.score ?? storedHomeScore,
-        awayScore: liveGameData.awayTeam?.score ?? storedAwayScore,
-        isLive: true
+        homeScore: storedHomeScore,
+        awayScore: storedAwayScore,
+        isLive: false
+      };
+    } catch (error) {
+      console.warn('Error calculating display scores:', error);
+      return {
+        homeScore: 0,
+        awayScore: 0,
+        isLive: false
       };
     }
-
-    // Fallback to stored scores
-    return {
-      homeScore: storedHomeScore,
-      awayScore: storedAwayScore,
-      isLive: false
-    };
   }, [liveGameData, alertData]);
-
-  // Debug score data
-  React.useEffect(() => {
-    if (alertData) {
-      console.log('🔍 SwipeableCard Score Debug:', {
-        alertId: alertData?.id,
-        storedHomeScore: alertData?.homeScore,
-        storedAwayScore: alertData?.awayScore,
-        liveHomeScore: liveGameData?.homeTeam?.score,
-        liveAwayScore: liveGameData?.awayTeam?.score,
-        displayHomeScore: displayScores.homeScore,
-        displayAwayScore: displayScores.awayScore,
-        hasLiveGame: !!liveGameData,
-        gameStatus: liveGameData?.status,
-        homeTeam: alertData?.homeTeam,
-        awayTeam: alertData?.awayTeam
-      });
-    }
-  }, [alertData, liveGameData, displayScores]);
 
   const handleSportsbookClick = (sportsbook: Sportsbook) => {
     // Try to open the app first, with better fallback handling
@@ -381,20 +407,27 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   // Construct a display message for sharing/copying
   const displayMessage = React.useMemo(() => {
-    const homeTeamName = typeof alertData?.homeTeam === 'string' ? alertData.homeTeam : alertData?.homeTeam?.name || '';
-    const awayTeamName = typeof alertData?.awayTeam === 'string' ? alertData.awayTeam : alertData?.awayTeam?.name || '';
-    let message = `ChirpBot Alert: ${homeTeamName} vs ${awayTeamName}`;
-    if (alertData?.sport) message += ` (${alertData.sport})`;
-    if (alertData?.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
-    if (alertData?.priority !== undefined) message += ` - Priority: ${alertData.priority}`;
-    if (alertData?.context?.reasons) {
-      message += `\nReasons: ${alertData.context.reasons.join(', ')}`;
+    try {
+      if (!alertData) return 'ChirpBot Alert';
+      
+      const homeTeamName = extractTeamName(alertData.homeTeam);
+      const awayTeamName = extractTeamName(alertData.awayTeam);
+      let message = `ChirpBot Alert: ${homeTeamName} vs ${awayTeamName}`;
+      if (alertData.sport) message += ` (${alertData.sport})`;
+      if (alertData.probability !== undefined) message += ` - Probability: ${alertData.probability.toFixed(2)}%`;
+      if (alertData.priority !== undefined) message += ` - Priority: ${alertData.priority}`;
+      if (alertData.context?.reasons) {
+        message += `\nReasons: ${alertData.context.reasons.join(', ')}`;
+      }
+      if (alertData.betbookData?.aiAdvice) {
+        message += `\nAI Advice: ${alertData.betbookData.aiAdvice}`;
+      }
+      return message;
+    } catch (error) {
+      console.warn('Error constructing display message:', error);
+      return 'ChirpBot Alert';
     }
-    if (alertData?.betbookData?.aiAdvice) {
-      message += `\nAI Advice: ${alertData.betbookData.aiAdvice}`;
-    }
-    return message;
-  }, [alertData]);
+  }, [alertData, extractTeamName]);
 
   // Early null check to help TypeScript understand alertData is defined
   if (!alertData) {
@@ -789,7 +822,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                 )}
 
-                
+
               </div>
 
               {/* Alert Message - Clean Layout */}
