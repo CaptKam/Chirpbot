@@ -1952,10 +1952,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available alert types from cylinders
-  app.get('/api/admin/available-alerts/:sport', async (req, res) => {
+  // Get available alert types from cylinders - accessible to all authenticated users
+  app.get('/api/available-alerts/:sport', async (req, res) => {
     try {
-      if (!req.session.adminUserId && !req.session.userId) {
+      if (!req.session.userId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
 

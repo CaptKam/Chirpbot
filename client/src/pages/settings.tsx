@@ -48,15 +48,15 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Global settings query to check admin-disabled alerts
+  // Global settings query to check admin-disabled alerts (only for admin users)
   const { data: globalSettings } = useQuery({
     queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!user?.id && isAuthenticated && user?.role === 'admin',
   });
 
-  // Available alert types query from cylinders
+  // Available alert types query from cylinders (accessible to all authenticated users)
   const { data: availableAlerts } = useQuery({
-    queryKey: [`/api/admin/available-alerts/${activeSport}`],
+    queryKey: [`/api/available-alerts/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
   });
 
@@ -86,8 +86,8 @@ export default function Settings() {
   const getAlertPreference = (sport: string, alertType: string): boolean => {
     if (preferencesLoading) return true; // Default to true while loading to avoid brief disablings
 
-    // Check if the alert is globally disabled by admin
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
+    // Check if the alert is globally disabled by admin (only if user is admin and global settings are loaded)
+    if (user?.role === 'admin' && globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
       return false;
     }
 
@@ -348,8 +348,12 @@ export default function Settings() {
                     </h3>
                     <div className="space-y-3">
                       {(availableAlerts as any[] || []).filter((alertType) => {
-                        // Only show alerts that are globally enabled by admin
-                        return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
+                        // For admin users, only show alerts that are globally enabled
+                        if (user?.role === 'admin' && globalSettings && typeof globalSettings === 'object') {
+                          return (globalSettings as Record<string, boolean>)[alertType.key] !== false;
+                        }
+                        // For regular users, show all available alerts (they can't modify global settings anyway)
+                        return true;
                       }).map((alertType) => {
                         const isEnabled = getAlertPreference(activeSport, alertType.key);
                         return (
@@ -387,7 +391,8 @@ export default function Settings() {
                     </div>
                   )}
 
-                  {(availableAlerts as any[] || []).filter((alertType) => {
+                  {/* Show admin disabled message only for admin users */}
+                  {user?.role === 'admin' && (availableAlerts as any[] || []).filter((alertType) => {
                     return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
                   }).length === 0 && (availableAlerts as any[] || []).length > 0 && (
                     <div className="text-center py-8">
