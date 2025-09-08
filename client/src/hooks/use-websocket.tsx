@@ -158,17 +158,20 @@ export function useWebSocket(): UseWebSocketReturn {
   }, [connect]);
 
   useEffect(() => {
-    connect();
+    // Add a small delay to prevent immediate connection issues
+    const timer = setTimeout(() => {
+      connect();
+    }, 1000);
 
+    // Cleanup on unmount
     return () => {
+      clearTimeout(timer);
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      isConnectingRef.current = false;
     };
   }, [connect]);
 

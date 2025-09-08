@@ -236,49 +236,29 @@ app.use((req, res, next) => {
       }
     });
 
-    // Start listening with ULTRA-robust error handling
-    let retryCount = 0;
-    const maxRetries = 10;
-
-    while (retryCount < maxRetries) {
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const attemptListen = () => {
-            server.listen({
-              port,
-              host: "0.0.0.0",
-              exclusive: false, // Allow port sharing to avoid conflicts
-            }, () => {
-              console.log(`✅ Server running on port ${port}`);
-              console.log('🚀 ChirpBot V2 is ready!');
-              console.log('💪 System is now ULTRA-BULLETPROOF with auto-recovery');
-              resolve();
-            }).on('error', (err: any) => {
-              if (err.code === 'EADDRINUSE') {
-                // Don't reject, just retry
-                server.close();
-                setTimeout(() => {
-                  attemptListen();
-                }, 2000);
-              } else {
-                reject(err);
-              }
-            });
-          };
-          attemptListen();
+    // Simplified server startup with better error handling
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server.listen(port, "0.0.0.0", () => {
+          console.log(`✅ Server running on port ${port}`);
+          console.log('🚀 ChirpBot V2 is ready!');
+          resolve();
+        }).on('error', (err: any) => {
+          if (err.code === 'EADDRINUSE') {
+            console.error(`❌ Port ${port} is already in use. Killing existing processes...`);
+            reject(err);
+          } else {
+            reject(err);
+          }
         });
-        break; // Success! Exit the retry loop
-      } catch (error: any) {
-        retryCount++;
-        console.log(`⚠️ Server startup attempt ${retryCount}/${maxRetries} failed`);
-
-        if (retryCount < maxRetries) {
-          console.log(`⏳ Retrying in 5 seconds...`);
-          await new Promise(resolve => setTimeout(resolve, 5000));
-        } else {
-          console.error('❌ Max retries reached. Running in degraded mode.');
-          // Don't exit - keep the process alive
-        }
+      });
+    } catch (error: any) {
+      if (error.code === 'EADDRINUSE') {
+        console.log('🔄 Attempting to kill existing processes and restart...');
+        process.exit(1); // Let the workflow handle restart
+      } else {
+        console.error('❌ Server startup failed:', error);
+        process.exit(1);
       }
     }
   } catch (error: any) {

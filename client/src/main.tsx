@@ -4,29 +4,27 @@ import "./index.css";
 
 // Global error handlers to prevent unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason);
-  
-  // Log more details if available
-  if (event.reason instanceof Error) {
-    console.error('Stack trace:', event.reason.stack);
-  }
+  const reason = String(event.reason);
   
   // Check if it's a network error that we can safely ignore
-  const reason = String(event.reason);
   const ignorableErrors = [
     'NetworkError',
     'Failed to fetch',
     'AbortError',
-    'The user aborted a request'
+    'The user aborted a request',
+    'WebSocket',
+    'connection',
+    'ECONNREFUSED'
   ];
   
   if (ignorableErrors.some(err => reason.includes(err))) {
-    console.log('Ignoring network-related error');
+    console.log('Ignoring network-related error:', reason);
     event.preventDefault();
     return;
   }
   
-  event.preventDefault(); // Prevent the default browser error handling
+  console.warn('Unhandled promise rejection:', event.reason);
+  event.preventDefault();
 });
 
 window.addEventListener('error', (event) => {
