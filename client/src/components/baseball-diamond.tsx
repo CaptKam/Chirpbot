@@ -117,8 +117,29 @@ export function WeatherDisplay({
   // Use stadium context if available, otherwise show basic wind info
   const displayText = stadiumWindContext || `${windSpeed}mph ${windDirection}`;
 
-  // Weather info is now handled by the parent component to avoid duplication
-  return null;
+  return (
+    <div className={`flex items-center space-x-1 ${textSize}`}>
+      <span className="text-slate-400 font-mono">
+        {getWindIcon(windDirection)}
+      </span>
+      <span className="text-slate-300 font-medium">
+        {displayText}
+        {windGust && windGust > windSpeed + 3 && (
+          <span className="text-yellow-400 ml-1">
+            (gusts {windGust}mph)
+          </span>
+        )}
+      </span>
+      {temperature && (
+        <>
+          <span className="text-slate-500">•</span>
+          <span className="text-slate-300">
+            {temperature}°F
+          </span>
+        </>
+      )}
+    </div>
+  );
 }
 
 export { default as WeatherImpactVisualizer } from './WeatherImpactVisualizer';
