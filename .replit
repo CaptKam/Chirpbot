@@ -56,13 +56,4 @@ args = "sleep 2"
 task = "shell.exec"
 args = "npm run dev"
 
-[[workflows.workflow]]
-name = "Validate Cylinders"
-author = 44048571
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run validate-cylinders"
-
 [agent]

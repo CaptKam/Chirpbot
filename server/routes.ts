@@ -2225,8 +2225,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 15000); // Check every 15 seconds
   
-  // Store monitoring interval globally for graceful shutdown cleanup
-  (global as any).setMonitoringInterval(monitoringInterval);
+  // Clean up monitoring on server shutdown
+  process.on('beforeExit', () => {
+    clearInterval(monitoringInterval);
+    console.log('✅ Alert monitoring stopped cleanly');
+  })
 
   console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 
