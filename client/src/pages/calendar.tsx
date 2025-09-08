@@ -168,6 +168,7 @@ export default function Calendar() {
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
   
   const { hasGamesWithinTwoDays, hasTomorrowGames } = useGamesAvailability();
 
@@ -202,7 +203,18 @@ export default function Calendar() {
 
   const todayGames = todayGamesData?.games || [];
   const tomorrowGames = tomorrowGamesData?.games || [];
-  const games = todayGames; // Keep existing behavior for main games list
+  
+  // Apply team filter if active
+  const filteredTodayGames = teamFilter 
+    ? todayGames.filter(game => 
+        (teamFilter.homeTeam && game.homeTeam?.name === teamFilter.homeTeam) ||
+        (teamFilter.awayTeam && game.awayTeam?.name === teamFilter.awayTeam) ||
+        (teamFilter.homeTeam && game.awayTeam?.name === teamFilter.homeTeam) ||
+        (teamFilter.awayTeam && game.homeTeam?.name === teamFilter.awayTeam)
+      )
+    : todayGames;
+    
+  const games = filteredTodayGames;
   const isLoading = isLoadingToday || (hasGamesWithinTwoDays && hasTomorrowGames && isLoadingTomorrow);
 
   // Fetch alerts for badge count
@@ -357,6 +369,11 @@ export default function Calendar() {
             <div className="flex items-center space-x-3">
               <h2 className="text-lg font-black uppercase tracking-wider text-slate-100">
                 {isSameDay(selectedDate, new Date()) ? "Today's Games" : format(selectedDate, 'MMMM d, yyyy')}
+                {teamFilter && (
+                  <span className="text-sm font-normal text-emerald-400 ml-2">
+                    - {teamFilter.homeTeam || teamFilter.awayTeam} games
+                  </span>
+                )}
               </h2>
               <Button
                 variant="outline"
@@ -367,6 +384,16 @@ export default function Calendar() {
                 <CalendarIcon className="w-4 h-4 mr-2" />
                 Pick Date
               </Button>
+              {teamFilter && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTeamFilter(null)}
+                  className="bg-red-500/20 border-red-500/50 text-red-300 hover:bg-red-500/30"
+                >
+                  Clear Filter
+                </Button>
+              )}
             </div>
             <div className="flex items-center space-x-4 mt-1">
               <span className="text-sm font-semibold text-emerald-400">
