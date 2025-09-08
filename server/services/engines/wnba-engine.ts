@@ -72,9 +72,9 @@ export class WNBAEngine extends BaseSportEngine {
       if (await this.isAlertEnabled('WNBA_FOURTH_QUARTER')) {
         const alertKey = `${gameState.gameId}_WNBA_FOURTH_QUARTER_${timeRemaining.replace(/[:\s]/g, '')}`;
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+                            (gameState.awayTeam as any)?.displayName || (gameState.awayTeam as any)?.name || 'Away Team';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+                            (gameState.homeTeam as any)?.displayName || (gameState.homeTeam as any)?.name || 'Home Team';
         
         const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${timeRemaining} left`;
 
@@ -110,9 +110,9 @@ export class WNBAEngine extends BaseSportEngine {
       if (await this.isAlertEnabled('WNBA_CLOSE_GAME')) {
         const alertKey = `${gameState.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+                            (gameState.awayTeam as any)?.displayName || (gameState.awayTeam as any)?.name || 'Away Team';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+                            (gameState.homeTeam as any)?.displayName || (gameState.homeTeam as any)?.name || 'Home Team';
         
         const message = `🔥 CLOSE WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
 
@@ -147,9 +147,9 @@ export class WNBAEngine extends BaseSportEngine {
         const overtimePeriod = quarter - 4;
         const alertKey = `${gameState.gameId}_WNBA_OVERTIME_${quarter}`;
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+                            (gameState.awayTeam as any)?.displayName || (gameState.awayTeam as any)?.name || 'Away Team';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+                            (gameState.homeTeam as any)?.displayName || (gameState.homeTeam as any)?.name || 'Home Team';
         
         const message = `⚡ WNBA OVERTIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
 
@@ -184,9 +184,9 @@ export class WNBAEngine extends BaseSportEngine {
       if (await this.isAlertEnabled('WNBA_HIGH_SCORING')) {
         const alertKey = `${gameState.gameId}_WNBA_HIGH_SCORING`;
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
+                            (gameState.awayTeam as any)?.displayName || (gameState.awayTeam as any)?.name || 'Away Team';
         const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
+                            (gameState.homeTeam as any)?.displayName || (gameState.homeTeam as any)?.name || 'Home Team';
         
         const message = `🎯 HIGH-SCORING WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${totalScore} combined points`;
 
