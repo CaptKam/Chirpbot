@@ -583,7 +583,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         handleSportsbookClick(sportsbook);
                         setDragX(0);
                       }}
-                      className="h-10 w-10 p-1 rounded-lg bg-white/90 hover:bg-white hover:scale-105 shadow-lg ring-2 ring-white/20 transition-all duration-200"
+                      className="h-10 w-10 p-1 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20"
                       style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
                       data-testid={`ai-sportsbook-${sportsbook.name.toLowerCase()}`}
                     >
@@ -602,7 +602,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             {/* Quick Actions */}
             <div className="flex gap-2 mt-3 pt-3 border-t border-slate-700/30">
               <button
-                className="flex-1 px-3 py-2 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
+                className="flex-1 px-3 py-2 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard.writeText(displayMessage);
@@ -612,7 +612,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 📋 Copy
               </button>
               <button
-                className="flex-1 px-3 py-2 text-xs font-medium bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
+                className="flex-1 px-3 py-2 text-xs font-medium bg-blue-500/20 text-blue-400 rounded"
                 onClick={(e) => {
                   e.stopPropagation();
                   // Share alert
@@ -641,7 +641,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       handleSportsbookClick(sportsbook);
                       setDragX(0);
                     }}
-                    className="h-12 w-12 p-1.5 rounded-xl bg-white/90 hover:bg-white hover:scale-105 shadow-xl ring-2 ring-white/30 transition-all duration-200"
+                    className="h-12 w-12 p-1.5 rounded-xl bg-white/90 shadow-xl ring-2 ring-white/30"
                     style={{ backgroundColor: `${sportsbook.color}20`, borderColor: `${sportsbook.color}40` }}
                     data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
                   >
@@ -668,7 +668,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             handleDeleteAlert();
             setDragX(0); // Return to center after click
           }}
-          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 ring-1 ring-red-500/30 transition-all hover:scale-110 active:scale-95"
+          className="h-12 w-12 p-0 rounded-full bg-red-500/20 ring-1 ring-red-500/30"
           data-testid={`delete-alert-${alertId}`}
           disabled={isDeleting}
         >

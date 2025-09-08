@@ -326,7 +326,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                     handleSportsbookClick(sportsbook);
                     setDragX(0);
                   }}
-                  className="h-10 w-10 p-1 rounded-lg bg-white/90 hover:bg-white hover:scale-105 shadow-lg ring-2 ring-white/20 transition-all duration-200"
+                  className="h-10 w-10 p-1 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20"
                   style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
                 >
                   <img
@@ -352,7 +352,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             setDragX(0);
           }}
           disabled={isDeleting}
-          className="h-12 w-12 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 ring-1 ring-red-500/30 transition-all"
+          className="h-12 w-12 p-0 rounded-full bg-red-500/20 ring-1 ring-red-500/30"
         >
           <Trash2 className="w-5 h-5 text-red-400" />
         </Button>

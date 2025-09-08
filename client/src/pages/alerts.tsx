@@ -202,7 +202,7 @@ export default function AlertsPage() {
                     createdAt: alert.createdAt,
                     context: alert.context
                   }}
-                  className="hover:border-emerald-500/30 transition-all duration-200"
+                  className="border-emerald-500/30"
                 />
               ) : (
                 // Use Complex Card for detailed game state alerts
