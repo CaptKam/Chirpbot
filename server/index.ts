@@ -216,7 +216,32 @@ app.use((req, res, next) => {
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
     if (app.get("env") === "development") {
-      await setupVite(app, server);
+      try {
+        await setupVite(app, server);
+        console.log('✅ Vite development server setup complete');
+      } catch (viteError) {
+        console.error('⚠️ Vite setup failed, but continuing with server startup:', viteError);
+        // Fallback: serve static files if Vite fails
+        try {
+          serveStatic(app);
+          console.log('🔄 Fallback to static file serving');
+        } catch (staticError) {
+          console.error('⚠️ Static file serving also failed, serving minimal fallback');
+          // Minimal fallback - just serve a basic response
+          app.use('*', (req, res) => {
+            res.status(200).send(`
+              <!DOCTYPE html>
+              <html>
+                <head><title>ChirpBot V2</title></head>
+                <body>
+                  <h1>ChirpBot V2 Server Running</h1>
+                  <p>Frontend temporarily unavailable - API endpoints are still accessible</p>
+                </body>
+              </html>
+            `);
+          });
+        }
+      }
     } else {
       serveStatic(app);
     }
