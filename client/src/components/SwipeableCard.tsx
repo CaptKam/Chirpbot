@@ -704,10 +704,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-6 relative" key={`alert-${alertData.id}-${Date.now()}`}>
+            <div className="p-4 relative" key={`alert-${alertData.id}-${Date.now()}`}>
 
               {/* Clean Header - Calendar Page Style */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-4">
                   <Badge
                     variant="outline"
@@ -771,7 +771,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               )}
 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <GameCardTemplate
                   gameId={alertData.id}
                   homeTeam={{
@@ -810,7 +810,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
 
               {/* Alert Message - Clean Layout */}
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10 mb-4">
                 <div className="flex items-start space-x-3">
                   <div className="flex-1">
                     {/* Message Display */}
