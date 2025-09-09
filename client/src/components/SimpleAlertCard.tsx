@@ -397,6 +397,15 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           >
           </GameCardTemplate>
 
+          {/* Game Started Message - Centered where weather was */}
+          {alert.type?.includes('GAME_START') && (
+            <div className="flex justify-center py-2">
+              <p className="text-slate-300 text-sm font-medium">
+                🚨 Game Started
+              </p>
+            </div>
+          )}
+
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
           <div className="p-4 pt-0">
 
@@ -405,7 +414,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
               <p className="text-slate-100 text-base font-medium leading-relaxed">
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
               </p>
-            </div>
+            </div></div>
 
             
 
