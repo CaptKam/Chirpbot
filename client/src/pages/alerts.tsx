@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import AlertFooter from '@/components/AlertFooter';
 import { SwipeableCard } from '@/components/SwipeableCard';
@@ -55,7 +55,7 @@ interface AlertStats {
 }
 
 export default function AlertsPage() {
-  const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF'>('all');
+  const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF' | 'WNBA' | 'CFL'>('all');
 
   // Fetch alerts using React Query
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
@@ -68,6 +68,17 @@ export default function AlertsPage() {
     queryKey: ['/api/alerts/stats'],
     refetchInterval: 60000, // Refetch every minute
   });
+
+  // Group alerts by sport for better organization
+  const alertsBySport = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    alerts.forEach((alert: any) => {
+      const sport = alert.sport || 'OTHER';
+      if (!grouped[sport]) grouped[sport] = [];
+      grouped[sport].push(alert);
+    });
+    return grouped;
+  }, [alerts]);
 
   const filteredAlerts = filter === 'all' 
     ? (alerts as Alert[] || [])

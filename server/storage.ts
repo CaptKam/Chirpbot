@@ -389,16 +389,22 @@ export const storage = {
           'AI_EVENT_SUMMARIES': true,
           'AI_ROI_ALERTS': true,
         },
-        'nfl': [
-            'NFL_GAME_START',
-            'NFL_TWO_MINUTE_WARNING',
-            'NFL_RED_ZONE'
-          ],
-        'ncaaf': [
-            'NCAAF_GAME_START',
-            'NCAAF_TWO_MINUTE_WARNING',
-            'NCAAF_RED_ZONE'
-          ],
+        'nfl': {
+          'NFL_GAME_START': true,
+          'NFL_SECOND_HALF_KICKOFF': true,
+          'NFL_TWO_MINUTE_WARNING': true,
+          'NFL_RED_ZONE': true,
+          'FOURTH_DOWN': true
+        },
+        'ncaaf': {
+          'NCAAF_GAME_START': true,
+          'NCAAF_SECOND_HALF_KICKOFF': true,
+          'NCAAF_TWO_MINUTE_WARNING': true,
+          'NCAAF_RED_ZONE': true,
+          'FOURTH_DOWN': true,
+          'OVERTIME': true,
+          'CLUTCH_TIME': true
+        },
         'cfl': {
           'CFL_GAME_START': true,
           'CFL_SECOND_HALF_KICKOFF': true,
@@ -407,6 +413,13 @@ export const storage = {
           'THREE_MINUTE_WARNING': true
         },
         'wnba': {
+          'WNBA_GAME_START': true,
+          'WNBA_TWO_MINUTE_WARNING': true,
+          'FINAL_MINUTES': true,
+          'HIGH_SCORING_QUARTER': true,
+          'LOW_SCORING_QUARTER': true,
+          'FOURTH_QUARTER': true
+        }
           'WNBA_GAME_START': true,
           'WNBA_TWO_MINUTE_WARNING': true,
           'FINAL_MINUTES': true,

@@ -314,7 +314,7 @@ export class AlertGenerator {
 
           // 🎯 STEP 2: Check if any users have active monitoring for this sport (NEW OPTIMIZATION)
           const usersWithActiveMonitoring = await this.getUsersWithActiveMonitoring(sport);
-          
+
           if (usersWithActiveMonitoring.length === 0) {
             if (['MLB', 'NFL'].includes(sport)) {
               console.log(`🚫 No users actively monitoring ${sport} games - skipping data fetch`);
@@ -451,7 +451,7 @@ export class AlertGenerator {
 
     // 🎯 NEW OPTIMIZED FLOW: Check user preferences FIRST before any game processing
     const usersWithActiveMonitoring = await this.getUsersWithActiveMonitoring(sport);
-    
+
     if (usersWithActiveMonitoring.length === 0) {
       console.log(`🚫 No users actively monitoring ${sport} games - skipping all processing`);
       return 0;
@@ -567,14 +567,14 @@ export class AlertGenerator {
         if (enabledAlertTypes.length === 0 && sport === 'MLB') {
           const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
           const hasAnyEnabledGlobally = Object.values(globalSettings).some(enabled => enabled === true);
-          
+
           if (hasAnyEnabledGlobally) {
             // User inherits global settings - get the enabled alert types
             const globalEnabledTypes = Object.entries(globalSettings)
               .filter(([_, enabled]) => enabled)
               .map(([alertType]) => alertType);
             enabledAlertTypes.push(...globalEnabledTypes);
-            
+
             if (this.logLevel !== 'quiet') {
               console.log(`👤 User ${user.username}: Inherited ${enabledAlertTypes.length} global ${sport} settings`);
             }
@@ -1011,6 +1011,212 @@ export class AlertGenerator {
     } catch (error) {
       console.error('Error saving real-time alert:', error);
       return 0;
+    }
+  }
+
+  // Helper to refresh user engines when preferences or new users change
+  private async refreshUserEngines(): Promise<void> {
+    const allUsers = await storage.getAllUsers();
+    const usersWithPrefs = [];
+
+    for (const user of allUsers) {
+      const userAlertPreferences = await storage.getUserAlertPreferences(user.id);
+      if (userAlertPreferences && userAlertPreferences.length > 0) {
+        usersWithPrefs.push({ id: user.id, username: user.username });
+      }
+    }
+
+    // Initialize sport-specific engines for users with enabled preferences
+    for (const user of usersWithPrefs) {
+      try {
+        // Initialize engines for all supported sports
+        const supportedSports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
+
+        for (const sport of supportedSports) {
+          try {
+            // Check if user has any preferences for this sport
+            const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport);
+            const hasEnabledAlerts = userPrefs.some(pref => pref.enabled);
+
+            if (hasEnabledAlerts || userPrefs.length === 0) {
+              // Initialize engine for this sport
+              switch (sport) {
+                case 'MLB':
+                  const { MLBEngine } = await import('./engines/mlb-engine');
+                  const mlbEngine = new MLBEngine();
+                  await mlbEngine.initializeForUser(user.id);
+                  this.sportEngines.set(`${user.id}_MLB`, mlbEngine);
+                  break;
+
+                case 'NFL':
+                  const { NFLEngine } = await import('./engines/nfl-engine');
+                  const nflEngine = new NFLEngine();
+                  await nflEngine.initializeForUser(user.id);
+                  this.sportEngines.set(`${user.id}_NFL`, nflEngine);
+                  break;
+
+                case 'NCAAF':
+                  const { NCAAFEngine } = await import('./engines/ncaaf-engine');
+                  const ncaafEngine = new NCAAFEngine();
+                  await ncaafEngine.initializeForUser(user.id);
+                  this.sportEngines.set(`${user.id}_NCAAF`, ncaafEngine);
+                  break;
+
+                case 'WNBA':
+                  const { WNBAEngine } = await import('./engines/wnba-engine');
+                  const wnbaEngine = new WNBAEngine();
+                  await wnbaEngine.initializeForUser(user.id);
+                  this.sportEngines.set(`${user.id}_WNBA`, wnbaEngine);
+                  break;
+
+                case 'CFL':
+                  const { CFLEngine } = await import('./engines/cfl-engine');
+                  const cflEngine = new CFLEngine();
+                  await cflEngine.initializeForUser(user.id);
+                  this.sportEngines.set(`${user.id}_CFL`, cflEngine);
+                  break;
+              }
+
+              if (this.logLevel !== 'quiet') {
+                console.log(`✅ Initialized ${sport} engine for user ${user.username}`);
+              }
+            }
+          } catch (sportError) {
+            console.error(`❌ Failed to initialize ${sport} engine for user ${user.id}:`, sportError);
+          }
+        }
+
+      } catch (error) {
+        console.error(`❌ Failed to initialize engines for user ${user.id}:`, error);
+      }
+    }
+  }
+
+  // Process alerts for a specific sport
+  private async processSport(sport: string): Promise<number> {
+    if (this.logLevel !== 'quiet') {
+      console.log(`🚀 Processing ${sport} alerts...`);
+    }
+
+    // Get globally enabled alerts for this sport
+    const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
+
+    if (enabledAlerts.length === 0) {
+      if (['MLB', 'NFL'].includes(sport)) {
+        console.log(`🚫 No ${sport} alerts enabled globally - skipping ${sport} monitoring.`);
+      }
+      return 0;
+    }
+
+    // Fetch games for the sport
+    let games: any[] = [];
+    try {
+      switch (sport) {
+        case 'MLB':
+          games = await this.mlbApi.getTodaysGames();
+          break;
+        case 'NFL':
+          games = await this.getNFLGames();
+          break;
+        case 'NCAAF':
+          games = await this.ncaafApi.getTodaysGames();
+          break;
+        case 'WNBA':
+          games = await this.getWNBAGames();
+          break;
+        case 'CFL':
+          games = await this.getCFLGames();
+          break;
+        default:
+          if (this.logLevel !== 'quiet') {
+            console.log(`ℹ️ No game fetching logic defined for ${sport}.`);
+          }
+          return 0;
+      }
+    } catch (error) {
+      console.error(`❌ Error fetching ${sport} games:`, error);
+      return 0;
+    }
+
+    if (games.length === 0) {
+      if (this.logLevel !== 'quiet') {
+        console.log(`📊 No live games found for ${sport} today.`);
+      }
+      return 0;
+    }
+
+    if (this.logLevel !== 'quiet') {
+      console.log(`✅ Found ${games.length} live games for ${sport}.`);
+    }
+
+    // Process alerts for each game using the appropriate engine
+    let totalAlerts = 0;
+    for (const game of games) {
+      try {
+        const gameState = this.normalizeGameState(game, sport);
+        const engine = this.sportEngines.get(sport);
+
+        if (!engine) {
+          console.log(`❌ No engine found for sport: ${sport}`);
+          continue;
+        }
+
+        const alerts = await engine.generateLiveAlerts(gameState);
+        totalAlerts += alerts.length;
+
+        for (const alert of alerts) {
+          await this.saveRealTimeAlert(
+            alert.alertKey,
+            alert.type,
+            gameState.gameId,
+            alert.message,
+            alert.context,
+            alert.priority,
+            sport
+          );
+        }
+      } catch (error) {
+        console.error(`❌ Error processing ${sport} game ${game.gameId}:`, error);
+      }
+    }
+
+    if (this.logLevel !== 'quiet') {
+      console.log(`📊 ${sport}: Processed ${games.length} games, generated ${totalAlerts} alerts.`);
+    }
+
+    return totalAlerts;
+  }
+
+  // Main monitoring loop
+  async runMonitoringCycle(): Promise<void> {
+    try {
+      if (this.logLevel !== 'quiet') {
+        console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+      }
+
+      // Check for any new users or preference changes
+      await this.refreshUserEngines();
+
+      let totalAlerts = 0;
+
+      // Process all supported sports explicitly
+      const allSports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
+
+      for (const sport of allSports) {
+        try {
+          const sportAlerts = await this.processSport(sport);
+          totalAlerts += sportAlerts;
+        } catch (sportError) {
+          console.error(`❌ Error processing ${sport}:`, sportError);
+        }
+      }
+
+      if (this.logLevel !== 'quiet') {
+        console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
+      }
+
+    } catch (error) {
+      console.error('❌ Error in monitoring cycle:', error);
     }
   }
 
