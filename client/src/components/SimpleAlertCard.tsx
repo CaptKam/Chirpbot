@@ -47,7 +47,7 @@ function getAlertStatus(alertType: string, createdAt: string, gameStatus?: strin
     'HIGH_SCORING': 45,
     'LATE_PRESSURE': 20,
     'OVERTIME': 60,
-    'BLOWOUT': 60
+    'BLOWOUT': 60,
     'SHUTOUT': 60
   };
 
