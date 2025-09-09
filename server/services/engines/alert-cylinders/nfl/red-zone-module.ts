@@ -1,77 +1,80 @@
-
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { weatherService } from '../../../weather-service';
 
 export default class RedZoneModule extends BaseAlertModule {
-  alertType = 'NFL_RED_ZONE';
+  alertType = 'RED_ZONE';
   sport = 'NFL';
 
   isTriggered(gameState: GameState): boolean {
-    // Team is in red zone (within 20 yards of goal line)
     return gameState.status === 'live' && 
-           gameState.fieldPosition !== undefined && 
-           gameState.fieldPosition <= 20 &&
-           gameState.fieldPosition > 0;
+           gameState.yardLine !== undefined && 
+           gameState.yardLine <= 20;
   }
 
-  generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) {
-      return null;
+  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
+    if (!this.isTriggered(gameState)) return null;
+
+    const down = gameState.down || 1;
+    const yardLine = gameState.yardLine || 20;
+    const teamWithBall = gameState.possession || gameState.homeTeam;
+
+    // Get weather data for enhanced context
+    const homeTeam = gameState.homeTeam;
+    let weatherData = null;
+    let weatherContext = '';
+
+    try {
+      weatherData = await weatherService.getWeatherForTeam(homeTeam);
+      if (weatherData) {
+        // Red zone specific weather impacts
+        if (weatherData.windSpeed >= 15 && down >= 3) {
+          weatherContext = ` 💨 ${weatherData.windSpeed}mph winds - Field goal challenging`;
+        } else if (weatherData.condition === 'Rain' && down >= 3) {
+          weatherContext = ` 🌧️ Rain - Slippery conditions for short passes`;
+        } else if (weatherData.temperature < 32) {
+          weatherContext = ` 🥶 Freezing ${weatherData.temperature}°F - Handling difficulty`;
+        }
+      }
+    } catch (error) {
+      console.warn('Weather data unavailable for NFL red zone alert enhancement');
     }
 
-    const probability = this.calculateProbability(gameState);
-    const down = gameState.down || 1;
-    const yardsToGo = gameState.yardsToGo || 10;
+    const baseMessage = `🔴 RED ZONE: ${teamWithBall} has ${down}${this.getOrdinalSuffix(down)} & ${gameState.yardsToGo || 10} at the ${yardLine} yard line!`;
+    const enhancedMessage = baseMessage + weatherContext;
 
     return {
-      alertKey: `${gameState.gameId}_NFL_RED_ZONE_${down}_${yardsToGo}`,
+      alertKey: `${gameState.gameId}_red_zone_${down}_${yardLine}`,
       type: this.alertType,
-      message: `🎯 NFL RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${gameState.fieldPosition} yard line`,
+      message: enhancedMessage,
       context: {
         gameId: gameState.gameId,
-        sport: gameState.sport,
         homeTeam: gameState.homeTeam,
         awayTeam: gameState.awayTeam,
         homeScore: gameState.homeScore,
         awayScore: gameState.awayScore,
-        down: gameState.down,
-        yardsToGo: gameState.yardsToGo,
-        fieldPosition: gameState.fieldPosition,
         quarter: gameState.quarter,
         timeRemaining: gameState.timeRemaining,
-        probability
+        down,
+        yardLine,
+        yardsToGo: gameState.yardsToGo,
+        possession: teamWithBall,
+        weatherData: weatherData,
+        weatherContext: weatherContext
       },
-      priority: probability > 70 ? 90 : 85
+      priority: 85
     };
   }
 
   calculateProbability(gameState: GameState): number {
-    if (!this.isTriggered(gameState)) return 0;
-
-    let probability = 60; // Base red zone probability
-
-    // Field position impact
-    if (gameState.fieldPosition <= 10) probability += 20; // Goal line area
-    else if (gameState.fieldPosition <= 15) probability += 10;
-
-    // Down and distance impact
-    if (gameState.down === 1) probability += 15;
-    else if (gameState.down === 2) probability += 5;
-    else if (gameState.down === 3) probability -= 5;
-    else if (gameState.down === 4) probability += 10; // High stakes
-
-    // Yards to go impact
-    if (gameState.yardsToGo <= 3) probability += 15;
-    else if (gameState.yardsToGo <= 7) probability += 5;
-
-    // Time pressure (4th quarter)
-    if (gameState.quarter === 4) probability += 10;
-
-    return Math.min(Math.max(probability, 20), 95);
+    return this.isTriggered(gameState) ? 85 : 0;
   }
 
   private getOrdinalSuffix(num: number): string {
-    const suffixes = ['th', 'st', 'nd', 'rd'];
-    const remainder = num % 100;
-    return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) return 'st';
+    if (j === 2 && k !== 12) return 'nd';
+    if (j === 3 && k !== 13) return 'rd';
+    return 'th';
   }
 }

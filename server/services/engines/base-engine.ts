@@ -45,7 +45,7 @@ export abstract class BaseAlertModule {
   abstract sport: string;
 
   abstract isTriggered(gameState: GameState): boolean;
-  abstract generateAlert(gameState: GameState): AlertResult | null | Promise<AlertResult | null>;
+  abstract generateAlert(gameState: GameState): AlertResult | Promise<AlertResult> | null | Promise<null>;
   abstract calculateProbability(gameState: GameState): number;
 }
 
@@ -122,7 +122,7 @@ export abstract class BaseSportEngine {
   // Universal enhancement application - benefits all sports
   protected enhanceAlertUniversally(alert: AlertResult, gameState: GameState, weatherData?: any): AlertResult {
     const { UniversalAlertEnhancer } = require('./universal-enhancement-framework');
-    
+
     // Apply weather context if available
     if (weatherData) {
       alert.message = UniversalAlertEnhancer.applyWeatherContext(alert.message, this.sport, weatherData);
@@ -133,7 +133,7 @@ export abstract class BaseSportEngine {
 
     // Calculate universal probability
     const universalProbability = UniversalAlertEnhancer.calculateUniversalProbability(gameState, this.sport);
-    
+
     // Calculate universal priority
     alert.priority = UniversalAlertEnhancer.calculateUniversalPriority(alert.type, universalProbability, this.sport);
 

@@ -1,5 +1,6 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { weatherService } from '../../../weather-service';
 
 export default class GameStartModule extends BaseAlertModule {
   alertType = 'CFL_GAME_START';
@@ -10,13 +11,39 @@ export default class GameStartModule extends BaseAlertModule {
            gameState.timeRemaining === '15:00';
   }
 
-  generateAlert(gameState: GameState): AlertResult | null {
+  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
     if (!this.isTriggered(gameState)) return null;
+
+    // Get weather data for the home team
+    const homeTeam = gameState.homeTeam;
+    let weatherData = null;
+    let weatherContext = '';
+    
+    try {
+      weatherData = await weatherService.getWeatherForTeam(homeTeam);
+      if (weatherData) {
+        // CFL-specific weather impacts (wider field, more wind effect)
+        if (weatherData.temperature < 10) {
+          weatherContext = ` 🥶 Extremely cold: ${weatherData.temperature}°F - Canadian conditions`;
+        } else if (weatherData.windSpeed >= 20) {
+          weatherContext = ` 💨 High winds: ${weatherData.windSpeed}mph - Wider field affected`;
+        } else if (weatherData.condition === 'Snow') {
+          weatherContext = ` ❄️ Snow conditions - True Canadian football`;
+        } else if (weatherData.condition === 'Rain') {
+          weatherContext = ` 🌧️ Rain - Field conditions impact`;
+        }
+      }
+    } catch (error) {
+      console.warn('Weather data unavailable for CFL alert enhancement');
+    }
+
+    const baseMessage = `🏈 CFL Game Started: ${gameState.awayTeam} @ ${gameState.homeTeam}`;
+    const enhancedMessage = baseMessage + weatherContext;
 
     return {
       alertKey: `${gameState.gameId}_game_start`,
       type: this.alertType,
-      message: `🏈 CFL Game Started: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+      message: enhancedMessage,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -24,7 +51,9 @@ export default class GameStartModule extends BaseAlertModule {
         homeScore: gameState.homeScore,
         awayScore: gameState.awayScore,
         quarter: gameState.quarter,
-        timeRemaining: gameState.timeRemaining
+        timeRemaining: gameState.timeRemaining,
+        weatherData: weatherData,
+        weatherContext: weatherContext
       },
       priority: 75
     };
