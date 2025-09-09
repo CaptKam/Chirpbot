@@ -716,21 +716,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     {alertData.sport}
                   </Badge>
                   <span className="text-slate-300 text-sm font-semibold uppercase tracking-wider">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-lg">⚡</span>
-                      <span>
-                        {(() => {
-                          const message = (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim();
-                          // Extract the main situation (everything after the colon)
-                          const parts = message.split(':');
-                          if (parts.length > 1) {
-                            return parts[1].trim().toUpperCase();
-                          }
-                          return message.toUpperCase();
-                        })()}
-                      </span>
-                      <span className="text-lg">⚡</span>
-                    </div>
+                    SCORING OPPORTUNITY
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
@@ -800,7 +786,18 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       <span className="text-lg">⚡</span>
                     </div>
                     
-                    
+                    {/* Main Situation - Medium Size */}
+                    <p className="text-white text-lg font-semibold leading-tight">
+                      {(() => {
+                        const message = (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim();
+                        // Extract the main situation (everything after the colon)
+                        const parts = message.split(':');
+                        if (parts.length > 1) {
+                          return parts[1].trim();
+                        }
+                        return message;
+                      })()}
+                    </p>
                   </div>
 
                   {/* Probability Badge - Compact */}
