@@ -218,7 +218,7 @@ export function GameCardTemplate({
 
   return (
     <Card 
-      className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-4 ${cardHeight} hover:bg-white/10 ${
+      className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-2 ${cardHeight} hover:bg-white/10 ${
         isSelected 
           ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
           : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
@@ -228,7 +228,7 @@ export function GameCardTemplate({
       data-testid={`game-card-${gameId}`}
     >
       {/* Main Game Layout */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         {/* Away Team - Left Side */}
         <div className="flex items-center space-x-3">
           <div className="text-center">
@@ -316,7 +316,7 @@ export function GameCardTemplate({
       </div>
 
       {/* Bottom Row - Weather, Time & Venue Info */}
-      <div className="flex items-center justify-between pt-3 border-t border-white/10">
+      <div className="flex items-center justify-between pt-2 border-t border-white/10">
         {/* Weather Display - Use real weather data from API */}
         {showWeather && sport === 'MLB' && weatherData && (
           <WeatherDisplay 
