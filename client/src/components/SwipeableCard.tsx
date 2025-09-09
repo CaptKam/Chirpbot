@@ -833,7 +833,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       const alertTime = new Date(alertData.createdAt || '');
                       const now = new Date();
                       const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
-                      
+
                       if (diffMinutes < 1) return 'Just now';
                       if (diffMinutes < 60) return `${diffMinutes}m`;
                       return `${Math.floor(diffMinutes / 60)}h`;
@@ -898,10 +898,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   <p className="text-white text-sm font-semibold leading-tight">
                     {(() => {
                       let message = alertData.message || '';
-                      
+
                       // Remove emojis
                       message = message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|⭐|🎯|🔴|🟡|🟢|⚽|🏀|🏐|🎾|⚾|🥎|🏈|🏉|🎱|🏸|🏓|🥅|⛳|🎣|🥊|🥋|🎿|⛷️|🏂|⛸️|🥌|🛷|🏇|🤺|🏌️|🧗|🤸|🏄|🏊|🤽|🚣|🧘|🏃|🚴|🤾|⛹️|🏋️|🧖|🧚|🧜|🧞|🧛|🧟|🤱|👨|👩|👦|👧|👶/g, '').trim();
-                      
+
                       // Extract the main situation text based on sport
                       if (alertData.sport === 'MLB') {
                         // For baseball, extract situation after colon
@@ -932,13 +932,13 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                           return `${awayTeam} vs ${homeTeam} - Game Starting`;
                         }
                       }
-                      
+
                       // Fallback: remove percentage text and return clean message
                       return message.replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '').replace(/\s*-\s*\d+%.*$/i, '');
                     })()}
                   </p>
 
-                  
+
                 </div>
 
                 {/* Priority Indicator - Compact */}
