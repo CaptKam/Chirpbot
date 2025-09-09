@@ -716,7 +716,44 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     {alertData.sport}
                   </Badge>
                   <span className="text-slate-300 text-sm font-semibold uppercase tracking-wider">
-                    {alertData.type.replace(/_/g, ' ')}
+                    {(() => {
+                      // Remove sport name and clean up the alert type
+                      const type = alertData.type.replace(/MLB_|NFL_|NBA_|NHL_|CFL_|NCAAF_|WNBA_/gi, '').replace(/_/g, ' ').trim();
+
+                      // Make titles super simple and kid-friendly
+                      const kidFriendlyTitles: Record<string, string> = {
+                        'BASES LOADED': 'BASES LOADED! 🔥',
+                        'BASES LOADED NO OUTS': 'BASES LOADED, NO OUTS! 🔥',
+                        'BASES LOADED ONE OUT': 'BASES LOADED, ONE OUT! ⚾',
+                        'RISP': 'SCORING POSITION! 🎯',
+                        'FULL COUNT': 'FULL COUNT! ⚾',
+                        'POWER HITTER': 'BIG HITTER UP! 💪',
+                        'HOT HITTER': 'HOT PLAYER BATTING! 🔥',
+                        'RUNNERS 1ST 2ND': 'RUNNERS ON BASE!',
+                        'FIRST AND THIRD NO OUTS': '1ST & 3RD, NO OUTS!',
+                        'RUNNER ON THIRD NO OUTS': '3RD BASE, NO OUTS!',
+                        'RUNNER ON THIRD ONE OUT': '3RD BASE, ONE OUT!',
+                        'SECOND AND THIRD NO OUTS': '2ND & 3RD, NO OUTS!',
+                        'SECOND AND THIRD ONE OUT': '2ND & 3RD, ONE OUT!',
+                        'CLOSE GAME': 'CLOSE GAME! 🎯',
+                        'CLOSE GAME LIVE': 'CLOSE GAME NOW!',
+                        'HIGH SCORING': 'LOTS OF RUNS! 🎆',
+                        'LATE PRESSURE': 'CLUTCH TIME! ⏰',
+                        'OVERTIME': 'OVERTIME! 🚨',
+                        'BLOWOUT': 'BLOWOUT GAME!',
+                        'SHUTOUT': 'SHUTOUT GAME!',
+                        'RED ZONE': 'RED ZONE! 🏈',
+                        'FOURTH DOWN': '4TH DOWN! 🤔',
+                        'TWO MINUTE WARNING': '2 MINUTES LEFT! ⏰',
+                        'POWER PLAY': 'POWER PLAY! ⚡',
+                        'EMPTY NET': 'EMPTY NET! 🥅',
+                        'CLUTCH TIME': 'CRUNCH TIME! 🏀',
+                        'GAME START': 'GAME STARTING! 🎮',
+                        'SEVENTH INNING STRETCH': '7TH INNING STRETCH! ⚾'
+                      };
+
+                      return kidFriendlyTitles[type.toUpperCase()] || type.toUpperCase();
+                    })()}
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
