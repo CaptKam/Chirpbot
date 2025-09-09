@@ -809,31 +809,42 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               </div>
 
-              {/* Alert Message - Clean Layout */}
-              <div className="bg-white/5 rounded-xl p-3 border border-white/10 mb-4">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-1">
-                    {/* Message Display */}
-                    <p className="text-slate-100 text-base leading-relaxed font-medium">
+              {/* Alert Message - Maximum Clarity Design */}
+              <div className="bg-gradient-to-r from-emerald-500/20 to-green-600/20 rounded-2xl p-5 border-2 border-emerald-400/30 mb-4 shadow-xl">
+                <div className="text-center space-y-3">
+                  {/* Main Alert Message */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                    <p className="text-white text-xl font-bold leading-tight tracking-wide">
                       {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
                     </p>
-
-                    {/* AI Insights */}
-                    {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
-                      <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/30">
-                        <div className="flex items-center gap-1 mb-2">
-                          <span className="text-blue-400 text-xs">🤖 AI Insights</span>
-                        </div>
-                        <div className="space-y-1">
-                          {alertData.context.aiInsights.map((insight: string, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-200">
-                              • {insight}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
+
+                  {/* Priority Indicator */}
+                  {alertData.priority && alertData.priority >= 80 && (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
+                      <span className="text-red-300 text-sm font-semibold uppercase tracking-wider">
+                        HIGH VALUE ALERT
+                      </span>
+                      <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
+                    </div>
+                  )}
+
+                  {/* AI Insights */}
+                  {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
+                    <div className="mt-4 p-3 bg-blue-500/15 rounded-xl border border-blue-400/30">
+                      <div className="flex items-center justify-center gap-2 mb-3">
+                        <span className="text-blue-300 text-sm font-medium">🤖 AI Analysis</span>
+                      </div>
+                      <div className="space-y-2">
+                        {alertData.context.aiInsights.map((insight: string, idx: number) => (
+                          <p key={idx} className="text-sm text-blue-100 text-center leading-relaxed">
+                            • {insight}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
