@@ -9,6 +9,7 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
+import { requestDeduplicator } from "./middleware/request-deduplicator";
 // Extend session data interface
 declare module 'express-session' {
   interface SessionData {
@@ -41,6 +42,9 @@ async function requireAuthentication(req: express.Request, res: express.Response
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+
+  // Add request deduplication middleware FIRST (before any logging)
+  app.use(requestDeduplicator.middleware());
 
   // Add route debugging middleware with duplicate detection
   const recentRequests = new Map();
@@ -1956,12 +1960,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/health', async (req, res) => {
     try {
       // Basic health check - server is responding
+      const memUsage = process.memoryUsage();
+      const memPercent = memUsage.heapUsed / memUsage.heapTotal;
+      
+      // Get deduplication stats
+      const dedupeStats = requestDeduplicator.getStats();
+      
       const healthStatus = {
-        status: 'healthy',
+        status: memPercent > 0.9 ? 'degraded' : 'healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        pid: process.pid
+        memory: {
+          ...memUsage,
+          percentage: Math.round(memPercent * 100)
+        },
+        pid: process.pid,
+        deduplication: {
+          ...dedupeStats,
+          effectiveness: dedupeStats.cacheSize > 0 ? 
+            `Serving ${dedupeStats.cacheSize} cached responses` : 'No cached responses yet'
+        }
       };
       
       res.status(200).json(healthStatus);
