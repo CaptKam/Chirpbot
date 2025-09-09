@@ -419,13 +419,6 @@ export const storage = {
           'HIGH_SCORING_QUARTER': true,
           'LOW_SCORING_QUARTER': true,
           'FOURTH_QUARTER': true
-        }
-          'WNBA_GAME_START': true,
-          'WNBA_TWO_MINUTE_WARNING': true,
-          'FINAL_MINUTES': true,
-          'HIGH_SCORING_QUARTER': true,
-          'LOW_SCORING_QUARTER': true,
-          'FOURTH_QUARTER': true
         },
         'nba': {
           'NBA_FOURTH_QUARTER': true,
