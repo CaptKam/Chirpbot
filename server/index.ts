@@ -247,9 +247,11 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    // Start alert generation
-    console.log('🚨 Starting alert generation...');
-    alertGenerator.generateLiveGameAlerts();
+    // Start alert generation (non-blocking) - TEMPORARILY DISABLED
+    console.log('🚨 Alert generation disabled during startup for debugging...');
+    // setTimeout(() => {
+    //   alertGenerator.generateLiveGameAlerts().catch(console.error);
+    // }, 1000); // Delay to ensure server starts first
 
     // Start alert cleanup service
     console.log('🧹 Starting alert cleanup service...');
