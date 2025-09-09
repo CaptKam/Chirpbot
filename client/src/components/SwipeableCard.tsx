@@ -843,7 +843,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         } else if (message.includes('Two Minute Warning')) {
                           return 'Two minute warning - critical game situation';
                         } else if (message.includes('Game Starting')) {
-                          return `${alertData.awayTeam?.name || 'Away'} vs ${alertData.homeTeam?.name || 'Home'} - Game Starting`;
+                          const awayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away';
+                          const homeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home';
+                          return `${awayTeam} vs ${homeTeam} - Game Starting`;
                         }
                       } else if (alertData.sport === 'NBA' || alertData.sport === 'WNBA') {
                         // For basketball, clean up the message
@@ -852,7 +854,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         } else if (message.includes('Two Minute Warning')) {
                           return 'Two minute warning - critical game situation';
                         } else if (message.includes('Game Starting')) {
-                          return `${alertData.awayTeam?.name || 'Away'} vs ${alertData.homeTeam?.name || 'Home'} - Game Starting`;
+                          const awayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away';
+                          const homeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home';
+                          return `${awayTeam} vs ${homeTeam} - Game Starting`;
                         }
                       }
                       
