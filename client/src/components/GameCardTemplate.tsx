@@ -218,10 +218,10 @@ export function GameCardTemplate({
 
   return (
     <Card 
-      className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-2 ${cardHeight} hover:bg-white/10 ${
+      className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-2 ${cardHeight} ${
         isSelected 
           ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
-          : 'ring-1 ring-white/10 hover:ring-emerald-500/50'
+          : 'ring-1 ring-white/10'
       } ${className}`}
       style={{ borderRadius: '12px' }}
       onClick={onSelect}
