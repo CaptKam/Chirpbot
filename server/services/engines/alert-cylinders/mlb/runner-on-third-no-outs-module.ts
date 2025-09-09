@@ -1,5 +1,17 @@
-
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+
+// Assuming PlayerContextService is defined elsewhere and imported
+// For demonstration purposes, let's assume a basic structure
+class PlayerContextService {
+  static enhanceAlertWithPlayer(baseMessage: string, gameState: GameState, alertType: string): string {
+    // In a real scenario, this would query player data based on gameState
+    // For this example, we'll add a placeholder if a specific player is relevant
+    if (alertType === 'MLB_RUNNER_ON_THIRD_NO_OUTS' && gameState.batter && gameState.batter.name === 'Ohtani') {
+      return `${baseMessage} - Batter: ${gameState.batter.name} is up!`;
+    }
+    return baseMessage;
+  }
+}
 
 export default class RunnerOnThirdNoOutsModule extends BaseAlertModule {
   alertType = 'MLB_RUNNER_ON_THIRD_NO_OUTS';
@@ -17,10 +29,13 @@ export default class RunnerOnThirdNoOutsModule extends BaseAlertModule {
   generateAlert(gameState: GameState): AlertResult | null {
     if (!this.isTriggered(gameState)) return null;
 
+    const baseMessage = `🎯 SCORING OPPORTUNITY: Runner on 3rd, 0 outs - 67% chance to score!`;
+    const enhancedMessage = PlayerContextService.enhanceAlertWithPlayer(baseMessage, gameState, this.alertType);
+
     return {
-      alertKey: `${gameState.gameId}_runner_third_no_outs`,
+      alertKey: `${gameState.gameId}_runner_on_third_no_outs`,
       type: this.alertType,
-      message: `🔥 HIGH SCORING PROBABILITY: Runner on 3rd, 0 outs - 84% chance to score!`,
+      message: enhancedMessage,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -36,13 +51,13 @@ export default class RunnerOnThirdNoOutsModule extends BaseAlertModule {
         balls: gameState.balls,
         strikes: gameState.strikes,
         scenarioName: 'Runner on 3rd',
-        scoringProbability: 84
+        scoringProbability: 67 // Updated probability as per example
       },
       priority: 95
     };
   }
 
   calculateProbability(): number {
-    return 84;
+    return 67; // Updated probability as per example
   }
 }

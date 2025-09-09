@@ -100,7 +100,11 @@ export class MLBEngine extends BaseSportEngine {
             inning: enhancedData.inning || gameState.inning || 1,
             isTopInning: enhancedData.isTopInning,
             homeScore: enhancedData.homeScore || gameState.homeScore,
-            awayScore: enhancedData.awayScore || gameState.awayScore
+            awayScore: enhancedData.awayScore || gameState.awayScore,
+            // Enhanced player context
+            currentBatter: enhancedData.batter || null,
+            currentPitcher: enhancedData.pitcher || null,
+            runnerDetails: enhancedData.runnerDetails || null
           };
         }
       }

@@ -7,7 +7,28 @@ export interface GameState {
   awayScore: number;
   status: string;
   isLive: boolean;
-  [key: string]: any; // Allow sport-specific fields
+
+  // Optional sport-specific fields
+  inning?: number;
+  quarter?: number;
+  period?: number;
+  timeRemaining?: string;
+  outs?: number;
+  balls?: number;
+  strikes?: number;
+  hasFirst?: boolean;
+  hasSecond?: boolean;
+  hasThird?: boolean;
+  isTopInning?: boolean;
+  down?: number;
+  yardsToGo?: number;
+  fieldPosition?: number;
+
+  // Enhanced player context
+  currentBatter?: any;
+  currentPitcher?: any;
+  runnerDetails?: any;
+  currentPlayer?: any; // For other sports
 }
 
 export interface AlertResult {
@@ -105,14 +126,14 @@ export abstract class BaseSportEngine {
     const alerts: AlertResult[] = [];
 
     console.log(`🔍 Generating alerts for game ${gameState.gameId} with ${this.alertModules.size} loaded modules`);
-    
+
     for (const [alertType, module] of this.alertModules) {
       try {
         console.log(`🧪 Checking ${alertType} module for game ${gameState.gameId}`);
-        
+
         if (module.isTriggered(gameState)) {
           console.log(`✅ ${alertType} triggered for game ${gameState.gameId}`);
-          
+
           const alert = module.generateAlert(gameState);
           if (alert) {
             console.log(`📢 Generated ${alertType} alert: ${alert.message}`);
@@ -138,10 +159,10 @@ export abstract class BaseSportEngine {
         .toLowerCase()
         .replace(`${this.sport.toLowerCase()}_`, '') // Remove sport prefix
         .replace(/_/g, '-') + '-module';
-      
+
       const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
       console.log(`🔧 Loading module from: ${modulePath}`);
-      
+
       const module = await import(modulePath);
       const ModuleClass = module.default;
       return new ModuleClass();
@@ -174,11 +195,11 @@ export abstract class BaseSportEngine {
       const fs = await import('fs');
       const path = await import('path');
       const { fileURLToPath } = await import('url');
-      
+
       // Get the directory path in ES modules
       const currentDir = path.dirname(fileURLToPath(import.meta.url));
       const cylinderPath = path.join(currentDir, `alert-cylinders/${this.sport.toLowerCase()}`);
-      
+
       if (!fs.existsSync(cylinderPath)) {
         console.log(`⚠️ No cylinder directory found for ${this.sport} at ${cylinderPath}`);
         return [];
