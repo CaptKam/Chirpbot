@@ -704,31 +704,31 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-4 relative" key={`alert-${alertData.id}-${Date.now()}`}>
+            <div className="p-2 relative" key={`alert-${alertData.id}-${Date.now()}`}>
 
               {/* Clean Header - Calendar Page Style */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
                   <Badge
                     variant="outline"
-                    className="px-3 py-1.5 text-sm font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10 rounded-full"
+                    className="px-2 py-1 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10 rounded-full"
                   >
                     {alertData.sport}
                   </Badge>
                   {alertData.context?.scoringProbability && (
-                    <div className="inline-flex items-center gap-1 rounded-full px-3 py-1 bg-emerald-500/20 border border-emerald-400/40">
-                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
-                      <span className="text-emerald-300 text-sm font-semibold">
+                    <div className="inline-flex items-center gap-1 rounded-full px-2 py-1 bg-emerald-500/20 border border-emerald-400/40">
+                      <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
+                      <span className="text-emerald-300 text-xs font-semibold">
                         {alertData.context.scoringProbability}%
                       </span>
                     </div>
                   )}
-                  <span className="text-slate-300 text-sm font-semibold uppercase tracking-wider">
+                  <span className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
                     SCORING OPPORTUNITY
                   </span>
                 </div>
-                <div className="flex items-center text-sm">
-                  <Clock className="w-4 h-4 text-slate-400 mr-1" />
+                <div className="flex items-center text-xs">
+                  <Clock className="w-3 h-3 text-slate-400 mr-1" />
                   <span className="text-slate-400 font-medium">
                     {(() => {
                       const alertTime = new Date(alertData.createdAt || '');
@@ -745,15 +745,15 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               {/* AI-Enhanced Title */}
               {alertData?.context?.aiTitle && (
-                <div className="mb-2">
-                  <h3 className="text-lg font-bold text-white">
+                <div className="mb-1">
+                  <h3 className="text-base font-bold text-white">
                     {alertData.context.aiTitle}
                   </h3>
                 </div>
               )}
 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
-              <div className="mb-4">
+              <div className="mb-2">
                 <GameCardTemplate
                   gameId={alertData.id}
                   homeTeam={{
@@ -792,11 +792,11 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
 
               {/* Alert Message - Compact Design */}
-              <div className="bg-emerald-500/10 rounded-lg p-3 mb-4 border border-emerald-500/30">
+              <div className="bg-emerald-500/10 rounded-lg p-2 mb-2 border border-emerald-500/30">
                 {/* Main Alert Message with Compact Typography */}
-                <div className="text-center space-y-2">
+                <div className="text-center">
                   {/* Main Situation - Clean and Simple */}
-                  <p className="text-white text-lg font-semibold leading-tight">
+                  <p className="text-white text-sm font-semibold leading-tight">
                     {(() => {
                       const message = (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim();
                       // Extract the main situation (everything after the colon)
@@ -815,21 +815,21 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
                 {/* Priority Indicator - Compact */}
                 {alertData.priority && alertData.priority >= 80 && (
-                  <div className="flex items-center justify-center gap-1 mt-2 pt-2 border-t border-emerald-500/20">
-                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                  <div className="flex items-center justify-center gap-1 mt-1 pt-1 border-t border-emerald-500/20">
+                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
                     <span className="text-red-300 text-xs font-medium uppercase tracking-wide">
-                      HIGH VALUE ALERT
+                      HIGH VALUE
                     </span>
-                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
                   </div>
                 )}
 
                 {/* AI Insights - Enhanced */}
                 {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
-                  <div className="mt-4 p-3 bg-blue-500/15 rounded-lg border border-blue-400/30">
-                    <div className="space-y-2">
+                  <div className="mt-2 p-2 bg-blue-500/15 rounded-lg border border-blue-400/30">
+                    <div className="space-y-1">
                       {alertData.context.aiInsights.map((insight: string, idx: number) => (
-                        <p key={idx} className="text-sm text-blue-200 leading-relaxed text-center">
+                        <p key={idx} className="text-xs text-blue-200 leading-relaxed text-center">
                           {insight}
                         </p>
                       ))}
@@ -840,7 +840,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               {/* AI Call to Action */}
               {alertData?.context?.aiCallToAction && (
-                <div className="mb-3 p-2 bg-green-500/10 rounded border border-green-500/30">
+                <div className="mb-1 p-1.5 bg-green-500/10 rounded border border-green-500/30">
                   <p className="text-xs font-medium text-green-300">
                     {alertData.context.aiCallToAction}
                   </p>
