@@ -18,7 +18,7 @@ interface CachedAlert {
 
 export class AlertDeduplication {
   private recentAlerts = new Map<string, CachedAlert>();
-  private readonly CLEANUP_INTERVAL = 300000; // 5 minutes
+  private readonly CLEANUP_INTERVAL = 30000; // 30 seconds - much more frequent cleanup to prevent memory leaks
   private cleanupTimer: NodeJS.Timeout;
 
   constructor() {

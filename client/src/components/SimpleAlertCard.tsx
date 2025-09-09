@@ -414,7 +414,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
               <p className="text-slate-100 text-base font-medium leading-relaxed">
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
               </p>
-            </div></div>
+            </div>
 
             
 
