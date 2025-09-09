@@ -2398,30 +2398,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // ALL ALERT GENERATION TEMPORARILY DISABLED FOR DEBUGGING
+  // Alert generation re-enabled
   const alertGenerator = new AlertGenerator();
-  console.log('🔧 Alert generation completely disabled for server startup debugging');
+  console.log('🚀 Alert generation ENABLED - starting monitoring system');
   
-  // setTimeout(() => {
-  //   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
-  // }, 5000); // Wait 5 seconds for server to start
+  setTimeout(() => {
+    alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
+  }, 5000); // Wait 5 seconds for server to start
 
-  // // Start live game monitoring with robust error handling - DELAYED START
-  // setTimeout(() => {
-  //   const monitoringInterval = setInterval(async () => {
-  //     try {
-  //       console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-  //       await alertGenerator.generateLiveGameAlerts();
-  //     } catch (error: any) {
-  //       console.error('⚠️ Non-critical error in live monitoring:', error.message);
-  //       // Don't crash - just continue monitoring
-  //     }
-  //   }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
+  // Start live game monitoring with robust error handling - DELAYED START
+  setTimeout(() => {
+    const monitoringInterval = setInterval(async () => {
+      try {
+        console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+        await alertGenerator.generateLiveGameAlerts();
+      } catch (error: any) {
+        console.error('⚠️ Non-critical error in live monitoring:', error.message);
+        // Don't crash - just continue monitoring
+      }
+    }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
 
-  //   // Store monitoring interval globally for graceful shutdown cleanup
-  //   (global as any).setMonitoringInterval(monitoringInterval);
-  //   console.log('⚡ Real-time monitoring started after server initialization');
-  // }, 10000); // Wait 10 seconds for server to fully start
+    // Store monitoring interval globally for graceful shutdown cleanup
+    (global as any).setMonitoringInterval(monitoringInterval);
+    console.log('⚡ Real-time monitoring started after server initialization');
+  }, 10000); // Wait 10 seconds for server to fully start
 
   console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 
