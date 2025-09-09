@@ -298,41 +298,25 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
     };
   }, []);
 
-  return (
-    <div className="relative overflow-hidden rounded-xl">
-      {/* Sportsbooks Panel (Left Swipe) */}
-      <div className={`absolute inset-y-0 right-0 w-60 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
-        dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}>
-        <div className="h-full flex flex-col items-center justify-center p-4 space-y-3">
-          <h4 className="text-sm text-white/90 font-semibold tracking-wide">Quick Bet</h4>
-          <div className="grid grid-cols-2 gap-3">
-            {sportsbooks.map((sportsbook) => (
-              <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
-                <Button
-                  onClick={() => {
-                    handleSportsbookClick(sportsbook);
-                    setDragX(0);
-                  }}
-                  className="h-10 w-10 p-1 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20"
-                  style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
-                >
-                  <img
-                    src={sportsbook.logo}
-                    alt={sportsbook.name}
-                    className="w-full h-full rounded object-contain"
-                  />
-                </Button>
-                <span className="text-xs text-white/80 font-medium">{sportsbook.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+  // Get team names
+  const homeTeam = typeof alert.homeTeam === 'object' ? alert.homeTeam?.name || 'Home' : alert.homeTeam || 'Home';
+  const awayTeam = typeof alert.awayTeam === 'object' ? alert.awayTeam?.name || 'Away' : alert.awayTeam || 'Away';
+  const homeScore = alert.context?.homeScore;
+  const awayScore = alert.context?.awayScore;
+  const isLive = (homeScore !== undefined && awayScore !== undefined);
 
-      {/* Delete Panel (Right Swipe) */}
-      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent flex items-center justify-start pl-4 transition-opacity duration-300 ${
-        dragX > 50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+  // Clean message - remove emojis and object text
+  const cleanMessage = alert.message
+    .replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒|🚨/g, '')
+    .replace(/\[object Object\]/g, '')
+    .replace(/Game Started:?\s*/i, '')
+    .trim();
+
+  return (
+    <div className="relative">
+      {/* Delete Panel (Right Swipe Only) */}
+      <div className={`absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-red-500/20 to-transparent flex items-center justify-start pl-2 transition-opacity duration-300 ${
+        dragX > 30 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         <Button
           onClick={() => {
@@ -340,16 +324,16 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             setDragX(0);
           }}
           disabled={isDeleting}
-          className="h-12 w-12 p-0 rounded-full bg-red-500/20 ring-1 ring-red-500/30"
+          className="h-8 w-8 p-0 rounded-full bg-red-500/20 ring-1 ring-red-500/30"
         >
-          <Trash2 className="w-5 h-5 text-red-400" />
+          <Trash2 className="w-4 h-4 text-red-400" />
         </Button>
       </div>
 
-      {/* Main Simple Card */}
+      {/* Simple Card */}
       <motion.div
         drag="x"
-        dragConstraints={{ left: -280, right: 140 }}
+        dragConstraints={{ left: -50, right: 80 }}
         dragElastic={0.1}
         dragMomentum={false}
         onDragStart={handleDragStart}
@@ -365,62 +349,48 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <div className={`${className} transition-all duration-200 relative border-2 ${
-          getAlertStatus(alert.type, alert.createdAt, 
-            (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
-          ).status === 'ACTIVE' 
-            ? 'border-emerald-500 shadow-emerald-500/20' 
-            : 'border-gray-500/50 shadow-gray-500/10'
-        } shadow-lg rounded-xl`}>
-
-          <GameCardTemplate
-            gameId={alert.id}
-            homeTeam={{
-              name: typeof alert.homeTeam === 'object' ? alert.homeTeam?.name || 'Home' : alert.homeTeam || 'Home',
-              score: alert.context?.homeScore
-            }}
-            awayTeam={{
-              name: typeof alert.awayTeam === 'object' ? alert.awayTeam?.name || 'Away' : alert.awayTeam || 'Away', 
-              score: alert.context?.awayScore
-            }}
-            sport={alert.sport}
-            status={(alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined) ? 'live' : 'scheduled'}
-            inning={alert.context?.inning}
-            quarter={alert.context?.quarter}
-            period={alert.context?.period}
-            isTopInning={alert.context?.isTopInning}
-            size="md"
-            showWeather={false}
-            showVenue={false}
-            showEnhancedMLB={false}
-            className="bg-white/5 border-white/10"
-          >
-          </GameCardTemplate>
-
-          {/* Game Started Message - Centered where weather was */}
-          {alert.type?.includes('GAME_START') && (
-            <div className="flex justify-center py-2">
-              <p className="text-slate-300 text-sm font-medium">
-                🚨 Game Started
-              </p>
+        <Card className={`${className} bg-white/5 backdrop-blur-sm border-2 ${
+          getAlertStatus(alert.type, alert.createdAt, isLive ? 'live' : 'scheduled').status === 'ACTIVE' 
+            ? 'border-emerald-500/30 shadow-emerald-500/10' 
+            : 'border-gray-500/30 shadow-gray-500/5'
+        } min-h-[80px] p-3`}>
+          
+          {/* Simple Header - Teams and Scores */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-slate-300 text-sm font-medium">{awayTeam}</span>
+              {isLive && <span className="text-slate-100 text-sm font-bold">{awayScore}</span>}
+              <span className="text-slate-400 text-xs">@</span>
+              <span className="text-slate-300 text-sm font-medium">{homeTeam}</span>
+              {isLive && <span className="text-slate-100 text-sm font-bold">{homeScore}</span>}
             </div>
-          )}
-
-          {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
-          <div className="p-4 pt-0">
-
-            {/* Alert Message - Simple */}
-            <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
-              <p className="text-slate-100 text-base font-medium leading-relaxed">
-                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
-              </p>
+            <div className="flex items-center space-x-2">
+              {isLive && (
+                <Badge className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-xs">
+                  LIVE
+                </Badge>
+              )}
+              <Badge className="px-2 py-0.5 bg-slate-700/50 text-slate-300 text-xs">
+                {alert.sport}
+              </Badge>
             </div>
-
-            
-
-            
           </div>
-        </div>
+
+          {/* Simple Alert Message */}
+          <div className="bg-slate-800/30 rounded-md p-2">
+            <p className="text-slate-100 text-sm leading-relaxed">
+              {cleanMessage || (alert.type?.includes('GAME_START') ? 'Game has started!' : 'Alert')}
+            </p>
+          </div>
+
+          {/* Simple Footer - Just Time */}
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-slate-400 text-xs">{formatTime(alert.createdAt)}</span>
+            {alert.priority >= 80 && (
+              <span className="text-red-400 text-xs font-medium">HIGH VALUE</span>
+            )}
+          </div>
+        </Card>
       </motion.div>
     </div>
   );
