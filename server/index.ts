@@ -24,9 +24,9 @@ let isShuttingDown = false;
 const gracefulShutdown = async (signal: string) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  
+
   console.log(`\n📍 ${signal} signal received - starting graceful shutdown...`);
-  
+
   try {
     // Close server to stop accepting new connections
     if (httpServer) {
@@ -37,18 +37,18 @@ const gracefulShutdown = async (signal: string) => {
         });
       });
     }
-    
+
     // Clear monitoring interval to prevent port binding issues
     if (monitoringInterval) {
       clearInterval(monitoringInterval);
       monitoringInterval = null;
       console.log('✅ Alert monitoring timer cleared');
     }
-    
+
     // Close database connections
     await pool.end();
     console.log('✅ Database connections closed');
-    
+
     console.log('✅ Graceful shutdown complete');
     process.exit(0);
   } catch (err) {
@@ -63,7 +63,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('  Promise:', promise);
   console.error('  Reason:', reason);
   console.error('  Stack:', reason instanceof Error ? reason.stack : 'No stack trace available');
-  
+
   // Try to identify the source
   if (reason instanceof Error) {
     if (reason.message?.includes('pool') || reason.message?.includes('database')) {
@@ -76,26 +76,26 @@ process.on('unhandledRejection', (reason, promise) => {
       console.log('🔄 Generic error handled - continuing operations');
     }
   }
-  
+
   // Log but continue running - don't crash
 });
 
 process.on('uncaughtException', (error: any) => {
   console.error('⚠️ Uncaught Exception:', error);
-  
+
   // For EADDRINUSE, try to recover without exiting
   if (error.code === 'EADDRINUSE') {
     console.log('🔄 Port already in use - will retry in 5 seconds...');
     // Don't exit - just wait and let the retry logic handle it
     return;
   }
-  
+
   // For database errors, try to reconnect
   if (error.message?.includes('database') || error.message?.includes('pool')) {
     console.log('🔄 Database error detected - continuing with degraded service');
     return;
   }
-  
+
   // For other non-critical errors, log and continue
   console.log('🔄 Continuing despite error - service may be degraded');
 });
@@ -250,34 +250,38 @@ app.use((req, res, next) => {
     // Other ports are firewalled. Default to 5000 if not specified.
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
-    const port = parseInt(process.env.PORT || '5000', 10);
-    
+    const PORT = parseInt(process.env.PORT || "5000", 10);
+    const HOST = "0.0.0.0"; // Always bind to 0.0.0.0 for Replit deployment
+
     // Store server reference for graceful shutdown
     httpServer = server;
-    
+
     // Enhanced error handling for server startup
     server.on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${port} is already in use!`);
+        console.error(`❌ Port ${PORT} is already in use!`);
         console.log('🔄 Attempting to recover...');
-        
+
         // Try to clean up and restart
         setTimeout(() => {
           process.exit(1); // Let process manager restart us
         }, 1000);
       } else if (error.code === 'EACCES') {
-        console.error(`❌ Port ${port} requires elevated privileges`);
+        console.error(`❌ Port ${PORT} requires elevated privileges`);
         process.exit(1);
       } else {
         console.error('❌ Server error:', error);
         process.exit(1);
       }
     });
-    
+
     // Simplified server startup
-    server.listen(port, "0.0.0.0", () => {
-      console.log(`✅ Server running on port ${port}`);
-      console.log('🚀 ChirpBot V2 is ready!');
+    server.listen(PORT, HOST, () => {
+      console.log(`🚀 Server running on ${HOST}:${PORT}`);
+      console.log(`📱 Database connected: ${pool ? 'Yes' : 'No'}`);
+      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔐 Session secret: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);
+      console.log(`💾 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
       console.log('💪 System is now ULTRA-BULLETPROOF with auto-recovery');
     });
   } catch (error: any) {
