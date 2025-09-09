@@ -2355,7 +2355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('⚠️ Non-critical error in live monitoring:', error.message);
       // Don't crash - just continue monitoring
     }
-  }, 15000); // Check every 15 seconds
+  }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
   
   // Store monitoring interval globally for graceful shutdown cleanup
   (global as any).setMonitoringInterval(monitoringInterval);

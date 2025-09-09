@@ -5,10 +5,10 @@
 
 export class MemoryManager {
   private static instance: MemoryManager;
-  private gcThreshold = 0.85; // Trigger GC at 85% memory
-  private forceGcThreshold = 0.9; // Force GC at 90% memory
+  private gcThreshold = 0.70; // Trigger GC at 70% memory - EMERGENCY
+  private forceGcThreshold = 0.80; // Force GC at 80% memory - EMERGENCY
   private lastGcTime = Date.now();
-  private gcCooldown = 30000; // 30 seconds between GC attempts
+  private gcCooldown = 10000; // 10 seconds between GC attempts - EMERGENCY
   
   private constructor() {}
   
