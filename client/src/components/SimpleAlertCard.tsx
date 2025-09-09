@@ -8,7 +8,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
-import { BaseballDiamond, WeatherDisplay } from './baseball-diamond';
+import { BaseballDiamond } from './baseball-diamond';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -172,29 +172,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
-  // Fetch weather data for MLB games
-  const { data: weatherData } = useQuery({
-    queryKey: ['weather', alert.homeTeam],
-    queryFn: async () => {
-      const homeTeamName = typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || '';
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(homeTeamName)}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Weather fetch failed');
-      return response.json();
-    },
-    staleTime: 60 * 1000, // Cache for 1 minute
-    refetchInterval: 60 * 1000, // Refetch every minute
-    retry: 1,
-    enabled: alert.sport === 'MLB' && !!alert.homeTeam // Only fetch for MLB games with home team
-  });
-
-  // Convert wind direction degrees to cardinal direction
-  const getCardinalDirection = (degrees: number) => {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-    const index = Math.round(degrees / 22.5) % 16;
-    return directions[index];
-  };
+  
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -411,27 +389,12 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             quarter={alert.context?.quarter}
             period={alert.context?.period}
             isTopInning={alert.context?.isTopInning}
-            weather={weatherData ? {
-              windSpeed: weatherData.windSpeed,
-              windDirection: getCardinalDirection(weatherData.windDirection)
-            } : undefined}
             size="md"
-            showWeather={alert.sport === 'MLB'}
+            showWeather={false}
             showVenue={false}
             showEnhancedMLB={false}
             className="bg-white/5 border-white/10"
           >
-            {/* Weather for MLB games */}
-            {alert.sport === 'MLB' && weatherData && (
-              <WeatherDisplay 
-                windSpeed={weatherData.windSpeed}
-                windDirection={getCardinalDirection(weatherData.windDirection)}
-                windGust={weatherData.windGust}
-                temperature={weatherData.temperature}
-                stadiumWindContext={weatherData.stadiumWindContext}
-                size="sm"
-              />
-            )}
           </GameCardTemplate>
 
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
