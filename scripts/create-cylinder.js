@@ -1,6 +1,4 @@
-
-
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import fs from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -21,14 +19,14 @@ class CylinderCreator {
   // 1. Create the cylinder module file
   createCylinderModule() {
     const cylinderDir = join(rootDir, `server/services/engines/alert-cylinders/${this.sportLower}`);
-    
+
     if (!existsSync(cylinderDir)) {
       mkdirSync(cylinderDir, { recursive: true });
       console.log(`✅ Created cylinder directory: ${cylinderDir}`);
     }
 
     const moduleFile = join(cylinderDir, this.moduleFileName);
-    
+
     if (existsSync(moduleFile)) {
       throw new Error(`❌ Module already exists: ${moduleFile}`);
     }
@@ -81,23 +79,23 @@ export default class ${this.alertName.split('_').map(w => w.charAt(0) + w.slice(
   // 2. Update the sport engine
   updateEngine() {
     const engineFile = join(rootDir, `server/services/engines/${this.sportLower}-engine.ts`);
-    
+
     if (!existsSync(engineFile)) {
       throw new Error(`❌ Engine file not found: ${engineFile}`);
     }
 
     let engineContent = readFileSync(engineFile, 'utf8');
-    
+
     // Find and update the moduleMap
     const moduleMapMatch = engineContent.match(/moduleMap:\s*Record<string,\s*string>\s*=\s*{([^}]+)}/s);
-    
+
     if (!moduleMapMatch) {
       throw new Error(`❌ Could not find moduleMap in ${engineFile}`);
     }
 
     const newMapping = `        '${this.alertKey}': './alert-cylinders/${this.sportLower}/${this.moduleFileName}',`;
     const updatedModuleMap = moduleMapMatch[1].trim() + ',\n' + newMapping;
-    
+
     engineContent = engineContent.replace(
       moduleMapMatch[0],
       `moduleMap: Record<string, string> = {\n${updatedModuleMap}\n      }`
@@ -110,26 +108,26 @@ export default class ${this.alertName.split('_').map(w => w.charAt(0) + w.slice(
   // 3. Update storage defaults
   updateStorageDefaults() {
     const storageFile = join(rootDir, 'server/storage.ts');
-    
+
     if (!existsSync(storageFile)) {
       throw new Error(`❌ Storage file not found: ${storageFile}`);
     }
 
     let storageContent = readFileSync(storageFile, 'utf8');
-    
+
     // Find the sport's default settings
-    const defaultsPattern = new RegExp(`(${this.sport}:\\s*{[^}]+)(})`);
+    const defaultsPattern = new RegExp(`(${this.sport}:\\s*{[^}]+})(})`);
     const match = storageContent.match(defaultsPattern);
-    
+
     if (!match) {
       throw new Error(`❌ Could not find ${this.sport} defaults in storage.ts`);
     }
 
     const newDefault = `    '${this.alertKey}': true,`;
     const updatedDefaults = match[1] + '\n' + newDefault + '\n  ' + match[2];
-    
+
     storageContent = storageContent.replace(match[0], updatedDefaults);
-    
+
     writeFileSync(storageFile, storageContent);
     console.log(`✅ Updated storage defaults: ${storageFile}`);
   }
@@ -145,7 +143,7 @@ export default class ${this.alertName.split('_').map(w => w.charAt(0) + w.slice(
       this.createCylinderModule();
       this.updateEngine();
       this.updateStorageDefaults();
-      
+
       console.log(`\n🎉 SUCCESS! Created cylinder: ${this.alertKey}`);
       console.log(`\n📋 TODO List:`);
       console.log(`   1. Implement detection logic in isTriggered() method`);
@@ -155,7 +153,7 @@ export default class ${this.alertName.split('_').map(w => w.charAt(0) + w.slice(
       console.log(`   5. Add to admin dashboard configuration`);
       console.log(`   6. Add to user settings ALERT_TYPE_CONFIG`);
       console.log(`   7. Run validation: npm run validate-cylinders`);
-      
+
     } catch (error) {
       console.error(`❌ Error creating cylinder: ${error.message}`);
       process.exit(1);
