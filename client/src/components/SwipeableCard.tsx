@@ -776,29 +776,20 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               <div className="bg-emerald-500/10 rounded-lg p-3 mb-4 border border-emerald-500/30">
                 {/* Main Alert Message with Compact Typography */}
                 <div className="text-center space-y-2">
-                  {/* Key Alert Text - Compact */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-lg">⚡</span>
-                      <h3 className="text-emerald-300 text-xs font-bold uppercase tracking-wide">
-                        SCORING OPPORTUNITY
-                      </h3>
-                      <span className="text-lg">⚡</span>
-                    </div>
-                    
-                    {/* Main Situation - Medium Size */}
-                    <p className="text-white text-lg font-semibold leading-tight">
-                      {(() => {
-                        const message = (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim();
-                        // Extract the main situation (everything after the colon)
-                        const parts = message.split(':');
-                        if (parts.length > 1) {
-                          return parts[1].trim();
-                        }
-                        return message;
-                      })()}
-                    </p>
-                  </div>
+                  {/* Main Situation - Clean and Simple */}
+                  <p className="text-white text-lg font-semibold leading-tight">
+                    {(() => {
+                      const message = (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim();
+                      // Extract the main situation (everything after the colon)
+                      const parts = message.split(':');
+                      if (parts.length > 1) {
+                        // Remove any "chance to score" text from the extracted message
+                        return parts[1].trim().replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '');
+                      }
+                      // Remove any "chance to score" text from the full message
+                      return message.replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '');
+                    })()}
+                  </p>
 
                   {/* Probability Badge - Compact */}
                   {alertData.context?.scoringProbability && (
