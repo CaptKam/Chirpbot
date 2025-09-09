@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, TimerReset, Activity, Wifi, ChevronDown, Play, Star, Users, TrendingUp, Award, Target, Clock, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import footballStadiumImage from '@assets/generated_images/NFL_stadium_night_game_ba0513ae.png';
+import baseballActionImage from '@assets/generated_images/Baseball_pitcher_action_shot_8511fb41.png';
 
 export default function LandingPage() {
   return (
@@ -91,7 +91,7 @@ function Hero() {
       className="relative overflow-hidden" 
       id="hero"
       style={{
-        backgroundImage: `url(${footballStadiumImage})`,
+        backgroundImage: `url(${baseballActionImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
