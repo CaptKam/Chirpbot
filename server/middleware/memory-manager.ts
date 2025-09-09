@@ -5,10 +5,10 @@
 
 export class MemoryManager {
   private static instance: MemoryManager;
-  private gcThreshold = 0.70; // Trigger GC at 70% memory - EMERGENCY
-  private forceGcThreshold = 0.80; // Force GC at 80% memory - EMERGENCY
+  private gcThreshold = 0.85; // Trigger GC at 85% memory
+  private forceGcThreshold = 0.95; // Force GC at 95% memory
   private lastGcTime = Date.now();
-  private gcCooldown = 10000; // 10 seconds between GC attempts - EMERGENCY
+  private gcCooldown = 30000; // 30 seconds between GC attempts
   
   private constructor() {}
   
@@ -47,15 +47,20 @@ export class MemoryManager {
     const memBefore = this.getMemoryUsage();
     
     if (memBefore > this.forceGcThreshold) {
-      console.log('🧹 CRITICAL: Force garbage collection at', Math.round(memBefore * 100) + '%');
+      // Reduce log spam - only log if memory is really critical
+      if (memBefore > 0.90) {
+        console.log('🧹 CRITICAL: Force garbage collection at', Math.round(memBefore * 100) + '%');
+      }
       
       // Force aggressive cleanup
       if (global.gc) {
         global.gc();
-        global.gc(); // Double GC for aggressive cleanup
       }
     } else if (memBefore > this.gcThreshold) {
-      console.log('🧹 Memory cleanup triggered at', Math.round(memBefore * 100) + '%');
+      // Only log significant cleanups
+      if (memBefore > 0.88) {
+        console.log('🧹 Memory cleanup triggered at', Math.round(memBefore * 100) + '%');
+      }
       
       // Standard cleanup
       if (global.gc) {
