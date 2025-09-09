@@ -31,6 +31,73 @@ function formatTime(date: string | Date): string {
   return alertTime.toLocaleDateString();
 }
 
+// Sport-specific color mapping
+function getSportColors(sport: string): { 
+  badge: string, 
+  alertBg: string, 
+  alertBorder: string, 
+  probability: string 
+} {
+  switch (sport.toUpperCase()) {
+    case 'MLB':
+      return {
+        badge: 'border-green-500/40 text-green-400 bg-green-500/10',
+        alertBg: 'bg-green-500/10',
+        alertBorder: 'border-green-500/30',
+        probability: 'bg-green-500/20 border-green-400/40 text-green-300'
+      };
+    case 'NFL':
+      return {
+        badge: 'border-orange-500/40 text-orange-400 bg-orange-500/10',
+        alertBg: 'bg-orange-500/10',
+        alertBorder: 'border-orange-500/30',
+        probability: 'bg-orange-500/20 border-orange-400/40 text-orange-300'
+      };
+    case 'NBA':
+      return {
+        badge: 'border-purple-500/40 text-purple-400 bg-purple-500/10',
+        alertBg: 'bg-purple-500/10',
+        alertBorder: 'border-purple-500/30',
+        probability: 'bg-purple-500/20 border-purple-400/40 text-purple-300'
+      };
+    case 'WNBA':
+      return {
+        badge: 'border-pink-500/40 text-pink-400 bg-pink-500/10',
+        alertBg: 'bg-pink-500/10',
+        alertBorder: 'border-pink-500/30',
+        probability: 'bg-pink-500/20 border-pink-400/40 text-pink-300'
+      };
+    case 'CFL':
+      return {
+        badge: 'border-red-500/40 text-red-400 bg-red-500/10',
+        alertBg: 'bg-red-500/10',
+        alertBorder: 'border-red-500/30',
+        probability: 'bg-red-500/20 border-red-400/40 text-red-300'
+      };
+    case 'NCAAF':
+      return {
+        badge: 'border-blue-500/40 text-blue-400 bg-blue-500/10',
+        alertBg: 'bg-blue-500/10',
+        alertBorder: 'border-blue-500/30',
+        probability: 'bg-blue-500/20 border-blue-400/40 text-blue-300'
+      };
+    case 'NHL':
+      return {
+        badge: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10',
+        alertBg: 'bg-cyan-500/10',
+        alertBorder: 'border-cyan-500/30',
+        probability: 'bg-cyan-500/20 border-cyan-400/40 text-cyan-300'
+      };
+    default:
+      return {
+        badge: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+        alertBg: 'bg-emerald-500/10',
+        alertBorder: 'border-emerald-500/30',
+        probability: 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300'
+      };
+  }
+}
+
 function getAlertStatus(alertType: string, createdAt: string, gameStatus?: string): { status: 'ACTIVE' | 'EXPIRED', minutesAgo: number } {
   const alertTime = new Date(createdAt);
   const now = new Date();
@@ -711,14 +778,20 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 <div className="flex items-center space-x-2">
                   <Badge
                     variant="outline"
-                    className="px-2 py-1 text-xs font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10 rounded-full"
+                    className={`px-2 py-1 text-xs font-bold rounded-full ${getSportColors(alertData.sport || 'MLB').badge}`}
                   >
                     {alertData.sport}
                   </Badge>
                   {alertData.context?.scoringProbability && (
-                    <div className="inline-flex items-center gap-1 rounded-full px-2 py-1 bg-emerald-500/20 border border-emerald-400/40">
-                      <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
-                      <span className="text-emerald-300 text-xs font-semibold">
+                    <div className={`inline-flex items-center gap-1 rounded-full px-2 py-1 border ${getSportColors(alertData.sport || 'MLB').probability}`}>
+                      <div className={`w-1 h-1 rounded-full animate-pulse ${alertData.sport === 'MLB' ? 'bg-green-400' : 
+                        alertData.sport === 'NFL' ? 'bg-orange-400' :
+                        alertData.sport === 'NBA' ? 'bg-purple-400' :
+                        alertData.sport === 'WNBA' ? 'bg-pink-400' :
+                        alertData.sport === 'CFL' ? 'bg-red-400' :
+                        alertData.sport === 'NCAAF' ? 'bg-blue-400' :
+                        alertData.sport === 'NHL' ? 'bg-cyan-400' : 'bg-emerald-400'}`}></div>
+                      <span className="text-xs font-semibold">
                         {alertData.context.scoringProbability}%
                       </span>
                     </div>
@@ -818,7 +891,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
 
               {/* Alert Message - Compact Design */}
-              <div className="bg-emerald-500/10 rounded-lg p-3 mb-3 border border-emerald-500/30">
+              <div className={`rounded-lg p-3 mb-3 border ${getSportColors(alertData.sport || 'MLB').alertBg} ${getSportColors(alertData.sport || 'MLB').alertBorder}`}>
                 {/* Main Alert Message with Compact Typography */}
                 <div className="text-center">
                   {/* Main Situation - Clean and Simple */}
