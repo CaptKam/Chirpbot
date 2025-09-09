@@ -144,7 +144,7 @@ export function GameCardTemplate({
 
   const logoSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md';
   const scoreSize = size === 'sm' ? 'text-lg' : size === 'lg' ? 'text-2xl' : 'text-2xl';
-  const cardHeight = size === 'sm' ? 'min-h-[120px]' : 'min-h-[160px]';
+  const cardHeight = size === 'sm' ? 'min-h-[120px]' : size === 'md' ? 'min-h-[130px]' : 'min-h-[160px]';
 
   const formatTime = (dateString?: string) => {
     if (!dateString) return 'TBD';
