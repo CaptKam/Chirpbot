@@ -47,7 +47,7 @@ function getAlertStatus(alertType: string, createdAt: string, gameStatus?: strin
     'HIGH_SCORING': 45,
     'LATE_PRESSURE': 20,
     'OVERTIME': 60,
-    'BLOWOUT': 60,
+    'BLOWOUT': 60
     'SHUTOUT': 60
   };
 
@@ -172,7 +172,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
-  
+
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -397,15 +397,6 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           >
           </GameCardTemplate>
 
-          {/* Game Started Message - Centered where weather was */}
-          {alert.type?.includes('GAME_START') && (
-            <div className="flex justify-center py-2">
-              <p className="text-slate-300 text-sm font-medium">
-                🚨 Game Started
-              </p>
-            </div>
-          )}
-
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
           <div className="p-4 pt-0">
 
@@ -416,9 +407,9 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
               </p>
             </div>
 
-            
 
-            
+
+
           </div>
         </div>
       </motion.div>
