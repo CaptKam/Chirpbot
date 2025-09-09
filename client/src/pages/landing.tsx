@@ -93,7 +93,7 @@ function Hero() {
       style={{
         backgroundImage: `url(${baseballActionImage})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'center bottom',
         backgroundRepeat: 'no-repeat'
       }}
     >
