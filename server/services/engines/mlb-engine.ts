@@ -64,7 +64,7 @@ export class MLBEngine extends BaseSportEngine {
     if (gameState.hasThird) runnerBonus += 15; // Runner on third
     if (gameState.hasSecond) runnerBonus += 10; // Runner on second
     if (gameState.hasFirst) runnerBonus += 5; // Runner on first
-    
+
     probability += runnerBonus;
 
     // Keep probability within reasonable bounds
@@ -198,12 +198,12 @@ export class MLBEngine extends BaseSportEngine {
     const currentTypes = Array.from(this.alertModules.keys()).sort();
     const newTypes = [...enabledAlertTypes].sort();
     const typesChanged = JSON.stringify(currentTypes) !== JSON.stringify(newTypes);
-    
+
     if (!typesChanged && this.alertModules.size > 0) {
       console.log(`🔄 MLB alert cylinders already loaded: ${this.alertModules.size} modules`);
       return; // Reuse existing modules
     }
-    
+
     // Only clear when types have actually changed
     if (typesChanged) {
       this.alertModules.clear();

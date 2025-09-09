@@ -1,5 +1,7 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { weatherService } from '../../../weather-service';
+import { PlayerContextService } from '../../../player-context-service';
 
 export default class BasesLoadedNoOutsModule extends BaseAlertModule {
   alertType = 'MLB_BASES_LOADED_NO_OUTS';
@@ -14,13 +16,35 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
     return hasFirst && hasSecond && hasThird && outs === 0;
   }
 
-  generateAlert(gameState: GameState): AlertResult | null {
+  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
     if (!this.isTriggered(gameState)) return null;
 
-    // Generate player-enhanced message
-    const playerContext = this.generatePlayerContext(gameState);
+    // Get weather data for the home team
+    const homeTeam = gameState.homeTeam;
+    let weatherData = null;
+    let weatherContext = '';
+    
+    try {
+      weatherData = await weatherService.getWeatherForTeam(homeTeam);
+      if (weatherData && weatherData.stadiumWindContext) {
+        const homeRunFactor = weatherService.calculateHomeRunFactor(weatherData);
+        
+        if (homeRunFactor > 1.1) {
+          weatherContext = ` 🌬️ Weather favors home runs: ${weatherData.stadiumWindContext}`;
+        } else if (homeRunFactor < 0.9) {
+          weatherContext = ` 🌪️ Tough conditions: ${weatherData.stadiumWindContext}`;
+        } else if (weatherData.windSpeed >= 10) {
+          weatherContext = ` 🌬️ ${weatherData.stadiumWindContext}`;
+        }
+      }
+    } catch (error) {
+      console.warn('Weather data unavailable for alert enhancement');
+    }
+
+    // Generate enhanced message with player and weather context
     const baseMessage = `🔥 HIGH SCORING PROBABILITY: Bases Loaded, 0 outs - 86% chance to score!`;
-    const enhancedMessage = playerContext ? `${baseMessage} ${playerContext}` : baseMessage;
+    const playerContext = PlayerContextService.enhanceAlertWithPlayer(baseMessage, gameState, this.alertType);
+    const enhancedMessage = playerContext + weatherContext;
 
     return {
       alertKey: `${gameState.gameId}_bases_loaded_no_outs`,
@@ -46,52 +70,16 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
         currentBatter: gameState.currentBatter,
         currentPitcher: gameState.currentPitcher,
         runnerDetails: gameState.runnerDetails,
-        playerImpact: this.calculatePlayerImpact(gameState)
+        playerImpact: this.calculatePlayerImpact(gameState),
+        // Weather data
+        weatherData: weatherData,
+        weatherContext: weatherContext
       },
       priority: 97
     };
   }
 
-  private generatePlayerContext(gameState: GameState): string | null {
-    const batter = gameState.currentBatter;
-    if (!batter) return null;
-
-    // Extract player name (handle various formats)
-    const playerName = batter.fullName || batter.name || batter.lastName || 'Unknown';
-    
-    // Check for star players or high-impact situations
-    const isStarPlayer = this.isStarPlayer(batter);
-    const battingAvg = batter.seasonStats?.avg || batter.avg;
-    const homeRuns = batter.seasonStats?.homeRuns || batter.hr || 0;
-
-    if (isStarPlayer) {
-      return `⭐ ${playerName} at bat!`;
-    } else if (battingAvg && parseFloat(battingAvg) > 0.300) {
-      return `🔥 ${playerName} (.${Math.round(parseFloat(battingAvg) * 1000)}) at bat!`;
-    } else if (homeRuns > 20) {
-      return `💪 ${playerName} (${homeRuns} HRs) at bat!`;
-    } else if (playerName !== 'Unknown') {
-      return `⚾ ${playerName} at bat`;
-    }
-
-    return null;
-  }
-
-  private isStarPlayer(batter: any): boolean {
-    if (!batter) return false;
-    
-    const playerName = (batter.fullName || batter.name || batter.lastName || '').toLowerCase();
-    
-    // List of star players (you can expand this)
-    const starPlayers = [
-      'shohei ohtani', 'ohtani', 'mike trout', 'trout', 'mookie betts', 'betts',
-      'aaron judge', 'judge', 'bryce harper', 'harper', 'manny machado', 'machado',
-      'vladimir guerrero', 'guerrero', 'fernando tatis', 'tatis', 'juan soto', 'soto',
-      'ronald acuna', 'acuna', 'freddie freeman', 'freeman', 'corey seager', 'seager'
-    ];
-
-    return starPlayers.some(star => playerName.includes(star));
-  }
+  
 
   private calculatePlayerImpact(gameState: GameState): number {
     const batter = gameState.currentBatter;

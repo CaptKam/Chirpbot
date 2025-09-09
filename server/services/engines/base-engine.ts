@@ -45,7 +45,7 @@ export abstract class BaseAlertModule {
   abstract sport: string;
 
   abstract isTriggered(gameState: GameState): boolean;
-  abstract generateAlert(gameState: GameState): AlertResult | null;
+  abstract generateAlert(gameState: GameState): AlertResult | null | Promise<AlertResult | null>;
   abstract calculateProbability(gameState: GameState): number;
 }
 
