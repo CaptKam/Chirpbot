@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, TimerReset, Activity, Wifi, ChevronDown, Play, Star, Users, TrendingUp, Award, Target, Clock, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import footballStadiumImage from '@assets/generated_images/NFL_stadium_night_game_ba0513ae.png';
 
 export default function LandingPage() {
   return (
@@ -86,9 +87,18 @@ function Badge({ children }: { children: React.ReactNode }) {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden" id="hero">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0B1220]/60 to-[#0B1220]" />
+    <section 
+      className="relative overflow-hidden" 
+      id="hero"
+      style={{
+        backgroundImage: `url(${footballStadiumImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Background gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0B1220]/70 via-[#0B1220]/80 to-[#0B1220]" />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-24 lg:pb-32">
         <div className="text-center">
