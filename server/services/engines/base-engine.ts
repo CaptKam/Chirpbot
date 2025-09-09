@@ -119,6 +119,27 @@ export abstract class BaseSportEngine {
     this.sport = sport;
   }
 
+  // Universal enhancement application - benefits all sports
+  protected enhanceAlertUniversally(alert: AlertResult, gameState: GameState, weatherData?: any): AlertResult {
+    const { UniversalAlertEnhancer } = require('./universal-enhancement-framework');
+    
+    // Apply weather context if available
+    if (weatherData) {
+      alert.message = UniversalAlertEnhancer.applyWeatherContext(alert.message, this.sport, weatherData);
+    }
+
+    // Apply player context
+    alert.message = UniversalAlertEnhancer.applyPlayerContext(alert.message, gameState, this.sport);
+
+    // Calculate universal probability
+    const universalProbability = UniversalAlertEnhancer.calculateUniversalProbability(gameState, this.sport);
+    
+    // Calculate universal priority
+    alert.priority = UniversalAlertEnhancer.calculateUniversalPriority(alert.type, universalProbability, this.sport);
+
+    return alert;
+  }
+
   abstract calculateProbability(gameState: GameState): Promise<number>;
 
   // Generate live alerts using loaded modules

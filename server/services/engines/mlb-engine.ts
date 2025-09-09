@@ -220,4 +220,30 @@ export class MLBEngine extends BaseSportEngine {
 
     console.log(`🔧 Initialized ${this.alertModules.size} MLB alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
   }
+
+  // Placeholder for getting weather data - implement actual logic
+  private async getWeatherForGame(gameState: GameState): Promise<any> {
+    // In a real scenario, you'd fetch weather data based on game location and time.
+    // For now, returning dummy data.
+    return { temperature: 75, condition: 'Sunny' };
+  }
+
+  // Placeholder for universal alert enhancement logic
+  private enhanceAlertUniversally(alert: AlertResult, gameState: GameState, weatherData: any): AlertResult {
+    // This is where you'd apply rules that benefit all sports and alert types.
+    // Example: Add weather context to the alert message if it's relevant.
+    let enhancedMessage = alert.message;
+    if (weatherData && weatherData.condition === 'Sunny') {
+      enhancedMessage += ` (Pleasant weather: ${weatherData.temperature}°F)`;
+    } else if (weatherData && weatherData.condition === 'Rainy') {
+      enhancedMessage += ` (Expect delays due to rain)`;
+    }
+
+    // Example: Adjust severity based on game importance (e.g., playoffs)
+    // if (gameState.isPlayoffGame) {
+    //   alert.severity = 'CRITICAL';
+    // }
+
+    return { ...alert, message: enhancedMessage };
+  }
 }
