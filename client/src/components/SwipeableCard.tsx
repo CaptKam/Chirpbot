@@ -68,9 +68,9 @@ function getAlertStatus(alertType: string, createdAt: string, gameStatus?: strin
   const expirationMinutes = alertExpirationTimes[alertType] || 10; // Default 10 minutes
   const isActive = minutesAgo <= expirationMinutes;
 
-  return { 
-    status: isActive ? 'ACTIVE' : 'EXPIRED', 
-    minutesAgo 
+  return {
+    status: isActive ? 'ACTIVE' : 'EXPIRED',
+    minutesAgo
   };
 }
 
@@ -181,7 +181,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     if (typeof alertData.homeTeam === 'string') return alertData.homeTeam;
     return alertData.homeTeam?.name || '';
   }, [alertData]);
-  
+
   const { data: weatherData } = useQuery({
     queryKey: ['weather', homeTeamName],
     queryFn: async () => {
@@ -314,7 +314,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
     } catch (error: any) {
       console.error('Delete alert error:', error);
       toast({
-        title: "Error", 
+        title: "Error",
         description: error?.message || "Failed to delete alert. Please try again.",
         variant: "destructive",
       });
@@ -692,12 +692,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           mass: 0.6
         }}
         className="relative z-10"
-        whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
+        whileDrag={{ scale: 1.01, cursor: "grabbing" }}
       >
         <Card className={`${className} border-2 ${
-          getAlertStatus(alertData.type, alertData.createdAt || '', liveGameData?.status).status === 'ACTIVE' 
-            ? 'border-emerald-500 shadow-emerald-500/20' 
+          getAlertStatus(alertData.type, alertData.createdAt || '', liveGameData?.status).status === 'ACTIVE'
+            ? 'border-emerald-500 shadow-emerald-500/20'
             : 'border-gray-500 shadow-gray-500/20'
         } shadow-lg`} {...props}>
           {/* Render the redesigned alert card content here */}
@@ -767,9 +767,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   className="shadow-lg"
                 />
 
-                
 
-                
+
+
               </div>
 
               {/* Alert Message - Clean Layout */}
