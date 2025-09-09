@@ -709,7 +709,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* Clean Header - Calendar Page Style */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
-                  <div className={`w-3 h-3 rounded-full ${getAlertColor(alertData.priority ?? 0)} animate-pulse`}></div>
                   <Badge
                     variant="outline"
                     className="px-3 py-1.5 text-sm font-bold border-emerald-500/40 text-emerald-400 bg-emerald-500/10 rounded-full"
