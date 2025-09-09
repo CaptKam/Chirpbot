@@ -315,48 +315,6 @@ export function GameCardTemplate({
         </div>
       </div>
 
-      {/* Bottom Row - Weather, Time & Venue Info */}
-      <div className="flex items-center justify-between pt-2 border-t border-white/10">
-        {/* Weather Display - Use real weather data from API */}
-        {showWeather && sport === 'MLB' && weatherData && (
-          <WeatherDisplay 
-            windSpeed={weatherData.windSpeed}
-            windDirection={getCardinalDirection(weatherData.windDirection)}
-            windGust={weatherData.windGust}
-            temperature={weatherData.temperature}
-            stadiumWindContext={weatherData.stadiumWindContext}
-            size="sm"
-          />
-        )}
-
-        {/* Fallback weather display for non-MLB or when no data */}
-        {showWeather && (sport !== 'MLB' || !weatherData) && (
-          <WeatherDisplay 
-            windSpeed={weather?.windSpeed || 5}
-            windDirection={weather?.windDirection || "N"}
-            size="sm"
-          />
-        )}
-
-        <div className="flex items-center space-x-3">
-          {/* Time for scheduled games */}
-          {status === 'scheduled' && (
-            <div className="flex items-center space-x-1">
-              <Clock className="w-3 h-3 text-slate-400" />
-              <span className="text-sm text-slate-300 font-medium">
-                {formatTime(startTime)}
-              </span>
-            </div>
-          )}
-
-          {/* Venue */}
-          {showVenue && venue && (
-            <div className="text-xs text-slate-400 text-right">
-              {venue.length > 25 ? `${venue.substring(0, 25)}...` : venue}
-            </div>
-          )}
-        </div>
-      </div>
 
 
 
