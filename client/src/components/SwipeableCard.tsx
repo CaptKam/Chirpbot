@@ -807,7 +807,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     <div className="inline-flex items-center gap-1 rounded-full px-3 py-1 bg-emerald-500/20 border border-emerald-400/40">
                       <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
                       <span className="text-emerald-300 text-sm font-semibold">
-                        {alertData.context.scoringProbability}% chance to score
+                        {alertData.context.scoringProbability}%
                       </span>
                     </div>
                   )}
