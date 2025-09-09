@@ -6,8 +6,8 @@
  * It monitors the server process and restarts it instantly if it crashes
  */
 
-const { spawn } = require('child_process');
-const http = require('http');
+import { spawn } from 'child_process';
+import http from 'http';
 
 class UltimateServerManager {
   constructor() {
