@@ -1,4 +1,5 @@
 import { getPacificDate } from '../utils/timezone';
+import { mlbApiCircuit, protectedFetch } from '../middleware/circuit-breaker';
 
 export class MLBApiService {
   private baseUrl = 'https://statsapi.mlb.com/api/v1';
@@ -50,7 +51,7 @@ export class MLBApiService {
       const url = `${this.baseUrl}/schedule?sportId=1&date=${targetDate}&hydrate=team,linescore,venue,game(content(summary))`;
       console.log(`🔄 MLB API: Fetching today's games for ${targetDate}`);
 
-      const response = await fetch(url);
+      const response = await protectedFetch(mlbApiCircuit, url);
       if (!response.ok) {
         throw new Error(`MLB API error: ${response.status}`);
       }
@@ -95,7 +96,7 @@ export class MLBApiService {
   async getLiveFeed(gameId: string): Promise<any> {
     try {
       const url = `${this.baseUrl}/game/${gameId}/feed/live`;
-      const response = await fetch(url);
+      const response = await protectedFetch(mlbApiCircuit, url);
       if (!response.ok) {
         throw new Error(`MLB Live Feed API error: ${response.status}`);
       }
@@ -120,7 +121,8 @@ export class MLBApiService {
       }
 
       console.log(`🔄 MLB API: Fetching enhanced data for game ${gameId}`);
-      const response = await fetch(
+      const response = await protectedFetch(
+        mlbApiCircuit,
         `https://statsapi.mlb.com/api/v1.1/game/${gameId}/feed/live`
       );
 

@@ -1966,6 +1966,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get deduplication stats
       const dedupeStats = requestDeduplicator.getStats();
       
+      // Get circuit breaker stats
+      const { mlbApiCircuit, espnApiCircuit, weatherApiCircuit } = await import('./middleware/circuit-breaker');
+      const circuitBreakerStatus = {
+        mlbApi: mlbApiCircuit.getStatus(),
+        espnApi: espnApiCircuit.getStatus(),
+        weatherApi: weatherApiCircuit.getStatus()
+      };
+      
       const healthStatus = {
         status: memPercent > 0.9 ? 'degraded' : 'healthy',
         timestamp: new Date().toISOString(),
@@ -1979,7 +1987,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...dedupeStats,
           effectiveness: dedupeStats.cacheSize > 0 ? 
             `Serving ${dedupeStats.cacheSize} cached responses` : 'No cached responses yet'
-        }
+        },
+        circuitBreakers: circuitBreakerStatus
       };
       
       res.status(200).json(healthStatus);
