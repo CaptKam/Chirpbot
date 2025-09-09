@@ -724,7 +724,33 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </div>
                   )}
                   <span className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
-                    SCORING OPPORTUNITY
+                    {(() => {
+                      // Dynamic alert type based on sport and context
+                      if (alertData.sport === 'MLB') {
+                        if (alertData.context?.scoringProbability) return 'SCORING OPPORTUNITY';
+                        if (alertData.type?.includes('INNING')) return 'INNING UPDATE';
+                        if (alertData.type?.includes('GAME_START')) return 'GAME STARTING';
+                        return 'BASEBALL ALERT';
+                      } else if (alertData.sport === 'NFL') {
+                        if (alertData.type?.includes('RED_ZONE')) return 'RED ZONE';
+                        if (alertData.type?.includes('TWO_MINUTE')) return 'TWO MINUTE WARNING';
+                        if (alertData.type?.includes('GAME_START')) return 'GAME STARTING';
+                        return 'FOOTBALL ALERT';
+                      } else if (alertData.sport === 'NBA') {
+                        if (alertData.type?.includes('CLUTCH')) return 'CLUTCH TIME';
+                        if (alertData.type?.includes('GAME_START')) return 'GAME STARTING';
+                        return 'BASKETBALL ALERT';
+                      } else if (alertData.sport === 'WNBA') {
+                        if (alertData.type?.includes('TWO_MINUTE')) return 'TWO MINUTE WARNING';
+                        if (alertData.type?.includes('GAME_START')) return 'GAME STARTING';
+                        return 'BASKETBALL ALERT';
+                      } else if (alertData.sport === 'CFL') {
+                        if (alertData.type?.includes('TWO_MINUTE')) return 'TWO MINUTE WARNING';
+                        if (alertData.type?.includes('GAME_START')) return 'GAME STARTING';
+                        return 'FOOTBALL ALERT';
+                      }
+                      return 'GAME ALERT';
+                    })()}
                   </span>
                 </div>
                 <div className="flex items-center text-xs">
@@ -798,15 +824,40 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   {/* Main Situation - Clean and Simple */}
                   <p className="text-white text-sm font-semibold leading-tight">
                     {(() => {
-                      const message = (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim();
-                      // Extract the main situation (everything after the colon)
-                      const parts = message.split(':');
-                      if (parts.length > 1) {
-                        // Remove any "chance to score" text from the extracted message
-                        return parts[1].trim().replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '');
+                      let message = alertData.message || '';
+                      
+                      // Remove emojis
+                      message = message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|⭐|🎯|🔴|🟡|🟢|⚽|🏀|🏐|🎾|⚾|🥎|🏈|🏉|🎱|🏸|🏓|🥅|⛳|🎣|🥊|🥋|🎿|⛷️|🏂|⛸️|🥌|🛷|🏇|🤺|🏌️|🧗|🤸|🏄|🏊|🤽|🚣|🧘|🏃|🚴|🤾|⛹️|🏋️|🧖|🧚|🧜|🧞|🧛|🧟|🤱|👨|👩|👦|👧|👶/g, '').trim();
+                      
+                      // Extract the main situation text based on sport
+                      if (alertData.sport === 'MLB') {
+                        // For baseball, extract situation after colon
+                        const parts = message.split(':');
+                        if (parts.length > 1) {
+                          return parts[1].trim().replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '');
+                        }
+                      } else if (alertData.sport === 'NFL' || alertData.sport === 'CFL') {
+                        // For football, clean up the message
+                        if (message.includes('Red Zone')) {
+                          return message.replace(/.*Red Zone[:\s-]*/i, '').replace(/\s*-\s*\d+%.*$/i, '');
+                        } else if (message.includes('Two Minute Warning')) {
+                          return 'Two minute warning - critical game situation';
+                        } else if (message.includes('Game Starting')) {
+                          return `${alertData.awayTeam?.name || 'Away'} vs ${alertData.homeTeam?.name || 'Home'} - Game Starting`;
+                        }
+                      } else if (alertData.sport === 'NBA' || alertData.sport === 'WNBA') {
+                        // For basketball, clean up the message
+                        if (message.includes('Clutch Time')) {
+                          return 'Final 5 minutes - close game situation';
+                        } else if (message.includes('Two Minute Warning')) {
+                          return 'Two minute warning - critical game situation';
+                        } else if (message.includes('Game Starting')) {
+                          return `${alertData.awayTeam?.name || 'Away'} vs ${alertData.homeTeam?.name || 'Home'} - Game Starting`;
+                        }
                       }
-                      // Remove any "chance to score" text from the full message
-                      return message.replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '');
+                      
+                      // Fallback: remove percentage text and return clean message
+                      return message.replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '').replace(/\s*-\s*\d+%.*$/i, '');
                     })()}
                   </p>
 
