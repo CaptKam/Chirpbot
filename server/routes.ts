@@ -564,15 +564,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/signup', async (req, res) => {
     try {
-      const { username, email, password } = req.body;
+      const { usernameOrEmail, password, firstName, lastName } = req.body;
 
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: 'Username, email, and password are required' });
+      if (!usernameOrEmail || !password) {
+        return res.status(400).json({ message: 'Username/email and password are required' });
+      }
+
+      if (usernameOrEmail.length < 3) {
+        return res.status(400).json({ message: 'Username or email must be at least 3 characters long' });
       }
 
       if (password.length < 6) {
         return res.status(400).json({ message: 'Password must be at least 6 characters long' });
       }
+
+      // Determine if input is email or username
+      const isEmail = usernameOrEmail.includes('@');
+      const username = isEmail ? usernameOrEmail.split('@')[0] : usernameOrEmail;
+      const email = isEmail ? usernameOrEmail : `${usernameOrEmail}@chirpbot.local`;
 
       // Check if user already exists
       const existingUserByUsername = await storage.getUserByUsername(username);
@@ -580,9 +589,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ message: 'Username already exists' });
       }
 
-      const existingUserByEmail = await storage.getUserByEmail(email);
-      if (existingUserByEmail) {
-        return res.status(409).json({ message: 'Email already exists' });
+      if (isEmail) {
+        const existingUserByEmail = await storage.getUserByEmail(email);
+        if (existingUserByEmail) {
+          return res.status(409).json({ message: 'Email already exists' });
+        }
       }
 
       // Hash password
@@ -594,6 +605,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username,
         email,
         password: hashedPassword,
+        firstName: firstName || null,
+        lastName: lastName || null,
         authMethod: 'local',
         role: 'user'
       });
