@@ -809,22 +809,22 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               </div>
 
-              {/* Alert Message - Enhanced Visual Design */}
-              <div className="bg-emerald-500/10 rounded-xl p-5 mb-4 border border-emerald-500/30 shadow-lg">
-                {/* Main Alert Message with Enhanced Typography */}
-                <div className="text-center space-y-3">
-                  {/* Key Alert Text - Split for Visual Impact */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-2xl">⚡</span>
-                      <h3 className="text-emerald-300 text-sm font-bold uppercase tracking-widest">
+              {/* Alert Message - Compact Design */}
+              <div className="bg-emerald-500/10 rounded-lg p-3 mb-4 border border-emerald-500/30">
+                {/* Main Alert Message with Compact Typography */}
+                <div className="text-center space-y-2">
+                  {/* Key Alert Text - Compact */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-lg">⚡</span>
+                      <h3 className="text-emerald-300 text-xs font-bold uppercase tracking-wide">
                         SCORING OPPORTUNITY
                       </h3>
-                      <span className="text-2xl">⚡</span>
+                      <span className="text-lg">⚡</span>
                     </div>
                     
-                    {/* Main Situation - Large and Bold */}
-                    <p className="text-white text-2xl font-bold leading-tight">
+                    {/* Main Situation - Medium Size */}
+                    <p className="text-white text-lg font-semibold leading-tight">
                       {(() => {
                         const message = (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim();
                         // Extract the main situation (everything after the colon)
@@ -837,25 +837,25 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </p>
                   </div>
 
-                  {/* Probability Badge - Matching Pill Style */}
+                  {/* Probability Badge - Compact */}
                   {alertData.context?.scoringProbability && (
-                    <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 bg-emerald-500/20 border border-emerald-400/40">
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                      <span className="text-emerald-300 text-lg font-bold">
+                    <div className="inline-flex items-center gap-1 rounded-full px-3 py-1 bg-emerald-500/20 border border-emerald-400/40">
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+                      <span className="text-emerald-300 text-sm font-semibold">
                         {alertData.context.scoringProbability}% chance to score
                       </span>
                     </div>
                   )}
                 </div>
 
-                {/* Priority Indicator - Enhanced */}
+                {/* Priority Indicator - Compact */}
                 {alertData.priority && alertData.priority >= 80 && (
-                  <div className="flex items-center justify-center gap-2 mt-4 pt-3 border-t border-emerald-500/20">
-                    <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
-                    <span className="text-red-300 text-sm font-semibold uppercase tracking-wide">
+                  <div className="flex items-center justify-center gap-1 mt-2 pt-2 border-t border-emerald-500/20">
+                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                    <span className="text-red-300 text-xs font-medium uppercase tracking-wide">
                       HIGH VALUE ALERT
                     </span>
-                    <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
                   </div>
                 )}
 
