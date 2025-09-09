@@ -40,30 +40,35 @@ export class MLBEngine extends BaseSportEngine {
   async calculateProbability(gameState: GameState): Promise<number> {
     const { inning, outs, homeScore, awayScore } = gameState;
 
-    let probability = 50; // Base probability
+    let probability = 40; // Base probability
 
-    // Inning-specific adjustments
-    if (inning >= 7) probability += 15; // Late innings
-    else if (inning >= 4) probability += 8; // Middle innings
-    else if (inning <= 2) probability += 10; // Early game excitement
+    // Simple inning adjustments
+    if (inning >= 7) probability += 20; // Late innings are more exciting
+    else if (inning >= 4) probability += 10; // Middle innings
+    else probability += 5; // Early innings
 
-    // Outs situation
-    if (outs === 0) probability += 15; // No outs
-    else if (outs === 1) probability += 5; // One out
-    else if (outs === 2) probability -= 10; // Two outs - pressure
+    // Outs situation - simple rules
+    if (outs === 0) probability += 20; // No outs - high potential
+    else if (outs === 1) probability += 10; // One out - still good
+    else probability += 5; // Two outs - pressure but still possible
 
-    // Score situation
+    // Score differential
     const scoreDiff = Math.abs(homeScore - awayScore);
-    if (scoreDiff <= 2) probability += 20; // Close game
-    else if (scoreDiff <= 5) probability += 10; // Moderately close
-    else if (scoreDiff >= 8) probability -= 15; // Blowout
+    if (scoreDiff <= 1) probability += 25; // Very close game
+    else if (scoreDiff <= 3) probability += 15; // Close game
+    else if (scoreDiff <= 6) probability += 5; // Moderately competitive
+    else probability -= 10; // Blowout
 
-    // Base runners (if available)
-    if (gameState.hasFirst || gameState.hasSecond || gameState.hasThird) {
-      probability += 10; // Runners on base
-    }
+    // Simple base runner boost
+    let runnerBonus = 0;
+    if (gameState.hasThird) runnerBonus += 15; // Runner on third
+    if (gameState.hasSecond) runnerBonus += 10; // Runner on second
+    if (gameState.hasFirst) runnerBonus += 5; // Runner on first
+    
+    probability += runnerBonus;
 
-    return Math.min(Math.max(probability, 10), 95);
+    // Keep probability within reasonable bounds
+    return Math.min(Math.max(probability, 15), 90);
   }
 
   // Override to add MLB-specific game state normalization

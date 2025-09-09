@@ -48,7 +48,7 @@ Game Data → Sport Engine → Alert Cylinders → User Filtering → Telegram/W
 ```
 
 ### Multi-Sport Engine Status
-- ✅ **MLB Engine**: RE24-based probability calculations, 9 alert types
+- ✅ **MLB Engine**: Context-aware probability calculations, 9 alert types
 - ✅ **NFL Engine**: Game state monitoring, 2 alert types  
 - ✅ **NCAAF Engine**: College football integration, 2 alert types
 - ✅ **WNBA Engine**: Basketball monitoring, 2 alert types

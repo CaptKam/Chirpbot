@@ -58,7 +58,7 @@ Complete 24-state lookup table covering all base runner combinations:
 
 ### System Status
 
-✅ **UPGRADE COMPLETE**: V2 RE24 system now active
+❌ **SYSTEM REVERTED**: RE24 system removed - back to simple probability model
 ✅ **Production Ready**: Built on existing stable foundation
 ✅ **Law Compliance**: All ChirpBot Development Laws maintained
 ✅ **Alert Protection**: LAW #2 compliance - no disruption to working alerts
