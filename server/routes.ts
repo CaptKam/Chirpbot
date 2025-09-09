@@ -10,6 +10,7 @@ import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@share
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
 import { requestDeduplicator } from "./middleware/request-deduplicator";
+import { memoryManager } from "./middleware/memory-manager";
 // Extend session data interface
 declare module 'express-session' {
   interface SessionData {
@@ -43,7 +44,8 @@ async function requireAuthentication(req: express.Request, res: express.Response
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // Add request deduplication middleware FIRST (before any logging)
+  // Add memory management and request deduplication middleware FIRST (before any logging)
+  app.use(memoryManager.middleware());
   app.use(requestDeduplicator.middleware());
 
   // Add route debugging middleware with duplicate detection
@@ -1974,13 +1976,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weatherApi: weatherApiCircuit.getStatus()
       };
       
+      // Get memory management stats
+      const memoryStats = memoryManager.getStats();
+      
       const healthStatus = {
         status: memPercent > 0.9 ? 'degraded' : 'healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         memory: {
           ...memUsage,
-          percentage: Math.round(memPercent * 100)
+          percentage: Math.round(memPercent * 100),
+          management: memoryStats
         },
         pid: process.pid,
         deduplication: {
