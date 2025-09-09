@@ -720,7 +720,18 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
-                  <span className="text-slate-400 font-medium">{formatTime(alertData.createdAt || '')}</span>
+                  <Clock className="w-4 h-4 text-slate-400 mr-1" />
+                  <span className="text-slate-400 font-medium">
+                    {(() => {
+                      const alertTime = new Date(alertData.createdAt || '');
+                      const now = new Date();
+                      const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
+                      
+                      if (diffMinutes < 1) return 'Just now';
+                      if (diffMinutes < 60) return `${diffMinutes}m`;
+                      return `${Math.floor(diffMinutes / 60)}h`;
+                    })()}
+                  </span>
                 </div>
               </div>
 
