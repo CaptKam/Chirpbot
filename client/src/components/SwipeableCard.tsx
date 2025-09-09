@@ -704,7 +704,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-2 relative" key={`alert-${alertData.id}-${Date.now()}`}>
+            <div className="p-4 relative" key={`alert-${alertData.id}-${Date.now()}`}>
 
               {/* Clean Header - Calendar Page Style */}
               <div className="flex items-center justify-between mb-2">
