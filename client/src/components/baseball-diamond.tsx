@@ -67,21 +67,7 @@ export function BaseballDiamond({
         <div className={`absolute top-1/2 right-0 transform -translate-y-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.first ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
       </div>
 
-      {/* Base status text */}
-      {(runners.first || runners.second || runners.third) && (
-        <motion.div
-          className={`${text} text-emerald-400 font-medium text-center`}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          {[
-            runners.first && '1st',
-            runners.second && '2nd',
-            runners.third && '3rd'
-          ].filter(Boolean).join(' & ')}
-        </motion.div>
-      )}
+      
     </div>
   );
 }
