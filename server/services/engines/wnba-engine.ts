@@ -15,7 +15,8 @@ export class WNBAEngine extends BaseSportEngine {
     try {
       // Only check settings for actual WNBA alert types
       const validWNBAAlerts = [
-        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING'
+        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'FINAL_MINUTES',
+        'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER'
       ];
 
       if (!validWNBAAlerts.includes(alertType)) {
@@ -247,7 +248,8 @@ export class WNBAEngine extends BaseSportEngine {
 
       // Filter to only valid WNBA alerts that have corresponding modules
       const validWNBAAlerts = [
-        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING'
+        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'FINAL_MINUTES',
+        'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER'
       ];
 
       const wnbaEnabledTypes = enabledTypes.filter(alertType =>
@@ -278,7 +280,11 @@ export class WNBAEngine extends BaseSportEngine {
     try {
       const moduleMap: Record<string, string> = {
         'WNBA_GAME_START': './alert-cylinders/wnba/game-start-module.ts',
-        'WNBA_TWO_MINUTE_WARNING': './alert-cylinders/wnba/two-minute-warning-module.ts'
+        'WNBA_TWO_MINUTE_WARNING': './alert-cylinders/wnba/two-minute-warning-module.ts',
+        'FINAL_MINUTES': './alert-cylinders/wnba/final-minutes-module.ts',
+        'HIGH_SCORING_QUARTER': './alert-cylinders/wnba/high-scoring-quarter-module.ts',
+        'LOW_SCORING_QUARTER': './alert-cylinders/wnba/low-scoring-quarter-module.ts',
+        'FOURTH_QUARTER': './alert-cylinders/wnba/fourth-quarter-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
@@ -314,7 +320,11 @@ export class WNBAEngine extends BaseSportEngine {
   async getAvailableAlertTypes(): Promise<string[]> {
     return [
       'WNBA_GAME_START',
-      'WNBA_TWO_MINUTE_WARNING'
+      'WNBA_TWO_MINUTE_WARNING',
+      'FINAL_MINUTES',
+      'HIGH_SCORING_QUARTER',
+      'LOW_SCORING_QUARTER',
+      'FOURTH_QUARTER'
     ];
   }
 }
