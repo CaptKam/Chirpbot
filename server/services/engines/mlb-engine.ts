@@ -185,7 +185,21 @@ export class MLBEngine extends BaseSportEngine {
 
   // Initialize alert cylinder modules for enabled alert types
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    this.alertModules.clear();
+    // Only clear if the alert types have changed - prevents memory leak from constant reloading
+    const currentTypes = Array.from(this.alertModules.keys()).sort();
+    const newTypes = [...enabledAlertTypes].sort();
+    const typesChanged = JSON.stringify(currentTypes) !== JSON.stringify(newTypes);
+    
+    if (!typesChanged && this.alertModules.size > 0) {
+      console.log(`🔄 MLB alert cylinders already loaded: ${this.alertModules.size} modules`);
+      return; // Reuse existing modules
+    }
+    
+    // Only clear when types have actually changed
+    if (typesChanged) {
+      this.alertModules.clear();
+      console.log(`🧹 Cleared MLB alert modules due to type changes`);
+    }
 
     for (const alertType of enabledAlertTypes) {
       const module = await this.loadAlertModule(alertType);
