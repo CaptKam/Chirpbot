@@ -373,7 +373,6 @@ export const storage = {
         'mlb': {
           'MLB_GAME_START': true,
           'MLB_SEVENTH_INNING_STRETCH': true,
-          // High-probability scoring situations
           'MLB_RUNNER_ON_THIRD_NO_OUTS': true,
           'MLB_FIRST_AND_THIRD_NO_OUTS': true,
           'MLB_SECOND_AND_THIRD_NO_OUTS': true,
@@ -381,6 +380,9 @@ export const storage = {
           'MLB_RUNNER_ON_THIRD_ONE_OUT': true,
           'MLB_SECOND_AND_THIRD_ONE_OUT': true,
           'MLB_BASES_LOADED_ONE_OUT': true,
+          'MLB_RUNNER_ON_FIRST': true,
+          'MLB_FULL_COUNT': true,
+          'MLB_SCORING_POSITION': true,
           // AI Enhancement alerts (available for MLB)
           'AI_ENHANCED_MESSAGES': true,
           'AI_PREDICTIVE_AT_BAT': true,

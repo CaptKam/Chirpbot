@@ -22,7 +22,10 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_BASES_LOADED_NO_OUTS',
         'MLB_RUNNER_ON_THIRD_ONE_OUT',
         'MLB_SECOND_AND_THIRD_ONE_OUT',
-        'MLB_BASES_LOADED_ONE_OUT'
+        'MLB_BASES_LOADED_ONE_OUT',
+        'MLB_RUNNER_ON_FIRST',
+        'MLB_FULL_COUNT',
+        'MLB_SCORING_POSITION'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -127,7 +130,10 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_BASES_LOADED_NO_OUTS',
         'MLB_RUNNER_ON_THIRD_ONE_OUT',
         'MLB_SECOND_AND_THIRD_ONE_OUT',
-        'MLB_BASES_LOADED_ONE_OUT'
+        'MLB_BASES_LOADED_ONE_OUT',
+        'MLB_RUNNER_ON_FIRST',
+        'MLB_FULL_COUNT',
+        'MLB_SCORING_POSITION'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
@@ -166,7 +172,10 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_SECOND_AND_THIRD_NO_OUTS': './alert-cylinders/mlb/second-and-third-no-outs-module.ts',
         'MLB_BASES_LOADED_NO_OUTS': './alert-cylinders/mlb/bases-loaded-no-outs-module.ts',
         'MLB_RUNNER_ON_THIRD_ONE_OUT': './alert-cylinders/mlb/runner-on-third-one-out-module.ts',
-        'MLB_SECOND_AND_THIRD_ONE_OUT': './alert-cylinders/mlb/second-and-third-one-out-module.ts'
+        'MLB_SECOND_AND_THIRD_ONE_OUT': './alert-cylinders/mlb/second-and-third-one-out-module.ts',
+        'MLB_RUNNER_ON_FIRST': './alert-cylinders/mlb/runner-on-first-module.ts',
+        'MLB_FULL_COUNT': './alert-cylinders/mlb/full-count-module.ts',
+        'MLB_SCORING_POSITION': './alert-cylinders/mlb/scoring-position-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
