@@ -809,29 +809,62 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               </div>
 
-              {/* Alert Message - Clean Modern Design */}
-              <div className="bg-white/5 rounded-lg p-4 mb-4 border border-white/10">
-                {/* Main Alert Message */}
-                <p className="text-slate-100 text-lg font-medium leading-relaxed mb-3">
-                  {(alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim()}
-                </p>
+              {/* Alert Message - Enhanced Visual Design */}
+              <div className="bg-emerald-500/10 rounded-xl p-5 mb-4 border border-emerald-500/30 shadow-lg">
+                {/* Main Alert Message with Enhanced Typography */}
+                <div className="text-center space-y-3">
+                  {/* Key Alert Text - Split for Visual Impact */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-2xl">⚡</span>
+                      <h3 className="text-emerald-300 text-sm font-bold uppercase tracking-widest">
+                        SCORING OPPORTUNITY
+                      </h3>
+                      <span className="text-2xl">⚡</span>
+                    </div>
+                    
+                    {/* Main Situation - Large and Bold */}
+                    <p className="text-white text-2xl font-bold leading-tight">
+                      {(() => {
+                        const message = (alertData.message || '').replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈/g, '').trim();
+                        // Extract the main situation (everything after the colon)
+                        const parts = message.split(':');
+                        if (parts.length > 1) {
+                          return parts[1].trim();
+                        }
+                        return message;
+                      })()}
+                    </p>
+                  </div>
 
-                {/* Priority Indicator - Subtle */}
+                  {/* Probability Badge - Matching Pill Style */}
+                  {alertData.context?.scoringProbability && (
+                    <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 bg-emerald-500/20 border border-emerald-400/40">
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                      <span className="text-emerald-300 text-lg font-bold">
+                        {alertData.context.scoringProbability}% chance to score
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Priority Indicator - Enhanced */}
                 {alertData.priority && alertData.priority >= 80 && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                    <span className="text-emerald-400 text-xs font-medium">
-                      High Value
+                  <div className="flex items-center justify-center gap-2 mt-4 pt-3 border-t border-emerald-500/20">
+                    <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
+                    <span className="text-red-300 text-sm font-semibold uppercase tracking-wide">
+                      HIGH VALUE ALERT
                     </span>
+                    <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
                   </div>
                 )}
 
-                {/* AI Insights - Minimal */}
+                {/* AI Insights - Enhanced */}
                 {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
-                  <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border-l-2 border-blue-400/50">
-                    <div className="space-y-1">
+                  <div className="mt-4 p-3 bg-blue-500/15 rounded-lg border border-blue-400/30">
+                    <div className="space-y-2">
                       {alertData.context.aiInsights.map((insight: string, idx: number) => (
-                        <p key={idx} className="text-sm text-slate-300 leading-relaxed">
+                        <p key={idx} className="text-sm text-blue-200 leading-relaxed text-center">
                           {insight}
                         </p>
                       ))}
