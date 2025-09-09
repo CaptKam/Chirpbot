@@ -1290,3 +1290,32 @@ input:checked + .slider:before {
 .refresh-btn:hover i {
     transform: rotate(180deg);
 }
+  .status {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .stats-display {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .stat-item {
+    padding: 8px 12px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    text-align: center;
+  }

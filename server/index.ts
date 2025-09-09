@@ -9,6 +9,7 @@ import { seedDatabase } from "./seed-database";
 import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
 import { pool } from "./db";
+import { alertCleanupService } from './services/alert-cleanup';
 
 // Keep track of server and monitoring timer for graceful shutdown
 let httpServer: any = null;
@@ -245,6 +246,14 @@ app.use((req, res, next) => {
     } else {
       serveStatic(app);
     }
+
+    // Start alert generation
+    console.log('🚨 Starting alert generation...');
+    alertGenerator.generateLiveGameAlerts();
+
+    // Start alert cleanup service
+    console.log('🧹 Starting alert cleanup service...');
+    alertCleanupService.startCleanup();
 
     // ALWAYS serve the app on the port specified in the environment variable PORT
     // Other ports are firewalled. Default to 5000 if not specified.

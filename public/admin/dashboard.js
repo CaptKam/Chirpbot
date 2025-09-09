@@ -14,16 +14,16 @@ async function checkAuthentication() {
         const response = await fetch('/api/admin-auth/verify', {
             credentials: 'include'
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             console.log('✅ Admin authenticated:', data.user?.username);
-            
+
             // Load dashboard data
             loadDashboardData();
             loadStatistics();
             loadSystemStatus();
-            
+
             // Set up sport selector if it exists
             const sportSelector = document.getElementById('sportSelector');
             if (sportSelector) {
@@ -32,7 +32,7 @@ async function checkAuthentication() {
                     loadSportAlertSettings();
                 });
             }
-            
+
             // Set up logout button
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
@@ -56,25 +56,25 @@ window.showTab = function(tabName) {
     tabContents.forEach(content => {
         content.style.display = 'none';
     });
-    
+
     // Remove active class from all tabs
     const tabs = document.querySelectorAll('.nav-tab');
     tabs.forEach(tab => {
         tab.classList.remove('active');
     });
-    
+
     // Show the selected tab content
     const selectedContent = document.getElementById(tabName + 'Content');
     if (selectedContent) {
         selectedContent.style.display = 'block';
     }
-    
+
     // Add active class to the selected tab button
     const selectedTab = document.getElementById(tabName + 'Tab');
     if (selectedTab) {
         selectedTab.classList.add('active');
     }
-    
+
     // Load data specific to the tab if needed
     if (tabName === 'users') {
         loadUsers();
@@ -122,15 +122,15 @@ async function loadUsers() {
         const response = await fetch('/api/admin/users', {
             credentials: 'include'
         });
-        
+
         if (!response.ok) {
             console.error('Failed to load users');
             return;
         }
-        
+
         const users = await response.json();
         globalUsers = users;
-        
+
         // Update users table if it exists
         const usersTableBody = document.getElementById('usersTableBody');
         if (usersTableBody) {
@@ -156,10 +156,10 @@ async function loadUsers() {
                 `).join('');
             }
         }
-        
+
         const usersList = document.getElementById('usersList');
         if (!usersList) return;
-        
+
         usersList.innerHTML = users.map(user => `
             <div class="user-card" data-user-id="${user.id}">
                 <div class="user-info">
@@ -191,25 +191,25 @@ async function loadStatistics() {
         const response = await fetch('/api/admin/stats', {
             credentials: 'include'
         });
-        
+
         if (!response.ok) {
             console.error('Failed to load statistics');
             return;
         }
-        
+
         const stats = await response.json();
-        
+
         // Map backend structure to frontend elements
         const totalUsersEl = document.getElementById('totalUsers');
         const totalAdminsEl = document.getElementById('totalAdmins');
         const todayAlertsEl = document.getElementById('todayAlerts');
         const totalAlertsEl = document.getElementById('totalAlerts');
-        
+
         if (totalUsersEl) totalUsersEl.textContent = stats.users?.total || 0;
         if (totalAdminsEl) totalAdminsEl.textContent = stats.users?.admins || 0;
         if (todayAlertsEl) todayAlertsEl.textContent = stats.alerts?.today || 0;
         if (totalAlertsEl) totalAlertsEl.textContent = stats.alerts?.total || 0;
-        
+
         // Also update monitored teams if the element exists
         const monitoredTeamsEl = document.getElementById('monitoredTeams');
         if (monitoredTeamsEl) monitoredTeamsEl.textContent = stats.monitoredTeams || 0;
@@ -223,14 +223,14 @@ async function loadSystemStatus() {
         const response = await fetch('/api/admin/system-status', {
             credentials: 'include'
         });
-        
+
         if (!response.ok) {
             console.error('Failed to load system status');
             return;
         }
-        
+
         const status = await response.json();
-        
+
         const statusHtml = `
             <div class="status-item">
                 <span>Alert Engine:</span>
@@ -257,7 +257,7 @@ async function loadSystemStatus() {
                 </span>
             </div>
         `;
-        
+
         const systemStatusEl = document.getElementById('systemStatus');
         if (systemStatusEl) {
             systemStatusEl.innerHTML = statusHtml;
@@ -280,32 +280,32 @@ async function loadSystemSettings() {
 
 window.loadSportAlertSettings = async function() {
     const sport = document.getElementById('sportSelector')?.value || 'MLB';
-    
+
     try {
         const response = await fetch(`/api/admin/global-alert-settings/${sport}`, {
             credentials: 'include'
         });
-        
+
         if (!response.ok) {
             console.error('Failed to load alert settings');
             return;
         }
-        
+
         const settings = await response.json();
         globalAlertSettings = settings;
-        
+
         // Update the sport title
         const sportTitleEl = document.getElementById('sportTitle');
         if (sportTitleEl) {
             sportTitleEl.textContent = sport;
         }
-        
+
         const alertsContainer = document.getElementById('alertSettingsList');
         if (!alertsContainer) {
             console.log('Alert settings container not found');
             return;
         }
-        
+
         alertsContainer.innerHTML = settings.map(setting => `
             <div class="alert-setting-card">
                 <div class="alert-info">
@@ -341,7 +341,7 @@ window.toggleAlertSetting = async function(alertKey, enabled, sport) {
                 enabled
             })
         });
-        
+
         if (response.ok) {
             showNotification(`${alertKey} ${enabled ? 'enabled' : 'disabled'} for ${sport}`, 'success');
         } else {
@@ -356,10 +356,10 @@ window.toggleAlertSetting = async function(alertKey, enabled, sport) {
 window.editUser = async function(userId) {
     const user = globalUsers.find(u => u.id === userId);
     if (!user) return;
-    
+
     const newUsername = prompt('Enter new username:', user.username);
     if (!newUsername) return;
-    
+
     try {
         const response = await fetch(`/api/admin/users/${userId}`, {
             method: 'PATCH',
@@ -369,7 +369,7 @@ window.editUser = async function(userId) {
             credentials: 'include',
             body: JSON.stringify({ username: newUsername })
         });
-        
+
         if (response.ok) {
             showNotification('User updated successfully', 'success');
             loadUsers();
@@ -384,13 +384,13 @@ window.editUser = async function(userId) {
 
 window.deleteUser = async function(userId) {
     if (!confirm('Are you sure you want to delete this user?')) return;
-    
+
     try {
         const response = await fetch(`/api/admin/users/${userId}`, {
             method: 'DELETE',
             credentials: 'include'
         });
-        
+
         if (response.ok) {
             showNotification('User deleted successfully', 'success');
             loadUsers();
@@ -417,13 +417,13 @@ function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.classList.add('show');
     }, 10);
-    
+
     setTimeout(() => {
         notification.classList.remove('show');
         setTimeout(() => {
@@ -439,7 +439,7 @@ window.loadSystemSettings = async function() {
         const aiResponse = await fetch('/api/admin/ai-settings', {
             credentials: 'include'
         });
-        
+
         if (aiResponse.ok) {
             const aiSettings = await aiResponse.json();
             const aiSettingsList = document.getElementById('aiSettingsList');
@@ -481,7 +481,7 @@ window.showNotification = showNotification;
 window.toggleMasterAlerts = async function() {
     const toggle = document.getElementById('masterAlertToggle');
     if (!toggle) return;
-    
+
     try {
         const response = await fetch('/api/admin/master-alerts', {
             method: 'POST',
@@ -491,7 +491,7 @@ window.toggleMasterAlerts = async function() {
             credentials: 'include',
             body: JSON.stringify({ enabled: toggle.checked })
         });
-        
+
         if (response.ok) {
             showNotification(`Master alerts ${toggle.checked ? 'enabled' : 'disabled'}`, 'success');
         } else {
@@ -509,3 +509,73 @@ window.refreshAlertSettings = function() {
     loadSportAlertSettings();
     showNotification('Alert settings refreshed', 'success');
 }
+
+// Helper function to display status messages
+function showStatus(message, type = 'info') {
+    const statusEl = document.getElementById('cleanupStats');
+    if (!statusEl) return;
+    statusEl.innerHTML = `<p class="status-message ${type}">${message}</p>`;
+}
+
+// Cleanup functions
+async function getCleanupStats() {
+  try {
+    showStatus('Getting cleanup stats...', 'info');
+    const response = await fetch('/api/admin/cleanup-stats');
+    const data = await response.json();
+
+    if (data.success) {
+      const statsHtml = `
+        <div class="stats-grid">
+          <div class="stat-item">
+            <strong>Total Alerts:</strong> ${data.stats.total}
+          </div>
+          <div class="stat-item">
+            <strong>Recent (< 24h):</strong> ${data.stats.recent}
+          </div>
+          <div class="stat-item">
+            <strong>Old (> 24h):</strong> ${data.stats.old}
+          </div>
+        </div>
+        <p><em>Automatic cleanup runs every hour</em></p>
+      `;
+      document.getElementById('cleanupStats').innerHTML = statsHtml;
+      showStatus(data.message, 'success');
+    } else {
+      showStatus('Failed to get cleanup stats', 'error');
+    }
+  } catch (error) {
+    console.error('Error getting cleanup stats:', error);
+    showStatus('Error getting cleanup stats', 'error');
+  }
+}
+
+async function manualCleanup() {
+  if (!confirm('Are you sure you want to manually cleanup alerts older than 24 hours?')) {
+    return;
+  }
+
+  try {
+    showStatus('Running manual cleanup...', 'info');
+    const response = await fetch('/api/admin/cleanup-alerts', {
+      method: 'POST'
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      showStatus(`Manual cleanup complete: Removed ${data.deletedCount} old alerts`, 'success');
+      // Refresh stats
+      setTimeout(getCleanupStats, 1000);
+    } else {
+      showStatus('Manual cleanup failed', 'error');
+    }
+  } catch (error) {
+    console.error('Error during manual cleanup:', error);
+    showStatus('Error during manual cleanup', 'error');
+  }
+}
+
+// Immediately load cleanup stats when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    getCleanupStats();
+});

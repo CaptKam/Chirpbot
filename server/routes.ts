@@ -440,9 +440,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if alert type is globally enabled first
       const isGloballyEnabled = await storage.isAlertGloballyEnabled(sport.toUpperCase(), alertType);
       if (!isGloballyEnabled && enabled) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: `Alert type ${alertType} is globally disabled by admin`,
-          globallyDisabled: true 
+          globallyDisabled: true
         });
       }
 
@@ -481,10 +481,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), filteredPreferences);
-      res.json({ 
-        message: 'Alert preferences updated successfully', 
+      res.json({
+        message: 'Alert preferences updated successfully',
         count: result.length,
-        filtered: preferences.length - filteredPreferences.length 
+        filtered: preferences.length - filteredPreferences.length
       });
     } catch (error) {
       console.error('Error setting bulk alert preferences:', error);
@@ -719,12 +719,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/debug/test-alerts', requireAdmin, async (req, res) => {
     try {
       console.log('🧪 Testing alert generation system...');
-      
+
       const alertGenerator = new AlertGenerator();
-      
+
       // Force generate alerts for live games
       await alertGenerator.generateLiveGameAlerts();
-      
+
       res.json({
         message: 'Test alert generation completed - check server logs',
         note: 'This forces the alert generation process to run immediately'
@@ -852,7 +852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/debug/user-preferences/:userId', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      
+
       // Get user info
       const user = await storage.getUserById(userId);
       if (!user) {
@@ -861,7 +861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all alert preferences for this user
       const allPreferences = await storage.getUserAlertPreferences(userId);
-      
+
       // Group by sport
       const preferencesBySport: Record<string, any[]> = {};
       allPreferences.forEach(pref => {
@@ -982,6 +982,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Admin API routes
+  app.post('/api/admin/cleanup-alerts', requireAdmin, async (req, res) => {
+    try {
+      const { alertCleanupService } = await import('./services/alert-cleanup');
+
+      // Get stats before cleanup
+      const statsBefore = await alertCleanupService.getCleanupStats();
+
+      // Perform cleanup
+      const deletedCount = await alertCleanupService.cleanupNow();
+
+      // Get stats after cleanup
+      const statsAfter = await alertCleanupService.getCleanupStats();
+
+      res.json({
+        success: true,
+        deletedCount,
+        statsBefore,
+        statsAfter,
+        message: `Cleaned up ${deletedCount} alerts older than 24 hours`
+      });
+    } catch (error) {
+      console.error('Error in manual cleanup:', error);
+      res.status(500).json({ error: 'Failed to cleanup alerts' });
+    }
+  });
+
+  app.get('/api/admin/cleanup-stats', requireAdmin, async (req, res) => {
+    try {
+      const { alertCleanupService } = await import('./services/alert-cleanup');
+      const stats = await alertCleanupService.getCleanupStats();
+
+      res.json({
+        success: true,
+        stats,
+        message: `${stats.old} alerts are older than 24 hours and will be cleaned up`
+      });
+    } catch (error) {
+      console.error('Error getting cleanup stats:', error);
+      res.status(500).json({ error: 'Failed to get cleanup stats' });
+    }
+  });
+
+
   app.get('/api/admin/users', requireAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
@@ -1192,7 +1235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check alert engine status
       const masterAlertsEnabled = await storage.getMasterAlertEnabled();
-      
+
       // Check database connectivity
       let databaseConnected = false;
       try {
@@ -1209,9 +1252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let telegramConnected = false;
       try {
         const usersWithTelegram = await db.execute(sql`
-          SELECT COUNT(*) as count FROM users 
-          WHERE telegram_enabled = true 
-          AND telegram_bot_token IS NOT NULL 
+          SELECT COUNT(*) as count FROM users
+          WHERE telegram_enabled = true
+          AND telegram_bot_token IS NOT NULL
           AND telegram_chat_id IS NOT NULL
         `);
         telegramConnected = parseInt(String(usersWithTelegram.rows[0]?.count || '0')) > 0;
@@ -1246,7 +1289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current user from session
       const currentUserId = req.session?.userId;
-      
+
       // If user is not authenticated, return empty array
       if (!currentUserId) {
         res.json([]);
@@ -1567,10 +1610,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const regularUserId = req.session?.userId;
       const userId = adminUserId || regularUserId;
 
-      console.log('🔍 Admin verify check:', { 
-        hasAdminSession: !!adminUserId, 
+      console.log('🔍 Admin verify check:', {
+        hasAdminSession: !!adminUserId,
         hasRegularSession: !!regularUserId,
-        sessionId: req.sessionID?.slice(0, 8) 
+        sessionId: req.sessionID?.slice(0, 8)
       });
 
       if (!userId) {
@@ -1964,10 +2007,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Basic health check - server is responding
       const memUsage = process.memoryUsage();
       const memPercent = memUsage.heapUsed / memUsage.heapTotal;
-      
+
       // Get deduplication stats
       const dedupeStats = requestDeduplicator.getStats();
-      
+
       // Get circuit breaker stats
       const { mlbApiCircuit, espnApiCircuit, weatherApiCircuit } = await import('./middleware/circuit-breaker');
       const circuitBreakerStatus = {
@@ -1975,10 +2018,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         espnApi: espnApiCircuit.getStatus(),
         weatherApi: weatherApiCircuit.getStatus()
       };
-      
+
       // Get memory management stats
       const memoryStats = memoryManager.getStats();
-      
+
       const healthStatus = {
         status: memPercent > 0.9 ? 'degraded' : 'healthy',
         timestamp: new Date().toISOString(),
@@ -1991,17 +2034,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pid: process.pid,
         deduplication: {
           ...dedupeStats,
-          effectiveness: dedupeStats.cacheSize > 0 ? 
+          effectiveness: dedupeStats.cacheSize > 0 ?
             `Serving ${dedupeStats.cacheSize} cached responses` : 'No cached responses yet'
         },
         circuitBreakers: circuitBreakerStatus
       };
-      
+
       res.status(200).json(healthStatus);
     } catch (error) {
       console.error('Health check failed:', error);
-      res.status(503).json({ 
-        status: 'unhealthy', 
+      res.status(503).json({
+        status: 'unhealthy',
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });
@@ -2049,7 +2092,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })(sport.toUpperCase());
           availableAlerts = await tempEngine.getAvailableAlertTypes();
         }
-        
+
         // Convert to the format expected by the frontend
         const alertConfig = availableAlerts.map(alertType => {
           const displayName = alertType
@@ -2057,7 +2100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .split('_')
             .map(word => word.charAt(0) + word.slice(1).toLowerCase())
             .join(' ');
-            
+
           return {
             key: alertType,
             label: displayName,
@@ -2356,7 +2399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Don't crash - just continue monitoring
     }
   }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
-  
+
   // Store monitoring interval globally for graceful shutdown cleanup
   (global as any).setMonitoringInterval(monitoringInterval);
 
