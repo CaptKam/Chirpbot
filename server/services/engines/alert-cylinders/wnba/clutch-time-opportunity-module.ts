@@ -97,7 +97,7 @@ export default class ClutchTimeOpportunityModule extends BaseAlertModule {
           possession: gameState.possession || null,
           shotClockPressure: this.parseTimeToSeconds(timeRemaining) % 24 <= 8,
           paceFactors: this.WNBA_PACE_FACTORS,
-          clutchWeight: this.QUARTER_CLUTCH_WEIGHTS[quarter] || 1.0,
+          clutchWeight: this.QUARTER_CLUTCH_WEIGHTS[quarter as keyof typeof this.QUARTER_CLUTCH_WEIGHTS] || 1.0,
           momentumShift: this.detectMomentumShift(gameState),
           keyMatchups: this.identifyKeyMatchups(gameState)
         }
@@ -208,7 +208,7 @@ export default class ClutchTimeOpportunityModule extends BaseAlertModule {
     let intensity = 50;
     
     // Quarter weight
-    intensity *= this.QUARTER_CLUTCH_WEIGHTS[quarter] || 1.0;
+    intensity *= this.QUARTER_CLUTCH_WEIGHTS[quarter as keyof typeof this.QUARTER_CLUTCH_WEIGHTS] || 1.0;
     
     // Time pressure (more intense as time decreases)
     if (quarter >= 4) {

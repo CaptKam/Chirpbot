@@ -122,7 +122,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
     const deficit = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
     
     // Base probability from quarter-specific lookup
-    let probability = (this.QUARTER_COMEBACK_PROBABILITIES[quarter] || 0.25) * 100;
+    let probability = (this.QUARTER_COMEBACK_PROBABILITIES[quarter as keyof typeof this.QUARTER_COMEBACK_PROBABILITIES] || 0.25) * 100;
     
     // Deficit impact - smaller deficits have higher probability
     if (deficit <= 5) probability += 20;
@@ -214,7 +214,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
     const deficit = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
     
     // Start with base probability from quarter
-    let probability = this.QUARTER_COMEBACK_PROBABILITIES[quarter] || 0.25;
+    let probability = this.QUARTER_COMEBACK_PROBABILITIES[quarter as keyof typeof this.QUARTER_COMEBACK_PROBABILITIES] || 0.25;
     
     // Adjust for deficit size
     if (deficit <= 5) probability *= 1.5;

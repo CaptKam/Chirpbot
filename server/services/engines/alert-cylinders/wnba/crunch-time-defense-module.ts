@@ -128,7 +128,7 @@ export default class CrunchTimeDefenseModule extends BaseAlertModule {
     const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
     
     // Base probability increases with quarter importance
-    let probability = 50 * (this.QUARTER_DEFENSIVE_IMPORTANCE[quarter] || 1.0);
+    let probability = 50 * (this.QUARTER_DEFENSIVE_IMPORTANCE[quarter as keyof typeof this.QUARTER_DEFENSIVE_IMPORTANCE] || 1.0);
     
     // Score differential impact - closer games increase defensive importance
     if (scoreDiff <= 3) probability += 25;
@@ -224,7 +224,7 @@ export default class CrunchTimeDefenseModule extends BaseAlertModule {
     let importance = 60;
     
     // Quarter weight
-    importance *= this.QUARTER_DEFENSIVE_IMPORTANCE[quarter] || 1.0;
+    importance *= this.QUARTER_DEFENSIVE_IMPORTANCE[quarter as keyof typeof this.QUARTER_DEFENSIVE_IMPORTANCE] || 1.0;
     
     // Score closeness amplifies defensive importance
     if (scoreDiff <= 2) importance += 30;

@@ -378,7 +378,7 @@ export default class WNBAChampionshipImplicationsModule extends BaseAlertModule 
       'CONFERENCE_STANDINGS': 4,
       'CHAMPIONSHIP_CONTEXT': 2
     };
-    priority += scenarioBonus[scenarioType] || 0;
+    priority += scenarioBonus[scenarioType as keyof typeof scenarioBonus] || 0;
     
     // Quarter factor
     if (quarter >= 4) priority += 6;
