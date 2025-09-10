@@ -564,24 +564,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/signup', async (req, res) => {
     try {
-      const { usernameOrEmail, password, firstName, lastName } = req.body;
+      const { username, email, password } = req.body;
 
-      if (!usernameOrEmail || !password) {
-        return res.status(400).json({ message: 'Username/email and password are required' });
-      }
-
-      if (usernameOrEmail.length < 3) {
-        return res.status(400).json({ message: 'Username or email must be at least 3 characters long' });
+      if (!username || !email || !password) {
+        return res.status(400).json({ message: 'Username, email, and password are required' });
       }
 
       if (password.length < 6) {
         return res.status(400).json({ message: 'Password must be at least 6 characters long' });
       }
-
-      // Determine if input is email or username
-      const isEmail = usernameOrEmail.includes('@');
-      const username = isEmail ? usernameOrEmail.split('@')[0] : usernameOrEmail;
-      const email = isEmail ? usernameOrEmail : `${usernameOrEmail}@chirpbot.local`;
 
       // Check if user already exists
       const existingUserByUsername = await storage.getUserByUsername(username);
@@ -589,11 +580,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ message: 'Username already exists' });
       }
 
-      if (isEmail) {
-        const existingUserByEmail = await storage.getUserByEmail(email);
-        if (existingUserByEmail) {
-          return res.status(409).json({ message: 'Email already exists' });
-        }
+      const existingUserByEmail = await storage.getUserByEmail(email);
+      if (existingUserByEmail) {
+        return res.status(409).json({ message: 'Email already exists' });
       }
 
       // Hash password
@@ -605,8 +594,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username,
         email,
         password: hashedPassword,
-        firstName: firstName || null,
-        lastName: lastName || null,
         authMethod: 'local',
         role: 'user'
       });
@@ -2398,30 +2385,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Alert generation re-enabled
+  // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
-  console.log('🚀 Alert generation ENABLED - starting monitoring system');
-  
-  setTimeout(() => {
-    alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
-  }, 5000); // Wait 5 seconds for server to start
+  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
 
-  // Start live game monitoring with robust error handling - DELAYED START
-  setTimeout(() => {
-    const monitoringInterval = setInterval(async () => {
-      try {
-        console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-        await alertGenerator.generateLiveGameAlerts();
-      } catch (error: any) {
-        console.error('⚠️ Non-critical error in live monitoring:', error.message);
-        // Don't crash - just continue monitoring
-      }
-    }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
+  // Start live game monitoring with robust error handling
+  const monitoringInterval = setInterval(async () => {
+    try {
+      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+      await alertGenerator.generateLiveGameAlerts();
+    } catch (error: any) {
+      console.error('⚠️ Non-critical error in live monitoring:', error.message);
+      // Don't crash - just continue monitoring
+    }
+  }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
 
-    // Store monitoring interval globally for graceful shutdown cleanup
-    (global as any).setMonitoringInterval(monitoringInterval);
-    console.log('⚡ Real-time monitoring started after server initialization');
-  }, 10000); // Wait 10 seconds for server to fully start
+  // Store monitoring interval globally for graceful shutdown cleanup
+  (global as any).setMonitoringInterval(monitoringInterval);
 
   console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 

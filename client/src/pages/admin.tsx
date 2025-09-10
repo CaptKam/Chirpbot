@@ -32,14 +32,7 @@ import { AuthLoading, StatsLoading } from '@/components/sports-loading';
   const ALERT_TYPE_CONFIG = {
     MLB: [
       { key: 'MLB_GAME_START', label: 'Game Start', description: 'Alert when MLB game begins' },
-      { key: 'MLB_SEVENTH_INNING_STRETCH', label: 'Seventh Inning Stretch', description: 'Traditional 7th inning stretch alert' },
-      { key: 'MLB_RUNNER_ON_THIRD_NO_OUTS', label: 'Runner on 3rd, 0 Outs', description: '84% scoring probability situation' },
-      { key: 'MLB_FIRST_AND_THIRD_NO_OUTS', label: '1st & 3rd, 0 Outs', description: '86% scoring probability situation' },
-      { key: 'MLB_SECOND_AND_THIRD_NO_OUTS', label: '2nd & 3rd, 0 Outs', description: '85% scoring probability situation' },
-      { key: 'MLB_BASES_LOADED_NO_OUTS', label: 'Bases Loaded, 0 Outs', description: '86% scoring probability situation' },
-      { key: 'MLB_RUNNER_ON_THIRD_ONE_OUT', label: 'Runner on 3rd, 1 Out', description: '66% scoring probability situation' },
-      { key: 'MLB_SECOND_AND_THIRD_ONE_OUT', label: '2nd & 3rd, 1 Out', description: '68% scoring probability situation' },
-      { key: 'MLB_BASES_LOADED_ONE_OUT', label: 'Bases Loaded, 1 Out', description: '66% scoring probability situation' }
+      { key: 'MLB_SEVENTH_INNING_STRETCH', label: 'Seventh Inning Stretch', description: 'Traditional 7th inning stretch alert' }
     ],
     NFL: {
     "Game Situations": [
@@ -95,22 +88,30 @@ export default function Admin() {
   const { toast } = useToast();
   const { user: currentUser, isAuthenticated } = useAuth();
 
-  // Check authentication and admin access
-  if (!isAuthenticated || !currentUser) {
-    return <AuthLoading />;
-  }
-
-  if (currentUser.role !== 'admin') {
+  // Redirect to web admin panel
+  if (isAuthenticated && currentUser && currentUser.role === 'admin') {
+    window.location.href = '/admin-panel';
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
         <div className="text-center">
-          <Shield className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-100 mb-2">Access Denied</h1>
-          <p className="text-slate-400">You need admin privileges to access this page.</p>
+          <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-slate-100 mb-2">Redirecting to Admin Panel</h1>
+          <p className="text-slate-400">Please wait while we redirect you to the web admin interface...</p>
         </div>
       </div>
     );
   }
+
+  // Access denied for non-admin users
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
+      <div className="text-center">
+        <Shield className="w-16 h-16 text-red-400 mx-auto mb-4" />
+        <h1 className="text-2xl font-bold text-slate-100 mb-2">Access Denied</h1>
+        <p className="text-slate-400">You need admin privileges to access this page.</p>
+      </div>
+    </div>
+  );
 
   // Fetch users
   const { data: users, isLoading: usersLoading } = useQuery({

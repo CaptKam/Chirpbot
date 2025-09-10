@@ -64,7 +64,7 @@ export class MLBEngine extends BaseSportEngine {
     if (gameState.hasThird) runnerBonus += 15; // Runner on third
     if (gameState.hasSecond) runnerBonus += 10; // Runner on second
     if (gameState.hasFirst) runnerBonus += 5; // Runner on first
-
+    
     probability += runnerBonus;
 
     // Keep probability within reasonable bounds
@@ -100,11 +100,7 @@ export class MLBEngine extends BaseSportEngine {
             inning: enhancedData.inning || gameState.inning || 1,
             isTopInning: enhancedData.isTopInning,
             homeScore: enhancedData.homeScore || gameState.homeScore,
-            awayScore: enhancedData.awayScore || gameState.awayScore,
-            // Enhanced player context
-            currentBatter: enhancedData.batter || null,
-            currentPitcher: enhancedData.pitcher || null,
-            runnerDetails: enhancedData.runnerDetails || null
+            awayScore: enhancedData.awayScore || gameState.awayScore
           };
         }
       }
@@ -198,12 +194,12 @@ export class MLBEngine extends BaseSportEngine {
     const currentTypes = Array.from(this.alertModules.keys()).sort();
     const newTypes = [...enabledAlertTypes].sort();
     const typesChanged = JSON.stringify(currentTypes) !== JSON.stringify(newTypes);
-
+    
     if (!typesChanged && this.alertModules.size > 0) {
       console.log(`🔄 MLB alert cylinders already loaded: ${this.alertModules.size} modules`);
       return; // Reuse existing modules
     }
-
+    
     // Only clear when types have actually changed
     if (typesChanged) {
       this.alertModules.clear();
@@ -219,31 +215,5 @@ export class MLBEngine extends BaseSportEngine {
     }
 
     console.log(`🔧 Initialized ${this.alertModules.size} MLB alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
-  }
-
-  // Placeholder for getting weather data - implement actual logic
-  private async getWeatherForGame(gameState: GameState): Promise<any> {
-    // In a real scenario, you'd fetch weather data based on game location and time.
-    // For now, returning dummy data.
-    return { temperature: 75, condition: 'Sunny' };
-  }
-
-  // Placeholder for universal alert enhancement logic
-  private enhanceAlertUniversally(alert: AlertResult, gameState: GameState, weatherData: any): AlertResult {
-    // This is where you'd apply rules that benefit all sports and alert types.
-    // Example: Add weather context to the alert message if it's relevant.
-    let enhancedMessage = alert.message;
-    if (weatherData && weatherData.condition === 'Sunny') {
-      enhancedMessage += ` (Pleasant weather: ${weatherData.temperature}°F)`;
-    } else if (weatherData && weatherData.condition === 'Rainy') {
-      enhancedMessage += ` (Expect delays due to rain)`;
-    }
-
-    // Example: Adjust severity based on game importance (e.g., playoffs)
-    // if (gameState.isPlayoffGame) {
-    //   alert.severity = 'CRITICAL';
-    // }
-
-    return { ...alert, message: enhancedMessage };
   }
 }

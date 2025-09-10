@@ -25,12 +25,10 @@ export default function Signup() {
     onSuccess: () => {
       toast({
         title: "Account created!",
-        description: "Your ChirpBot account has been created successfully. Redirecting to dashboard...",
+        description: "Your ChirpBot account has been created successfully. You can now sign in.",
       });
-      // Redirect to dashboard after a brief delay to show success message
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 1500);
+      // Redirect to dashboard after signup
+      window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
       toast({

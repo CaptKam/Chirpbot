@@ -7,28 +7,7 @@ export interface GameState {
   awayScore: number;
   status: string;
   isLive: boolean;
-
-  // Optional sport-specific fields
-  inning?: number;
-  quarter?: number;
-  period?: number;
-  timeRemaining?: string;
-  outs?: number;
-  balls?: number;
-  strikes?: number;
-  hasFirst?: boolean;
-  hasSecond?: boolean;
-  hasThird?: boolean;
-  isTopInning?: boolean;
-  down?: number;
-  yardsToGo?: number;
-  fieldPosition?: number;
-
-  // Enhanced player context
-  currentBatter?: any;
-  currentPitcher?: any;
-  runnerDetails?: any;
-  currentPlayer?: any; // For other sports
+  [key: string]: any; // Allow sport-specific fields
 }
 
 export interface AlertResult {
@@ -45,7 +24,7 @@ export abstract class BaseAlertModule {
   abstract sport: string;
 
   abstract isTriggered(gameState: GameState): boolean;
-  abstract generateAlert(gameState: GameState): AlertResult | Promise<AlertResult> | null | Promise<null>;
+  abstract generateAlert(gameState: GameState): AlertResult | null;
   abstract calculateProbability(gameState: GameState): number;
 }
 
@@ -119,27 +98,6 @@ export abstract class BaseSportEngine {
     this.sport = sport;
   }
 
-  // Universal enhancement application - benefits all sports
-  protected enhanceAlertUniversally(alert: AlertResult, gameState: GameState, weatherData?: any): AlertResult {
-    const { UniversalAlertEnhancer } = require('./universal-enhancement-framework');
-
-    // Apply weather context if available
-    if (weatherData) {
-      alert.message = UniversalAlertEnhancer.applyWeatherContext(alert.message, this.sport, weatherData);
-    }
-
-    // Apply player context
-    alert.message = UniversalAlertEnhancer.applyPlayerContext(alert.message, gameState, this.sport);
-
-    // Calculate universal probability
-    const universalProbability = UniversalAlertEnhancer.calculateUniversalProbability(gameState, this.sport);
-
-    // Calculate universal priority
-    alert.priority = UniversalAlertEnhancer.calculateUniversalPriority(alert.type, universalProbability, this.sport);
-
-    return alert;
-  }
-
   abstract calculateProbability(gameState: GameState): Promise<number>;
 
   // Generate live alerts using loaded modules
@@ -147,14 +105,14 @@ export abstract class BaseSportEngine {
     const alerts: AlertResult[] = [];
 
     console.log(`🔍 Generating alerts for game ${gameState.gameId} with ${this.alertModules.size} loaded modules`);
-
+    
     for (const [alertType, module] of this.alertModules) {
       try {
         console.log(`🧪 Checking ${alertType} module for game ${gameState.gameId}`);
-
+        
         if (module.isTriggered(gameState)) {
           console.log(`✅ ${alertType} triggered for game ${gameState.gameId}`);
-
+          
           const alert = module.generateAlert(gameState);
           if (alert) {
             console.log(`📢 Generated ${alertType} alert: ${alert.message}`);
@@ -180,10 +138,10 @@ export abstract class BaseSportEngine {
         .toLowerCase()
         .replace(`${this.sport.toLowerCase()}_`, '') // Remove sport prefix
         .replace(/_/g, '-') + '-module';
-
+      
       const modulePath = `./alert-cylinders/${this.sport.toLowerCase()}/${moduleFileName}`;
       console.log(`🔧 Loading module from: ${modulePath}`);
-
+      
       const module = await import(modulePath);
       const ModuleClass = module.default;
       return new ModuleClass();
@@ -216,11 +174,11 @@ export abstract class BaseSportEngine {
       const fs = await import('fs');
       const path = await import('path');
       const { fileURLToPath } = await import('url');
-
+      
       // Get the directory path in ES modules
       const currentDir = path.dirname(fileURLToPath(import.meta.url));
       const cylinderPath = path.join(currentDir, `alert-cylinders/${this.sport.toLowerCase()}`);
-
+      
       if (!fs.existsSync(cylinderPath)) {
         console.log(`⚠️ No cylinder directory found for ${this.sport} at ${cylinderPath}`);
         return [];

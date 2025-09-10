@@ -521,16 +521,7 @@ function showStatus(message, type = 'info') {
 async function getCleanupStats() {
   try {
     showStatus('Getting cleanup stats...', 'info');
-    const response = await fetch('/api/admin/cleanup-stats', {
-      credentials: 'include'
-    });
-    
-    if (response.status === 401) {
-      console.log('🔒 Not authenticated for cleanup stats, redirecting to login...');
-      window.location.href = '/admin/login.html';
-      return;
-    }
-    
+    const response = await fetch('/api/admin/cleanup-stats');
     const data = await response.json();
 
     if (data.success) {
@@ -555,7 +546,7 @@ async function getCleanupStats() {
     }
   } catch (error) {
     console.error('Error getting cleanup stats:', error);
-    showStatus('Authentication required for cleanup stats', 'error');
+    showStatus('Error getting cleanup stats', 'error');
   }
 }
 
@@ -584,8 +575,7 @@ async function manualCleanup() {
   }
 }
 
-// Only load cleanup stats if we're authenticated and on the system tab
+// Immediately load cleanup stats when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    // Don't automatically load cleanup stats to prevent auth polling
-    console.log('Dashboard loaded - cleanup stats available on System tab');
+    getCleanupStats();
 });
