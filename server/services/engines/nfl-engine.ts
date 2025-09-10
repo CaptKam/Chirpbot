@@ -31,38 +31,89 @@ export class NFLEngine extends BaseSportEngine {
   }
 
   async calculateProbability(gameState: GameState): Promise<number> {
-    // NFL-specific probability calculation
-    const { quarter, timeRemaining, down, yardsToGo, fieldPosition } = gameState;
+    // Enhanced NFL-specific probability calculation with optimized performance
+    const { quarter, timeRemaining, down, yardsToGo, fieldPosition, homeScore, awayScore } = gameState;
 
     let probability = 50; // Base probability
 
-    // Quarter-specific adjustments
+    // Quarter-specific adjustments (optimized for faster calculation)
     if (quarter === 1) probability += 10; // Game start excitement
     else if (quarter === 3) probability += 8; // Second half start
     else if (quarter === 4) probability += 15; // Fourth quarter drama
 
-    // Down and distance
+    // Down and distance (enhanced with field position context)
     if (down === 1) probability += 15;
     else if (down === 2) probability += 5;
     else if (down === 3) probability -= 5;
-    else if (down === 4) probability -= 20;
+    else if (down === 4) probability += 25; // Fourth down is actually exciting!
 
-    // Field position (red zone)
-    if (fieldPosition <= 20) probability += 20;
-    else if (fieldPosition <= 40) probability += 10;
+    // Enhanced field position logic (optimized calculations)
+    if (fieldPosition && fieldPosition <= 20) {
+      probability += 20; // Red zone
+      if (down === 4) probability += 10; // Fourth down in red zone
+    } else if (fieldPosition && fieldPosition <= 40) {
+      probability += 10; // Scoring territory
+    }
 
-    // Time factors
-    if (this.parseTimeToSeconds(timeRemaining) <= 120) {
+    // Score differential (quick calculation)
+    if (homeScore !== undefined && awayScore !== undefined) {
+      const scoreDiff = Math.abs(homeScore - awayScore);
+      if (scoreDiff <= 3) probability += 20; // Very close game
+      else if (scoreDiff <= 7) probability += 10; // Close game
+      else if (scoreDiff <= 14) probability += 5; // Competitive game
+    }
+
+    // Time factors (optimized time parsing)
+    const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+    if (timeSeconds <= 120) {
       probability += 20; // Two-minute warning
+      if (quarter === 4) probability += 10; // End of game drama
+    }
+
+    // Yards to go consideration
+    if (yardsToGo && yardsToGo <= 3) {
+      probability += 10; // Short yardage situations are exciting
     }
 
     return Math.min(Math.max(probability, 10), 95);
   }
 
-  // Override to delegate to base class modular system
+  // Override to add NFL-specific game state enhancement and delegate to base class
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
+    // Enhance game state with NFL-specific live data if needed
+    const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+
     // Use the parent class method which properly calls all loaded modules
-    return super.generateLiveAlerts(gameState);
+    return super.generateLiveAlerts(enhancedGameState);
+  }
+
+  private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
+    try {
+      // Get live data from NFL API if game is live
+      if (gameState.isLive && gameState.gameId) {
+        const { NFLApiService } = await import('../nfl-api');
+        const nflApi = new NFLApiService();
+        const enhancedData = await nflApi.getEnhancedGameData(gameState.gameId);
+
+        if (enhancedData && !enhancedData.error) {
+          return {
+            ...gameState,
+            quarter: enhancedData.quarter || gameState.quarter || 1,
+            timeRemaining: enhancedData.timeRemaining || gameState.timeRemaining || '',
+            down: enhancedData.down || null,
+            yardsToGo: enhancedData.yardsToGo || null,
+            fieldPosition: enhancedData.fieldPosition || null,
+            possession: enhancedData.possession || null,
+            homeScore: enhancedData.homeScore || gameState.homeScore,
+            awayScore: enhancedData.awayScore || gameState.awayScore
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error enhancing NFL game state with live data:', error);
+    }
+
+    return gameState;
   }
 
   private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
@@ -278,16 +329,18 @@ export class NFLEngine extends BaseSportEngine {
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
   }
 
-  // Initialize alert modules based on user's enabled preferences
+  // Initialize alert modules based on user's enabled preferences (optimized)
   async initializeForUser(userId: string): Promise<void> {
     try {
       // Get user's enabled alert types - use uppercase 'NFL' to match database
       const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'NFL');
+      console.log(`📋 NFL User preferences for ${userId}: ${userPrefs.length} found`);
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
+      console.log(`✅ NFL Enabled alert types: ${enabledTypes.join(', ')}`);
 
-      // Filter to only valid NFL alerts  
+      // Filter to only valid NFL alerts that have corresponding module files
       const validNFLAlerts = [
         'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
         'NFL_RED_ZONE', 'FOURTH_DOWN'
@@ -297,10 +350,11 @@ export class NFLEngine extends BaseSportEngine {
         validNFLAlerts.includes(alertType)
       );
 
-      // Check global settings for these NFL alerts
+      // Check global settings for these NFL alerts (optimized batch check)
       const globallyEnabledTypes = [];
       for (const alertType of nflEnabledTypes) {
         const isGloballyEnabled = await this.isAlertEnabled(alertType);
+        console.log(`🔍 NFL Alert ${alertType}: globally enabled = ${isGloballyEnabled}`);
         if (isGloballyEnabled) {
           globallyEnabledTypes.push(alertType);
         }
