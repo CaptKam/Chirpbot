@@ -1,12 +1,12 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
-import { AIContextController, AlertContext, AIEnhancedAlert } from '../ai-context-controller';
+import { asyncAIProcessor } from '../async-ai-processor';
+import { CrossSportContext } from '../cross-sport-ai-enhancement';
 import { weatherService } from '../weather-service';
 
 export class NFLEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
-  private aiContextController: AIContextController;
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -22,7 +22,6 @@ export class NFLEngine extends BaseSportEngine {
   constructor() {
     super('NFL');
     this.settingsCache = new SettingsCache(storage);
-    this.aiContextController = new AIContextController();
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -140,7 +139,7 @@ export class NFLEngine extends BaseSportEngine {
       const alertTime = Date.now() - alertStartTime;
       this.performanceMetrics.alertGenerationTime.push(alertTime);
       
-      // Process alerts with AI enhancement for high-priority NFL situations
+      // Process alerts with cross-sport AI enhancement for high-priority NFL situations
       const processedAlerts = await this.processEnhancedNFLAlerts(rawAlerts, enhancedGameState);
       
       this.performanceMetrics.totalAlerts += processedAlerts.length;
@@ -355,36 +354,99 @@ export class NFLEngine extends BaseSportEngine {
     console.log(`🔧 Initialized ${this.alertModules.size} NFL alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
   }
   
-  // Process NFL alerts with AI enhancement for high-priority situations
+  // Process NFL alerts with cross-sport AI enhancement for high-priority situations
   private async processEnhancedNFLAlerts(rawAlerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
-    const processedAlerts: AlertResult[] = [];
-    
+    const enhancedAlerts: AlertResult[] = [];
+    const aiStartTime = Date.now();
+
     for (const alert of rawAlerts) {
       try {
-        // Check if this is a high-priority NFL alert that should get AI enhancement
-        if (alert.priority >= 85 && this.shouldEnhanceNFLAlert(alert.type)) {
-          const aiStartTime = Date.now();
-          console.log(`🤖 NFL AI Enhancement: Processing ${alert.type} alert (priority: ${alert.priority})`);
+        // Only enhance high-priority alerts (>= 85 probability)
+        const probability = await this.calculateProbability(gameState);
+        
+        if (probability >= 85 && this.crossSportAI.configured) {
+          console.log(`🧠 NFL AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
           
-          const enhancedAlert = await this.enhanceNFLAlertWithAI(alert, gameState);
-          const aiTime = Date.now() - aiStartTime;
-          this.performanceMetrics.aiEnhancementTime.push(aiTime);
+          // Build cross-sport context for NFL
+          const aiContext: CrossSportContext = {
+            sport: 'NFL',
+            gameId: gameState.gameId,
+            alertType: alert.type,
+            priority: alert.priority,
+            probability: probability,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            isLive: gameState.isLive,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            down: gameState.down,
+            yardsToGo: gameState.yardsToGo,
+            fieldPosition: gameState.fieldPosition,
+            possession: gameState.possession,
+            redZone: gameState.fieldPosition ? gameState.fieldPosition <= 20 : false,
+            goalLine: gameState.fieldPosition ? gameState.fieldPosition <= 5 : false,
+            weather: gameState.weather ? {
+              temperature: gameState.weather.data?.temperature || 72,
+              condition: gameState.weather.data?.condition || 'Clear',
+              windSpeed: gameState.weather.data?.windSpeed || 0,
+              humidity: gameState.weather.data?.humidity || 50,
+              impact: gameState.weather.impact?.description || 'Minimal impact',
+              // Rich NFL weather context for AI processing
+              fieldGoalDifficulty: gameState.weather.impact?.fieldGoalDifficulty || 'low',
+              passingConditions: gameState.weather.impact?.passingConditions || 'excellent',
+              preferredStrategy: gameState.weather.impact?.preferredStrategy || 'balanced',
+              weatherAlert: gameState.weather.impact?.weatherAlert || false,
+              fieldGoalFactor: gameState.weather.fieldGoalFactor || 1.0,
+              passingFactor: gameState.weather.passingFactor || 1.0,
+              runningFactor: gameState.weather.runningFactor || 1.0,
+              isOutdoorStadium: gameState.weather.isOutdoorStadium || false,
+              strategicImplications: this.getWeatherStrategicImplications(gameState.weather.impact, gameState),
+              bettingImplications: this.getWeatherBettingImplications(gameState.weather.impact, gameState)
+            } : undefined,
+            originalMessage: alert.message,
+            originalContext: alert.context
+          };
+
+          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
+          
+          // Update alert with AI enhancement
+          enhancedAlerts.push({
+            ...alert,
+            message: aiResponse.enhancedMessage,
+            context: {
+              ...alert.context,
+              aiEnhanced: true,
+              aiInsights: aiResponse.contextualInsights,
+              aiRecommendation: aiResponse.actionableRecommendation,
+              urgencyLevel: aiResponse.urgencyLevel,
+              bettingContext: aiResponse.bettingContext,
+              confidence: aiResponse.confidence,
+              sportSpecificData: aiResponse.sportSpecificData,
+              processingTime: aiResponse.aiProcessingTime
+            }
+          });
+
           this.performanceMetrics.enhancedAlerts++;
-          
-          console.log(`✅ NFL AI Enhanced: ${alert.type} in ${aiTime}ms`);
-          processedAlerts.push(enhancedAlert);
         } else {
-          // Standard alert without AI enhancement
-          processedAlerts.push(alert);
+          // Keep original alert for lower-priority situations
+          enhancedAlerts.push(alert);
         }
       } catch (error) {
         console.error(`❌ NFL AI Enhancement failed for ${alert.type}:`, error);
-        // Fallback to original alert on AI failure
-        processedAlerts.push(alert);
+        // Fallback to original alert on error
+        enhancedAlerts.push(alert);
       }
     }
-    
-    return processedAlerts;
+
+    const aiTime = Date.now() - aiStartTime;
+    this.performanceMetrics.aiEnhancementTime.push(aiTime);
+    if (aiTime > 50) {
+      console.log(`⚠️ NFL AI Enhancement slow: ${aiTime}ms (target: <50ms)`);
+    }
+
+    return enhancedAlerts;
   }
   
   // Check if NFL alert type should receive AI enhancement

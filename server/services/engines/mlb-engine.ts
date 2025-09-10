@@ -1,6 +1,8 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
+import { asyncAIProcessor } from '../async-ai-processor';
+import { CrossSportContext } from '../cross-sport-ai-enhancement';
 
 export class MLBEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
@@ -112,7 +114,10 @@ export class MLBEngine extends BaseSportEngine {
       const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
 
       // Use the parent class method which properly calls all loaded modules
-      const alerts = await super.generateLiveAlerts(enhancedGameState);
+      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
+      
+      // Process alerts with cross-sport AI enhancement for high-priority situations
+      const alerts = await this.processEnhancedMLBAlerts(rawAlerts, enhancedGameState);
       
       // Track MLB-specific metrics
       if (enhancedGameState.hasFirst && enhancedGameState.hasSecond && enhancedGameState.hasThird) {
@@ -181,6 +186,66 @@ export class MLBEngine extends BaseSportEngine {
     }
 
     return gameState;
+  }
+
+  // Process alerts with cross-sport AI enhancement for high-priority MLB situations
+  private async processEnhancedMLBAlerts(rawAlerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    const enhancedAlerts: AlertResult[] = [];
+    const aiStartTime = Date.now();
+
+    for (const alert of rawAlerts) {
+      try {
+        // Only enhance high-priority alerts (>= 85 probability)
+        const probability = await this.calculateProbability(gameState);
+        
+        if (probability >= 85) {
+          console.log(`🧠 MLB AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
+          
+          // Build cross-sport context for MLB
+          const aiContext: CrossSportContext = {
+            sport: 'MLB',
+            gameId: gameState.gameId,
+            alertType: alert.type,
+            priority: alert.priority,
+            probability: probability,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            isLive: gameState.isLive,
+            inning: gameState.inning,
+            outs: gameState.outs,
+            balls: gameState.balls,
+            strikes: gameState.strikes,
+            baseRunners: {
+              first: gameState.hasFirst || false,
+              second: gameState.hasSecond || false,
+              third: gameState.hasThird || false
+            },
+            originalMessage: alert.message,
+            originalContext: alert.context
+          };
+
+          // Queue for async AI enhancement (non-blocking) and return base alert immediately
+          await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
+          console.log(`🚀 MLB Async AI: Queued ${alert.type} for background enhancement`);
+        }
+        
+        // Always return base alert immediately (async enhancement happens via WebSocket)
+        enhancedAlerts.push(alert);
+      } catch (error) {
+        console.error(`❌ MLB AI Enhancement failed for ${alert.type}:`, error);
+        // Fallback to original alert on error
+        enhancedAlerts.push(alert);
+      }
+    }
+
+    const aiTime = Date.now() - aiStartTime;
+    if (aiTime > 50) {
+      console.log(`⚠️ MLB AI Enhancement slow: ${aiTime}ms (target: <50ms)`);
+    }
+
+    return enhancedAlerts;
   }
 
   // Initialize alert modules based on user's enabled preferences

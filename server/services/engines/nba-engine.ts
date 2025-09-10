@@ -1,6 +1,8 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
+import { asyncAIProcessor } from '../async-ai-processor';
+import { CrossSportContext } from '../cross-sport-ai-enhancement';
 
 export class NBAEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
@@ -153,8 +155,11 @@ export class NBAEngine extends BaseSportEngine {
       
       // Use the parent class method which properly calls all loaded modules
       const alertStartTime = Date.now();
-      const alerts = await super.generateLiveAlerts(enhancedGameState);
+      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
       const alertTime = Date.now() - alertStartTime;
+      
+      // Process alerts with cross-sport AI enhancement for high-priority NBA situations
+      const alerts = await this.processEnhancedNBAAlerts(rawAlerts, enhancedGameState);
       this.performanceMetrics.alertGenerationTime.push(alertTime);
       
       this.performanceMetrics.totalAlerts += alerts.length;
@@ -321,6 +326,81 @@ export class NBAEngine extends BaseSportEngine {
     else if (quarter === 4) clutchFactor += 15; // Fourth quarter
     
     return Math.min(clutchFactor, 100);
+  }
+
+  // Process alerts with cross-sport AI enhancement for high-priority NBA situations
+  private async processEnhancedNBAAlerts(rawAlerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    const enhancedAlerts: AlertResult[] = [];
+    const aiStartTime = Date.now();
+
+    for (const alert of rawAlerts) {
+      try {
+        // Only enhance high-priority alerts (>= 85 probability)
+        const probability = await this.calculateProbability(gameState);
+        
+        if (probability >= 85 && this.crossSportAI.configured) {
+          console.log(`🧠 NBA AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
+          
+          // Build cross-sport context for NBA
+          const aiContext: CrossSportContext = {
+            sport: 'NBA',
+            gameId: gameState.gameId,
+            alertType: alert.type,
+            priority: alert.priority,
+            probability: probability,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            isLive: gameState.isLive,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            timeLeft: gameState.timeRemaining,
+            shotClock: (gameState as any).shotClock || 24,
+            fouls: {
+              home: (gameState as any).homeFouls || 0,
+              away: (gameState as any).awayFouls || 0
+            },
+            possession: gameState.possession,
+            originalMessage: alert.message,
+            originalContext: alert.context
+          };
+
+          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
+          
+          // Update alert with AI enhancement
+          enhancedAlerts.push({
+            ...alert,
+            message: aiResponse.enhancedMessage,
+            context: {
+              ...alert.context,
+              aiEnhanced: true,
+              aiInsights: aiResponse.contextualInsights,
+              aiRecommendation: aiResponse.actionableRecommendation,
+              urgencyLevel: aiResponse.urgencyLevel,
+              bettingContext: aiResponse.bettingContext,
+              confidence: aiResponse.confidence,
+              sportSpecificData: aiResponse.sportSpecificData,
+              processingTime: aiResponse.aiProcessingTime
+            }
+          });
+        } else {
+          // Keep original alert for lower-priority situations
+          enhancedAlerts.push(alert);
+        }
+      } catch (error) {
+        console.error(`❌ NBA AI Enhancement failed for ${alert.type}:`, error);
+        // Fallback to original alert on error
+        enhancedAlerts.push(alert);
+      }
+    }
+
+    const aiTime = Date.now() - aiStartTime;
+    if (aiTime > 50) {
+      console.log(`⚠️ NBA AI Enhancement slow: ${aiTime}ms (target: <50ms)`);
+    }
+
+    return enhancedAlerts;
   }
 
   // Initialize alert modules based on user's enabled preferences

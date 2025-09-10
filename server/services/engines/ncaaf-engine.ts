@@ -1,6 +1,8 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
+import { asyncAIProcessor } from '../async-ai-processor';
+import { CrossSportContext } from '../cross-sport-ai-enhancement';
 
 export class NCAAFEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
@@ -13,7 +15,9 @@ export class NCAAFEngine extends BaseSportEngine {
     cacheHits: 0,
     cacheMisses: 0,
     probabilityCalculationTime: [] as number[],
-    gameStateEnhancementTime: [] as number[]
+    gameStateEnhancementTime: [] as number[],
+    aiEnhancementTime: [] as number[],
+    enhancedAlerts: 0
   };
 
   constructor() {
@@ -138,14 +142,17 @@ export class NCAAFEngine extends BaseSportEngine {
       const alertTime = Date.now() - alertStartTime;
       this.performanceMetrics.alertGenerationTime.push(alertTime);
       
-      this.performanceMetrics.totalAlerts += rawAlerts.length;
+      // Process alerts with cross-sport AI enhancement for high-priority NCAAF situations
+      const processedAlerts = await this.processEnhancedNCAAFAlerts(rawAlerts, enhancedGameState);
+      
+      this.performanceMetrics.totalAlerts += processedAlerts.length;
       
       const totalTime = Date.now() - startTime;
       if (totalTime > 150) {
         console.log(`⚠️ NCAAF Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
       }
       
-      return rawAlerts;
+      return processedAlerts;
     } catch (error) {
       const totalTime = Date.now() - startTime;
       console.error(`❌ NCAAF Alert generation failed after ${totalTime}ms:`, error);
@@ -508,6 +515,138 @@ export class NCAAFEngine extends BaseSportEngine {
     }
   }
 
+  // Process NCAAF alerts with cross-sport AI enhancement for high-priority college situations
+  private async processEnhancedNCAAFAlerts(rawAlerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    const enhancedAlerts: AlertResult[] = [];
+    const aiStartTime = Date.now();
+
+    for (const alert of rawAlerts) {
+      try {
+        // Only enhance high-priority alerts (>= 85 probability)
+        const probability = await this.calculateProbability(gameState);
+        
+        if (probability >= 85 && this.crossSportAI.configured) {
+          console.log(`🧠 NCAAF AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
+          
+          // Build cross-sport context for NCAAF (college-specific enhancements)
+          const aiContext: CrossSportContext = {
+            sport: 'NCAAF',
+            gameId: gameState.gameId,
+            alertType: alert.type,
+            priority: alert.priority,
+            probability: probability,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            isLive: gameState.isLive,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            down: gameState.down,
+            yardsToGo: gameState.yardsToGo,
+            fieldPosition: gameState.fieldPosition,
+            possession: gameState.possession,
+            redZone: gameState.fieldPosition ? gameState.fieldPosition <= 20 : false,
+            goalLine: gameState.fieldPosition ? gameState.fieldPosition <= 5 : false,
+            
+            // College-specific context (no professional equivalent)
+            championshipContext: this.determineChampionshipImplications(gameState.homeTeam, gameState.awayTeam),
+            playoffImplications: this.hasPlayoffImplications(gameState.homeTeam, gameState.awayTeam),
+            
+            originalMessage: alert.message,
+            originalContext: alert.context
+          };
+
+          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
+          
+          // Update alert with AI enhancement
+          enhancedAlerts.push({
+            ...alert,
+            message: aiResponse.enhancedMessage,
+            context: {
+              ...alert.context,
+              aiEnhanced: true,
+              aiInsights: aiResponse.contextualInsights,
+              aiRecommendation: aiResponse.actionableRecommendation,
+              urgencyLevel: aiResponse.urgencyLevel,
+              bettingContext: aiResponse.bettingContext,
+              confidence: aiResponse.confidence,
+              sportSpecificData: aiResponse.sportSpecificData,
+              processingTime: aiResponse.aiProcessingTime,
+              // College-specific AI context
+              collegeFactors: {
+                championship: aiContext.championshipContext,
+                playoffs: aiContext.playoffImplications,
+                rivalryGame: this.isRivalryGame(gameState.homeTeam, gameState.awayTeam)
+              }
+            }
+          });
+
+          this.performanceMetrics.enhancedAlerts++;
+        } else {
+          // Keep original alert for lower-priority situations
+          enhancedAlerts.push(alert);
+        }
+      } catch (error) {
+        console.error(`❌ NCAAF AI Enhancement failed for ${alert.type}:`, error);
+        // Fallback to original alert on error
+        enhancedAlerts.push(alert);
+      }
+    }
+
+    const aiTime = Date.now() - aiStartTime;
+    this.performanceMetrics.aiEnhancementTime.push(aiTime);
+    if (aiTime > 50) {
+      console.log(`⚠️ NCAAF AI Enhancement slow: ${aiTime}ms (target: <50ms)`);
+    }
+
+    return enhancedAlerts;
+  }
+
+  // Determine college football championship implications
+  private determineChampionshipImplications(homeTeam: string, awayTeam: string): string {
+    // Major college football championship scenarios
+    const majorBowlTeams = [
+      'Alabama', 'Georgia', 'Ohio State', 'Michigan', 'Clemson', 'Notre Dame',
+      'Oklahoma', 'Texas', 'USC', 'Oregon', 'Florida State', 'Miami'
+    ];
+    
+    const isHomeTopTier = majorBowlTeams.some(team => homeTeam.includes(team));
+    const isAwayTopTier = majorBowlTeams.some(team => awayTeam.includes(team));
+    
+    if (isHomeTopTier && isAwayTopTier) {
+      return 'Playoff implications - Top-tier matchup affecting CFP rankings';
+    } else if (isHomeTopTier || isAwayTopTier) {
+      return 'Conference championship implications - Major program involved';
+    } else {
+      return 'Conference standings impact - Bowl eligibility implications';
+    }
+  }
+
+  // Check for playoff implications
+  private hasPlayoffImplications(homeTeam: string, awayTeam: string): boolean {
+    const playoffContenders = [
+      'Alabama', 'Georgia', 'Ohio State', 'Michigan', 'Clemson', 'Notre Dame',
+      'Oklahoma', 'Texas', 'USC', 'Oregon', 'Florida State', 'Miami', 'Penn State'
+    ];
+    
+    return playoffContenders.some(team => homeTeam.includes(team) || awayTeam.includes(team));
+  }
+
+  // Determine if this is a rivalry game (affects AI enhancement priority)
+  private isRivalryGame(homeTeam: string, awayTeam: string): boolean {
+    const majorRivalries = [
+      ['Alabama', 'Auburn'], ['Ohio State', 'Michigan'], ['Texas', 'Oklahoma'],
+      ['USC', 'Notre Dame'], ['Florida', 'Georgia'], ['Army', 'Navy'],
+      ['Harvard', 'Yale'], ['Duke', 'North Carolina']
+    ];
+    
+    return majorRivalries.some(rivalry => 
+      (homeTeam.includes(rivalry[0]) && awayTeam.includes(rivalry[1])) ||
+      (homeTeam.includes(rivalry[1]) && awayTeam.includes(rivalry[0]))
+    );
+  }
+
   // Memory cleanup and optimization
   cleanupPerformanceMetrics(): void {
     // Keep only the last 100 measurements to prevent memory buildup
@@ -527,6 +666,9 @@ export class NCAAFEngine extends BaseSportEngine {
     }
     if (this.performanceMetrics.gameStateEnhancementTime.length > maxEntries) {
       this.performanceMetrics.gameStateEnhancementTime = this.performanceMetrics.gameStateEnhancementTime.slice(-maxEntries);
+    }
+    if (this.performanceMetrics.aiEnhancementTime.length > maxEntries) {
+      this.performanceMetrics.aiEnhancementTime = this.performanceMetrics.aiEnhancementTime.slice(-maxEntries);
     }
   }
 }
