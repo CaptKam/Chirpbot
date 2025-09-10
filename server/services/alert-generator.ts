@@ -671,16 +671,19 @@ export class AlertGenerator {
       awayScore = game.awayScore.score || game.awayScore.value || 0;
     }
 
+    // Destructure game to exclude homeTeam and awayTeam objects
+    const { homeTeam: _, awayTeam: __, homeScore: ___, awayScore: ____, ...otherGameFields } = game;
+    
     const gameState: GameState = {
       gameId,
       sport,
-      homeTeam,
-      awayTeam,
-      homeScore,
-      awayScore,
+      homeTeam,  // Use normalized string
+      awayTeam,  // Use normalized string  
+      homeScore, // Use normalized number
+      awayScore, // Use normalized number
       status: game.status || 'live',
       isLive: game.isLive || false,
-      ...game // Include all other sport-specific fields
+      ...otherGameFields // Include other sport-specific fields but exclude team objects
     };
 
     return gameState;
