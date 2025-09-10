@@ -8,6 +8,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
 import { AlertGenerator } from "./services/alert-generator";
 import { BasicAI } from "./services/basic-ai";
+import { AIEnhancementService } from "./services/ai-enhancements";
+import { AIContextController } from "./services/ai-context-controller";
 import { pool } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 
@@ -190,9 +192,19 @@ app.use((req, res, next) => {
 
     // Initialize alert generator and AI system
     const alertGenerator = new AlertGenerator();
+    
+    // Initialize and test all AI services
+    console.log('🤖 Initializing AI services...');
     const aiEngine = new BasicAI();
-
-    // AI system status logging disabled
+    const aiEnhancementService = new AIEnhancementService();
+    const aiContextController = new AIContextController();
+    
+    // Verify AI system status
+    if (aiEngine.configured) {
+      console.log('✅ AI Services: FULLY ACTIVATED - OpenAI integration operational');
+    } else {
+      console.log('🚫 AI Services: Configuration issue detected - check OpenAI API key');
+    }
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

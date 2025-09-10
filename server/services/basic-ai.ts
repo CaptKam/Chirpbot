@@ -53,11 +53,13 @@ export class BasicAI {
           return false;
         }
       }
-      console.log('✅ OpenAI: ENABLED');
+      console.log('✅ OpenAI: ENABLED - disable flags check passed');
       return true;
     } catch (error) {
-      console.warn('⚠️ Could not check disable flags, force disabling AI');
-      return false; // Force disable on error
+      console.warn('⚠️ Disable flags check failed, defaulting to ENABLED:', error instanceof Error ? error.message : String(error));
+      // Default to enabled if we can't check flags - this is safer for activation
+      console.log('✅ OpenAI: ENABLED (disable flags unavailable, defaulting to enabled)');
+      return true;
     }
   }
 

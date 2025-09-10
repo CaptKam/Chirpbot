@@ -48,8 +48,57 @@ export class AIEnhancementService {
       return originalMessage;
     }
 
-    // AI is enabled - use the disabled method logic
-    return this.enhanceAlertDisabled(alertType, originalMessage, gameContext, userPreferences);
+    console.log(`🤖 AI Enhancement: Processing ${alertType} alert with AI insights`);
+    
+    try {
+      let enhancedMessage = originalMessage;
+
+      // 1. Enhanced Context Insight
+      if (userPreferences.AI_ENHANCED_MESSAGES) {
+        const contextInsight = await this.generateContextInsight(alertType, gameContext);
+        if (contextInsight) {
+          enhancedMessage += `\n💡 AI Insight: ${contextInsight}`;
+        }
+      }
+
+      // 2. Predictive At-Bat Analysis
+      if (userPreferences.AI_PREDICTIVE_AT_BAT && gameContext.batter) {
+        const prediction = await this.predictAtBatOutcome(gameContext);
+        if (prediction) {
+          enhancedMessage += `\n🔮 AI Prediction: ${prediction}`;
+        }
+      }
+
+      // 3. Real-Time Scoring Probability
+      if (userPreferences.AI_SCORING_PROBABILITY && gameContext.baseRunners.length > 0) {
+        const scoringProb = await this.calculateScoringProbability(gameContext);
+        if (scoringProb) {
+          enhancedMessage += `\n📊 Scoring Probability: ${scoringProb}`;
+        }
+      }
+
+      // 4. Game Situation Analysis
+      if (userPreferences.AI_SITUATION_ANALYSIS) {
+        const situationAnalysis = await this.analyzeSituation(gameContext);
+        if (situationAnalysis) {
+          enhancedMessage += `\n🎯 Situation: ${situationAnalysis}`;
+        }
+      }
+
+      // 5. Advanced ROI Analysis
+      if (userPreferences.AI_ROI_ALERTS && this.isROISituation(gameContext)) {
+        const roiAnalysis = await this.generateROIAnalysis(gameContext);
+        if (roiAnalysis) {
+          enhancedMessage += `\n💰 ROI Analysis: ${roiAnalysis}`;
+        }
+      }
+
+      console.log(`✅ AI Enhancement: Successfully enhanced ${alertType} alert`);
+      return enhancedMessage;
+    } catch (error) {
+      console.error('AI Enhancement error:', error);
+      return originalMessage; // Fallback to original message
+    }
   }
 
 
