@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { weatherAlertIntegration } from '../../../weather-alert-integration';
 
 export default class StealLikelihoodModule extends BaseAlertModule {
   alertType = 'MLB_STEAL_LIKELIHOOD';
@@ -77,14 +78,14 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     }
   };
 
-  isTriggered(gameState: GameState): boolean {
+  async isTriggered(gameState: GameState): Promise<boolean> {
     // Defensive live game check
     if (gameState.status !== 'live' && !gameState.isLive) return false;
 
     // Must have potential stealing scenarios
     if (!this.hasStealingOpportunity(gameState)) return false;
 
-    const probability = this.calculateStealProbability(gameState);
+    const probability = await this.calculateStealProbability(gameState);
     const gameId = gameState.gameId;
     const wasTriggered = this.lastTriggeredState[gameId] || false;
     
@@ -100,12 +101,12 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     return shouldTrigger;
   }
 
-  generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
+  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
+    if (!(await this.isTriggered(gameState))) return null;
 
-    const stealProbability = this.calculateStealProbability(gameState);
+    const stealProbability = await this.calculateStealProbability(gameState);
     const stealAnalysis = this.analyzeStealSituation(gameState);
-    const alertMessage = this.generateStealMessage(stealProbability, stealAnalysis);
+    const alertMessage = this.generateStealMessage(stealProbability, stealAnalysis, gameState.weatherContext);
 
     // Create unique alert key with base runner configuration
     const baseConfiguration = this.getBaseConfiguration(gameState);
@@ -136,6 +137,9 @@ export default class StealLikelihoodModule extends BaseAlertModule {
         currentBatter: gameState.currentBatter,
         currentPitcher: gameState.currentPitcher,
         baseConfiguration,
+        // Weather integration context
+        weatherContext: gameState.weatherContext,
+        weatherImpact: gameState.weatherContext?.impact || 1.0,
         // Predictive metadata
         alertTiming: 'predictive',
         confidence: this.calculateConfidenceLevel(stealProbability),
@@ -146,8 +150,8 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     };
   }
 
-  calculateProbability(gameState: GameState): number {
-    return this.calculateStealProbability(gameState);
+  async calculateProbability(gameState: GameState): Promise<number> {
+    return await this.calculateStealProbability(gameState);
   }
 
   private hasStealingOpportunity(gameState: GameState): boolean {
@@ -166,14 +170,14 @@ export default class StealLikelihoodModule extends BaseAlertModule {
            (hasFirst && hasThird);      // First and third (double steal)
   }
 
-  private calculateStealProbability(gameState: GameState): number {
+  private async calculateStealProbability(gameState: GameState): Promise<number> {
     const cacheKey = this.createGameStateKey(gameState);
     
     if (this.probabilityCache[cacheKey] !== undefined) {
       return this.probabilityCache[cacheKey];
     }
 
-    const probability = this.calculateDeterministicStealProbability(gameState);
+    const probability = await this.calculateDeterministicStealProbability(gameState);
     this.probabilityCache[cacheKey] = probability;
     return probability;
   }
@@ -194,7 +198,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     ].join('_');
   }
 
-  private calculateDeterministicStealProbability(gameState: GameState): number {
+  private async calculateDeterministicStealProbability(gameState: GameState): Promise<number> {
     // Start with base steal ATTEMPT rate for the scenario
     const baseScenario = this.getStealScenario(gameState);
     let probability = this.STEAL_ATTEMPT_RATES[baseScenario].base;
@@ -224,6 +228,26 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     // Environmental factors (smaller multiplicative adjustment)
     const environmentMultiplier = this.getEnvironmentalMultiplier(gameState);
     probability *= environmentMultiplier;
+
+    // WEATHER INTEGRATION: Apply weather factors to steal probability
+    try {
+      const weatherFactors = await weatherAlertIntegration.calculateStealingWeatherFactors(gameState);
+      // Apply multiplicative weather impact for stealing conditions
+      probability = probability * weatherFactors.overallWeatherImpact;
+      
+      // Store weather context for alert generation
+      gameState.weatherContext = {
+        factors: weatherFactors,
+        impact: weatherFactors.overallWeatherImpact,
+        significant: weatherFactors.significantWeatherEffect,
+        description: weatherFactors.weatherContext,
+        gripFactor: weatherFactors.gripFactor,
+        visibilityFactor: weatherFactors.visibilityFactor
+      };
+    } catch (error) {
+      console.error('Weather integration error in Steal Likelihood module:', error);
+      // Continue without weather factors if integration fails
+    }
 
     // Convert to percentage and apply realistic bounds for per-pitch probabilities
     const percentage = probability * 100;
@@ -359,7 +383,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     return 'unknown';
   }
 
-  private generateStealMessage(probability: number, analysis: any): string {
+  private generateStealMessage(probability: number, analysis: any, weatherContext?: any): string {
     const roundedProb = Math.round(probability);
     const scenario = analysis.scenario;
     const countSit = analysis.countSituation;
@@ -380,6 +404,11 @@ export default class StealLikelihoodModule extends BaseAlertModule {
       message += ` on favorable ${countSit} count`;
     } else if (analysis.countLeverage < 0.9) {
       message += ` despite tough ${countSit} count`;
+    }
+
+    // Add weather context suffix if significant weather impact
+    if (weatherContext?.significant && weatherContext?.description) {
+      message += ` (${weatherContext.description})`;
     }
 
     return message;

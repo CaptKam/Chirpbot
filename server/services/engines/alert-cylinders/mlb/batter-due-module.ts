@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { weatherAlertIntegration } from '../../../weather-alert-integration';
 
 export default class BatterDueModule extends BaseAlertModule {
   alertType = 'MLB_BATTER_DUE';
@@ -68,13 +69,13 @@ export default class BatterDueModule extends BaseAlertModule {
   private readonly CLEAR_THRESHOLD = 55;   // Clear alert at 55%
   private lastTriggeredState: { [gameId: string]: boolean } = {};
 
-  isTriggered(gameState: GameState): boolean {
+  async isTriggered(gameState: GameState): Promise<boolean> {
     if (gameState.status !== 'live') return false;
 
     // Only trigger in the middle to late innings (4+) when games get more strategic
     if (!gameState.inning || gameState.inning < 4) return false;
 
-    const probability = this.getScoringProbability(gameState);
+    const probability = await this.getScoringProbability(gameState);
     const gameId = gameState.gameId;
     const wasTriggered = this.lastTriggeredState[gameId] || false;
     
@@ -94,16 +95,16 @@ export default class BatterDueModule extends BaseAlertModule {
     return shouldTrigger;
   }
 
-  generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
+  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
+    if (!(await this.isTriggered(gameState))) return null;
 
     // Use cached probability to ensure consistency
-    const scoringProbability = this.getScoringProbability(gameState);
+    const scoringProbability = await this.getScoringProbability(gameState);
     const gameContext = this.analyzeGameSituation(gameState);
     const lineupContext = this.analyzeLineupData(gameState);
     
-    // Create dynamic message based on the specific situation
-    let alertMessage = this.generateAlertMessage(scoringProbability, gameContext, lineupContext);
+    // Create dynamic message based on the specific situation and weather
+    let alertMessage = this.generateAlertMessage(scoringProbability, gameContext, lineupContext, gameState.weatherContext);
 
     // More granular alertKey with base/out/lineup context
     const baseOutState = this.getBaseOutStateKey(gameState);
@@ -138,6 +139,9 @@ export default class BatterDueModule extends BaseAlertModule {
         currentBatter: gameState.currentBatter,
         currentPitcher: gameState.currentPitcher,
         baseOutState,
+        // Weather integration context
+        weatherContext: gameState.weatherContext,
+        weatherImpact: gameState.weatherContext?.impact || 1.0,
         // Predictive metadata
         alertTiming: 'predictive',
         confidence: this.calculateConfidenceLevel(scoringProbability),
@@ -147,11 +151,11 @@ export default class BatterDueModule extends BaseAlertModule {
     };
   }
 
-  calculateProbability(gameState: GameState): number {
-    return this.getScoringProbability(gameState);
+  async calculateProbability(gameState: GameState): Promise<number> {
+    return await this.getScoringProbability(gameState);
   }
 
-  private getScoringProbability(gameState: GameState): number {
+  private async getScoringProbability(gameState: GameState): Promise<number> {
     // Create unique cache key for this specific game state
     const cacheKey = this.createGameStateKey(gameState);
     
@@ -160,8 +164,8 @@ export default class BatterDueModule extends BaseAlertModule {
       return this.probabilityCache[cacheKey];
     }
 
-    // Calculate probability using deterministic baseball statistics
-    const probability = this.calculateDeterministicProbability(gameState);
+    // Calculate probability using deterministic baseball statistics with weather
+    const probability = await this.calculateDeterministicProbability(gameState);
     
     // Cache the result for this specific game state
     this.probabilityCache[cacheKey] = probability;
@@ -185,7 +189,7 @@ export default class BatterDueModule extends BaseAlertModule {
     ].join('_');
   }
 
-  private calculateDeterministicProbability(gameState: GameState): number {
+  private async calculateDeterministicProbability(gameState: GameState): Promise<number> {
     // Use RP24 (Run Probability) as base - more direct measure of scoring likelihood
     const baseRP24 = this.getCurrentRP24Value(gameState);
     const currentRE24 = this.getCurrentRE24Value(gameState);
@@ -203,6 +207,24 @@ export default class BatterDueModule extends BaseAlertModule {
     probability += this.getCountSituationFactor(gameState.balls || 0, gameState.strikes || 0);
     probability += this.getRealLineupStrengthFactor(gameState);
     probability += this.getPitcherBatterMatchupFactor(gameState);
+
+    // WEATHER INTEGRATION: Apply weather factors to scoring probability
+    try {
+      const weatherFactors = await weatherAlertIntegration.calculateScoringWeatherFactors(gameState);
+      // Apply multiplicative weather impact to preserve percentage nature
+      probability = probability * weatherFactors.overallWeatherImpact;
+      
+      // Store weather context for alert generation
+      gameState.weatherContext = {
+        factors: weatherFactors,
+        impact: weatherFactors.overallWeatherImpact,
+        significant: weatherFactors.significantWeatherEffect,
+        description: weatherFactors.weatherContext
+      };
+    } catch (error) {
+      console.error('Weather integration error in Batter Due module:', error);
+      // Continue without weather factors if integration fails
+    }
 
     // Apply calibrated bounds (more realistic than hard caps)
     return this.calibrateScoreBounds(probability, gameState);
@@ -320,22 +342,27 @@ export default class BatterDueModule extends BaseAlertModule {
     return 'weak'; // 8-9: Weakest hitters (including pitcher in NL)
   }
 
-  private generateAlertMessage(scoringProbability: number, gameContext: any, lineupContext: any): string {
+  private generateAlertMessage(scoringProbability: number, gameContext: any, lineupContext: any, weatherContext?: any): string {
     const roundedProb = Math.round(scoringProbability);
     const currentBatter = lineupContext.currentBatterName || 'batter';
     
+    // Add weather context suffix if significant weather impact
+    const weatherSuffix = (weatherContext?.significant && weatherContext?.description) 
+      ? ` (${weatherContext.description})` 
+      : '';
+    
     if (gameContext.isCloseGame && gameContext.hasRunnersInScoringPosition) {
-      return `🔥 CLUTCH MOMENT: ${roundedProb}% scoring chance - ${currentBatter} with runners in scoring position!`;
+      return `🔥 CLUTCH MOMENT: ${roundedProb}% scoring chance - ${currentBatter} with runners in scoring position!${weatherSuffix}`;
     } else if (gameContext.isHighLeverage && lineupContext.hasStrongUpcomingHitters) {
-      return `⚡ HIGH LEVERAGE: ${roundedProb}% scoring chance - strong lineup sequence coming up!`;
+      return `⚡ HIGH LEVERAGE: ${roundedProb}% scoring chance - strong lineup sequence coming up!${weatherSuffix}`;
     } else if (gameContext.isLateInning && lineupContext.currentBatterStrength === 'elite') {
-      return `⏰ CLUTCH HITTER: ${roundedProb}% scoring chance - elite batter ${currentBatter} at the plate!`;
+      return `⏰ CLUTCH HITTER: ${roundedProb}% scoring chance - elite batter ${currentBatter} at the plate!${weatherSuffix}`;
     } else if (gameContext.hasRunnersInScoringPosition && lineupContext.favorablePitcherMatchup) {
-      return `💥 FAVORABLE MATCHUP: ${roundedProb}% scoring chance - ${currentBatter} vs favorable pitcher!`;
+      return `💥 FAVORABLE MATCHUP: ${roundedProb}% scoring chance - ${currentBatter} vs favorable pitcher!${weatherSuffix}`;
     } else if (lineupContext.hasStrongUpcomingHitters) {
-      return `⚡ STRONG LINEUP: ${roundedProb}% scoring chance - powerful hitters coming to bat!`;
+      return `⚡ STRONG LINEUP: ${roundedProb}% scoring chance - powerful hitters coming to bat!${weatherSuffix}`;
     } else {
-      return `📈 SCORING OPPORTUNITY: ${roundedProb}% chance with current lineup sequence!`;
+      return `📈 SCORING OPPORTUNITY: ${roundedProb}% chance with current lineup sequence!${weatherSuffix}`;
     }
   }
 
