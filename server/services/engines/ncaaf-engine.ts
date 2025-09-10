@@ -25,7 +25,9 @@ export class NCAAFEngine extends BaseSportEngine {
     try {
       // CRITICAL FIX: Only check settings for NCAAF alert types with actual cylinder modules
       const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE'
+        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
+        'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY', 
+        'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL'
       ];
 
       if (!validNCAAFAlerts.includes(alertType)) {
@@ -296,7 +298,11 @@ export class NCAAFEngine extends BaseSportEngine {
     return [
       'NCAAF_GAME_START',
       'NCAAF_TWO_MINUTE_WARNING',
-      'NCAAF_RED_ZONE'
+      'NCAAF_RED_ZONE',
+      'NCAAF_FOURTH_DOWN_DECISION',
+      'NCAAF_UPSET_OPPORTUNITY',
+      'NCAAF_RED_ZONE_EFFICIENCY',
+      'NCAAF_COMEBACK_POTENTIAL'
     ];
   }
 
@@ -356,7 +362,9 @@ export class NCAAFEngine extends BaseSportEngine {
 
       // CRITICAL FIX: Only include NCAAF alerts that have actual cylinder modules implemented
       const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE'
+        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
+        'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY', 
+        'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL'
       ];
 
       const ncaafEnabledTypes = enabledTypes.filter(alertType =>
@@ -390,7 +398,11 @@ export class NCAAFEngine extends BaseSportEngine {
       const moduleMap: Record<string, string> = {
         'NCAAF_GAME_START': './alert-cylinders/ncaaf/game-start-module.ts',
         'NCAAF_TWO_MINUTE_WARNING': './alert-cylinders/ncaaf/two-minute-warning-module.ts',
-        'NCAAF_RED_ZONE': './alert-cylinders/ncaaf/red-zone-module.ts'
+        'NCAAF_RED_ZONE': './alert-cylinders/ncaaf/red-zone-module.ts',
+        'NCAAF_FOURTH_DOWN_DECISION': './alert-cylinders/ncaaf/fourth-down-decision-module.ts',
+        'NCAAF_UPSET_OPPORTUNITY': './alert-cylinders/ncaaf/upset-opportunity-module.ts',
+        'NCAAF_RED_ZONE_EFFICIENCY': './alert-cylinders/ncaaf/red-zone-efficiency-module.ts',
+        'NCAAF_COMEBACK_POTENTIAL': './alert-cylinders/ncaaf/comeback-potential-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
