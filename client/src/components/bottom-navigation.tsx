@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, Settings, AlertTriangle, Shield } from 'lucide-react';
+import { Calendar, Settings, AlertTriangle, Shield, BarChart3 } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 
@@ -26,6 +26,7 @@ export function BottomNavigation() {
 
   const baseNavItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
+    { path: "/v3-dashboard", icon: BarChart3, label: "V3 Metrics", testId: "nav-v3-dashboard" },
   ];
 
   // Conditionally add Calendar, Alerts, and Settings tabs if there are games within two days
@@ -41,7 +42,9 @@ export function BottomNavigation() {
   return (
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50">
       <div className="flex">
-        {navItems.map(({ path, icon: Icon, label, testId, badgeCount }) => {
+        {navItems.map((item) => {
+          const { path, icon: Icon, label, testId } = item;
+          const badgeCount = (item as any).badgeCount || 0;
           const isActive = location === path || (path === "/dashboard" && location === "/");
 
           return (

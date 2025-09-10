@@ -12,7 +12,7 @@ import Admin from "./pages/admin";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
-import V3Dashboard from "./pages/v3-dashboard";
+import V3PerformanceDashboard from "./pages/v3-performance-dashboard";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
@@ -85,7 +85,7 @@ function RegularAppContent() {
         <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
-        <Route path="/v3-dashboard" component={() => <ProtectedRoute component={V3Dashboard} />} />
+        <Route path="/v3-dashboard" component={() => <ProtectedRoute component={V3PerformanceDashboard} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
         <Route component={NotFound} />

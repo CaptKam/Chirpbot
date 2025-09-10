@@ -1526,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Collect performance metrics from all engines
-      const sportMetrics = {};
+      const sportMetrics: Record<string, any> = {};
       const aggregatedStats = {
         totalRequests: 0,
         totalAlerts: 0,
@@ -1536,31 +1536,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         avgCalculationTime: 0,
         avgAlertGenerationTime: 0,
         avgEnhancementTime: 0,
-        responseTimeDistribution: [],
-        cacheHitRates: [],
-        alertRates: []
+        responseTimeDistribution: [] as number[],
+        cacheHitRates: [] as number[],
+        alertRates: [] as number[]
       };
 
       let totalEngines = 0;
-      let responseTimes = [];
+      const responseTimes: number[] = [];
 
       for (const [sport, engine] of Object.entries(engines)) {
         try {
           const metrics = engine.getPerformanceMetrics();
           sportMetrics[sport.toUpperCase()] = metrics;
           
+          // Handle different metric structures - normalize data access
+          let totalRequests = 0;
+          let totalAlerts = 0;
+          let cacheHits = 0;
+          let cacheMisses = 0;
+          let avgResponseTime = 0;
+          let cacheHitRate = 0;
+          
+          if ((metrics as any).performance) {
+            // Structured format (MLB, NBA, NFL, etc.)
+            totalRequests = (metrics as any).performance.totalRequests || 0;
+            totalAlerts = (metrics as any).performance.totalAlerts || 0;
+            cacheHits = (metrics as any).performance.cacheHits || 0;
+            cacheMisses = (metrics as any).performance.cacheMisses || 0;
+            avgResponseTime = (metrics as any).performance.avgResponseTime || 0;
+            cacheHitRate = (metrics as any).performance.cacheHitRate || 0;
+          } else {
+            // Flattened format (NCAAF, etc.)
+            totalRequests = (metrics as any).totalRequests || 0;
+            totalAlerts = (metrics as any).totalAlerts || 0;
+            cacheHits = (metrics as any).cacheHits || 0;
+            cacheMisses = (metrics as any).cacheMisses || 0;
+            avgResponseTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
+            cacheHitRate = (metrics as any).cacheHitRate || 0;
+          }
+          
           // Aggregate statistics
-          aggregatedStats.totalRequests += metrics.performance.totalRequests || 0;
-          aggregatedStats.totalAlerts += metrics.performance.totalAlerts || 0;
-          aggregatedStats.totalCacheHits += metrics.performance.cacheHits || 0;
-          aggregatedStats.totalCacheMisses += metrics.performance.cacheMisses || 0;
+          aggregatedStats.totalRequests += totalRequests;
+          aggregatedStats.totalAlerts += totalAlerts;
+          aggregatedStats.totalCacheHits += cacheHits;
+          aggregatedStats.totalCacheMisses += cacheMisses;
           
           // Collect response times for distribution
-          responseTimes.push(metrics.performance.avgResponseTime || 0);
-          aggregatedStats.cacheHitRates.push(metrics.performance.cacheHitRate || 0);
+          responseTimes.push(avgResponseTime);
+          aggregatedStats.cacheHitRates.push(cacheHitRate);
           aggregatedStats.alertRates.push(
-            metrics.performance.totalRequests > 0 
-              ? (metrics.performance.totalAlerts / metrics.performance.totalRequests) * 100 
+            totalRequests > 0 
+              ? (totalAlerts / totalRequests) * 100 
               : 0
           );
           
@@ -1591,15 +1617,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // V3 Optimization Achievement Tracking
       const v3Achievements = {
-        sub250msTargets: Object.entries(sportMetrics).map(([sport, metrics]) => ({
-          sport,
-          achieved: metrics.performance?.avgResponseTime < 250,
-          responseTime: metrics.performance?.avgResponseTime || 0,
-          target: 250
-        })),
+        sub250msTargets: Object.entries(sportMetrics).map(([sport, metrics]: [string, any]) => {
+          let responseTime = 0;
+          if ((metrics as any).performance?.avgResponseTime !== undefined) {
+            responseTime = (metrics as any).performance.avgResponseTime;
+          } else {
+            responseTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
+          }
+          
+          return {
+            sport,
+            achieved: responseTime < 250,
+            responseTime,
+            target: 250
+          };
+        }),
         overallV3Success: responseTimes.filter(t => t < 250).length / Math.max(1, responseTimes.length) * 100,
-        performanceGrades: Object.entries(sportMetrics).map(([sport, metrics]) => {
-          const avgTime = metrics.performance?.avgResponseTime || 0;
+        performanceGrades: Object.entries(sportMetrics).map(([sport, metrics]: [string, any]) => {
+          let avgTime = 0;
+          if ((metrics as any).performance?.avgResponseTime !== undefined) {
+            avgTime = (metrics as any).performance.avgResponseTime;
+          } else {
+            avgTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
+          }
+          
           let grade = 'F';
           if (avgTime < 100) grade = 'A+';
           else if (avgTime < 150) grade = 'A';
@@ -1614,14 +1655,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // System health indicators
       const systemHealth = {
         activeEngines: totalEngines,
-        healthyEngines: Object.values(sportMetrics).filter(m => !m.performance?.error).length,
-        overallHealth: totalEngines > 0 ? (Object.values(sportMetrics).filter(m => !m.performance?.error).length / totalEngines) * 100 : 0,
+        healthyEngines: Object.values(sportMetrics).filter((m: any) => {
+          return !(m.performance?.error || m.error);
+        }).length,
+        overallHealth: totalEngines > 0 ? (Object.values(sportMetrics).filter((m: any) => {
+          return !(m.performance?.error || m.error);
+        }).length / totalEngines) * 100 : 0,
         memoryEfficiency: overallCacheHitRate,
         alertGenerationEfficiency: aggregatedStats.totalRequests > 0 ? (aggregatedStats.totalAlerts / aggregatedStats.totalRequests) * 100 : 0
       };
 
       // Real-time performance warnings
-      const performanceWarnings = [];
+      const performanceWarnings: any[] = [];
       responseTimes.forEach((time, index) => {
         const sport = Object.keys(engines)[index];
         if (time > 250) {
