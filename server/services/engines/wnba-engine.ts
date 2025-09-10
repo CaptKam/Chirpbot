@@ -27,7 +27,10 @@ export class WNBAEngine extends BaseSportEngine {
       // Only check settings for actual WNBA alert types
       const validWNBAAlerts = [
         'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'FINAL_MINUTES',
-        'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER'
+        'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER',
+        // V3-10: New WNBA predictive alert types
+        'WNBA_CLUTCH_TIME_OPPORTUNITY', 'WNBA_COMEBACK_POTENTIAL',
+        'WNBA_CRUNCH_TIME_DEFENSE', 'WNBA_CHAMPIONSHIP_IMPLICATIONS'
       ];
 
       if (!validWNBAAlerts.includes(alertType)) {
@@ -281,7 +284,10 @@ export class WNBAEngine extends BaseSportEngine {
       // Filter to only valid WNBA alerts that have corresponding module files
       const validWNBAAlerts = [
         'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'FINAL_MINUTES',
-        'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER'
+        'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER',
+        // V3-10: New WNBA predictive alert types
+        'WNBA_CLUTCH_TIME_OPPORTUNITY', 'WNBA_COMEBACK_POTENTIAL',
+        'WNBA_CRUNCH_TIME_DEFENSE', 'WNBA_CHAMPIONSHIP_IMPLICATIONS'
       ];
 
       const wnbaEnabledTypes = enabledTypes.filter(alertType =>
@@ -319,7 +325,12 @@ export class WNBAEngine extends BaseSportEngine {
         'FINAL_MINUTES': './alert-cylinders/wnba/final-minutes-module.ts',
         'HIGH_SCORING_QUARTER': './alert-cylinders/wnba/high-scoring-quarter-module.ts',
         'LOW_SCORING_QUARTER': './alert-cylinders/wnba/low-scoring-quarter-module.ts',
-        'FOURTH_QUARTER': './alert-cylinders/wnba/fourth-quarter-module.ts'
+        'FOURTH_QUARTER': './alert-cylinders/wnba/fourth-quarter-module.ts',
+        // V3-10: New WNBA predictive alert modules
+        'WNBA_CLUTCH_TIME_OPPORTUNITY': './alert-cylinders/wnba/clutch-time-opportunity-module.ts',
+        'WNBA_COMEBACK_POTENTIAL': './alert-cylinders/wnba/comeback-potential-module.ts',
+        'WNBA_CRUNCH_TIME_DEFENSE': './alert-cylinders/wnba/crunch-time-defense-module.ts',
+        'WNBA_CHAMPIONSHIP_IMPLICATIONS': './alert-cylinders/wnba/wnba-championship-implications-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
@@ -430,7 +441,12 @@ export class WNBAEngine extends BaseSportEngine {
       'FINAL_MINUTES',
       'HIGH_SCORING_QUARTER',
       'LOW_SCORING_QUARTER',
-      'FOURTH_QUARTER'
+      'FOURTH_QUARTER',
+      // V3-10: New WNBA predictive alert types
+      'WNBA_CLUTCH_TIME_OPPORTUNITY',
+      'WNBA_COMEBACK_POTENTIAL',
+      'WNBA_CRUNCH_TIME_DEFENSE',
+      'WNBA_CHAMPIONSHIP_IMPLICATIONS'
     ];
   }
 }

@@ -1,8 +1,9 @@
 import { MLBApiService } from './mlb-api';
 import { NFLApiService } from './nfl-api';
 import { NCAAFApiService } from './ncaaf-api';
+import { WNBAApiService } from './wnba-api';
 
-export type Sport = 'MLB' | 'NFL' | 'NCAAF';
+export type Sport = 'MLB' | 'NFL' | 'NCAAF' | 'WNBA';
 
 export interface GamePollingState {
   gameId: string;
@@ -14,11 +15,13 @@ export interface GamePollingState {
   lastStateChange: number;
   isUserMonitored: boolean;
   criticality: 'low' | 'medium' | 'high' | 'critical';
-  quarter?: number; // For NFL/NCAAF games
+  quarter?: number; // For NFL/NCAAF/WNBA games  
   timeRemaining?: string; // For time-based sports
   down?: number; // For football games (NFL/NCAAF)
   yardsToGo?: number; // For football games (NFL/NCAAF)
   fieldPosition?: number; // For football games (NFL/NCAAF)
+  possession?: string; // For basketball games (WNBA)
+  shotClock?: number; // For basketball games (WNBA)
 }
 
 export interface PollingConfig {
@@ -33,6 +36,7 @@ export interface SportApiServices {
   MLB?: MLBApiService;
   NFL?: NFLApiService;
   NCAAF?: NCAAFApiService;
+  WNBA?: WNBAApiService;
 }
 
 export class AdaptivePollingManager {
@@ -63,6 +67,13 @@ export class AdaptivePollingManager {
       scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-7)
       live: { interval: 1000, cacheTTL: 2000 },           // 1s for live games (V3-7)
       final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games (V3-7)
+      delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
+      suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+    },
+    WNBA: {
+      scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-10)
+      live: { interval: 500, cacheTTL: 1000 },            // 500ms for live games (V3-10)
+      final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games (V3-10)
       delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
       suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
     }
@@ -106,11 +117,13 @@ export class AdaptivePollingManager {
         lastStateChange: Date.now(),
         isUserMonitored,
         criticality,
-        quarter: (this.sport === 'NFL' || this.sport === 'NCAAF') ? (game.quarter || 1) : undefined,
+        quarter: (this.sport === 'NFL' || this.sport === 'NCAAF' || this.sport === 'WNBA') ? (game.quarter || 1) : undefined,
         timeRemaining: game.timeRemaining || undefined,
         down: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.down : undefined,
         yardsToGo: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.yardsToGo : undefined,
-        fieldPosition: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.fieldPosition : undefined
+        fieldPosition: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.fieldPosition : undefined,
+        possession: (this.sport === 'WNBA') ? game.possession : undefined,
+        shotClock: (this.sport === 'WNBA') ? game.shotClock : undefined
       };
 
       this.gameStates.set(gameId, pollingState);
@@ -161,6 +174,8 @@ export class AdaptivePollingManager {
       return this.calculateNFLCriticality(game);
     } else if (this.sport === 'NCAAF') {
       return this.calculateNCAAFCriticality(game);
+    } else if (this.sport === 'WNBA') {
+      return this.calculateWNBACriticality(game);
     } else {
       return this.calculateMLBCriticality(game);
     }
@@ -242,6 +257,80 @@ export class AdaptivePollingManager {
 
     // Medium: Competitive games
     if (scoreDiff <= 14) {
+      return 'medium';
+    }
+
+    // Low: Blowouts or early game
+    return 'low';
+  }
+
+  /**
+   * Calculate WNBA game criticality based on score, quarter, and game situation
+   */
+  private calculateWNBACriticality(game: any): 'low' | 'medium' | 'high' | 'critical' {
+    const homeScore = game.homeTeam?.score || game.homeScore || 0;
+    const awayScore = game.awayTeam?.score || game.awayScore || 0;
+    const scoreDiff = Math.abs(homeScore - awayScore);
+    const quarter = game.quarter || game.period || 1;
+    const timeRemaining = game.timeRemaining || game.clock || '';
+    const possession = game.possession;
+    const shotClock = game.shotClock;
+
+    // Parse time remaining in seconds  
+    const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+
+    // Critical: Close games in 4th quarter or overtime
+    if (quarter >= 4 && scoreDiff <= 5) {
+      return 'critical';
+    }
+
+    // Critical: Final 2 minutes of any quarter with close score
+    if (timeRemaining && quarter >= 4 && timeSeconds <= 120 && scoreDiff <= 8) {
+      return 'critical';
+    }
+
+    // Critical: Overtime periods (any score differential)
+    if (quarter >= 5) {
+      return 'critical';
+    }
+
+    // Critical: Shot clock pressure situations in close games
+    if (shotClock !== undefined && shotClock <= 8 && quarter >= 3 && scoreDiff <= 10) {
+      return 'critical';
+    }
+
+    // Critical: Final minute of regulation
+    if (timeRemaining && quarter === 4 && timeSeconds <= 60) {
+      return 'critical';
+    }
+
+    // High: Close games in 3rd/4th quarter
+    if (quarter >= 3 && scoreDiff <= 8) {
+      return 'high';
+    }
+
+    // High: Final 5 minutes of 4th quarter
+    if (timeRemaining && quarter === 4 && timeSeconds <= 300) {
+      return 'high';
+    }
+
+    // High: Shot clock pressure in competitive games
+    if (shotClock !== undefined && shotClock <= 8 && quarter >= 2) {
+      return 'high';
+    }
+
+    // High: Potential comeback situations
+    if (quarter >= 3 && scoreDiff >= 8 && scoreDiff <= 15) {
+      return 'high';
+    }
+
+    // Medium: Competitive games in later periods
+    if (scoreDiff <= 12 && quarter >= 2) {
+      return 'medium';
+    }
+
+    // Medium: Second half action
+    if (quarter >= 3) {
       return 'medium';
     }
 
@@ -380,6 +469,12 @@ export class AdaptivePollingManager {
       final: 60000,    // 1min minimum for NCAAF final
       delayed: 3000,
       suspended: 3000
+    } : this.sport === 'WNBA' ? {
+      live: 250,     // 250ms minimum for WNBA live (V3-10) - basketball is fast-paced
+      scheduled: 15000, // 15s minimum for WNBA scheduled
+      final: 60000,    // 1min minimum for WNBA final
+      delayed: 3000,
+      suspended: 3000
     } : {
       live: 200,     // 200ms minimum for MLB live
       scheduled: 5000,
@@ -451,6 +546,8 @@ export class AdaptivePollingManager {
         enhancedData = await this.apiServices.NFL.getEnhancedGameData(gameId, 'live');
       } else if (this.sport === 'NCAAF' && this.apiServices.NCAAF) {
         enhancedData = await this.apiServices.NCAAF.getEnhancedGameData(gameId);
+      } else if (this.sport === 'WNBA' && this.apiServices.WNBA) {
+        enhancedData = await this.apiServices.WNBA.getEnhancedGameData(gameId);
       }
       
       if (enhancedData && !enhancedData.error) {
@@ -520,6 +617,8 @@ export class AdaptivePollingManager {
         allGames = await this.apiServices.NFL.getTodaysGames();
       } else if (this.sport === 'NCAAF' && this.apiServices.NCAAF) {
         allGames = await this.apiServices.NCAAF.getTodaysGames();
+      } else if (this.sport === 'WNBA' && this.apiServices.WNBA) {
+        allGames = await this.apiServices.WNBA.getTodaysGames();
       }
       
       const gameMap = new Map(allGames.map(game => [game.id, game]));
