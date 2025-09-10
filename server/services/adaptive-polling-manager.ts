@@ -3,8 +3,9 @@ import { NFLApiService } from './nfl-api';
 import { NCAAFApiService } from './ncaaf-api';
 import { WNBAApiService } from './wnba-api';
 import { NBAApiService } from './nba-api';
+import { CFLApiService } from './cfl-api';
 
-export type Sport = 'MLB' | 'NFL' | 'NCAAF' | 'WNBA' | 'NBA';
+export type Sport = 'MLB' | 'NFL' | 'NCAAF' | 'WNBA' | 'NBA' | 'CFL';
 
 export interface GamePollingState {
   gameId: string;
@@ -16,11 +17,11 @@ export interface GamePollingState {
   lastStateChange: number;
   isUserMonitored: boolean;
   criticality: 'low' | 'medium' | 'high' | 'critical';
-  quarter?: number; // For NFL/NCAAF/WNBA/NBA games  
+  quarter?: number; // For NFL/NCAAF/CFL/WNBA/NBA games  
   timeRemaining?: string; // For time-based sports
-  down?: number; // For football games (NFL/NCAAF)
-  yardsToGo?: number; // For football games (NFL/NCAAF)
-  fieldPosition?: number; // For football games (NFL/NCAAF)
+  down?: number; // For football games (NFL/NCAAF/CFL)
+  yardsToGo?: number; // For football games (NFL/NCAAF/CFL)
+  fieldPosition?: number; // For football games (NFL/NCAAF/CFL)
   possession?: string; // For basketball games (WNBA/NBA)
   shotClock?: number; // For basketball games (WNBA/NBA)
 }
@@ -39,6 +40,7 @@ export interface SportApiServices {
   NCAAF?: NCAAFApiService;
   WNBA?: WNBAApiService;
   NBA?: NBAApiService;
+  CFL?: CFLApiService;
 }
 
 export class AdaptivePollingManager {
@@ -85,6 +87,13 @@ export class AdaptivePollingManager {
       final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games (V3-12)
       delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
       suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+    },
+    CFL: {
+      scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-15)
+      live: { interval: 750, cacheTTL: 1500 },            // 750ms for live games (V3-15)
+      final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games (V3-15)
+      delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
+      suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
     }
   };
 
@@ -126,11 +135,11 @@ export class AdaptivePollingManager {
         lastStateChange: Date.now(),
         isUserMonitored,
         criticality,
-        quarter: (this.sport === 'NFL' || this.sport === 'NCAAF' || this.sport === 'WNBA' || this.sport === 'NBA') ? (game.quarter || 1) : undefined,
+        quarter: (this.sport === 'NFL' || this.sport === 'NCAAF' || this.sport === 'CFL' || this.sport === 'WNBA' || this.sport === 'NBA') ? (game.quarter || 1) : undefined,
         timeRemaining: game.timeRemaining || undefined,
-        down: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.down : undefined,
-        yardsToGo: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.yardsToGo : undefined,
-        fieldPosition: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.fieldPosition : undefined,
+        down: (this.sport === 'NFL' || this.sport === 'NCAAF' || this.sport === 'CFL') ? game.down : undefined,
+        yardsToGo: (this.sport === 'NFL' || this.sport === 'NCAAF' || this.sport === 'CFL') ? game.yardsToGo : undefined,
+        fieldPosition: (this.sport === 'NFL' || this.sport === 'NCAAF' || this.sport === 'CFL') ? game.fieldPosition : undefined,
         possession: (this.sport === 'WNBA' || this.sport === 'NBA') ? game.possession : undefined,
         shotClock: (this.sport === 'WNBA' || this.sport === 'NBA') ? game.shotClock : undefined
       };
@@ -187,6 +196,8 @@ export class AdaptivePollingManager {
       return this.calculateWNBACriticality(game);
     } else if (this.sport === 'NBA') {
       return this.calculateNBACriticality(game);
+    } else if (this.sport === 'CFL') {
+      return this.calculateCFLCriticality(game);
     } else {
       return this.calculateMLBCriticality(game);
     }
@@ -512,6 +523,111 @@ export class AdaptivePollingManager {
 
     // Medium: Second half action
     if (quarter >= 3) {
+      return 'medium';
+    }
+
+    // Low: Blowouts or early game
+    return 'low';
+  }
+
+  /**
+   * Calculate CFL game criticality based on score, quarter, and Canadian football specifics
+   */
+  private calculateCFLCriticality(game: any): 'low' | 'medium' | 'high' | 'critical' {
+    const homeScore = game.homeTeam?.score || game.homeScore || 0;
+    const awayScore = game.awayTeam?.score || game.awayScore || 0;
+    const scoreDiff = Math.abs(homeScore - awayScore);
+    const quarter = game.quarter || 1;
+    const timeRemaining = game.timeRemaining || '';
+    const fieldPosition = game.fieldPosition;
+    const down = game.down;
+    const yardsToGo = game.yardsToGo;
+
+    // Parse time remaining in seconds (CFL has 15-minute quarters)
+    const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+
+    // Critical: Close games in 4th quarter or overtime
+    if (quarter >= 4 && scoreDiff <= 8) {
+      return 'critical';
+    }
+
+    // Critical: CFL Three-minute warning situations (critical window in CFL)
+    if (timeRemaining && quarter >= 4 && timeSeconds <= 180) {
+      return 'critical';
+    }
+
+    // Critical: Two-minute warning situations 
+    if (timeRemaining && quarter >= 4 && timeSeconds <= 120) {
+      return 'critical';
+    }
+
+    // Critical: Overtime periods (sudden death in CFL playoffs)
+    if (quarter >= 5) {
+      return 'critical';
+    }
+
+    // Critical: Third down situations (CFL 3-down system makes this crucial!)
+    if (down === 3) {
+      return 'critical';
+    }
+
+    // Critical: CFL Red zone (within 20 yards, considering wider CFL field)
+    if (fieldPosition !== undefined && fieldPosition <= 20) {
+      return 'critical';
+    }
+
+    // Critical: Rouge scoring opportunity (missed FG can still score 1 point)
+    if (fieldPosition !== undefined && fieldPosition <= 45 && down === 3 && yardsToGo && yardsToGo >= 10) {
+      return 'critical';
+    }
+
+    // Critical: Goal line situations (within 10 yards on CFL's wider field)
+    if (fieldPosition !== undefined && fieldPosition <= 10) {
+      return 'critical';
+    }
+
+    // High: Close games in 3rd/4th quarter
+    if (quarter >= 3 && scoreDiff <= 10) {
+      return 'high';
+    }
+
+    // High: Close to CFL scoring territory (within 45 yards due to rouge potential)
+    if (fieldPosition !== undefined && fieldPosition <= 45) {
+      return 'high';
+    }
+
+    // High: Second down situations (still manageable in 3-down system)
+    if (down === 2) {
+      return 'high';
+    }
+
+    // High: Short yardage situations (critical in 3-down system)
+    if (yardsToGo && yardsToGo <= 3) {
+      return 'high';
+    }
+
+    // High: Final 5 minutes of any half (CFL 15-minute quarters)
+    if (timeRemaining && timeSeconds <= 300) {
+      return 'high';
+    }
+
+    // High: Grey Cup implications (playoff pressure boost)
+    if (quarter >= 3 && scoreDiff <= 7) {
+      return 'high';
+    }
+
+    // Medium: Competitive games in CFL (higher scoring than NFL)
+    if (scoreDiff <= 15) {
+      return 'medium';
+    }
+
+    // Medium: Second half action (important in CFL pacing)
+    if (quarter >= 3) {
+      return 'medium';
+    }
+
+    // Medium: First down opportunities (important in 3-down system)
+    if (down === 1 && yardsToGo && yardsToGo >= 10) {
       return 'medium';
     }
 
