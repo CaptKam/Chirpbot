@@ -604,7 +604,7 @@ export class AlertGenerator {
         // This user has both enabled alerts AND monitored games
         usersWithActiveMonitoring.push({
           userId: user.id,
-          username: user.username,
+          username: user.username || `user_${user.id.slice(0, 8)}`,
           enabledAlertTypes,
           monitoredGameIds
         });

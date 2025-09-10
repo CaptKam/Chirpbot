@@ -5,8 +5,8 @@ export class MLBApiService {
   private baseUrl = 'https://statsapi.mlb.com/api/v1';
   private lastCall: { [key: string]: number } = {};
   private cache: { [key: string]: { data: any, timestamp: number } } = {};
-  private readonly RATE_LIMIT_MS = 5000; // 5 seconds between calls
-  private readonly CACHE_TTL_MS = 30000; // 30 second cache
+  private readonly RATE_LIMIT_MS = 250; // 250ms between calls for near real-time
+  private readonly CACHE_TTL_MS = 1000; // 1 second cache for freshest data
 
   private canMakeCall(endpoint: string): boolean {
     const now = Date.now();
@@ -35,9 +35,10 @@ export class MLBApiService {
   }
 
   async getTodaysGames(date?: string): Promise<any[]> {
+    const targetDate = date || getPacificDate();
+    const cacheKey = `games_${targetDate}`;
+    
     try {
-      const targetDate = date || getPacificDate();
-      const cacheKey = `games_${targetDate}`;
       
       // Check cache first
       const cached = this.getCached(cacheKey);
@@ -108,8 +109,9 @@ export class MLBApiService {
   }
 
   async getEnhancedGameData(gameId: string): Promise<any> {
+    const cacheKey = `enhanced_${gameId}`;
+    
     try {
-      const cacheKey = `enhanced_${gameId}`;
       
       // Check cache first
       const cached = this.getCached(cacheKey);
