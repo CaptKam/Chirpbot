@@ -17,9 +17,12 @@ interface StadiumCoordinates {
   lon: number;
   city: string;
   stadium: string;
-  homePlateDirection?: number; // Degrees from north to center field
+  homePlateDirection?: number; // Degrees from north to center field (MLB)
+  fieldOrientation?: number; // Degrees from north to field direction (NFL)
   isDome?: boolean;
   elevation?: number; // Feet above sea level
+  roofType?: 'open' | 'dome' | 'retractable'; // NFL-specific roof classification
+  sport?: 'MLB' | 'NFL';
 }
 
 // MLB Stadium coordinates with home plate orientations (degrees from north to center field)
@@ -54,7 +57,41 @@ const STADIUMS: Record<string, StadiumCoordinates> = {
   'Tampa Bay Rays': { lat: 27.7682, lon: -82.6534, city: 'St. Petersburg', stadium: 'Tropicana Field', homePlateDirection: 95, isDome: true },
   'Texas Rangers': { lat: 32.7472, lon: -97.0833, city: 'Arlington', stadium: 'Globe Life Field', homePlateDirection: 95, isDome: true },
   'Toronto Blue Jays': { lat: 43.6414, lon: -79.3894, city: 'Toronto', stadium: 'Rogers Centre', homePlateDirection: 95, isDome: true },
-  'Washington Nationals': { lat: 38.8730, lon: -77.0074, city: 'Washington', stadium: 'Nationals Park', homePlateDirection: 95 }
+  'Washington Nationals': { lat: 38.8730, lon: -77.0074, city: 'Washington', stadium: 'Nationals Park', homePlateDirection: 95 },
+
+  // NFL Stadium coordinates with field orientations and roof classifications
+  'Arizona Cardinals': { lat: 33.5276, lon: -112.2626, city: 'Glendale', stadium: 'State Farm Stadium', fieldOrientation: 15, roofType: 'retractable', sport: 'NFL' },
+  'Atlanta Falcons': { lat: 33.7553, lon: -84.4006, city: 'Atlanta', stadium: 'Mercedes-Benz Stadium', fieldOrientation: 6, roofType: 'retractable', sport: 'NFL' },
+  'Baltimore Ravens': { lat: 39.2780, lon: -76.6227, city: 'Baltimore', stadium: 'M&T Bank Stadium', fieldOrientation: 14, roofType: 'open', sport: 'NFL' },
+  'Buffalo Bills': { lat: 42.7738, lon: -78.7870, city: 'Orchard Park', stadium: 'Highmark Stadium', fieldOrientation: 18, roofType: 'open', sport: 'NFL' },
+  'Carolina Panthers': { lat: 35.2258, lon: -80.8528, city: 'Charlotte', stadium: 'Bank of America Stadium', fieldOrientation: 12, roofType: 'open', sport: 'NFL' },
+  'Chicago Bears': { lat: 41.8623, lon: -87.6167, city: 'Chicago', stadium: 'Soldier Field', fieldOrientation: 9, roofType: 'open', sport: 'NFL' },
+  'Cincinnati Bengals': { lat: 39.0955, lon: -84.5161, city: 'Cincinnati', stadium: 'Paycor Stadium', fieldOrientation: 20, roofType: 'open', sport: 'NFL' },
+  'Cleveland Browns': { lat: 41.5061, lon: -81.6995, city: 'Cleveland', stadium: 'Cleveland Browns Stadium', fieldOrientation: 180, roofType: 'open', sport: 'NFL' },
+  'Dallas Cowboys': { lat: 32.7473, lon: -97.0945, city: 'Arlington', stadium: 'AT&T Stadium', fieldOrientation: 9, roofType: 'retractable', sport: 'NFL' },
+  'Denver Broncos': { lat: 39.7439, lon: -105.0201, city: 'Denver', stadium: 'Empower Field at Mile High', fieldOrientation: 5, roofType: 'open', elevation: 5280, sport: 'NFL' },
+  'Detroit Lions': { lat: 42.3400, lon: -83.0456, city: 'Detroit', stadium: 'Ford Field', fieldOrientation: 320, roofType: 'dome', sport: 'NFL' },
+  'Green Bay Packers': { lat: 44.5013, lon: -88.0622, city: 'Green Bay', stadium: 'Lambeau Field', fieldOrientation: 0, roofType: 'open', sport: 'NFL' },
+  'Houston Texans': { lat: 29.6847, lon: -95.4107, city: 'Houston', stadium: 'NRG Stadium', fieldOrientation: 350, roofType: 'retractable', sport: 'NFL' },
+  'Indianapolis Colts': { lat: 39.7601, lon: -86.1639, city: 'Indianapolis', stadium: 'Lucas Oil Stadium', fieldOrientation: 16, roofType: 'retractable', sport: 'NFL' },
+  'Jacksonville Jaguars': { lat: 30.3238, lon: -81.6374, city: 'Jacksonville', stadium: 'TIAA Bank Field', fieldOrientation: 70, roofType: 'open', sport: 'NFL' },
+  'Kansas City Chiefs': { lat: 39.0489, lon: -94.4839, city: 'Kansas City', stadium: 'Arrowhead Stadium', fieldOrientation: 10, roofType: 'open', sport: 'NFL' },
+  'Las Vegas Raiders': { lat: 36.0909, lon: -115.1833, city: 'Las Vegas', stadium: 'Allegiant Stadium', fieldOrientation: 340, roofType: 'dome', sport: 'NFL' },
+  'Los Angeles Chargers': { lat: 33.8641, lon: -118.2611, city: 'Inglewood', stadium: 'SoFi Stadium', fieldOrientation: 7, roofType: 'open', sport: 'NFL' },
+  'Los Angeles Rams': { lat: 33.8641, lon: -118.2611, city: 'Inglewood', stadium: 'SoFi Stadium', fieldOrientation: 7, roofType: 'open', sport: 'NFL' },
+  'Miami Dolphins': { lat: 25.9580, lon: -80.2389, city: 'Miami Gardens', stadium: 'Hard Rock Stadium', fieldOrientation: 347, roofType: 'open', sport: 'NFL' },
+  'Minnesota Vikings': { lat: 44.9778, lon: -93.2581, city: 'Minneapolis', stadium: 'U.S. Bank Stadium', fieldOrientation: 340, roofType: 'dome', sport: 'NFL' },
+  'New England Patriots': { lat: 42.0909, lon: -71.2643, city: 'Foxborough', stadium: 'Gillette Stadium', fieldOrientation: 8, roofType: 'open', sport: 'NFL' },
+  'New Orleans Saints': { lat: 29.9511, lon: -90.0812, city: 'New Orleans', stadium: 'Caesars Superdome', fieldOrientation: 90, roofType: 'dome', sport: 'NFL' },
+  'New York Giants': { lat: 40.8135, lon: -74.0745, city: 'East Rutherford', stadium: 'MetLife Stadium', fieldOrientation: 145, roofType: 'open', sport: 'NFL' },
+  'New York Jets': { lat: 40.8135, lon: -74.0745, city: 'East Rutherford', stadium: 'MetLife Stadium', fieldOrientation: 145, roofType: 'open', sport: 'NFL' },
+  'Philadelphia Eagles': { lat: 39.9008, lon: -75.1675, city: 'Philadelphia', stadium: 'Lincoln Financial Field', fieldOrientation: 355, roofType: 'open', sport: 'NFL' },
+  'Pittsburgh Steelers': { lat: 40.4468, lon: -80.0158, city: 'Pittsburgh', stadium: 'Acrisure Stadium', fieldOrientation: 61, roofType: 'open', sport: 'NFL' },
+  'San Francisco 49ers': { lat: 37.4031, lon: -121.9695, city: 'Santa Clara', stadium: "Levi's Stadium", fieldOrientation: 16, roofType: 'open', sport: 'NFL' },
+  'Seattle Seahawks': { lat: 47.5952, lon: -122.3316, city: 'Seattle', stadium: 'Lumen Field', fieldOrientation: 334, roofType: 'open', sport: 'NFL' },
+  'Tampa Bay Buccaneers': { lat: 27.9759, lon: -82.5033, city: 'Tampa', stadium: 'Raymond James Stadium', fieldOrientation: 15, roofType: 'open', sport: 'NFL' },
+  'Tennessee Titans': { lat: 36.1665, lon: -86.7713, city: 'Nashville', stadium: 'Nissan Stadium', fieldOrientation: 180, roofType: 'open', sport: 'NFL' },
+  'Washington Commanders': { lat: 38.9077, lon: -76.8645, city: 'Landover', stadium: 'FedExField', fieldOrientation: 6, roofType: 'open', sport: 'NFL' }
 };
 
 export class WeatherService {
@@ -156,7 +193,7 @@ export class WeatherService {
     };
   }
 
-  // Calculate home run probability based on weather conditions
+  // Calculate home run probability based on weather conditions (MLB)
   calculateHomeRunFactor(weather: WeatherData): number {
     let factor = 1.0;
 
@@ -183,6 +220,171 @@ export class WeatherService {
     else if (weather.pressure > 1020) factor -= 0.05;
 
     return Math.max(0.7, Math.min(1.4, factor)); // Clamp between 0.7 and 1.4
+  }
+
+  // Calculate field goal success probability modifier based on weather (NFL)
+  calculateFieldGoalWeatherFactor(weather: WeatherData, distance: number = 40): number {
+    let factor = 1.0;
+
+    // Wind impact is most critical for field goals
+    if (weather.windSpeed > 10) {
+      // Crosswinds are most challenging
+      const windImpact = Math.min(weather.windSpeed / 40, 0.4); // Cap at 40% reduction
+      factor -= windImpact;
+      
+      // Headwinds hurt more than tailwinds help on long kicks
+      if (weather.windSpeed > 15) {
+        factor -= 0.1; // Additional penalty for strong winds
+      }
+    }
+
+    // Temperature effects on ball and air density
+    if (weather.temperature < 32) {
+      factor -= 0.15; // Cold weather significantly impacts kicking
+    } else if (weather.temperature < 50) {
+      factor -= 0.08; // Mild cold impact
+    } else if (weather.temperature > 85) {
+      factor += 0.05; // Hot weather slightly helps
+    }
+
+    // Precipitation impact
+    if (weather.condition.toLowerCase().includes('rain')) {
+      factor -= 0.2; // Rain significantly impacts footing and ball handling
+    } else if (weather.condition.toLowerCase().includes('snow')) {
+      factor -= 0.25; // Snow is worse than rain
+    }
+
+    // Distance factor - longer kicks more affected by weather
+    if (distance > 45) {
+      factor *= 0.95; // Long kicks more susceptible
+    } else if (distance > 50) {
+      factor *= 0.9; // Very long kicks significantly more affected
+    }
+
+    return Math.max(0.3, Math.min(1.2, factor)); // Clamp between 30% and 120%
+  }
+
+  // Calculate passing game effectiveness based on weather (NFL)
+  calculatePassingWeatherFactor(weather: WeatherData): number {
+    let factor = 1.0;
+
+    // Wind significantly affects passing accuracy
+    if (weather.windSpeed > 12) {
+      factor -= Math.min(weather.windSpeed / 50, 0.3); // Up to 30% reduction
+    }
+
+    // Temperature effects on ball handling
+    if (weather.temperature < 35) {
+      factor -= 0.12; // Cold makes ball harder to grip
+    } else if (weather.temperature < 50) {
+      factor -= 0.06; // Mild cold impact
+    }
+
+    // Precipitation is very bad for passing
+    if (weather.condition.toLowerCase().includes('rain')) {
+      factor -= 0.25; // Rain makes ball slippery
+    } else if (weather.condition.toLowerCase().includes('snow')) {
+      factor -= 0.35; // Snow is worse for passing
+    }
+
+    // Humidity affects ball grip
+    if (weather.humidity > 80) {
+      factor -= 0.05; // High humidity makes ball slippery
+    }
+
+    return Math.max(0.4, Math.min(1.1, factor)); // Clamp between 40% and 110%
+  }
+
+  // Calculate running game effectiveness based on weather (NFL)
+  calculateRunningWeatherFactor(weather: WeatherData): number {
+    let factor = 1.0;
+
+    // Running is less affected by wind
+    if (weather.windSpeed > 20) {
+      factor -= 0.05; // Only extreme winds affect running
+    }
+
+    // Cold weather slightly favors running
+    if (weather.temperature < 40) {
+      factor += 0.08; // Cold weather slightly favors ground game
+    }
+
+    // Precipitation affects footing but less than passing
+    if (weather.condition.toLowerCase().includes('rain')) {
+      factor -= 0.1; // Rain affects footing
+    } else if (weather.condition.toLowerCase().includes('snow')) {
+      factor -= 0.15; // Snow affects footing more
+    }
+
+    return Math.max(0.7, Math.min(1.2, factor)); // Clamp between 70% and 120%
+  }
+
+  // Get weather impact assessment for NFL strategy
+  getNFLWeatherImpact(weather: WeatherData): {
+    fieldGoalDifficulty: 'low' | 'moderate' | 'high' | 'extreme';
+    passingConditions: 'excellent' | 'good' | 'poor' | 'dangerous';
+    preferredStrategy: 'balanced' | 'run-heavy' | 'pass-heavy' | 'conservative';
+    weatherAlert: boolean;
+    description: string;
+  } {
+    const fieldGoalFactor = this.calculateFieldGoalWeatherFactor(weather);
+    const passingFactor = this.calculatePassingWeatherFactor(weather);
+    const runningFactor = this.calculateRunningWeatherFactor(weather);
+
+    // Determine field goal difficulty
+    let fieldGoalDifficulty: 'low' | 'moderate' | 'high' | 'extreme';
+    if (fieldGoalFactor > 0.9) fieldGoalDifficulty = 'low';
+    else if (fieldGoalFactor > 0.7) fieldGoalDifficulty = 'moderate';
+    else if (fieldGoalFactor > 0.5) fieldGoalDifficulty = 'high';
+    else fieldGoalDifficulty = 'extreme';
+
+    // Determine passing conditions
+    let passingConditions: 'excellent' | 'good' | 'poor' | 'dangerous';
+    if (passingFactor > 0.9) passingConditions = 'excellent';
+    else if (passingFactor > 0.75) passingConditions = 'good';
+    else if (passingFactor > 0.6) passingConditions = 'poor';
+    else passingConditions = 'dangerous';
+
+    // Determine preferred strategy
+    let preferredStrategy: 'balanced' | 'run-heavy' | 'pass-heavy' | 'conservative';
+    if (runningFactor > passingFactor + 0.15) {
+      preferredStrategy = 'run-heavy';
+    } else if (passingFactor > runningFactor + 0.1) {
+      preferredStrategy = 'pass-heavy';
+    } else if (fieldGoalFactor < 0.7 || passingFactor < 0.7) {
+      preferredStrategy = 'conservative';
+    } else {
+      preferredStrategy = 'balanced';
+    }
+
+    // Weather alert for extreme conditions
+    const weatherAlert = weather.windSpeed > 15 || 
+                        weather.temperature < 32 || 
+                        weather.condition.toLowerCase().includes('rain') || 
+                        weather.condition.toLowerCase().includes('snow');
+
+    // Create description
+    let description = '';
+    if (weather.windSpeed > 15) {
+      description += `Strong ${weather.windSpeed}mph winds affecting kicks and passes. `;
+    }
+    if (weather.temperature < 32) {
+      description += `Freezing conditions impacting ball handling. `;
+    }
+    if (weather.condition.toLowerCase().includes('rain') || weather.condition.toLowerCase().includes('snow')) {
+      description += `Precipitation creating slippery conditions. `;
+    }
+    if (!description) {
+      description = 'Favorable weather conditions for all aspects of the game.';
+    }
+
+    return {
+      fieldGoalDifficulty,
+      passingConditions,
+      preferredStrategy,
+      weatherAlert,
+      description: description.trim()
+    };
   }
 
   getWindDescription(windSpeed: number, windDirection: number): string {

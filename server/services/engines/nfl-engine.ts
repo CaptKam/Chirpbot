@@ -2,6 +2,7 @@ import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
 import { AIContextController, AlertContext, AIEnhancedAlert } from '../ai-context-controller';
+import { weatherService } from '../weather-service';
 
 export class NFLEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
@@ -45,8 +46,8 @@ export class NFLEngine extends BaseSportEngine {
   }
 
   async calculateProbability(gameState: GameState): Promise<number> {
-    // Enhanced NFL-specific probability calculation with optimized performance
-    const { quarter, timeRemaining, down, yardsToGo, fieldPosition, homeScore, awayScore } = gameState;
+    // Enhanced NFL-specific probability calculation with weather considerations
+    const { quarter, timeRemaining, down, yardsToGo, fieldPosition, homeScore, awayScore, weather } = gameState;
 
     let probability = 50; // Base probability
 
@@ -87,6 +88,35 @@ export class NFLEngine extends BaseSportEngine {
     // Yards to go consideration
     if (yardsToGo && yardsToGo <= 3) {
       probability += 10; // Short yardage situations are exciting
+    }
+
+    // Weather impact adjustments (for outdoor stadiums only)
+    if (weather && weather.isOutdoorStadium) {
+      const weatherImpact = weather.impact;
+      
+      // Extreme weather conditions increase excitement/unpredictability
+      if (weatherImpact.weatherAlert) {
+        probability += 15; // Weather makes games more unpredictable/exciting
+        
+        // Specific weather situation adjustments
+        if (weatherImpact.fieldGoalDifficulty === 'extreme') {
+          probability += 10; // Very difficult field goal conditions
+        }
+        
+        if (weatherImpact.passingConditions === 'dangerous') {
+          probability += 8; // Poor passing conditions create more drama
+        }
+        
+        // Fourth down in extreme weather is extra exciting
+        if (down === 4 && weatherImpact.fieldGoalDifficulty !== 'low') {
+          probability += 5; // Weather complicates fourth down decisions
+        }
+      }
+      
+      // Red zone weather impact - field goal difficulty affects strategy
+      if (fieldPosition && fieldPosition <= 20 && weatherImpact.fieldGoalDifficulty === 'high') {
+        probability += 5; // Weather makes red zone decisions more critical
+      }
     }
 
     return Math.min(Math.max(probability, 10), 95);
@@ -130,6 +160,8 @@ export class NFLEngine extends BaseSportEngine {
 
   private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
     try {
+      let enhancedGameState = { ...gameState };
+
       // Get live data from NFL API if game is live
       if (gameState.isLive && gameState.gameId) {
         const { NFLApiService } = await import('../nfl-api');
@@ -137,8 +169,8 @@ export class NFLEngine extends BaseSportEngine {
         const enhancedData = await nflApi.getEnhancedGameData(gameState.gameId, 'live');
 
         if (enhancedData && !enhancedData.error) {
-          return {
-            ...gameState,
+          enhancedGameState = {
+            ...enhancedGameState,
             quarter: enhancedData.quarter || gameState.quarter || 1,
             timeRemaining: enhancedData.timeRemaining || gameState.timeRemaining || '',
             down: enhancedData.down || null,
@@ -150,11 +182,55 @@ export class NFLEngine extends BaseSportEngine {
           };
         }
       }
+
+      // Add weather data for NFL games (for outdoor stadiums only)
+      try {
+        const weatherData = await weatherService.getWeatherForTeam(enhancedGameState.homeTeam);
+        const weatherImpact = weatherService.getNFLWeatherImpact(weatherData);
+        
+        // Only add weather context for meaningful weather conditions
+        if (weatherImpact.weatherAlert || weatherImpact.fieldGoalDifficulty !== 'low') {
+          console.log(`🌤️ NFL Weather for ${enhancedGameState.homeTeam}: ${weatherData.condition} ${weatherData.temperature}°F, ${weatherData.windSpeed}mph winds`);
+          
+          enhancedGameState = {
+            ...enhancedGameState,
+            weather: {
+              data: weatherData,
+              impact: weatherImpact,
+              fieldGoalFactor: weatherService.calculateFieldGoalWeatherFactor(weatherData),
+              passingFactor: weatherService.calculatePassingWeatherFactor(weatherData),
+              runningFactor: weatherService.calculateRunningWeatherFactor(weatherData),
+              isOutdoorStadium: !this.isIndoorStadium(enhancedGameState.homeTeam)
+            }
+          };
+        }
+      } catch (weatherError) {
+        console.warn(`🌤️ Weather data unavailable for NFL game ${enhancedGameState.gameId}:`, weatherError);
+        // Continue without weather data - not critical for game alerts
+      }
+
+      return enhancedGameState;
     } catch (error) {
       console.error('Error enhancing NFL game state with live data:', error);
+      return gameState;
     }
+  }
 
-    return gameState;
+  // Check if team plays in indoor stadium
+  private isIndoorStadium(teamName: string): boolean {
+    const indoorTeams = [
+      'Detroit Lions', 'Minnesota Vikings', 'New Orleans Saints', 'Las Vegas Raiders'
+    ];
+    const retractableRoofTeams = [
+      'Arizona Cardinals', 'Atlanta Falcons', 'Dallas Cowboys', 'Houston Texans', 'Indianapolis Colts'
+    ];
+    
+    // Indoor stadiums never have weather impact
+    if (indoorTeams.includes(teamName)) return true;
+    
+    // Retractable roof stadiums - assume open for this implementation
+    // In a real system, you'd check current roof status
+    return false;
   }
 
 
@@ -366,7 +442,7 @@ export class NFLEngine extends BaseSportEngine {
   
   // Build AlertContext from NFL game state and alert for AI processing
   private buildNFLAlertContext(alert: AlertResult, gameState: GameState): AlertContext {
-    return {
+    const baseContext = {
       gameId: gameState.gameId,
       sport: 'NFL',
       alertType: alert.type,
@@ -387,6 +463,88 @@ export class NFLEngine extends BaseSportEngine {
       originalMessage: alert.message,
       originalContext: alert.context
     };
+
+    // Add weather context for outdoor stadiums
+    if (gameState.weather && gameState.weather.isOutdoorStadium) {
+      const weatherContext = {
+        weather: {
+          temperature: gameState.weather.data.temperature,
+          condition: gameState.weather.data.condition,
+          windSpeed: gameState.weather.data.windSpeed,
+          windDirection: gameState.weather.data.windDirection,
+          humidity: gameState.weather.data.humidity,
+          fieldGoalDifficulty: gameState.weather.impact.fieldGoalDifficulty,
+          passingConditions: gameState.weather.impact.passingConditions,
+          preferredStrategy: gameState.weather.impact.preferredStrategy,
+          weatherAlert: gameState.weather.impact.weatherAlert,
+          description: gameState.weather.impact.description,
+          fieldGoalFactor: gameState.weather.fieldGoalFactor,
+          passingFactor: gameState.weather.passingFactor,
+          runningFactor: gameState.weather.runningFactor
+        },
+        weatherImpact: {
+          affectsFieldGoals: gameState.weather.impact.fieldGoalDifficulty !== 'low',
+          affectsPassing: gameState.weather.impact.passingConditions !== 'excellent',
+          strategicImplications: this.getWeatherStrategicImplications(gameState.weather.impact, gameState),
+          bettingImplications: this.getWeatherBettingImplications(gameState.weather.impact, gameState)
+        }
+      };
+      
+      return { ...baseContext, ...weatherContext };
+    }
+
+    return baseContext;
+  }
+
+  // Get strategic implications based on weather conditions
+  private getWeatherStrategicImplications(weatherImpact: any, gameState: GameState): string {
+    const implications = [];
+    
+    if (weatherImpact.fieldGoalDifficulty === 'extreme') {
+      implications.push('Field goals extremely difficult - favor going for it on 4th down');
+    } else if (weatherImpact.fieldGoalDifficulty === 'high') {
+      implications.push('Field goal accuracy reduced - shorter attempts preferred');
+    }
+    
+    if (weatherImpact.passingConditions === 'dangerous' || weatherImpact.passingConditions === 'poor') {
+      implications.push('Passing game compromised - expect more rushing attempts');
+    }
+    
+    if (weatherImpact.preferredStrategy === 'run-heavy') {
+      implications.push('Weather strongly favors ground game over aerial attack');
+    } else if (weatherImpact.preferredStrategy === 'conservative') {
+      implications.push('Weather conditions call for conservative play calling');
+    }
+    
+    if (gameState.fieldPosition && gameState.fieldPosition <= 20 && weatherImpact.fieldGoalDifficulty !== 'low') {
+      implications.push('Red zone weather impact - touchdown attempts favored over field goals');
+    }
+    
+    return implications.join('; ') || 'Weather conditions within normal parameters';
+  }
+
+  // Get betting implications based on weather conditions
+  private getWeatherBettingImplications(weatherImpact: any, gameState: GameState): string {
+    const implications = [];
+    
+    if (weatherImpact.fieldGoalDifficulty === 'extreme' || weatherImpact.fieldGoalDifficulty === 'high') {
+      implications.push('Lower scoring potential - UNDER bets favored');
+    }
+    
+    if (weatherImpact.passingConditions === 'poor' || weatherImpact.passingConditions === 'dangerous') {
+      implications.push('Passing yards UNDER bets more attractive');
+      implications.push('Rushing attempts/yards OVER bets more attractive');
+    }
+    
+    if (weatherImpact.preferredStrategy === 'run-heavy') {
+      implications.push('Game likely to feature more running plays and shorter possessions');
+    }
+    
+    if (weatherImpact.weatherAlert) {
+      implications.push('Increased variance - weather creates unpredictable outcomes');
+    }
+    
+    return implications.join('; ') || 'Weather impact on betting lines minimal';
   }
   
   // Get fallback insight for NFL alerts when AI enhancement fails

@@ -103,6 +103,33 @@ export default class FourthDownModule extends BaseAlertModule {
     if (gameState.fieldPosition <= 10) probability += 10; // Goal line boost
     else if (gameState.fieldPosition <= 30) probability += 5; // Red zone boost
     
+    // Weather impact adjustments (for outdoor stadiums only)
+    if (gameState.weather && gameState.weather.isOutdoorStadium) {
+      const weatherImpact = gameState.weather.impact;
+      
+      // Weather affects conversion strategies differently based on distance
+      if (gameState.yardsToGo <= 3) {
+        // Short yardage - weather favors running
+        if (weatherImpact.preferredStrategy === 'run-heavy') {
+          probability += 8; // Weather favors short yardage running
+        } else if (weatherImpact.passingConditions === 'dangerous') {
+          probability += 5; // Must run in bad passing weather
+        }
+      } else {
+        // Longer conversions - weather affects passing
+        if (weatherImpact.passingConditions === 'dangerous') {
+          probability -= 12; // Hard to convert long yardage in bad weather
+        } else if (weatherImpact.passingConditions === 'poor') {
+          probability -= 6; // Moderate passing difficulty
+        }
+      }
+      
+      // Extreme weather generally favors conservative decisions
+      if (weatherImpact.weatherAlert) {
+        probability -= 5; // Slightly lower conversion due to conditions
+      }
+    }
+    
     return Math.min(Math.max(probability, 15), 95);
   }
   

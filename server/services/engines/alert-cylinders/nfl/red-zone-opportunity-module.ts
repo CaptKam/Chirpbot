@@ -123,6 +123,50 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     
     let probability = baseProbability * downDistanceMultiplier;
 
+    // Weather impact adjustments (for outdoor stadiums only)
+    if (gameState.weather && gameState.weather.isOutdoorStadium) {
+      const weatherImpact = gameState.weather.impact;
+      
+      // If field goals are difficult due to weather, touchdown attempts become more attractive
+      if (weatherImpact.fieldGoalDifficulty === 'extreme') {
+        probability += 20; // Significantly favor touchdown attempts over field goals
+      } else if (weatherImpact.fieldGoalDifficulty === 'high') {
+        probability += 12; // Moderately favor touchdown attempts
+      } else if (weatherImpact.fieldGoalDifficulty === 'moderate') {
+        probability += 6; // Slightly favor touchdown attempts
+      }
+      
+      // Wind/weather conditions affecting play strategy
+      if (weatherImpact.preferredStrategy === 'run-heavy') {
+        // Heavy running weather - easier to score rushing touchdowns in red zone
+        if (gameState.fieldPosition <= 10) {
+          probability += 8; // Goal line running is very effective
+        } else if (gameState.fieldPosition <= 20) {
+          probability += 5; // Red zone running still good
+        }
+      } else if (weatherImpact.preferredStrategy === 'conservative') {
+        // Conservative weather - both passing and kicking affected
+        probability += 4; // Slight preference for touchdown attempts
+      }
+      
+      // Extreme weather conditions increase touchdown attempt preference
+      if (weatherImpact.weatherAlert) {
+        probability += 8; // Weather makes field goals unreliable
+        
+        // Special case: Very close to goal line in bad weather
+        if (gameState.fieldPosition <= 5 && weatherImpact.passingConditions !== 'dangerous') {
+          probability += 5; // Short yardage touchdowns still achievable
+        }
+      }
+      
+      // Passing conditions impact on red zone strategy
+      if (weatherImpact.passingConditions === 'dangerous' && gameState.fieldPosition > 10) {
+        probability -= 8; // Harder to pass in far red zone
+      } else if (weatherImpact.passingConditions === 'poor' && gameState.fieldPosition > 15) {
+        probability -= 4; // Moderate passing difficulty
+      }
+    }
+
     // Time pressure adjustments
     const timeAdjustment = this.getTimePressureAdjustment(gameState);
     probability *= timeAdjustment;
