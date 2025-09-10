@@ -23,7 +23,8 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_RUNNER_ON_THIRD_ONE_OUT',
         'MLB_SECOND_AND_THIRD_ONE_OUT',
         'MLB_BASES_LOADED_ONE_OUT',
-        'MLB_BATTER_DUE'
+        'MLB_BATTER_DUE',
+        'MLB_STEAL_LIKELIHOOD'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -134,7 +135,8 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_RUNNER_ON_THIRD_ONE_OUT',
         'MLB_SECOND_AND_THIRD_ONE_OUT',
         'MLB_BASES_LOADED_ONE_OUT',
-        'MLB_BATTER_DUE'
+        'MLB_BATTER_DUE',
+        'MLB_STEAL_LIKELIHOOD'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
@@ -174,7 +176,8 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_BASES_LOADED_NO_OUTS': './alert-cylinders/mlb/bases-loaded-no-outs-module.ts',
         'MLB_RUNNER_ON_THIRD_ONE_OUT': './alert-cylinders/mlb/runner-on-third-one-out-module.ts',
         'MLB_SECOND_AND_THIRD_ONE_OUT': './alert-cylinders/mlb/second-and-third-one-out-module.ts',
-        'MLB_BATTER_DUE': './alert-cylinders/mlb/batter-due-module.ts'
+        'MLB_BATTER_DUE': './alert-cylinders/mlb/batter-due-module.ts',
+        'MLB_STEAL_LIKELIHOOD': './alert-cylinders/mlb/steal-likelihood-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
