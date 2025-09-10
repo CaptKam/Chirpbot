@@ -9,6 +9,7 @@ import { SettingsCache } from "./settings-cache";
 import { BasicAI } from "./basic-ai";
 import { AIEnhancementService, GameContext } from './ai-enhancements';
 import { AIContextController, AlertContext } from './ai-context-controller';
+import { AdaptivePollingManager } from './adaptive-polling-manager';
 
 // Import sport engines
 import { MLBEngine } from './engines/mlb-engine';
@@ -136,6 +137,9 @@ export class AlertGenerator {
 
   // Sport-specific engines
   private sportEngines: Map<string, BaseSportEngine>;
+  
+  // Adaptive polling manager for MLB
+  private adaptivePollingManager: AdaptivePollingManager;
 
   constructor() {
     this.mlbApi = new MLBApiService();
@@ -153,6 +157,9 @@ export class AlertGenerator {
     this.sportEngines.set('WNBA', new WNBAEngine());
     this.sportEngines.set('NFL', new NFLEngine());
     this.sportEngines.set('CFL', new CFLEngine());
+
+    // Initialize adaptive polling manager for MLB
+    this.adaptivePollingManager = new AdaptivePollingManager(this.mlbApi);
   }
 
   // Check if a specific alert type is globally enabled (CACHED - No DB spam!)
@@ -405,7 +412,8 @@ export class AlertGenerator {
       try {
         switch (sport) {
           case 'MLB':
-            games = await this.mlbApi.getTodaysGames();
+            // Use batch polling for initial game fetch with adaptive cache
+            games = await this.mlbApi.getTodaysGames(undefined, 'batch');
             break;
           case 'NFL':
             games = await this.getNFLGames();
@@ -462,6 +470,17 @@ export class AlertGenerator {
     for (const user of usersWithActiveMonitoring) {
       for (const gameId of user.monitoredGameIds) {
         monitoredGameIds.add(gameId);
+      }
+    }
+
+    // 🎯 ADAPTIVE POLLING: Initialize for MLB games with intelligent intervals
+    if (sport === 'MLB' && games.length > 0) {
+      try {
+        await this.adaptivePollingManager.initializeGamePolling(games, monitoredGameIds);
+        console.log(`🎯 Adaptive polling initialized for ${games.length} MLB games`);
+      } catch (error) {
+        console.error('❌ Failed to initialize adaptive polling:', error);
+        // Continue with fallback processing
       }
     }
 

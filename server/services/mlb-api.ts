@@ -4,16 +4,34 @@ import { mlbApiCircuit, protectedFetch } from '../middleware/circuit-breaker';
 export class MLBApiService {
   private baseUrl = 'https://statsapi.mlb.com/api/v1';
   private lastCall: { [key: string]: number } = {};
-  private cache: { [key: string]: { data: any, timestamp: number } } = {};
-  private readonly RATE_LIMIT_MS = 250; // 250ms between calls for near real-time
-  private readonly CACHE_TTL_MS = 1000; // 1 second cache for freshest data
+  private cache: { [key: string]: { data: any, timestamp: number, ttl: number } } = {};
+  
+  // Adaptive rate limiting based on game states
+  private readonly RATE_LIMITS = {
+    live: 200,        // 200ms for live games (high priority)
+    scheduled: 5000,  // 5s for scheduled games
+    final: 30000,     // 30s for final games
+    delayed: 2000,    // 2s for delayed games
+    default: 250      // Default fallback
+  };
 
-  private canMakeCall(endpoint: string): boolean {
+  // Adaptive cache TTL based on data type and game state
+  private readonly CACHE_TTL = {
+    live: 500,         // 500ms for live game data
+    scheduled: 15000,  // 15s for scheduled games
+    final: 120000,     // 2min for final games
+    delayed: 5000,     // 5s for delayed games
+    batch: 8000,       // 8s for batch requests
+    default: 1000      // Default fallback
+  };
+
+  private canMakeCall(endpoint: string, gameState: string = 'default'): boolean {
     const now = Date.now();
     const lastCallTime = this.lastCall[endpoint] || 0;
+    const rateLimit = this.RATE_LIMITS[gameState as keyof typeof this.RATE_LIMITS] || this.RATE_LIMITS.default;
     
-    if (now - lastCallTime < this.RATE_LIMIT_MS) {
-      console.log(`🚫 MLB API: Rate limited ${endpoint} (${this.RATE_LIMIT_MS}ms cooldown)`);
+    if (now - lastCallTime < rateLimit) {
+      console.log(`🚫 MLB API: Rate limited ${endpoint} (${rateLimit}ms cooldown for ${gameState})`);
       return false;
     }
     
@@ -21,31 +39,42 @@ export class MLBApiService {
     return true;
   }
 
-  private getCached(key: string): any | null {
+  private getCached(key: string, forceCheck: boolean = false): any | null {
     const cached = this.cache[key];
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
-      console.log(`📋 MLB API: Using cached data for ${key}`);
-      return cached.data;
+    if (cached) {
+      const age = Date.now() - cached.timestamp;
+      const isExpired = age >= cached.ttl;
+      
+      if (!isExpired && !forceCheck) {
+        console.log(`📋 MLB API: Using cached data for ${key} (${Math.round(age/1000)}s old, TTL: ${Math.round(cached.ttl/1000)}s)`);
+        return cached.data;
+      }
     }
     return null;
   }
 
-  private setCache(key: string, data: any): void {
-    this.cache[key] = { data, timestamp: Date.now() };
+  private setCache(key: string, data: any, cacheType: string = 'default'): void {
+    const ttl = this.CACHE_TTL[cacheType as keyof typeof this.CACHE_TTL] || this.CACHE_TTL.default;
+    this.cache[key] = { 
+      data, 
+      timestamp: Date.now(),
+      ttl
+    };
   }
 
-  async getTodaysGames(date?: string): Promise<any[]> {
+  async getTodaysGames(date?: string, requestType: 'batch' | 'individual' = 'batch'): Promise<any[]> {
     const targetDate = date || getPacificDate();
     const cacheKey = `games_${targetDate}`;
     
     try {
       
-      // Check cache first
+      // Check cache first with appropriate TTL
       const cached = this.getCached(cacheKey);
       if (cached) return cached;
       
-      // Rate limiting
-      if (!this.canMakeCall('getTodaysGames')) {
+      // Rate limiting based on request type
+      const gameState = requestType === 'batch' ? 'scheduled' : 'default';
+      if (!this.canMakeCall('getTodaysGames', gameState)) {
         return this.getCached(cacheKey) || [];
       }
       
@@ -84,8 +113,8 @@ export class MLBApiService {
         };
       });
 
-      // Cache the result
-      this.setCache(cacheKey, processedGames);
+      // Cache the result with appropriate TTL
+      this.setCache(cacheKey, processedGames, 'batch');
       return processedGames;
     } catch (error) {
       console.error('Error fetching MLB games:', error);
@@ -108,17 +137,17 @@ export class MLBApiService {
     }
   }
 
-  async getEnhancedGameData(gameId: string): Promise<any> {
+  async getEnhancedGameData(gameId: string, gameState: 'live' | 'scheduled' | 'final' | 'delayed' = 'live'): Promise<any> {
     const cacheKey = `enhanced_${gameId}`;
     
     try {
       
-      // Check cache first
+      // Check cache first with state-specific TTL
       const cached = this.getCached(cacheKey);
       if (cached) return cached;
       
-      // Rate limiting
-      if (!this.canMakeCall(`getEnhancedGameData_${gameId}`)) {
+      // Rate limiting based on game state
+      if (!this.canMakeCall(`getEnhancedGameData_${gameId}`, gameState)) {
         return this.getCached(cacheKey) || this.getFallbackGameData();
       }
 
@@ -197,8 +226,8 @@ export class MLBApiService {
         lastUpdated: new Date().toISOString()
       };
 
-      // Cache the result
-      this.setCache(cacheKey, enhancedData);
+      // Cache the result with state-specific TTL
+      this.setCache(cacheKey, enhancedData, gameState);
       return enhancedData;
     } catch (error) {
       console.error('Error fetching enhanced game data:', error);
