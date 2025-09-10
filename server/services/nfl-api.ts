@@ -5,23 +5,32 @@ export class NFLApiService {
   private baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
   private lastCall: { [key: string]: number } = {};
   private cache: { [key: string]: { data: any, timestamp: number, ttl: number } } = {};
+  private performanceMetrics = {
+    requests: [] as number[],
+    apiLatency: [] as number[],
+    cacheHits: 0,
+    cacheMisses: 0,
+    totalRequests: 0,
+    rateLimitHits: 0,
+    errorCount: 0
+  };
   
-  // Adaptive rate limiting based on game states (optimized for NFL)
+  // V3-2 Adaptive rate limiting based on game states (optimized for NFL)
   private readonly RATE_LIMITS = {
-    live: 250,        // 250ms for live games (ultra-fast)
-    scheduled: 5000,  // 5s for scheduled games
-    final: 30000,     // 30s for final games
+    live: 1000,       // 1s for live games (V3-2 requirement)
+    scheduled: 30000, // 30s for scheduled games (V3-2 requirement)
+    final: 300000,    // 300s for final games (V3-2 requirement)
     delayed: 2000,    // 2s for delayed games
-    default: 300      // Default fallback
+    default: 1000     // Default fallback
   };
 
-  // Adaptive cache TTL based on data type and game state
+  // V3-2 Adaptive cache TTL based on data type and game state
   private readonly CACHE_TTL = {
-    live: 500,         // 500ms for live game data
-    scheduled: 15000,  // 15s for scheduled games
-    final: 120000,     // 2min for final games
+    live: 1000,        // 1s for live game data (V3-2 requirement)
+    scheduled: 30000,  // 30s for scheduled games (V3-2 requirement)
+    final: 300000,     // 300s for final games (V3-2 requirement)
     delayed: 5000,     // 5s for delayed games
-    batch: 8000,       // 8s for batch requests
+    batch: 15000,      // 15s for batch requests
     default: 1000      // Default fallback
   };
 
@@ -31,6 +40,7 @@ export class NFLApiService {
     const rateLimit = this.RATE_LIMITS[gameState as keyof typeof this.RATE_LIMITS] || this.RATE_LIMITS.default;
     
     if (now - lastCallTime < rateLimit) {
+      this.performanceMetrics.rateLimitHits++;
       console.log(`🚫 NFL API: Rate limited ${endpoint} (${rateLimit}ms cooldown for ${gameState})`);
       return false;
     }
@@ -46,10 +56,12 @@ export class NFLApiService {
       const isExpired = age >= cached.ttl;
       
       if (!isExpired && !forceCheck) {
+        this.performanceMetrics.cacheHits++;
         console.log(`📋 NFL API: Using cached data for ${key} (${Math.round(age/1000)}s old, TTL: ${Math.round(cached.ttl/1000)}s)`);
         return cached.data;
       }
     }
+    this.performanceMetrics.cacheMisses++;
     return null;
   }
 

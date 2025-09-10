@@ -1,7 +1,11 @@
 import { MLBApiService } from './mlb-api';
+import { NFLApiService } from './nfl-api';
+
+export type Sport = 'MLB' | 'NFL';
 
 export interface GamePollingState {
   gameId: string;
+  sport: Sport;
   currentState: 'scheduled' | 'live' | 'final' | 'delayed' | 'suspended';
   lastPolled: number;
   pollInterval: number;
@@ -9,6 +13,8 @@ export interface GamePollingState {
   lastStateChange: number;
   isUserMonitored: boolean;
   criticality: 'low' | 'medium' | 'high' | 'critical';
+  quarter?: number; // For NFL games
+  timeRemaining?: string; // For time-based sports
 }
 
 export interface PollingConfig {
@@ -19,20 +25,35 @@ export interface PollingConfig {
   suspended: { interval: number; cacheTTL: number };
 }
 
+export interface SportApiServices {
+  MLB?: MLBApiService;
+  NFL?: NFLApiService;
+}
+
 export class AdaptivePollingManager {
   private gameStates: Map<string, GamePollingState> = new Map();
-  private mlbApi: MLBApiService;
+  private apiServices: SportApiServices;
   private pollingTimers: Map<string, NodeJS.Timeout> = new Map();
   private lastBatchPoll: number = 0;
   private isEnabled: boolean = true;
+  private sport: Sport;
 
-  // Intelligent polling intervals based on game state
-  private readonly POLLING_CONFIG: PollingConfig = {
-    scheduled: { interval: 10000, cacheTTL: 30000 },    // 10s for pre-game
-    live: { interval: 250, cacheTTL: 1000 },            // 250ms for live games
-    final: { interval: 60000, cacheTTL: 300000 },       // 1min for completed games  
-    delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
-    suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+  // Sport-specific intelligent polling intervals
+  private readonly SPORT_POLLING_CONFIGS: Record<Sport, PollingConfig> = {
+    MLB: {
+      scheduled: { interval: 10000, cacheTTL: 30000 },    // 10s for pre-game
+      live: { interval: 250, cacheTTL: 1000 },            // 250ms for live games
+      final: { interval: 60000, cacheTTL: 300000 },       // 1min for completed games  
+      delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
+      suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+    },
+    NFL: {
+      scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-2)
+      live: { interval: 1000, cacheTTL: 2000 },           // 1s for live games (V3-2)
+      final: { interval: 300000, cacheTTL: 600000 },      // 300s for completed games (V3-2)
+      delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
+      suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+    }
   };
 
   // Criticality-based adjustments
@@ -43,9 +64,10 @@ export class AdaptivePollingManager {
     critical: 0.5  // 2x faster for clutch situations
   };
 
-  constructor(mlbApi: MLBApiService) {
-    this.mlbApi = mlbApi;
-    console.log('🎯 AdaptivePollingManager initialized with intelligent intervals');
+  constructor(sport: Sport, apiServices: SportApiServices) {
+    this.sport = sport;
+    this.apiServices = apiServices;
+    console.log(`🎯 AdaptivePollingManager initialized for ${sport} with intelligent intervals`);
   }
 
   /**
@@ -64,13 +86,16 @@ export class AdaptivePollingManager {
       
       const pollingState: GamePollingState = {
         gameId,
+        sport: this.sport,
         currentState: gameState,
         lastPolled: 0,
         pollInterval: this.calculatePollInterval(gameState, criticality, isUserMonitored),
         stateChangeCount: 0,
         lastStateChange: Date.now(),
         isUserMonitored,
-        criticality
+        criticality,
+        quarter: this.sport === 'NFL' ? (game.quarter || 1) : undefined,
+        timeRemaining: game.timeRemaining || undefined
       };
 
       this.gameStates.set(gameId, pollingState);
@@ -114,9 +139,20 @@ export class AdaptivePollingManager {
   }
 
   /**
-   * Calculate game criticality based on score, inning, and situation
+   * Calculate game criticality based on sport, score, and game situation
    */
   private calculateGameCriticality(game: any): 'low' | 'medium' | 'high' | 'critical' {
+    if (this.sport === 'NFL') {
+      return this.calculateNFLCriticality(game);
+    } else {
+      return this.calculateMLBCriticality(game);
+    }
+  }
+
+  /**
+   * Calculate MLB game criticality based on score, inning, and situation
+   */
+  private calculateMLBCriticality(game: any): 'low' | 'medium' | 'high' | 'critical' {
     const homeScore = game.homeTeam?.score || game.homeScore || 0;
     const awayScore = game.awayTeam?.score || game.awayScore || 0;
     const scoreDiff = Math.abs(homeScore - awayScore);
@@ -143,14 +179,82 @@ export class AdaptivePollingManager {
   }
 
   /**
-   * Calculate optimal polling interval for a game
+   * Calculate NFL game criticality based on score, quarter, and game situation
+   */
+  private calculateNFLCriticality(game: any): 'low' | 'medium' | 'high' | 'critical' {
+    const homeScore = game.homeTeam?.score || game.homeScore || 0;
+    const awayScore = game.awayTeam?.score || game.awayScore || 0;
+    const scoreDiff = Math.abs(homeScore - awayScore);
+    const quarter = game.quarter || 1;
+    const timeRemaining = game.timeRemaining || '';
+    const fieldPosition = game.fieldPosition;
+    const down = game.down;
+
+    // Parse time remaining in seconds
+    const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+
+    // Critical: Close games in 4th quarter or overtime
+    if (quarter >= 4 && scoreDiff <= 7) {
+      return 'critical';
+    }
+
+    // Critical: Two-minute warning situations
+    if (quarter >= 4 && timeSeconds <= 120) {
+      return 'critical';
+    }
+
+    // Critical: Red zone situations (within 20 yards)
+    if (fieldPosition && fieldPosition <= 20) {
+      return 'critical';
+    }
+
+    // Critical: Fourth down situations
+    if (down === 4) {
+      return 'critical';
+    }
+
+    // High: Close games in 3rd/4th quarter
+    if (quarter >= 3 && scoreDiff <= 10) {
+      return 'high';
+    }
+
+    // High: Close to scoring territory
+    if (fieldPosition && fieldPosition <= 40) {
+      return 'high';
+    }
+
+    // Medium: Competitive games
+    if (scoreDiff <= 14) {
+      return 'medium';
+    }
+
+    // Low: Blowouts or early game
+    return 'low';
+  }
+
+  /**
+   * Parse time string to seconds for NFL games
+   */
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString) return 0;
+    const cleanTime = timeString.trim().split(' ')[0];
+    if (cleanTime.includes(':')) {
+      const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
+      return (minutes * 60) + seconds;
+    }
+    return parseInt(cleanTime) || 0;
+  }
+
+  /**
+   * Calculate optimal polling interval for a game using sport-specific config
    */
   private calculatePollInterval(
     gameState: 'scheduled' | 'live' | 'final' | 'delayed' | 'suspended',
     criticality: 'low' | 'medium' | 'high' | 'critical',
     isUserMonitored: boolean
   ): number {
-    let baseInterval = this.POLLING_CONFIG[gameState].interval;
+    const sportConfig = this.SPORT_POLLING_CONFIGS[this.sport];
+    let baseInterval = sportConfig[gameState].interval;
     
     // Apply criticality multiplier
     const multiplier = this.CRITICALITY_MULTIPLIERS[criticality];
@@ -161,9 +265,15 @@ export class AdaptivePollingManager {
       baseInterval = Math.round(baseInterval * 0.75);
     }
     
-    // Enforce minimum intervals for safety
-    const minimums = {
-      live: 200,
+    // Enforce sport-specific minimum intervals for safety
+    const minimums = this.sport === 'NFL' ? {
+      live: 1000,    // 1s minimum for NFL live (V3-2)
+      scheduled: 15000, // 15s minimum for NFL scheduled
+      final: 60000,    // 1min minimum for NFL final
+      delayed: 3000,
+      suspended: 3000
+    } : {
+      live: 200,     // 200ms minimum for MLB live
       scheduled: 5000,
       final: 30000,
       delayed: 3000,
@@ -212,7 +322,7 @@ export class AdaptivePollingManager {
   }
 
   /**
-   * Poll a single game with enhanced data
+   * Poll a single game with enhanced data using sport-specific API
    */
   private async pollIndividualGame(gameId: string): Promise<void> {
     const state = this.gameStates.get(gameId);
@@ -224,18 +334,24 @@ export class AdaptivePollingManager {
     }
 
     try {
-      // Get enhanced game data for live games
-      const enhancedData = await this.mlbApi.getEnhancedGameData(gameId);
+      let enhancedData = null;
+      
+      // Use sport-specific API service
+      if (this.sport === 'MLB' && this.apiServices.MLB) {
+        enhancedData = await this.apiServices.MLB.getEnhancedGameData(gameId);
+      } else if (this.sport === 'NFL' && this.apiServices.NFL) {
+        enhancedData = await this.apiServices.NFL.getEnhancedGameData(gameId, 'live');
+      }
       
       if (enhancedData && !enhancedData.error) {
         // Update game state and detect transitions
         await this.updateGameState(gameId, enhancedData);
         state.lastPolled = now;
         
-        console.log(`🔄 Individual poll: Game ${gameId} (${state.currentState}/${state.criticality})`);
+        console.log(`🔄 ${this.sport} Individual poll: Game ${gameId} (${state.currentState}/${state.criticality})`);
       }
     } catch (error) {
-      console.error(`❌ Individual game polling failed for ${gameId}:`, error);
+      console.error(`❌ ${this.sport} Individual game polling failed for ${gameId}:`, error);
     }
   }
 
@@ -262,7 +378,7 @@ export class AdaptivePollingManager {
   }
 
   /**
-   * Poll multiple non-critical games in batches
+   * Poll multiple non-critical games in batches using sport-specific API
    */
   private async batchPollGames(): Promise<void> {
     const now = Date.now();
@@ -285,11 +401,18 @@ export class AdaptivePollingManager {
     }
 
     try {
-      // Batch fetch today's games (more efficient than individual calls)
-      const allGames = await this.mlbApi.getTodaysGames();
+      let allGames = [];
+      
+      // Use sport-specific API service for batch fetching
+      if (this.sport === 'MLB' && this.apiServices.MLB) {
+        allGames = await this.apiServices.MLB.getTodaysGames();
+      } else if (this.sport === 'NFL' && this.apiServices.NFL) {
+        allGames = await this.apiServices.NFL.getTodaysGames();
+      }
+      
       const gameMap = new Map(allGames.map(game => [game.id, game]));
       
-      console.log(`📦 Batch polling ${gamesToPoll.length} games`);
+      console.log(`📦 ${this.sport} Batch polling ${gamesToPoll.length} games`);
       
       for (const gameId of gamesToPoll) {
         const gameData = gameMap.get(gameId);
@@ -304,7 +427,7 @@ export class AdaptivePollingManager {
       
       this.lastBatchPoll = now;
     } catch (error) {
-      console.error('❌ Batch polling failed:', error);
+      console.error(`❌ ${this.sport} Batch polling failed:`, error);
     }
   }
 
@@ -383,7 +506,25 @@ export class AdaptivePollingManager {
     };
 
     for (const state of this.gameStates.values()) {
-      stats[state.currentState + 'Games']++;
+      // Type-safe game state counting
+      switch (state.currentState) {
+        case 'live':
+          stats.liveGames++;
+          break;
+        case 'scheduled':
+          stats.scheduledGames++;
+          break;
+        case 'final':
+          stats.finalGames++;
+          break;
+        case 'delayed':
+          stats.delayedGames++;
+          break;
+        case 'suspended':
+          stats.suspendedGames++;
+          break;
+      }
+      
       if (state.criticality === 'critical') stats.criticalGames++;
       if (state.criticality === 'high' || state.criticality === 'critical') stats.highPriorityGames++;
     }

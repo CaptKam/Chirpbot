@@ -138,8 +138,8 @@ export class AlertGenerator {
   // Sport-specific engines
   private sportEngines: Map<string, BaseSportEngine>;
   
-  // Adaptive polling manager for MLB
-  private adaptivePollingManager: AdaptivePollingManager;
+  // Adaptive polling managers for different sports
+  private adaptivePollingManagers: Map<string, AdaptivePollingManager>;
 
   constructor() {
     this.mlbApi = new MLBApiService();
@@ -158,8 +158,31 @@ export class AlertGenerator {
     this.sportEngines.set('NFL', new NFLEngine());
     this.sportEngines.set('CFL', new CFLEngine());
 
-    // Initialize adaptive polling manager for MLB
-    this.adaptivePollingManager = new AdaptivePollingManager(this.mlbApi);
+    // Initialize adaptive polling managers for each sport
+    this.adaptivePollingManagers = new Map();
+    
+    // MLB adaptive polling manager
+    this.adaptivePollingManagers.set('MLB', new AdaptivePollingManager('MLB', { MLB: this.mlbApi }));
+    
+    // NFL adaptive polling manager - initialize NFL API dynamically when needed
+    this.initializeNFLPollingManager();
+  }
+
+  // Initialize NFL polling manager with dynamic NFL API
+  private initializeNFLPollingManager(): void {
+    try {
+      // Dynamic import to avoid circular dependencies
+      import('./nfl-api').then(({ NFLApiService }) => {
+        const nflApi = new NFLApiService();
+        this.nflApi = nflApi;
+        this.adaptivePollingManagers.set('NFL', new AdaptivePollingManager('NFL', { NFL: nflApi }));
+        console.log('🏈 NFL AdaptivePollingManager initialized with V3-2 intervals');
+      }).catch(error => {
+        console.error('❌ Failed to initialize NFL AdaptivePollingManager:', error);
+      });
+    } catch (error) {
+      console.error('❌ Error setting up NFL polling manager:', error);
+    }
   }
 
   // Check if a specific alert type is globally enabled (CACHED - No DB spam!)
@@ -473,13 +496,18 @@ export class AlertGenerator {
       }
     }
 
-    // 🎯 ADAPTIVE POLLING: Initialize for MLB games with intelligent intervals
-    if (sport === 'MLB' && games.length > 0) {
+    // 🎯 ADAPTIVE POLLING: Initialize for supported sports with intelligent intervals
+    if ((sport === 'MLB' || sport === 'NFL') && games.length > 0) {
       try {
-        await this.adaptivePollingManager.initializeGamePolling(games, monitoredGameIds);
-        console.log(`🎯 Adaptive polling initialized for ${games.length} MLB games`);
+        const pollingManager = this.adaptivePollingManagers.get(sport);
+        if (pollingManager) {
+          await pollingManager.initializeGamePolling(games, monitoredGameIds);
+          console.log(`🎯 ${sport} Adaptive polling initialized for ${games.length} games with V3-2 intervals`);
+        } else {
+          console.log(`⚠️ ${sport} Adaptive polling manager not yet initialized - will set up later`);
+        }
       } catch (error) {
-        console.error('❌ Failed to initialize adaptive polling:', error);
+        console.error(`❌ Failed to initialize ${sport} adaptive polling:`, error);
         // Continue with fallback processing
       }
     }
