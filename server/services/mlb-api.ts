@@ -172,8 +172,13 @@ export class MLBApiService {
       const homeScore = linescore?.teams?.home?.runs ?? 0;
       const awayScore = linescore?.teams?.away?.runs ?? 0;
 
+      // Extract lineup and batter information for predictive analysis
+      const lineupData = this.extractLineupData(liveData, gameData, isTopInning);
+      const currentBatter = currentPlay?.batter?.fullName || null;
+      const currentPitcher = currentPlay?.pitcher?.fullName || null;
+
       console.log(`🔍 Live data for game ${gameId}:`, {
-        runners, balls, strikes, outs, inning, isTopInning, homeScore, awayScore
+        runners, balls, strikes, outs, inning, isTopInning, homeScore, awayScore, currentBatter, currentPitcher
       });
 
       const enhancedData = {
@@ -186,6 +191,9 @@ export class MLBApiService {
         homeScore,
         awayScore,
         gameState: liveData.gameState,
+        lineupData,
+        currentBatter,
+        currentPitcher,
         lastUpdated: new Date().toISOString()
       };
 
@@ -198,6 +206,55 @@ export class MLBApiService {
     }
   }
 
+  private extractLineupData(liveData: any, gameData: any, isTopInning: boolean): any {
+    try {
+      // Extract lineup information for the batting team
+      const battingTeam = isTopInning ? 'away' : 'home';
+      const probablePitchers = gameData.probablePitchers || {};
+      const teams = gameData.teams || {};
+      const offense = liveData.linescore?.offense || {};
+      
+      // Get current batting order position
+      const battingOrder = offense.battingOrder || 1;
+      
+      // In a real implementation, this would extract full lineup data
+      // For now, we'll provide deterministic batting order progression
+      const lineupPosition = battingOrder;
+      const nextBatterPosition = (battingOrder % 9) + 1;
+      const onDeckPosition = ((battingOrder + 1) % 9) + 1;
+      
+      return {
+        battingTeam,
+        currentBatterOrder: lineupPosition,
+        nextBatterOrder: nextBatterPosition,
+        onDeckBatterOrder: onDeckPosition,
+        // Deterministic lineup strength based on batting order position
+        currentBatterStrength: this.getBatterStrengthByPosition(lineupPosition),
+        nextBatterStrength: this.getBatterStrengthByPosition(nextBatterPosition),
+        onDeckBatterStrength: this.getBatterStrengthByPosition(onDeckPosition)
+      };
+    } catch (error) {
+      console.error('Error extracting lineup data:', error);
+      return {
+        battingTeam: isTopInning ? 'away' : 'home',
+        currentBatterOrder: 1,
+        nextBatterOrder: 2,
+        onDeckBatterOrder: 3,
+        currentBatterStrength: 'average',
+        nextBatterStrength: 'average',
+        onDeckBatterStrength: 'average'
+      };
+    }
+  }
+
+  private getBatterStrengthByPosition(position: number): 'elite' | 'strong' | 'average' | 'weak' {
+    // Standard MLB batting order strength patterns (deterministic)
+    if (position >= 1 && position <= 2) return 'elite';   // 1-2: Best contact/speed hitters
+    if (position >= 3 && position <= 5) return 'strong';  // 3-5: Best power hitters
+    if (position >= 6 && position <= 7) return 'average'; // 6-7: Average hitters
+    return 'weak'; // 8-9: Weakest hitters (including pitcher in NL)
+  }
+
   private getFallbackGameData() {
     return {
       runners: { first: false, second: false, third: false },
@@ -206,6 +263,17 @@ export class MLBApiService {
       outs: 0,
       inning: 1,
       isTopInning: true,
+      lineupData: {
+        battingTeam: 'home',
+        currentBatterOrder: 1,
+        nextBatterOrder: 2,
+        onDeckBatterOrder: 3,
+        currentBatterStrength: 'average',
+        nextBatterStrength: 'average',
+        onDeckBatterStrength: 'average'
+      },
+      currentBatter: null,
+      currentPitcher: null,
       error: 'Failed to fetch live data'
     };
   }
