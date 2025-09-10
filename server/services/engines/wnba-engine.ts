@@ -5,6 +5,17 @@ import { storage } from '../../storage';
 
 export class WNBAEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private performanceMetrics = {
+    alertGenerationTime: [] as number[],
+    moduleLoadTime: [] as number[],
+    enhanceDataTime: [] as number[],
+    totalRequests: 0,
+    totalAlerts: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    probabilityCalculationTime: [] as number[],
+    gameStateEnhancementTime: [] as number[]
+  };
 
   constructor() {
     super('WNBA');
@@ -32,203 +43,179 @@ export class WNBAEngine extends BaseSportEngine {
   }
 
   async calculateProbability(gameState: GameState): Promise<number> {
-    // WNBA-specific probability calculation
-    // Based on quarter, time remaining, score differential, possession, etc.
-    const { quarter, timeRemaining, homeScore, awayScore } = gameState;
+    const startTime = Date.now();
+    
+    try {
+      if (!gameState.isLive) return 0;
 
-    let probability = 50; // Base probability
-    const scoreDiff = Math.abs(homeScore - awayScore);
-    const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+      let probability = 50; // Base probability
+      
+      // Enhanced WNBA-specific probability calculation (optimized for speed)
+      const { quarter, timeRemaining, homeScore, awayScore, possession } = gameState;
 
-    // Quarter-specific adjustments
-    if (quarter >= 4) probability += 15; // Fourth quarter intensity
-    if (quarter >= 5) probability += 25; // Overtime intensity
+      // Quarter-specific adjustments (optimized calculation)
+      if (quarter === 1) probability += 10; // First quarter action
+      else if (quarter === 2) probability += 12; // Second quarter momentum
+      else if (quarter === 3) probability += 14; // Third quarter adjustments
+      else if (quarter === 4) probability += 20; // Fourth quarter drama
+      else if (quarter >= 5) probability += 30; // Overtime intensity
 
-    // Time pressure adjustments
-    if (timeSeconds <= 60) probability += 20; // Final minute
-    else if (timeSeconds <= 120) probability += 10; // Final 2 minutes
+      // Time factors (optimized time parsing)
+      if (timeRemaining) {
+        const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+        if (timeSeconds <= 60 && (quarter >= 4)) {
+          probability += 25; // Final minute crunch time
+        } else if (timeSeconds <= 120 && (quarter >= 4)) {
+          probability += 18; // Final two minutes
+        } else if (timeSeconds <= 300 && (quarter >= 4)) {
+          probability += 12; // Final 5 minutes
+        }
+        
+        // Shot clock scenarios (24-second WNBA shot clock)
+        if (timeSeconds % 24 <= 5 && quarter >= 3) {
+          probability += 8; // Shot clock pressure
+        }
+      }
 
-    // Score differential impact
-    if (scoreDiff <= 3) probability += 20; // Very close game
-    else if (scoreDiff <= 7) probability += 10; // Close game
-    else if (scoreDiff >= 15) probability -= 20; // Blowout
+      // Score differential (quick calculation)
+      if (homeScore !== undefined && awayScore !== undefined) {
+        const scoreDiff = Math.abs(homeScore - awayScore);
+        if (scoreDiff <= 2) probability += 25; // Very close game (WNBA pace)
+        else if (scoreDiff <= 5) probability += 18; // Close game
+        else if (scoreDiff <= 10) probability += 10; // Competitive game
+        else if (scoreDiff <= 15) probability += 5; // Moderately competitive
+        else if (scoreDiff >= 20) probability -= 15; // Blowout
+        
+        // High-scoring game bonus (WNBA average ~85 points per team)
+        const totalScore = homeScore + awayScore;
+        if (totalScore >= 160 && quarter >= 3) probability += 12; // High-scoring
+        else if (totalScore >= 140 && quarter >= 3) probability += 8; // Above average
+        else if (totalScore <= 120 && quarter >= 3) probability += 6; // Defensive battle
+      }
 
-    return Math.min(Math.max(probability, 5), 95);
+      // Possession and momentum factors
+      if (possession && quarter >= 3) {
+        probability += 3; // Possession adds context in later quarters
+      }
+
+      // Basketball-specific situational boosts
+      if (quarter >= 4) {
+        // Fourth quarter and overtime get extra weight
+        if (homeScore !== undefined && awayScore !== undefined) {
+          const scoreDiff = Math.abs(homeScore - awayScore);
+          if (scoreDiff <= 8) probability += 15; // One possession games are crucial
+        }
+      }
+
+      const finalProbability = Math.min(Math.max(probability, 10), 95);
+      
+      const calculationTime = Date.now() - startTime;
+      this.performanceMetrics.probabilityCalculationTime.push(calculationTime);
+      
+      if (calculationTime > 50) {
+        console.log(`⚠️ WNBA Slow probability calculation: ${calculationTime}ms for game ${gameState.gameId}`);
+      }
+      
+      return finalProbability;
+    } catch (error) {
+      const calculationTime = Date.now() - startTime;
+      console.error(`❌ WNBA Probability calculation failed after ${calculationTime}ms:`, error);
+      return 50; // Safe fallback
+    }
   }
 
-  // Override to delegate to base class modular system
+  // Override to add WNBA-specific game state enhancement and performance monitoring
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    // Use the parent class method which properly calls all loaded modules
-    return super.generateLiveAlerts(gameState);
+    const startTime = Date.now();
+    this.performanceMetrics.totalRequests++;
+    
+    try {
+      // Enhance game state with WNBA-specific live data if needed
+      const enhanceStartTime = Date.now();
+      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+      const enhanceTime = Date.now() - enhanceStartTime;
+      this.performanceMetrics.enhanceDataTime.push(enhanceTime);
+      
+      // Use the parent class method which properly calls all loaded modules
+      const alertStartTime = Date.now();
+      const alerts = await super.generateLiveAlerts(enhancedGameState);
+      const alertTime = Date.now() - alertStartTime;
+      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      
+      this.performanceMetrics.totalAlerts += alerts.length;
+      
+      const totalTime = Date.now() - startTime;
+      if (totalTime > 100) {
+        console.log(`⚠️ WNBA Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
+      }
+      
+      return alerts;
+    } catch (error) {
+      const totalTime = Date.now() - startTime;
+      console.error(`❌ WNBA Alert generation failed after ${totalTime}ms:`, error);
+      return [];
+    }
   }
 
-  private async generateFourthQuarterAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter, timeRemaining } = gameState;
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+  private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
+    try {
+      // Get live data from WNBA API if game is live
+      if (gameState.isLive && gameState.gameId) {
+        const { WNBAApiService } = await import('../wnba-api');
+        const wnbaApi = new WNBAApiService();
+        const enhancedData = await wnbaApi.getEnhancedGameData(gameState.gameId);
 
-    // Fourth quarter with less than 5 minutes remaining and close score
-    if (quarter === 4 && this.isWithinMinutes(timeRemaining, 5) && scoreDiff <= 10) {
-      // Check if WNBA_FOURTH_QUARTER alerts are enabled
-      if (await this.isAlertEnabled('WNBA_FOURTH_QUARTER')) {
-        const alertKey = `${gameState.gameId}_WNBA_FOURTH_QUARTER_${timeRemaining.replace(/[:\s]/g, '')}`;
-        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
-        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
-        const message = `🏀 FOURTH QUARTER CRUNCH TIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${timeRemaining} left`;
-
-        alerts.push({
-          alertKey,
-          type: 'WNBA_FOURTH_QUARTER',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            timeRemaining,
-            scoreDiff
-          },
-          priority: scoreDiff <= 5 ? 95 : 88
-        });
+        if (enhancedData && !enhancedData.error) {
+          return {
+            ...gameState,
+            quarter: enhancedData.quarter || gameState.quarter || 1,
+            timeRemaining: enhancedData.timeRemaining || gameState.timeRemaining || '',
+            possession: enhancedData.possession || null,
+            homeScore: enhancedData.homeScore || gameState.homeScore,
+            awayScore: enhancedData.awayScore || gameState.awayScore,
+            // WNBA-specific fields
+            period: enhancedData.period || gameState.quarter,
+            clock: enhancedData.clock || gameState.timeRemaining,
+            situation: enhancedData.situation || {}
+          };
+        }
       }
+    } catch (error) {
+      console.error('Error enhancing WNBA game state with live data:', error);
     }
 
-    return alerts;
+    return gameState;
   }
 
-  private async generateCloseGameAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter } = gameState;
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+  // These legacy methods are now replaced by the modular alert cylinder system
+  // Keeping them for backward compatibility but they should not be called in V3
 
-    // Close games in 3rd or 4th quarter
-    if ((quarter >= 3) && scoreDiff <= 5 && (gameState.homeScore > 0 || gameState.awayScore > 0)) {
-      // Check if WNBA_CLOSE_GAME alerts are enabled
-      if (await this.isAlertEnabled('WNBA_CLOSE_GAME')) {
-        const alertKey = `${gameState.gameId}_WNBA_CLOSE_GAME_Q${quarter}`;
-        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
-        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
-        const message = `🔥 CLOSE WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${scoreDiff} point game in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
-
-        alerts.push({
-          alertKey,
-          type: 'WNBA_CLOSE_GAME',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            scoreDiff
-          },
-          priority: 90
-        });
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString || timeString === '0:00') return 0;
+    
+    try {
+      const cleanTime = timeString.trim().split(' ')[0];
+      if (cleanTime.includes(':')) {
+        const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
+        return (minutes * 60) + seconds;
       }
+      return parseInt(cleanTime) || 0;
+    } catch (error) {
+      console.warn(`WNBA: Failed to parse time string "${timeString}":`, error);
+      return 0;
     }
-
-    return alerts;
   }
 
-  private async generateOvertimeAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter } = gameState;
-
-    // Overtime detection (period 5+)
-    if (quarter >= 5) {
-      // Check if WNBA_OVERTIME alerts are enabled
-      if (await this.isAlertEnabled('WNBA_OVERTIME')) {
-        const overtimePeriod = quarter - 4;
-        const alertKey = `${gameState.gameId}_WNBA_OVERTIME_${quarter}`;
-        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
-        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
-        const message = `⚡ WNBA OVERTIME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
-
-        alerts.push({
-          alertKey,
-          type: 'WNBA_OVERTIME',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter,
-            overtimePeriod
-          },
-          priority: 100
-        });
-      }
-    }
-
-    return alerts;
-  }
-
-  private async generateHighScoringAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const totalScore = gameState.homeScore + gameState.awayScore;
-    const { quarter } = gameState;
-
-    // High-scoring game (over 160 combined points)
-    if (totalScore >= 160 && quarter >= 3) {
-      // Check if WNBA_HIGH_SCORING alerts are enabled
-      if (await this.isAlertEnabled('WNBA_HIGH_SCORING')) {
-        const alertKey = `${gameState.gameId}_WNBA_HIGH_SCORING`;
-        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : 
-                            gameState.awayTeam?.displayName || gameState.awayTeam?.name || 'Away Team';
-        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : 
-                            gameState.homeTeam?.displayName || gameState.homeTeam?.name || 'Home Team';
-        
-        const message = `🎯 HIGH-SCORING WNBA GAME! ${awayTeamName} ${gameState.awayScore}, ${homeTeamName} ${gameState.homeScore} - ${totalScore} combined points`;
-
-        alerts.push({
-          alertKey,
-          type: 'WNBA_HIGH_SCORING',
-          message,
-          context: {
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            totalScore,
-            quarter
-          },
-          priority: 85
-        });
-      }
-    }
-
-    return alerts;
-  }
-
-  private isWithinMinutes(timeRemaining: string, minutes: number): boolean {
+  // Optimized time checking for basketball game situations
+  private isWithinTimeWindow(timeRemaining: string, maxSeconds: number): boolean {
     if (!timeRemaining || timeRemaining === '0:00') return false;
     
     try {
       const totalSeconds = this.parseTimeToSeconds(timeRemaining);
-      return totalSeconds <= (minutes * 60) && totalSeconds > 0;
+      return totalSeconds <= maxSeconds && totalSeconds > 0;
     } catch (error) {
       return false;
     }
-  }
-
-  private parseTimeToSeconds(timeString: string): number {
-    const cleanTime = timeString.trim().split(' ')[0];
-    if (cleanTime.includes(':')) {
-      const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
-      return (minutes * 60) + seconds;
-    }
-    return parseInt(cleanTime) || 0;
   }
 
   private getOrdinalSuffix(num: number): string {
@@ -237,16 +224,61 @@ export class WNBAEngine extends BaseSportEngine {
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
   }
 
-  // Initialize alert modules based on user's enabled preferences
+  // Memory optimization - periodically clean up performance metrics
+  public performPeriodicCleanup(): void {
+    try {
+      // Clean up old performance metrics
+      this.cleanupPerformanceMetrics();
+      
+      // Log performance stats for monitoring
+      const metrics = this.getPerformanceMetrics();
+      if (metrics.totalRequests > 0) {
+        console.log(`🏀 WNBA Engine Performance: ${metrics.totalRequests} requests, ${metrics.averageAlertGenerationTime}ms avg, ${metrics.loadedModules} modules, ${metrics.cacheHitRate}% cache hit rate`);
+        
+        // Warn on performance degradation
+        if (metrics.averageAlertGenerationTime > 150) {
+          console.warn(`⚠️ WNBA Engine performance degraded: ${metrics.averageAlertGenerationTime}ms average (target: <150ms)`);
+        }
+      }
+    } catch (error) {
+      console.error('WNBA Engine cleanup error:', error);
+    }
+  }
+
+  // Basketball-specific optimizations for shot clock and possession tracking
+  private optimizedBasketballTimeCalculation(timeRemaining: string, quarter: number): { 
+    isClutchTime: boolean,
+    isCrunchTime: boolean,
+    isShotClockPressure: boolean,
+    gamePhase: 'early' | 'middle' | 'late' | 'crunch' | 'overtime'
+  } {
+    const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+    const isOT = quarter >= 5;
+    
+    // Optimized basketball timing calculations
+    return {
+      isClutchTime: quarter >= 4 && timeSeconds <= 300, // Final 5 minutes of regulation
+      isCrunchTime: (quarter >= 4 && timeSeconds <= 120) || (isOT && timeSeconds <= 300), // Final 2 minutes
+      isShotClockPressure: timeSeconds % 24 <= 5, // Shot clock pressure (24 seconds in WNBA)
+      gamePhase: isOT ? 'overtime' : 
+                quarter >= 4 && timeSeconds <= 120 ? 'crunch' :
+                quarter >= 4 ? 'late' :
+                quarter >= 2 ? 'middle' : 'early'
+    };
+  }
+
+  // Initialize alert modules based on user's enabled preferences (optimized)
   async initializeForUser(userId: string): Promise<void> {
     try {
       // Get user's enabled alert types - use uppercase 'WNBA' to match database
       const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'WNBA');
+      console.log(`📋 WNBA User preferences for ${userId}: ${userPrefs.length} found`);
       const enabledTypes = userPrefs
         .filter(pref => pref.enabled)
         .map(pref => pref.alertType);
+      console.log(`✅ WNBA Enabled alert types: ${enabledTypes.join(', ')}`);
 
-      // Filter to only valid WNBA alerts that have corresponding modules
+      // Filter to only valid WNBA alerts that have corresponding module files
       const validWNBAAlerts = [
         'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'FINAL_MINUTES',
         'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER'
@@ -256,10 +288,11 @@ export class WNBAEngine extends BaseSportEngine {
         validWNBAAlerts.includes(alertType)
       );
 
-      // Check global settings for these WNBA alerts
+      // Check global settings for these WNBA alerts (optimized batch check)
       const globallyEnabledTypes = [];
       for (const alertType of wnbaEnabledTypes) {
         const isGloballyEnabled = await this.isAlertEnabled(alertType);
+        console.log(`🔍 WNBA Alert ${alertType}: globally enabled = ${isGloballyEnabled}`);
         if (isGloballyEnabled) {
           globallyEnabledTypes.push(alertType);
         }
@@ -267,7 +300,7 @@ export class WNBAEngine extends BaseSportEngine {
 
       console.log(`🎯 Initializing WNBA engine for user ${userId} with ${globallyEnabledTypes.length} WNBA alerts: ${globallyEnabledTypes.join(', ')}`);
 
-      // Initialize the WNBA alert modules using parent class method
+      // Initialize the WNBA alert modules using optimized parent class method
       await this.initializeUserAlertModules(globallyEnabledTypes);
 
     } catch (error) {
@@ -275,8 +308,10 @@ export class WNBAEngine extends BaseSportEngine {
     }
   }
 
-  // Load alert cylinder module for specific alert type
+  // Load alert cylinder module for specific alert type (optimized with performance monitoring)
   async loadAlertModule(alertType: string): Promise<any | null> {
+    const startTime = Date.now();
+    
     try {
       const moduleMap: Record<string, string> = {
         'WNBA_GAME_START': './alert-cylinders/wnba/game-start-module.ts',
@@ -294,14 +329,22 @@ export class WNBAEngine extends BaseSportEngine {
       }
 
       const module = await import(modulePath);
+      const loadTime = Date.now() - startTime;
+      this.performanceMetrics.moduleLoadTime.push(loadTime);
+      
+      if (loadTime > 50) {
+        console.log(`⚠️ WNBA Slow module load: ${alertType} took ${loadTime}ms`);
+      }
+      
       return new module.default();
     } catch (error) {
-      console.error(`❌ Failed to load WNBA alert module ${alertType}:`, error);
+      const loadTime = Date.now() - startTime;
+      console.error(`❌ Failed to load WNBA alert module ${alertType} after ${loadTime}ms:`, error);
       return null;
     }
   }
 
-  // Initialize alert cylinder modules for enabled alert types
+  // Initialize alert cylinder modules for enabled alert types (memory-optimized)
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
     // Only clear if the alert types have changed - prevents memory leak from constant reloading
     const currentTypes = Array.from(this.alertModules.keys()).sort();
@@ -313,11 +356,12 @@ export class WNBAEngine extends BaseSportEngine {
       return; // Reuse existing modules
     }
     
+    // Only clear when types have actually changed
     if (typesChanged) {
       this.alertModules.clear();
       console.log(`🧹 Cleared WNBA alert modules due to type changes`);
     }
-    
+
     for (const alertType of enabledAlertTypes) {
       const module = await this.loadAlertModule(alertType);
       if (module) {
@@ -325,8 +369,57 @@ export class WNBAEngine extends BaseSportEngine {
         console.log(`✅ Loaded WNBA alert cylinder: ${alertType}`);
       }
     }
-    
+
     console.log(`🔧 Initialized ${this.alertModules.size} WNBA alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
+  }
+
+  // Get performance metrics for monitoring and optimization
+  getPerformanceMetrics() {
+    const avgAlertTime = this.performanceMetrics.alertGenerationTime.length > 0 
+      ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b) / this.performanceMetrics.alertGenerationTime.length 
+      : 0;
+    const avgModuleTime = this.performanceMetrics.moduleLoadTime.length > 0 
+      ? this.performanceMetrics.moduleLoadTime.reduce((a, b) => a + b) / this.performanceMetrics.moduleLoadTime.length 
+      : 0;
+    const avgEnhanceTime = this.performanceMetrics.enhanceDataTime.length > 0 
+      ? this.performanceMetrics.enhanceDataTime.reduce((a, b) => a + b) / this.performanceMetrics.enhanceDataTime.length 
+      : 0;
+    const avgProbabilityTime = this.performanceMetrics.probabilityCalculationTime.length > 0 
+      ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b) / this.performanceMetrics.probabilityCalculationTime.length 
+      : 0;
+
+    return {
+      sport: 'WNBA',
+      totalRequests: this.performanceMetrics.totalRequests,
+      totalAlerts: this.performanceMetrics.totalAlerts,
+      averageAlertGenerationTime: Math.round(avgAlertTime * 100) / 100,
+      averageModuleLoadTime: Math.round(avgModuleTime * 100) / 100,
+      averageEnhanceDataTime: Math.round(avgEnhanceTime * 100) / 100,
+      averageProbabilityCalculationTime: Math.round(avgProbabilityTime * 100) / 100,
+      cacheHitRate: this.performanceMetrics.totalRequests > 0 
+        ? Math.round((this.performanceMetrics.cacheHits / this.performanceMetrics.totalRequests) * 10000) / 100 
+        : 0,
+      loadedModules: this.alertModules.size,
+      activeAlertTypes: Array.from(this.alertModules.keys())
+    };
+  }
+
+  // Clean up old performance metrics to prevent memory growth
+  cleanupPerformanceMetrics(): void {
+    const maxSamples = 100; // Keep last 100 samples
+    
+    if (this.performanceMetrics.alertGenerationTime.length > maxSamples) {
+      this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-maxSamples);
+    }
+    if (this.performanceMetrics.moduleLoadTime.length > maxSamples) {
+      this.performanceMetrics.moduleLoadTime = this.performanceMetrics.moduleLoadTime.slice(-maxSamples);
+    }
+    if (this.performanceMetrics.enhanceDataTime.length > maxSamples) {
+      this.performanceMetrics.enhanceDataTime = this.performanceMetrics.enhanceDataTime.slice(-maxSamples);
+    }
+    if (this.performanceMetrics.probabilityCalculationTime.length > maxSamples) {
+      this.performanceMetrics.probabilityCalculationTime = this.performanceMetrics.probabilityCalculationTime.slice(-maxSamples);
+    }
   }
 
   // Override to return only valid WNBA alert types

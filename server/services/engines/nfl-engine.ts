@@ -403,7 +403,7 @@ export class NFLEngine extends BaseSportEngine {
   private async enhanceNFLAlertWithAI(alert: AlertResult, gameState: GameState): Promise<AlertResult> {
     try {
       // Convert GameState and AlertResult to AlertContext for AI processing
-      const alertContext: AlertContext = this.buildNFLAlertContext(alert, gameState);
+      const alertContext: AlertContext = await this.buildNFLAlertContext(alert, gameState);
       
       // Get AI enhancement from AIContextController
       const aiEnhancement: AIEnhancedAlert = await this.aiContextController.enhanceAlertWithFullControl(alertContext);
@@ -441,13 +441,13 @@ export class NFLEngine extends BaseSportEngine {
   }
   
   // Build AlertContext from NFL game state and alert for AI processing
-  private buildNFLAlertContext(alert: AlertResult, gameState: GameState): AlertContext {
+  private async buildNFLAlertContext(alert: AlertResult, gameState: GameState): Promise<AlertContext> {
     const baseContext = {
       gameId: gameState.gameId,
       sport: 'NFL',
       alertType: alert.type,
       priority: alert.priority,
-      probability: this.calculateProbability(gameState),
+      probability: await this.calculateProbability(gameState),
       homeTeam: gameState.homeTeam,
       awayTeam: gameState.awayTeam,
       homeScore: gameState.homeScore,
