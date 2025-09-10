@@ -24,7 +24,7 @@ export class NFLEngine extends BaseSportEngine {
       // Only check settings for actual NFL alert types
       const validNFLAlerts = [
         'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
-        'NFL_RED_ZONE', 'NFL_FOURTH_DOWN'
+        'NFL_RED_ZONE', 'NFL_FOURTH_DOWN', 'NFL_RED_ZONE_OPPORTUNITY', 'NFL_TURNOVER_LIKELIHOOD'
       ];
 
       if (!validNFLAlerts.includes(alertType)) {
@@ -179,7 +179,7 @@ export class NFLEngine extends BaseSportEngine {
       // Filter to only valid NFL alerts that have corresponding module files
       const validNFLAlerts = [
         'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
-        'NFL_RED_ZONE', 'NFL_FOURTH_DOWN'
+        'NFL_RED_ZONE', 'NFL_FOURTH_DOWN', 'NFL_RED_ZONE_OPPORTUNITY', 'NFL_TURNOVER_LIKELIHOOD'
       ];
 
       const nflEnabledTypes = enabledTypes.filter(alertType =>
@@ -216,7 +216,9 @@ export class NFLEngine extends BaseSportEngine {
         'NFL_TWO_MINUTE_WARNING': './alert-cylinders/nfl/two-minute-warning-module.ts',
         'NFL_RED_ZONE': './alert-cylinders/nfl/red-zone-module.ts',
         'NFL_SECOND_HALF_KICKOFF': './alert-cylinders/nfl/second-half-kickoff-module.ts',
-        'NFL_FOURTH_DOWN': './alert-cylinders/nfl/fourth-down-module.ts'
+        'NFL_FOURTH_DOWN': './alert-cylinders/nfl/fourth-down-module.ts',
+        'NFL_RED_ZONE_OPPORTUNITY': './alert-cylinders/nfl/red-zone-opportunity-module.ts',
+        'NFL_TURNOVER_LIKELIHOOD': './alert-cylinders/nfl/turnover-likelihood-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
