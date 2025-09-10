@@ -82,6 +82,8 @@ window.showTab = function(tabName) {
         loadAlertSettings();
     } else if (tabName === 'system') {
         loadSystemSettings();
+    } else if (tabName === 'v3-metrics') {
+        loadV3Metrics();
     }
 }
 
@@ -574,6 +576,186 @@ async function manualCleanup() {
     showStatus('Error during manual cleanup', 'error');
   }
 }
+
+// V3 Performance Metrics Functions
+async function loadV3Metrics() {
+    try {
+        console.log('📊 Loading V3 performance metrics...');
+        
+        // Show loading state
+        const refreshBtn = document.getElementById('refreshV3Btn');
+        if (refreshBtn) {
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            refreshBtn.disabled = true;
+        }
+        
+        const response = await fetch('/api/v3/performance-metrics', {
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const metrics = await response.json();
+            console.log('✅ V3 metrics loaded successfully:', metrics);
+            renderV3Metrics(metrics);
+            
+            // Set up auto-refresh every 30 seconds
+            setTimeout(() => {
+                loadV3Metrics();
+            }, 30000);
+        } else {
+            console.error('❌ Failed to load V3 metrics:', response.statusText);
+            showV3MetricsError('Failed to load V3 performance metrics');
+        }
+    } catch (error) {
+        console.error('❌ Error loading V3 metrics:', error);
+        showV3MetricsError('Error connecting to V3 metrics API');
+    } finally {
+        // Restore refresh button
+        const refreshBtn = document.getElementById('refreshV3Btn');
+        if (refreshBtn) {
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Metrics';
+            refreshBtn.disabled = false;
+        }
+    }
+}
+
+function renderV3Metrics(metrics) {
+    try {
+        // Update system health
+        const systemHealth = document.getElementById('systemHealth');
+        const healthScore = document.getElementById('healthScore');
+        const healthBar = document.getElementById('healthBar');
+        
+        if (systemHealth && healthScore && healthBar) {
+            systemHealth.textContent = metrics.summary.systemHealth;
+            healthScore.textContent = `${metrics.summary.systemHealthScore}%`;
+            healthBar.style.width = `${metrics.summary.systemHealthScore}%`;
+            
+            // Color code the health bar
+            if (metrics.summary.systemHealthScore >= 90) {
+                healthBar.style.backgroundColor = '#10B981'; // green
+            } else if (metrics.summary.systemHealthScore >= 75) {
+                healthBar.style.backgroundColor = '#F59E0B'; // yellow
+            } else {
+                healthBar.style.backgroundColor = '#EF4444'; // red
+            }
+        }
+        
+        // Update AI metrics
+        const aiCacheHitRate = document.getElementById('aiCacheHitRate');
+        const aiProcessedJobs = document.getElementById('aiProcessedJobs');
+        const aiCacheHits = document.getElementById('aiCacheHits');
+        
+        if (aiCacheHitRate) aiCacheHitRate.textContent = `${metrics.aiEnhancement.cacheHitRate}%`;
+        if (aiProcessedJobs) aiProcessedJobs.textContent = metrics.aiEnhancement.completedJobs;
+        if (aiCacheHits) aiCacheHits.textContent = metrics.aiEnhancement.cacheHits;
+        
+        // Update response time
+        const avgResponseTime = document.getElementById('avgResponseTime');
+        const responseIndicator = document.getElementById('responseIndicator');
+        const responseStatus = document.getElementById('responseStatus');
+        
+        if (avgResponseTime) avgResponseTime.textContent = metrics.summary.avgResponseTime;
+        
+        if (responseIndicator && responseStatus) {
+            const responseTimeMs = parseInt(metrics.summary.avgResponseTime);
+            if (responseTimeMs <= 250) {
+                responseIndicator.style.color = '#10B981';
+                responseStatus.textContent = 'Optimal';
+            } else if (responseTimeMs <= 500) {
+                responseIndicator.style.color = '#F59E0B';
+                responseStatus.textContent = 'Good';
+            } else {
+                responseIndicator.style.color = '#EF4444';
+                responseStatus.textContent = 'Slow';
+            }
+        }
+        
+        // Update polling stats
+        const liveGames = document.getElementById('liveGames');
+        const totalGames = document.getElementById('totalGames');
+        const criticalGames = document.getElementById('criticalGames');
+        const activePolling = document.getElementById('activePolling');
+        
+        if (liveGames) liveGames.textContent = metrics.gamePolling.liveGames;
+        if (totalGames) totalGames.textContent = metrics.gamePolling.totalGames;
+        if (criticalGames) criticalGames.textContent = metrics.gamePolling.criticalGames;
+        if (activePolling) activePolling.textContent = metrics.gamePolling.individualPollingActive;
+        
+        // Update engines grid
+        renderEnginesGrid(metrics.engines);
+        
+        // Update features list
+        renderFeaturesList(metrics.crossSportFeatures);
+        
+        // Update timestamp
+        const timestamp = document.getElementById('metricsTimestamp');
+        if (timestamp) {
+            timestamp.textContent = new Date().toLocaleTimeString();
+        }
+        
+        console.log('✅ V3 metrics rendered successfully');
+    } catch (error) {
+        console.error('❌ Error rendering V3 metrics:', error);
+    }
+}
+
+function renderEnginesGrid(engines) {
+    const enginesGrid = document.getElementById('enginesGrid');
+    if (!enginesGrid) return;
+    
+    let html = '';
+    for (const [sport, engine] of Object.entries(engines)) {
+        html += `
+            <div class="engine-card ${engine.status.toLowerCase()}">
+                <div class="engine-header">
+                    <h4>${sport.toUpperCase()}</h4>
+                    <div class="engine-status ${engine.status.toLowerCase()}">●</div>
+                </div>
+                <div class="engine-response">${engine.responseTime}</div>
+                <div class="engine-description">${engine.description}</div>
+            </div>
+        `;
+    }
+    enginesGrid.innerHTML = html;
+}
+
+function renderFeaturesList(features) {
+    const featuresList = document.getElementById('featuresList');
+    if (!featuresList) return;
+    
+    let html = '';
+    for (const [feature, status] of Object.entries(features)) {
+        const isActive = status.startsWith('✅');
+        html += `
+            <div class="feature-item ${isActive ? 'active' : 'inactive'}">
+                <div class="feature-status">${isActive ? '✅' : '❌'}</div>
+                <div class="feature-name">${feature.replace(/([A-Z])/g, ' $1').trim()}</div>
+                <div class="feature-description">${status.replace('✅ ', '').replace('❌ ', '')}</div>
+            </div>
+        `;
+    }
+    featuresList.innerHTML = html;
+}
+
+function showV3MetricsError(message) {
+    const container = document.querySelector('.v3-metrics-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="error-message" style="text-align: center; padding: 40px; color: #EF4444;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
+                <h3>Failed to Load V3 Metrics</h3>
+                <p>${message}</p>
+                <button class="refresh-btn" onclick="loadV3Metrics()" style="margin-top: 20px;">
+                    <i class="fas fa-retry"></i> Try Again
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Make loadV3Metrics globally available
+window.loadV3Metrics = loadV3Metrics;
 
 // Immediately load cleanup stats when the page loads
 document.addEventListener('DOMContentLoaded', () => {
