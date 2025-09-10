@@ -4,6 +4,17 @@ import { storage } from '../../storage';
 
 export class NCAAFEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private performanceMetrics = {
+    alertGenerationTime: [] as number[],
+    moduleLoadTime: [] as number[],
+    enhanceDataTime: [] as number[],
+    totalRequests: 0,
+    totalAlerts: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    probabilityCalculationTime: [] as number[],
+    gameStateEnhancementTime: [] as number[]
+  };
 
   constructor() {
     super('NCAAF');
@@ -12,14 +23,13 @@ export class NCAAFEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only check settings for actual NCAAF alert types
+      // CRITICAL FIX: Only check settings for NCAAF alert types with actual cylinder modules
       const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE', 'FOURTH_DOWN',
-        'NCAAF_SECOND_HALF_KICKOFF', 'OVERTIME', 'CLUTCH_TIME'
+        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE'
       ];
 
       if (!validNCAAFAlerts.includes(alertType)) {
-        console.log(`❌ ${alertType} is not a valid NCAAF alert type - rejecting`);
+        console.log(`❌ ${alertType} is not a valid NCAAF alert type (no cylinder module exists) - rejecting`);
         return false;
       }
 
@@ -31,246 +41,218 @@ export class NCAAFEngine extends BaseSportEngine {
   }
 
   async calculateProbability(gameState: GameState): Promise<number> {
-    if (!gameState.isLive) return 0;
+    const startTime = Date.now();
+    
+    try {
+      if (!gameState.isLive) return 0;
 
-    let probability = 50; // Base probability
+      let probability = 50; // Base probability
+      
+      // Enhanced NCAAF-specific probability calculation (optimized for speed)
+      const { quarter, timeRemaining, down, yardsToGo, fieldPosition, homeScore, awayScore } = gameState;
 
-    // Two-minute warning situations are high priority
-    if (gameState.quarter === 2 || gameState.quarter === 4) {
-      const totalSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
-      if (totalSeconds <= 120) {
-        probability += 30;
+      // Quarter-specific adjustments (optimized calculation)
+      if (quarter === 1) probability += 15; // Game start excitement
+      else if (quarter === 2) probability += 10; // End of first half drama
+      else if (quarter === 3) probability += 12; // Second half start
+      else if (quarter === 4) probability += 20; // Fourth quarter drama
+
+      // Time factors (optimized time parsing)
+      if (timeRemaining) {
+        const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+        if (timeSeconds <= 120 && (quarter === 2 || quarter === 4)) {
+          probability += 25; // Two-minute warning situations
+        } else if (timeSeconds <= 300) {
+          probability += 15; // Final 5 minutes
+        }
       }
-    }
 
-    // Game start situations
-    if (gameState.quarter === 1 && this.isKickoffTime(gameState.timeRemaining)) {
-      probability += 25;
-    }
+      // Down and distance (enhanced with field position)
+      if (down && yardsToGo) {
+        if (down === 1) probability += 12;
+        else if (down === 2) probability += 8;
+        else if (down === 3) probability += 5;
+        else if (down === 4) probability += 30; // Fourth down is crucial in college
+        
+        // Short yardage situations
+        if (yardsToGo <= 3) probability += 10;
+      }
 
-    // Close game situations
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    if (scoreDiff <= 7) {
-      probability += 15;
-    }
+      // Field position (red zone and scoring territory)
+      if (fieldPosition !== undefined) {
+        if (fieldPosition <= 20) {
+          probability += 25; // Red zone
+          if (down === 4) probability += 15; // Fourth down in red zone
+        } else if (fieldPosition <= 40) {
+          probability += 12; // Scoring territory
+        }
+      }
 
-    return Math.min(100, probability);
+      // Score differential (quick calculation)
+      if (homeScore !== undefined && awayScore !== undefined) {
+        const scoreDiff = Math.abs(homeScore - awayScore);
+        if (scoreDiff <= 3) probability += 25; // Very close game
+        else if (scoreDiff <= 7) probability += 18; // Close game (touchdowns matter more in college)
+        else if (scoreDiff <= 14) probability += 10; // Two-score game
+        else if (scoreDiff <= 21) probability += 5; // Three-score game
+      }
+
+      // Game start situations (kickoff detection)
+      if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
+        probability += 25;
+      }
+
+      const result = Math.min(Math.max(probability, 10), 95);
+      
+      const calcTime = Date.now() - startTime;
+      this.performanceMetrics.probabilityCalculationTime.push(calcTime);
+      
+      if (calcTime > 5) {
+        console.log(`⚠️ NCAAF Slow probability calculation: ${calcTime}ms`);
+      }
+      
+      return result;
+    } catch (error) {
+      const calcTime = Date.now() - startTime;
+      console.error(`❌ NCAAF Probability calculation failed after ${calcTime}ms:`, error);
+      return 50; // Fallback to base probability
+    }
   }
 
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    // Alert processing is now handled by the base class using alert cylinders
-    return super.generateLiveAlerts(gameState);
+    const startTime = Date.now();
+    this.performanceMetrics.totalRequests++;
+    
+    try {
+      // Enhance game state with NCAAF-specific live data if needed
+      const enhanceStartTime = Date.now();
+      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+      const enhanceTime = Date.now() - enhanceStartTime;
+      this.performanceMetrics.enhanceDataTime.push(enhanceTime);
+      
+      // Use the parent class method which properly calls all loaded modules
+      const alertStartTime = Date.now();
+      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
+      const alertTime = Date.now() - alertStartTime;
+      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      
+      this.performanceMetrics.totalAlerts += rawAlerts.length;
+      
+      const totalTime = Date.now() - startTime;
+      if (totalTime > 150) {
+        console.log(`⚠️ NCAAF Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
+      }
+      
+      return rawAlerts;
+    } catch (error) {
+      const totalTime = Date.now() - startTime;
+      console.error(`❌ NCAAF Alert generation failed after ${totalTime}ms:`, error);
+      return [];
+    }
   }
 
-  private async generateTwoMinuteWarningAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter, timeRemaining } = gameState;
+  // Reuse single API service instance to avoid overhead
+  private static ncaafApiService: any = null;
 
-    // Double-check global settings before generating any alerts
-    if (!(await this.isAlertEnabled('TWO_MINUTE_WARNING'))) {
-      return alerts;
+  // Enhanced game state processing with live data enrichment
+  private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
+    const startTime = Date.now();
+    
+    try {
+      let enhancedGameState = { ...gameState };
+
+      // Get live data from NCAAF API if game is live
+      if (gameState.isLive && gameState.gameId) {
+        // Reuse singleton API service instance to avoid creation overhead
+        if (!NCAAFEngine.ncaafApiService) {
+          const { NCAAFApiService } = await import('../ncaaf-api');
+          NCAAFEngine.ncaafApiService = new NCAAFApiService();
+        }
+        
+        const enhancedData = await NCAAFEngine.ncaafApiService.getEnhancedGameData?.(gameState.gameId);
+
+        // CRITICAL FIX: Only use enhanced data if it's meaningful, not stub data
+        if (enhancedData && !enhancedData.error && this.isEnhancedDataMeaningful(enhancedData, gameState)) {
+          // Only merge fields that have meaningful enhanced values
+          enhancedGameState = {
+            ...enhancedGameState,
+            // Only use enhanced quarter if it's different from default AND gameState has no quarter or they differ meaningfully
+            quarter: this.shouldUseEnhancedValue(enhancedData.quarter, gameState.quarter, 1) ? enhancedData.quarter : gameState.quarter,
+            // Only use enhanced time if it's not the default stub value
+            timeRemaining: this.shouldUseEnhancedValue(enhancedData.timeRemaining, gameState.timeRemaining, '15:00') ? enhancedData.timeRemaining : gameState.timeRemaining,
+            // Only enhance specific fields if they're provided
+            down: enhancedData.down !== undefined ? enhancedData.down : gameState.down,
+            yardsToGo: enhancedData.yardsToGo !== undefined ? enhancedData.yardsToGo : gameState.yardsToGo,
+            fieldPosition: enhancedData.fieldPosition !== undefined ? enhancedData.fieldPosition : gameState.fieldPosition,
+            possession: enhancedData.possession !== undefined ? enhancedData.possession : gameState.possession,
+            // Only use enhanced scores if they're meaningful (not 0 when game has real scores)
+            homeScore: this.shouldUseEnhancedScore(enhancedData.homeScore, gameState.homeScore),
+            awayScore: this.shouldUseEnhancedScore(enhancedData.awayScore, gameState.awayScore),
+            homeRank: enhancedData.homeRank !== undefined ? enhancedData.homeRank : (gameState.homeRank || 0),
+            awayRank: enhancedData.awayRank !== undefined ? enhancedData.awayRank : (gameState.awayRank || 0)
+          };
+          
+          this.performanceMetrics.cacheHits++;
+          console.log(`🔍 NCAAF Enhanced game ${gameState.gameId}: Used meaningful enhanced data`);
+        } else {
+          this.performanceMetrics.cacheMisses++;
+          console.log(`🚫 NCAAF Game ${gameState.gameId}: Enhanced data was stub/meaningless - preserving original data`);
+        }
+      }
+
+      const enhanceTime = Date.now() - startTime;
+      this.performanceMetrics.gameStateEnhancementTime.push(enhanceTime);
+      
+      // Auto-cleanup metrics to prevent memory growth
+      if (this.performanceMetrics.gameStateEnhancementTime.length % 50 === 0) {
+        this.cleanupPerformanceMetrics();
+      }
+      
+      if (enhanceTime > 50) {
+        console.log(`⚠️ NCAAF Slow game state enhancement: ${enhanceTime}ms for game ${gameState.gameId}`);
+      }
+
+      return enhancedGameState;
+    } catch (error) {
+      const enhanceTime = Date.now() - startTime;
+      console.error(`❌ NCAAF Game state enhancement failed after ${enhanceTime}ms:`, error);
+      return gameState;
     }
-
-    // Check if we're in the final 2 minutes of any quarter
-    if (this.isWithinTwoMinutes(timeRemaining) && quarter > 0) {
-      const isEndOfHalf = quarter === 2 || quarter === 4;
-      const alertKey = `${gameState.gameId}_TWO_MINUTE_WARNING_Q${quarter}_${timeRemaining.replace(/[:\s]/g, '')}`;
-      const message = `⏰ TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left in ${quarter}${this.getOrdinalSuffix(quarter)} quarter`;
-
-      alerts.push({
-        alertKey,
-        type: 'TWO_MINUTE_WARNING',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter,
-          timeRemaining,
-          isEndOfHalf
-        },
-        priority: 88
-      });
-    }
-
-    return alerts;
   }
 
-  private async generateRedZoneAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { fieldPosition, down, yardsToGo } = gameState;
-
-    // Double-check global settings before generating any alerts
-    if (!(await this.isAlertEnabled('RED_ZONE'))) {
-      return alerts;
+  // Helper to determine if enhanced data is meaningful vs stub data
+  private isEnhancedDataMeaningful(enhancedData: any, gameState: GameState): boolean {
+    // If enhanced data has default stub values that would overwrite real data, reject it
+    if (enhancedData.quarter === 1 && enhancedData.timeRemaining === '15:00' && 
+        enhancedData.homeScore === 0 && enhancedData.awayScore === 0 &&
+        (gameState.quarter !== 1 || gameState.timeRemaining !== '15:00' || 
+         gameState.homeScore !== 0 || gameState.awayScore !== 0)) {
+      return false; // This is clearly stub data that would corrupt real game data
     }
-
-    // Red zone detection (within 20 yards of goal line)
-    if (fieldPosition <= 20) {
-      const probability = await this.calculateProbability(gameState);
-      const alertKey = `${gameState.gameId}_RED_ZONE_${down}_${yardsToGo}`;
-      const message = `🎯 RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${fieldPosition} yard line (${probability}% TD chance)`;
-
-      alerts.push({
-        alertKey,
-        type: 'RED_ZONE',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          down,
-          yardsToGo,
-          fieldPosition,
-          probability
-        },
-        priority: probability > 70 ? 90 : 85
-      });
-    }
-
-    return alerts;
+    return true;
   }
 
-  private async generateFourthDownAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { down, yardsToGo, fieldPosition } = gameState;
-
-    // Double-check global settings before generating any alerts
-    if (!(await this.isAlertEnabled('FOURTH_DOWN'))) {
-      return alerts;
+  // Helper to determine if enhanced value should be used over game state value
+  private shouldUseEnhancedValue(enhancedValue: any, gameStateValue: any, stubDefault: any): boolean {
+    // Don't use enhanced value if it's the stub default and gameState has a different value
+    if (enhancedValue === stubDefault && gameStateValue !== undefined && gameStateValue !== stubDefault) {
+      return false;
     }
-
-    // Fourth down situations
-    if (down === 4) {
-      const probability = await this.calculateProbability(gameState);
-      const alertKey = `${gameState.gameId}_FOURTH_DOWN_${yardsToGo}_${fieldPosition}`;
-      const message = `🏈 FOURTH DOWN! ${gameState.awayTeam} vs ${gameState.homeTeam} - 4th & ${yardsToGo} at ${fieldPosition} yard line`;
-
-      alerts.push({
-        alertKey,
-        type: 'FOURTH_DOWN',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          down,
-          yardsToGo,
-          fieldPosition,
-          probability
-        },
-        priority: yardsToGo <= 3 ? 95 : 85
-      });
-    }
-
-    return alerts;
+    // Use enhanced value if it's meaningful and different
+    return enhancedValue !== undefined && enhancedValue !== stubDefault;
   }
 
-  private async generateGameStartAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter, timeRemaining } = gameState;
-
-    // Double-check global settings before generating any alerts
-    if (!(await this.isAlertEnabled('NCAAF_GAME_START'))) {
-      return alerts;
+  // Helper to determine if enhanced scores should be used
+  private shouldUseEnhancedScore(enhancedScore: number, gameStateScore: number): number {
+    // If enhanced score is 0 but gameState has a real score, keep gameState score
+    if (enhancedScore === 0 && gameStateScore > 0) {
+      return gameStateScore;
     }
-
-    // Game start - first quarter kickoff
-    if (quarter === 1 && this.isKickoffTime(timeRemaining)) {
-      const alertKey = `${gameState.gameId}_NCAAF_GAME_START`;
-      const message = `🏈 NCAAF GAME START! ${gameState.awayTeam} @ ${gameState.homeTeam} - Kickoff time!`;
-
-      alerts.push({
-        alertKey,
-        type: 'NCAAF_GAME_START',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter,
-          timeRemaining,
-          isGameStart: true
-        },
-        priority: 100
-      });
-    }
-
-    return alerts;
+    // Otherwise use enhanced score if it's meaningful
+    return enhancedScore !== undefined ? enhancedScore : gameStateScore;
   }
 
-  private async generateHalftimeKickoffAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter, timeRemaining } = gameState;
-
-    // Double-check global settings before generating any alerts
-    if (!(await this.isAlertEnabled('NCAAF_SECOND_HALF_KICKOFF'))) {
-      return alerts;
-    }
-
-    // Second half kickoff
-    if (quarter === 3 && this.isKickoffTime(timeRemaining)) {
-      const alertKey = `${gameState.gameId}_NCAAF_SECOND_HALF_KICKOFF`;
-      const message = `🏈 NCAAF SECOND HALF KICKOFF! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Second half begins!`;
-
-      alerts.push({
-        alertKey,
-        type: 'NCAAF_SECOND_HALF_KICKOFF',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter,
-          timeRemaining,
-          isSecondHalf: true
-        },
-        priority: 95
-      });
-    }
-
-    return alerts;
-  }
-
-  private async generateOvertimeAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const alerts: AlertResult[] = [];
-    const { quarter } = gameState;
-
-    // Double-check global settings before generating any alerts
-    if (!(await this.isAlertEnabled('OVERTIME'))) {
-      return alerts;
-    }
-
-    // Overtime detection (period 5+)
-    if (quarter >= 5) {
-      const overtimePeriod = quarter - 4;
-      const alertKey = `${gameState.gameId}_OVERTIME_${quarter}`;
-      const message = `⚡ NCAAF OVERTIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} OT`;
-
-      alerts.push({
-        alertKey,
-        type: 'OVERTIME',
-        message,
-        context: {
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter,
-          overtimePeriod
-        },
-        priority: 100
-      });
-    }
-
-    return alerts;
-  }
-
+  // Optimized helper methods for NCAAF-specific calculations
   private isWithinTwoMinutes(timeRemaining: string): boolean {
     if (!timeRemaining || timeRemaining === '0:00') return false;
 
@@ -309,12 +291,46 @@ export class NCAAFEngine extends BaseSportEngine {
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
   }
 
-  // Get available alert types from cylinders
+  // Get available alert types from cylinders (only implemented modules)
   async getAvailableAlertTypes(): Promise<string[]> {
     return [
       'NCAAF_GAME_START',
-      'NCAAF_TWO_MINUTE_WARNING'
+      'NCAAF_TWO_MINUTE_WARNING',
+      'NCAAF_RED_ZONE'
     ];
+  }
+
+  // Get performance metrics for monitoring and debugging
+  getPerformanceMetrics() {
+    const avgAlertTime = this.performanceMetrics.alertGenerationTime.length > 0
+      ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.alertGenerationTime.length
+      : 0;
+      
+    const avgModuleLoadTime = this.performanceMetrics.moduleLoadTime.length > 0
+      ? this.performanceMetrics.moduleLoadTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.moduleLoadTime.length
+      : 0;
+      
+    const avgEnhanceTime = this.performanceMetrics.enhanceDataTime.length > 0
+      ? this.performanceMetrics.enhanceDataTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.enhanceDataTime.length
+      : 0;
+      
+    const avgProbabilityTime = this.performanceMetrics.probabilityCalculationTime.length > 0
+      ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
+      : 0;
+
+    return {
+      ...this.performanceMetrics,
+      averageAlertGenerationTime: Math.round(avgAlertTime),
+      averageModuleLoadTime: Math.round(avgModuleLoadTime),
+      averageEnhanceDataTime: Math.round(avgEnhanceTime),
+      averageProbabilityCalculationTime: Math.round(avgProbabilityTime),
+      cacheHitRate: this.performanceMetrics.totalRequests > 0 
+        ? Math.round((this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100)
+        : 0,
+      alertsPerRequest: this.performanceMetrics.totalRequests > 0
+        ? Math.round((this.performanceMetrics.totalAlerts / this.performanceMetrics.totalRequests) * 100) / 100
+        : 0
+    };
   }
 
   // Initialize alert modules based on user's enabled preferences
@@ -338,10 +354,9 @@ export class NCAAFEngine extends BaseSportEngine {
         return;
       }
 
-      // Filter to only valid NCAAF alerts
+      // CRITICAL FIX: Only include NCAAF alerts that have actual cylinder modules implemented
       const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE', 'FOURTH_DOWN',
-        'NCAAF_SECOND_HALF_KICKOFF', 'OVERTIME', 'CLUTCH_TIME'
+        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE'
       ];
 
       const ncaafEnabledTypes = enabledTypes.filter(alertType =>
@@ -367,8 +382,10 @@ export class NCAAFEngine extends BaseSportEngine {
     }
   }
 
-  // Load alert cylinder module for specific alert type
+  // Load alert cylinder module for specific alert type (with performance monitoring)
   async loadAlertModule(alertType: string): Promise<any | null> {
+    const startTime = Date.now();
+    
     try {
       const moduleMap: Record<string, string> = {
         'NCAAF_GAME_START': './alert-cylinders/ncaaf/game-start-module.ts',
@@ -383,15 +400,25 @@ export class NCAAFEngine extends BaseSportEngine {
       }
 
       const module = await import(modulePath);
+      const loadTime = Date.now() - startTime;
+      this.performanceMetrics.moduleLoadTime.push(loadTime);
+      
+      if (loadTime > 50) {
+        console.log(`⚠️ NCAAF Slow module load: ${alertType} took ${loadTime}ms`);
+      }
+      
       return new module.default();
     } catch (error) {
-      console.error(`❌ Failed to load NCAAF alert module ${alertType}:`, error);
+      const loadTime = Date.now() - startTime;
+      console.error(`❌ Failed to load NCAAF alert module ${alertType} after ${loadTime}ms:`, error);
       return null;
     }
   }
 
-  // Initialize alert cylinder modules for enabled alert types
+  // Initialize alert cylinder modules for enabled alert types (optimized)
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
+    const startTime = Date.now();
+    
     // Only clear if the alert types have changed - prevents memory leak from constant reloading
     const currentTypes = Array.from(this.alertModules.keys()).sort();
     const newTypes = [...enabledAlertTypes].sort();
@@ -407,14 +434,87 @@ export class NCAAFEngine extends BaseSportEngine {
       console.log(`🧹 Cleared NCAAF alert modules due to type changes`);
     }
 
-    for (const alertType of enabledAlertTypes) {
+    // Load modules in parallel for better performance
+    const moduleLoadPromises = enabledAlertTypes.map(async (alertType) => {
       const module = await this.loadAlertModule(alertType);
       if (module) {
         this.alertModules.set(alertType, module);
         console.log(`✅ Loaded NCAAF alert cylinder: ${alertType}`);
+        return { alertType, success: true };
+      } else {
+        return { alertType, success: false };
       }
+    });
+
+    const results = await Promise.all(moduleLoadPromises);
+    const successCount = results.filter(r => r.success).length;
+    const initTime = Date.now() - startTime;
+    
+    if (initTime > 100) {
+      console.log(`⚠️ NCAAF Slow module initialization: ${initTime}ms for ${enabledAlertTypes.length} modules`);
     }
 
-    console.log(`🔧 Initialized ${this.alertModules.size} NCAAF alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
+    console.log(`🔧 Initialized ${successCount}/${enabledAlertTypes.length} NCAAF alert cylinders in ${initTime}ms: ${Array.from(this.alertModules.keys()).join(', ')}`);
+  }
+
+  // Optimized batch processing for multiple games
+  async processMultipleGames(gameStates: GameState[]): Promise<AlertResult[]> {
+    const startTime = Date.now();
+    const allAlerts: AlertResult[] = [];
+    
+    try {
+      // Process games in parallel for maximum performance
+      const gamePromises = gameStates.map(async (gameState) => {
+        try {
+          return await this.generateLiveAlerts(gameState);
+        } catch (error) {
+          console.error(`❌ NCAAF Error processing game ${gameState.gameId}:`, error);
+          return [];
+        }
+      });
+      
+      const gameResults = await Promise.all(gamePromises);
+      
+      // Flatten results
+      for (const alerts of gameResults) {
+        allAlerts.push(...alerts);
+      }
+      
+      const totalTime = Date.now() - startTime;
+      
+      if (totalTime > 200) {
+        console.log(`⚠️ NCAAF Slow batch processing: ${totalTime}ms for ${gameStates.length} games, ${allAlerts.length} alerts`);
+      } else {
+        console.log(`⚡ NCAAF Fast batch processing: ${totalTime}ms for ${gameStates.length} games, ${allAlerts.length} alerts`);
+      }
+      
+      return allAlerts;
+    } catch (error) {
+      const totalTime = Date.now() - startTime;
+      console.error(`❌ NCAAF Batch processing failed after ${totalTime}ms:`, error);
+      return allAlerts;
+    }
+  }
+
+  // Memory cleanup and optimization
+  cleanupPerformanceMetrics(): void {
+    // Keep only the last 100 measurements to prevent memory buildup
+    const maxEntries = 100;
+    
+    if (this.performanceMetrics.alertGenerationTime.length > maxEntries) {
+      this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-maxEntries);
+    }
+    if (this.performanceMetrics.moduleLoadTime.length > maxEntries) {
+      this.performanceMetrics.moduleLoadTime = this.performanceMetrics.moduleLoadTime.slice(-maxEntries);
+    }
+    if (this.performanceMetrics.enhanceDataTime.length > maxEntries) {
+      this.performanceMetrics.enhanceDataTime = this.performanceMetrics.enhanceDataTime.slice(-maxEntries);
+    }
+    if (this.performanceMetrics.probabilityCalculationTime.length > maxEntries) {
+      this.performanceMetrics.probabilityCalculationTime = this.performanceMetrics.probabilityCalculationTime.slice(-maxEntries);
+    }
+    if (this.performanceMetrics.gameStateEnhancementTime.length > maxEntries) {
+      this.performanceMetrics.gameStateEnhancementTime = this.performanceMetrics.gameStateEnhancementTime.slice(-maxEntries);
+    }
   }
 }
