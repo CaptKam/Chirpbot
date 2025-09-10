@@ -4,6 +4,20 @@ import { storage } from '../../storage';
 
 export class MLBEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private performanceMetrics = {
+    alertGenerationTime: [] as number[],
+    moduleLoadTime: [] as number[],
+    enhanceDataTime: [] as number[],
+    totalRequests: 0,
+    totalAlerts: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    probabilityCalculationTime: [] as number[],
+    gameStateEnhancementTime: [] as number[],
+    basesLoadedSituations: 0,
+    seventhInningDetections: 0,
+    runnerScoringOpportunities: 0
+  };
 
   constructor() {
     super('MLB');
@@ -40,9 +54,14 @@ export class MLBEngine extends BaseSportEngine {
   }
 
   async calculateProbability(gameState: GameState): Promise<number> {
-    const { inning, outs, homeScore, awayScore } = gameState;
+    const startTime = Date.now();
+    
+    try {
+      if (!gameState.isLive) return 0;
 
-    let probability = 40; // Base probability
+      const { inning, outs, homeScore, awayScore } = gameState;
+
+      let probability = 40; // Base probability
 
     // Simple inning adjustments
     if (inning >= 7) probability += 20; // Late innings are more exciting
@@ -71,18 +90,57 @@ export class MLBEngine extends BaseSportEngine {
 
     // Keep probability within reasonable bounds
     return Math.min(Math.max(probability, 15), 90);
+    } finally {
+      // Track performance metrics
+      const calculationTime = Date.now() - startTime;
+      this.performanceMetrics.probabilityCalculationTime.push(calculationTime);
+      this.performanceMetrics.totalRequests++;
+      
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.probabilityCalculationTime.length > 100) {
+        this.performanceMetrics.probabilityCalculationTime = this.performanceMetrics.probabilityCalculationTime.slice(-100);
+      }
+    }
   }
 
   // Override to add MLB-specific game state normalization
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    // Enhance game state with MLB-specific data if needed
-    const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+    const startTime = Date.now();
+    
+    try {
+      // Enhance game state with MLB-specific data if needed
+      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
 
-    // Use the parent class method which properly calls all loaded modules
-    return super.generateLiveAlerts(enhancedGameState);
+      // Use the parent class method which properly calls all loaded modules
+      const alerts = await super.generateLiveAlerts(enhancedGameState);
+      
+      // Track MLB-specific metrics
+      if (enhancedGameState.hasFirst && enhancedGameState.hasSecond && enhancedGameState.hasThird) {
+        this.performanceMetrics.basesLoadedSituations++;
+      }
+      if (enhancedGameState.inning === 7) {
+        this.performanceMetrics.seventhInningDetections++;
+      }
+      if (enhancedGameState.hasThird && enhancedGameState.outs <= 1) {
+        this.performanceMetrics.runnerScoringOpportunities++;
+      }
+      
+      this.performanceMetrics.totalAlerts += alerts.length;
+      return alerts;
+    } finally {
+      const alertTime = Date.now() - startTime;
+      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.alertGenerationTime.length > 100) {
+        this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-100);
+      }
+    }
   }
 
   private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
+    const startTime = Date.now();
+    
     try {
       // Get live data from MLB API if game is live
       if (gameState.isLive && gameState.gameId) {
@@ -91,6 +149,7 @@ export class MLBEngine extends BaseSportEngine {
         const enhancedData = await mlbApi.getEnhancedGameData(gameState.gameId);
 
         if (enhancedData && !enhancedData.error) {
+          this.performanceMetrics.cacheHits++;
           return {
             ...gameState,
             hasFirst: enhancedData.runners?.first || false,
@@ -104,10 +163,21 @@ export class MLBEngine extends BaseSportEngine {
             homeScore: enhancedData.homeScore || gameState.homeScore,
             awayScore: enhancedData.awayScore || gameState.awayScore
           };
+        } else {
+          this.performanceMetrics.cacheMisses++;
         }
       }
     } catch (error) {
       console.error('Error enhancing game state with live data:', error);
+      this.performanceMetrics.cacheMisses++;
+    } finally {
+      const enhanceTime = Date.now() - startTime;
+      this.performanceMetrics.gameStateEnhancementTime.push(enhanceTime);
+      
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.gameStateEnhancementTime.length > 100) {
+        this.performanceMetrics.gameStateEnhancementTime = this.performanceMetrics.gameStateEnhancementTime.slice(-100);
+      }
     }
 
     return gameState;
@@ -221,5 +291,49 @@ export class MLBEngine extends BaseSportEngine {
     }
 
     console.log(`🔧 Initialized ${this.alertModules.size} MLB alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
+  }
+
+  // Get performance metrics for V3 dashboard
+  getPerformanceMetrics() {
+    const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
+      ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
+      : 0;
+
+    const avgAlertTime = this.performanceMetrics.alertGenerationTime.length > 0
+      ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.alertGenerationTime.length
+      : 0;
+
+    const avgEnhanceTime = this.performanceMetrics.gameStateEnhancementTime.length > 0
+      ? this.performanceMetrics.gameStateEnhancementTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.gameStateEnhancementTime.length
+      : 0;
+
+    const cacheHitRate = this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
+      ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
+      : 0;
+
+    return {
+      sport: 'MLB',
+      performance: {
+        avgResponseTime: avgCalculationTime + avgAlertTime + avgEnhanceTime,
+        avgCalculationTime,
+        avgAlertGenerationTime: avgAlertTime,
+        avgEnhancementTime: avgEnhanceTime,
+        cacheHitRate,
+        totalRequests: this.performanceMetrics.totalRequests,
+        totalAlerts: this.performanceMetrics.totalAlerts,
+        cacheHits: this.performanceMetrics.cacheHits,
+        cacheMisses: this.performanceMetrics.cacheMisses
+      },
+      sportSpecific: {
+        basesLoadedSituations: this.performanceMetrics.basesLoadedSituations,
+        seventhInningDetections: this.performanceMetrics.seventhInningDetections,
+        runnerScoringOpportunities: this.performanceMetrics.runnerScoringOpportunities
+      },
+      recentPerformance: {
+        calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),
+        alertTimes: this.performanceMetrics.alertGenerationTime.slice(-20),
+        enhancementTimes: this.performanceMetrics.gameStateEnhancementTime.slice(-20)
+      }
+    };
   }
 }

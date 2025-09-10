@@ -12,6 +12,7 @@ import Admin from "./pages/admin";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
+import V3Dashboard from "./pages/v3-dashboard";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useEffect } from "react";
@@ -72,14 +73,19 @@ function RegularAppContent() {
     }
   }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
 
+  // Check if current route is V3 dashboard for wider layout
+  const [location] = useLocation();
+  const isV3Dashboard = location === '/v3-dashboard';
+  
   return (
-    <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
+    <div className={isAuthenticated ? `${isV3Dashboard ? 'max-w-7xl' : 'max-w-md'} mx-auto bg-transparent min-h-screen relative` : "min-h-screen"}>
       <Switch>
         <Route path="/" component={() => <PublicRoute component={Landing} />} />
         <Route path="/login" component={() => <PublicRoute component={Login} />} />
         <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
+        <Route path="/v3-dashboard" component={() => <ProtectedRoute component={V3Dashboard} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
         <Route component={NotFound} />

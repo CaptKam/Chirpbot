@@ -489,4 +489,48 @@ export class NBAEngine extends BaseSportEngine {
     
     return stats;
   }
+
+  // Get performance metrics for V3 dashboard (consistent with other engines)
+  getPerformanceMetrics() {
+    const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
+      ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
+      : 0;
+
+    const avgAlertTime = this.performanceMetrics.alertGenerationTime.length > 0
+      ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.alertGenerationTime.length
+      : 0;
+
+    const avgEnhanceTime = this.performanceMetrics.gameStateEnhancementTime.length > 0
+      ? this.performanceMetrics.gameStateEnhancementTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.gameStateEnhancementTime.length
+      : 0;
+
+    const cacheHitRate = this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
+      ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
+      : 0;
+
+    return {
+      sport: 'NBA',
+      performance: {
+        avgResponseTime: avgCalculationTime + avgAlertTime + avgEnhanceTime,
+        avgCalculationTime,
+        avgAlertGenerationTime: avgAlertTime,
+        avgEnhancementTime: avgEnhanceTime,
+        cacheHitRate,
+        totalRequests: this.performanceMetrics.totalRequests,
+        totalAlerts: this.performanceMetrics.totalAlerts,
+        cacheHits: this.performanceMetrics.cacheHits,
+        cacheMisses: this.performanceMetrics.cacheMisses
+      },
+      sportSpecific: {
+        clutchTimeDetections: this.performanceMetrics.clutchTimeDetections,
+        overtimeAlerts: this.performanceMetrics.overtimeAlerts,
+        professionalBasketballAlerts: this.performanceMetrics.totalAlerts
+      },
+      recentPerformance: {
+        calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),
+        alertTimes: this.performanceMetrics.alertGenerationTime.slice(-20),
+        enhancementTimes: this.performanceMetrics.gameStateEnhancementTime.slice(-20)
+      }
+    };
+  }
 }

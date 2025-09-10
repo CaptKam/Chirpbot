@@ -1502,6 +1502,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // V3-16: Performance Metrics Dashboard API
+  app.get('/api/v3/performance-metrics', requireAuthentication, async (req, res) => {
+    try {
+      console.log('📊 V3 Performance Metrics requested');
+      
+      // Import all sport engines
+      const { MLBEngine } = await import('./services/engines/mlb-engine');
+      const { NFLEngine } = await import('./services/engines/nfl-engine');
+      const { NBAEngine } = await import('./services/engines/nba-engine');
+      const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+      const { CFLEngine } = await import('./services/engines/cfl-engine');
+      const { WNBAEngine } = await import('./services/engines/wnba-engine');
+
+      // Instantiate engines to get their performance metrics
+      const engines = {
+        mlb: new MLBEngine(),
+        nfl: new NFLEngine(), 
+        nba: new NBAEngine(),
+        ncaaf: new NCAAFEngine(),
+        cfl: new CFLEngine(),
+        wnba: new WNBAEngine()
+      };
+
+      // Collect performance metrics from all engines
+      const sportMetrics = {};
+      const aggregatedStats = {
+        totalRequests: 0,
+        totalAlerts: 0,
+        totalCacheHits: 0,
+        totalCacheMisses: 0,
+        avgResponseTime: 0,
+        avgCalculationTime: 0,
+        avgAlertGenerationTime: 0,
+        avgEnhancementTime: 0,
+        responseTimeDistribution: [],
+        cacheHitRates: [],
+        alertRates: []
+      };
+
+      let totalEngines = 0;
+      let responseTimes = [];
+
+      for (const [sport, engine] of Object.entries(engines)) {
+        try {
+          const metrics = engine.getPerformanceMetrics();
+          sportMetrics[sport.toUpperCase()] = metrics;
+          
+          // Aggregate statistics
+          aggregatedStats.totalRequests += metrics.performance.totalRequests || 0;
+          aggregatedStats.totalAlerts += metrics.performance.totalAlerts || 0;
+          aggregatedStats.totalCacheHits += metrics.performance.cacheHits || 0;
+          aggregatedStats.totalCacheMisses += metrics.performance.cacheMisses || 0;
+          
+          // Collect response times for distribution
+          responseTimes.push(metrics.performance.avgResponseTime || 0);
+          aggregatedStats.cacheHitRates.push(metrics.performance.cacheHitRate || 0);
+          aggregatedStats.alertRates.push(
+            metrics.performance.totalRequests > 0 
+              ? (metrics.performance.totalAlerts / metrics.performance.totalRequests) * 100 
+              : 0
+          );
+          
+          totalEngines++;
+        } catch (error) {
+          console.error(`Error getting metrics for ${sport}:`, error);
+          sportMetrics[sport.toUpperCase()] = {
+            sport: sport.toUpperCase(),
+            performance: { error: 'Metrics unavailable' },
+            sportSpecific: {},
+            recentPerformance: {}
+          };
+        }
+      }
+
+      // Calculate aggregated averages
+      if (totalEngines > 0) {
+        aggregatedStats.avgResponseTime = responseTimes.reduce((a, b) => a + b, 0) / totalEngines;
+        aggregatedStats.avgCalculationTime = responseTimes.filter(t => t > 0).reduce((a, b) => a + b, 0) / Math.max(1, responseTimes.filter(t => t > 0).length);
+        aggregatedStats.responseTimeDistribution = responseTimes;
+      }
+
+      // Calculate overall cache hit rate
+      const totalCacheRequests = aggregatedStats.totalCacheHits + aggregatedStats.totalCacheMisses;
+      const overallCacheHitRate = totalCacheRequests > 0 
+        ? (aggregatedStats.totalCacheHits / totalCacheRequests) * 100 
+        : 0;
+
+      // V3 Optimization Achievement Tracking
+      const v3Achievements = {
+        sub250msTargets: Object.entries(sportMetrics).map(([sport, metrics]) => ({
+          sport,
+          achieved: metrics.performance?.avgResponseTime < 250,
+          responseTime: metrics.performance?.avgResponseTime || 0,
+          target: 250
+        })),
+        overallV3Success: responseTimes.filter(t => t < 250).length / Math.max(1, responseTimes.length) * 100,
+        performanceGrades: Object.entries(sportMetrics).map(([sport, metrics]) => {
+          const avgTime = metrics.performance?.avgResponseTime || 0;
+          let grade = 'F';
+          if (avgTime < 100) grade = 'A+';
+          else if (avgTime < 150) grade = 'A';
+          else if (avgTime < 200) grade = 'B';
+          else if (avgTime < 250) grade = 'C';
+          else if (avgTime < 300) grade = 'D';
+          
+          return { sport, grade, responseTime: avgTime };
+        })
+      };
+
+      // System health indicators
+      const systemHealth = {
+        activeEngines: totalEngines,
+        healthyEngines: Object.values(sportMetrics).filter(m => !m.performance?.error).length,
+        overallHealth: totalEngines > 0 ? (Object.values(sportMetrics).filter(m => !m.performance?.error).length / totalEngines) * 100 : 0,
+        memoryEfficiency: overallCacheHitRate,
+        alertGenerationEfficiency: aggregatedStats.totalRequests > 0 ? (aggregatedStats.totalAlerts / aggregatedStats.totalRequests) * 100 : 0
+      };
+
+      // Real-time performance warnings
+      const performanceWarnings = [];
+      responseTimes.forEach((time, index) => {
+        const sport = Object.keys(engines)[index];
+        if (time > 250) {
+          performanceWarnings.push({
+            sport: sport.toUpperCase(),
+            warning: 'Response time exceeds 250ms target',
+            responseTime: time,
+            severity: time > 500 ? 'high' : 'medium'
+          });
+        }
+      });
+
+      const response = {
+        timestamp: new Date().toISOString(),
+        summary: {
+          totalSports: totalEngines,
+          totalRequests: aggregatedStats.totalRequests,
+          totalAlerts: aggregatedStats.totalAlerts,
+          avgResponseTime: Math.round(aggregatedStats.avgResponseTime * 100) / 100,
+          overallCacheHitRate: Math.round(overallCacheHitRate * 100) / 100,
+          v3OptimizationSuccess: Math.round(v3Achievements.overallV3Success * 100) / 100
+        },
+        sportMetrics,
+        aggregatedStats,
+        v3Achievements,
+        systemHealth,
+        performanceWarnings,
+        recommendations: [
+          ...(aggregatedStats.avgResponseTime > 200 ? ['Consider implementing additional caching strategies'] : []),
+          ...(overallCacheHitRate < 80 ? ['Optimize cache strategies to improve hit rates'] : []),
+          ...(performanceWarnings.length > 0 ? ['Address high response time warnings in flagged sports'] : []),
+          ...(v3Achievements.overallV3Success < 80 ? ['Focus on V3 optimization improvements for sub-250ms targets'] : [])
+        ]
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('V3 Performance Metrics API error:', error);
+      res.status(500).json({ 
+        error: 'Failed to retrieve performance metrics',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Test NCAAF two-minute warning logic
   app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
     try {

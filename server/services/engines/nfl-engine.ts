@@ -614,4 +614,57 @@ export class NFLEngine extends BaseSportEngine {
       `  Enhanced Alerts: ${stats.enhancedAlerts} (${stats.enhancementRate}%)\n` +
       `  Cache Hit Rate: ${stats.cacheHitRate}%, Alerts/Request: ${stats.alertsPerRequest}`);
   }
+
+  // Get performance metrics for V3 dashboard (consistent with other engines)
+  getPerformanceMetrics() {
+    const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime?.length > 0
+      ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
+      : 0;
+
+    const avgAlertTime = this.performanceMetrics.alertGenerationTime.length > 0
+      ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.alertGenerationTime.length
+      : 0;
+
+    const avgEnhanceTime = this.performanceMetrics.enhanceDataTime.length > 0
+      ? this.performanceMetrics.enhanceDataTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.enhanceDataTime.length
+      : 0;
+
+    const avgAITime = this.performanceMetrics.aiEnhancementTime.length > 0
+      ? this.performanceMetrics.aiEnhancementTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.aiEnhancementTime.length
+      : 0;
+
+    const cacheHitRate = this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
+      ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
+      : 0;
+
+    return {
+      sport: 'NFL',
+      performance: {
+        avgResponseTime: avgCalculationTime + avgAlertTime + avgEnhanceTime + avgAITime,
+        avgCalculationTime,
+        avgAlertGenerationTime: avgAlertTime,
+        avgEnhancementTime: avgEnhanceTime,
+        avgAIEnhancementTime: avgAITime,
+        cacheHitRate,
+        totalRequests: this.performanceMetrics.totalRequests,
+        totalAlerts: this.performanceMetrics.totalAlerts,
+        enhancedAlerts: this.performanceMetrics.enhancedAlerts,
+        cacheHits: this.performanceMetrics.cacheHits,
+        cacheMisses: this.performanceMetrics.cacheMisses
+      },
+      sportSpecific: {
+        aiEnhancementRate: this.performanceMetrics.totalAlerts > 0 
+          ? (this.performanceMetrics.enhancedAlerts / this.performanceMetrics.totalAlerts) * 100 
+          : 0,
+        weatherIntegratedAlerts: this.performanceMetrics.enhancedAlerts,
+        contextAwareAlerts: this.performanceMetrics.totalAlerts
+      },
+      recentPerformance: {
+        calculationTimes: this.performanceMetrics.probabilityCalculationTime?.slice(-20) || [],
+        alertTimes: this.performanceMetrics.alertGenerationTime.slice(-20),
+        enhancementTimes: this.performanceMetrics.enhanceDataTime.slice(-20),
+        aiTimes: this.performanceMetrics.aiEnhancementTime.slice(-20)
+      }
+    };
+  }
 }
