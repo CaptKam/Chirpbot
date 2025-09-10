@@ -486,9 +486,9 @@ Your mission: Create the most valuable, actionable alert possible. Consider:
 - Game momentum and context  
 - User urgency and timing
 - Predictive insights
-${context.sport === 'NFL' ? '- Down and distance implications
+${context.sport === 'NFL' ? `- Down and distance implications
 - Red zone efficiency
-- Clock management factors' : ''}
+- Clock management factors` : ''}
 
 Provide:
 1. Compelling title (under 60 chars)

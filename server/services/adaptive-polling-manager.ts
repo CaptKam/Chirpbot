@@ -1,7 +1,8 @@
 import { MLBApiService } from './mlb-api';
 import { NFLApiService } from './nfl-api';
+import { NCAAFApiService } from './ncaaf-api';
 
-export type Sport = 'MLB' | 'NFL';
+export type Sport = 'MLB' | 'NFL' | 'NCAAF';
 
 export interface GamePollingState {
   gameId: string;
@@ -13,8 +14,11 @@ export interface GamePollingState {
   lastStateChange: number;
   isUserMonitored: boolean;
   criticality: 'low' | 'medium' | 'high' | 'critical';
-  quarter?: number; // For NFL games
+  quarter?: number; // For NFL/NCAAF games
   timeRemaining?: string; // For time-based sports
+  down?: number; // For football games (NFL/NCAAF)
+  yardsToGo?: number; // For football games (NFL/NCAAF)
+  fieldPosition?: number; // For football games (NFL/NCAAF)
 }
 
 export interface PollingConfig {
@@ -28,6 +32,7 @@ export interface PollingConfig {
 export interface SportApiServices {
   MLB?: MLBApiService;
   NFL?: NFLApiService;
+  NCAAF?: NCAAFApiService;
 }
 
 export class AdaptivePollingManager {
@@ -51,6 +56,13 @@ export class AdaptivePollingManager {
       scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-2)
       live: { interval: 1000, cacheTTL: 2000 },           // 1s for live games (V3-2)
       final: { interval: 300000, cacheTTL: 600000 },      // 300s for completed games (V3-2)
+      delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
+      suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+    },
+    NCAAF: {
+      scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-7)
+      live: { interval: 1000, cacheTTL: 2000 },           // 1s for live games (V3-7)
+      final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games (V3-7)
       delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
       suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
     }
@@ -94,8 +106,11 @@ export class AdaptivePollingManager {
         lastStateChange: Date.now(),
         isUserMonitored,
         criticality,
-        quarter: this.sport === 'NFL' ? (game.quarter || 1) : undefined,
-        timeRemaining: game.timeRemaining || undefined
+        quarter: (this.sport === 'NFL' || this.sport === 'NCAAF') ? (game.quarter || 1) : undefined,
+        timeRemaining: game.timeRemaining || undefined,
+        down: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.down : undefined,
+        yardsToGo: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.yardsToGo : undefined,
+        fieldPosition: (this.sport === 'NFL' || this.sport === 'NCAAF') ? game.fieldPosition : undefined
       };
 
       this.gameStates.set(gameId, pollingState);
@@ -144,6 +159,8 @@ export class AdaptivePollingManager {
   private calculateGameCriticality(game: any): 'low' | 'medium' | 'high' | 'critical' {
     if (this.sport === 'NFL') {
       return this.calculateNFLCriticality(game);
+    } else if (this.sport === 'NCAAF') {
+      return this.calculateNCAAFCriticality(game);
     } else {
       return this.calculateMLBCriticality(game);
     }
@@ -198,13 +215,13 @@ export class AdaptivePollingManager {
       return 'critical';
     }
 
-    // Critical: Two-minute warning situations
-    if (quarter >= 4 && timeSeconds <= 120) {
+    // Critical: Two-minute warning situations (only when timeRemaining data is available)
+    if (timeRemaining && quarter >= 4 && timeSeconds <= 120) {
       return 'critical';
     }
 
     // Critical: Red zone situations (within 20 yards)
-    if (fieldPosition && fieldPosition <= 20) {
+    if (fieldPosition !== undefined && fieldPosition <= 20) {
       return 'critical';
     }
 
@@ -219,7 +236,7 @@ export class AdaptivePollingManager {
     }
 
     // High: Close to scoring territory
-    if (fieldPosition && fieldPosition <= 40) {
+    if (fieldPosition !== undefined && fieldPosition <= 40) {
       return 'high';
     }
 
@@ -233,7 +250,92 @@ export class AdaptivePollingManager {
   }
 
   /**
-   * Parse time string to seconds for NFL games
+   * Calculate NCAAF game criticality based on score, quarter, and game situation
+   */
+  private calculateNCAAFCriticality(game: any): 'low' | 'medium' | 'high' | 'critical' {
+    const homeScore = game.homeTeam?.score || game.homeScore || 0;
+    const awayScore = game.awayTeam?.score || game.awayScore || 0;
+    const scoreDiff = Math.abs(homeScore - awayScore);
+    const quarter = game.quarter || 1;
+    const timeRemaining = game.timeRemaining || '';
+    const fieldPosition = game.fieldPosition;
+    const down = game.down;
+    const yardsToGo = game.yardsToGo;
+
+    // Parse time remaining in seconds
+    const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+
+    // Critical: Close games in 4th quarter or overtime
+    if (quarter >= 4 && scoreDiff <= 7) {
+      return 'critical';
+    }
+
+    // Critical: Two-minute warning situations (only when timeRemaining data is available)
+    if (timeRemaining && quarter >= 4 && timeSeconds <= 120) {
+      return 'critical';
+    }
+
+    // Critical: Overtime periods
+    if (quarter >= 5) {
+      return 'critical';
+    }
+
+    // Critical: Red zone situations (within 20 yards)
+    if (fieldPosition !== undefined && fieldPosition <= 20) {
+      return 'critical';
+    }
+
+    // Critical: Fourth down situations
+    if (down === 4) {
+      return 'critical';
+    }
+
+    // Critical: Goal line situations (within 5 yards)
+    if (fieldPosition !== undefined && fieldPosition <= 5) {
+      return 'critical';
+    }
+
+    // High: Close games in 3rd/4th quarter
+    if (quarter >= 3 && scoreDiff <= 10) {
+      return 'high';
+    }
+
+    // High: Close to scoring territory
+    if (fieldPosition !== undefined && fieldPosition <= 40) {
+      return 'high';
+    }
+
+    // High: Third down situations
+    if (down === 3) {
+      return 'high';
+    }
+
+    // High: Short yardage situations
+    if (yardsToGo && yardsToGo <= 3) {
+      return 'high';
+    }
+
+    // High: Final 5 minutes of any quarter (only when timeRemaining is available)
+    if (timeRemaining && timeSeconds <= 300) {
+      return 'high';
+    }
+
+    // Medium: Competitive games
+    if (scoreDiff <= 14) {
+      return 'medium';
+    }
+
+    // Medium: Second half action
+    if (quarter >= 3) {
+      return 'medium';
+    }
+
+    // Low: Blowouts or early game
+    return 'low';
+  }
+
+  /**
+   * Parse time string to seconds for NFL/NCAAF games
    */
   private parseTimeToSeconds(timeString: string): number {
     if (!timeString) return 0;
@@ -260,7 +362,7 @@ export class AdaptivePollingManager {
     const multiplier = this.CRITICALITY_MULTIPLIERS[criticality];
     baseInterval = Math.round(baseInterval * multiplier);
     
-    // User-monitored games get priority (25% faster)
+    // User-monitored games get priority (25% faster, subject to minimum limits)
     if (isUserMonitored) {
       baseInterval = Math.round(baseInterval * 0.75);
     }
@@ -270,6 +372,12 @@ export class AdaptivePollingManager {
       live: 1000,    // 1s minimum for NFL live (V3-2)
       scheduled: 15000, // 15s minimum for NFL scheduled
       final: 60000,    // 1min minimum for NFL final
+      delayed: 3000,
+      suspended: 3000
+    } : this.sport === 'NCAAF' ? {
+      live: 500,     // 500ms minimum for NCAAF live (V3-7) - allows critical situations to reach 500ms
+      scheduled: 15000, // 15s minimum for NCAAF scheduled
+      final: 60000,    // 1min minimum for NCAAF final
       delayed: 3000,
       suspended: 3000
     } : {
@@ -341,6 +449,8 @@ export class AdaptivePollingManager {
         enhancedData = await this.apiServices.MLB.getEnhancedGameData(gameId);
       } else if (this.sport === 'NFL' && this.apiServices.NFL) {
         enhancedData = await this.apiServices.NFL.getEnhancedGameData(gameId, 'live');
+      } else if (this.sport === 'NCAAF' && this.apiServices.NCAAF) {
+        enhancedData = await this.apiServices.NCAAF.getEnhancedGameData(gameId);
       }
       
       if (enhancedData && !enhancedData.error) {
@@ -408,6 +518,8 @@ export class AdaptivePollingManager {
         allGames = await this.apiServices.MLB.getTodaysGames();
       } else if (this.sport === 'NFL' && this.apiServices.NFL) {
         allGames = await this.apiServices.NFL.getTodaysGames();
+      } else if (this.sport === 'NCAAF' && this.apiServices.NCAAF) {
+        allGames = await this.apiServices.NCAAF.getTodaysGames();
       }
       
       const gameMap = new Map(allGames.map(game => [game.id, game]));

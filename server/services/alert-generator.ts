@@ -164,6 +164,10 @@ export class AlertGenerator {
     // MLB adaptive polling manager
     this.adaptivePollingManagers.set('MLB', new AdaptivePollingManager('MLB', { MLB: this.mlbApi }));
     
+    // NCAAF adaptive polling manager (V3-7)
+    this.adaptivePollingManagers.set('NCAAF', new AdaptivePollingManager('NCAAF', { NCAAF: this.ncaafApi }));
+    console.log('🏈 NCAAF AdaptivePollingManager initialized with V3-7 intervals');
+    
     // NFL adaptive polling manager - initialize NFL API dynamically when needed
     this.initializeNFLPollingManager();
   }
@@ -497,12 +501,13 @@ export class AlertGenerator {
     }
 
     // 🎯 ADAPTIVE POLLING: Initialize for supported sports with intelligent intervals
-    if ((sport === 'MLB' || sport === 'NFL') && games.length > 0) {
+    if ((sport === 'MLB' || sport === 'NFL' || sport === 'NCAAF') && games.length > 0) {
       try {
         const pollingManager = this.adaptivePollingManagers.get(sport);
         if (pollingManager) {
           await pollingManager.initializeGamePolling(games, monitoredGameIds);
-          console.log(`🎯 ${sport} Adaptive polling initialized for ${games.length} games with V3-2 intervals`);
+          const versionLabel = sport === 'NCAAF' ? 'V3-7' : 'V3-2';
+          console.log(`🎯 ${sport} Adaptive polling initialized for ${games.length} games with ${versionLabel} intervals`);
         } else {
           console.log(`⚠️ ${sport} Adaptive polling manager not yet initialized - will set up later`);
         }
