@@ -90,7 +90,16 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
         confidenceLevel,
         situationDescription,
         alertType: 'PREDICTIVE',
-        predictionCategory: 'RED_ZONE_SCORING'
+        predictionCategory: 'RED_ZONE_SCORING',
+        // NFL-specific context for AI enhancement
+        nflContext: {
+          isRedZone: true,
+          isGoalLine: gameState.fieldPosition <= 5,
+          isShortYardage: gameState.yardsToGo <= 3,
+          scoreDifferential: Math.abs(gameState.homeScore - gameState.awayScore),
+          timePressure: this.getTimePressureLevel(gameState),
+          playCalling: this.getPlayCallingTendency(gameState)
+        }
       },
       priority: touchdownProbability > 80 ? 95 : touchdownProbability > 70 ? 90 : 85
     };
@@ -213,5 +222,48 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     }
     
     return parseInt(cleanTime) || 0;
+  }
+  
+  private getTimePressureLevel(gameState: GameState): string {
+    if (!gameState.quarter || !gameState.timeRemaining) return 'NORMAL';
+    
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
+    
+    if (gameState.quarter === 4) {
+      if (timeSeconds <= 120) return 'CRITICAL';  // Two-minute warning
+      if (timeSeconds <= 300) return 'HIGH';      // Last 5 minutes
+      return 'MEDIUM';
+    }
+    
+    if (gameState.quarter === 2 && timeSeconds <= 120) {
+      return 'MEDIUM';  // End of half
+    }
+    
+    return 'NORMAL';
+  }
+  
+  private getPlayCallingTendency(gameState: GameState): string {
+    // Analyze down, distance, and field position to predict play type
+    if (!gameState.down || !gameState.yardsToGo || !gameState.fieldPosition) {
+      return 'BALANCED';
+    }
+    
+    if (gameState.fieldPosition <= 3) {
+      return 'POWER_RUN';  // Goal line situations favor power running
+    }
+    
+    if (gameState.down === 1 && gameState.yardsToGo <= 3) {
+      return 'RUN_HEAVY';  // Short yardage on first down
+    }
+    
+    if (gameState.down === 3 && gameState.yardsToGo >= 7) {
+      return 'PASS_HEAVY';  // Long third down
+    }
+    
+    if (gameState.down === 2 && gameState.yardsToGo <= 3) {
+      return 'RUN_LIKELY';  // Second and short
+    }
+    
+    return 'BALANCED';
   }
 }

@@ -34,7 +34,18 @@ export default class FourthDownModule extends BaseAlertModule {
         fieldPosition: gameState.fieldPosition,
         quarter: gameState.quarter,
         timeRemaining: gameState.timeRemaining,
-        isFourthDown: true
+        isFourthDown: true,
+        // NFL-specific context for AI enhancement
+        nflContext: {
+          isFourthDown: true,
+          isShortYardage: yardsToGo <= 3,
+          isInRedZone: fieldPosition <= 20,
+          isGoalLine: fieldPosition <= 5,
+          scoreDifferential: Math.abs(gameState.homeScore - gameState.awayScore),
+          timePressure: this.getTimePressureLevel(gameState),
+          conversionProbability: this.getConversionProbability(gameState),
+          decisionRecommendation: this.getDecisionRecommendation(gameState)
+        }
       },
       priority
     };
@@ -57,5 +68,81 @@ export default class FourthDownModule extends BaseAlertModule {
     if (gameState.quarter === 4) probability += 5;
 
     return Math.min(probability, 100);
+  }
+  
+  private getTimePressureLevel(gameState: GameState): string {
+    if (!gameState.quarter || !gameState.timeRemaining) return 'NORMAL';
+    
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
+    
+    if (gameState.quarter === 4) {
+      if (timeSeconds <= 60) return 'CRITICAL';   // Final minute
+      if (timeSeconds <= 120) return 'HIGH';      // Two-minute warning
+      if (timeSeconds <= 300) return 'MEDIUM';    // Last 5 minutes
+    }
+    
+    if (gameState.quarter === 2 && timeSeconds <= 120) {
+      return 'MEDIUM';  // End of half
+    }
+    
+    return 'NORMAL';
+  }
+  
+  private getConversionProbability(gameState: GameState): number {
+    if (!gameState.yardsToGo || !gameState.fieldPosition) return 50;
+    
+    let probability = 50; // Base conversion rate
+    
+    // Distance factors
+    if (gameState.yardsToGo <= 1) probability = 85;
+    else if (gameState.yardsToGo <= 3) probability = 70;
+    else if (gameState.yardsToGo <= 5) probability = 55;
+    else probability = 35;
+    
+    // Field position adjustments
+    if (gameState.fieldPosition <= 10) probability += 10; // Goal line boost
+    else if (gameState.fieldPosition <= 30) probability += 5; // Red zone boost
+    
+    return Math.min(Math.max(probability, 15), 95);
+  }
+  
+  private getDecisionRecommendation(gameState: GameState): string {
+    const conversionProb = this.getConversionProbability(gameState);
+    const fieldPosition = gameState.fieldPosition || 50;
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    const timePressure = this.getTimePressureLevel(gameState);
+    
+    // High conversion probability situations
+    if (conversionProb >= 75) {
+      return 'GO_FOR_IT';
+    }
+    
+    // Critical time situations
+    if (timePressure === 'CRITICAL' && scoreDiff <= 7) {
+      return fieldPosition <= 40 ? 'GO_FOR_IT' : 'PUNT';
+    }
+    
+    // Field goal range
+    if (fieldPosition <= 35 && conversionProb < 60) {
+      return 'FIELD_GOAL_ATTEMPT';
+    }
+    
+    // Default recommendations
+    if (fieldPosition <= 30) return 'GO_FOR_IT';
+    if (fieldPosition >= 60) return 'PUNT';
+    
+    return conversionProb >= 50 ? 'GO_FOR_IT' : 'PUNT';
+  }
+  
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString) return 0;
+    const cleanTime = timeString.trim().split(' ')[0];
+    
+    if (cleanTime.includes(':')) {
+      const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
+      return (minutes * 60) + seconds;
+    }
+    
+    return parseInt(cleanTime) || 0;
   }
 }

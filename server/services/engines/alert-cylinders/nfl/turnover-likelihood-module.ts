@@ -77,7 +77,16 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
         primaryRiskFactor,
         situationDescription,
         alertType: 'PREDICTIVE',
-        predictionCategory: 'TURNOVER_RISK'
+        predictionCategory: 'TURNOVER_RISK',
+        // NFL-specific context for AI enhancement
+        nflContext: {
+          isPressureSituation: this.isPressureSituation(gameState),
+          isFourthDown: gameState.down === 4,
+          isDeepInOwnTerritory: gameState.fieldPosition >= 80,
+          scoreDifferential: Math.abs(gameState.homeScore - gameState.awayScore),
+          timePressure: this.getTimePressureLevel(gameState),
+          defensiveOpportunity: this.getDefensiveOpportunityLevel(gameState)
+        }
       },
       priority: turnoverRisk > 50 ? 95 : turnoverRisk > 40 ? 90 : 85
     };

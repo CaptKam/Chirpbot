@@ -1,9 +1,11 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
+import { AIContextController, AlertContext, AIEnhancedAlert } from '../ai-context-controller';
 
 export class NFLEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private aiContextController: AIContextController;
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -11,12 +13,15 @@ export class NFLEngine extends BaseSportEngine {
     totalRequests: 0,
     totalAlerts: 0,
     cacheHits: 0,
-    cacheMisses: 0
+    cacheMisses: 0,
+    aiEnhancementTime: [] as number[],
+    enhancedAlerts: 0
   };
 
   constructor() {
     super('NFL');
     this.settingsCache = new SettingsCache(storage);
+    this.aiContextController = new AIContextController();
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -87,7 +92,7 @@ export class NFLEngine extends BaseSportEngine {
     return Math.min(Math.max(probability, 10), 95);
   }
 
-  // Override to add NFL-specific game state enhancement and delegate to base class
+  // Override to add NFL-specific game state enhancement and AI-enhanced alert processing
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const startTime = Date.now();
     this.performanceMetrics.totalRequests++;
@@ -101,18 +106,21 @@ export class NFLEngine extends BaseSportEngine {
       
       // Use the parent class method which properly calls all loaded modules
       const alertStartTime = Date.now();
-      const alerts = await super.generateLiveAlerts(enhancedGameState);
+      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
       const alertTime = Date.now() - alertStartTime;
       this.performanceMetrics.alertGenerationTime.push(alertTime);
       
-      this.performanceMetrics.totalAlerts += alerts.length;
+      // Process alerts with AI enhancement for high-priority NFL situations
+      const processedAlerts = await this.processEnhancedNFLAlerts(rawAlerts, enhancedGameState);
+      
+      this.performanceMetrics.totalAlerts += processedAlerts.length;
       
       const totalTime = Date.now() - startTime;
       if (totalTime > 100) {
         console.log(`⚠️ NFL Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
       }
       
-      return alerts;
+      return processedAlerts;
     } catch (error) {
       const totalTime = Date.now() - startTime;
       console.error(`❌ NFL Alert generation failed after ${totalTime}ms:`, error);
@@ -271,9 +279,135 @@ export class NFLEngine extends BaseSportEngine {
     console.log(`🔧 Initialized ${this.alertModules.size} NFL alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
   }
   
-  // Get performance statistics for monitoring
+  // Process NFL alerts with AI enhancement for high-priority situations
+  private async processEnhancedNFLAlerts(rawAlerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    const processedAlerts: AlertResult[] = [];
+    
+    for (const alert of rawAlerts) {
+      try {
+        // Check if this is a high-priority NFL alert that should get AI enhancement
+        if (alert.priority >= 85 && this.shouldEnhanceNFLAlert(alert.type)) {
+          const aiStartTime = Date.now();
+          console.log(`🤖 NFL AI Enhancement: Processing ${alert.type} alert (priority: ${alert.priority})`);
+          
+          const enhancedAlert = await this.enhanceNFLAlertWithAI(alert, gameState);
+          const aiTime = Date.now() - aiStartTime;
+          this.performanceMetrics.aiEnhancementTime.push(aiTime);
+          this.performanceMetrics.enhancedAlerts++;
+          
+          console.log(`✅ NFL AI Enhanced: ${alert.type} in ${aiTime}ms`);
+          processedAlerts.push(enhancedAlert);
+        } else {
+          // Standard alert without AI enhancement
+          processedAlerts.push(alert);
+        }
+      } catch (error) {
+        console.error(`❌ NFL AI Enhancement failed for ${alert.type}:`, error);
+        // Fallback to original alert on AI failure
+        processedAlerts.push(alert);
+      }
+    }
+    
+    return processedAlerts;
+  }
+  
+  // Check if NFL alert type should receive AI enhancement
+  private shouldEnhanceNFLAlert(alertType: string): boolean {
+    const enhancedNFLAlerts = [
+      'NFL_RED_ZONE_OPPORTUNITY',
+      'NFL_TURNOVER_LIKELIHOOD', 
+      'NFL_FOURTH_DOWN',
+      'NFL_TWO_MINUTE_WARNING'
+    ];
+    
+    return enhancedNFLAlerts.includes(alertType);
+  }
+  
+  // Enhance NFL alert with AI-generated contextual analysis
+  private async enhanceNFLAlertWithAI(alert: AlertResult, gameState: GameState): Promise<AlertResult> {
+    try {
+      // Convert GameState and AlertResult to AlertContext for AI processing
+      const alertContext: AlertContext = this.buildNFLAlertContext(alert, gameState);
+      
+      // Get AI enhancement from AIContextController
+      const aiEnhancement: AIEnhancedAlert = await this.aiContextController.enhanceAlertWithFullControl(alertContext);
+      
+      // Merge AI enhancement with original alert
+      return {
+        ...alert,
+        message: aiEnhancement.message,
+        context: {
+          ...alert.context,
+          aiEnhanced: true,
+          aiInsights: aiEnhancement.insights,
+          bettingAdvice: aiEnhancement.bettingAdvice,
+          gameProjection: aiEnhancement.gameProjection,
+          urgency: aiEnhancement.urgency,
+          callToAction: aiEnhancement.callToAction,
+          confidenceScore: aiEnhancement.confidenceScore,
+          aiProcessingTime: aiEnhancement.aiProcessingTime
+        },
+        priority: Math.max(alert.priority, 90) // Boost priority for AI-enhanced alerts
+      };
+    } catch (error) {
+      console.error('NFL AI enhancement failed:', error);
+      // Return original alert with fallback AI context
+      return {
+        ...alert,
+        context: {
+          ...alert.context,
+          aiEnhanced: false,
+          aiError: 'AI enhancement unavailable',
+          fallbackInsight: this.getNFLFallbackInsight(alert.type, gameState)
+        }
+      };
+    }
+  }
+  
+  // Build AlertContext from NFL game state and alert for AI processing
+  private buildNFLAlertContext(alert: AlertResult, gameState: GameState): AlertContext {
+    return {
+      gameId: gameState.gameId,
+      sport: 'NFL',
+      alertType: alert.type,
+      priority: alert.priority,
+      probability: this.calculateProbability(gameState),
+      homeTeam: gameState.homeTeam,
+      awayTeam: gameState.awayTeam,
+      homeScore: gameState.homeScore,
+      awayScore: gameState.awayScore,
+      quarter: gameState.quarter,
+      timeRemaining: gameState.timeRemaining,
+      down: gameState.down,
+      yardsToGo: gameState.yardsToGo,
+      fieldPosition: gameState.fieldPosition,
+      possession: gameState.possession,
+      redZone: gameState.fieldPosition ? gameState.fieldPosition <= 20 : false,
+      goalLine: gameState.fieldPosition ? gameState.fieldPosition <= 5 : false,
+      originalMessage: alert.message,
+      originalContext: alert.context
+    };
+  }
+  
+  // Get fallback insight for NFL alerts when AI enhancement fails
+  private getNFLFallbackInsight(alertType: string, gameState: GameState): string {
+    switch (alertType) {
+      case 'NFL_RED_ZONE_OPPORTUNITY':
+        return `Red zone situations have ${gameState.fieldPosition <= 10 ? '85%' : '65%'} touchdown probability`;
+      case 'NFL_TURNOVER_LIKELIHOOD':
+        return `High-pressure situation with ${gameState.down === 4 ? 'critical' : 'elevated'} turnover risk`;
+      case 'NFL_FOURTH_DOWN':
+        return `Fourth down decisions are crucial - ${gameState.yardsToGo <= 3 ? 'go for it' : 'consider punt'} territory`;
+      case 'NFL_TWO_MINUTE_WARNING':
+        return `Clock management phase - every play and timeout becomes critical`;
+      default:
+        return 'High-value NFL betting situation detected';
+    }
+  }
+  
+  // Get performance statistics for monitoring (updated with AI metrics)
   getPerformanceStats(): any {
-    const { alertGenerationTime, moduleLoadTime, enhanceDataTime } = this.performanceMetrics;
+    const { alertGenerationTime, moduleLoadTime, enhanceDataTime, aiEnhancementTime } = this.performanceMetrics;
     
     const calculateStats = (times: number[]) => {
       if (times.length === 0) return { avg: 0, p50: 0, p95: 0, p99: 0, max: 0, min: 0 };
@@ -293,8 +427,13 @@ export class NFLEngine extends BaseSportEngine {
       alertGeneration: calculateStats(alertGenerationTime),
       moduleLoading: calculateStats(moduleLoadTime),
       dataEnhancement: calculateStats(enhanceDataTime),
+      aiEnhancement: calculateStats(aiEnhancementTime),
       totalRequests: this.performanceMetrics.totalRequests,
       totalAlerts: this.performanceMetrics.totalAlerts,
+      enhancedAlerts: this.performanceMetrics.enhancedAlerts,
+      enhancementRate: this.performanceMetrics.totalAlerts > 0 
+        ? Math.round((this.performanceMetrics.enhancedAlerts / this.performanceMetrics.totalAlerts) * 100) 
+        : 0,
       cacheHitRate: this.performanceMetrics.totalRequests > 0 
         ? Math.round((this.performanceMetrics.cacheHits / this.performanceMetrics.totalRequests) * 100) 
         : 0,
@@ -304,7 +443,7 @@ export class NFLEngine extends BaseSportEngine {
     };
   }
   
-  // Log performance summary every 5 minutes
+  // Log performance summary every 5 minutes (updated with AI metrics)
   logPerformanceSummary(): void {
     const stats = this.getPerformanceStats();
     console.log(`📊 NFL Engine Performance Summary:
@@ -312,7 +451,9 @@ export class NFLEngine extends BaseSportEngine {
       `  Alert Generation: avg ${stats.alertGeneration.avg}ms, p95 ${stats.alertGeneration.p95}ms\n` +
       `  Module Loading: avg ${stats.moduleLoading.avg}ms, p95 ${stats.moduleLoading.p95}ms\n` +
       `  Data Enhancement: avg ${stats.dataEnhancement.avg}ms, p95 ${stats.dataEnhancement.p95}ms\n` +
+      `  AI Enhancement: avg ${stats.aiEnhancement.avg}ms, p95 ${stats.aiEnhancement.p95}ms\n` +
       `  Total Requests: ${stats.totalRequests}, Alerts: ${stats.totalAlerts}\n` +
+      `  Enhanced Alerts: ${stats.enhancedAlerts} (${stats.enhancementRate}%)\n` +
       `  Cache Hit Rate: ${stats.cacheHitRate}%, Alerts/Request: ${stats.alertsPerRequest}`);
   }
 }
