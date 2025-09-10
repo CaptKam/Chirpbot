@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { weatherAlertIntegration } from '../../../weather-alert-integration';
+import { advancedPlayerStats, PlayerAdvancedStats, PitcherAdvancedStats, HandednessMatchup } from '../../../advanced-player-stats';
 
 export default class BatterDueModule extends BaseAlertModule {
   alertType = 'MLB_BATTER_DUE';
@@ -64,6 +65,10 @@ export default class BatterDueModule extends BaseAlertModule {
   // Cached probability to prevent flapping - computed once per unique game state
   private probabilityCache: { [key: string]: number } = {};
   
+  // Advanced metrics cache for performance optimization
+  private playerStatsCache: { [key: string]: { batter?: PlayerAdvancedStats; pitcher?: PitcherAdvancedStats; timestamp: number } } = {};
+  private readonly PLAYER_CACHE_TTL = 30 * 60 * 1000; // 30 minutes for live game player stats
+  
   // Hysteresis thresholds to prevent alert flapping
   private readonly TRIGGER_THRESHOLD = 62; // Trigger alert at 62%
   private readonly CLEAR_THRESHOLD = 55;   // Clear alert at 55%
@@ -103,8 +108,11 @@ export default class BatterDueModule extends BaseAlertModule {
     const gameContext = this.analyzeGameSituation(gameState);
     const lineupContext = this.analyzeLineupData(gameState);
     
-    // Create dynamic message based on the specific situation and weather
-    let alertMessage = this.generateAlertMessage(scoringProbability, gameContext, lineupContext, gameState.weatherContext);
+    // Get advanced player metrics for sophisticated analysis
+    const { batterStats, pitcherStats, handednessMatchup } = await this.getAdvancedPlayerMetrics(gameState);
+    
+    // Create dynamic message based on the specific situation, weather, and advanced metrics
+    let alertMessage = this.generateAdvancedAlertMessage(scoringProbability, gameContext, lineupContext, gameState.weatherContext, batterStats, pitcherStats, handednessMatchup);
 
     // More granular alertKey with base/out/lineup context
     const baseOutState = this.getBaseOutStateKey(gameState);
@@ -139,6 +147,11 @@ export default class BatterDueModule extends BaseAlertModule {
         currentBatter: gameState.currentBatter,
         currentPitcher: gameState.currentPitcher,
         baseOutState,
+        // Advanced sabermetric context
+        batterAdvancedStats: batterStats,
+        pitcherAdvancedStats: pitcherStats,
+        handednessMatchup: handednessMatchup,
+        batterAdvantage: batterStats && pitcherStats ? advancedPlayerStats.calculateBatterAdvantage(batterStats, pitcherStats) : 0,
         // Weather integration context
         weatherContext: gameState.weatherContext,
         weatherImpact: gameState.weatherContext?.impact || 1.0,
@@ -226,6 +239,11 @@ export default class BatterDueModule extends BaseAlertModule {
       // Continue without weather factors if integration fails
     }
 
+    // Apply advanced metrics enhancements
+    if (gameState.currentBatter && gameState.currentPitcher) {
+      probability = await this.applyAdvancedMetricsBoost(probability, gameState);
+    }
+    
     // Apply calibrated bounds (more realistic than hard caps)
     return this.calibrateScoreBounds(probability, gameState);
   }
@@ -501,5 +519,246 @@ export default class BatterDueModule extends BaseAlertModule {
     else if (outs === 1) leverage *= 1.1;
     
     return Math.round(leverage * 100) / 100; // Round to 2 decimal places
+  }
+
+  // === ADVANCED SABERMETRIC METHODS ===
+
+  /**
+   * Generate sophisticated alert message with advanced metrics context
+   */
+  private generateAdvancedAlertMessage(
+    probability: number, 
+    gameContext: any, 
+    lineupContext: any, 
+    weatherContext?: any,
+    batterStats?: PlayerAdvancedStats,
+    pitcherStats?: PitcherAdvancedStats,
+    handednessMatchup?: HandednessMatchup
+  ): string {
+    const roundedProb = Math.round(probability);
+    const currentBatter = lineupContext.currentBatterName;
+    
+    // Weather suffix for enhanced context
+    const weatherSuffix = weatherContext?.significant ? 
+      ` (${weatherContext.description})` : '';
+    
+    // Advanced metrics context
+    const advancedContext = this.buildAdvancedMetricsContext(batterStats, pitcherStats, handednessMatchup);
+    
+    // Generate sophisticated message based on advanced analytics
+    if (gameContext.isHighLeverage && batterStats?.wRCPlus && batterStats.wRCPlus >= 130) {
+      return `⚡ ELITE HITTER: ${roundedProb}% scoring chance - ${currentBatter} (${batterStats.wRCPlus} wRC+, ${(batterStats.xwOBA * 1000).toFixed(0)} xwOBA)${advancedContext}${weatherSuffix}`;
+    } else if (handednessMatchup?.favorsBatter && handednessMatchup.advantageStrength === 'strong') {
+      return `💥 PLATOON ADVANTAGE: ${roundedProb}% scoring chance - ${currentBatter} ${handednessMatchup.description.toLowerCase()}${advancedContext}${weatherSuffix}`;
+    } else if (batterStats?.recent.trend === 'hot' && batterStats.recent.wRCPlus >= 140) {
+      return `🔥 HOT STREAK: ${roundedProb}% scoring chance - ${currentBatter} blazing hot (${batterStats.recent.wRCPlus} wRC+ last 15 games)${advancedContext}${weatherSuffix}`;
+    } else if (gameContext.isLateInning && batterStats?.xwOBA && batterStats.xwOBA >= 0.380) {
+      return `⏰ CLUTCH CONTACT: ${roundedProb}% scoring chance - ${currentBatter} makes elite contact (.${(batterStats.xwOBA * 1000).toFixed(0)} xwOBA)${advancedContext}${weatherSuffix}`;
+    } else if (gameContext.hasRunnersInScoringPosition && lineupContext.hasStrongUpcomingHitters) {
+      const nextBatterContext = batterStats ? `, elite lineup following` : '';
+      return `⚡ POWER SEQUENCE: ${roundedProb}% scoring chance - strong lineup with RISP${nextBatterContext}${advancedContext}${weatherSuffix}`;
+    } else if (pitcherStats && advancedContext.includes('struggling')) {
+      return `🎯 PITCHER FATIGUE: ${roundedProb}% scoring chance - favorable matchup vs struggling pitcher${advancedContext}${weatherSuffix}`;
+    } else if (batterStats?.wRCPlus && batterStats.wRCPlus >= 115) {
+      return `📈 ABOVE AVERAGE: ${roundedProb}% scoring chance - ${currentBatter} productive hitter (${batterStats.wRCPlus} wRC+)${advancedContext}${weatherSuffix}`;
+    } else {
+      return `📊 SCORING CHANCE: ${roundedProb}% probability with current analytics${advancedContext}${weatherSuffix}`;
+    }
+  }
+
+  /**
+   * Fetch and cache advanced player metrics with handedness analysis
+   */
+  private async getAdvancedPlayerMetrics(gameState: GameState): Promise<{
+    batterStats?: PlayerAdvancedStats;
+    pitcherStats?: PitcherAdvancedStats;
+    handednessMatchup?: HandednessMatchup;
+  }> {
+    const cacheKey = `${gameState.gameId}_${gameState.currentBatter}_${gameState.currentPitcher}`;
+    const now = Date.now();
+    
+    // Check cache first
+    const cached = this.playerStatsCache[cacheKey];
+    if (cached && (now - cached.timestamp) < this.PLAYER_CACHE_TTL) {
+      const handednessMatchup = cached.batter && cached.pitcher ? 
+        advancedPlayerStats.analyzeHandednessMatchup(cached.batter.handedness, cached.pitcher.handedness) : undefined;
+      
+      return {
+        batterStats: cached.batter,
+        pitcherStats: cached.pitcher,
+        handednessMatchup
+      };
+    }
+
+    try {
+      // Determine batting team for context
+      const battingTeam = gameState.isTopInning ? gameState.awayTeam : gameState.homeTeam;
+      const pitchingTeam = gameState.isTopInning ? gameState.homeTeam : gameState.awayTeam;
+      
+      // Fetch advanced stats if player names available
+      let batterStats: PlayerAdvancedStats | undefined;
+      let pitcherStats: PitcherAdvancedStats | undefined;
+      
+      if (gameState.currentBatter) {
+        batterStats = await advancedPlayerStats.getBatterAdvancedStats(
+          gameState.currentBatter, 
+          battingTeam
+        );
+        console.log(`📊 Advanced stats for ${gameState.currentBatter}: xwOBA=${batterStats.xwOBA.toFixed(3)}, wRC+=${batterStats.wRCPlus}, trend=${batterStats.recent.trend}`);
+      }
+      
+      if (gameState.currentPitcher) {
+        pitcherStats = await advancedPlayerStats.getPitcherAdvancedStats(
+          gameState.currentPitcher, 
+          pitchingTeam
+        );
+        console.log(`⚾ Advanced stats for ${gameState.currentPitcher}: xERA=${pitcherStats.xERA.toFixed(2)}, K%-BB%=${(pitcherStats.kwBB * 100).toFixed(1)}%`);
+      }
+      
+      // Analyze handedness matchup if both players available
+      const handednessMatchup = batterStats && pitcherStats ? 
+        advancedPlayerStats.analyzeHandednessMatchup(batterStats.handedness, pitcherStats.handedness) : undefined;
+      
+      if (handednessMatchup) {
+        console.log(`🤝 Matchup analysis: ${handednessMatchup.matchupType} - ${handednessMatchup.description} (${(handednessMatchup.expectedWOBAModifier * 100 - 100).toFixed(1)}% modifier)`);
+      }
+      
+      // Cache the results
+      this.playerStatsCache[cacheKey] = {
+        batter: batterStats,
+        pitcher: pitcherStats,
+        timestamp: now
+      };
+      
+      return { batterStats, pitcherStats, handednessMatchup };
+    } catch (error) {
+      console.error('Error fetching advanced player metrics:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Apply advanced metrics boost to probability calculations
+   */
+  private async applyAdvancedMetricsBoost(probability: number, gameState: GameState): Promise<number> {
+    try {
+      const { batterStats, pitcherStats, handednessMatchup } = await this.getAdvancedPlayerMetrics(gameState);
+      
+      let enhancedProbability = probability;
+      
+      // Apply xwOBA quality multiplier
+      if (batterStats?.xwOBA) {
+        const xwobaMultiplier = this.calculateXwOBAMultiplier(batterStats.xwOBA);
+        enhancedProbability *= xwobaMultiplier;
+        console.log(`📊 xwOBA multiplier: ${xwobaMultiplier.toFixed(3)} for ${batterStats.xwOBA.toFixed(3)} xwOBA`);
+      }
+      
+      // Apply wRC+ run creation adjustment
+      if (batterStats?.wRCPlus) {
+        const wrcPlusAdjustment = this.calculateWRCPlusAdjustment(batterStats.wRCPlus);
+        enhancedProbability += wrcPlusAdjustment;
+        console.log(`💪 wRC+ adjustment: ${wrcPlusAdjustment.toFixed(1)} for ${batterStats.wRCPlus} wRC+`);
+      }
+      
+      // Apply handedness matchup modifier
+      if (handednessMatchup) {
+        enhancedProbability *= handednessMatchup.expectedWOBAModifier;
+        console.log(`🤝 Handedness modifier: ${handednessMatchup.expectedWOBAModifier.toFixed(3)} (${handednessMatchup.matchupType})`);
+      }
+      
+      // Apply recent performance trends
+      if (batterStats?.recent.trend) {
+        const trendAdjustment = this.calculateTrendAdjustment(batterStats.recent.trend, batterStats.recent.wRCPlus);
+        enhancedProbability += trendAdjustment;
+        console.log(`🔥 Trend adjustment: ${trendAdjustment.toFixed(1)} for ${batterStats.recent.trend} streak`);
+      }
+      
+      // Apply pitcher quality counter-adjustment
+      if (pitcherStats) {
+        const pitcherAdjustment = this.calculatePitcherQualityAdjustment(pitcherStats);
+        enhancedProbability += pitcherAdjustment;
+        console.log(`⚾ Pitcher adjustment: ${pitcherAdjustment.toFixed(1)} for pitcher quality`);
+      }
+      
+      console.log(`🚀 Advanced metrics enhanced probability: ${probability.toFixed(1)}% → ${enhancedProbability.toFixed(1)}%`);
+      return enhancedProbability;
+    } catch (error) {
+      console.error('Error applying advanced metrics boost:', error);
+      return probability; // Return original probability if enhancement fails
+    }
+  }
+
+  // === ADVANCED METRICS HELPER METHODS ===
+
+  private calculateXwOBAMultiplier(xwOBA: number): number {
+    const leagueAverage = 0.318; // 2024 MLB league average
+    // Convert xwOBA difference to multiplicative factor
+    // Range: 0.85 (poor contact) to 1.25 (elite contact)
+    const differential = (xwOBA - leagueAverage) / leagueAverage;
+    return Math.max(0.85, Math.min(1.25, 1.0 + (differential * 0.8)));
+  }
+
+  private calculateWRCPlusAdjustment(wRCPlus: number): number {
+    // Direct adjustment based on runs created above/below average
+    // Each 10 points of wRC+ = ~1% probability adjustment
+    const leagueAverage = 100;
+    return Math.max(-8, Math.min(8, (wRCPlus - leagueAverage) / 12.5));
+  }
+
+  private calculateTrendAdjustment(trend: 'hot' | 'cold' | 'average', recentWRCPlus: number): number {
+    switch (trend) {
+      case 'hot':
+        // Hot streak bonus scaled by performance level
+        return Math.min(6, 2 + (recentWRCPlus - 100) / 25);
+      case 'cold':
+        // Cold streak penalty capped at reasonable level
+        return Math.max(-4, -1 - (100 - recentWRCPlus) / 30);
+      default:
+        return 0;
+    }
+  }
+
+  private calculatePitcherQualityAdjustment(pitcherStats: PitcherAdvancedStats): number {
+    // Worse pitcher = higher scoring probability
+    const avgXERA = 4.28; // 2024 league average
+    const avgKwBB = 0.145; // 2024 league average K%-BB%
+    
+    // xERA adjustment (worse ERA = higher scoring chance)
+    const eraAdjustment = Math.max(-3, Math.min(4, (pitcherStats.xERA - avgXERA) * 0.8));
+    
+    // K%-BB% adjustment (lower strikeout rate = higher scoring chance)
+    const kwbbAdjustment = Math.max(-2, Math.min(3, (avgKwBB - pitcherStats.kwBB) * 15));
+    
+    return eraAdjustment + kwbbAdjustment;
+  }
+
+  private buildAdvancedMetricsContext(
+    batterStats?: PlayerAdvancedStats, 
+    pitcherStats?: PitcherAdvancedStats, 
+    handednessMatchup?: HandednessMatchup
+  ): string {
+    const contextParts: string[] = [];
+    
+    // Handedness context
+    if (handednessMatchup && handednessMatchup.advantageStrength !== 'neutral') {
+      const advantage = handednessMatchup.favorsBatter ? 'favorable' : 'tough';
+      contextParts.push(`${advantage} ${handednessMatchup.matchupType}`);
+    }
+    
+    // Recent performance context
+    if (batterStats?.recent.trend === 'hot') {
+      contextParts.push('hot streak');
+    } else if (batterStats?.recent.trend === 'cold') {
+      contextParts.push('cold spell');
+    }
+    
+    // Pitcher quality context
+    if (pitcherStats?.xERA && pitcherStats.xERA > 4.80) {
+      contextParts.push('struggling pitcher');
+    } else if (pitcherStats?.kwBB && pitcherStats.kwBB > 0.20) {
+      contextParts.push('dominant pitcher');
+    }
+    
+    return contextParts.length > 0 ? ` - ${contextParts.join(', ')}` : '';
   }
 }
