@@ -874,6 +874,20 @@ export class AdaptivePollingManager {
     const newState = this.analyzeGameState(gameData);
     const newCriticality = this.calculateGameCriticality(gameData);
     
+    // CRITICAL FIX: Check if game has live indicators and promote to live status
+    if (this.sport === 'MLB' && gameData && newState === 'live' && gameData.status === 'scheduled') {
+      // Check for live indicators in enhanced data
+      const hasLiveIndicators = gameData.runners || gameData.balls !== undefined || 
+                               gameData.strikes !== undefined || gameData.outs !== undefined ||
+                               (gameData.inning && gameData.inning > 0);
+      
+      if (hasLiveIndicators) {
+        console.log(`🚀 Promotion: scheduled → live via enhanced data for game ${gameId}`);
+        gameData.isLive = true;
+        gameData.status = 'live';
+      }
+    }
+    
     // Detect state transitions
     if (newState !== currentState.currentState) {
       console.log(`🔄 Game ${gameId}: ${currentState.currentState} → ${newState}`);
