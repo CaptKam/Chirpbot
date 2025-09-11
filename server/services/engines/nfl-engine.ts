@@ -4,9 +4,11 @@ import { storage } from '../../storage';
 import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
 import { weatherService } from '../weather-service';
+import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 
 export class NFLEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private lineMovementCache: Map<string, any> = new Map(); // Track line movements
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -16,7 +18,8 @@ export class NFLEngine extends BaseSportEngine {
     cacheHits: 0,
     cacheMisses: 0,
     aiEnhancementTime: [] as number[],
-    enhancedAlerts: 0
+    enhancedAlerts: 0,
+    probabilityCalculationTime: [] as number[]
   };
 
   constructor() {
@@ -139,8 +142,11 @@ export class NFLEngine extends BaseSportEngine {
       const alertTime = Date.now() - alertStartTime;
       this.performanceMetrics.alertGenerationTime.push(alertTime);
       
+      // Enhance alerts with time-sensitive intelligence via AlertComposer
+      const composedAlerts = await this.composeTimeBasedAlerts(rawAlerts, enhancedGameState);
+      
       // Process alerts with cross-sport AI enhancement for high-priority NFL situations
-      const processedAlerts = await this.processEnhancedNFLAlerts(rawAlerts, enhancedGameState);
+      const processedAlerts = await this.processEnhancedNFLAlerts(composedAlerts, enhancedGameState);
       
       this.performanceMetrics.totalAlerts += processedAlerts.length;
       
@@ -607,6 +613,111 @@ export class NFLEngine extends BaseSportEngine {
     }
     
     return implications.join('; ') || 'Weather impact on betting lines minimal';
+  }
+  
+  /**
+   * Compose time-based, actionable alerts using AlertComposer
+   */
+  private async composeTimeBasedAlerts(alerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    const composedAlerts: AlertResult[] = [];
+    
+    for (const alert of alerts) {
+      try {
+        // Generate enhanced payload with time-sensitive intelligence
+        const enhancedPayload = await alertComposer.composeEnhancedAlert(alert, gameState, {
+          // Add NFL-specific context
+          recentLineMovement: this.getRecentLineMovement(gameState),
+          sharpMoney: this.getSharpMoneyIndicator(gameState),
+          weatherImpact: gameState.weather
+        });
+        
+        // Create enhanced alert with rich messaging
+        const enhancedAlert: AlertResult = {
+          ...alert,
+          message: enhancedPayload.headline,
+          context: {
+            ...alert.context,
+            enhanced: enhancedPayload,
+            displayText: alertComposer.formatForDisplay(enhancedPayload),
+            mobileText: alertComposer.formatForMobileNotification(enhancedPayload),
+            timing: enhancedPayload.timing,
+            action: enhancedPayload.action,
+            insight: enhancedPayload.insight,
+            riskReward: enhancedPayload.riskReward
+          }
+        };
+        
+        composedAlerts.push(enhancedAlert);
+        console.log(`⚡ NFL Alert Composed: ${alert.type} - ${enhancedPayload.timing.urgencyLevel} priority`);
+      } catch (error) {
+        console.error(`Failed to compose NFL alert:`, error);
+        composedAlerts.push(alert); // Fallback to original
+      }
+    }
+    
+    return composedAlerts;
+  }
+  
+  /**
+   * Get recent line movement for NFL context
+   */
+  private getRecentLineMovement(gameState: GameState): any {
+    // In production, this would connect to real-time odds feeds
+    // For now, simulate based on game state
+    const key = `${gameState.gameId}_line`;
+    const previous = this.lineMovementCache.get(key);
+    const current = {
+      total: (gameState.homeScore || 0) + (gameState.awayScore || 0),
+      spread: (gameState.homeScore || 0) - (gameState.awayScore || 0),
+      quarter: gameState.quarter || 0,
+      timestamp: Date.now()
+    };
+    
+    if (previous && (current.timestamp - previous.timestamp) < 60000) {
+      const totalMove = current.total - previous.total;
+      const spreadMove = current.spread - previous.spread;
+      
+      if (Math.abs(totalMove) >= 3 || Math.abs(spreadMove) >= 0.5) {
+        this.lineMovementCache.set(key, current);
+        return {
+          totalMove,
+          spreadMove,
+          quarterChange: current.quarter !== previous.quarter,
+          timeAgo: Math.floor((current.timestamp - previous.timestamp) / 1000)
+        };
+      }
+    }
+    
+    this.lineMovementCache.set(key, current);
+    return null;
+  }
+  
+  /**
+   * Get sharp money indicators for NFL
+   */
+  private getSharpMoneyIndicator(gameState: GameState): any {
+    // In production, this would use real betting data
+    // Simulate based on game flow and field position
+    const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+    const quarter = gameState.quarter || 1;
+    const fieldPosition = gameState.fieldPosition || 50;
+    
+    // Red zone situations often see sharp action
+    if (fieldPosition <= 20 && quarter >= 3) {
+      return { indicator: 'heavy', direction: 'TD props', confidence: 75 };
+    }
+    
+    // Close games in 4th quarter
+    if (scoreDiff <= 3 && quarter === 4) {
+      return { indicator: 'moderate', direction: 'under', confidence: 65 };
+    }
+    
+    // Fourth down situations
+    if (gameState.down === 4) {
+      return { indicator: 'spike', direction: 'live action', confidence: 80 };
+    }
+    
+    return null;
   }
   
   // Get fallback insight for NFL alerts when AI enhancement fails

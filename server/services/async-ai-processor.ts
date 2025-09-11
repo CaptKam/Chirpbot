@@ -21,6 +21,7 @@ interface AsyncAIResult {
   status: 'completed' | 'failed' | 'timeout';
   error?: string;
   wasActuallyEnhanced: boolean; // Whether AI was actually applied vs gated
+  hasComposerEnhancement?: boolean; // Whether AlertComposer was used
 }
 
 export class AsyncAIProcessor {
@@ -240,10 +241,15 @@ export class AsyncAIProcessor {
 
       const processingTime = Date.now() - startTime;
       
-      // Build enhanced alert
+      // Check if alert already has AlertComposer enhancement
+      const hasComposerEnhancement = job.originalAlert.context?.enhanced && 
+                                      job.originalAlert.context?.timing && 
+                                      job.originalAlert.context?.action;
+      
+      // Build enhanced alert that preserves AlertComposer enhancements
       const enhancedAlert: AlertResult = {
         ...job.originalAlert,
-        message: aiResponse.enhancedMessage,
+        message: aiResponse.enhancedMessage || job.originalAlert.message,
         context: {
           ...job.originalAlert.context,
           aiEnhanced: true,
@@ -255,7 +261,21 @@ export class AsyncAIProcessor {
           sportSpecificData: aiResponse.sportSpecificData,
           processingTime: aiResponse.aiProcessingTime,
           asyncProcessed: true,
-          asyncJobId: jobId
+          asyncJobId: jobId,
+          // Preserve AlertComposer enhancements if present
+          ...(hasComposerEnhancement ? {
+            enhanced: job.originalAlert.context.enhanced,
+            timing: job.originalAlert.context.timing,
+            action: job.originalAlert.context.action,
+            insight: job.originalAlert.context.insight,
+            riskReward: job.originalAlert.context.riskReward,
+            displayText: job.originalAlert.context.displayText,
+            mobileText: job.originalAlert.context.mobileText
+          } : {}),
+          // Combine insights if both exist
+          combinedInsight: hasComposerEnhancement && aiResponse.contextualInsights
+            ? `${job.originalAlert.context.insight?.keyFactor || ''} | AI: ${aiResponse.contextualInsights}`
+            : aiResponse.contextualInsights || job.originalAlert.context.insight?.keyFactor
         }
       };
 
@@ -267,7 +287,8 @@ export class AsyncAIProcessor {
         processingTime,
         processedAt: Date.now(),
         status: 'completed',
-        wasActuallyEnhanced: true
+        wasActuallyEnhanced: true,
+        hasComposerEnhancement
       };
       
       this.results.set(jobId, result);

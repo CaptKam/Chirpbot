@@ -3,9 +3,11 @@ import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
 import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 
 export class MLBEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private lineMovementCache: Map<string, any> = new Map(); // Track line movements
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -118,8 +120,11 @@ export class MLBEngine extends BaseSportEngine {
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
       
+      // Enhance alerts with time-sensitive intelligence via AlertComposer
+      const composedAlerts = await this.composeTimeBasedAlerts(rawAlerts, enhancedGameState);
+      
       // Process alerts with cross-sport AI enhancement for high-priority situations
-      const alerts = await this.processEnhancedMLBAlerts(rawAlerts, enhancedGameState);
+      const alerts = await this.processEnhancedMLBAlerts(composedAlerts, enhancedGameState);
       
       // Track MLB-specific metrics
       if (enhancedGameState.hasFirst && enhancedGameState.hasSecond && enhancedGameState.hasThird) {
@@ -395,6 +400,99 @@ export class MLBEngine extends BaseSportEngine {
     console.log(`🔧 Initialized ${this.alertModules.size} MLB alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
   }
 
+  /**
+   * Compose time-based, actionable alerts using AlertComposer
+   */
+  private async composeTimeBasedAlerts(alerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    const composedAlerts: AlertResult[] = [];
+    
+    for (const alert of alerts) {
+      try {
+        // Generate enhanced payload with time-sensitive intelligence
+        const enhancedPayload = await alertComposer.composeEnhancedAlert(alert, gameState, {
+          // Add any MLB-specific context
+          recentLineMovement: this.getRecentLineMovement(gameState),
+          sharpMoney: this.getSharpMoneyIndicator(gameState)
+        });
+        
+        // Create enhanced alert with rich messaging
+        const enhancedAlert: AlertResult = {
+          ...alert,
+          message: enhancedPayload.headline,
+          context: {
+            ...alert.context,
+            enhanced: enhancedPayload,
+            displayText: alertComposer.formatForDisplay(enhancedPayload),
+            mobileText: alertComposer.formatForMobileNotification(enhancedPayload),
+            timing: enhancedPayload.timing,
+            action: enhancedPayload.action,
+            insight: enhancedPayload.insight,
+            riskReward: enhancedPayload.riskReward
+          }
+        };
+        
+        composedAlerts.push(enhancedAlert);
+        console.log(`⚡ MLB Alert Composed: ${alert.type} - ${enhancedPayload.timing.urgencyLevel} priority`);
+      } catch (error) {
+        console.error(`Failed to compose MLB alert:`, error);
+        composedAlerts.push(alert); // Fallback to original
+      }
+    }
+    
+    return composedAlerts;
+  }
+  
+  /**
+   * Get recent line movement for context
+   */
+  private getRecentLineMovement(gameState: GameState): any {
+    // In production, this would connect to real-time odds feeds
+    // For now, simulate based on game state
+    const key = `${gameState.gameId}_line`;
+    const previous = this.lineMovementCache.get(key);
+    const current = {
+      total: gameState.homeScore + gameState.awayScore,
+      spread: gameState.homeScore - gameState.awayScore,
+      timestamp: Date.now()
+    };
+    
+    if (previous && (current.timestamp - previous.timestamp) < 60000) {
+      const totalMove = current.total - previous.total;
+      const spreadMove = current.spread - previous.spread;
+      
+      if (Math.abs(totalMove) >= 0.5 || Math.abs(spreadMove) >= 0.5) {
+        this.lineMovementCache.set(key, current);
+        return {
+          totalMove,
+          spreadMove,
+          timeAgo: Math.floor((current.timestamp - previous.timestamp) / 1000)
+        };
+      }
+    }
+    
+    this.lineMovementCache.set(key, current);
+    return null;
+  }
+  
+  /**
+   * Get sharp money indicators
+   */
+  private getSharpMoneyIndicator(gameState: GameState): any {
+    // In production, this would use real betting data
+    // Simulate based on game flow
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    const inning = gameState.inning || 1;
+    
+    if (scoreDiff <= 1 && inning >= 7) {
+      return { indicator: 'heavy', direction: 'over', confidence: 85 };
+    }
+    if (gameState.hasFirst && gameState.hasSecond && gameState.hasThird) {
+      return { indicator: 'moderate', direction: 'over', confidence: 70 };
+    }
+    
+    return null;
+  }
+  
   // Get performance metrics for V3 dashboard
   getPerformanceMetrics() {
     const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
