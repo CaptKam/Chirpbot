@@ -179,8 +179,8 @@ export default function AlertsPage() {
         {filteredAlerts.length === 0 ? (
           <Card className="bg-white/5 backdrop-blur-sm border-white/10">
             <CardContent className="p-8 text-center">
-              <Bell className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-300">No alerts for {filter === 'all' ? 'any sport' : filter}</p>
+              <Bell className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-100 text-base">No alerts for {filter === 'all' ? 'any sport' : filter}</p>
               <Button 
                 onClick={() => refetchAlerts()} 
                 variant="outline" 

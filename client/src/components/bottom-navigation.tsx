@@ -54,7 +54,7 @@ export function BottomNavigation() {
               className={`flex-1 py-3 px-4 text-center transition-colors relative ${
                 isActive
                   ? "text-emerald-400 font-bold"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-slate-200 hover:text-slate-100"
               }`}
             >
               <div className="relative">

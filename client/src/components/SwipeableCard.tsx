@@ -496,14 +496,14 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     {alertData.context.aiBettingAdvice.confidence}% Confidence
                   </span>
                 </div>
-                <p className="text-xs font-medium text-green-200 mb-2">
+                <p className="text-xs font-medium text-green-100 mb-2">
                   {alertData.context.aiBettingAdvice.recommendation}
                 </p>
 
                 {/* Reasoning */}
                 <div className="space-y-1 mb-2">
                   {alertData.context.aiBettingAdvice.reasoning?.map((reason: string, idx: number) => (
-                    <p key={idx} className="text-xs text-green-200">• {reason}</p>
+                    <p key={idx} className="text-xs text-green-100">• {reason}</p>
                   ))}
                 </div>
 
@@ -525,7 +525,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   <span className="text-purple-400 text-xs font-bold uppercase tracking-wide">🔮 AI Game Projection</span>
                 </div>
 
-                <p className="text-xs font-medium text-purple-200 mb-2">
+                <p className="text-xs font-medium text-purple-100 mb-2">
                   Final: {alertData.context.aiGameProjection.finalScorePrediction}
                 </p>
 
@@ -542,7 +542,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 {/* Key Moments */}
                 <div className="space-y-1">
                   {alertData.context.aiGameProjection.keyMoments?.map((moment: string, idx: number) => (
-                    <p key={idx} className="text-xs text-purple-200">⏱️ {moment}</p>
+                    <p key={idx} className="text-xs text-purple-100">⏱️ {moment}</p>
                   ))}
                 </div>
               </div>
@@ -557,14 +557,14 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     {alertData.context?.scoringProbability || alertData.confidence}% Confidence
                   </span>
                 </div>
-                <p className="text-xs text-green-200 mb-2">
+                <p className="text-xs text-green-100 mb-2">
                   {alertData.betbookData.aiAdvice}
                 </p>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-300">
+                  <span className="text-slate-100">
                     O/U: {alertData.betbookData.odds?.total}
                   </span>
-                  <span className="text-slate-300">
+                  <span className="text-slate-100">
                     Spread: {alertData.betbookData.odds?.home > 0 ? '+' : ''}{alertData.betbookData.odds?.home}
                   </span>
                 </div>
@@ -577,7 +577,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 ring-1 ring-white/20">
                   <div className="flex items-center space-x-2 mb-2">
                     <Target className="w-4 h-4 text-green-400" />
-                    <span className="text-xs text-green-200 font-semibold">Recommended Bet</span>
+                    <span className="text-xs text-green-100 font-semibold">Recommended Bet</span>
                   </div>
                   <p className="text-white text-sm font-medium">
                     {alertData.context?.recommendation ||
@@ -609,7 +609,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 ring-1 ring-white/10">
                     <div className="flex items-center space-x-2 mb-1">
                       <Brain className="w-3 h-3 text-purple-400" />
-                      <span className="text-xs text-purple-200 font-medium">AI Analysis</span>
+                      <span className="text-xs text-purple-100 font-medium">AI Analysis</span>
                       <span className="text-xs text-green-300 font-mono">
                         {alertData.context.confidence || alertData.confidence}% confidence
                       </span>
@@ -796,7 +796,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       </span>
                     </div>
                   )}
-                  <span className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+                  <span className="text-slate-100 text-xs font-semibold uppercase tracking-wider">
                     {(() => {
                       // Dynamic alert type based on sport and context
                       if (alertData.sport === 'MLB') {
@@ -827,8 +827,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </span>
                 </div>
                 <div className="flex items-center text-xs">
-                  <Clock className="w-3 h-3 text-slate-400 mr-1" />
-                  <span className="text-slate-400 font-medium">
+                  <Clock className="w-3 h-3 text-slate-200 mr-1" />
+                  <span className="text-slate-200 font-medium">
                     {(() => {
                       const alertTime = new Date(alertData.createdAt || '');
                       const now = new Date();
