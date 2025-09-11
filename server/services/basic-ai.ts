@@ -123,10 +123,10 @@ PROBABILITY: ${context.probability}%
 ${context.weather ? `WEATHER: ${context.weather.temperature}°F, ${context.weather.condition}` : ''}
 
 Provide:
-1. Quick betting insight (1 sentence)
-2. Simple recommendation (Over/Under/Spread)
+1. Comprehensive betting analysis with statistical foundation
+2. Strategic recommendation with detailed rationale (Over/Under/Spread/Props)
 
-Keep response under 100 words. Focus on immediate betting value.
+Focus on advanced betting intelligence, market inefficiencies, and data-driven insights.
     `.trim();
   }
 
@@ -143,7 +143,7 @@ Keep response under 100 words. Focus on immediate betting value.
         messages: [
           {
             role: 'system',
-            content: 'You are a sports betting analyst. Provide brief, actionable betting insights.'
+            content: 'You are an elite sports betting analyst with advanced knowledge of statistical modeling, situational analysis, and market dynamics. Provide sophisticated, data-driven insights that demonstrate professional-level expertise. Use precise terminology and analytical depth appropriate for experienced bettors and industry professionals.'
           },
           {
             role: 'user',

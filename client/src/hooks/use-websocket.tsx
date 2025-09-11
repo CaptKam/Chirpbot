@@ -64,7 +64,6 @@ export function useWebSocket() {
                   timestamp: alertData.createdAt,
                   seen: false,
                   sentToTelegram: false,
-                  context: alertData.payload?.context || {},
                   // Preserve AI enhancement data if available
                   context: {
                     ...alertData.payload?.context,

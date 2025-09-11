@@ -246,13 +246,13 @@ ${context.inning && context.inning >= 7 ? '- LATE INNING: High leverage situatio
 Focus on: Run expectancy, leverage situations, clutch hitting, pitcher fatigue, bullpen usage.
 
 Provide:
-1. Enhanced title (under 50 chars)
-2. Enhanced message (under 100 chars) 
-3. 3 contextual insights
-4. Actionable betting recommendation
-5. Win probability factors
+1. Enhanced title (compelling and descriptive)
+2. Enhanced message (professional analysis with specific details)
+3. 3 contextual insights (advanced strategic analysis)
+4. Actionable betting recommendation (with rationale)
+5. Win probability factors (data-driven assessment)
 
-Keep response concise and baseball-specific.`;
+Focus on professional-level baseball analytics and sophisticated betting intelligence.`;
   }
 
   private buildNFLPrompt(context: CrossSportContext, basePrompt: string): string {
@@ -269,13 +269,13 @@ ${context.weather?.impact ? `- Weather impact: ${context.weather.impact}` : ''}
 Focus on: Down & distance, field position, clock management, weather impact, playoff positioning.
 
 Provide:
-1. Enhanced title (under 50 chars)
-2. Enhanced message (under 100 chars)
-3. 3 NFL-specific insights
-4. Betting recommendation (spread/total/prop)
-5. Key factors for next play
+1. Enhanced title (strategic and compelling)
+2. Enhanced message (detailed situational analysis)
+3. 3 NFL-specific insights (advanced tactical analysis)
+4. Betting recommendation with specific reasoning (spread/total/prop)
+5. Key factors for next play (strategic depth)
 
-Emphasize NFL strategy and situational football.`;
+Emphasize sophisticated NFL strategy, advanced analytics, and professional-level situational football analysis.`;
   }
 
   private buildNCAAFPrompt(context: CrossSportContext, basePrompt: string): string {
@@ -310,13 +310,13 @@ ${context.quarter && context.quarter >= 4 && context.timeLeft ? '- CLUTCH TIME: 
 Focus on: Clutch performances, star player impact, playoff positioning, MVP considerations, championship implications.
 
 Provide:
-1. Enhanced title (under 50 chars)
-2. Enhanced message (under 100 chars)
-3. 3 NBA insights (star power, clutch time, playoffs)
-4. Betting recommendation
-5. Championship/MVP factors
+1. Enhanced title (dynamic and engaging)
+2. Enhanced message (comprehensive situational analysis)
+3. 3 NBA insights (advanced analytics on star power, clutch performance, playoff implications)
+4. Betting recommendation with statistical backing
+5. Championship/MVP factors with detailed reasoning
 
-Emphasize professional basketball dynamics and superstar performances.`;
+Emphasize sophisticated professional basketball analytics, advanced metrics, and elite-level performance analysis.`;
   }
 
   private buildWNBAPrompt(context: CrossSportContext, basePrompt: string): string {
