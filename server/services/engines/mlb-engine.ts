@@ -4,6 +4,7 @@ import { storage } from '../../storage';
 import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
+import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class MLBEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
@@ -138,6 +139,10 @@ export class MLBEngine extends BaseSportEngine {
       }
       
       this.performanceMetrics.totalAlerts += alerts.length;
+      
+      // Send alerts to Telegram for users with notifications enabled
+      await this.deliverAlertsToTelegram(alerts, enhancedGameState);
+      
       return alerts;
     } finally {
       const alertTime = Date.now() - startTime;
@@ -494,6 +499,79 @@ export class MLBEngine extends BaseSportEngine {
   }
   
   // Get performance metrics for V3 dashboard
+  // Send alerts to Telegram for users with notifications enabled
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    if (!alerts || alerts.length === 0) return;
+    
+    try {
+      // Get all users with Telegram enabled
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(user => 
+        user.telegramEnabled && 
+        user.telegramBotToken && 
+        user.telegramChatId &&
+        user.telegramBotToken !== 'default_key' &&
+        user.telegramChatId !== 'test-chat-id'
+      );
+      
+      if (telegramUsers.length === 0) {
+        console.log('📱 ℹ️ No users with valid Telegram configurations found');
+        return;
+      }
+      
+      console.log(`📱 🚀 Delivering ${alerts.length} MLB alerts to ${telegramUsers.length} Telegram users`);
+      
+      // Send alerts to each user
+      for (const alert of alerts) {
+        for (const user of telegramUsers) {
+          try {
+            const telegramConfig: TelegramConfig = {
+              botToken: user.telegramBotToken!,
+              chatId: user.telegramChatId!
+            };
+            
+            const telegramAlert = {
+              id: alert.alertKey,
+              type: alert.type,
+              title: alert.message.split('|')[0].trim(), // Extract title from message
+              description: alert.message,
+              gameInfo: {
+                awayTeam: gameState.awayTeam,
+                homeTeam: gameState.homeTeam,
+                score: {
+                  away: gameState.awayScore,
+                  home: gameState.homeScore
+                },
+                inning: gameState.inning,
+                inningState: gameState.isTopInning ? 'top' : 'bottom',
+                outs: gameState.outs,
+                balls: gameState.balls,
+                strikes: gameState.strikes,
+                runners: {
+                  first: gameState.hasFirst,
+                  second: gameState.hasSecond,
+                  third: gameState.hasThird
+                }
+              }
+            };
+            
+            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
+            
+            if (sent) {
+              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
+            } else {
+              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
+            }
+          } catch (error) {
+            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('📱 ❌ Telegram delivery system error:', error);
+    }
+  }
+
   getPerformanceMetrics() {
     const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
       ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
