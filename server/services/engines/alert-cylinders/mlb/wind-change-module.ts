@@ -20,7 +20,7 @@ export default class WindChangeModule extends BaseAlertModule {
   private readonly MEASUREMENT_INTERVAL = 2 * 60 * 1000; // Check every 2 minutes
 
   isTriggered(gameState: GameState): boolean {
-    if (gameState.status !== 'live') return false;
+    if (!gameState.isLive) return false;
     if (!gameState.weatherContext) return false;
     
     const gameId = gameState.gameId;

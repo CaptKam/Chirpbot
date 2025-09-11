@@ -80,7 +80,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
 
   isTriggered(gameState: GameState): boolean {
     // Defensive live game check
-    if (gameState.status !== 'live' && !gameState.isLive) return false;
+    if (!gameState.isLive) return false;
 
     // Must have potential stealing scenarios
     if (!this.hasStealingOpportunity(gameState)) return false;

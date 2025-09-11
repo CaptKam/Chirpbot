@@ -27,7 +27,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
   ];
 
   isTriggered(gameState: GameState): boolean {
-    if (gameState.status !== 'live') return false;
+    if (!gameState.isLive) return false;
     if (!gameState.onDeckBatter) return false;
     
     // Only trigger in innings 3+ when games get more strategic

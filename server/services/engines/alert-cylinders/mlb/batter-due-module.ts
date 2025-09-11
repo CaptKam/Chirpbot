@@ -75,7 +75,7 @@ export default class BatterDueModule extends BaseAlertModule {
   private lastTriggeredState: { [gameId: string]: boolean } = {};
 
   isTriggered(gameState: GameState): boolean {
-    if (gameState.status !== 'live') return false;
+    if (!gameState.isLive) return false;
 
     // Only trigger in the middle to late innings (4+) when games get more strategic
     if (!gameState.inning || gameState.inning < 4) return false;

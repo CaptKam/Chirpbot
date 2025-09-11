@@ -7,7 +7,7 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
 
   isTriggered(gameState: GameState): boolean {
     return gameState.inning === 7 && !gameState.isTopInning && 
-           gameState.status === 'live' && gameState.outs === 0;
+           gameState.isLive && gameState.outs === 0;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

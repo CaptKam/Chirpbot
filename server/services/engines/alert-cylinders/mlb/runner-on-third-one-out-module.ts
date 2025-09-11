@@ -6,7 +6,7 @@ export default class RunnerOnThirdOneOutModule extends BaseAlertModule {
   sport = 'MLB';
 
   isTriggered(gameState: GameState): boolean {
-    if (gameState.status !== 'live') return false;
+    if (!gameState.isLive) return false;
 
     const { hasFirst, hasSecond, hasThird, outs } = gameState;
 

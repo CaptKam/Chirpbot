@@ -6,7 +6,7 @@ export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
   sport = 'MLB';
 
   isTriggered(gameState: GameState): boolean {
-    if (gameState.status !== 'live') return false;
+    if (!gameState.isLive) return false;
 
     const { hasFirst, hasSecond, hasThird, outs } = gameState;
 
@@ -29,9 +29,9 @@ export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
         awayScore: gameState.awayScore,
         inning: gameState.inning,
         isTopInning: gameState.isTopInning,
-        hasFirst: gameState.hasFirst || false,
-        hasSecond: gameState.hasSecond || true,
-        hasThird: gameState.hasThird || true,
+        hasFirst: gameState.hasFirst,
+        hasSecond: gameState.hasSecond,
+        hasThird: gameState.hasThird,
         outs: gameState.outs || 0,
         balls: gameState.balls,
         strikes: gameState.strikes,

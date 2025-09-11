@@ -6,7 +6,7 @@ export default class GameStartModule extends BaseAlertModule {
   sport = 'MLB';
 
   isTriggered(gameState: GameState): boolean {
-    return gameState.status === 'live' && gameState.inning === 1 && gameState.isTopInning;
+    return gameState.isLive && gameState.inning === 1 && gameState.isTopInning;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
