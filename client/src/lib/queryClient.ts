@@ -48,9 +48,9 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: true, // Enable refetch on window focus for debugging
       staleTime: 0, // Make data immediately stale for debugging
-      cacheTime: 1000, // Keep cache for only 1 second
+      gcTime: 1000, // Keep cache for only 1 second
       retry: false,
-      onError: (error) => {
+      onError: (error: any) => {
         console.error('Query error:', error);
         // Don't show toast for expected 401 errors during auth checks
         if (!error.message?.includes('401')) {
