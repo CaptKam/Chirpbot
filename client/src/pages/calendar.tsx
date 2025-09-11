@@ -76,7 +76,9 @@ import { useGamesAvailability } from '@/hooks/useGamesAvailability';
 import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+import { getSeasonAwareSports } from '@shared/season-manager';
+
+const SPORTS = getSeasonAwareSports();
 const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
 // Enhanced Game Display Component for Live MLB Games

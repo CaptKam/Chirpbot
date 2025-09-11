@@ -1,8 +1,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { addDays, format } from "date-fns";
+import { getSeasonAwareSports } from '@shared/season-manager';
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+const SPORTS = getSeasonAwareSports();
 
 export function useGamesAvailability() {
   const today = new Date();

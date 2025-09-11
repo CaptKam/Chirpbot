@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { getSportTabColors } from '@shared/season-manager';
 
 interface SportTabsProps {
   sports: string[];
@@ -8,27 +9,7 @@ interface SportTabsProps {
   onSportChangeCallback?: () => void;
 }
 
-// Sport-specific color mapping for tabs
-function getSportTabColors(sport: string): { border: string; text: string; bg: string } {
-  switch (sport.toUpperCase()) {
-    case 'MLB':
-      return { border: 'border-green-500', text: 'text-green-400', bg: 'bg-green-500/10' };
-    case 'NFL':
-      return { border: 'border-orange-500', text: 'text-orange-400', bg: 'bg-orange-500/10' };
-    case 'NBA':
-      return { border: 'border-purple-500', text: 'text-purple-400', bg: 'bg-purple-500/10' };
-    case 'WNBA':
-      return { border: 'border-pink-500', text: 'text-pink-400', bg: 'bg-pink-500/10' };
-    case 'CFL':
-      return { border: 'border-red-500', text: 'text-red-400', bg: 'bg-red-500/10' };
-    case 'NCAAF':
-      return { border: 'border-blue-500', text: 'text-blue-400', bg: 'bg-blue-500/10' };
-    case 'NHL':
-      return { border: 'border-cyan-500', text: 'text-cyan-400', bg: 'bg-cyan-500/10' };
-    default:
-      return { border: 'border-emerald-500', text: 'text-emerald-400', bg: 'bg-emerald-500/10' };
-  }
-}
+// Note: getSportTabColors is now imported from season-manager
 
 export function SportTabs({ 
   sports, 

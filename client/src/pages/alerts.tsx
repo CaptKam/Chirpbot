@@ -12,6 +12,7 @@ import { AlertTriangle, Clock, TrendingUp, Users, Bell, Activity } from 'lucide-
 import { AlertLoading } from '@/components/sports-loading';
 import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
+import { getSeasonAwareSports } from '@shared/season-manager';
 
 interface Alert {
   id: string;
@@ -167,7 +168,7 @@ export default function AlertsPage() {
       
       {/* Filter Tabs - moved outside constraining div for full width */}
       <SportTabs 
-        sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
+        sports={['all', ...getSeasonAwareSports()]} 
         activeSport={filter} 
         onSportChange={setFilter} 
       />

@@ -282,7 +282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sport = 'MLB', date } = req.query;
       let games = [];
 
-      const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+      const { getSeasonAwareSports } = await import('../shared/season-manager');
+      const SPORTS = getSeasonAwareSports();
 
       switch(sport) {
         case 'MLB':

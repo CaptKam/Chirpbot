@@ -15,7 +15,9 @@ import { SportTabs } from '@/components/SportTabs';
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const SPORTS = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+import { getSeasonAwareSports } from '@shared/season-manager';
+
+const SPORTS = getSeasonAwareSports();
 
 // Alert type configurations - now populated from cylinder modules via API
 const ALERT_TYPE_CONFIG: Record<string, any[]> = {
@@ -572,50 +574,7 @@ export default function Settings() {
           </Card>
         )}
         
-        {/* V3 Performance Dashboard Access */}
-        <Card className="border border-blue-500/20 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-slate-100 mb-3 flex items-center">
-              <Monitor className="w-5 h-5 mr-2 text-blue-400" />
-              V3 Performance Dashboard
-            </h3>
-            <p className="text-sm text-slate-300 mb-4">
-              Monitor real-time performance metrics across all 6 sports engines. View response times, cache efficiency, V3 optimization achievements, and system health indicators.
-            </p>
-            <div className="flex space-x-3">
-              <Link
-                href="/v3-dashboard"
-                data-testid="link-v3-dashboard"
-              >
-                <Button 
-                  variant="outline" 
-                  className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 flex items-center"
-                >
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Open V3 Dashboard
-                </Button>
-              </Link>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-4 text-xs text-slate-400">
-              <div>
-                <div className="text-blue-400 font-medium">Features:</div>
-                <ul className="mt-1 space-y-1">
-                  <li>• Real-time performance metrics</li>
-                  <li>• Sub-250ms achievement tracking</li>
-                  <li>• Multi-sport comparison</li>
-                </ul>
-              </div>
-              <div>
-                <div className="text-purple-400 font-medium">Monitoring:</div>
-                <ul className="mt-1 space-y-1">
-                  <li>• Response time analytics</li>
-                  <li>• Cache efficiency tracking</li>
-                  <li>• System health indicators</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </Card>
+        
       </div>
     </div>
   );
