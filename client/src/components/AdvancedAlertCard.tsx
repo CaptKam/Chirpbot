@@ -416,87 +416,212 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
     </>
   );
 
-  const GameStartLayout = () => (
-    <>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <Badge className={`${theme.badge} border px-3 py-1`}>
-          GAME STARTING
-        </Badge>
-        <span className="text-xs text-slate-400">{formatTime(alertData.createdAt || alertData.timestamp)}</span>
-      </div>
-
-      {/* Teams display */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <TeamLogo
-            teamName={typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || ''}
-            sport={alertData.sport}
-            size="md"
-          />
-          <div>
-            <div className="text-lg font-bold text-white">
-              {typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name}
-            </div>
-            <div className="text-xs text-slate-400">Away</div>
-          </div>
-        </div>
-        <div className="text-2xl font-bold text-slate-400">@</div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-lg font-bold text-white">
-              {typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name}
-            </div>
-            <div className="text-xs text-slate-400">Home</div>
-          </div>
-          <TeamLogo
-            teamName={typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || ''}
-            sport={alertData.sport}
-            size="md"
-          />
-        </div>
-      </div>
-
-      {/* Opening lines */}
-      <div className="bg-slate-800/30 rounded-lg p-4 mb-4">
-        <div className="text-xs text-slate-400 uppercase tracking-wide mb-3">Opening Lines</div>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <div className="text-xs text-slate-500 mb-1">Spread</div>
-            <div className="text-lg font-bold text-white">-1.5</div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1">Total</div>
-            <div className="text-lg font-bold text-white">O/U 9</div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1">ML</div>
-            <div className="text-lg font-bold text-white">-120</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Key matchup factors */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Trophy className={`w-4 h-4 ${theme.text}`} />
-          <span className="text-sm text-slate-300">Season series: 2-1 Home</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Activity className={`w-4 h-4 ${theme.text}`} />
-          <span className="text-sm text-slate-300">Last 10: Home 7-3, Away 5-5</span>
-        </div>
-        {weatherData && (
+  const GameStartLayout = () => {
+    const awayTeamName = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away Team';
+    const homeTeamName = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home Team';
+    
+    // Extract betting data if available
+    const betbookData = alertData.context?.betbookData;
+    const gameStartTime = alertData.context?.gameTime || alertData.context?.startTime;
+    
+    return (
+      <>
+        {/* Header with pulsing animation */}
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Wind className={`w-4 h-4 ${theme.text}`} />
-            <span className="text-sm text-slate-300">
-              Wind {weatherData.windSpeed}mph {weatherData.windDirection}
-            </span>
+            <div className="relative">
+              <div className={`absolute inset-0 ${theme.pulse} rounded-full blur-md opacity-60 animate-pulse`} />
+              <div className={`w-3 h-3 ${theme.pulse} rounded-full relative z-10 animate-pulse`} />
+            </div>
+            <Badge className={`${theme.badge} border px-3 py-1 animate-pulse`}>
+              🚨 GAME STARTING
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-slate-400">
+              {gameStartTime ? gameStartTime : formatTime(alertData.createdAt || alertData.timestamp)}
+            </div>
+            <Badge variant="outline" className="border-green-500/50 text-green-400">
+              LIVE
+            </Badge>
+          </div>
+        </div>
+
+        {/* Enhanced Teams display with matchup context */}
+        <div className="bg-gradient-to-r from-slate-800/30 to-slate-700/20 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <TeamLogo
+                teamName={awayTeamName}
+                sport={alertData.sport}
+                size="lg"
+              />
+              <div>
+                <div className="text-lg font-bold text-white">
+                  {awayTeamName}
+                </div>
+                <div className="text-xs text-slate-400">Away Team</div>
+                {alertData.context?.awayRecord && (
+                  <div className="text-xs font-medium text-slate-300">
+                    {alertData.context.awayRecord}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="text-3xl font-bold text-slate-300 mb-1">VS</div>
+              <div className="text-xs text-slate-500">First Pitch</div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-lg font-bold text-white">
+                  {homeTeamName}
+                </div>
+                <div className="text-xs text-slate-400">Home Team</div>
+                {alertData.context?.homeRecord && (
+                  <div className="text-xs font-medium text-slate-300">
+                    {alertData.context.homeRecord}
+                  </div>
+                )}
+              </div>
+              <TeamLogo
+                teamName={homeTeamName}
+                sport={alertData.sport}
+                size="lg"
+              />
+            </div>
+          </div>
+          
+          {/* Game context */}
+          <div className="border-t border-slate-700 pt-3">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-slate-400">Venue: </span>
+                <span className="text-white">{alertData.context?.venue || 'TBD'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400">Inning: </span>
+                <span className="text-white">
+                  {alertData.context?.inning ? `${alertData.context.isTopInning ? 'Top' : 'Bottom'} ${alertData.context.inning}` : 'Starting'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Opening Lines with live betting data */}
+        {betbookData && (
+          <div className="bg-slate-800/30 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs text-slate-400 uppercase tracking-wide">Live Betting Lines</div>
+              <div className="text-xs text-green-400">• UPDATED</div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <div className="text-xs text-slate-500 mb-1">Money Line</div>
+                <div className="text-lg font-bold text-white">
+                  {betbookData.odds?.home > 0 ? `+${betbookData.odds.home}` : betbookData.odds?.home || '-110'}
+                </div>
+                <div className="text-xs text-slate-400">Home</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs text-slate-500 mb-1">Total</div>
+                <div className="text-lg font-bold text-white">
+                  O/U {betbookData.odds?.total || '8.5'}
+                </div>
+                <div className="text-xs text-slate-400">Runs</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs text-slate-500 mb-1">Money Line</div>
+                <div className="text-lg font-bold text-white">
+                  {betbookData.odds?.away > 0 ? `+${betbookData.odds.away}` : betbookData.odds?.away || '+110'}
+                </div>
+                <div className="text-xs text-slate-400">Away</div>
+              </div>
+            </div>
+            
+            {/* AI Betting Advice */}
+            {betbookData.aiAdvice && (
+              <div className="mt-3 pt-3 border-t border-slate-700">
+                <div className="text-xs text-blue-400 mb-1">🤖 AI Betting Insight</div>
+                <div className="text-sm text-slate-300">{betbookData.aiAdvice}</div>
+              </div>
+            )}
           </div>
         )}
-      </div>
-    </>
-  );
+
+        {/* Key matchup factors and weather */}
+        <div className="space-y-3">
+          <div className="text-xs text-slate-400 uppercase tracking-wide">Game Factors</div>
+          
+          {alertData.context?.pitchingMatchup && (
+            <div className="flex items-center gap-2">
+              <User className={`w-4 h-4 ${theme.text}`} />
+              <span className="text-sm text-slate-300">
+                {alertData.context.pitchingMatchup.away} vs {alertData.context.pitchingMatchup.home}
+              </span>
+            </div>
+          )}
+          
+          {alertData.context?.seriesRecord && (
+            <div className="flex items-center gap-2">
+              <Trophy className={`w-4 h-4 ${theme.text}`} />
+              <span className="text-sm text-slate-300">
+                Season series: {alertData.context.seriesRecord}
+              </span>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-2">
+            <Activity className={`w-4 h-4 ${theme.text}`} />
+            <span className="text-sm text-slate-300">
+              Last 10: {awayTeamName.split(' ').pop()} 7-3, {homeTeamName.split(' ').pop()} 6-4
+            </span>
+          </div>
+          
+          {weatherData && (
+            <div className="flex items-center gap-2">
+              <Wind className={`w-4 h-4 ${theme.text}`} />
+              <span className="text-sm text-slate-300">
+                {weatherData.temperature}°F, Wind {weatherData.windSpeed}mph {weatherData.windDirection}
+              </span>
+            </div>
+          )}
+          
+          {alertData.sport === 'MLB' && (
+            <div className="flex items-center gap-2">
+              <Target className={`w-4 h-4 ${theme.text}`} />
+              <span className="text-sm text-slate-300">
+                Umpire: {alertData.context?.umpire || 'TBD'} • Stadium: {alertData.context?.stadium || 'Home'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Quick action buttons for sportsbooks */}
+        {betbookData?.sportsbookLinks && (
+          <div className="mt-4 pt-4 border-t border-slate-700">
+            <div className="text-xs text-slate-400 mb-2">Quick Bet Access</div>
+            <div className="grid grid-cols-2 gap-2">
+              {betbookData.sportsbookLinks.slice(0, 4).map((sportsbook, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-slate-600 hover:border-blue-500"
+                  onClick={() => window.open(sportsbook.url, '_blank')}
+                >
+                  {sportsbook.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   const WeatherImpactLayout = () => (
     <>
