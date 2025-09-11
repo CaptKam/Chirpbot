@@ -111,11 +111,16 @@ export class MLBApiService {
                                    game.status.detailedState?.toLowerCase().includes('progress') ||
                                    game.status.detailedState?.toLowerCase().includes('inning');
         
+        // Check if game is actually finished (respect final status)
+        const isGameFinished = game.status.abstractGameState === 'Final' || 
+                              game.status.detailedState?.toLowerCase().includes('final') ||
+                              game.status.detailedState?.toLowerCase().includes('completed');
+        
         // A game is live if:
-        // 1. The abstractGameState says it's live OR
-        // 2. We have rich live data indicators (linescore with active inning, outs data, etc.)
+        // 1. The abstractGameState says it's live OR  
+        // 2. We have rich live data indicators (linescore with active inning, outs data, etc.) AND the game is not finished
         const isLive = statusIndicatesLive || 
-                      (hasLinescore && hasActiveInning && (hasInningState || hasOuts || hasRunners || hasActiveCount));
+                      (!isGameFinished && hasLinescore && hasActiveInning && (hasInningState || hasOuts || hasRunners || hasActiveCount));
         
         if (isLive && !statusIndicatesLive) {
           console.log(`🔴 MLB: Game ${game.gamePk} marked as live due to live data indicators (abstractGameState: ${game.status.abstractGameState}, detailedState: ${game.status.detailedState})`);
