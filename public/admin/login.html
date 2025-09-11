@@ -3,64 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting to Admin...</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-        }
-        .redirect-container {
-            text-align: center;
-            max-width: 400px;
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        h1 {
-            margin: 0 0 10px;
-            font-size: 24px;
-            font-weight: 600;
-        }
-        p {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 16px;
-        }
-    </style>
+    <title>Admin Login - ChirpBot</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="redirect-container">
-        <div class="spinner"></div>
-        <h1>Redirecting to Admin Panel</h1>
-        <p>Please wait while we redirect you to the admin interface...</p>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo">
+                    <i class="fas fa-bolt"></i>
+                    <h1>ChirpBot</h1>
+                </div>
+                <p class="subtitle">Admin Access Panel</p>
+            </div>
+
+            <form id="loginForm" class="login-form">
+                <div id="errorMessage" class="error-message" style="display: none;">
+                    Invalid credentials. Please try again.
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user"></i>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            placeholder="Enter your username" 
+                            required
+                            data-testid="input-username"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            placeholder="Enter your password" 
+                            required
+                            data-testid="input-password"
+                        >
+                        <button type="button" class="toggle-password" onclick="togglePassword()" data-testid="button-toggle-password">
+                            <i class="fas fa-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginBtn" data-testid="button-login">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <div class="security-notice">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Secure admin access</span>
+                </div>
+                <a href="/" class="back-link" data-testid="link-back">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to main app
+                </a>
+            </div>
+        </div>
     </div>
-    
-    <script>
-        console.log('Redirecting from static admin to React admin system');
-        // Redirect to React admin system immediately
-        window.location.replace('/admin');
-    </script>
+
+    <script src="login.js"></script>
 </body>
 </html>

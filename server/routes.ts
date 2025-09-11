@@ -55,6 +55,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const clients = new Set<WebSocket>();
 
+  // Admin panel compatibility route
+  app.get('/admin-panel', (req, res) => res.redirect('/admin/login.html'));
+
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
 

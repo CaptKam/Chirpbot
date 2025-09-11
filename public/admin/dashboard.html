@@ -3,64 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting to Admin...</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-        }
-        .redirect-container {
-            text-align: center;
-            max-width: 400px;
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        h1 {
-            margin: 0 0 10px;
-            font-size: 24px;
-            font-weight: 600;
-        }
-        p {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 16px;
-        }
-    </style>
+    <title>Admin Dashboard - ChirpBot</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="redirect-container">
-        <div class="spinner"></div>
-        <h1>Redirecting to Admin Panel</h1>
-        <p>Please wait while we redirect you to the admin interface...</p>
+<body class="dashboard-page">
+    <!-- Loading State -->
+    <div id="loadingScreen" class="dashboard-loading">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h2>Verifying Admin Access...</h2>
+            <p>Please wait while we authenticate your session</p>
+        </div>
     </div>
-    
-    <script>
-        console.log('Redirecting from static admin dashboard to React admin system');
-        // Redirect to React admin system immediately
-        window.location.replace('/admin');
-    </script>
+
+    <!-- Main Dashboard Content -->
+    <div id="dashboardContent" class="dashboard-container" style="display: none;">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-brand">
+                    <i class="fas fa-bolt"></i>
+                    <div>
+                        <h1>ChirpBot Admin</h1>
+                        <p>System Control Panel</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="admin-info">
+                        <div class="admin-avatar" id="adminAvatar" data-testid="avatar-admin">A</div>
+                        <div class="admin-details">
+                            <h3 id="adminName" data-testid="text-admin-name">Administrator</h3>
+                            <p id="adminRole" data-testid="text-admin-role">System Admin</p>
+                        </div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" data-testid="button-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <nav class="dashboard-nav">
+                <button class="nav-tab active" onclick="showTab('overview')" data-testid="tab-overview">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Overview
+                </button>
+                <button class="nav-tab" onclick="showTab('users')" data-testid="tab-users">
+                    <i class="fas fa-users"></i>
+                    Users
+                </button>
+                <button class="nav-tab" onclick="showTab('alerts')" data-testid="tab-alerts">
+                    <i class="fas fa-bell"></i>
+                    Alerts
+                </button>
+                <button class="nav-tab" onclick="showTab('system')" data-testid="tab-system">
+                    <i class="fas fa-cog"></i>
+                    System
+                </button>
+            </nav>
+
+            <!-- Overview Tab -->
+            <div id="overview-tab" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon users">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalUsers" data-testid="stat-total-users">-</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon admins">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalAdmins" data-testid="stat-total-admins">-</div>
+                        <div class="stat-label">Admin Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon alerts">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalAlerts" data-testid="stat-total-alerts">-</div>
+                        <div class="stat-label">Active Alerts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon total">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="systemStatus" data-testid="stat-system-status">-</div>
+                        <div class="stat-label">System Status</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-users"></i>
+                            User Management
+                        </h2>
+                        <div class="search-bar">
+                            <div class="search-input">
+                                <i class="fas fa-search"></i>
+                                <input type="text" placeholder="Search users..." id="userSearch" data-testid="input-search-users">
+                            </div>
+                            <select class="sport-selector" id="roleFilter" data-testid="select-role-filter">
+                                <option value="">All Roles</option>
+                                <option value="admin">Admin</option>
+                                <option value="manager">Manager</option>
+                                <option value="analyst">Analyst</option>
+                                <option value="user">User</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="users-table">
+                        <thead class="table-header">
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Auth Provider</th>
+                                <th>Telegram</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody" data-testid="table-users">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Alerts Tab -->
+            <div id="alerts-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-bell"></i>
+                            Alert Management
+                        </h2>
+                    </div>
+                    <p>Alert management functionality coming soon...</p>
+                </div>
+            </div>
+
+            <!-- System Tab -->
+            <div id="system-tab" class="tab-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-cog"></i>
+                            System Information
+                        </h2>
+                    </div>
+                    <div id="systemInfo" data-testid="system-info">
+                        Loading system information...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
 </body>
 </html>
