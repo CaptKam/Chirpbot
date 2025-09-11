@@ -846,12 +846,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {(() => {
                 const payload = (alertData as any)?.payload;
                 const v3Message = payload?.message?.trim();
-                console.log('🔍 V3 Message Debug:', { 
-                  alertId: alertData?.id, 
-                  hasPayload: !!payload,
-                  payloadKeys: payload ? Object.keys(payload) : [],
-                  v3Message 
-                });
                 
                 // V3 Message Display - Only render if V3 message exists
                 if (v3Message) {
