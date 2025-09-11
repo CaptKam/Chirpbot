@@ -146,12 +146,23 @@ export default function Settings() {
         description: "Your alert settings have been saved.",
       });
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update alert preference. Please try again.",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      console.error('Alert preference update error:', error);
+      
+      // Check if it's an authentication error
+      if (error?.message?.includes('401') || error?.message?.includes('Authentication required')) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to save your alert preferences.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error", 
+          description: "Failed to update alert preference. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
