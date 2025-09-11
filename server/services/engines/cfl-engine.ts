@@ -20,7 +20,8 @@ export class CFLEngine extends BaseSportEngine {
     enhancedAlerts: 0,
     thirdDownSituations: 0,
     rougeOpportunities: 0,
-    greyHupImplications: 0
+    greyHupImplications: 0,
+    overtimeAlerts: 0
   };
 
   constructor() {
@@ -91,7 +92,7 @@ export class CFLEngine extends BaseSportEngine {
         if (down === 1) probability += 15; // First down advantage
         else if (down === 2) probability += 8; // Second down still good
         else if (down === 3) probability += 25; // Third down is critical in CFL!
-        this.performanceMetrics.threeDownSituations++;
+        this.performanceMetrics.thirdDownSituations++;
 
         // Yards to go adjustments (CFL field specifics)
         if (yardsToGo <= 1) probability += 20; // Very short yardage
@@ -237,7 +238,7 @@ export class CFLEngine extends BaseSportEngine {
         // Only enhance high-priority alerts (>= 85 probability)
         const probability = await this.calculateProbability(gameState);
 
-        if (probability >= 85 && this.crossSportAI.configured) {
+        if (probability >= 85) {
           console.log(`🧠 CFL AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
 
           // Build cross-sport context for CFL
@@ -262,7 +263,9 @@ export class CFLEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
+          // Queue for async AI enhancement (non-blocking) and return base alert immediately
+          await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
+          console.log(`🚀 CFL Async AI: Queued ${alert.type} for background enhancement`);
 
           // Update alert with AI enhancement
           enhancedAlerts.push({
@@ -354,7 +357,7 @@ export class CFLEngine extends BaseSportEngine {
       averageProbabilityCalculation: this.performanceMetrics.probabilityCalculationTime.length > 0
         ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
         : 0,
-      averageAI EnhancementTime: this.performanceMetrics.aiEnhancementTime.length > 0
+      averageAIEnhancementTime: this.performanceMetrics.aiEnhancementTime?.length > 0
         ? this.performanceMetrics.aiEnhancementTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.aiEnhancementTime.length
         : 0,
       totalActiveModules: this.alertModules.size,

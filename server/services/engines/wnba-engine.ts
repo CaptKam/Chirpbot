@@ -209,7 +209,7 @@ export class WNBAEngine extends BaseSportEngine {
         // Only enhance high-priority alerts (>= 85 probability)
         const probability = await this.calculateProbability(gameState);
 
-        if (probability >= 85 && this.crossSportAI.configured) {
+        if (probability >= 85) {
           console.log(`🧠 WNBA AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
 
           // Build cross-sport context for WNBA
@@ -237,7 +237,9 @@ export class WNBAEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
+          // Queue for async AI enhancement (non-blocking) and return base alert immediately
+          await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
+          console.log(`🚀 WNBA Async AI: Queued ${alert.type} for background enhancement`);
 
           // Update alert with AI enhancement
           enhancedAlerts.push({

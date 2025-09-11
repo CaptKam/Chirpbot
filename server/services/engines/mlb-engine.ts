@@ -328,8 +328,8 @@ export class MLBEngine extends BaseSportEngine {
             currentPitcher: enhancedData.currentPitcher || gameState.currentPitcher,
             onDeckBatter: enhancedData.onDeckBatter || gameState.onDeckBatter,
             weatherContext,
-            // Force isLive=true for games with rich live data indicators
-            isLive: true
+            // Respect original game status - don't force live for finished games
+            isLive: gameState.status === 'final' ? false : (gameState.isLive || true)
           };
           console.log(`🚀 MLB Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, runners=[${enhancedGameState.hasFirst ? '1B' : ''}${enhancedGameState.hasSecond ? '2B' : ''}${enhancedGameState.hasThird ? '3B' : ''}], outs=${enhancedGameState.outs}, inning=${enhancedGameState.inning}`);
           return enhancedGameState;
