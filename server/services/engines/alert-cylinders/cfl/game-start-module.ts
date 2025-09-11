@@ -4,10 +4,38 @@ import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 export default class GameStartModule extends BaseAlertModule {
   alertType = 'CFL_GAME_START';
   sport = 'CFL';
+  
+  // Track game states to detect transitions (gameId -> last known state)
+  private gameStates: Map<string, { status: string, hasTriggered: boolean }> = new Map();
 
   isTriggered(gameState: GameState): boolean {
-    return gameState.status === 'live' && gameState.quarter === 1 && 
-           gameState.timeRemaining === '15:00';
+    if (!gameState.gameId) return false;
+    
+    const currentState = this.gameStates.get(gameState.gameId);
+    const isLiveGame = gameState.status === 'live' && gameState.quarter === 1 && gameState.timeRemaining === '15:00';
+    
+    // Only trigger if game is now live AND we haven't triggered for this game yet
+    if (isLiveGame) {
+      // If we haven't seen this game before, or if we've seen it but it wasn't live before
+      if (!currentState || (!currentState.hasTriggered)) {
+        // Update our tracking
+        this.gameStates.set(gameState.gameId, { 
+          status: 'live',
+          hasTriggered: true 
+        });
+        return true;
+      }
+    } else {
+      // Game is not live yet, track it but don't trigger
+      if (!currentState) {
+        this.gameStates.set(gameState.gameId, { 
+          status: gameState.status || 'scheduled',
+          hasTriggered: false 
+        });
+      }
+    }
+    
+    return false;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
