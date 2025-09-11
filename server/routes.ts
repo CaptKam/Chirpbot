@@ -11,6 +11,7 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 import { AlertGenerator } from "./services/alert-generator";
 import { requestDeduplicator } from "./middleware/request-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
+import { pool } from "./db";
 // Extend session data interface
 declare module 'express-session' {
   interface SessionData {
@@ -196,6 +197,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Basic health check
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Environment and database diagnostics endpoint for production debugging
+  app.get('/api/environment-status', async (req, res) => {
+    try {
+      const diagnostics = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          NODE_ENV: process.env.NODE_ENV || 'not set (defaults to development)',
+          REPL_ID: process.env.REPL_ID ? 'set' : 'not set',
+          DATABASE_URL_EXISTS: !!process.env.DATABASE_URL,
+          PORT: process.env.PORT || '5000',
+          SESSION_SECRET_EXISTS: !!process.env.SESSION_SECRET
+        },
+        database: {
+          connected: false,
+          error: null,
+          userCount: 0,
+          tableCount: 0,
+          alertPreferences: 0,
+          monitoredTeams: 0
+        },
+        session: {
+          authenticated: !!req.session?.userId,
+          sessionId: req.sessionID ? 'present' : 'missing',
+          userId: req.session?.userId || null,
+          hasSession: !!req.session
+        }
+      };
+
+      // Test database connection and get counts
+      try {
+        const client = await pool.connect();
+        diagnostics.database.connected = true;
+
+        // Get user count
+        const userCount = await client.query('SELECT COUNT(*) FROM users');
+        diagnostics.database.userCount = parseInt(userCount.rows[0].count);
+
+        // Get table count
+        const tableCount = await client.query(
+          "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
+        );
+        diagnostics.database.tableCount = parseInt(tableCount.rows[0].count);
+
+        // Get alert preferences
+        const alertPrefs = await client.query('SELECT COUNT(*) FROM user_alert_preferences');
+        diagnostics.database.alertPreferences = parseInt(alertPrefs.rows[0].count);
+
+        // Get monitored teams
+        const monitoredTeams = await client.query('SELECT COUNT(*) FROM user_monitored_teams');
+        diagnostics.database.monitoredTeams = parseInt(monitoredTeams.rows[0].count);
+
+        // Get database info
+        const dbInfo = await client.query('SELECT current_database(), version()');
+        diagnostics.database.name = dbInfo.rows[0].current_database;
+        diagnostics.database.version = dbInfo.rows[0].version.split(' ')[0] + ' ' + dbInfo.rows[0].version.split(' ')[1];
+
+        // Get a sample user to check if data exists
+        const sampleUser = await client.query('SELECT id, username, email, role FROM users LIMIT 1');
+        diagnostics.database.sampleUserExists = sampleUser.rows.length > 0;
+        if (sampleUser.rows.length > 0) {
+          diagnostics.database.sampleUser = {
+            id: sampleUser.rows[0].id,
+            username: sampleUser.rows[0].username,
+            email: sampleUser.rows[0].email,
+            role: sampleUser.rows[0].role
+          };
+        }
+
+        client.release();
+      } catch (error) {
+        diagnostics.database.error = error.message;
+      }
+
+      // Determine likely environment
+      const isProduction = process.env.NODE_ENV === 'production';
+      const hasUsers = diagnostics.database.userCount > 0;
+      const likelyEnvironment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
+      
+      diagnostics.analysis = {
+        likelyEnvironment,
+        hasUserData: hasUsers,
+        sessionWorking: diagnostics.session.authenticated,
+        issueDetected: !hasUsers || !diagnostics.database.connected,
+        recommendations: []
+      };
+
+      // Generate recommendations
+      if (!diagnostics.database.connected) {
+        diagnostics.analysis.recommendations.push('Database connection failed - check DATABASE_URL');
+      }
+      
+      if (diagnostics.database.userCount === 0) {
+        diagnostics.analysis.recommendations.push('No users found - likely empty production database');
+        diagnostics.analysis.recommendations.push('Consider data migration from development to production');
+      }
+      
+      if (!diagnostics.session.authenticated) {
+        diagnostics.analysis.recommendations.push('User not authenticated - check session/login status');
+      }
+
+      if (diagnostics.database.userCount > 0 && !diagnostics.session.authenticated) {
+        diagnostics.analysis.recommendations.push('Users exist but session not working - check session configuration');
+      }
+
+      res.json(diagnostics);
+    } catch (error) {
+      res.status(500).json({
+        error: 'Diagnostic failed',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 
   // Teams routes
