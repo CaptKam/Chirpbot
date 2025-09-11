@@ -39,8 +39,8 @@ export function BottomNavigation() {
   const navItems = [...baseNavItems, ...conditionalNavItems];
 
   return (
-    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/5 backdrop-blur-md border-t border-white/10 shadow-xl z-50">
-      <div className="flex">
+    <div className="fixed bottom-0 left-0 right-0 bg-white/5 backdrop-blur-lg border-t border-white/10 shadow-2xl z-50">
+      <div className="flex max-w-md mx-auto">
         {navItems.map((item) => {
           const { path, icon: Icon, label, testId } = item;
           const badgeCount = (item as any).badgeCount || 0;
@@ -51,21 +51,21 @@ export function BottomNavigation() {
               key={path}
               href={path}
               data-testid={testId}
-              className={`flex-1 py-3 px-4 text-center transition-colors relative ${
+              className={`flex-1 py-4 px-2 sm:px-4 text-center transition-colors relative min-h-[60px] flex flex-col items-center justify-center ${
                 isActive
                   ? "text-emerald-400 font-bold"
                   : "text-slate-200 hover:text-slate-100"
               }`}
             >
               <div className="relative">
-                <Icon className="w-6 h-6 mb-1 mx-auto" />
+                <Icon className="w-6 h-6 mx-auto" />
                 {badgeCount > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-bold">
                     {badgeCount > 99 ? '99+' : badgeCount}
                   </div>
                 )}
               </div>
-              <span className="text-xs font-semibold uppercase tracking-wider">
+              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider mt-1">
                 {label}
               </span>
             </Link>

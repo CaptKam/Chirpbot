@@ -469,7 +469,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div className="relative overflow-hidden rounded-xl mx-2 sm:mx-0">
       {/* AI Betting Insights Panel (Left Swipe) - Only show when swiped left */}
       <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'

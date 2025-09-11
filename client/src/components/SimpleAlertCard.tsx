@@ -299,7 +299,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   }, []);
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div className="relative overflow-hidden rounded-xl mx-2 sm:mx-0">
       {/* Sportsbooks Panel (Left Swipe) */}
       <div className={`absolute inset-y-0 right-0 w-60 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -314,7 +314,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                     handleSportsbookClick(sportsbook);
                     setDragX(0);
                   }}
-                  className="h-10 w-10 p-1 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20"
+                  className="h-11 w-11 sm:h-10 sm:w-10 p-1 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20 touch-manipulation"
                   style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
                 >
                   <img
@@ -361,7 +361,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           stiffness: 300,
           mass: 0.8
         }}
-        className="relative z-10"
+        className="relative z-10 touch-manipulation"
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >

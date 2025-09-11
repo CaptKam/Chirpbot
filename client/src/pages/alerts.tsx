@@ -159,13 +159,13 @@ export default function AlertsPage() {
   );
 
   return (
-    <div className="pb-20 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
+    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       <PageHeader 
         title="Live Alerts" 
         subtitle="Real-time sports notifications"
         icon={Bell}
       />
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6">
 
       {/* Filter Tabs */}
       <SportTabs 
@@ -175,7 +175,7 @@ export default function AlertsPage() {
       />
 
       {/* Alerts Content */}
-      <div className="p-4 space-y-4">
+      <div className="pb-8 space-y-4">
         {filteredAlerts.length === 0 ? (
           <Card className="bg-white/5 backdrop-blur-sm border-white/10">
             <CardContent className="p-8 text-center">
@@ -197,6 +197,7 @@ export default function AlertsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
+              className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
             >
               {shouldUseSimpleCard(alert.type) ? (
                 // Use Simple Card for basic alerts
