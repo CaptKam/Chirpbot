@@ -41,11 +41,11 @@ async function checkAuthentication() {
         } else {
             // Not authenticated, redirect to login
             console.log('🔒 Not authenticated, redirecting to login...');
-            window.location.href = '/admin/login.html';
+            window.location.replace('/admin/login.html');
         }
     } catch (error) {
         console.error('Authentication check failed:', error);
-        window.location.href = '/admin/login.html';
+        window.location.replace('/admin/login.html');
     }
 }
 

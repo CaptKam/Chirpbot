@@ -115,8 +115,12 @@ app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: false, // Disabled for Vite dev mode
 }));
+// CORS configuration for consistent origin handling
+const corsOrigin = process.env.CANONICAL_ORIGIN || 
+  (process.env.NODE_ENV === 'production' ? false : ['http://localhost:5000', 'http://127.0.0.1:5000']);
+
 app.use(cors({
-  origin: true, // Allow all origins in development
+  origin: corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
@@ -131,19 +135,22 @@ const PgSession = connectPgSimple(session);
 
 // Session middleware with PostgreSQL store using the shared Neon pool
 app.use(session({
+  name: 'cb.sid', // Unique session name to avoid conflicts
   store: new PgSession({
     pool: pool,
     tableName: 'session',
     createTableIfMissing: true
   }),
-  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'chirpbot-dev-secret-key-12345'),
+  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025', // Stable secret for dev
   resave: false,
   saveUninitialized: false,
   cookie: {
+    path: '/',
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    domain: process.env.COOKIE_DOMAIN || undefined, // Leave undefined for localhost
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for better persistence
   }
 }));
 

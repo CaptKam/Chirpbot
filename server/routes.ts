@@ -2549,6 +2549,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to diagnose cookie/session issues
+  app.get('/api/admin-auth/debug', async (req, res) => {
+    const cookieHeader = req.headers.cookie || 'none';
+    const hasCbSid = cookieHeader.includes('cb.sid');
+    const hasConnectSid = cookieHeader.includes('connect.sid');
+    
+    res.json({
+      host: req.hostname,
+      origin: req.headers.origin || 'none',
+      cookiePresent: hasCbSid || hasConnectSid,
+      cookieType: hasCbSid ? 'cb.sid' : hasConnectSid ? 'connect.sid' : 'none',
+      sessionId: req.sessionID ? req.sessionID.slice(0, 8) + '...' : 'none',
+      adminUserId: req.session?.adminUserId || 'none',
+      userId: req.session?.userId || 'none',
+      authenticated: !!(req.session?.adminUserId || req.session?.userId),
+      headers: {
+        host: req.headers.host,
+        origin: req.headers.origin || 'none',
+        referer: req.headers.referer || 'none'
+      }
+    });
+  });
+
   // Global Alert Management Endpoints
   app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
     try {

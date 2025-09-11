@@ -25,17 +25,22 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('🔍 Checking existing admin authentication...');
             const response = await fetch('/api/admin-auth/verify', {
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                }
             });
             
             if (response.ok) {
-                console.log('✅ Already authenticated, redirecting to dashboard');
-                // Already authenticated, redirect to dashboard
-                window.location.href = '/admin/dashboard.html';
-            } else {
-                console.log('🔒 Not authenticated, showing login form');
-                // Not authenticated, stay on login page - this is normal
+                const data = await response.json();
+                if (data.authenticated) {
+                    console.log('✅ Already authenticated, redirecting to dashboard');
+                    // Use replace to avoid back button loops
+                    window.location.replace('/admin/dashboard.html');
+                    return;
+                }
             }
+            console.log('🔒 Not authenticated, showing login form');
         } catch (error) {
             console.log('🔒 Not authenticated, showing login form (error)');
             // Network error or not authenticated, stay on login page
@@ -91,8 +96,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('adminLoggedIn', 'true');
                 localStorage.setItem('adminUser', JSON.stringify(data.user));
 
-                // Redirect to dashboard
-                window.location.href = '/admin/dashboard.html';
+                // Use replace to avoid back button loops
+                window.location.replace('/admin/dashboard.html');
             } else {
                 showError(data.message || 'Invalid credentials. Please try again.');
             }
