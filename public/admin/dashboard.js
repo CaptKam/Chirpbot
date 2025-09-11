@@ -523,7 +523,9 @@ function showStatus(message, type = 'info') {
 async function getCleanupStats() {
   try {
     showStatus('Getting cleanup stats...', 'info');
-    const response = await fetch('/api/admin/cleanup-stats');
+    const response = await fetch('/api/admin/cleanup-stats', {
+      credentials: 'include'
+    });
     const data = await response.json();
 
     if (data.success) {
@@ -560,7 +562,8 @@ async function manualCleanup() {
   try {
     showStatus('Running manual cleanup...', 'info');
     const response = await fetch('/api/admin/cleanup-alerts', {
-      method: 'POST'
+      method: 'POST',
+      credentials: 'include'
     });
     const data = await response.json();
 
