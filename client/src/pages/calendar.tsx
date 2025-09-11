@@ -566,8 +566,6 @@ export default function Calendar() {
                     startTime={game.startTime}
                     venue={game.venue}
                     inning={game.inning}
-                    quarter={game.quarter}
-                    period={game.period}
                     isTopInning={game.inningState === 'Top'}
                     isSelected={isSelected}
                     onSelect={() => toggleGameSelection(game.id)}
