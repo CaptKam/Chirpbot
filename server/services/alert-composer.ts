@@ -378,8 +378,54 @@ export class AlertComposer {
       return `${urgency} ${sport} 4th down decision | ${awayTeam} @ ${homeTeam} (${score}) | Analytics moment | ${timing.timeWindow}`;
     }
     
-    // Default headline
-    return `${urgency} ${sport} ${awayTeam} @ ${homeTeam} (${score}) | ${type.replace(/_/g, ' ')} | ${timing.timeWindow}`;
+    // Default headline - use user-friendly description instead of raw type
+    const alertDescription = this.getAlertDescription(type);
+    return `${urgency} ${sport} ${awayTeam} @ ${homeTeam} (${score}) | ${alertDescription} | ${timing.timeWindow}`;
+  }
+
+  /**
+   * Convert raw alert type to user-friendly description
+   */
+  private getAlertDescription(type: string): string {
+    // MLB Alert Types
+    if (type.includes('BATTER_DUE')) return 'Key Batter Coming Up';
+    if (type.includes('STEAL_LIKELIHOOD')) return 'Steal Opportunity';
+    if (type.includes('ON_DECK_PREDICTION')) return 'Next Batter Alert';
+    if (type.includes('WIND_CHANGE')) return 'Weather Impact';
+    if (type.includes('SEVENTH_INNING_STRETCH')) return 'Seventh Inning';
+    if (type.includes('RUNNER_ON_THIRD')) return 'Scoring Position';
+    if (type.includes('BASES_LOADED')) return 'Bases Loaded';
+    if (type.includes('FIRST_AND_THIRD')) return 'Runners in Position';
+    if (type.includes('SECOND_AND_THIRD')) return 'Scoring Threat';
+    if (type.includes('GAME_START')) return 'Game Starting';
+    
+    // NFL Alert Types
+    if (type.includes('RED_ZONE')) return 'Red Zone';
+    if (type.includes('TWO_MINUTE_WARNING')) return 'Two Minute Warning';
+    if (type.includes('FOURTH_DOWN')) return 'Fourth Down';
+    if (type.includes('FIELD_GOAL_RANGE')) return 'Field Goal Range';
+    if (type.includes('TURNOVER')) return 'Turnover';
+    if (type.includes('MOMENTUM_SHIFT')) return 'Momentum Shift';
+    
+    // NBA/WNBA Alert Types
+    if (type.includes('CLUTCH_TIME')) return 'Clutch Time';
+    if (type.includes('BONUS_SITUATION')) return 'Bonus Situation';
+    if (type.includes('TIMEOUT')) return 'Timeout Called';
+    if (type.includes('HOT_HAND')) return 'Hot Hand';
+    if (type.includes('FOUL_TROUBLE')) return 'Foul Trouble';
+    
+    // NCAAF Alert Types
+    if (type.includes('OVERTIME')) return 'Overtime';
+    if (type.includes('TARGETING')) return 'Targeting Review';
+    
+    // Generic fallback - remove sport prefix and make readable
+    const cleaned = type
+      .replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '')
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+    
+    return cleaned;
   }
 
   /**
