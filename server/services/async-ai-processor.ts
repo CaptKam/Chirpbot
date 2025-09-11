@@ -29,7 +29,7 @@ export class AsyncAIProcessor {
   private jobQueue: Map<string, AsyncAIJob> = new Map();
   private processingQueue: Set<string> = new Set();
   private results: Map<string, AsyncAIResult> = new Map();
-  private readonly AI_TIMEOUT_MS = 150; // 150ms timeout for AI processing
+  private readonly AI_TIMEOUT_MS = 5000; // 5 second timeout for AI processing
   private readonly MAX_RETRIES = 1;
   private readonly MAX_QUEUE_SIZE = 1000;
   private readonly RESULT_TTL = 300000; // 5 minutes
