@@ -27,6 +27,53 @@ import draftkingsLogo from '@assets/draftkings.png';
 import fanaticsLogo from '@assets/fanatics.png';
 import fanduelLogo from '@assets/fanduel.png';
 
+// Sportsbook interface and data
+interface Sportsbook {
+  name: string;
+  logo: string;
+  appUrl: string;
+  storeUrl: string;
+  color: string;
+}
+
+const sportsbooks: Sportsbook[] = [
+  {
+    name: 'Bet365',
+    logo: bet365Logo,
+    appUrl: 'bet365://',
+    storeUrl: 'https://apps.apple.com/app/bet365-sportsbook-casino/id454638411',
+    color: '#1E5F2F'
+  },
+  {
+    name: 'DraftKings',
+    logo: draftkingsLogo,
+    appUrl: 'draftkings://',
+    storeUrl: 'https://apps.apple.com/app/draftkings-sportsbook-casino/id1051014021',
+    color: '#FF6B35'
+  },
+  {
+    name: 'Fanatics',
+    logo: fanaticsLogo,
+    appUrl: 'fanatics://',
+    storeUrl: 'https://apps.apple.com/app/fanatics-sportsbook-casino/id1601393479',
+    color: '#E31837'
+  },
+  {
+    name: 'FanDuel',
+    logo: fanduelLogo,
+    appUrl: 'fanduel://',
+    storeUrl: 'https://apps.apple.com/app/fanduel-sportsbook-casino/id1273132976',
+    color: '#0D7EFF'
+  },
+  {
+    name: 'BetMGM',
+    logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjRkZEODAwIi8+PHRleHQgeD0iMjAiIHk9IjI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMDAwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTJweCIgZm9udC13ZWlnaHQ9ImJvbGQiPk1HTTwvdGV4dD48L3N2Zz4=',
+    appUrl: 'betmgm://',
+    storeUrl: 'https://apps.apple.com/app/betmgm-sportsbook/id1439016742',
+    color: '#FFD800'
+  }
+];
+
 // Alert type categorization
 const ALERT_CATEGORIES = {
   SCORING: ['BASES_LOADED', 'RISP', 'RED_ZONE', 'RED_ZONE_OPPORTUNITY', 'POWER_PLAY', 'CLUTCH_TIME'],
@@ -213,6 +260,44 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
   const aiInsights = alertData.context?.aiInsights || [];
   const reasons = alertData.context?.reasons || [];
 
+  const handleSportsbookClick = (sportsbook: Sportsbook) => {
+    // Try to open the app first, with better fallback handling
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // On mobile, try deep link first
+      const startTime = Date.now();
+      const link = document.createElement('a');
+      link.href = sportsbook.appUrl;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Check if app opened, fallback to store if not
+      setTimeout(() => {
+        if (Date.now() - startTime < 1500) {
+          window.open(sportsbook.storeUrl, '_blank');
+        }
+      }, 1000);
+    } else {
+      // On desktop, go directly to web version
+      const webUrls = {
+        'Bet365': 'https://www.bet365.com',
+        'DraftKings': 'https://sportsbook.draftkings.com',
+        'Fanatics': 'https://sportsbook.fanaticsbetting.com',
+        'FanDuel': 'https://sportsbook.fanduel.com',
+        'BetMGM': 'https://sports.betmgm.com'
+      };
+      window.open(webUrls[sportsbook.name as keyof typeof webUrls] || sportsbook.storeUrl, '_blank');
+    }
+
+    toast({
+      title: `Opening ${sportsbook.name}`,
+      description: `Launching ${sportsbook.name} sportsbook...`,
+    });
+  };
+
   const handleDeleteAlert = async () => {
     setIsDeleting(true);
     try {
@@ -237,23 +322,55 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
     }
   };
 
+  const startAutoReturnTimer = () => {
+    // Clear any existing timer
+    if (autoReturnTimeoutRef.current) {
+      clearTimeout(autoReturnTimeoutRef.current);
+    }
+
+    // Set new timer to return to center after 3 seconds
+    autoReturnTimeoutRef.current = setTimeout(() => {
+      setDragX(0);
+    }, 3000);
+  };
+
   const handleDragEnd = (event: any, info: PanInfo) => {
     setIsDragging(false);
     const threshold = 80;
     const velocity = info.velocity.x;
 
+    // Use velocity for more natural swipe detection
     if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 300) {
       setDragX(0);
     } else if (info.offset.x > threshold || velocity > 300) {
+      // Swiped right - show delete
       setDragX(120);
-      if (autoReturnTimeoutRef.current) clearTimeout(autoReturnTimeoutRef.current);
-      autoReturnTimeoutRef.current = setTimeout(() => setDragX(0), 3000);
+      startAutoReturnTimer();
     } else if (info.offset.x < -threshold || velocity < -300) {
-      setDragX(-120);
-      if (autoReturnTimeoutRef.current) clearTimeout(autoReturnTimeoutRef.current);
-      autoReturnTimeoutRef.current = setTimeout(() => setDragX(0), 3000);
+      // Swiped left - show sportsbooks
+      setDragX(-360);
+      startAutoReturnTimer();
+    } else {
+      setDragX(0);
     }
   };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+    // Clear any existing timer when starting a new drag
+    if (autoReturnTimeoutRef.current) {
+      clearTimeout(autoReturnTimeoutRef.current);
+    }
+  };
+
+  // Clear timer on component unmount
+  useEffect(() => {
+    return () => {
+      if (autoReturnTimeoutRef.current) {
+        clearTimeout(autoReturnTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Render different layouts based on alert category
   const renderAlertContent = () => {
@@ -941,82 +1058,160 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
   );
 
   return (
-    <motion.div
-      drag="x"
-      dragConstraints={{ left: -400, right: 400 }}
-      dragElastic={0.2}
-      animate={{ x: dragX }}
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={handleDragEnd}
-      whileTap={{ scale: isDragging ? 1 : 0.98 }}
-      onClick={() => !isDragging && onTap?.()}
-      className={cn("relative cursor-pointer", className)}
-      data-testid={`advanced-alert-${alertId}`}
-    >
-      {/* Delete button backdrop */}
-      <div className="absolute inset-y-0 -right-2 w-32 flex items-center justify-end pr-4">
+    <div className="relative overflow-hidden rounded-xl mx-2 sm:mx-0">
+      {/* Sportsbook Panel (Left Swipe) - Only show when swiped left */}
+      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
+        dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}>
+        <div className="h-full flex flex-col justify-center p-4 space-y-3">
+          {/* Quick Bet Header */}
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <DollarSign className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm">Quick Bet</p>
+              <p className="text-blue-200 text-xs">Live Sportsbooks</p>
+            </div>
+          </div>
+
+          {/* Sportsbooks Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {sportsbooks.slice(0, 4).map((sportsbook) => (
+              <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
+                <Button
+                  onClick={() => {
+                    handleSportsbookClick(sportsbook);
+                    setDragX(0);
+                  }}
+                  className="h-12 w-12 p-1.5 rounded-xl bg-white/90 shadow-xl ring-2 ring-white/30"
+                  style={{ backgroundColor: `${sportsbook.color}20`, borderColor: `${sportsbook.color}40` }}
+                  data-testid={`advanced-sportsbook-${sportsbook.name.toLowerCase()}`}
+                >
+                  <img
+                    src={sportsbook.logo}
+                    alt={sportsbook.name}
+                    className="w-full h-full rounded-lg object-contain"
+                  />
+                </Button>
+                <span className="text-xs text-white/90 font-medium text-center">{sportsbook.name}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Additional sportsbook if available */}
+          {sportsbooks.length > 4 && (
+            <div className="mt-2">
+              <Button
+                onClick={() => {
+                  handleSportsbookClick(sportsbooks[4]);
+                  setDragX(0);
+                }}
+                className="w-full h-10 bg-white/10 hover:bg-white/20 text-white text-sm"
+                variant="outline"
+              >
+                <img
+                  src={sportsbooks[4].logo}
+                  alt={sportsbooks[4].name}
+                  className="w-4 h-4 mr-2"
+                />
+                {sportsbooks[4].name}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Delete Panel (Right Swipe) - Only show when swiped right */}
+      <div className={`absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-red-500/20 to-transparent flex items-center justify-start pl-4 transition-opacity duration-300 ${
+        dragX > 30 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}>
         <Button
-          onClick={handleDeleteAlert}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteAlert();
+            setDragX(0); // Return to center after click
+          }}
+          className="h-12 w-12 p-0 rounded-full bg-red-500/20 ring-1 ring-red-500/30"
+          data-testid={`advanced-delete-alert-${alertId}`}
           disabled={isDeleting}
-          className="bg-red-500 hover:bg-red-600 text-white rounded-lg p-3"
-          size="sm"
         >
-          <Trash2 className="w-5 h-5" />
+          <Trash2 className={`w-5 h-5 text-red-400 ${isDeleting ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
-      {/* Main card */}
-      <Card className={`relative ${theme.bg} backdrop-blur-sm ${theme.border} border transition-all duration-200 overflow-hidden`}>
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.gradient}" />
-        
-        <div className="p-4">
-          {renderAlertContent()}
-        </div>
+      {/* Main Card */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -400, right: 150 }}
+        dragElastic={0.15}
+        dragMomentum={true}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        animate={{ x: dragX }}
+        transition={{
+          type: "spring",
+          damping: 20,
+          stiffness: 250,
+          mass: 0.6
+        }}
+        className="relative z-10"
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
+        whileDrag={{ scale: 1.01, cursor: "grabbing" }}
+        onClick={() => !isDragging && onTap?.()}
+      >
+        <Card className={`relative ${theme.bg} backdrop-blur-sm ${theme.border} border transition-all duration-200 overflow-hidden`}>
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.gradient}" />
+          
+          <div className="p-4">
+            {renderAlertContent()}
+          </div>
 
-        {/* Footer with game state */}
-        <div className={`px-4 py-3 border-t ${theme.border} bg-slate-900/50`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Sport badge */}
-              <Badge variant="outline" className="border-slate-600 text-slate-400 text-xs">
-                {alertData.sport}
-              </Badge>
+          {/* Footer with game state */}
+          <div className={`px-4 py-3 border-t ${theme.border} bg-slate-900/50`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Sport badge */}
+                <Badge variant="outline" className="border-slate-600 text-slate-400 text-xs">
+                  {alertData.sport}
+                </Badge>
 
-              {/* Game state */}
-              {alertData.sport === 'MLB' && alertData.inning && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">
-                    {alertData.isTopInning ? '▲' : '▼'} {alertData.inning}
-                  </span>
-                  {alertData.outs !== undefined && (
-                    <span className="text-xs text-slate-500">
-                      {alertData.outs} out{alertData.outs !== 1 ? 's' : ''}
+                {/* Game state */}
+                {alertData.sport === 'MLB' && alertData.inning && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">
+                      {alertData.isTopInning ? '▲' : '▼'} {alertData.inning}
                     </span>
-                  )}
-                </div>
-              )}
+                    {alertData.outs !== undefined && (
+                      <span className="text-xs text-slate-500">
+                        {alertData.outs} out{alertData.outs !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                )}
 
-              {/* Score if available */}
-              {(alertData.homeScore !== undefined || alertData.awayScore !== undefined) && (
-                <div className="text-sm font-medium text-white">
-                  {alertData.awayScore || 0} - {alertData.homeScore || 0}
-                </div>
-              )}
-            </div>
-
-            {/* Live indicator */}
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <div className={`absolute inset-0 ${theme.pulse} rounded-full blur opacity-75 animate-pulse`} />
-                <div className={`w-2 h-2 ${theme.pulse} rounded-full relative z-10`} />
+                {/* Score if available */}
+                {(alertData.homeScore !== undefined || alertData.awayScore !== undefined) && (
+                  <div className="text-sm font-medium text-white">
+                    {alertData.awayScore || 0} - {alertData.homeScore || 0}
+                  </div>
+                )}
               </div>
-              <span className="text-xs text-slate-400">
-                {formatTime(alertData.createdAt || alertData.timestamp)}
-              </span>
+
+              {/* Live indicator */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <div className={`absolute inset-0 ${theme.pulse} rounded-full blur opacity-75 animate-pulse`} />
+                  <div className={`w-2 h-2 ${theme.pulse} rounded-full relative z-10`} />
+                </div>
+                <span className="text-xs text-slate-400">
+                  {formatTime(alertData.createdAt || alertData.timestamp)}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
-    </motion.div>
+        </Card>
+      </motion.div>
+    </div>
   );
 }
