@@ -155,8 +155,120 @@
                             <i class="fas fa-bell"></i>
                             Alert Management
                         </h2>
+                        <div class="alert-loading" id="alertsLoading" data-testid="loading-alerts">
+                            <div class="spinner-small"></div>
+                            <span>Loading alert settings...</span>
+                        </div>
                     </div>
-                    <p>Alert management functionality coming soon...</p>
+
+                    <!-- Master Alert Control -->
+                    <div class="alert-section">
+                        <div class="alert-section-header">
+                            <h3><i class="fas fa-power-off"></i> Master Alert System</h3>
+                            <p>Global control for the entire alert system</p>
+                        </div>
+                        <div class="alert-control-card">
+                            <div class="alert-control">
+                                <div class="control-info">
+                                    <h4>Master Alert Switch</h4>
+                                    <p>Enable or disable all alerts system-wide</p>
+                                </div>
+                                <label class="toggle-switch" data-testid="toggle-master-alerts">
+                                    <input type="checkbox" id="masterAlertsToggle" onchange="toggleMasterAlerts(this.checked)">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="alert-section">
+                        <div class="alert-section-header">
+                            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                            <p>Bulk operations for alert management</p>
+                        </div>
+                        <div class="quick-actions-grid">
+                            <button class="quick-action-btn enable" onclick="enableAllAlerts()" data-testid="button-enable-all">
+                                <i class="fas fa-check-circle"></i>
+                                Enable All Alerts
+                            </button>
+                            <button class="quick-action-btn disable" onclick="disableAllAlerts()" data-testid="button-disable-all">
+                                <i class="fas fa-times-circle"></i>
+                                Disable All Alerts
+                            </button>
+                            <button class="quick-action-btn special" onclick="quickEnableMLB()" data-testid="button-quick-mlb">
+                                <i class="fas fa-baseball-ball"></i>
+                                Quick Enable MLB
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sports Alert Controls -->
+                    <div class="alert-section">
+                        <div class="alert-section-header">
+                            <h3><i class="fas fa-sports"></i> Sports Alert Settings</h3>
+                            <p>Configure alerts for each sport</p>
+                        </div>
+                        
+                        <!-- Sport Tabs -->
+                        <div class="sport-tabs">
+                            <button class="sport-tab active" onclick="showSportSettings('MLB')" data-testid="sport-tab-mlb">
+                                <i class="fas fa-baseball-ball"></i>
+                                MLB
+                            </button>
+                            <button class="sport-tab" onclick="showSportSettings('NFL')" data-testid="sport-tab-nfl">
+                                <i class="fas fa-football-ball"></i>
+                                NFL
+                            </button>
+                            <button class="sport-tab" onclick="showSportSettings('NBA')" data-testid="sport-tab-nba">
+                                <i class="fas fa-basketball-ball"></i>
+                                NBA
+                            </button>
+                            <button class="sport-tab" onclick="showSportSettings('NCAAF')" data-testid="sport-tab-ncaaf">
+                                <i class="fas fa-graduation-cap"></i>
+                                NCAAF
+                            </button>
+                            <button class="sport-tab" onclick="showSportSettings('WNBA')" data-testid="sport-tab-wnba">
+                                <i class="fas fa-female"></i>
+                                WNBA
+                            </button>
+                            <button class="sport-tab" onclick="showSportSettings('CFL')" data-testid="sport-tab-cfl">
+                                <i class="fas fa-leaf"></i>
+                                CFL
+                            </button>
+                        </div>
+
+                        <!-- Sport Settings Content -->
+                        <div id="sportSettingsContent" class="sport-settings-content" data-testid="sport-settings">
+                            <!-- Content will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Alert Statistics -->
+                    <div class="alert-section">
+                        <div class="alert-section-header">
+                            <h3><i class="fas fa-chart-bar"></i> Alert Statistics</h3>
+                            <p>System-wide alert activity</p>
+                        </div>
+                        <div class="alert-stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="enabledAlertsCount" data-testid="stat-enabled-alerts">-</div>
+                                <div class="stat-label">Enabled Alert Types</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="totalUsersWithAlerts" data-testid="stat-users-with-alerts">-</div>
+                                <div class="stat-label">Users with Alerts</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="recentAlertsCount" data-testid="stat-recent-alerts">-</div>
+                                <div class="stat-label">Alerts Today</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="systemHealthStatus" data-testid="stat-system-health">-</div>
+                                <div class="stat-label">System Health</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

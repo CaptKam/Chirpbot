@@ -2,6 +2,9 @@
 let currentUser = null;
 let allUsers = [];
 let filteredUsers = [];
+let currentSport = 'MLB';
+let alertSettings = {};
+let isLoadingAlerts = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
@@ -87,12 +90,19 @@ function updateUserInfo() {
 
 async function loadStatistics() {
     try {
-        const response = await fetch('/api/admin/statistics', {
+        const response = await fetch('/api/admin/stats', {
             credentials: 'include'
         });
         
         if (response.ok) {
-            const stats = await response.json();
+            const data = await response.json();
+            // Transform the response data to match what the UI expects
+            const stats = {
+                totalUsers: data.users.total,
+                totalAdmins: data.users.admins,
+                totalAlerts: data.alerts.total,
+                systemStatus: 'Operational'
+            };
             updateStatistics(stats);
         } else {
             // Fallback to basic stats
@@ -340,6 +350,11 @@ function showTab(tabName) {
     
     // Add active class to clicked nav tab
     event.target.classList.add('active');
+    
+    // Load alert settings when alerts tab is shown
+    if (tabName === 'alerts' && !isLoadingAlerts) {
+        loadAlertSettings();
+    }
 }
 
 async function logout() {
@@ -378,4 +393,419 @@ function showNotification(message, type = 'info') {
             notification.remove();
         }
     }, 3000);
+}
+
+// ALERT MANAGEMENT FUNCTIONS
+
+async function loadAlertSettings() {
+    if (isLoadingAlerts) return;
+    
+    isLoadingAlerts = true;
+    showAlertLoading(true);
+    
+    try {
+        // Load master alert status and show initial sport settings
+        await Promise.all([
+            loadMasterAlertStatus(),
+            loadAlertStatistics(),
+            showSportSettings(currentSport)
+        ]);
+        showNotification('Alert settings loaded successfully', 'success');
+    } catch (error) {
+        console.error('Failed to load alert settings:', error);
+        showNotification('Failed to load alert settings', 'error');
+    } finally {
+        isLoadingAlerts = false;
+        showAlertLoading(false);
+    }
+}
+
+function showAlertLoading(show) {
+    const loadingElement = document.getElementById('alertsLoading');
+    if (loadingElement) {
+        loadingElement.style.display = show ? 'flex' : 'none';
+    }
+}
+
+async function loadMasterAlertStatus() {
+    try {
+        const response = await fetch('/api/admin/master-alerts', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const masterToggle = document.getElementById('masterAlertsToggle');
+            if (masterToggle) {
+                masterToggle.checked = data.enabled;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load master alert status:', error);
+    }
+}
+
+async function toggleMasterAlerts(enabled) {
+    try {
+        const response = await fetch('/api/admin/master-alerts', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ enabled })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showNotification(data.message, 'success');
+            // Reload alert statistics to reflect changes
+            loadAlertStatistics();
+        } else {
+            showNotification('Failed to update master alert status', 'error');
+            // Revert toggle
+            const masterToggle = document.getElementById('masterAlertsToggle');
+            if (masterToggle) {
+                masterToggle.checked = !enabled;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to toggle master alerts:', error);
+        showNotification('Failed to update master alert status', 'error');
+        // Revert toggle
+        const masterToggle = document.getElementById('masterAlertsToggle');
+        if (masterToggle) {
+            masterToggle.checked = !enabled;
+        }
+    }
+}
+
+async function enableAllAlerts() {
+    const button = event.target.closest('.quick-action-btn');
+    if (button) button.disabled = true;
+    
+    try {
+        const response = await fetch('/api/admin/enable-all-alerts', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showNotification(`Enabled ${data.results?.length || 0} alert types`, 'success');
+            // Reload current sport settings and statistics
+            await Promise.all([
+                showSportSettings(currentSport),
+                loadAlertStatistics()
+            ]);
+        } else {
+            showNotification('Failed to enable all alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to enable all alerts:', error);
+        showNotification('Failed to enable all alerts', 'error');
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+async function disableAllAlerts() {
+    if (!confirm('Are you sure you want to disable ALL alerts across the entire system? This will affect all users.')) {
+        return;
+    }
+    
+    const button = event.target.closest('.quick-action-btn');
+    if (button) button.disabled = true;
+    
+    try {
+        const response = await fetch('/api/admin/disable-all-alerts', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showNotification(`Disabled ${data.disabledCount || 0} alert types`, 'success');
+            // Reload current sport settings and statistics
+            await Promise.all([
+                showSportSettings(currentSport),
+                loadAlertStatistics()
+            ]);
+        } else {
+            showNotification('Failed to disable all alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to disable all alerts:', error);
+        showNotification('Failed to disable all alerts', 'error');
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+async function quickEnableMLB() {
+    const button = event.target.closest('.quick-action-btn');
+    if (button) button.disabled = true;
+    
+    try {
+        const response = await fetch('/api/admin/quick-enable-mlb', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showNotification(`Enabled ${data.results?.length || 0} critical MLB alerts`, 'success');
+            // Reload MLB settings if currently viewing
+            if (currentSport === 'MLB') {
+                await showSportSettings('MLB');
+            }
+            loadAlertStatistics();
+        } else {
+            showNotification('Failed to enable MLB alerts', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to enable MLB alerts:', error);
+        showNotification('Failed to enable MLB alerts', 'error');
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+async function showSportSettings(sport) {
+    currentSport = sport;
+    
+    // Update active sport tab
+    document.querySelectorAll('.sport-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event?.target?.classList?.add('active') || 
+    document.querySelector(`[onclick="showSportSettings('${sport}')"]`)?.classList?.add('active');
+    
+    const contentElement = document.getElementById('sportSettingsContent');
+    if (!contentElement) return;
+    
+    // Show loading state
+    contentElement.innerHTML = `
+        <div class="sport-settings-loading">
+            <div class="spinner-small"></div>
+            <span>Loading ${sport} alert settings...</span>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`/api/admin/global-alert-settings/${sport}`, {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const settings = await response.json();
+            renderSportSettings(sport, settings);
+        } else {
+            contentElement.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 12px;"></i>
+                    <p>Failed to load ${sport} settings</p>
+                    <button onclick="showSportSettings('${sport}')" class="quick-action-btn" style="margin-top: 16px;">
+                        <i class="fas fa-refresh"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error(`Failed to load ${sport} settings:`, error);
+        contentElement.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #ef4444;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 12px;"></i>
+                <p>Error loading ${sport} settings</p>
+                <button onclick="showSportSettings('${sport}')" class="quick-action-btn" style="margin-top: 16px;">
+                    <i class="fas fa-refresh"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function renderSportSettings(sport, settings) {
+    const contentElement = document.getElementById('sportSettingsContent');
+    if (!contentElement) return;
+    
+    // Group alerts by category for better organization
+    const alertCategories = {
+        'Game Events': [],
+        'Scoring Opportunities': [],
+        'Critical Moments': [],
+        'Other': []
+    };
+    
+    // Categorize alerts based on their names
+    Object.keys(settings).forEach(alertKey => {
+        const alertName = formatAlertName(alertKey);
+        const alertData = { key: alertKey, name: alertName, enabled: settings[alertKey] };
+        
+        if (alertKey.includes('GAME_START') || alertKey.includes('INNING_STRETCH')) {
+            alertCategories['Game Events'].push(alertData);
+        } else if (alertKey.includes('BASES_LOADED') || alertKey.includes('RED_ZONE') || alertKey.includes('SCORING')) {
+            alertCategories['Scoring Opportunities'].push(alertData);
+        } else if (alertKey.includes('TWO_MINUTE') || alertKey.includes('OVERTIME') || alertKey.includes('FINAL') || alertKey.includes('FOURTH')) {
+            alertCategories['Critical Moments'].push(alertData);
+        } else {
+            alertCategories['Other'].push(alertData);
+        }
+    });
+    
+    const categoriesHtml = Object.keys(alertCategories)
+        .filter(category => alertCategories[category].length > 0)
+        .map(category => {
+            const alerts = alertCategories[category];
+            const categoryId = category.replace(/\s+/g, '-').toLowerCase();
+            
+            return `
+                <div class="alert-category">
+                    <div class="alert-category-header" onclick="toggleAlertCategory('${categoryId}')">
+                        <div class="alert-category-title">
+                            <i class="fas fa-chevron-down" id="chevron-${categoryId}"></i>
+                            ${category} (${alerts.length})
+                        </div>
+                    </div>
+                    <div class="alert-category-content" id="category-${categoryId}">
+                        ${alerts.map(alert => `
+                            <div class="alert-item">
+                                <div class="alert-item-info">
+                                    <div class="alert-item-name">${alert.name}</div>
+                                    <div class="alert-item-description">${getAlertDescription(alert.key)}</div>
+                                </div>
+                                <div class="alert-item-toggle">
+                                    <label class="toggle-switch" data-testid="toggle-${alert.key.toLowerCase()}">
+                                        <input type="checkbox" ${alert.enabled ? 'checked' : ''} 
+                                               onchange="toggleGlobalAlertSetting('${sport}', '${alert.key}', this.checked)">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    
+    contentElement.innerHTML = `
+        <div class="sport-alerts-grid">
+            ${categoriesHtml}
+        </div>
+    `;
+}
+
+function toggleAlertCategory(categoryId) {
+    const content = document.getElementById(`category-${categoryId}`);
+    const chevron = document.getElementById(`chevron-${categoryId}`);
+    
+    if (content && chevron) {
+        const isExpanded = content.style.display !== 'none';
+        content.style.display = isExpanded ? 'none' : 'block';
+        chevron.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
+    }
+}
+
+function formatAlertName(alertKey) {
+    return alertKey
+        .replace(/^(MLB_|NFL_|NBA_|NCAAF_|WNBA_|CFL_)/, '')
+        .replace(/_/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
+function getAlertDescription(alertKey) {
+    const descriptions = {
+        'GAME_START': 'Alert when game begins',
+        'SEVENTH_INNING_STRETCH': 'Alert at 7th inning stretch',
+        'TWO_MINUTE_WARNING': 'Alert at two-minute warning',
+        'RED_ZONE': 'Alert when team enters red zone',
+        'FOURTH_DOWN': 'Alert on fourth down situations',
+        'OVERTIME': 'Alert when game goes to overtime',
+        'FINAL_MINUTES': 'Alert in final minutes of game',
+        'BASES_LOADED_NO_OUTS': 'Alert when bases loaded with no outs',
+        'BASES_LOADED_ONE_OUT': 'Alert when bases loaded with one out',
+        'RUNNER_ON_THIRD_NO_OUTS': 'Alert with runner on third, no outs',
+        'CLUTCH_TIME': 'Alert during clutch time situations',
+        'PLAYOFF_INTENSITY': 'Alert for high-intensity playoff moments'
+    };
+    
+    // Find matching description
+    for (const [key, desc] of Object.entries(descriptions)) {
+        if (alertKey.includes(key)) {
+            return desc;
+        }
+    }
+    
+    return 'Advanced game situation alert';
+}
+
+async function toggleGlobalAlertSetting(sport, alertType, enabled) {
+    try {
+        const response = await fetch('/api/admin/global-alert-setting', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ sport, alertType, enabled })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showNotification(data.message, 'success');
+            loadAlertStatistics();
+        } else {
+            showNotification(`Failed to update ${alertType}`, 'error');
+            // Revert toggle
+            const toggle = event.target;
+            if (toggle) toggle.checked = !enabled;
+        }
+    } catch (error) {
+        console.error('Failed to toggle alert setting:', error);
+        showNotification(`Failed to update ${alertType}`, 'error');
+        // Revert toggle
+        const toggle = event.target;
+        if (toggle) toggle.checked = !enabled;
+    }
+}
+
+async function loadAlertStatistics() {
+    try {
+        // Load alert statistics from multiple sources
+        const [alertsResponse, usersResponse] = await Promise.all([
+            fetch('/api/alerts/stats', { credentials: 'include' }),
+            fetch('/api/admin/users', { credentials: 'include' })
+        ]);
+        
+        const alertStats = alertsResponse.ok ? await alertsResponse.json() : {};
+        const usersData = usersResponse.ok ? await usersResponse.json() : [];
+        
+        // Calculate statistics
+        const usersWithAlerts = usersData.filter(user => 
+            user.telegramEnabled || (user.preferences && Object.keys(user.preferences).length > 0)
+        ).length;
+        
+        // Update statistics display
+        updateStatElement('enabledAlertsCount', alertStats.totalAlerts || '-');
+        updateStatElement('totalUsersWithAlerts', usersWithAlerts || '-');
+        updateStatElement('recentAlertsCount', alertStats.todayAlerts || '-');
+        updateStatElement('systemHealthStatus', 'Operational');
+        
+    } catch (error) {
+        console.error('Failed to load alert statistics:', error);
+        // Set fallback values
+        updateStatElement('enabledAlertsCount', '-');
+        updateStatElement('totalUsersWithAlerts', '-');
+        updateStatElement('recentAlertsCount', '-');
+        updateStatElement('systemHealthStatus', 'Unknown');
+    }
+}
+
+function updateStatElement(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value;
+    }
 }

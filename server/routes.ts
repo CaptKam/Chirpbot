@@ -49,6 +49,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(memoryManager.middleware());
   app.use(requestDeduplicator.middleware());
 
+  // CRITICAL FIX: Ensure API routes are protected from Vite catch-all
+  app.use('/api/*', (req, res, next) => {
+    // Mark this as an API request so it doesn't get caught by Vite's catch-all
+    req.isApiRequest = true;
+    next();
+  });
+
+  // REMOVED: Broken /api/admin/statistics route - replaced with working /api/admin/stats endpoint
+
   // Request deduplication and memory management are handled by middleware above
 
   // Setup WebSocket server with heartbeat
@@ -1221,6 +1230,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH handler for admin dashboard compatibility - client sends PATCH requests
+  app.patch('/api/admin/users/:userId/role', requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+
+      if (!role || !['admin', 'manager', 'analyst', 'user'].includes(role)) {
+        return res.status(400).json({ message: 'Invalid role. Must be admin, manager, analyst, or user' });
+      }
+
+      const updatedUser = await storage.updateUserRole(userId, role);
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json({ message: 'User role updated successfully', user: userWithoutPassword });
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      res.status(500).json({ message: 'Failed to update user role' });
+    }
+  });
+
   app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
@@ -1371,6 +1404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch admin stats' });
     }
   });
+
 
   // System status endpoint for admin dashboard
   app.get('/api/admin/system-status', requireAdmin, async (req, res) => {
@@ -2910,6 +2944,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/admin/logout', (req, res) => {
+    req.session.adminUserId = undefined;
+    res.json({ message: 'Admin logout successful' });
+  });
+
+  // Alias route for admin dashboard compatibility - client expects /api/admin-auth/logout
+  app.post('/api/admin-auth/logout', (req, res) => {
     req.session.adminUserId = undefined;
     res.json({ message: 'Admin logout successful' });
   });
