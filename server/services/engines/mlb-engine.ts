@@ -262,8 +262,8 @@ export class MLBEngine extends BaseSportEngine {
       
       this.performanceMetrics.totalAlerts += alerts.length;
       
-      // Send alerts to Telegram for users with notifications enabled (already deduplicated)
-      await this.deliverAlertsToTelegram(alerts, enhancedGameState);
+      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
+      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
       
       return alerts;
     } finally {
@@ -296,11 +296,11 @@ export class MLBEngine extends BaseSportEngine {
           let weatherContext = gameState.weatherContext;
           try {
             const { weatherAlertIntegration } = await import('../weather-alert-integration');
-            const weatherData = await weatherAlertIntegration.getCurrentConditions(
-              gameState.homeTeam,
-              gameState.awayTeam
+            // Get weather for home team (where game is played)
+            const weatherData = await weatherAlertIntegration.getWeatherForTeam(
+              gameState.homeTeam
             );
-            if (weatherData && !weatherData.error) {
+            if (weatherData) {
               weatherContext = {
                 windSpeed: weatherData.windSpeed,
                 windDirection: weatherData.windDirection,
@@ -622,9 +622,77 @@ export class MLBEngine extends BaseSportEngine {
   
   // Get performance metrics for V3 dashboard
   // Send alerts to Telegram for users with notifications enabled
-  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
     if (!alerts || alerts.length === 0) return;
     
+    try {
+      console.log(`🚀 Simultaneously delivering ${alerts.length} MLB alerts to WebSocket and Telegram`);
+      
+      // Create delivery promises for parallel execution
+      const deliveryPromises: Promise<void>[] = [];
+      
+      // 1. WebSocket delivery promise
+      deliveryPromises.push(this.deliverAlertsToWebSocket(alerts, gameState));
+      
+      // 2. Telegram delivery promise
+      deliveryPromises.push(this.deliverAlertsToTelegram(alerts, gameState));
+      
+      // Execute both deliveries simultaneously
+      await Promise.all(deliveryPromises);
+      
+      console.log(`✅ Synchronized delivery complete for ${alerts.length} alerts`);
+      
+    } catch (error) {
+      console.error('❌ Synchronized alert delivery system error:', error);
+    }
+  }
+
+  private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      const wsBroadcast = (global as any).wsBroadcast;
+      if (!wsBroadcast) {
+        console.warn('📡 WebSocket broadcast function not available');
+        return;
+      }
+
+      for (const alert of alerts) {
+        const alertData = {
+          type: 'new_alert',
+          data: {
+            id: alert.alertKey,
+            type: alert.type,
+            sport: 'MLB',
+            priority: alert.priority,
+            message: alert.message,
+            context: alert.context,
+            gameId: gameState.gameId,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            inning: gameState.inning,
+            isTopInning: gameState.isTopInning,
+            outs: gameState.outs,
+            balls: gameState.balls,
+            strikes: gameState.strikes,
+            runners: {
+              first: gameState.hasFirst,
+              second: gameState.hasSecond,
+              third: gameState.hasThird
+            },
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        wsBroadcast(alertData);
+        console.log(`📡 ✅ WebSocket: ${alert.type} alert broadcasted`);
+      }
+    } catch (error) {
+      console.error('📡 ❌ WebSocket delivery error:', error);
+    }
+  }
+
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
     try {
       // Get all users with Telegram enabled
       const allUsers = await storage.getAllUsers();
