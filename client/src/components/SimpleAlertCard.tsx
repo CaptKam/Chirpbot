@@ -3,7 +3,7 @@ import { motion, PanInfo } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain } from 'lucide-react';
+import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain, Target, Activity } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -177,17 +177,35 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
     (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
   );
   const isLive = alertStatus.status === 'ACTIVE';
+  const isNewAlert = alertStatus.minutesAgo < 1; // Alert less than 1 minute old
   const confidence = alert.confidence || alert.payload?.gameInfo?.v3Analysis?.confidence || 0;
-  const confidenceLevel = confidence >= 80 ? 'high' : confidence >= 60 ? 'medium' : 'low';
-  const confidenceColor = confidence >= 80 ? 'bg-green-500/20 text-green-400 border-green-400/30' : 
-                          confidence >= 60 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30' : 
-                          'bg-orange-500/20 text-orange-400 border-orange-400/30';
+  const confidenceLevel = confidence >= 90 ? 'high' : confidence >= 70 ? 'medium' : 'low';
+  const confidenceColor = confidence >= 90 ? 'bg-green-500/20 text-green-400 border-green-400/30' : 
+                          confidence >= 70 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30' : 
+                          'bg-gray-500/20 text-gray-400 border-gray-400/30';
   
-  // Priority border color
-  const priorityBorderColor = alert.priority >= 90 ? 'border-l-red-500' :
-                               alert.priority >= 80 ? 'border-l-orange-500' :
-                               alert.priority >= 70 ? 'border-l-yellow-500' :
-                               'border-l-blue-500';
+  // Priority border color (4px wide vertical bar on left)
+  const priorityBorderColor = alert.priority >= 90 ? 'border-l-4 border-l-red-500' :
+                               alert.priority >= 80 ? 'border-l-4 border-l-orange-500' :
+                               alert.priority >= 70 ? 'border-l-4 border-l-yellow-500' :
+                               'border-l-4 border-l-blue-500';
+  
+  // Check if game is live
+  const isGameLive = alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined;
+  
+  // Format game time/period
+  const getGameTimeDisplay = () => {
+    if (alert.context?.quarter) {
+      return `Q${alert.context.quarter} ${alert.context.timeRemaining || ''}`;
+    } else if (alert.context?.inning) {
+      return `${alert.context.isTopInning ? '▲' : '▼'} ${alert.context.inning}`;
+    } else if (alert.context?.period) {
+      return `P${alert.context.period} ${alert.context.timeRemaining || ''}`;
+    }
+    return '';
+  };
+  
+  const gameTimeDisplay = getGameTimeDisplay();
   
   // Get sport-specific accent color
   const sportAccentColor = alert.sport === 'MLB' ? 'text-green-400/60' :
@@ -394,22 +412,21 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <div className={`${className} transition-all duration-200 relative border border-gray-700/50 border-l-4 ${priorityBorderColor} ${
-          isLive && alert.priority >= 80 ? 'animate-pulse' : ''
+        <div className={`${className} transition-all duration-200 relative border border-gray-700/50 ${priorityBorderColor} ${
+          isNewAlert ? 'ring-2 ring-emerald-500 ring-opacity-50 animate-pulse' : ''
         } shadow-lg hover:shadow-xl rounded-lg min-h-[120px] bg-slate-900/95`}>
 
-          {/* Status Badge */}
-          <div className="absolute top-2 left-2 z-10 flex items-center gap-2">
+          {/* Alert Status Badge - Top Left Corner */}
+          <div className="absolute top-2 left-6 z-10">
             {isLive ? (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 border border-green-400/30">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-semibold text-green-400">LIVE</span>
-              </div>
+              <Badge className="bg-green-500/20 text-green-400 border-green-400/30 animate-pulse" data-testid="badge-status-live">
+                <Activity className="h-3 w-3 mr-1" />
+                LIVE
+              </Badge>
             ) : (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-500/20 border border-gray-400/30">
-                <div className="w-2 h-2 rounded-full bg-gray-500" />
-                <span className="text-xs font-semibold text-gray-400">EXPIRED</span>
-              </div>
+              <Badge className="bg-gray-600/20 text-gray-400 border-gray-400/30" data-testid="badge-status-expired">
+                EXPIRED
+              </Badge>
             )}
           </div>
 
@@ -442,26 +459,34 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
             {/* Alert Message with Confidence Badge */}
             <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
-              <p className="text-slate-100 text-base font-medium leading-relaxed line-clamp-2">
-                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
-              </p>
-              {confidence > 0 && (
-                <div className="mt-2 flex items-center gap-2">
-                  <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${confidenceColor}`}>
-                    <Brain className="w-3 h-3" />
-                    <span>{Math.round(confidence)}% confidence</span>
-                  </div>
-                </div>
-              )}
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-slate-100 text-base font-medium leading-relaxed line-clamp-2 flex-1">
+                  {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
+                </p>
+                {confidence > 0 && (
+                  <Badge className={`${confidenceColor} flex items-center gap-1`} data-testid="badge-confidence">
+                    <Target className="h-3 w-3" />
+                    <span className="font-semibold">{Math.round(confidence)}%</span>
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* Game State and Footer Info */}
             <div className="flex items-center justify-between mt-auto">
               <div className="flex items-center gap-2">
-                {/* Sport Badge with accent color */}
-                <Badge variant="outline" className={`text-xs border-gray-600 ${sportAccentColor}`}>
-                  {alert.sport || 'UNKNOWN'}
-                </Badge>
+                {/* Sport Badge with Live Game Indicator */}
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className={`text-xs border-gray-600 ${sportAccentColor}`}>
+                    {alert.sport || 'UNKNOWN'}
+                  </Badge>
+                  {isGameLive && (
+                    <div className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" data-testid="indicator-live-pulse"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" data-testid="indicator-live-dot"></span>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Game State Indicator */}
                 {alert.sport === 'MLB' && alert.context?.inning && (
@@ -494,10 +519,20 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                 )}
               </div>
               
-              {/* Timestamp */}
-              <span className="text-xs text-slate-500 whitespace-nowrap" data-testid="text-timestamp">
-                {formatTime(alert.createdAt)}
-              </span>
+              {/* Enhanced Time Display */}
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-gray-400" data-testid="text-timestamp">
+                  {formatTime(alert.createdAt)}
+                </span>
+                {gameTimeDisplay && (
+                  <>
+                    <span className="text-gray-500">•</span>
+                    <span className="text-gray-300" data-testid="text-game-time">
+                      {gameTimeDisplay}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
 
           </div>
