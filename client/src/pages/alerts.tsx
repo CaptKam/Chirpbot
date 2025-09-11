@@ -84,24 +84,65 @@ export default function AlertsPage() {
     ? (alerts as Alert[] || [])
     : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
 
-  const getAlertIcon = (type: string) => {
+  // Enhanced icon system with priority-based coloring
+  const getAlertIcon = (type: string, priority = 70) => {
+    const priorityColors = getPriorityColors(priority);
+    const iconClass = `h-4 w-4 ${priorityColors.textColor}`;
+    
     switch (type) {
       case 'CLOSE_GAME':
-        return <AlertTriangle className="h-4 w-4" />;
+      case 'CLOSE_GAME_LIVE':
+        return <AlertTriangle className={iconClass} />;
       case 'BASES_LOADED':
-        return <Users className="h-4 w-4" />;
+      case 'RUNNERS_1ST_2ND':
+      case 'RISP':
+        return <Users className={iconClass} />;
       case 'HOME_RUN':
-        return <TrendingUp className="h-4 w-4" />;
+      case 'HIGH_SCORING':
+        return <TrendingUp className={iconClass} />;
+      case 'POWER_HITTER':
+      case 'HOT_HITTER':
+        return <Activity className={iconClass} />;
+      case 'TWO_MINUTE_WARNING':
+      case 'OVERTIME':
+        return <Clock className={iconClass} />;
       default:
-        return <Bell className="h-4 w-4" />;
+        return <Bell className={iconClass} />;
     }
   };
 
-  const getAlertColor = (priority: number) => {
-    if (priority >= 90) return 'bg-red-500';
-    if (priority >= 80) return 'bg-orange-500';
-    if (priority >= 70) return 'bg-yellow-500';
-    return 'bg-blue-500';
+  // Enhanced priority color system with correct thresholds
+  const getPriorityColors = (priority: number) => {
+    if (priority >= 90) {
+      return {
+        bgColor: 'bg-red-500',
+        textColor: 'text-red-400',
+        borderColor: 'border-red-500/50',
+        gradientBg: 'bg-gradient-to-r from-red-500/20 to-red-600/20'
+      };
+    }
+    if (priority >= 75) {
+      return {
+        bgColor: 'bg-orange-500',
+        textColor: 'text-orange-400',
+        borderColor: 'border-orange-500/50',
+        gradientBg: 'bg-gradient-to-r from-orange-500/20 to-orange-600/20'
+      };
+    }
+    if (priority >= 60) {
+      return {
+        bgColor: 'bg-blue-500',
+        textColor: 'text-blue-400',
+        borderColor: 'border-blue-500/50',
+        gradientBg: 'bg-gradient-to-r from-blue-500/20 to-blue-600/20'
+      };
+    }
+    return {
+      bgColor: 'bg-slate-500',
+      textColor: 'text-slate-400',
+      borderColor: 'border-slate-500/50',
+      gradientBg: 'bg-gradient-to-r from-slate-500/20 to-slate-600/20'
+    };
   };
 
   const formatTime = (dateString: string) => {
@@ -171,7 +212,8 @@ export default function AlertsPage() {
       <SportTabs 
         sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
         selectedSport={filter} 
-        onSportChange={setFilter} 
+        onSportChange={setFilter}
+        className="mb-6"
       />
 
       {/* Alerts Content */}

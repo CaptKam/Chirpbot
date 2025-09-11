@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, PanInfo } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calculator, Activity, Clock } from 'lucide-react';
+import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calculator, Activity, Clock, Radio, CloudSnow, Sun, Cloud, CloudRain, Wind, AlertTriangle, Users, Bell } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -31,69 +31,96 @@ function formatTime(date: string | Date): string {
   return alertTime.toLocaleDateString();
 }
 
-// Sport-specific color mapping
+// Enhanced sport-specific color mapping with better contrast and theming
 function getSportColors(sport: string): { 
-  badge: string, 
-  alertBg: string, 
-  alertBorder: string, 
-  probability: string 
+  badge: string;
+  alertBg: string;
+  alertBorder: string;
+  probability: string;
+  accent: string;
+  gradientFrom: string;
+  gradientTo: string;
 } {
   switch (sport.toUpperCase()) {
     case 'MLB':
       return {
-        badge: 'border-green-500/40 text-green-400 bg-green-500/10',
-        alertBg: 'bg-green-500/10',
-        alertBorder: 'border-green-500/30',
-        probability: 'bg-green-500/20 border-green-400/40 text-green-300'
+        badge: 'border-emerald-400/50 text-emerald-300 bg-emerald-500/15',
+        alertBg: 'bg-emerald-500/10',
+        alertBorder: 'border-emerald-500/30',
+        probability: 'bg-emerald-500/20 border-emerald-400/50 text-emerald-200',
+        accent: 'text-emerald-400',
+        gradientFrom: 'from-emerald-500/20',
+        gradientTo: 'to-green-600/20'
       };
     case 'NFL':
       return {
-        badge: 'border-orange-500/40 text-orange-400 bg-orange-500/10',
+        badge: 'border-orange-400/50 text-orange-300 bg-orange-500/15',
         alertBg: 'bg-orange-500/10',
         alertBorder: 'border-orange-500/30',
-        probability: 'bg-orange-500/20 border-orange-400/40 text-orange-300'
+        probability: 'bg-orange-500/20 border-orange-400/50 text-orange-200',
+        accent: 'text-orange-400',
+        gradientFrom: 'from-orange-500/20',
+        gradientTo: 'to-amber-600/20'
       };
     case 'NBA':
       return {
-        badge: 'border-purple-500/40 text-purple-400 bg-purple-500/10',
-        alertBg: 'bg-purple-500/10',
-        alertBorder: 'border-purple-500/30',
-        probability: 'bg-purple-500/20 border-purple-400/40 text-purple-300'
+        badge: 'border-orange-400/50 text-orange-300 bg-orange-500/15',
+        alertBg: 'bg-orange-500/10',
+        alertBorder: 'border-orange-500/30',
+        probability: 'bg-orange-500/20 border-orange-400/50 text-orange-200',
+        accent: 'text-orange-400',
+        gradientFrom: 'from-orange-500/20',
+        gradientTo: 'to-red-600/20'
       };
     case 'WNBA':
       return {
-        badge: 'border-pink-500/40 text-pink-400 bg-pink-500/10',
+        badge: 'border-pink-400/50 text-pink-300 bg-pink-500/15',
         alertBg: 'bg-pink-500/10',
         alertBorder: 'border-pink-500/30',
-        probability: 'bg-pink-500/20 border-pink-400/40 text-pink-300'
+        probability: 'bg-pink-500/20 border-pink-400/50 text-pink-200',
+        accent: 'text-pink-400',
+        gradientFrom: 'from-pink-500/20',
+        gradientTo: 'to-rose-600/20'
       };
     case 'CFL':
       return {
-        badge: 'border-red-500/40 text-red-400 bg-red-500/10',
+        badge: 'border-red-400/50 text-red-300 bg-red-500/15',
         alertBg: 'bg-red-500/10',
         alertBorder: 'border-red-500/30',
-        probability: 'bg-red-500/20 border-red-400/40 text-red-300'
+        probability: 'bg-red-500/20 border-red-400/50 text-red-200',
+        accent: 'text-red-400',
+        gradientFrom: 'from-red-500/20',
+        gradientTo: 'to-red-700/20'
       };
     case 'NCAAF':
       return {
-        badge: 'border-blue-500/40 text-blue-400 bg-blue-500/10',
+        badge: 'border-blue-400/50 text-blue-300 bg-blue-500/15',
         alertBg: 'bg-blue-500/10',
         alertBorder: 'border-blue-500/30',
-        probability: 'bg-blue-500/20 border-blue-400/40 text-blue-300'
+        probability: 'bg-blue-500/20 border-blue-400/50 text-blue-200',
+        accent: 'text-blue-400',
+        gradientFrom: 'from-blue-500/20',
+        gradientTo: 'to-indigo-600/20'
       };
     case 'NHL':
       return {
-        badge: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10',
+        badge: 'border-cyan-400/50 text-cyan-300 bg-cyan-500/15',
         alertBg: 'bg-cyan-500/10',
         alertBorder: 'border-cyan-500/30',
-        probability: 'bg-cyan-500/20 border-cyan-400/40 text-cyan-300'
+        probability: 'bg-cyan-500/20 border-cyan-400/50 text-cyan-200',
+        accent: 'text-cyan-400',
+        gradientFrom: 'from-cyan-500/20',
+        gradientTo: 'to-blue-600/20'
       };
     default:
       return {
-        badge: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
-        alertBg: 'bg-emerald-500/10',
-        alertBorder: 'border-emerald-500/30',
-        probability: 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300'
+        badge: 'border-slate-400/50 text-slate-300 bg-slate-500/15',
+        alertBg: 'bg-slate-500/10',
+        alertBorder: 'border-slate-500/30',
+        probability: 'bg-slate-500/20 border-slate-400/50 text-slate-200',
+        accent: 'text-slate-400',
+        gradientFrom: 'from-slate-500/20',
+        gradientTo: 'to-gray-600/20'
       };
   }
 }
@@ -141,11 +168,48 @@ function getAlertStatus(alertType: string, createdAt: string, gameStatus?: strin
   };
 }
 
-function getAlertColor(priority: number): string {
-  if (priority >= 90) return 'bg-red-400';
-  if (priority >= 80) return 'bg-orange-400';
-  if (priority >= 70) return 'bg-yellow-400';
-  return 'bg-blue-400';
+// Enhanced priority color system with correct thresholds and gradients
+function getPriorityColors(priority: number): {
+  borderColor: string;
+  bgColor: string;
+  textColor: string;
+  dotColor: string;
+  gradientBg: string;
+} {
+  if (priority >= 90) {
+    return {
+      borderColor: 'border-red-500/50',
+      bgColor: 'bg-red-500/10',
+      textColor: 'text-red-400',
+      dotColor: 'bg-red-500',
+      gradientBg: 'bg-gradient-to-r from-red-500/20 to-red-600/20'
+    };
+  }
+  if (priority >= 75) {
+    return {
+      borderColor: 'border-orange-500/50',
+      bgColor: 'bg-orange-500/10',
+      textColor: 'text-orange-400',
+      dotColor: 'bg-orange-500',
+      gradientBg: 'bg-gradient-to-r from-orange-500/20 to-orange-600/20'
+    };
+  }
+  if (priority >= 60) {
+    return {
+      borderColor: 'border-blue-500/50',
+      bgColor: 'bg-blue-500/10',
+      textColor: 'text-blue-400',
+      dotColor: 'bg-blue-500',
+      gradientBg: 'bg-gradient-to-r from-blue-500/20 to-blue-600/20'
+    };
+  }
+  return {
+    borderColor: 'border-slate-500/50',
+    bgColor: 'bg-slate-500/10',
+    textColor: 'text-slate-400',
+    dotColor: 'bg-slate-500',
+    gradientBg: 'bg-gradient-to-r from-slate-500/20 to-slate-600/20'
+  };
 }
 
 interface BetbookData {
@@ -224,6 +288,135 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
+
+  // Enhanced status tracking
+  const sportColors = getSportColors(alertData?.sport || 'MLB');
+  const priorityColors = getPriorityColors(alertData?.priority || 0);
+  const priority = alertData?.priority || 0;
+  
+  // Determine if this is a live game
+  const { status, minutesAgo } = getAlertStatus(alertData?.type || '', alertData?.createdAt || new Date().toISOString());
+  const isLiveGame = status === 'ACTIVE' && minutesAgo < 5;
+  
+  // Check for AI enhancements
+  const hasAIInsights = !!(alertData?.context?.aiInsights || alertData?.payload?.betbookData?.aiAdvice);
+
+  // Enhanced icon system with better categorization
+  const getAlertIcon = (type: string, priority: number) => {
+    const iconSize = "h-4 w-4";
+    const priorityColors = getPriorityColors(priority);
+    const iconClass = `${iconSize} ${priorityColors.textColor}`;
+
+    switch (type) {
+      case 'TWO_MINUTE_WARNING':
+      case 'NCAAF_KICKOFF':
+      case 'NCAAF_HALFTIME':
+        return <Clock className={iconClass} />;
+      case 'CLOSE_GAME':
+      case 'CLOSE_GAME_LIVE':
+        return <AlertTriangle className={iconClass} />;
+      case 'HIGH_SCORING':
+        return <TrendingUp className={iconClass} />;
+      case 'SHUTOUT':
+      case 'BLOWOUT':
+        return <Users className={iconClass} />;
+      case 'BASES_LOADED':
+      case 'RUNNERS_1ST_2ND':
+      case 'RISP':
+        return <Target className={iconClass} />;
+      case 'POWER_HITTER':
+      case 'HOT_HITTER':
+        return <Zap className={iconClass} />;
+      case 'OVERTIME':
+        return <Clock className={iconClass} />;
+      default:
+        return <Bell className={iconClass} />;
+    }
+  };
+
+  // Weather icon helper
+  const getWeatherIcon = (weatherContext?: string, size = "h-4 w-4") => {
+    if (!weatherContext) return null;
+    
+    const weather = weatherContext.toLowerCase();
+    if (weather.includes('rain') || weather.includes('storm')) {
+      return <CloudRain className={`${size} text-blue-400`} />;
+    }
+    if (weather.includes('snow')) {
+      return <CloudSnow className={`${size} text-blue-300`} />;
+    }
+    if (weather.includes('wind')) {
+      return <Wind className={`${size} text-slate-400`} />;
+    }
+    if (weather.includes('cloud')) {
+      return <Cloud className={`${size} text-slate-400`} />;
+    }
+    if (weather.includes('clear') || weather.includes('sun')) {
+      return <Sun className={`${size} text-yellow-400`} />;
+    }
+    return null;
+  };
+
+  // Live status indicator
+  const LiveIndicator = ({ gameStatus }: { gameStatus?: string }) => {
+    if (gameStatus !== 'live') return null;
+    
+    return (
+      <div className="flex items-center gap-1" data-testid="live-indicator">
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+        <span className="text-xs font-medium text-green-400">LIVE</span>
+      </div>
+    );
+  };
+
+  // AI Enhancement indicator
+  const AIIndicator = ({ hasAI }: { hasAI: boolean }) => {
+    if (!hasAI) return null;
+    
+    return (
+      <div 
+        className="flex items-center gap-1 text-purple-400" 
+        data-testid="ai-indicator"
+        title="AI Enhanced"
+      >
+        <Brain className="h-3 w-3" />
+        <span className="text-xs font-medium">AI</span>
+      </div>
+    );
+  };
+
+  // Enhanced probability badge
+  const ProbabilityBadge = ({ 
+    probability, 
+    sport, 
+    priority 
+  }: { 
+    probability?: number;
+    sport: string;
+    priority: number;
+  }) => {
+    if (!probability) return null;
+    
+    const percentage = Math.round(probability * 100);
+    const sportColors = getSportColors(sport);
+    const priorityColors = getPriorityColors(priority);
+    
+    return (
+      <div
+        className={`
+          px-2 py-1 rounded-md text-xs font-bold 
+          ${priorityColors.gradientBg} 
+          ${priorityColors.borderColor} 
+          border backdrop-blur-sm
+          transition-all duration-200 hover:scale-105
+        `}
+        data-testid="probability-badge"
+        title={`${percentage}% probability based on current game state`}
+      >
+        <span className={priorityColors.textColor}>{percentage}%</span>
+      </div>
+    );
+  };
 
   // Fetch live game data for MLB alerts to get current scores
   const { data: todaysGames } = useQuery({
@@ -762,11 +955,16 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
       >
-        <Card className={`${className} border-2 ${
-          getAlertStatus(alertData.type, alertData.createdAt || '', liveGameData?.status).status === 'ACTIVE'
-            ? 'border-emerald-500 shadow-emerald-500/20'
-            : 'border-gray-500 shadow-gray-500/20'
-        } shadow-lg`} {...props}>
+        <Card className={`
+          ${className} border-2 transition-all duration-300
+          ${priorityColors.bgColor} ${priorityColors.borderColor}
+          ${status === 'ACTIVE' 
+            ? `shadow-lg ${sportColors.accent.replace('text-', 'shadow-')}/20` 
+            : 'shadow-gray-500/10'
+          }
+          backdrop-blur-sm hover:shadow-xl hover:scale-[1.01]
+          ${isDragging ? 'scale-[1.02]' : ''}
+        `} {...props}>
           {/* Render the redesigned alert card content here */}
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
