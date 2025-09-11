@@ -383,6 +383,10 @@ export const storage = {
           'MLB_BASES_LOADED_ONE_OUT': true,
           // On-deck batter predictions
           'MLB_ON_DECK_PREDICTION': true,
+          // Additional MLB alerts
+          'MLB_BATTER_DUE': true,
+          'MLB_STEAL_LIKELIHOOD': true,
+          'MLB_WIND_CHANGE': true,
           // AI Enhancement alerts (available for MLB)
           'AI_ENHANCED_MESSAGES': true,
           'AI_PREDICTIVE_AT_BAT': true,
