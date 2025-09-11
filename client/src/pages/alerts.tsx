@@ -161,9 +161,8 @@ export default function AlertsPage() {
   return (
     <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       <PageHeader 
-        title="Live Alerts" 
-        subtitle="Real-time sports notifications"
-        icon={Bell}
+        title="ChirpBot" 
+        subtitle="V2 Alert System"
       />
       <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6">
 
