@@ -3,9 +3,21 @@ import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
 import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
+import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class NCAAFEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private lineMovementCache: Map<string, any> = new Map(); // Track line movements
+  
+  // Deduplication tracking - tracks sent alerts to prevent duplicates
+  private sentAlerts: Map<string, Set<string>> = new Map(); // gameId -> Set of alertKeys
+  private alertTimestamps: Map<string, number> = new Map(); // alertKey -> timestamp
+  private lastCleanup: number = Date.now();
+  private readonly ALERT_COOLDOWN_MS = 300000; // 5 minutes cooldown per alert
+  private readonly CLEANUP_INTERVAL_MS = 600000; // Clean up old entries every 10 minutes
+  private readonly MAX_ALERTS_PER_GAME = 50; // Prevent memory overload per game
+  
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -17,12 +29,295 @@ export class NCAAFEngine extends BaseSportEngine {
     probabilityCalculationTime: [] as number[],
     gameStateEnhancementTime: [] as number[],
     aiEnhancementTime: [] as number[],
-    enhancedAlerts: 0
+    enhancedAlerts: 0,
+    fourthDownSituations: 0,
+    redZoneOpportunities: 0,
+    upsetAlertOpportunities: 0,
+    duplicatesBlocked: 0,
+    alertsSent: 0
   };
 
   constructor() {
     super('NCAAF');
     this.settingsCache = new SettingsCache(storage);
+  }
+  
+  /**
+   * Check if an alert has already been sent recently
+   */
+  private hasAlertBeenSent(gameId: string, alertKey: string): boolean {
+    // Check if this exact alert was sent recently
+    const lastSent = this.alertTimestamps.get(alertKey);
+    if (lastSent && (Date.now() - lastSent) < this.ALERT_COOLDOWN_MS) {
+      this.performanceMetrics.duplicatesBlocked++;
+      console.log(`🚫 NCAAF Duplicate blocked: ${alertKey} (sent ${Math.round((Date.now() - lastSent) / 1000)}s ago)`);
+      return true;
+    }
+    
+    // Check if we've sent too many alerts for this game
+    const gameAlerts = this.sentAlerts.get(gameId);
+    if (gameAlerts && gameAlerts.size >= this.MAX_ALERTS_PER_GAME) {
+      console.log(`⚠️ NCAAF Alert limit reached for game ${gameId} (${gameAlerts.size} alerts)`);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Mark an alert as sent
+   */
+  private markAlertSent(gameId: string, alertKey: string): void {
+    // Track by game
+    if (!this.sentAlerts.has(gameId)) {
+      this.sentAlerts.set(gameId, new Set());
+    }
+    this.sentAlerts.get(gameId)!.add(alertKey);
+    
+    // Track timestamp
+    this.alertTimestamps.set(alertKey, Date.now());
+    this.performanceMetrics.alertsSent++;
+    
+    console.log(`✅ NCAAF Alert tracked: ${alertKey} for game ${gameId}`);
+    
+    // Periodic cleanup to prevent memory leaks
+    this.cleanupOldAlerts();
+  }
+  
+  /**
+   * Clean up old alert tracking data to prevent memory leaks
+   */
+  private cleanupOldAlerts(): void {
+    const now = Date.now();
+    
+    // Only run cleanup periodically
+    if (now - this.lastCleanup < this.CLEANUP_INTERVAL_MS) {
+      return;
+    }
+    
+    console.log(`🧹 NCAAF Alert cleanup: Removing alerts older than ${this.ALERT_COOLDOWN_MS}ms`);
+    
+    // Clean up old timestamps
+    let removedCount = 0;
+    for (const [alertKey, timestamp] of this.alertTimestamps.entries()) {
+      if (now - timestamp > this.ALERT_COOLDOWN_MS) {
+        this.alertTimestamps.delete(alertKey);
+        removedCount++;
+      }
+    }
+    
+    // Clean up game tracking for finished games (no alerts in last hour)
+    const oneHourAgo = now - 3600000;
+    for (const [gameId, alerts] of this.sentAlerts.entries()) {
+      let hasRecentAlert = false;
+      for (const alertKey of alerts) {
+        const timestamp = this.alertTimestamps.get(alertKey);
+        if (timestamp && timestamp > oneHourAgo) {
+          hasRecentAlert = true;
+          break;
+        }
+      }
+      
+      if (!hasRecentAlert) {
+        this.sentAlerts.delete(gameId);
+        console.log(`🧹 NCAAF Removed tracking for game ${gameId}`);
+      }
+    }
+    
+    this.lastCleanup = now;
+    console.log(`🧹 NCAAF Alert cleanup complete: removed ${removedCount} old alerts`);
+  }
+
+  /**
+   * Deliver alerts to all channels (WebSocket + Telegram) simultaneously
+   */
+  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    if (alerts.length === 0) return;
+
+    console.log(`📬 NCAAF Delivering ${alerts.length} alerts via all channels for game ${gameState.gameId}`);
+    
+    try {
+      // Deliver to both WebSocket and Telegram simultaneously using Promise.all
+      const deliveryPromises = [
+        this.deliverAlertsToWebSocket(alerts, gameState),
+        this.deliverAlertsToTelegram(alerts, gameState)
+      ];
+      
+      // Wait for both deliveries to complete (or fail)
+      const results = await Promise.allSettled(deliveryPromises);
+      
+      // Log results for monitoring
+      const [wsResult, telegramResult] = results;
+      
+      if (wsResult.status === 'rejected') {
+        console.error('❌ NCAAF WebSocket delivery failed:', wsResult.reason);
+      } else {
+        console.log('✅ NCAAF WebSocket delivery successful');
+      }
+      
+      if (telegramResult.status === 'rejected') {
+        console.error('❌ NCAAF Telegram delivery failed:', telegramResult.reason);
+      } else {
+        console.log('✅ NCAAF Telegram delivery successful');
+      }
+      
+    } catch (error) {
+      console.error('❌ NCAAF Alert delivery error:', error);
+    }
+  }
+
+  /**
+   * Deliver alerts to WebSocket clients
+   */
+  private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      // Use global WebSocket broadcast if available
+      if (typeof global.wsBroadcast === 'function') {
+        for (const alert of alerts) {
+          const alertData = {
+            id: alert.alertKey,
+            type: alert.type,
+            sport: 'NCAAF',
+            priority: alert.priority,
+            message: alert.message,
+            context: alert.context,
+            gameId: gameState.gameId,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            timestamp: new Date().toISOString()
+          };
+          
+          // Broadcast to all connected WebSocket clients
+          global.wsBroadcast(JSON.stringify({ type: 'alert', data: alertData }));
+          console.log(`📡 NCAAF WebSocket broadcast: ${alert.type} for game ${gameState.gameId}`);
+        }
+      } else {
+        console.log('⚠️ NCAAF WebSocket broadcast not available - skipping WebSocket delivery');
+      }
+    } catch (error) {
+      console.error('❌ NCAAF WebSocket delivery error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deliver alerts to Telegram
+   */
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      for (const alert of alerts) {
+        // Create enhanced alert payload for Telegram
+        const telegramPayload: EnhancedAlertPayload = {
+          id: alert.alertKey,
+          type: alert.type,
+          sport: 'NCAAF',
+          priority: alert.priority,
+          message: alert.message,
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore || 0,
+          awayScore: gameState.awayScore || 0,
+          quarter: gameState.quarter || 1,
+          timeRemaining: gameState.timeRemaining || '15:00',
+          down: gameState.down,
+          yardsToGo: gameState.yardsToGo,
+          fieldPosition: gameState.fieldPosition,
+          possession: gameState.possession,
+          timestamp: new Date().toISOString(),
+          context: alert.context,
+          probability: alert.context?.probability || 50
+        };
+        
+        // Compose alert using AlertComposer for consistent formatting
+        const composedAlert = await alertComposer.composeTimeBasedAlert(telegramPayload);
+        
+        // Send to Telegram with NCAAF-specific configuration
+        const telegramConfig: TelegramConfig = {
+          sport: 'NCAAF',
+          priority: alert.priority,
+          gameContext: {
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore || 0,
+            awayScore: gameState.awayScore || 0,
+            quarter: gameState.quarter || 1,
+            timeRemaining: gameState.timeRemaining || '15:00',
+            down: gameState.down,
+            yardsToGo: gameState.yardsToGo,
+            fieldPosition: gameState.fieldPosition
+          }
+        };
+        
+        await sendTelegramAlert(composedAlert.message, telegramConfig);
+        console.log(`📱 NCAAF Telegram sent: ${alert.type} for game ${gameState.gameId}`);
+      }
+    } catch (error) {
+      console.error('❌ NCAAF Telegram delivery error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enhance alerts with time-sensitive intelligence via AlertComposer
+   */
+  private async composeTimeBasedAlerts(alerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    if (alerts.length === 0) return alerts;
+
+    try {
+      const composedAlerts: AlertResult[] = [];
+      
+      for (const alert of alerts) {
+        // Create enhanced alert payload for composition
+        const enhancedPayload: EnhancedAlertPayload = {
+          id: alert.alertKey,
+          type: alert.type,
+          sport: 'NCAAF',
+          priority: alert.priority,
+          message: alert.message,
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore || 0,
+          awayScore: gameState.awayScore || 0,
+          quarter: gameState.quarter || 1,
+          timeRemaining: gameState.timeRemaining || '15:00',
+          down: gameState.down,
+          yardsToGo: gameState.yardsToGo,
+          fieldPosition: gameState.fieldPosition,
+          possession: gameState.possession,
+          timestamp: new Date().toISOString(),
+          context: alert.context,
+          probability: alert.context?.probability || await this.calculateProbability(gameState)
+        };
+        
+        // Use AlertComposer to enhance the message with time-based context
+        const composedAlert = await alertComposer.composeTimeBasedAlert(enhancedPayload);
+        
+        // Update alert with composed message and enhanced context
+        composedAlerts.push({
+          ...alert,
+          message: composedAlert.message,
+          context: {
+            ...alert.context,
+            composedMessage: composedAlert.message,
+            timeComposition: composedAlert.timeContext,
+            urgencyLevel: composedAlert.urgencyLevel,
+            compositionTimestamp: new Date().toISOString()
+          }
+        });
+      }
+      
+      console.log(`📝 NCAAF Composed ${composedAlerts.length} time-based alerts`);
+      return composedAlerts;
+    } catch (error) {
+      console.error('❌ NCAAF Alert composition failed:', error);
+      return alerts; // Fallback to original alerts
+    }
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -127,36 +422,73 @@ export class NCAAFEngine extends BaseSportEngine {
 
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const startTime = Date.now();
-    this.performanceMetrics.totalRequests++;
     
     try {
-      // Enhance game state with NCAAF-specific live data if needed
-      const enhanceStartTime = Date.now();
-      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
-      const enhanceTime = Date.now() - enhanceStartTime;
-      this.performanceMetrics.enhanceDataTime.push(enhanceTime);
-      
-      // Use the parent class method which properly calls all loaded modules
-      const alertStartTime = Date.now();
-      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
-      const alertTime = Date.now() - alertStartTime;
-      this.performanceMetrics.alertGenerationTime.push(alertTime);
-      
-      // Process alerts with cross-sport AI enhancement for high-priority NCAAF situations
-      const processedAlerts = await this.processEnhancedNCAAFAlerts(rawAlerts, enhancedGameState);
-      
-      this.performanceMetrics.totalAlerts += processedAlerts.length;
-      
-      const totalTime = Date.now() - startTime;
-      if (totalTime > 150) {
-        console.log(`⚠️ NCAAF Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
+      // Early exit if game is not valid
+      if (!gameState.gameId) {
+        console.log('⚠️ NCAAF: No gameId provided, skipping alert generation');
+        return [];
       }
       
-      return processedAlerts;
-    } catch (error) {
-      const totalTime = Date.now() - startTime;
-      console.error(`❌ NCAAF Alert generation failed after ${totalTime}ms:`, error);
-      return [];
+      // Enhance game state with NCAAF-specific live data if needed
+      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+
+      // Use the parent class method which properly calls all loaded modules
+      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
+      
+      // Filter out duplicate alerts before processing
+      const dedupedAlerts: AlertResult[] = [];
+      for (const alert of rawAlerts) {
+        // Check if this alert has already been sent
+        if (!this.hasAlertBeenSent(enhancedGameState.gameId, alert.alertKey)) {
+          dedupedAlerts.push(alert);
+          // Mark as sent immediately to prevent duplicates in same processing cycle
+          this.markAlertSent(enhancedGameState.gameId, alert.alertKey);
+        }
+      }
+      
+      // If all alerts were duplicates, return early
+      if (dedupedAlerts.length === 0) {
+        console.log(`🔄 NCAAF: All ${rawAlerts.length} alerts were duplicates for game ${enhancedGameState.gameId}`);
+        return [];
+      }
+      
+      console.log(`✅ NCAAF: Processing ${dedupedAlerts.length} new alerts (blocked ${rawAlerts.length - dedupedAlerts.length} duplicates)`);
+      
+      // Enhance alerts with time-sensitive intelligence via AlertComposer
+      const composedAlerts = await this.composeTimeBasedAlerts(dedupedAlerts, enhancedGameState);
+      
+      // Process alerts with cross-sport AI enhancement for high-priority NCAAF situations
+      const alerts = await this.processEnhancedNCAAFAlerts(composedAlerts, enhancedGameState);
+      
+      // Track NCAAF-specific metrics
+      if (enhancedGameState.down === 4) {
+        this.performanceMetrics.fourthDownSituations++;
+      }
+      if (enhancedGameState.fieldPosition && enhancedGameState.fieldPosition <= 20) {
+        this.performanceMetrics.redZoneOpportunities++;
+      }
+      if (enhancedGameState.homeScore !== undefined && enhancedGameState.awayScore !== undefined) {
+        const scoreDiff = Math.abs(enhancedGameState.homeScore - enhancedGameState.awayScore);
+        if (scoreDiff >= 14) {
+          this.performanceMetrics.upsetAlertOpportunities++;
+        }
+      }
+      
+      this.performanceMetrics.totalAlerts += alerts.length;
+      
+      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
+      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
+      
+      return alerts;
+    } finally {
+      const alertTime = Date.now() - startTime;
+      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.alertGenerationTime.length > 100) {
+        this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-100);
+      }
     }
   }
 

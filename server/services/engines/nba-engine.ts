@@ -3,9 +3,21 @@ import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
 import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
+import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class NBAEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private lineMovementCache: Map<string, any> = new Map(); // Track line movements
+  
+  // Deduplication tracking - tracks sent alerts to prevent duplicates
+  private sentAlerts: Map<string, Set<string>> = new Map(); // gameId -> Set of alertKeys
+  private alertTimestamps: Map<string, number> = new Map(); // alertKey -> timestamp
+  private lastCleanup: number = Date.now();
+  private readonly ALERT_COOLDOWN_MS = 300000; // 5 minutes cooldown per alert
+  private readonly CLEANUP_INTERVAL_MS = 600000; // Clean up old entries every 10 minutes
+  private readonly MAX_ALERTS_PER_GAME = 50; // Prevent memory overload per game
+  
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -17,12 +29,100 @@ export class NBAEngine extends BaseSportEngine {
     probabilityCalculationTime: [] as number[],
     gameStateEnhancementTime: [] as number[],
     clutchTimeDetections: 0,
-    overtimeAlerts: 0
+    overtimeAlerts: 0,
+    duplicatesBlocked: 0,
+    alertsSent: 0
   };
 
   constructor() {
     super('NBA');
     this.settingsCache = new SettingsCache(storage);
+  }
+  
+  /**
+   * Check if an alert has already been sent recently
+   */
+  private hasAlertBeenSent(gameId: string, alertKey: string): boolean {
+    // Check if this exact alert was sent recently
+    const lastSent = this.alertTimestamps.get(alertKey);
+    if (lastSent && (Date.now() - lastSent) < this.ALERT_COOLDOWN_MS) {
+      this.performanceMetrics.duplicatesBlocked++;
+      console.log(`🚫 NBA Duplicate blocked: ${alertKey} (sent ${Math.round((Date.now() - lastSent) / 1000)}s ago)`);
+      return true;
+    }
+    
+    // Check if we've sent too many alerts for this game
+    const gameAlerts = this.sentAlerts.get(gameId);
+    if (gameAlerts && gameAlerts.size >= this.MAX_ALERTS_PER_GAME) {
+      console.log(`⚠️ NBA Alert limit reached for game ${gameId} (${gameAlerts.size} alerts)`);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Mark an alert as sent
+   */
+  private markAlertSent(gameId: string, alertKey: string): void {
+    // Track by game
+    if (!this.sentAlerts.has(gameId)) {
+      this.sentAlerts.set(gameId, new Set());
+    }
+    this.sentAlerts.get(gameId)!.add(alertKey);
+    
+    // Track timestamp
+    this.alertTimestamps.set(alertKey, Date.now());
+    this.performanceMetrics.alertsSent++;
+    
+    console.log(`✅ NBA Alert tracked: ${alertKey} for game ${gameId}`);
+    
+    // Periodic cleanup to prevent memory leaks
+    this.cleanupOldAlerts();
+  }
+  
+  /**
+   * Clean up old alert tracking data to prevent memory leaks
+   */
+  private cleanupOldAlerts(): void {
+    const now = Date.now();
+    
+    // Only run cleanup periodically
+    if (now - this.lastCleanup < this.CLEANUP_INTERVAL_MS) {
+      return;
+    }
+    
+    console.log(`🧹 NBA Alert cleanup: Removing alerts older than ${this.ALERT_COOLDOWN_MS}ms`);
+    
+    // Clean up old timestamps
+    let removedCount = 0;
+    for (const [alertKey, timestamp] of this.alertTimestamps.entries()) {
+      if (now - timestamp > this.ALERT_COOLDOWN_MS) {
+        this.alertTimestamps.delete(alertKey);
+        removedCount++;
+      }
+    }
+    
+    // Clean up game tracking for finished games (no alerts in last hour)
+    const oneHourAgo = now - 3600000;
+    for (const [gameId, alerts] of this.sentAlerts.entries()) {
+      let hasRecentAlert = false;
+      for (const alertKey of alerts) {
+        const timestamp = this.alertTimestamps.get(alertKey);
+        if (timestamp && timestamp > oneHourAgo) {
+          hasRecentAlert = true;
+          break;
+        }
+      }
+      
+      if (!hasRecentAlert) {
+        this.sentAlerts.delete(gameId);
+        console.log(`🧹 NBA Removed tracking for game ${gameId}`);
+      }
+    }
+    
+    this.lastCleanup = now;
+    console.log(`🧹 NBA Alert cleanup complete: removed ${removedCount} old alerts`);
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -144,36 +244,67 @@ export class NBAEngine extends BaseSportEngine {
   // Override to add NBA-specific game state enhancement and performance monitoring
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const startTime = Date.now();
-    this.performanceMetrics.totalRequests++;
     
     try {
+      // Early exit if game is not valid
+      if (!gameState.gameId) {
+        console.log('⚠️ NBA: No gameId provided, skipping alert generation');
+        return [];
+      }
+      
       // Enhance game state with NBA-specific live data if needed
-      const enhanceStartTime = Date.now();
       const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
-      const enhanceTime = Date.now() - enhanceStartTime;
-      this.performanceMetrics.enhanceDataTime.push(enhanceTime);
-      
+
       // Use the parent class method which properly calls all loaded modules
-      const alertStartTime = Date.now();
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
-      const alertTime = Date.now() - alertStartTime;
       
-      // Process alerts with cross-sport AI enhancement for high-priority NBA situations
-      const alerts = await this.processEnhancedNBAAlerts(rawAlerts, enhancedGameState);
-      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      // Filter out duplicate alerts before processing
+      const dedupedAlerts: AlertResult[] = [];
+      for (const alert of rawAlerts) {
+        // Check if this alert has already been sent
+        if (!this.hasAlertBeenSent(enhancedGameState.gameId, alert.alertKey)) {
+          dedupedAlerts.push(alert);
+          // Mark as sent immediately to prevent duplicates in same processing cycle
+          this.markAlertSent(enhancedGameState.gameId, alert.alertKey);
+        }
+      }
+      
+      // If all alerts were duplicates, return early
+      if (dedupedAlerts.length === 0) {
+        console.log(`🔄 NBA: All ${rawAlerts.length} alerts were duplicates for game ${enhancedGameState.gameId}`);
+        return [];
+      }
+      
+      console.log(`✅ NBA: Processing ${dedupedAlerts.length} new alerts (blocked ${rawAlerts.length - dedupedAlerts.length} duplicates)`);
+      
+      // Enhance alerts with time-sensitive intelligence via AlertComposer
+      const composedAlerts = await this.composeTimeBasedAlerts(dedupedAlerts, enhancedGameState);
+      
+      // Process alerts with cross-sport AI enhancement for high-priority situations
+      const alerts = await this.processEnhancedNBAAlerts(composedAlerts, enhancedGameState);
+      
+      // Track NBA-specific metrics
+      if (enhancedGameState.quarter >= 4) {
+        this.performanceMetrics.clutchTimeDetections++;
+      }
+      if (enhancedGameState.quarter >= 5) {
+        this.performanceMetrics.overtimeAlerts++;
+      }
       
       this.performanceMetrics.totalAlerts += alerts.length;
       
-      const totalTime = Date.now() - startTime;
-      if (totalTime > 150) {
-        console.log(`⚠️ NBA Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
-      }
+      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
+      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
       
       return alerts;
-    } catch (error) {
-      const totalTime = Date.now() - startTime;
-      console.error(`❌ NBA Alert generation failed after ${totalTime}ms:`, error);
-      return [];
+    } finally {
+      const alertTime = Date.now() - startTime;
+      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.alertGenerationTime.length > 100) {
+        this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-100);
+      }
     }
   }
 
@@ -534,6 +665,241 @@ export class NBAEngine extends BaseSportEngine {
     }
   }
 
+  /**
+   * Compose time-based, actionable alerts using AlertComposer
+   */
+  private async composeTimeBasedAlerts(alerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    const composedAlerts: AlertResult[] = [];
+    
+    for (const alert of alerts) {
+      try {
+        // Generate enhanced payload with time-sensitive intelligence
+        const enhancedPayload = await alertComposer.composeEnhancedAlert(alert, gameState, {
+          // Add any NBA-specific context
+          recentLineMovement: this.getRecentLineMovement(gameState),
+          sharpMoney: this.getSharpMoneyIndicator(gameState)
+        });
+        
+        // Create enhanced alert with rich messaging
+        const enhancedAlert: AlertResult = {
+          ...alert,
+          message: enhancedPayload.headline,
+          context: {
+            ...alert.context,
+            enhanced: enhancedPayload,
+            displayText: alertComposer.formatForDisplay(enhancedPayload),
+            mobileText: alertComposer.formatForMobileNotification(enhancedPayload),
+            timing: enhancedPayload.timing,
+            action: enhancedPayload.action,
+            insight: enhancedPayload.insight,
+            riskReward: enhancedPayload.riskReward
+          }
+        };
+        
+        composedAlerts.push(enhancedAlert);
+        console.log(`⚡ NBA Alert Composed: ${alert.type} - ${enhancedPayload.timing.urgencyLevel} priority`);
+      } catch (error) {
+        console.error(`Failed to compose NBA alert:`, error);
+        composedAlerts.push(alert); // Fallback to original
+      }
+    }
+    
+    return composedAlerts;
+  }
+  
+  /**
+   * Get recent line movement for NBA context
+   */
+  private getRecentLineMovement(gameState: GameState): any {
+    // In production, this would connect to real-time odds feeds
+    // For now, simulate based on game state
+    const key = `${gameState.gameId}_line`;
+    const previous = this.lineMovementCache.get(key);
+    const current = {
+      total: (gameState.homeScore || 0) + (gameState.awayScore || 0),
+      spread: (gameState.homeScore || 0) - (gameState.awayScore || 0),
+      timestamp: Date.now()
+    };
+    
+    if (previous && (current.timestamp - previous.timestamp) < 60000) {
+      const totalMove = current.total - previous.total;
+      const spreadMove = current.spread - previous.spread;
+      
+      if (Math.abs(totalMove) >= 0.5 || Math.abs(spreadMove) >= 0.5) {
+        this.lineMovementCache.set(key, current);
+        return {
+          totalMove,
+          spreadMove,
+          timeAgo: Math.floor((current.timestamp - previous.timestamp) / 1000)
+        };
+      }
+    }
+    
+    this.lineMovementCache.set(key, current);
+    return null;
+  }
+  
+  /**
+   * Get sharp money indicators for NBA
+   */
+  private getSharpMoneyIndicator(gameState: GameState): any {
+    // In production, this would use real betting data
+    // Simulate based on NBA game flow
+    const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+    const quarter = gameState.quarter || 1;
+    
+    // NBA-specific sharp money patterns
+    if (scoreDiff <= 3 && quarter >= 4) {
+      return { indicator: 'heavy', direction: 'over', confidence: 85 };
+    }
+    if (quarter >= 4 && scoreDiff <= 1) {
+      return { indicator: 'sharp', direction: 'total', confidence: 90 };
+    }
+    
+    return null;
+  }
+
+  // Send alerts to both WebSocket and Telegram simultaneously  
+  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    if (!alerts || alerts.length === 0) return;
+    
+    try {
+      console.log(`🚀 Simultaneously delivering ${alerts.length} NBA alerts to WebSocket and Telegram`);
+      
+      // Create delivery promises for parallel execution
+      const deliveryPromises: Promise<void>[] = [];
+      
+      // 1. WebSocket delivery promise
+      deliveryPromises.push(this.deliverAlertsToWebSocket(alerts, gameState));
+      
+      // 2. Telegram delivery promise
+      deliveryPromises.push(this.deliverAlertsToTelegram(alerts, gameState));
+      
+      // Execute both deliveries simultaneously
+      await Promise.all(deliveryPromises);
+      
+      console.log(`✅ Synchronized delivery complete for ${alerts.length} alerts`);
+      
+    } catch (error) {
+      console.error('❌ Synchronized alert delivery system error:', error);
+    }
+  }
+
+  private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      const wsBroadcast = (global as any).wsBroadcast;
+      if (!wsBroadcast) {
+        console.warn('📡 WebSocket broadcast function not available');
+        return;
+      }
+
+      for (const alert of alerts) {
+        const alertData = {
+          type: 'new_alert',
+          data: {
+            id: alert.alertKey,
+            type: alert.type,
+            sport: 'NBA',
+            priority: alert.priority,
+            message: alert.message,
+            context: alert.context,
+            gameId: gameState.gameId,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            period: (gameState as any).period || gameState.quarter,
+            clock: (gameState as any).clock || gameState.timeRemaining,
+            shotClock: (gameState as any).shotClock || 24,
+            possession: gameState.possession,
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        wsBroadcast(alertData);
+        console.log(`📡 ✅ WebSocket: ${alert.type} alert broadcasted`);
+      }
+    } catch (error) {
+      console.error('📡 ❌ WebSocket delivery error:', error);
+    }
+  }
+
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      // Get all users with Telegram enabled
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(user => 
+        user.telegramEnabled && 
+        user.telegramBotToken && 
+        user.telegramChatId &&
+        user.telegramBotToken !== 'default_key' &&
+        user.telegramChatId !== 'test-chat-id'
+      );
+      
+      if (telegramUsers.length === 0) {
+        console.log('📱 ℹ️ No users with valid Telegram configurations found');
+        return;
+      }
+      
+      console.log(`📱 🚀 Delivering ${alerts.length} NBA alerts to ${telegramUsers.length} Telegram users`);
+      
+      // Send alerts to each user
+      for (const alert of alerts) {
+        // Double-check alert hasn't been sent (extra safety)
+        const telegramKey = `telegram_${alert.alertKey}`;
+        if (this.hasAlertBeenSent(gameState.gameId, telegramKey)) {
+          console.log(`📱 🚫 Telegram alert already sent: ${telegramKey}`);
+          continue;
+        }
+        
+        for (const user of telegramUsers) {
+          try {
+            const telegramConfig: TelegramConfig = {
+              botToken: user.telegramBotToken!,
+              chatId: user.telegramChatId!
+            };
+            
+            const telegramAlert = {
+              id: alert.alertKey,
+              type: alert.type,
+              title: alert.message.split('|')[0].trim(), // Extract title from message
+              description: alert.message,
+              gameInfo: {
+                awayTeam: gameState.awayTeam,
+                homeTeam: gameState.homeTeam,
+                score: {
+                  away: gameState.awayScore,
+                  home: gameState.homeScore
+                },
+                quarter: gameState.quarter,
+                timeRemaining: gameState.timeRemaining,
+                period: (gameState as any).period || gameState.quarter,
+                shotClock: (gameState as any).shotClock || 24,
+                possession: gameState.possession
+              }
+            };
+            
+            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
+            
+            if (sent) {
+              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
+              // Mark this specific telegram alert as sent after successful delivery
+              this.markAlertSent(gameState.gameId, telegramKey);
+            } else {
+              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
+            }
+          } catch (error) {
+            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('📱 ❌ Telegram delivery system error:', error);
+    }
+  }
+
   // Performance metrics cleanup to prevent memory growth
   private cleanupPerformanceMetrics(): void {
     const maxSamples = 100; // Keep last 100 samples per metric
@@ -587,6 +953,10 @@ export class NBAEngine extends BaseSportEngine {
     const cacheHitRate = this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
       ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
       : 0;
+      
+    const deduplicationRate = this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked > 0
+      ? (this.performanceMetrics.duplicatesBlocked / (this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked)) * 100
+      : 0;
 
     return {
       sport: 'NBA',
@@ -596,15 +966,20 @@ export class NBAEngine extends BaseSportEngine {
         avgAlertGenerationTime: avgAlertTime,
         avgEnhancementTime: avgEnhanceTime,
         cacheHitRate,
+        deduplicationRate,
         totalRequests: this.performanceMetrics.totalRequests,
         totalAlerts: this.performanceMetrics.totalAlerts,
+        alertsSent: this.performanceMetrics.alertsSent,
+        duplicatesBlocked: this.performanceMetrics.duplicatesBlocked,
         cacheHits: this.performanceMetrics.cacheHits,
         cacheMisses: this.performanceMetrics.cacheMisses
       },
       sportSpecific: {
         clutchTimeDetections: this.performanceMetrics.clutchTimeDetections,
         overtimeAlerts: this.performanceMetrics.overtimeAlerts,
-        professionalBasketballAlerts: this.performanceMetrics.totalAlerts
+        professionalBasketballAlerts: this.performanceMetrics.totalAlerts,
+        activeGameTracking: this.sentAlerts.size,
+        totalTrackedAlerts: this.alertTimestamps.size
       },
       recentPerformance: {
         calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),
