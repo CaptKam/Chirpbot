@@ -100,6 +100,27 @@ export class MLBApiService {
         const homeScore = game.linescore?.teams?.home?.runs ?? game.teams.home.score ?? 0;
         const awayScore = game.linescore?.teams?.away?.runs ?? game.teams.away.score ?? 0;
         
+        // Enhanced isLive detection - check multiple indicators of live game data
+        const hasLinescore = !!game.linescore;
+        const hasActiveInning = game.linescore?.currentInning > 0;
+        const hasInningState = !!game.linescore?.inningState;
+        const hasOuts = game.linescore?.outs !== undefined && game.linescore?.outs !== null;
+        const hasRunners = game.linescore?.offense?.first || game.linescore?.offense?.second || game.linescore?.offense?.third;
+        const hasActiveCount = game.linescore?.balls !== undefined || game.linescore?.strikes !== undefined;
+        const statusIndicatesLive = game.status.abstractGameState === 'Live' || 
+                                   game.status.detailedState?.toLowerCase().includes('progress') ||
+                                   game.status.detailedState?.toLowerCase().includes('inning');
+        
+        // A game is live if:
+        // 1. The abstractGameState says it's live OR
+        // 2. We have rich live data indicators (linescore with active inning, outs data, etc.)
+        const isLive = statusIndicatesLive || 
+                      (hasLinescore && hasActiveInning && (hasInningState || hasOuts || hasRunners || hasActiveCount));
+        
+        if (isLive && !statusIndicatesLive) {
+          console.log(`🔴 MLB: Game ${game.gamePk} marked as live due to live data indicators (abstractGameState: ${game.status.abstractGameState}, detailedState: ${game.status.detailedState})`);
+        }
+        
         return {
           id: game.gamePk.toString(),
           homeTeam: { id: game.teams.home.team.id.toString(), name: game.teams.home.team.name, abbreviation: game.teams.home.team.abbreviation, score: homeScore },
@@ -109,7 +130,7 @@ export class MLBApiService {
           venue: game.venue.name,
           inning: game.linescore?.currentInning || null,
           inningState: game.linescore?.inningState || null,
-          isLive: game.status.abstractGameState === 'Live'
+          isLive: isLive
         };
       });
 
