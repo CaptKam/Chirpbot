@@ -522,10 +522,10 @@ export class NCAAFEngine extends BaseSportEngine {
 
     for (const alert of rawAlerts) {
       try {
-        // Only enhance high-priority alerts (>= 85 probability)
+        // Only enhance medium-priority alerts (>= 60 probability)
         const probability = await this.calculateProbability(gameState);
         
-        if (probability >= 85 && this.crossSportAI.configured) {
+        if (probability >= 60 && this.crossSportAI.configured) {
           console.log(`🧠 NCAAF AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
           
           // Build cross-sport context for NCAAF (college-specific enhancements)

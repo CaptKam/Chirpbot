@@ -125,7 +125,7 @@ export class AsyncAIProcessor {
     const isHighValue = highValueTypes.includes(alertType);
     
     // Additional criteria for gating
-    const meetsThreshold = !probability || probability >= 50; // Only enhance medium+ probability events (0-100 scale)
+    const meetsThreshold = !probability || probability >= 30; // Only enhance low+ probability events (0-100 scale)
     
     const shouldEnhance = isHighValue && meetsThreshold;
     

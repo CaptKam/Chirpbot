@@ -862,8 +862,8 @@ export class AlertGenerator {
         }
       }
 
-      // AI Context Controller takes full control for high-value alerts
-      if (finalPriority >= 70) {
+      // AI Context Controller takes full control for medium-value alerts and above
+      if (finalPriority >= 50) {
         try {
           if (this.logLevel !== 'quiet') {
             console.log(`🤖 AI Context Controller: Taking control of ${type} alert (priority: ${finalPriority})`);
