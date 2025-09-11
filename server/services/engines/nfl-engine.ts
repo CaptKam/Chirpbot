@@ -5,10 +5,20 @@ import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
 import { weatherService } from '../weather-service';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
+import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class NFLEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
   private lineMovementCache: Map<string, any> = new Map(); // Track line movements
+  
+  // Deduplication tracking - tracks sent alerts to prevent duplicates
+  private sentAlerts: Map<string, Set<string>> = new Map(); // gameId -> Set of alertKeys
+  private alertTimestamps: Map<string, number> = new Map(); // alertKey -> timestamp
+  private lastCleanup: number = Date.now();
+  private readonly ALERT_COOLDOWN_MS = 300000; // 5 minutes cooldown per alert
+  private readonly CLEANUP_INTERVAL_MS = 600000; // Clean up old entries every 10 minutes
+  private readonly MAX_ALERTS_PER_GAME = 50; // Prevent memory overload per game
+  
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -19,7 +29,9 @@ export class NFLEngine extends BaseSportEngine {
     cacheMisses: 0,
     aiEnhancementTime: [] as number[],
     enhancedAlerts: 0,
-    probabilityCalculationTime: [] as number[]
+    probabilityCalculationTime: [] as number[],
+    duplicatesBlocked: 0,
+    alertsSent: 0
   };
 
   constructor() {
@@ -127,39 +139,60 @@ export class NFLEngine extends BaseSportEngine {
   // Override to add NFL-specific game state enhancement and AI-enhanced alert processing
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const startTime = Date.now();
-    this.performanceMetrics.totalRequests++;
     
     try {
-      // Enhance game state with NFL-specific live data if needed
-      const enhanceStartTime = Date.now();
-      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
-      const enhanceTime = Date.now() - enhanceStartTime;
-      this.performanceMetrics.enhanceDataTime.push(enhanceTime);
-      
-      // Use the parent class method which properly calls all loaded modules
-      const alertStartTime = Date.now();
-      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
-      const alertTime = Date.now() - alertStartTime;
-      this.performanceMetrics.alertGenerationTime.push(alertTime);
-      
-      // Enhance alerts with time-sensitive intelligence via AlertComposer
-      const composedAlerts = await this.composeTimeBasedAlerts(rawAlerts, enhancedGameState);
-      
-      // Process alerts with cross-sport AI enhancement for high-priority NFL situations
-      const processedAlerts = await this.processEnhancedNFLAlerts(composedAlerts, enhancedGameState);
-      
-      this.performanceMetrics.totalAlerts += processedAlerts.length;
-      
-      const totalTime = Date.now() - startTime;
-      if (totalTime > 100) {
-        console.log(`⚠️ NFL Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
+      // Early exit if game is not valid
+      if (!gameState.gameId) {
+        console.log('⚠️ NFL: No gameId provided, skipping alert generation');
+        return [];
       }
       
-      return processedAlerts;
-    } catch (error) {
-      const totalTime = Date.now() - startTime;
-      console.error(`❌ NFL Alert generation failed after ${totalTime}ms:`, error);
-      return [];
+      // Enhance game state with NFL-specific live data if needed
+      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+
+      // Use the parent class method which properly calls all loaded modules
+      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
+      
+      // Filter out duplicate alerts before processing
+      const dedupedAlerts: AlertResult[] = [];
+      for (const alert of rawAlerts) {
+        // Check if this alert has already been sent
+        if (!this.hasAlertBeenSent(enhancedGameState.gameId, alert.alertKey)) {
+          dedupedAlerts.push(alert);
+          // Mark as sent immediately to prevent duplicates in same processing cycle
+          this.markAlertSent(enhancedGameState.gameId, alert.alertKey);
+        }
+      }
+      
+      // If all alerts were duplicates, return early
+      if (dedupedAlerts.length === 0) {
+        console.log(`🔄 NFL: All ${rawAlerts.length} alerts were duplicates for game ${enhancedGameState.gameId}`);
+        return [];
+      }
+      
+      console.log(`✅ NFL: Processing ${dedupedAlerts.length} new alerts (blocked ${rawAlerts.length - dedupedAlerts.length} duplicates)`);
+      
+      // Enhance alerts with time-sensitive intelligence via AlertComposer
+      const composedAlerts = await this.composeTimeBasedAlerts(dedupedAlerts, enhancedGameState);
+      
+      // Process alerts with cross-sport AI enhancement for high-priority NFL situations
+      const alerts = await this.processEnhancedNFLAlerts(composedAlerts, enhancedGameState);
+      
+      this.performanceMetrics.totalAlerts += alerts.length;
+      
+      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
+      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
+      
+      return alerts;
+    } finally {
+      const alertTime = Date.now() - startTime;
+      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      this.performanceMetrics.totalRequests++;
+      
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.alertGenerationTime.length > 100) {
+        this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-100);
+      }
     }
   }
 
@@ -810,6 +843,10 @@ export class NFLEngine extends BaseSportEngine {
       ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
       : 0;
 
+    const deduplicationRate = this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked > 0
+      ? (this.performanceMetrics.duplicatesBlocked / (this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked)) * 100
+      : 0;
+
     return {
       sport: 'NFL',
       performance: {
@@ -819,8 +856,11 @@ export class NFLEngine extends BaseSportEngine {
         avgEnhancementTime: avgEnhanceTime,
         avgAIEnhancementTime: avgAITime,
         cacheHitRate,
+        deduplicationRate,
         totalRequests: this.performanceMetrics.totalRequests,
         totalAlerts: this.performanceMetrics.totalAlerts,
+        alertsSent: this.performanceMetrics.alertsSent,
+        duplicatesBlocked: this.performanceMetrics.duplicatesBlocked,
         enhancedAlerts: this.performanceMetrics.enhancedAlerts,
         cacheHits: this.performanceMetrics.cacheHits,
         cacheMisses: this.performanceMetrics.cacheMisses
@@ -830,7 +870,9 @@ export class NFLEngine extends BaseSportEngine {
           ? (this.performanceMetrics.enhancedAlerts / this.performanceMetrics.totalAlerts) * 100 
           : 0,
         weatherIntegratedAlerts: this.performanceMetrics.enhancedAlerts,
-        contextAwareAlerts: this.performanceMetrics.totalAlerts
+        contextAwareAlerts: this.performanceMetrics.totalAlerts,
+        activeGameTracking: this.sentAlerts.size,
+        totalTrackedAlerts: this.alertTimestamps.size
       },
       recentPerformance: {
         calculationTimes: this.performanceMetrics.probabilityCalculationTime?.slice(-20) || [],
@@ -839,5 +881,244 @@ export class NFLEngine extends BaseSportEngine {
         aiTimes: this.performanceMetrics.aiEnhancementTime.slice(-20)
       }
     };
+  }
+
+  /**
+   * Check if an alert has already been sent recently
+   */
+  private hasAlertBeenSent(gameId: string, alertKey: string): boolean {
+    // Check if this exact alert was sent recently
+    const lastSent = this.alertTimestamps.get(alertKey);
+    if (lastSent && (Date.now() - lastSent) < this.ALERT_COOLDOWN_MS) {
+      this.performanceMetrics.duplicatesBlocked++;
+      console.log(`🚫 NFL Duplicate blocked: ${alertKey} (sent ${Math.round((Date.now() - lastSent) / 1000)}s ago)`);
+      return true;
+    }
+    
+    // Check if we've sent too many alerts for this game
+    const gameAlerts = this.sentAlerts.get(gameId);
+    if (gameAlerts && gameAlerts.size >= this.MAX_ALERTS_PER_GAME) {
+      console.log(`⚠️ NFL Alert limit reached for game ${gameId} (${gameAlerts.size} alerts)`);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Mark an alert as sent
+   */
+  private markAlertSent(gameId: string, alertKey: string): void {
+    // Track by game
+    if (!this.sentAlerts.has(gameId)) {
+      this.sentAlerts.set(gameId, new Set());
+    }
+    this.sentAlerts.get(gameId)!.add(alertKey);
+    
+    // Track timestamp
+    this.alertTimestamps.set(alertKey, Date.now());
+    this.performanceMetrics.alertsSent++;
+    
+    console.log(`✅ NFL Alert tracked: ${alertKey} for game ${gameId}`);
+    
+    // Periodic cleanup to prevent memory leaks
+    this.cleanupOldAlerts();
+  }
+  
+  /**
+   * Clean up old alert tracking data to prevent memory leaks
+   */
+  private cleanupOldAlerts(): void {
+    const now = Date.now();
+    
+    // Only run cleanup periodically
+    if (now - this.lastCleanup < this.CLEANUP_INTERVAL_MS) {
+      return;
+    }
+    
+    console.log(`🧹 NFL Alert cleanup: Removing alerts older than ${this.ALERT_COOLDOWN_MS}ms`);
+    
+    // Clean up old timestamps
+    let removedCount = 0;
+    for (const [alertKey, timestamp] of this.alertTimestamps.entries()) {
+      if (now - timestamp > this.ALERT_COOLDOWN_MS) {
+        this.alertTimestamps.delete(alertKey);
+        removedCount++;
+      }
+    }
+    
+    // Clean up game tracking for finished games (no alerts in last hour)
+    const oneHourAgo = now - 3600000;
+    for (const [gameId, alerts] of this.sentAlerts.entries()) {
+      let hasRecentAlert = false;
+      for (const alertKey of alerts) {
+        const timestamp = this.alertTimestamps.get(alertKey);
+        if (timestamp && timestamp > oneHourAgo) {
+          hasRecentAlert = true;
+          break;
+        }
+      }
+      
+      if (!hasRecentAlert) {
+        this.sentAlerts.delete(gameId);
+        console.log(`🧹 NFL Removed tracking for game ${gameId}`);
+      }
+    }
+    
+    this.lastCleanup = now;
+    console.log(`🧹 NFL Alert cleanup complete: removed ${removedCount} old alerts`);
+  }
+
+  // Send alerts to both WebSocket and Telegram simultaneously
+  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    if (!alerts || alerts.length === 0) return;
+    
+    try {
+      console.log(`🚀 Simultaneously delivering ${alerts.length} NFL alerts to WebSocket and Telegram`);
+      
+      // Create delivery promises for parallel execution
+      const deliveryPromises: Promise<void>[] = [];
+      
+      // 1. WebSocket delivery promise
+      deliveryPromises.push(this.deliverAlertsToWebSocket(alerts, gameState));
+      
+      // 2. Telegram delivery promise
+      deliveryPromises.push(this.deliverAlertsToTelegram(alerts, gameState));
+      
+      // Execute both deliveries simultaneously
+      await Promise.all(deliveryPromises);
+      
+      console.log(`✅ Synchronized delivery complete for ${alerts.length} alerts`);
+      
+    } catch (error) {
+      console.error('❌ Synchronized alert delivery system error:', error);
+    }
+  }
+
+  private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      const wsBroadcast = (global as any).wsBroadcast;
+      if (!wsBroadcast) {
+        console.warn('📡 WebSocket broadcast function not available');
+        return;
+      }
+
+      for (const alert of alerts) {
+        const alertData = {
+          type: 'new_alert',
+          data: {
+            id: alert.alertKey,
+            type: alert.type,
+            sport: 'NFL',
+            priority: alert.priority,
+            message: alert.message,
+            context: alert.context,
+            gameId: gameState.gameId,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            down: gameState.down,
+            yardsToGo: gameState.yardsToGo,
+            fieldPosition: gameState.fieldPosition,
+            possession: gameState.possession,
+            weather: gameState.weather ? {
+              temperature: gameState.weather.data?.temperature,
+              condition: gameState.weather.data?.condition,
+              windSpeed: gameState.weather.data?.windSpeed
+            } : null,
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        wsBroadcast(alertData);
+        console.log(`📡 ✅ WebSocket: ${alert.type} alert broadcasted`);
+      }
+    } catch (error) {
+      console.error('📡 ❌ WebSocket delivery error:', error);
+    }
+  }
+
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      // Get all users with Telegram enabled
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(user => 
+        user.telegramEnabled && 
+        user.telegramBotToken && 
+        user.telegramChatId &&
+        user.telegramBotToken !== 'default_key' &&
+        user.telegramChatId !== 'test-chat-id'
+      );
+      
+      if (telegramUsers.length === 0) {
+        console.log('📱 ℹ️ No users with valid Telegram configurations found');
+        return;
+      }
+      
+      console.log(`📱 🚀 Delivering ${alerts.length} NFL alerts to ${telegramUsers.length} Telegram users`);
+      
+      // Send alerts to each user
+      for (const alert of alerts) {
+        // Double-check alert hasn't been sent (extra safety)
+        const telegramKey = `telegram_${alert.alertKey}`;
+        if (this.hasAlertBeenSent(gameState.gameId, telegramKey)) {
+          console.log(`📱 🚫 Telegram alert already sent: ${telegramKey}`);
+          continue;
+        }
+        
+        for (const user of telegramUsers) {
+          try {
+            const telegramConfig: TelegramConfig = {
+              botToken: user.telegramBotToken!,
+              chatId: user.telegramChatId!
+            };
+            
+            const telegramAlert = {
+              id: alert.alertKey,
+              type: alert.type,
+              title: alert.message.split('|')[0].trim(), // Extract title from message
+              description: alert.message,
+              gameInfo: {
+                awayTeam: gameState.awayTeam,
+                homeTeam: gameState.homeTeam,
+                score: {
+                  away: gameState.awayScore,
+                  home: gameState.homeScore
+                },
+                quarter: gameState.quarter,
+                timeRemaining: gameState.timeRemaining,
+                down: gameState.down,
+                yardsToGo: gameState.yardsToGo,
+                fieldPosition: gameState.fieldPosition,
+                possession: gameState.possession,
+                weather: gameState.weather ? {
+                  temperature: gameState.weather.data?.temperature,
+                  condition: gameState.weather.data?.condition,
+                  windSpeed: gameState.weather.data?.windSpeed,
+                  impact: gameState.weather.impact?.description
+                } : null
+              }
+            };
+            
+            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
+            
+            if (sent) {
+              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
+              // Mark this specific telegram alert as sent after successful delivery
+              this.markAlertSent(gameState.gameId, telegramKey);
+            } else {
+              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
+            }
+          } catch (error) {
+            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('📱 ❌ Telegram delivery system error:', error);
+    }
   }
 }
