@@ -239,6 +239,17 @@ export default function AlertsPage() {
                     sentToTelegram: alert.sentToTelegram || false,
                     context: {
                       ...alert.context,
+                      // AI Enhancement fields
+                      aiEnhanced: alert.context?.aiEnhanced,
+                      aiMessage: alert.context?.aiMessage,
+                      aiTitle: alert.context?.aiTitle,
+                      aiInsights: alert.context?.aiInsights,
+                      aiRecommendation: alert.context?.aiRecommendation,
+                      aiCallToAction: alert.context?.aiCallToAction,
+                      aiBettingAdvice: alert.context?.aiBettingAdvice,
+                      aiGameProjection: alert.context?.aiGameProjection,
+                      aiUrgency: alert.context?.aiUrgency,
+                      aiConfidenceScore: alert.context?.aiConfidenceScore,
                       // MLB specific
                       inning: alert.context?.inning || alert.inning,
                       isTopInning: alert.context?.isTopInning || alert.isTopInning,
