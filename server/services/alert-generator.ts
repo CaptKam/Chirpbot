@@ -898,9 +898,12 @@ export class AlertGenerator {
 
           const aiEnhancedAlert = await this.aiContextController.enhanceAlertWithFullControl(alertContext);
 
+          // PRESERVE ORIGINAL V3 MESSAGE - Don't let AI overwrite it!
+          const originalV3Message = message; // Store the perfect V3 format message
+          
           if (aiEnhancedAlert.confidenceScore > finalPriority) {
-            // AI has enhanced the alert - use AI-controlled content
-            message = aiEnhancedAlert.message;
+            // AI has enhanced the alert - ADD insights but KEEP original message
+            context.aiMessage = aiEnhancedAlert.message; // Store AI message separately
             context.aiTitle = aiEnhancedAlert.title;
             context.aiInsights = aiEnhancedAlert.insights;
             context.aiRecommendation = aiEnhancedAlert.recommendation;
@@ -917,12 +920,16 @@ export class AlertGenerator {
 
             if (this.logLevel !== 'quiet') {
               console.log(`✅ AI Context Controller: Enhanced ${type} alert - New priority: ${finalPriority}, Processing: ${aiEnhancedAlert.aiProcessingTime}ms`);
+              console.log(`🔥 PRESERVED V3 MESSAGE: ${originalV3Message}`);
             }
           } else {
             if (this.logLevel !== 'quiet') {
               console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${finalPriority})`);
             }
           }
+          
+          // CRITICAL: Always use the original V3 message, never the AI's message
+          message = originalV3Message;
 
         } catch (error) {
           console.error('❌ AI Context Controller failed:', error);
