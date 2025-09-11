@@ -20,8 +20,8 @@ export interface Alert {
   confidence?: number;
   priority?: number;
   probability?: number;
-  homeTeam?: string;
-  awayTeam?: string;
+  homeTeam?: string | { name: string; id?: string; abbreviation?: string };
+  awayTeam?: string | { name: string; id?: string; abbreviation?: string };
   homeScore?: number;
   awayScore?: number;
   inning?: number;
@@ -68,8 +68,8 @@ export interface Alert {
     reasons?: string[];
     recommendation?: string;
     confidence?: number;
-    homeTeam?: string;
-    awayTeam?: string;
+    homeTeam?: string | { name: string; id?: string; abbreviation?: string };
+    awayTeam?: string | { name: string; id?: string; abbreviation?: string };
     scoringProbability?: number;
     aiBettingAdvice?: {
       recommendation: string;
@@ -85,6 +85,14 @@ export interface Alert {
     aiInsights?: string[];
     aiTitle?: string;
     aiCallToAction?: string;
+    // MLB-specific fields
+    currentBatter?: string;
+    onDeckBatter?: string;
+    currentPitcher?: string;
+    isPowerHitter?: boolean;
+    windSpeed?: number;
+    windDirection?: string;
+    windImpact?: string;
   };
   gameInfo?: {
     homeTeam: string;

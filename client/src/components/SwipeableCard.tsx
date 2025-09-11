@@ -474,7 +474,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
-        {false && (alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
+        {(alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
           <div className="h-full flex flex-col justify-center p-4 space-y-3">
             {/* AI Insights Header */}
             <div className="flex items-center space-x-2 mb-2">
@@ -482,13 +482,13 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 <Brain className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-bold text-sm">AI Betting Insights</h3>
+                <p className="text-white font-bold text-sm">AI Betting Insights</p>
                 <p className="text-blue-200 text-xs">ChirpBot v3 Analysis</p>
               </div>
             </div>
 
-            {/* AI Betting Advice - DISABLED */}
-            {false && alertData?.context?.aiBettingAdvice && (
+            {/* AI Betting Advice */}
+            {alertData?.context?.aiBettingAdvice && (
               <div className="mt-3 p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/30">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 AI Betting Analysis</span>
@@ -641,7 +641,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
             {/* Quick Sportsbook Access */}
             <div className="space-y-2">
-              <h4 className="text-xs text-blue-200 font-medium tracking-wide uppercase">Quick Bet</h4>
+              <p className="text-xs text-blue-200 font-medium tracking-wide uppercase">Quick Bet</p>
               <div className="flex space-x-2">
                 {sportsbooks.slice(0, 4).map((sportsbook) => (
                   <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
@@ -845,9 +845,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* AI-Enhanced Title */}
               {alertData?.context?.aiTitle && (
                 <div className="mb-1">
-                  <h3 className="text-base font-bold text-white">
+                  <p className="text-base font-bold text-white">
                     {alertData.context.aiTitle}
-                  </h3>
+                  </p>
                 </div>
               )}
 
@@ -960,10 +960,14 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   {/* Main Situation - Clean and Simple */}
                   <p className="text-white text-sm font-semibold leading-tight">
                     {(() => {
+                      // Use AI title if available
+                      if (alertData?.context?.aiTitle) {
+                        return alertData.context.aiTitle;
+                      }
+                      
                       let message = alertData.message || '';
-
-                      // Remove emojis
-                      message = message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|⭐|🎯|🔴|🟡|🟢|⚽|🏀|🏐|🎾|⚾|🥎|🏈|🏉|🎱|🏸|🏓|🥅|⛳|🎣|🥊|🥋|🎿|⛷️|🏂|⛸️|🥌|🛷|🏇|🤺|🏌️|🧗|🤸|🏄|🏊|🤽|🚣|🧘|🏃|🚴|🤾|⛹️|🏋️|🧖|🧚|🧜|🧞|🧛|🧟|🤱|👨|👩|👦|👧|👶/g, '').trim();
+                      // Remove emojis and clean up
+                      message = message.replace(/[\\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\\u{2700}-\u{27BF}]/gu, '').trim();
 
                       // Extract the main situation text based on sport
                       if (alertData.sport === 'MLB') {
