@@ -106,7 +106,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
 
     const stealProbability = this.calculateStealProbabilitySync(gameState);
     const stealAnalysis = this.analyzeStealSituation(gameState);
-    const alertMessage = this.generateStealMessage(stealProbability, stealAnalysis, gameState.weatherContext);
+    const alertMessage = this.generateStealMessage(stealProbability, stealAnalysis, gameState.weatherContext, gameState);
 
     // Create unique alert key with base runner configuration
     const baseConfiguration = this.getBaseConfiguration(gameState);
@@ -454,12 +454,12 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     return 'unknown';
   }
 
-  private generateStealMessage(probability: number, analysis: any, weatherContext?: any): string {
+  private generateStealMessage(probability: number, analysis: any, weatherContext?: any, gameState?: GameState): string {
     const roundedProb = Math.round(probability);
     const scenario = analysis.scenario;
     const countSit = analysis.countSituation;
 
-    let message = `🏃 HIGH STEAL LIKELIHOOD: ${roundedProb}% chance of steal attempt`;
+    let message = `🏃 ${gameState.awayTeam} @ ${gameState.homeTeam}: ${roundedProb}% steal chance`;
 
     // Add scenario-specific context
     if (scenario === '1B_to_2B') {

@@ -44,7 +44,7 @@ export default class FirstAndThirdNoOutsModule extends BaseAlertModule {
     const totalProbability = Math.min(95, baseProbability + windBonus + clutchBonus);
     
     // Build predictive message
-    let message = `🔥 EXTREME VALUE: ${currentBatter} batting with runners on 1st & 3rd, 0 outs - ${totalProbability}% scoring probability`;
+    let message = `🔥 ${gameState.awayTeam} @ ${gameState.homeTeam}: ${currentBatter} batting with runners on 1st & 3rd, 0 outs - ${totalProbability}% scoring chance`;
     
     // Add pitcher info if available
     if (currentPitcher) {

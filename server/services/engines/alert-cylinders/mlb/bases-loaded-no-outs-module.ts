@@ -20,7 +20,7 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_bases_loaded_no_outs`,
       type: this.alertType,
-      message: `🔥 HIGH SCORING PROBABILITY: Bases Loaded, 0 outs - 86% chance to score!`,
+      message: `🔥 ${gameState.awayTeam} @ ${gameState.homeTeam}: Bases Loaded, 0 outs - 86% scoring chance!`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

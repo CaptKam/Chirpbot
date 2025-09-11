@@ -20,7 +20,7 @@ export default class SecondAndThirdOneOutModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_second_third_one_out`,
       type: this.alertType,
-      message: `⚡ SCORING OPPORTUNITY: Runners on 2nd & 3rd, 1 out - 68% chance to score!`,
+      message: `⚡ ${gameState.awayTeam} @ ${gameState.homeTeam}: Runners on 2nd & 3rd, 1 out - 68% scoring chance!`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

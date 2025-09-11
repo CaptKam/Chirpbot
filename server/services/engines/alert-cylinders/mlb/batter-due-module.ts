@@ -112,7 +112,7 @@ export default class BatterDueModule extends BaseAlertModule {
     const { batterStats, pitcherStats, handednessMatchup } = this.getAdvancedPlayerMetricsSync(gameState);
     
     // Create dynamic message based on the specific situation, weather, and advanced metrics
-    let alertMessage = this.generateAdvancedAlertMessage(scoringProbability, gameContext, lineupContext, gameState.weatherContext, batterStats, pitcherStats, handednessMatchup);
+    let alertMessage = this.generateAdvancedAlertMessage(scoringProbability, gameContext, lineupContext, gameState.weatherContext, batterStats, pitcherStats, handednessMatchup, gameState);
 
     // More granular alertKey with base/out/lineup context
     const baseOutState = this.getBaseOutStateKey(gameState);
@@ -526,7 +526,8 @@ export default class BatterDueModule extends BaseAlertModule {
     weatherContext?: any,
     batterStats?: PlayerAdvancedStats,
     pitcherStats?: PitcherAdvancedStats,
-    handednessMatchup?: HandednessMatchup
+    handednessMatchup?: HandednessMatchup,
+    gameState?: GameState
   ): string {
     const roundedProb = Math.round(probability);
     const currentBatter = lineupContext.currentBatterName;
@@ -540,22 +541,22 @@ export default class BatterDueModule extends BaseAlertModule {
     
     // Generate sophisticated message based on advanced analytics
     if (gameContext.isHighLeverage && batterStats?.wRCPlus && batterStats.wRCPlus >= 130) {
-      return `⚡ ELITE HITTER: ${roundedProb}% scoring chance - ${currentBatter} (${batterStats.wRCPlus} wRC+, ${(batterStats.xwOBA * 1000).toFixed(0)} xwOBA)${advancedContext}${weatherSuffix}`;
+      return `⚡ ${gameState?.awayTeam} @ ${gameState?.homeTeam}: ${currentBatter} (${batterStats.wRCPlus} wRC+) - ${roundedProb}% scoring chance${advancedContext}${weatherSuffix}`;
     } else if (handednessMatchup?.favorsBatter && handednessMatchup.advantageStrength === 'strong') {
-      return `💥 PLATOON ADVANTAGE: ${roundedProb}% scoring chance - ${currentBatter} ${handednessMatchup.description.toLowerCase()}${advancedContext}${weatherSuffix}`;
+      return `💥 ${gameState?.awayTeam} @ ${gameState?.homeTeam}: ${currentBatter} with platoon advantage - ${roundedProb}% chance${advancedContext}${weatherSuffix}`;
     } else if (batterStats?.recent.trend === 'hot' && batterStats.recent.wRCPlus >= 140) {
-      return `🔥 HOT STREAK: ${roundedProb}% scoring chance - ${currentBatter} blazing hot (${batterStats.recent.wRCPlus} wRC+ last 15 games)${advancedContext}${weatherSuffix}`;
+      return `🔥 ${gameState?.awayTeam} @ ${gameState?.homeTeam}: ${currentBatter} hot streak - ${roundedProb}% chance${advancedContext}${weatherSuffix}`;
     } else if (gameContext.isLateInning && batterStats?.xwOBA && batterStats.xwOBA >= 0.380) {
-      return `⏰ CLUTCH CONTACT: ${roundedProb}% scoring chance - ${currentBatter} makes elite contact (.${(batterStats.xwOBA * 1000).toFixed(0)} xwOBA)${advancedContext}${weatherSuffix}`;
+      return `⏰ ${gameState?.awayTeam} @ ${gameState?.homeTeam}: ${currentBatter} clutch - ${roundedProb}% chance${advancedContext}${weatherSuffix}`;
     } else if (gameContext.hasRunnersInScoringPosition && lineupContext.hasStrongUpcomingHitters) {
       const nextBatterContext = batterStats ? `, elite lineup following` : '';
-      return `⚡ POWER SEQUENCE: ${roundedProb}% scoring chance - strong lineup with RISP${nextBatterContext}${advancedContext}${weatherSuffix}`;
+      return `⚡ ${gameState?.awayTeam} @ ${gameState?.homeTeam}: Strong lineup with RISP - ${roundedProb}% chance${advancedContext}${weatherSuffix}`;
     } else if (pitcherStats && advancedContext.includes('struggling')) {
-      return `🎯 PITCHER FATIGUE: ${roundedProb}% scoring chance - favorable matchup vs struggling pitcher${advancedContext}${weatherSuffix}`;
+      return `🎯 ${gameState?.awayTeam} @ ${gameState?.homeTeam}: Pitcher struggling - ${roundedProb}% chance${advancedContext}${weatherSuffix}`;
     } else if (batterStats?.wRCPlus && batterStats.wRCPlus >= 115) {
-      return `📈 ABOVE AVERAGE: ${roundedProb}% scoring chance - ${currentBatter} productive hitter (${batterStats.wRCPlus} wRC+)${advancedContext}${weatherSuffix}`;
+      return `📈 ${gameState?.awayTeam} @ ${gameState?.homeTeam}: ${currentBatter} (${batterStats.wRCPlus} wRC+) - ${roundedProb}% chance${advancedContext}${weatherSuffix}`;
     } else {
-      return `📊 SCORING CHANCE: ${roundedProb}% probability with current analytics${advancedContext}${weatherSuffix}`;
+      return `📊 ${gameState?.awayTeam} @ ${gameState?.homeTeam}: ${roundedProb}% scoring chance${advancedContext}${weatherSuffix}`;
     }
   }
 

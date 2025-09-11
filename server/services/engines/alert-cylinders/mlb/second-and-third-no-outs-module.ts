@@ -20,7 +20,7 @@ export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_second_third_no_outs`,
       type: this.alertType,
-      message: `🔥 HIGH SCORING PROBABILITY: Runners on 2nd & 3rd, 0 outs - 85% chance to score!`,
+      message: `🔥 ${gameState.awayTeam} @ ${gameState.homeTeam}: Runners on 2nd & 3rd, 0 outs - 85% scoring chance!`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

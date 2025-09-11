@@ -20,7 +20,7 @@ export default class BasesLoadedOneOutModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_bases_loaded_one_out`,
       type: this.alertType,
-      message: `⚡ SCORING OPPORTUNITY: Bases Loaded, 1 out - 66% chance to score!`,
+      message: `⚡ ${gameState.awayTeam} @ ${gameState.homeTeam}: Bases Loaded, 1 out - 66% scoring chance!`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

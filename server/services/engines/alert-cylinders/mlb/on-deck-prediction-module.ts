@@ -246,11 +246,11 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
 
     // Construct predictive message
     if (probability >= 85) {
-      return `${icon} EXTREME VALUE: ${batterLabel} ON DECK with ${situationDesc}, ${outsText} - ${Math.round(probability)}% scoring probability${windText}`;
+      return `${icon} ${gameState.awayTeam} @ ${gameState.homeTeam}: ${batterLabel} ON DECK with ${situationDesc}, ${outsText} - ${Math.round(probability)}% scoring chance${windText}`;
     } else if (probability >= 75) {
-      return `${icon} HIGH VALUE: ${batterLabel} coming up with ${situationDesc}, ${outsText} - ${Math.round(probability)}% scoring chance${windText}`;
+      return `${icon} ${gameState.awayTeam} @ ${gameState.homeTeam}: ${batterLabel} coming up with ${situationDesc}, ${outsText} - ${Math.round(probability)}% scoring chance${windText}`;
     } else {
-      return `${icon} ${batterLabel} on deck with ${situationDesc}, ${outsText} - ${Math.round(probability)}% opportunity developing${windText}`;
+      return `${icon} ${gameState.awayTeam} @ ${gameState.homeTeam}: ${batterLabel} on deck with ${situationDesc}, ${outsText} - ${Math.round(probability)}% chance${windText}`;
     }
   }
 }
