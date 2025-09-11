@@ -172,6 +172,32 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
+  // Calculate alert status and visual indicators
+  const alertStatus = getAlertStatus(alert.type, alert.createdAt, 
+    (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
+  );
+  const isLive = alertStatus.status === 'ACTIVE';
+  const confidence = alert.confidence || alert.payload?.gameInfo?.v3Analysis?.confidence || 0;
+  const confidenceLevel = confidence >= 80 ? 'high' : confidence >= 60 ? 'medium' : 'low';
+  const confidenceColor = confidence >= 80 ? 'bg-green-500/20 text-green-400 border-green-400/30' : 
+                          confidence >= 60 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30' : 
+                          'bg-orange-500/20 text-orange-400 border-orange-400/30';
+  
+  // Priority border color
+  const priorityBorderColor = alert.priority >= 90 ? 'border-l-red-500' :
+                               alert.priority >= 80 ? 'border-l-orange-500' :
+                               alert.priority >= 70 ? 'border-l-yellow-500' :
+                               'border-l-blue-500';
+  
+  // Get sport-specific accent color
+  const sportAccentColor = alert.sport === 'MLB' ? 'text-green-400/60' :
+                           alert.sport === 'NFL' ? 'text-orange-400/60' :
+                           alert.sport === 'NBA' ? 'text-purple-400/60' :
+                           alert.sport === 'WNBA' ? 'text-pink-400/60' :
+                           alert.sport === 'CFL' ? 'text-red-400/60' :
+                           alert.sport === 'NCAAF' ? 'text-blue-400/60' :
+                           'text-gray-400/60';
+
 
 
   const getAlertIcon = (type: string) => {
@@ -368,13 +394,24 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <div className={`${className} transition-all duration-200 relative border-2 ${
-          getAlertStatus(alert.type, alert.createdAt, 
-            (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
-          ).status === 'ACTIVE' 
-            ? 'border-emerald-500 shadow-emerald-500/20' 
-            : 'border-gray-500/50 shadow-gray-500/10'
-        } shadow-lg hover:shadow-xl rounded-lg min-h-[120px]`}>
+        <div className={`${className} transition-all duration-200 relative border border-gray-700/50 border-l-4 ${priorityBorderColor} ${
+          isLive && alert.priority >= 80 ? 'animate-pulse' : ''
+        } shadow-lg hover:shadow-xl rounded-lg min-h-[120px] bg-slate-900/95`}>
+
+          {/* Status Badge */}
+          <div className="absolute top-2 left-2 z-10 flex items-center gap-2">
+            {isLive ? (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 border border-green-400/30">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-semibold text-green-400">LIVE</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-500/20 border border-gray-400/30">
+                <div className="w-2 h-2 rounded-full bg-gray-500" />
+                <span className="text-xs font-semibold text-gray-400">EXPIRED</span>
+              </div>
+            )}
+          </div>
 
           <GameCardTemplate
             gameId={alert.id}
@@ -396,32 +433,64 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             showWeather={false}
             showVenue={false}
             showEnhancedMLB={false}
-            className="bg-white/5 border-white/10"
+            className="bg-transparent border-white/10"
           >
           </GameCardTemplate>
 
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
           <div className="p-4 pt-0 flex flex-col">
 
-            {/* Alert Message - Limited height with line clamp */}
+            {/* Alert Message with Confidence Badge */}
             <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
               <p className="text-slate-100 text-base font-medium leading-relaxed line-clamp-2">
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
               </p>
+              {confidence > 0 && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${confidenceColor}`}>
+                    <Brain className="w-3 h-3" />
+                    <span>{Math.round(confidence)}% confidence</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Priority/Confidence Badges - Bottom Footer */}
+            {/* Game State and Footer Info */}
             <div className="flex items-center justify-between mt-auto">
-              <div className="flex gap-2">
-                {alert.priority >= 80 && (
-                  <Badge variant="destructive" className="text-xs" data-testid="badge-high-priority">
-                    High Priority
-                  </Badge>
+              <div className="flex items-center gap-2">
+                {/* Sport Badge with accent color */}
+                <Badge variant="outline" className={`text-xs border-gray-600 ${sportAccentColor}`}>
+                  {alert.sport || 'UNKNOWN'}
+                </Badge>
+                
+                {/* Game State Indicator */}
+                {alert.sport === 'MLB' && alert.context?.inning && (
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <span className="font-medium">
+                      {alert.context.isTopInning ? '▲' : '▼'} {alert.context.inning}
+                    </span>
+                    {alert.context.outs !== undefined && (
+                      <span className="text-gray-500">• {alert.context.outs} out{alert.context.outs !== 1 ? 's' : ''}</span>
+                    )}
+                  </div>
                 )}
-                {alert.confidence && alert.confidence > 70 && (
-                  <Badge variant="secondary" className="text-xs" data-testid="badge-confidence">
-                    {Math.round(alert.confidence)}%
-                  </Badge>
+                
+                {(alert.sport === 'NFL' || alert.sport === 'NBA' || alert.sport === 'NCAAF') && alert.context?.quarter && (
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <span className="font-medium">Q{alert.context.quarter}</span>
+                    {alert.context.timeRemaining && (
+                      <span className="text-gray-500">• {alert.context.timeRemaining}</span>
+                    )}
+                  </div>
+                )}
+                
+                {(alert.sport === 'WNBA' || alert.sport === 'CFL') && alert.context?.period && (
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <span className="font-medium">P{alert.context.period}</span>
+                    {alert.context.timeRemaining && (
+                      <span className="text-gray-500">• {alert.context.timeRemaining}</span>
+                    )}
+                  </div>
                 )}
               </div>
               
