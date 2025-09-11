@@ -224,40 +224,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
-  
-  // Calculate alert status and visual indicators
-  const alertStatus = alertData ? getAlertStatus(alertData.type, alertData.createdAt, 
-    liveGameData?.status || 'scheduled'
-  ) : { status: 'EXPIRED', minutesAgo: 999 };
-  const isAlertLive = alertStatus.status === 'ACTIVE';
-  const isNewAlert = alertStatus.minutesAgo < 1; // Alert less than 1 minute old
-  const confidence = alertData?.confidence || alertData?.payload?.gameInfo?.v3Analysis?.confidence || 0;
-  const confidenceColor = confidence >= 90 ? 'bg-green-500/20 text-green-400 border-green-400/30' : 
-                          confidence >= 70 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30' : 
-                          'bg-gray-500/20 text-gray-400 border-gray-400/30';
-  
-  // Priority border color (4px wide vertical bar on left)
-  const priorityBorderColor = (alertData?.priority || 0) >= 90 ? 'border-l-4 border-l-red-500' :
-                               (alertData?.priority || 0) >= 80 ? 'border-l-4 border-l-orange-500' :
-                               (alertData?.priority || 0) >= 70 ? 'border-l-4 border-l-yellow-500' :
-                               'border-l-4 border-l-blue-500';
-  
-  // Check if game is live
-  const isGameLive = displayScores.isLive || (liveGameData?.status === 'live');
-  
-  // Format game time/period
-  const getGameTimeDisplay = () => {
-    if (alertData?.context?.quarter) {
-      return `Q${alertData.context.quarter} ${alertData.context.timeRemaining || ''}`;
-    } else if (alertData?.context?.inning) {
-      return `${alertData.context.isTopInning ? '▲' : '▼'} ${alertData.context.inning}`;
-    } else if (alertData?.context?.period) {
-      return `P${alertData.context.period} ${alertData.context.timeRemaining || ''}`;
-    }
-    return '';
-  };
-  
-  const gameTimeDisplay = getGameTimeDisplay();
 
   // Fetch live game data for MLB alerts to get current scores
   const { data: todaysGames } = useQuery({
@@ -335,6 +301,40 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       isLive: false
     };
   }, [liveGameData, alertData]);
+
+  // Calculate alert status and visual indicators
+  const alertStatus = alertData ? getAlertStatus(alertData.type, alertData.createdAt, 
+    liveGameData?.status || 'scheduled'
+  ) : { status: 'EXPIRED', minutesAgo: 999 };
+  const isAlertLive = alertStatus.status === 'ACTIVE';
+  const isNewAlert = alertStatus.minutesAgo < 1; // Alert less than 1 minute old
+  const confidence = alertData?.confidence || alertData?.payload?.gameInfo?.v3Analysis?.confidence || 0;
+  const confidenceColor = confidence >= 90 ? 'bg-green-500/20 text-green-400 border-green-400/30' : 
+                          confidence >= 70 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30' : 
+                          'bg-gray-500/20 text-gray-400 border-gray-400/30';
+  
+  // Priority border color (4px wide vertical bar on left)
+  const priorityBorderColor = (alertData?.priority || 0) >= 90 ? 'border-l-4 border-l-red-500' :
+                               (alertData?.priority || 0) >= 80 ? 'border-l-4 border-l-orange-500' :
+                               (alertData?.priority || 0) >= 70 ? 'border-l-4 border-l-yellow-500' :
+                               'border-l-4 border-l-blue-500';
+  
+  // Check if game is live
+  const isGameLive = displayScores.isLive || (liveGameData?.status === 'live');
+  
+  // Format game time/period
+  const getGameTimeDisplay = () => {
+    if (alertData?.context?.quarter) {
+      return `Q${alertData.context.quarter} ${alertData.context.timeRemaining || ''}`;
+    } else if (alertData?.context?.inning) {
+      return `${alertData.context.isTopInning ? '▲' : '▼'} ${alertData.context.inning}`;
+    } else if (alertData?.context?.period) {
+      return `P${alertData.context.period} ${alertData.context.timeRemaining || ''}`;
+    }
+    return '';
+  };
+  
+  const gameTimeDisplay = getGameTimeDisplay();
 
   // Debug score data
   React.useEffect(() => {
