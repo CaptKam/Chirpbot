@@ -186,32 +186,11 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Initialize database with required seed data
-    try {
-      await seedDatabase();
-      console.log('✅ Database initialization complete');
-    } catch (err) {
-      console.error('⚠️ Database seeding failed (may already be seeded):', err);
-      // Continue anyway - the database might already be seeded
-    }
-
     const server = await registerRoutes(app);
 
-    // Initialize alert generator and AI system
-    const alertGenerator = new AlertGenerator();
-    
-    // Initialize and test all AI services
-    console.log('🤖 Initializing AI services...');
-    const aiEngine = new BasicAI();
-    const aiEnhancementService = new AIEnhancementService();
-    const aiContextController = new AIContextController();
-    
-    // Verify AI system status
-    if (aiEngine.configured) {
-      console.log('✅ AI Services: FULLY ACTIVATED - OpenAI integration operational');
-    } else {
-      console.log('🚫 AI Services: Configuration issue detected - check OpenAI API key');
-    }
+    // Production optimization: Skip database seeding in production
+    const isProduction = process.env.NODE_ENV === 'production';
+    const skipSeed = isProduction && process.env.SKIP_SEED_IN_PROD !== 'false';
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -231,48 +210,6 @@ app.use((req, res, next) => {
       }
       // Don't throw err - this was causing unhandled rejections!
     });
-
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
-    if (app.get("env") === "development") {
-      try {
-        await setupVite(app, server);
-        console.log('✅ Vite development server setup complete');
-      } catch (viteError) {
-        console.error('⚠️ Vite setup failed, but continuing with server startup:', viteError);
-        // Fallback: serve static files if Vite fails
-        try {
-          serveStatic(app);
-          console.log('🔄 Fallback to static file serving');
-        } catch (staticError) {
-          console.error('⚠️ Static file serving also failed, serving minimal fallback');
-          // Minimal fallback - just serve a basic response
-          app.use('*', (req, res) => {
-            res.status(200).send(`
-              <!DOCTYPE html>
-              <html>
-                <head><title>ChirpBot V2</title></head>
-                <body>
-                  <h1>ChirpBot V2 Server Running</h1>
-                  <p>Frontend temporarily unavailable - API endpoints are still accessible</p>
-                </body>
-              </html>
-            `);
-          });
-        }
-      }
-    } else {
-      serveStatic(app);
-    }
-
-    // Start alert generation
-    console.log('🚨 Starting alert generation...');
-    alertGenerator.generateLiveGameAlerts();
-
-    // Start alert cleanup service
-    console.log('🧹 Starting alert cleanup service...');
-    alertCleanupService.startCleanup();
 
     // ALWAYS serve the app on the port specified in the environment variable PORT
     // Other ports are firewalled. Default to 5000 if not specified.
@@ -303,14 +240,99 @@ app.use((req, res, next) => {
       }
     });
 
-    // Simplified server startup
+    // 🔥 CRITICAL FIX: Start listening IMMEDIATELY to pass health checks
     server.listen(PORT, HOST, () => {
       console.log(`🚀 Server running on ${HOST}:${PORT}`);
       console.log(`📱 Database connected: ${pool ? 'Yes' : 'No'}`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔐 Session secret: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);
       console.log(`💾 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
-      console.log('💪 System is now ULTRA-BULLETPROOF with auto-recovery');
+      console.log('💪 Server is now listening - starting background initialization...');
+      
+      // 🔥 DEFER HEAVY OPERATIONS TO BACKGROUND - This prevents startup timeout!
+      setImmediate(async () => {
+        console.log('🔄 Starting background initialization...');
+        
+        try {
+          // Initialize database with required seed data (skip in production by default)
+          if (!skipSeed) {
+            try {
+              await seedDatabase();
+              console.log('✅ Database initialization complete');
+            } catch (err) {
+              console.error('⚠️ Database seeding failed (may already be seeded):', err);
+              // Continue anyway - the database might already be seeded
+            }
+          } else {
+            console.log('⏭️ Skipping database seeding in production');
+          }
+
+          // Initialize alert generator and AI system
+          const alertGenerator = new AlertGenerator();
+          
+          // Initialize and test all AI services
+          console.log('🤖 Initializing AI services...');
+          const aiEngine = new BasicAI();
+          const aiEnhancementService = new AIEnhancementService();
+          const aiContextController = new AIContextController();
+          
+          // Verify AI system status
+          if (aiEngine.configured) {
+            console.log('✅ AI Services: FULLY ACTIVATED - OpenAI integration operational');
+          } else {
+            console.log('🚫 AI Services: Configuration issue detected - check OpenAI API key');
+          }
+
+          // Setup frontend serving (Vite or static)
+          if (app.get("env") === "development") {
+            try {
+              await setupVite(app, server);
+              console.log('✅ Vite development server setup complete');
+            } catch (viteError) {
+              console.error('⚠️ Vite setup failed, but continuing with server startup:', viteError);
+              // Fallback: serve static files if Vite fails
+              try {
+                serveStatic(app);
+                console.log('🔄 Fallback to static file serving');
+              } catch (staticError) {
+                console.error('⚠️ Static file serving also failed, serving minimal fallback');
+                // Minimal fallback - just serve a basic response
+                app.use('*', (req, res) => {
+                  res.status(200).send(`
+                    <!DOCTYPE html>
+                    <html>
+                      <head><title>ChirpBot V3</title></head>
+                      <body>
+                        <h1>ChirpBot V3 Server Running</h1>
+                        <p>Frontend temporarily unavailable - API endpoints are still accessible</p>
+                      </body>
+                    </html>
+                  `);
+                });
+              }
+            }
+          } else {
+            serveStatic(app);
+          }
+
+          // Start alert generation with staggered initialization
+          console.log('🚨 Starting alert generation...');
+          setTimeout(() => {
+            alertGenerator.generateLiveGameAlerts();
+          }, 1000); // Stagger by 1 second
+
+          // Start alert cleanup service  
+          console.log('🧹 Starting alert cleanup service...');
+          setTimeout(() => {
+            alertCleanupService.startCleanup();
+          }, 2000); // Stagger by 2 seconds
+          
+          console.log('✅ Background initialization complete - all systems operational!');
+        } catch (error) {
+          console.error('⚠️ Background initialization error:', error);
+          console.log('🔄 Server will continue running - some features may be limited');
+        }
+      });
     });
   } catch (error: any) {
     console.error('⚠️ Server initialization warning:', error);

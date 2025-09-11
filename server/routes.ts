@@ -217,13 +217,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userCount: 0,
           tableCount: 0,
           alertPreferences: 0,
-          monitoredTeams: 0
+          monitoredTeams: 0,
+          name: null,
+          version: null,
+          sampleUserExists: false,
+          sampleUser: null
         },
         session: {
           authenticated: !!req.session?.userId,
           sessionId: req.sessionID ? 'present' : 'missing',
           userId: req.session?.userId || null,
           hasSession: !!req.session
+        },
+        analysis: {
+          likelyEnvironment: 'UNKNOWN',
+          hasUserData: false,
+          sessionWorking: false,
+          issueDetected: true,
+          recommendations: []
         }
       };
 
@@ -269,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         client.release();
       } catch (error) {
-        diagnostics.database.error = error.message;
+        diagnostics.database.error = error instanceof Error ? error.message : String(error);
       }
 
       // Determine likely environment
@@ -307,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({
         error: 'Diagnostic failed',
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       });
     }
