@@ -20,7 +20,7 @@ export default class RunnerOnThirdOneOutModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_runner_third_one_out`,
       type: this.alertType,
-      message: `⚡ ${gameState.awayTeam} @ ${gameState.homeTeam}: Runner on 3rd, 1 out - 66% scoring chance!`,
+      message: `🎯 CLUTCH MOMENT | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | Runner 90ft from scoring, 1 out | 66% probability | Wild pitch, sac fly, or clutch hit incoming | LIVE BETTING EDGE`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

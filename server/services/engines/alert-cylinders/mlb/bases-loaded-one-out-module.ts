@@ -20,7 +20,7 @@ export default class BasesLoadedOneOutModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_bases_loaded_one_out`,
       type: this.alertType,
-      message: `⚡ ${gameState.awayTeam} @ ${gameState.homeTeam}: Bases Loaded, 1 out - 66% scoring chance!`,
+      message: `⚡ HIGH LEVERAGE CRISIS | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | BASES LOADED, 1 OUT | 66% scoring edge | Double play threat vs grand slam potential | LIVE ODDS SHIFTING`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

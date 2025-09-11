@@ -16,7 +16,7 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_seventh_inning_stretch`,
       type: this.alertType,
-      message: `⚾ Seventh Inning Stretch: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+      message: `⚾ CRUNCH TIME | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | 7th inning stretch | Late game momentum shift | Bullpen decisions critical | LIVE ODDS VOLATILE`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

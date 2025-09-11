@@ -40,7 +40,7 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_bases_loaded_no_outs_${gameState.inning}_${Date.now()}`,
       type: this.alertType,
-      message: `🔥 BASES LOADED | ${gameState.awayTeam} @ ${gameState.homeTeam} | 0 outs | 86% scoring chance`,
+      message: `💥 MAXIMUM LEVERAGE | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | BASES LOADED, NO OUTS | 86% multi-run probability | Grand slam potential | Total runs EXPLODING | 30-SECOND WINDOW`,
       context: {
         // Core game state
         gameId: gameState.gameId,

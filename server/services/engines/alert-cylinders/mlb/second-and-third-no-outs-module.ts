@@ -20,7 +20,7 @@ export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_second_third_no_outs`,
       type: this.alertType,
-      message: `🔥 ${gameState.awayTeam} @ ${gameState.homeTeam}: Runners on 2nd & 3rd, 0 outs - 85% scoring chance!`,
+      message: `🔥 ELITE SCORING THREAT | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | Runners on 2nd & 3rd, NO OUTS | 85% multi-run potential | Sacrifice fly minimum | Infield hit scores 2 | TOTAL EXPLODING`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

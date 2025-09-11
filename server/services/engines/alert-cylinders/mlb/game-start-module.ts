@@ -15,7 +15,7 @@ export default class GameStartModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_game_start`,
       type: this.alertType,
-      message: `🚨 Game Started: ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+      message: `🚨 LIVE NOW | ${gameState.awayTeam} @ ${gameState.homeTeam} | First pitch thrown | Opening lines locked | Early value bets available | Momentum building | GET POSITIONED`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
