@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, Settings, AlertTriangle, Shield, BarChart3 } from 'lucide-react';
+import { Calendar, Settings, AlertTriangle, Shield } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 
@@ -26,7 +26,6 @@ export function BottomNavigation() {
 
   const baseNavItems = [
     { path: "/dashboard", icon: Calendar, label: "Calendar", testId: "nav-calendar" },
-    { path: "/v3-dashboard", icon: BarChart3, label: "V3 Metrics", testId: "nav-v3-dashboard" },
   ];
 
   // Conditionally add Calendar, Alerts, and Settings tabs if there are games within two days
