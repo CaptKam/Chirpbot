@@ -130,7 +130,22 @@ export default function Settings() {
   // Alert preferences mutation
   const updateAlertPreferenceMutation = useMutation({
     mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
-      const response = await apiRequest("POST", `/api/user/${user?.id}/alert-preferences`, {
+      // Debug logging
+      console.log('Attempting to update alert preference:', {
+        userId: user?.id,
+        isAuthenticated,
+        alertType,
+        enabled,
+        sport: activeSport
+      });
+
+      // Check if user is authenticated and has an ID
+      if (!user?.id) {
+        console.error('User ID is missing:', { user, isAuthenticated });
+        throw new Error('User not authenticated or ID missing');
+      }
+
+      const response = await apiRequest("POST", `/api/user/${user.id}/alert-preferences`, {
         sport: activeSport,
         alertType,
         enabled
@@ -147,15 +162,57 @@ export default function Settings() {
       });
     },
     onError: (error: any) => {
-      console.error('Alert preference update error:', error);
+      // Properly log the full error object
+      console.error('Alert preference update error - Full error object:', {
+        error,
+        message: error?.message || 'No message',
+        stack: error?.stack || 'No stack',
+        name: error?.name || 'No name',
+        toString: error?.toString ? error.toString() : 'Cannot convert to string'
+      });
       
-      // Check if it's an authentication error
-      if (error?.message?.includes('401') || error?.message?.includes('Authentication required')) {
+      // Extract meaningful error message
+      const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
+      
+      // Check for specific error types
+      if (errorMessage.includes('401') || errorMessage.includes('not authenticated') || errorMessage.includes('ID missing')) {
         toast({
           title: "Authentication Required",
           description: "Please log in to save your alert preferences.",
           variant: "destructive",
         });
+      } else if (errorMessage.includes('globally disabled')) {
+        // Handle globally disabled alerts
+        toast({
+          title: "Alert Disabled",
+          description: "This alert type has been globally disabled by the administrator and cannot be enabled.",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes('400')) {
+        // Extract the actual error message from the 400 response
+        try {
+          const match = errorMessage.match(/400: ({.*})/);
+          if (match && match[1]) {
+            const parsed = JSON.parse(match[1]);
+            toast({
+              title: "Cannot Update",
+              description: parsed.message || "This preference cannot be updated at this time.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: "Failed to update alert preference. Please try again.",
+              variant: "destructive",
+            });
+          }
+        } catch {
+          toast({
+            title: "Error",
+            description: "Failed to update alert preference. Please try again.",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Error", 
@@ -246,6 +303,19 @@ export default function Settings() {
   };
 
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
+    console.log('handleAlertToggle called:', { alertType, enabled, userId: user?.id, isAuthenticated });
+    
+    // Early validation
+    if (!user?.id) {
+      console.error('Cannot toggle alert - user not authenticated or ID missing');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to change alert preferences.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     updateAlertPreferenceMutation.mutate({ alertType, enabled });
   };
 
