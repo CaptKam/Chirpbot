@@ -3,7 +3,7 @@ import { motion, PanInfo } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain } from 'lucide-react';
+import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain, Target } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -79,6 +79,73 @@ function getAlertColor(priority: number): string {
   return 'bg-blue-400';
 }
 
+// Sport-specific color mapping
+function getSportColors(sport: string): { 
+  badge: string, 
+  alertBg: string, 
+  alertBorder: string, 
+  probability: string 
+} {
+  switch (sport.toUpperCase()) {
+    case 'MLB':
+      return {
+        badge: 'border-green-500/40 text-green-400 bg-green-500/10',
+        alertBg: 'bg-green-500/10',
+        alertBorder: 'border-green-500/30',
+        probability: 'bg-green-500/20 border-green-400/40 text-green-300'
+      };
+    case 'NFL':
+      return {
+        badge: 'border-orange-500/40 text-orange-400 bg-orange-500/10',
+        alertBg: 'bg-orange-500/10',
+        alertBorder: 'border-orange-500/30',
+        probability: 'bg-orange-500/20 border-orange-400/40 text-orange-300'
+      };
+    case 'NBA':
+      return {
+        badge: 'border-purple-500/40 text-purple-400 bg-purple-500/10',
+        alertBg: 'bg-purple-500/10',
+        alertBorder: 'border-purple-500/30',
+        probability: 'bg-purple-500/20 border-purple-400/40 text-purple-300'
+      };
+    case 'WNBA':
+      return {
+        badge: 'border-pink-500/40 text-pink-400 bg-pink-500/10',
+        alertBg: 'bg-pink-500/10',
+        alertBorder: 'border-pink-500/30',
+        probability: 'bg-pink-500/20 border-pink-400/40 text-pink-300'
+      };
+    case 'CFL':
+      return {
+        badge: 'border-red-500/40 text-red-400 bg-red-500/10',
+        alertBg: 'bg-red-500/10',
+        alertBorder: 'border-red-500/30',
+        probability: 'bg-red-500/20 border-red-400/40 text-red-300'
+      };
+    case 'NCAAF':
+      return {
+        badge: 'border-blue-500/40 text-blue-400 bg-blue-500/10',
+        alertBg: 'bg-blue-500/10',
+        alertBorder: 'border-blue-500/30',
+        probability: 'bg-blue-500/20 border-blue-400/40 text-blue-300'
+      };
+    case 'NHL':
+      return {
+        badge: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10',
+        alertBg: 'bg-cyan-500/10',
+        alertBorder: 'border-cyan-500/30',
+        probability: 'bg-cyan-500/20 border-cyan-400/40 text-cyan-300'
+      };
+    default:
+      return {
+        badge: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+        alertBg: 'bg-emerald-500/10',
+        alertBorder: 'border-emerald-500/30',
+        probability: 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300'
+      };
+  }
+}
+
 
 interface SimpleAlert {
   id: string;
@@ -106,6 +173,14 @@ interface SimpleAlert {
     hasFirst?: boolean;
     hasSecond?: boolean;
     hasThird?: boolean;
+    currentBatter?: string;
+    currentPitcher?: string;
+    scoringProbability?: number;
+    weatherContext?: string;
+    batterAdvantage?: string;
+    handednessMatchup?: string;
+    leverageIndex?: number;
+    scenarioName?: string;
   };
   payload?: {
     betbookData?: {
@@ -400,11 +475,93 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
           <div className="p-4 pt-0">
 
-            {/* Alert Message - Simple */}
-            <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
-              <p className="text-slate-100 text-base font-medium leading-relaxed">
-                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
-              </p>
+            {/* Enhanced Alert Content */}
+            <div className="space-y-3">
+              {/* Header: Batter vs Pitcher */}
+              {alert.context?.currentBatter && alert.context?.currentPitcher ? (
+                <div className="text-center">
+                  <div className="text-lg font-bold text-white">
+                    <span className="text-blue-400">{alert.context.currentBatter}</span>
+                    <span className="mx-2 text-slate-400">vs</span>
+                    <span className="text-red-400">{alert.context.currentPitcher}</span>
+                  </div>
+                  {alert.context?.handednessMatchup && (
+                    <div className="text-sm text-slate-400 mt-1">
+                      {alert.context.handednessMatchup}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Probability Badge */}
+              {alert.context?.scoringProbability && (
+                <div className="flex justify-center mb-3">
+                  <div className={`px-4 py-2 rounded-full text-sm font-bold border ${getSportColors(alert.sport).probability}`}>
+                    <TrendingUp className="w-4 h-4 inline mr-1" />
+                    {alert.context.scoringProbability}% Scoring Chance
+                  </div>
+                </div>
+              )}
+
+              {/* Alert Message with Context */}
+              <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
+                {alert.context?.scenarioName ? (
+                  <div className="text-center mb-2">
+                    <p className="text-yellow-400 text-sm font-semibold">{alert.context.scenarioName}</p>
+                  </div>
+                ) : null}
+                
+                <p className="text-slate-100 text-base font-medium leading-relaxed text-center">
+                  {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
+                </p>
+
+                {/* Baseball Situation Details */}
+                {alert.sport === 'MLB' && (
+                  <div className="flex justify-center items-center space-x-4 mt-3 text-sm text-slate-300">
+                    <div className="flex items-center space-x-1">
+                      <span className="font-medium">{alert.context?.balls || 0}-{alert.context?.strikes || 0}</span>
+                      <span className="text-slate-400">Count</span>
+                    </div>
+                    <div className="w-1 h-1 bg-slate-500 rounded-full"></div>
+                    <div className="flex items-center space-x-1">
+                      <span className="font-medium">{alert.context?.outs || 0}</span>
+                      <span className="text-slate-400">Out{(alert.context?.outs || 0) !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Weather Context */}
+              {alert.context?.weatherContext && (
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-2">
+                  <div className="flex items-center justify-center space-x-2 text-blue-300 text-sm">
+                    <span>🌬️</span>
+                    <span>{alert.context.weatherContext}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Insights */}
+              {(alert.context?.aiInsights || alert.context?.batterAdvantage) && (
+                <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-2">
+                  <div className="flex items-start space-x-2">
+                    <Brain className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-purple-200 text-sm leading-relaxed">
+                      {alert.context.aiInsights || alert.context.batterAdvantage}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Leverage Indicator */}
+              {alert.context?.leverageIndex && alert.context.leverageIndex > 1.5 && (
+                <div className="text-center">
+                  <div className="inline-flex items-center space-x-1 text-orange-400 text-sm font-medium">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>High Leverage Situation ({alert.context.leverageIndex.toFixed(1)})</span>
+                  </div>
+                </div>
+              )}
             </div>
 
 
