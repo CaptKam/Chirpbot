@@ -890,6 +890,69 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               </div>
 
+              {/* Predictive Data Display for MLB */}
+              {alertData.sport === 'MLB' && (alertData.context?.currentBatter || alertData.context?.onDeckBatter || alertData.context?.windSpeed) && (
+                <div className="mb-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Current At-Bat */}
+                    {alertData.context?.currentBatter && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Activity className="w-3 h-3 text-green-400" />
+                          <span className="text-xs text-green-400 font-semibold uppercase">At Bat</span>
+                        </div>
+                        <p className="text-sm text-white font-bold">{alertData.context.currentBatter}</p>
+                        {alertData.context?.currentPitcher && (
+                          <p className="text-xs text-slate-300">vs {alertData.context.currentPitcher}</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* On Deck */}
+                    {alertData.context?.onDeckBatter && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Target className="w-3 h-3 text-yellow-400" />
+                          <span className="text-xs text-yellow-400 font-semibold uppercase">On Deck</span>
+                        </div>
+                        <p className="text-sm text-white font-bold">{alertData.context.onDeckBatter}</p>
+                        {alertData.context?.isPowerHitter && (
+                          <span className="text-xs text-orange-400">⚡ Power Hitter</span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Wind Conditions */}
+                    {alertData.context?.windSpeed && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-blue-400" />
+                          <span className="text-xs text-blue-400 font-semibold uppercase">Wind</span>
+                        </div>
+                        <p className="text-sm text-white font-bold">
+                          {alertData.context.windSpeed}mph {alertData.context.windDirection || ''}
+                        </p>
+                        {alertData.context?.windImpact && (
+                          <p className="text-xs text-blue-300">{alertData.context.windImpact}</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Scoring Probability */}
+                    {alertData.context?.scoringProbability && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3 text-emerald-400" />
+                          <span className="text-xs text-emerald-400 font-semibold uppercase">Probability</span>
+                        </div>
+                        <p className="text-lg text-white font-bold">{alertData.context.scoringProbability}%</p>
+                        <p className="text-xs text-emerald-300">Scoring Chance</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Alert Message - Compact Design */}
               <div className={`rounded-lg p-3 mb-3 border ${getSportColors(alertData.sport || 'MLB').alertBg} ${getSportColors(alertData.sport || 'MLB').alertBorder}`}>
                 {/* Main Alert Message with Compact Typography */}

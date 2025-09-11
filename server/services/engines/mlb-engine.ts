@@ -40,7 +40,9 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_SECOND_AND_THIRD_ONE_OUT',
         'MLB_BASES_LOADED_ONE_OUT',
         'MLB_BATTER_DUE',
-        'MLB_STEAL_LIKELIHOOD'
+        'MLB_STEAL_LIKELIHOOD',
+        'MLB_ON_DECK_PREDICTION',
+        'MLB_WIND_CHANGE'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -155,6 +157,26 @@ export class MLBEngine extends BaseSportEngine {
 
         if (enhancedData && !enhancedData.error) {
           this.performanceMetrics.cacheHits++;
+          // Fetch weather data if available
+          let weatherContext = gameState.weatherContext;
+          try {
+            const { weatherAlertIntegration } = await import('../weather-alert-integration');
+            const weatherData = await weatherAlertIntegration.getCurrentConditions(
+              gameState.homeTeam,
+              gameState.awayTeam
+            );
+            if (weatherData && !weatherData.error) {
+              weatherContext = {
+                windSpeed: weatherData.windSpeed,
+                windDirection: weatherData.windDirection,
+                temperature: weatherData.temperature,
+                humidity: weatherData.humidity
+              };
+            }
+          } catch (error) {
+            // Weather fetch failed, continue without it
+          }
+
           return {
             ...gameState,
             hasFirst: enhancedData.runners?.first || false,
@@ -166,7 +188,11 @@ export class MLBEngine extends BaseSportEngine {
             inning: enhancedData.inning || gameState.inning || 1,
             isTopInning: enhancedData.isTopInning,
             homeScore: enhancedData.homeScore || gameState.homeScore,
-            awayScore: enhancedData.awayScore || gameState.awayScore
+            awayScore: enhancedData.awayScore || gameState.awayScore,
+            currentBatter: enhancedData.currentBatter || gameState.currentBatter,
+            currentPitcher: enhancedData.currentPitcher || gameState.currentPitcher,
+            onDeckBatter: enhancedData.onDeckBatter || gameState.onDeckBatter,
+            weatherContext
           };
         } else {
           this.performanceMetrics.cacheMisses++;
@@ -271,7 +297,9 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_SECOND_AND_THIRD_ONE_OUT',
         'MLB_BASES_LOADED_ONE_OUT',
         'MLB_BATTER_DUE',
-        'MLB_STEAL_LIKELIHOOD'
+        'MLB_STEAL_LIKELIHOOD',
+        'MLB_ON_DECK_PREDICTION',
+        'MLB_WIND_CHANGE'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
@@ -312,7 +340,9 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_RUNNER_ON_THIRD_ONE_OUT': './alert-cylinders/mlb/runner-on-third-one-out-module.ts',
         'MLB_SECOND_AND_THIRD_ONE_OUT': './alert-cylinders/mlb/second-and-third-one-out-module.ts',
         'MLB_BATTER_DUE': './alert-cylinders/mlb/batter-due-module.ts',
-        'MLB_STEAL_LIKELIHOOD': './alert-cylinders/mlb/steal-likelihood-module.ts'
+        'MLB_STEAL_LIKELIHOOD': './alert-cylinders/mlb/steal-likelihood-module.ts',
+        'MLB_ON_DECK_PREDICTION': './alert-cylinders/mlb/on-deck-prediction-module.ts',
+        'MLB_WIND_CHANGE': './alert-cylinders/mlb/wind-change-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
