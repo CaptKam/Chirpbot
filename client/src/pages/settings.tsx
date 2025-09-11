@@ -130,18 +130,8 @@ export default function Settings() {
   // Alert preferences mutation
   const updateAlertPreferenceMutation = useMutation({
     mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
-      // Debug logging
-      console.log('Attempting to update alert preference:', {
-        userId: user?.id,
-        isAuthenticated,
-        alertType,
-        enabled,
-        sport: activeSport
-      });
-
       // Check if user is authenticated and has an ID
       if (!user?.id) {
-        console.error('User ID is missing:', { user, isAuthenticated });
         throw new Error('User not authenticated or ID missing');
       }
 
@@ -162,15 +152,6 @@ export default function Settings() {
       });
     },
     onError: (error: any) => {
-      // Properly log the full error object
-      console.error('Alert preference update error - Full error object:', {
-        error,
-        message: error?.message || 'No message',
-        stack: error?.stack || 'No stack',
-        name: error?.name || 'No name',
-        toString: error?.toString ? error.toString() : 'Cannot convert to string'
-      });
-      
       // Extract meaningful error message
       const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
       
@@ -303,11 +284,8 @@ export default function Settings() {
   };
 
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
-    console.log('handleAlertToggle called:', { alertType, enabled, userId: user?.id, isAuthenticated });
-    
     // Early validation
     if (!user?.id) {
-      console.error('Cannot toggle alert - user not authenticated or ID missing');
       toast({
         title: "Authentication Required",
         description: "Please log in to change alert preferences.",

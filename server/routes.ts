@@ -48,31 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(memoryManager.middleware());
   app.use(requestDeduplicator.middleware());
 
-  // Add route debugging middleware with duplicate detection
-  const recentRequests = new Map();
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/api/')) {
-      const now = Date.now();
-      const requestKey = `${req.method}:${req.path}:${req.ip}`;
-      const lastRequest = recentRequests.get(requestKey);
-
-      if (lastRequest && (now - lastRequest) < 100) { // Within 100ms is likely duplicate
-        console.log(`⚠️ DUPLICATE REQUEST: ${req.method} ${req.path} - ${now - lastRequest}ms since last`);
-      } else {
-        console.log(`🔧 ROUTE DEBUG: ${req.method} ${req.path} - Body:`, req.body ? JSON.stringify(req.body).substring(0, 100) : 'none');
-      }
-
-      recentRequests.set(requestKey, now);
-      // Clean up old entries periodically
-      if (recentRequests.size > 100) {
-        const oldestTime = now - 10000; // 10 seconds
-        for (const [key, time] of recentRequests.entries()) {
-          if (time < oldestTime) recentRequests.delete(key);
-        }
-      }
-    }
-    next();
-  });
+  // Request deduplication and memory management are handled by middleware above
 
   // Setup WebSocket server with heartbeat
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -1529,8 +1505,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Weather endpoint - redirect to team-specific endpoint
   app.get('/api/weather', async (req, res) => {
-    console.log('🔧 ROUTE DEBUG: GET /api/weather - Body:', req.body);
-    console.log('⚠️ Generic weather endpoint called - should use /api/weather/team/:teamName');
 
     // Return fallback data with clear indication it's generic
     res.json({
@@ -1548,7 +1522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // V3-16: Performance Metrics Dashboard API
   app.get('/api/v3/performance-metrics', requireAuthentication, async (req, res) => {
     try {
-      console.log('📊 V3 Performance Metrics requested');
+      // Collect V3 performance metrics
 
       // Import all sport engines
       const { MLBEngine } = await import('./services/engines/mlb-engine');
@@ -2564,7 +2538,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const availableTypes = await wnbaEngine.getAvailableAlertTypes();
 
       // Get recent WNBA alerts
-      const recentAlerts = await storage.getRecentAlerts('WNBA', 10);
+      // TODO: Implement getRecentAlerts method in storage
+      const recentAlerts: any[] = []; // await storage.getRecentAlerts('WNBA', 10);
 
       const debugInfo = {
         userId,
@@ -2582,16 +2557,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('🏀 WNBA Debug Results:', debugInfo);
       res.json(debugInfo);
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ WNBA Debug error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message || 'Unknown error occurred' });
     }
   });
 
   // V3 Performance Dashboard endpoint
   app.get('/api/v3/performance', async (req, res) => {
     try {
-      console.log('📊 V3 Performance Metrics requested');
+      // Collect V3 performance metrics
 
       // Import all sport engines
       const { MLBEngine } = await import('./services/engines/mlb-engine');
@@ -3279,17 +3254,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Admin authentication required' });
       }
 
-      // Import and collect metrics from all V3 services
-      const { adaptivePollingManager } = await import('./services/adaptive-polling-manager');
-
       // Get comprehensive V3 performance data
       const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
-      const pollingStats = adaptivePollingManager.getPollingStatistics();
+      const pollingStats = multiSourceAggregator.getPollingStats();
 
       // Calculate system health indicators
-      const avgProcessingTime = aiMetrics.avgProcessingTime.length > 0
-        ? Math.round(aiMetrics.avgProcessingTime.reduce((a, b) => a + b, 0) / aiMetrics.avgProcessingTime.length)
-        : 0;
+      // avgProcessingTime is already a number from getPerformanceMetrics()
+      const avgProcessingTime = aiMetrics.avgProcessingTime || 0;
 
       const cacheHitRate = (aiMetrics.cacheHits + aiMetrics.cacheMisses) > 0
         ? Math.round((aiMetrics.cacheHits / (aiMetrics.cacheHits + aiMetrics.cacheMisses)) * 100)
