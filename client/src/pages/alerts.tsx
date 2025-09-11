@@ -164,17 +164,17 @@ export default function AlertsPage() {
         title="ChirpBot" 
         subtitle="V2 Alert System"
       />
-      <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6">
-
-      {/* Filter Tabs */}
+      
+      {/* Filter Tabs - moved outside constraining div for full width */}
       <SportTabs 
         sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
         activeSport={filter} 
         onSportChange={setFilter} 
       />
 
-      {/* Alerts Content */}
-      <div className="pb-8 space-y-4">
+      <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6">
+        {/* Alerts Content */}
+        <div className="pb-8 space-y-4">
         {filteredAlerts.length === 0 ? (
           <Card className="bg-white/5 backdrop-blur-sm border-white/10">
             <CardContent className="p-8 text-center">
@@ -270,7 +270,7 @@ export default function AlertsPage() {
             </motion.div>
           ))
         )}
-      </div>
+        </div>
       </div>
     </div>
   );
