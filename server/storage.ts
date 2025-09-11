@@ -381,6 +381,8 @@ export const storage = {
           'MLB_RUNNER_ON_THIRD_ONE_OUT': true,
           'MLB_SECOND_AND_THIRD_ONE_OUT': true,
           'MLB_BASES_LOADED_ONE_OUT': true,
+          // On-deck batter predictions
+          'MLB_ON_DECK_PREDICTION': true,
           // AI Enhancement alerts (available for MLB)
           'AI_ENHANCED_MESSAGES': true,
           'AI_PREDICTIVE_AT_BAT': true,
