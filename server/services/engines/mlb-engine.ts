@@ -212,14 +212,39 @@ export class MLBEngine extends BaseSportEngine {
     const startTime = Date.now();
     
     try {
+      // Early exit if game is not valid
+      if (!gameState.gameId) {
+        console.log('⚠️ MLB: No gameId provided, skipping alert generation');
+        return [];
+      }
+      
       // Enhance game state with MLB-specific data if needed
       const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
 
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
       
+      // Filter out duplicate alerts before processing
+      const dedupedAlerts: AlertResult[] = [];
+      for (const alert of rawAlerts) {
+        // Check if this alert has already been sent
+        if (!this.hasAlertBeenSent(enhancedGameState.gameId, alert.alertKey)) {
+          dedupedAlerts.push(alert);
+          // Mark as sent immediately to prevent duplicates in same processing cycle
+          this.markAlertSent(enhancedGameState.gameId, alert.alertKey);
+        }
+      }
+      
+      // If all alerts were duplicates, return early
+      if (dedupedAlerts.length === 0) {
+        console.log(`🔄 MLB: All ${rawAlerts.length} alerts were duplicates for game ${enhancedGameState.gameId}`);
+        return [];
+      }
+      
+      console.log(`✅ MLB: Processing ${dedupedAlerts.length} new alerts (blocked ${rawAlerts.length - dedupedAlerts.length} duplicates)`);
+      
       // Enhance alerts with time-sensitive intelligence via AlertComposer
-      const composedAlerts = await this.composeTimeBasedAlerts(rawAlerts, enhancedGameState);
+      const composedAlerts = await this.composeTimeBasedAlerts(dedupedAlerts, enhancedGameState);
       
       // Process alerts with cross-sport AI enhancement for high-priority situations
       const alerts = await this.processEnhancedMLBAlerts(composedAlerts, enhancedGameState);
@@ -237,7 +262,7 @@ export class MLBEngine extends BaseSportEngine {
       
       this.performanceMetrics.totalAlerts += alerts.length;
       
-      // Send alerts to Telegram for users with notifications enabled
+      // Send alerts to Telegram for users with notifications enabled (already deduplicated)
       await this.deliverAlertsToTelegram(alerts, enhancedGameState);
       
       return alerts;
@@ -620,6 +645,13 @@ export class MLBEngine extends BaseSportEngine {
       
       // Send alerts to each user
       for (const alert of alerts) {
+        // Double-check alert hasn't been sent (extra safety)
+        const telegramKey = `telegram_${alert.alertKey}`;
+        if (this.hasAlertBeenSent(gameState.gameId, telegramKey)) {
+          console.log(`📱 🚫 Telegram alert already sent: ${telegramKey}`);
+          continue;
+        }
+        
         for (const user of telegramUsers) {
           try {
             const telegramConfig: TelegramConfig = {
@@ -656,6 +688,8 @@ export class MLBEngine extends BaseSportEngine {
             
             if (sent) {
               console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
+              // Mark this specific telegram alert as sent after successful delivery
+              this.markAlertSent(gameState.gameId, telegramKey);
             } else {
               console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
             }
@@ -685,6 +719,10 @@ export class MLBEngine extends BaseSportEngine {
     const cacheHitRate = this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
       ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
       : 0;
+      
+    const deduplicationRate = this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked > 0
+      ? (this.performanceMetrics.duplicatesBlocked / (this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked)) * 100
+      : 0;
 
     return {
       sport: 'MLB',
@@ -694,15 +732,20 @@ export class MLBEngine extends BaseSportEngine {
         avgAlertGenerationTime: avgAlertTime,
         avgEnhancementTime: avgEnhanceTime,
         cacheHitRate,
+        deduplicationRate,
         totalRequests: this.performanceMetrics.totalRequests,
         totalAlerts: this.performanceMetrics.totalAlerts,
+        alertsSent: this.performanceMetrics.alertsSent,
+        duplicatesBlocked: this.performanceMetrics.duplicatesBlocked,
         cacheHits: this.performanceMetrics.cacheHits,
         cacheMisses: this.performanceMetrics.cacheMisses
       },
       sportSpecific: {
         basesLoadedSituations: this.performanceMetrics.basesLoadedSituations,
         seventhInningDetections: this.performanceMetrics.seventhInningDetections,
-        runnerScoringOpportunities: this.performanceMetrics.runnerScoringOpportunities
+        runnerScoringOpportunities: this.performanceMetrics.runnerScoringOpportunities,
+        activeGameTracking: this.sentAlerts.size,
+        totalTrackedAlerts: this.alertTimestamps.size
       },
       recentPerformance: {
         calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),
