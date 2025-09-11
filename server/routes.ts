@@ -213,15 +213,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         database: {
           connected: false,
-          error: null,
+          error: null as string | null,
           userCount: 0,
           tableCount: 0,
           alertPreferences: 0,
           monitoredTeams: 0,
-          name: null,
-          version: null,
+          name: null as string | null,
+          version: null as string | null,
           sampleUserExists: false,
-          sampleUser: null
+          sampleUser: null as any
         },
         session: {
           authenticated: !!req.session?.userId,
@@ -234,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasUserData: false,
           sessionWorking: false,
           issueDetected: true,
-          recommendations: []
+          recommendations: [] as string[]
         }
       };
 
