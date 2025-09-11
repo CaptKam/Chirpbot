@@ -174,8 +174,8 @@ export default function AlertsPage() {
         onSportChange={setFilter} 
       />
 
-      {/* Alerts Content */}
-      <div className="pb-8 space-y-4">
+      {/* Alerts Content - Responsive Grid */}
+      <div className="pb-8">
         {filteredAlerts.length === 0 ? (
           <Card className="bg-white/5 backdrop-blur-sm border-white/10">
             <CardContent className="p-8 text-center">
@@ -191,13 +191,14 @@ export default function AlertsPage() {
             </CardContent>
           </Card>
         ) : (
-          filteredAlerts.map((alert: Alert, index: number) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredAlerts.map((alert: Alert, index: number) => (
             <motion.div
               key={alert.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
+              transition={{ delay: index * 0.05 }}
+              className="flex flex-col h-full"
             >
               {shouldUseSimpleCard(alert.type) ? (
                 // Use Simple Card for basic alerts
@@ -214,7 +215,7 @@ export default function AlertsPage() {
                     createdAt: alert.createdAt,
                     context: alert.context
                   }}
-                  className="border-emerald-500/30"
+                  className="border-emerald-500/30 h-full"
                 />
               ) : (
                 // Use Complex Card for detailed game state alerts
@@ -266,11 +267,12 @@ export default function AlertsPage() {
                     betbookData: alert.context?.betbookData,
                     gameInfo: alert.context?.gameInfo
                   }}
-                  className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
+                  className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200 h-full"
                 />
               )}
             </motion.div>
-          ))
+          ))}
+          </div>
         )}
       </div>
       </div>

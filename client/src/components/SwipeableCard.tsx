@@ -766,16 +766,16 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           getAlertStatus(alertData.type, alertData.createdAt || '', liveGameData?.status).status === 'ACTIVE'
             ? 'border-emerald-500 shadow-emerald-500/20'
             : 'border-gray-500 shadow-gray-500/20'
-        } shadow-lg`} {...props}>
+        } shadow-lg hover:shadow-xl rounded-lg min-h-[160px] transition-all duration-200`} {...props}>
           {/* Render the redesigned alert card content here */}
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-6 relative" key={`alert-${alertData.id}-${Date.now()}`}>
+            <div className="p-4 relative flex flex-col" key={`alert-${alertData.id}-${Date.now()}`}>
 
-              {/* Clean Header - Calendar Page Style */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
+              {/* Clean Header - Fixed height */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2 flex-1">
                   <Badge
                     variant="outline"
                     className={`px-2 py-1 text-xs font-bold rounded-full ${getSportColors(alertData.sport || 'MLB').badge}`}
@@ -796,7 +796,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       </span>
                     </div>
                   )}
-                  <span className="text-slate-100 text-xs font-semibold uppercase tracking-wider">
+                  <span className="text-slate-100 text-xs font-semibold uppercase tracking-wider truncate max-w-[150px]">
                     {(() => {
                       // Dynamic alert type based on sport and context
                       if (alertData.sport === 'MLB') {
@@ -826,9 +826,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     })()}
                   </span>
                 </div>
-                <div className="flex items-center text-xs">
+                <div className="flex items-center text-xs whitespace-nowrap ml-2">
                   <Clock className="w-3 h-3 text-slate-200 mr-1" />
-                  <span className="text-slate-200 font-medium">
+                  <span className="text-slate-200 font-medium" data-testid="text-timestamp">
                     {(() => {
                       const alertTime = new Date(alertData.createdAt || '');
                       const now = new Date();
@@ -845,14 +845,14 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               {/* AI-Enhanced Title */}
               {alertData?.context?.aiTitle && (
                 <div className="mb-1">
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-base font-bold text-white line-clamp-1">
                     {alertData.context.aiTitle}
                   </h3>
                 </div>
               )}
 
-              {/* Game Card Template - Calendar Page Style with Live Scores */}
-              <div className="mb-4">
+              {/* Game Card Template - Fixed height section */}
+              <div className="mb-3 flex-1">
                 <GameCardTemplate
                   gameId={alertData.id}
                   homeTeam={{
@@ -890,12 +890,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               </div>
 
-              {/* Alert Message - Compact Design */}
-              <div className={`rounded-lg p-3 mb-3 border ${getSportColors(alertData.sport || 'MLB').alertBg} ${getSportColors(alertData.sport || 'MLB').alertBorder}`}>
+              {/* Alert Message - Compact Design with line clamp */}
+              <div className={`rounded-lg p-3 mb-2 border ${getSportColors(alertData.sport || 'MLB').alertBg} ${getSportColors(alertData.sport || 'MLB').alertBorder}`}>
                 {/* Main Alert Message with Compact Typography */}
                 <div className="text-center">
                   {/* Main Situation - Clean and Simple */}
-                  <p className="text-white text-sm font-semibold leading-tight">
+                  <p className="text-white text-sm font-semibold leading-tight line-clamp-2">
                     {(() => {
                       let message = alertData.message || '';
 
@@ -952,12 +952,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                 )}
 
-                {/* AI Insights - Enhanced */}
+                {/* AI Insights - Enhanced with line clamp */}
                 {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
                   <div className="mt-2 p-2 bg-blue-500/15 rounded-lg border border-blue-400/30">
                     <div className="space-y-1">
                       {alertData.context.aiInsights.map((insight: string, idx: number) => (
-                        <p key={idx} className="text-xs text-blue-200 leading-relaxed text-center">
+                        <p key={idx} className="text-xs text-blue-200 leading-relaxed text-center line-clamp-2">
                           {insight}
                         </p>
                       ))}
@@ -968,8 +968,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               {/* AI Call to Action */}
               {alertData?.context?.aiCallToAction && (
-                <div className="mb-1 p-1.5 bg-green-500/10 rounded border border-green-500/30">
-                  <p className="text-xs font-medium text-green-300">
+                <div className="mt-auto p-1.5 bg-green-500/10 rounded border border-green-500/30">
+                  <p className="text-xs font-medium text-green-300 line-clamp-1">
                     {alertData.context.aiCallToAction}
                   </p>
                 </div>

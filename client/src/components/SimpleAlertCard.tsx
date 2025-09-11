@@ -299,7 +299,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   }, []);
 
   return (
-    <div className="relative overflow-hidden rounded-xl mx-2 sm:mx-0">
+    <div className="relative overflow-hidden rounded-lg mx-2 sm:mx-0">
       {/* Sportsbooks Panel (Left Swipe) */}
       <div className={`absolute inset-y-0 right-0 w-60 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -316,11 +316,13 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                   }}
                   className="h-11 w-11 sm:h-10 sm:w-10 p-1 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20 touch-manipulation"
                   style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
+                  data-testid={`button-sportsbook-${sportsbook.name.toLowerCase()}`}
                 >
                   <img
                     src={sportsbook.logo}
                     alt={sportsbook.name}
                     className="w-full h-full rounded object-contain"
+                    data-testid={`img-sportsbook-logo-${sportsbook.name.toLowerCase()}`}
                   />
                 </Button>
                 <span className="text-xs text-white/80 font-medium">{sportsbook.name}</span>
@@ -341,6 +343,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           }}
           disabled={isDeleting}
           className="h-12 w-12 p-0 rounded-full bg-red-500/20 ring-1 ring-red-500/30"
+          data-testid="button-delete-alert"
         >
           <Trash2 className="w-5 h-5 text-red-400" />
         </Button>
@@ -371,7 +374,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           ).status === 'ACTIVE' 
             ? 'border-emerald-500 shadow-emerald-500/20' 
             : 'border-gray-500/50 shadow-gray-500/10'
-        } shadow-lg rounded-xl`}>
+        } shadow-lg hover:shadow-xl rounded-lg min-h-[120px]`}>
 
           <GameCardTemplate
             gameId={alert.id}
@@ -398,17 +401,35 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           </GameCardTemplate>
 
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
-          <div className="p-4 pt-0">
+          <div className="p-4 pt-0 flex flex-col">
 
-            {/* Alert Message - Simple */}
+            {/* Alert Message - Limited height with line clamp */}
             <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
-              <p className="text-slate-100 text-base font-medium leading-relaxed">
+              <p className="text-slate-100 text-base font-medium leading-relaxed line-clamp-2">
                 {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
               </p>
             </div>
 
-
-
+            {/* Priority/Confidence Badges - Bottom Footer */}
+            <div className="flex items-center justify-between mt-auto">
+              <div className="flex gap-2">
+                {alert.priority >= 80 && (
+                  <Badge variant="destructive" className="text-xs" data-testid="badge-high-priority">
+                    High Priority
+                  </Badge>
+                )}
+                {alert.confidence && alert.confidence > 70 && (
+                  <Badge variant="secondary" className="text-xs" data-testid="badge-confidence">
+                    {Math.round(alert.confidence)}%
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Timestamp */}
+              <span className="text-xs text-slate-500 whitespace-nowrap" data-testid="text-timestamp">
+                {formatTime(alert.createdAt)}
+              </span>
+            </div>
 
           </div>
         </div>

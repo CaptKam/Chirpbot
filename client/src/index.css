@@ -210,4 +210,62 @@
   .badge-sport {
     @apply bg-purple-100 text-purple-800 font-bold uppercase tracking-wide px-3 py-1 rounded-full text-sm;
   }
+
+  /* Global Card Styles for Consistency */
+  .card-standard {
+    @apply rounded-lg shadow-lg hover:shadow-xl transition-all duration-200;
+  }
+
+  .card-min-height-sm {
+    @apply min-h-[120px];
+  }
+
+  .card-min-height-md {
+    @apply min-h-[160px];
+  }
+
+  .card-min-height-lg {
+    @apply min-h-[200px];
+  }
+
+  /* Text Truncation Utilities */
+  .text-truncate-1 {
+    @apply truncate;
+  }
+
+  .text-truncate-2 {
+    @apply line-clamp-2;
+  }
+
+  .text-truncate-3 {
+    @apply line-clamp-3;
+  }
+
+  /* Responsive Grid Utilities */
+  .alert-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4;
+  }
+
+  /* Information Hierarchy */
+  .text-score {
+    @apply text-2xl font-bold;
+  }
+
+  .text-team {
+    @apply text-sm font-medium truncate;
+  }
+
+  .text-metric {
+    @apply text-xs font-semibold;
+  }
+
+  /* Card Padding Standards */
+  .card-padding {
+    @apply p-4;
+  }
+
+  /* Section Dividers */
+  .section-divider {
+    @apply border-t border-white/10 my-2;
+  }
 }
