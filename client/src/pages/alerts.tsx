@@ -170,7 +170,7 @@ export default function AlertsPage() {
       {/* Filter Tabs */}
       <SportTabs 
         sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
-        selectedSport={filter} 
+        activeSport={filter} 
         onSportChange={setFilter} 
       />
 
