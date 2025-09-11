@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize Async AI Processor for background AI enhancement
   const { asyncAIProcessor } = await import('./services/async-ai-processor');
-  
+
   // Set up callback for broadcasting enhanced alerts via WebSocket
   asyncAIProcessor.setOnEnhancedAlert(async (enhancedAlert, userId, sport, wasActuallyEnhanced) => {
     try {
@@ -1542,7 +1542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/v3/performance-metrics', requireAuthentication, async (req, res) => {
     try {
       console.log('📊 V3 Performance Metrics requested');
-      
+
       // Import all sport engines
       const { MLBEngine } = await import('./services/engines/mlb-engine');
       const { NFLEngine } = await import('./services/engines/nfl-engine');
@@ -1554,7 +1554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Instantiate engines to get their performance metrics
       const engines = {
         mlb: new MLBEngine(),
-        nfl: new NFLEngine(), 
+        nfl: new NFLEngine(),
         nba: new NBAEngine(),
         ncaaf: new NCAAFEngine(),
         cfl: new CFLEngine(),
@@ -1584,7 +1584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const metrics = engine.getPerformanceMetrics();
           sportMetrics[sport.toUpperCase()] = metrics;
-          
+
           // Handle different metric structures - normalize data access
           let totalRequests = 0;
           let totalAlerts = 0;
@@ -1592,7 +1592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let cacheMisses = 0;
           let avgResponseTime = 0;
           let cacheHitRate = 0;
-          
+
           if ((metrics as any).performance) {
             // Structured format (MLB, NBA, NFL, etc.)
             totalRequests = (metrics as any).performance.totalRequests || 0;
@@ -1610,22 +1610,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             avgResponseTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
             cacheHitRate = (metrics as any).cacheHitRate || 0;
           }
-          
+
           // Aggregate statistics
           aggregatedStats.totalRequests += totalRequests;
           aggregatedStats.totalAlerts += totalAlerts;
           aggregatedStats.totalCacheHits += cacheHits;
           aggregatedStats.totalCacheMisses += cacheMisses;
-          
+
           // Collect response times for distribution
           responseTimes.push(avgResponseTime);
           aggregatedStats.cacheHitRates.push(cacheHitRate);
           aggregatedStats.alertRates.push(
-            totalRequests > 0 
-              ? (totalAlerts / totalRequests) * 100 
+            totalRequests > 0
+              ? (totalAlerts / totalRequests) * 100
               : 0
           );
-          
+
           totalEngines++;
         } catch (error) {
           console.error(`Error getting metrics for ${sport}:`, error);
@@ -1647,8 +1647,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate overall cache hit rate
       const totalCacheRequests = aggregatedStats.totalCacheHits + aggregatedStats.totalCacheMisses;
-      const overallCacheHitRate = totalCacheRequests > 0 
-        ? (aggregatedStats.totalCacheHits / totalCacheRequests) * 100 
+      const overallCacheHitRate = totalCacheRequests > 0
+        ? (aggregatedStats.totalCacheHits / totalCacheRequests) * 100
         : 0;
 
       // V3 Optimization Achievement Tracking
@@ -1660,7 +1660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             responseTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
           }
-          
+
           return {
             sport,
             achieved: responseTime < 250,
@@ -1676,14 +1676,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             avgTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
           }
-          
+
           let grade = 'F';
           if (avgTime < 100) grade = 'A+';
           else if (avgTime < 150) grade = 'A';
           else if (avgTime < 200) grade = 'B';
           else if (avgTime < 250) grade = 'C';
           else if (avgTime < 300) grade = 'D';
-          
+
           return { sport, grade, responseTime: avgTime };
         })
       };
@@ -1741,7 +1741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response);
     } catch (error) {
       console.error('V3 Performance Metrics API error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to retrieve performance metrics',
         timestamp: new Date().toISOString()
       });
@@ -1752,7 +1752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/v3-performance-metrics', requireAuthentication, async (req, res) => {
     try {
       console.log('🤖 V3-17 AI Enhancement Performance Metrics requested');
-      
+
       // Import all sport engines and AsyncAIProcessor singleton
       const { MLBEngine } = await import('./services/engines/mlb-engine');
       const { NFLEngine } = await import('./services/engines/nfl-engine');
@@ -1765,7 +1765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Instantiate engines but use LIVE AsyncAI singleton
       const engines = {
         MLB: new MLBEngine(),
-        NFL: new NFLEngine(), 
+        NFL: new NFLEngine(),
         NBA: new NBAEngine(),
         NCAAF: new NCAAFEngine(),
         CFL: new CFLEngine(),
@@ -1803,16 +1803,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const [sport, engine] of Object.entries(engines)) {
         try {
           const metrics = (engine as any).performanceMetrics || {};
-          
+
           // Calculate standard performance metrics
           const avgAlertTime = metrics.alertGenerationTime?.length > 0
             ? metrics.alertGenerationTime.reduce((a: number, b: number) => a + b, 0) / metrics.alertGenerationTime.length
             : 0;
-          
+
           const avgEnhanceTime = metrics.enhanceDataTime?.length > 0
             ? metrics.enhanceDataTime.reduce((a: number, b: number) => a + b, 0) / metrics.enhanceDataTime.length
             : 0;
-            
+
           const avgProbTime = metrics.probabilityCalculationTime?.length > 0
             ? metrics.probabilityCalculationTime.reduce((a: number, b: number) => a + b, 0) / metrics.probabilityCalculationTime.length
             : 0;
@@ -1823,7 +1823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : 0;
 
           const totalResponseTime = avgAlertTime + avgEnhanceTime + avgProbTime + aiEnhancementTime;
-          const cacheHitRate = metrics.totalRequests > 0 
+          const cacheHitRate = metrics.totalRequests > 0
             ? (metrics.cacheHits || 0) / metrics.totalRequests * 100
             : 0;
 
@@ -1879,7 +1879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               })
             }
           };
-          
+
           // Aggregate stats
           aggregatedStats.totalRequests += metrics.totalRequests || 0;
           aggregatedStats.totalAlerts += metrics.totalAlerts || 0;
@@ -1888,7 +1888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           aggregatedStats.totalAIEnhanced += metrics.enhancedAlerts || 0;
           aggregatedStats.totalAITimeouts += metrics.aiTimeouts || 0;
           aggregatedStats.totalAIFailed += metrics.aiFailures || 0;
-          
+
         } catch (engineError) {
           console.error(`Error getting AI metrics for ${sport}:`, engineError);
           sportMetrics[sport] = {
@@ -1930,10 +1930,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (totalEngines > 0) {
         const avgTimes = Object.values(sportMetrics).map(m => (m as any).performance.avgResponseTime);
         aggregatedStats.avgResponseTime = avgTimes.reduce((a, b) => a + b, 0) / totalEngines;
-        
+
         const aiTimes = Object.values(sportMetrics).map(m => (m as any).aiEnhancement.avgProcessingTime);
         aggregatedStats.avgAIEnhancementTime = aiTimes.reduce((a, b) => a + b, 0) / totalEngines;
-        
+
         aggregatedStats.overallAIUsageRate = aggregatedStats.totalRequests > 0
           ? (aggregatedStats.totalAIEnhanced / aggregatedStats.totalRequests) * 100
           : 0;
@@ -1957,14 +1957,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           else if (responseTime < 250) grade = 'B';
           else if (responseTime < 300) grade = 'C';
           else if (responseTime < 400) grade = 'D';
-          
+
           return { sport, grade, responseTime };
         }),
         aiOptimizations: {
           gatingEnabled: true,
           costSavingsEstimate: '35%',
-          highValueTargeting: Object.keys(highValueAlertTypes).length,
-          processingEfficiency: aggregatedStats.totalAITimeouts + aggregatedStats.totalAIFailed === 0 ? 100 : 
+          highValueAlertTargeting: Object.keys(highValueAlertTypes).length,
+          processingEfficiency: aggregatedStats.totalAITimeouts + aggregatedStats.totalAIFailed === 0 ? 100 :
             ((aggregatedStats.totalAIEnhanced) / (aggregatedStats.totalAIEnhanced + aggregatedStats.totalAITimeouts + aggregatedStats.totalAIFailed)) * 100
         }
       };
@@ -1972,49 +1972,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // System health with AI monitoring
       const systemHealth = {
         activeEngines: totalEngines,
-        healthyEngines: Object.values(sportMetrics).filter(m => 
-          (m as any).performance.avgResponseTime < 500 && 
+        healthyEngines: Object.values(sportMetrics).filter(m =>
+          (m as any).performance.avgResponseTime < 500 &&
           (m as any).aiEnhancement.timeoutRate < 10
         ).length,
-        overallHealth: totalEngines > 0 ? (Object.values(sportMetrics).filter(m => 
-          (m as any).performance.avgResponseTime < 500 && 
+        overallHealth: totalEngines > 0 ? (Object.values(sportMetrics).filter(m =>
+          (m as any).performance.avgResponseTime < 500 &&
           (m as any).aiEnhancement.timeoutRate < 10
         ).length / totalEngines) * 100 : 0,
-        memoryEfficiency: aggregatedStats.totalRequests > 0 
-          ? (aggregatedStats.totalCacheHits / aggregatedStats.totalRequests) * 100 
+        memoryEfficiency: aggregatedStats.totalRequests > 0
+          ? (aggregatedStats.totalCacheHits / aggregatedStats.totalRequests) * 100
           : 0,
-        alertGenerationEfficiency: aggregatedStats.totalRequests > 0 
-          ? (aggregatedStats.totalAlerts / aggregatedStats.totalRequests) * 100 
+        alertGenerationEfficiency: aggregatedStats.totalRequests > 0
+          ? (aggregatedStats.totalAlerts / aggregatedStats.totalRequests) * 100
           : 0,
         aiSystemHealth: {
-          overallSuccessRate: aggregatedStats.totalRequests > 0 
-            ? (aggregatedStats.totalAIEnhanced / aggregatedStats.totalRequests) * 100 
+          overallSuccessRate: aggregatedStats.totalRequests > 0
+            ? (aggregatedStats.totalAIEnhanced / aggregatedStats.totalRequests) * 100
             : 0,
           avgLatency: aggregatedStats.avgAIEnhancementTime,
-          timeoutRate: aggregatedStats.totalRequests > 0 
-            ? (aggregatedStats.totalAITimeouts / aggregatedStats.totalRequests) * 100 
+          timeoutRate: aggregatedStats.totalRequests > 0
+            ? (aggregatedStats.totalAITimeouts / aggregatedStats.totalRequests) * 100
             : 0,
-          failureRate: aggregatedStats.totalRequests > 0 
-            ? (aggregatedStats.totalAIFailed / aggregatedStats.totalRequests) * 100 
+          failureRate: aggregatedStats.totalRequests > 0
+            ? (aggregatedStats.totalAIFailed / aggregatedStats.totalRequests) * 100
             : 0
         }
       };
 
       // Performance warnings with AI focus
       const performanceWarnings = Object.entries(sportMetrics)
-        .filter(([sport, metrics]) => 
-          (metrics as any).performance.avgResponseTime > 300 || 
+        .filter(([sport, metrics]) =>
+          (metrics as any).performance.avgResponseTime > 300 ||
           (metrics as any).aiEnhancement.timeoutRate > 15
         )
         .map(([sport, metrics]) => ({
           sport,
-          warning: (metrics as any).performance.avgResponseTime > 300 
+          warning: (metrics as any).performance.avgResponseTime > 300
             ? 'High response time detected'
             : 'High AI timeout rate detected',
           responseTime: (metrics as any).performance.avgResponseTime,
           aiTimeoutRate: (metrics as any).aiEnhancement.timeoutRate,
-          severity: (metrics as any).performance.avgResponseTime > 500 || (metrics as any).aiEnhancement.timeoutRate > 25 
-            ? 'high' as const 
+          severity: (metrics as any).performance.avgResponseTime > 500 || (metrics as any).aiEnhancement.timeoutRate > 25
+            ? 'high' as const
             : 'medium' as const
         }));
 
@@ -2365,8 +2365,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Overall Health Score
       const totalChecks = Object.keys(debugResults.database).length +
-                         Object.keys(debugResults.services).length +
-                         Object.keys(debugResults.endpoints).length;
+        Object.keys(debugResults.services).length +
+        Object.keys(debugResults.endpoints).length;
       const errorCount = debugResults.errors.length;
       const healthScore = Math.max(0, Math.round(((totalChecks - errorCount) / totalChecks) * 100));
 
@@ -2375,8 +2375,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalErrors: errorCount,
         status: errorCount === 0 ? 'HEALTHY' : errorCount < 5 ? 'DEGRADED' : 'CRITICAL',
         recommendation: errorCount === 0 ? 'System is operating normally' :
-                       errorCount < 5 ? 'Minor issues detected, monitor closely' :
-                       'Critical issues require immediate attention'
+          errorCount < 5 ? 'Minor issues detected, monitor closely' :
+            'Critical issues require immediate attention'
       };
 
       res.json(debugResults);
@@ -2529,7 +2529,276 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin-auth/logout', (req, res) => {
+  // WNBA Debug endpoint
+  app.get('/api/debug/wnba', async (req, res) => {
+    try {
+      console.log('🔍 WNBA Debug Request');
+
+      // Check if user is authenticated
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      // Get WNBA games
+      const { WNBAApiService } = await import('./services/wnba-api');
+      const wnbaApi = new WNBAApiService();
+      const games = await wnbaApi.getTodaysGames();
+
+      // Get user WNBA preferences
+      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'WNBA');
+      const enabledTypes = userPrefs
+        .filter(pref => pref.enabled)
+        .map(pref => pref.alertType);
+
+      // Check WNBA engine status
+      const { WNBAEngine } = await import('./services/engines/wnba-engine');
+      const wnbaEngine = new WNBAEngine();
+      const availableTypes = await wnbaEngine.getAvailableAlertTypes();
+
+      // Get recent WNBA alerts
+      const recentAlerts = await storage.getRecentAlerts('WNBA', 10);
+
+      const debugInfo = {
+        userId,
+        games: games.length,
+        gamesData: games,
+        userPreferences: {
+          total: userPrefs.length,
+          enabled: enabledTypes.length,
+          enabledTypes
+        },
+        availableAlertTypes: availableTypes,
+        recentAlerts: recentAlerts.length,
+        systemStatus: 'WNBA Debug Complete'
+      };
+
+      console.log('🏀 WNBA Debug Results:', debugInfo);
+      res.json(debugInfo);
+    } catch (error) {
+      console.error('❌ WNBA Debug error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // V3 Performance Dashboard endpoint
+  app.get('/api/v3/performance', async (req, res) => {
+    try {
+      console.log('📊 V3 Performance Metrics requested');
+
+      // Import all sport engines
+      const { MLBEngine } = await import('./services/engines/mlb-engine');
+      const { NFLEngine } = await import('./services/engines/nfl-engine');
+      const { NBAEngine } = await import('./services/engines/nba-engine');
+      const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+      const { CFLEngine } = await import('./services/engines/cfl-engine');
+      const { WNBAEngine } = await import('./services/engines/wnba-engine');
+
+      // Instantiate engines to get their performance metrics
+      const engines = {
+        mlb: new MLBEngine(),
+        nfl: new NFLEngine(),
+        nba: new NBAEngine(),
+        ncaaf: new NCAAFEngine(),
+        cfl: new CFLEngine(),
+        wnba: new WNBAEngine()
+      };
+
+      // Collect performance metrics from all engines
+      const sportMetrics: Record<string, any> = {};
+      const aggregatedStats = {
+        totalRequests: 0,
+        totalAlerts: 0,
+        totalCacheHits: 0,
+        totalCacheMisses: 0,
+        avgResponseTime: 0,
+        avgCalculationTime: 0,
+        avgAlertGenerationTime: 0,
+        avgEnhancementTime: 0,
+        responseTimeDistribution: [] as number[],
+        cacheHitRates: [] as number[],
+        alertRates: [] as number[]
+      };
+
+      let totalEngines = 0;
+      const responseTimes: number[] = [];
+      const sportsToMonitor = ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA'];
+
+      for (const sport of sportsToMonitor) {
+        try {
+          const engine = engines[sport.toLowerCase() as keyof typeof engines];
+          if (!engine) {
+            console.warn(`Engine not found for sport: ${sport}`);
+            continue;
+          }
+          const metrics = engine.getPerformanceMetrics();
+          sportMetrics[sport.toUpperCase()] = metrics;
+
+          // Handle different metric structures - normalize data access
+          let totalRequests = 0;
+          let totalAlerts = 0;
+          let cacheHits = 0;
+          let cacheMisses = 0;
+          let avgResponseTime = 0;
+          let cacheHitRate = 0;
+
+          if ((metrics as any).performance) {
+            // Structured format (MLB, NBA, NFL, etc.)
+            totalRequests = (metrics as any).performance.totalRequests || 0;
+            totalAlerts = (metrics as any).performance.totalAlerts || 0;
+            cacheHits = (metrics as any).performance.cacheHits || 0;
+            cacheMisses = (metrics as any).performance.cacheMisses || 0;
+            avgResponseTime = (metrics as any).performance.avgResponseTime || 0;
+            cacheHitRate = (metrics as any).performance.cacheHitRate || 0;
+          } else {
+            // Flattened format (NCAAF, etc.)
+            totalRequests = (metrics as any).totalRequests || 0;
+            totalAlerts = (metrics as any).totalAlerts || 0;
+            cacheHits = (metrics as any).cacheHits || 0;
+            cacheMisses = (metrics as any).cacheMisses || 0;
+            avgResponseTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
+            cacheHitRate = (metrics as any).cacheHitRate || 0;
+          }
+
+          // Aggregate statistics
+          aggregatedStats.totalRequests += totalRequests;
+          aggregatedStats.totalAlerts += totalAlerts;
+          aggregatedStats.totalCacheHits += cacheHits;
+          aggregatedStats.totalCacheMisses += cacheMisses;
+
+          // Collect response times for distribution
+          responseTimes.push(avgResponseTime);
+          aggregatedStats.cacheHitRates.push(cacheHitRate);
+          aggregatedStats.alertRates.push(
+            totalRequests > 0
+              ? (totalAlerts / totalRequests) * 100
+              : 0
+          );
+
+          totalEngines++;
+        } catch (error) {
+          console.error(`Error getting metrics for ${sport}:`, error);
+          sportMetrics[sport.toUpperCase()] = {
+            sport: sport.toUpperCase(),
+            performance: { error: 'Metrics unavailable' },
+            sportSpecific: {},
+            recentPerformance: {}
+          };
+        }
+      }
+
+      // Calculate aggregated averages
+      if (totalEngines > 0) {
+        aggregatedStats.avgResponseTime = responseTimes.reduce((a, b) => a + b, 0) / totalEngines;
+        aggregatedStats.avgCalculationTime = responseTimes.filter(t => t > 0).reduce((a, b) => a + b, 0) / Math.max(1, responseTimes.filter(t => t > 0).length);
+        aggregatedStats.responseTimeDistribution = responseTimes;
+      }
+
+      // Calculate overall cache hit rate
+      const totalCacheRequests = aggregatedStats.totalCacheHits + aggregatedStats.totalCacheMisses;
+      const overallCacheHitRate = totalCacheRequests > 0
+        ? (aggregatedStats.totalCacheHits / totalCacheRequests) * 100
+        : 0;
+
+      // V3 Optimization Achievement Tracking
+      const v3Achievements = {
+        sub250msTargets: Object.entries(sportMetrics).map(([sport, metrics]: [string, any]) => {
+          let responseTime = 0;
+          if ((metrics as any).performance?.avgResponseTime !== undefined) {
+            responseTime = (metrics as any).performance.avgResponseTime;
+          } else {
+            responseTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
+          }
+
+          return {
+            sport,
+            achieved: responseTime < 250,
+            responseTime,
+            target: 250
+          };
+        }),
+        overallV3Success: responseTimes.filter(t => t < 250).length / Math.max(1, responseTimes.length) * 100,
+        performanceGrades: Object.entries(sportMetrics).map(([sport, metrics]: [string, any]) => {
+          let avgTime = 0;
+          if ((metrics as any).performance?.avgResponseTime !== undefined) {
+            avgTime = (metrics as any).performance.avgResponseTime;
+          } else {
+            avgTime = ((metrics as any).averageAlertGenerationTime || 0) + ((metrics as any).averageEnhanceDataTime || 0) + ((metrics as any).averageProbabilityCalculationTime || 0);
+          }
+
+          let grade = 'F';
+          if (avgTime < 100) grade = 'A+';
+          else if (avgTime < 150) grade = 'A';
+          else if (avgTime < 200) grade = 'B';
+          else if (avgTime < 250) grade = 'C';
+          else if (avgTime < 300) grade = 'D';
+
+          return { sport, grade, responseTime: avgTime };
+        })
+      };
+
+      // System health indicators
+      const systemHealth = {
+        activeEngines: totalEngines,
+        healthyEngines: Object.values(sportMetrics).filter((m: any) => {
+          return !(m.performance?.error || m.error);
+        }).length,
+        overallHealth: totalEngines > 0 ? (Object.values(sportMetrics).filter((m: any) => {
+          return !(m.performance?.error || m.error);
+        }).length / totalEngines) * 100 : 0,
+        memoryEfficiency: overallCacheHitRate,
+        alertGenerationEfficiency: aggregatedStats.totalRequests > 0 ? (aggregatedStats.totalAlerts / aggregatedStats.totalRequests) * 100 : 0
+      };
+
+      // Real-time performance warnings
+      const performanceWarnings: any[] = [];
+      responseTimes.forEach((time, index) => {
+        const sport = sportsToMonitor[index];
+        if (time > 250) {
+          performanceWarnings.push({
+            sport: sport.toUpperCase(),
+            warning: 'Response time exceeds 250ms target',
+            responseTime: time,
+            severity: time > 500 ? 'high' : 'medium'
+          });
+        }
+      });
+
+      const response = {
+        timestamp: new Date().toISOString(),
+        summary: {
+          totalSports: totalEngines,
+          totalSportsMonitored: sportsToMonitor.length,
+          totalRequests: aggregatedStats.totalRequests,
+          totalAlerts: aggregatedStats.totalAlerts,
+          avgResponseTime: Math.round(aggregatedStats.avgResponseTime * 100) / 100,
+          overallCacheHitRate: Math.round(overallCacheHitRate * 100) / 100,
+          v3OptimizationSuccess: Math.round(v3Achievements.overallV3Success * 100) / 100
+        },
+        sportMetrics,
+        aggregatedStats,
+        v3Achievements,
+        systemHealth,
+        performanceWarnings,
+        recommendations: [
+          ...(aggregatedStats.avgResponseTime > 200 ? ['Consider implementing additional caching strategies'] : []),
+          ...(overallCacheHitRate < 80 ? ['Optimize cache strategies to improve hit rates'] : []),
+          ...(performanceWarnings.length > 0 ? ['Address high response time warnings in flagged sports'] : []),
+          ...(v3Achievements.overallV3Success < 80 ? ['Focus on V3 optimization improvements for sub-250ms targets'] : [])
+        ]
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('V3 Performance Metrics API error:', error);
+      res.status(500).json({
+        error: 'Failed to retrieve performance metrics',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  app.post('/api/admin/logout', (req, res) => {
     req.session.adminUserId = undefined;
     res.json({ message: 'Admin logout successful' });
   });
@@ -2554,7 +2823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const cookieHeader = req.headers.cookie || 'none';
     const hasCbSid = cookieHeader.includes('cb.sid');
     const hasConnectSid = cookieHeader.includes('connect.sid');
-    
+
     res.json({
       host: req.hostname,
       origin: req.headers.origin || 'none',
@@ -3005,23 +3274,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import and collect metrics from all V3 services
       const { adaptivePollingManager } = await import('./services/adaptive-polling-manager');
-      
+
       // Get comprehensive V3 performance data
       const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
       const pollingStats = adaptivePollingManager.getPollingStatistics();
-      
+
       // Calculate system health indicators
-      const avgProcessingTime = aiMetrics.avgProcessingTime.length > 0 
+      const avgProcessingTime = aiMetrics.avgProcessingTime.length > 0
         ? Math.round(aiMetrics.avgProcessingTime.reduce((a, b) => a + b, 0) / aiMetrics.avgProcessingTime.length)
         : 0;
-      
-      const cacheHitRate = (aiMetrics.cacheHits + aiMetrics.cacheMisses) > 0 
+
+      const cacheHitRate = (aiMetrics.cacheHits + aiMetrics.cacheMisses) > 0
         ? Math.round((aiMetrics.cacheHits / (aiMetrics.cacheHits + aiMetrics.cacheMisses)) * 100)
         : 0;
-      
-      const systemHealthScore = Math.min(100, Math.max(0, 
-        100 - (aiMetrics.failedJobs / Math.max(1, aiMetrics.totalJobs) * 50) - 
-        (avgProcessingTime > 250 ? 20 : 0) + 
+
+      const systemHealthScore = Math.min(100, Math.max(0,
+        100 - (aiMetrics.failedJobs / Math.max(1, aiMetrics.totalJobs) * 50) -
+        (avgProcessingTime > 250 ? 20 : 0) +
         (cacheHitRate > 80 ? 15 : 0)
       ));
 
@@ -3080,9 +3349,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(v3Metrics);
     } catch (error: any) {
       console.error('Error fetching V3 performance metrics:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to fetch V3 performance metrics',
-        details: error.message 
+        details: error.message
       });
     }
   });

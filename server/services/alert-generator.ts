@@ -137,7 +137,7 @@ export class AlertGenerator {
 
   // Sport-specific engines
   private sportEngines: Map<string, BaseSportEngine>;
-  
+
   // Adaptive polling managers for different sports
   private adaptivePollingManagers: Map<string, AdaptivePollingManager>;
 
@@ -160,14 +160,14 @@ export class AlertGenerator {
 
     // Initialize adaptive polling managers for each sport
     this.adaptivePollingManagers = new Map();
-    
+
     // MLB adaptive polling manager
     this.adaptivePollingManagers.set('MLB', new AdaptivePollingManager('MLB', { MLB: this.mlbApi }));
-    
+
     // NCAAF adaptive polling manager (V3-7)
     this.adaptivePollingManagers.set('NCAAF', new AdaptivePollingManager('NCAAF', { NCAAF: this.ncaafApi }));
     console.log('🏈 NCAAF AdaptivePollingManager initialized with V3-7 intervals');
-    
+
     // NFL adaptive polling manager - initialize NFL API dynamically when needed
     this.initializeNFLPollingManager();
   }
@@ -725,7 +725,7 @@ export class AlertGenerator {
 
     // Destructure game to exclude homeTeam and awayTeam objects
     const { homeTeam: _, awayTeam: __, homeScore: ___, awayScore: ____, ...otherGameFields } = game;
-    
+
     const gameState: GameState = {
       gameId,
       sport,
@@ -1204,8 +1204,15 @@ export class AlertGenerator {
       console.log(`✅ Found ${games.length} live games for ${sport}.`);
     }
 
-    // Process alerts for each game using the appropriate engine
-    let totalAlerts = 0;
+    // Debug WNBA games specifically
+    if (sport === 'WNBA' && games.length > 0) {
+      console.log(`🏀 WNBA Games Found: ${games.length}`);
+      games.forEach((game, index) => {
+        console.log(`  Game ${index + 1}: ${game.awayTeam} @ ${game.homeTeam} - Status: ${game.status} - Live: ${game.isLive}`);
+      });
+    }
+
+    // Process each live game
     for (const game of games) {
       try {
         const gameState = this.normalizeGameState(game, sport);
