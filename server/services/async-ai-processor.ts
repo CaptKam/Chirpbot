@@ -52,13 +52,17 @@ export class AsyncAIProcessor {
   // High-value alert types that benefit most from AI enhancement (V3-17 Gating)
   private highValueAlertTypes: Record<string, string[]> = {
     'MLB': [
+      'MLB_GAME_START',
       'MLB_BASES_LOADED_NO_OUTS',
       'MLB_BASES_LOADED_ONE_OUT', 
       'MLB_FIRST_AND_THIRD_NO_OUTS',
       'MLB_RUNNER_ON_THIRD_NO_OUTS',
       'MLB_SECOND_AND_THIRD_NO_OUTS',
       'MLB_RUNNER_ON_THIRD_ONE_OUT',
-      'MLB_SECOND_AND_THIRD_ONE_OUT'
+      'MLB_SECOND_AND_THIRD_ONE_OUT',
+      'MLB_SEVENTH_INNING_STRETCH',
+      'MLB_BATTER_DUE',
+      'MLB_STEAL_LIKELIHOOD'
     ],
     'NFL': [
       'NFL_RED_ZONE',
@@ -121,7 +125,7 @@ export class AsyncAIProcessor {
     const isHighValue = highValueTypes.includes(alertType);
     
     // Additional criteria for gating
-    const meetsThreshold = !probability || probability >= 75; // Only enhance high-probability events (0-100 scale)
+    const meetsThreshold = !probability || probability >= 50; // Only enhance medium+ probability events (0-100 scale)
     
     const shouldEnhance = isHighValue && meetsThreshold;
     
