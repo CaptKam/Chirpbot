@@ -773,9 +773,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
           {alertData ? (
             <div className="p-6 relative" key={`alert-${alertData.id}-${Date.now()}`}>
 
-              {/* Clean Header - Calendar Page Style */}
+              {/* Clean Header - Calendar Page Style with Proper Spacing */}
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge
                     variant="outline"
                     className={`px-2 py-1 text-xs font-bold rounded-full ${getSportColors(alertData.sport || 'MLB').badge}`}
@@ -826,8 +826,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     })()}
                   </span>
                 </div>
-                <div className="flex items-center text-xs">
-                  <Clock className="w-3 h-3 text-slate-200 mr-1" />
+                <div className="flex items-center gap-1 text-xs">
+                  <Clock className="w-3 h-3 text-slate-200" />
                   <span className="text-slate-200 font-medium">
                     {(() => {
                       const alertTime = new Date(alertData.createdAt || '');
@@ -842,14 +842,41 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* AI-Enhanced Title */}
-              {alertData?.context?.aiTitle && (
-                <div className="mb-1">
-                  <p className="text-base font-bold text-white">
-                    {alertData.context.aiTitle}
-                  </p>
-                </div>
-              )}
+              {/* V3 Alert Message Display */}
+              {(() => {
+                // Cast payload properly - it's a JSON field containing the message
+                const payload = (alertData as any)?.payload;
+                const v3Message = payload?.message;
+                console.log('🔍 V3 Message Debug:', { 
+                  alertId: alertData?.id, 
+                  hasPayload: !!payload,
+                  payloadKeys: payload ? Object.keys(payload) : [],
+                  v3Message 
+                });
+                
+                if (v3Message) {
+                  return (
+                    <div className="mb-3">
+                      <p className="text-base md:text-lg font-medium leading-snug text-white" data-testid="text-alert-message">
+                        {v3Message}
+                      </p>
+                    </div>
+                  );
+                }
+                
+                // Fallback to AI title if available
+                if (alertData?.context?.aiTitle) {
+                  return (
+                    <div className="mb-1">
+                      <p className="text-base font-bold text-white">
+                        {alertData.context.aiTitle}
+                      </p>
+                    </div>
+                  );
+                }
+                
+                return null;
+              })()}
 
               {/* Game Card Template - Calendar Page Style with Live Scores */}
               <div className="mb-4">
