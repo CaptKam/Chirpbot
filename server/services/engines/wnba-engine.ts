@@ -4,9 +4,21 @@ import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
 import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
+import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class WNBAEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private lineMovementCache: Map<string, any> = new Map(); // Track line movements
+  
+  // Deduplication tracking - tracks sent alerts to prevent duplicates
+  private sentAlerts: Map<string, Set<string>> = new Map(); // gameId -> Set of alertKeys
+  private alertTimestamps: Map<string, number> = new Map(); // alertKey -> timestamp
+  private lastCleanup: number = Date.now();
+  private readonly ALERT_COOLDOWN_MS = 300000; // 5 minutes cooldown per alert
+  private readonly CLEANUP_INTERVAL_MS = 600000; // Clean up old entries every 10 minutes
+  private readonly MAX_ALERTS_PER_GAME = 50; // Prevent memory overload per game
+  
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -16,12 +28,103 @@ export class WNBAEngine extends BaseSportEngine {
     cacheHits: 0,
     cacheMisses: 0,
     probabilityCalculationTime: [] as number[],
-    gameStateEnhancementTime: [] as number[]
+    gameStateEnhancementTime: [] as number[],
+    clutchTimeDetections: 0,
+    fourthQuarterSituations: 0,
+    overtimeDetections: 0,
+    duplicatesBlocked: 0,
+    alertsSent: 0
   };
 
   constructor() {
     super('WNBA');
     this.settingsCache = new SettingsCache(storage);
+  }
+  
+  /**
+   * Check if an alert has already been sent recently
+   */
+  private hasAlertBeenSent(gameId: string, alertKey: string): boolean {
+    // Check if this exact alert was sent recently
+    const lastSent = this.alertTimestamps.get(alertKey);
+    if (lastSent && (Date.now() - lastSent) < this.ALERT_COOLDOWN_MS) {
+      this.performanceMetrics.duplicatesBlocked++;
+      console.log(`🚫 WNBA Duplicate blocked: ${alertKey} (sent ${Math.round((Date.now() - lastSent) / 1000)}s ago)`);
+      return true;
+    }
+    
+    // Check if we've sent too many alerts for this game
+    const gameAlerts = this.sentAlerts.get(gameId);
+    if (gameAlerts && gameAlerts.size >= this.MAX_ALERTS_PER_GAME) {
+      console.log(`⚠️ WNBA Alert limit reached for game ${gameId} (${gameAlerts.size} alerts)`);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Mark an alert as sent
+   */
+  private markAlertSent(gameId: string, alertKey: string): void {
+    // Track by game
+    if (!this.sentAlerts.has(gameId)) {
+      this.sentAlerts.set(gameId, new Set());
+    }
+    this.sentAlerts.get(gameId)!.add(alertKey);
+    
+    // Track timestamp
+    this.alertTimestamps.set(alertKey, Date.now());
+    this.performanceMetrics.alertsSent++;
+    
+    console.log(`✅ WNBA Alert tracked: ${alertKey} for game ${gameId}`);
+    
+    // Periodic cleanup to prevent memory leaks
+    this.cleanupOldAlerts();
+  }
+  
+  /**
+   * Clean up old alert tracking data to prevent memory leaks
+   */
+  private cleanupOldAlerts(): void {
+    const now = Date.now();
+    
+    // Only run cleanup periodically
+    if (now - this.lastCleanup < this.CLEANUP_INTERVAL_MS) {
+      return;
+    }
+    
+    console.log(`🧹 WNBA Alert cleanup: Removing alerts older than ${this.ALERT_COOLDOWN_MS}ms`);
+    
+    // Clean up old timestamps
+    let removedCount = 0;
+    for (const [alertKey, timestamp] of this.alertTimestamps.entries()) {
+      if (now - timestamp > this.ALERT_COOLDOWN_MS) {
+        this.alertTimestamps.delete(alertKey);
+        removedCount++;
+      }
+    }
+    
+    // Clean up game tracking for finished games (no alerts in last hour)
+    const oneHourAgo = now - 3600000;
+    for (const [gameId, alerts] of this.sentAlerts.entries()) {
+      let hasRecentAlert = false;
+      for (const alertKey of alerts) {
+        const timestamp = this.alertTimestamps.get(alertKey);
+        if (timestamp && timestamp > oneHourAgo) {
+          hasRecentAlert = true;
+          break;
+        }
+      }
+      
+      if (!hasRecentAlert) {
+        this.sentAlerts.delete(gameId);
+        console.log(`🧹 WNBA Removed tracking for game ${gameId}`);
+      }
+    }
+    
+    this.lastCleanup = now;
+    console.log(`🧹 WNBA Alert cleanup complete: removed ${removedCount} old alerts`);
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -132,36 +235,72 @@ export class WNBAEngine extends BaseSportEngine {
   // Override to add WNBA-specific game state enhancement and performance monitoring
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const startTime = Date.now();
-    this.performanceMetrics.totalRequests++;
     
     try {
-      // Enhance game state with WNBA-specific live data if needed
-      const enhanceStartTime = Date.now();
-      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
-      const enhanceTime = Date.now() - enhanceStartTime;
-      this.performanceMetrics.enhanceDataTime.push(enhanceTime);
+      // Early exit if game is not valid
+      if (!gameState.gameId) {
+        console.log('⚠️ WNBA: No gameId provided, skipping alert generation');
+        return [];
+      }
       
+      // Enhance game state with WNBA-specific data if needed
+      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+
       // Use the parent class method which properly calls all loaded modules
-      const alertStartTime = Date.now();
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
-      const alertTime = Date.now() - alertStartTime;
+      
+      // Filter out duplicate alerts before processing
+      const dedupedAlerts: AlertResult[] = [];
+      for (const alert of rawAlerts) {
+        // Check if this alert has already been sent
+        if (!this.hasAlertBeenSent(enhancedGameState.gameId, alert.alertKey)) {
+          dedupedAlerts.push(alert);
+          // Mark as sent immediately to prevent duplicates in same processing cycle
+          this.markAlertSent(enhancedGameState.gameId, alert.alertKey);
+        }
+      }
+      
+      // If all alerts were duplicates, return early
+      if (dedupedAlerts.length === 0) {
+        console.log(`🔄 WNBA: All ${rawAlerts.length} alerts were duplicates for game ${enhancedGameState.gameId}`);
+        return [];
+      }
+      
+      console.log(`✅ WNBA: Processing ${dedupedAlerts.length} new alerts (blocked ${rawAlerts.length - dedupedAlerts.length} duplicates)`);
+      
+      // Enhance alerts with time-sensitive intelligence via AlertComposer
+      const composedAlerts = await this.composeTimeBasedAlerts(dedupedAlerts, enhancedGameState);
       
       // Process alerts with cross-sport AI enhancement for high-priority WNBA situations
-      const alerts = await this.processEnhancedWNBAAlerts(rawAlerts, enhancedGameState);
-      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      const alerts = await this.processEnhancedWNBAAlerts(composedAlerts, enhancedGameState);
+      
+      // Track WNBA-specific metrics
+      if (enhancedGameState.quarter === 4) {
+        this.performanceMetrics.fourthQuarterSituations++;
+      }
+      if (enhancedGameState.quarter >= 5) {
+        this.performanceMetrics.overtimeDetections++;
+      }
+      const timeSeconds = this.parseTimeToSeconds(enhancedGameState.timeRemaining || '');
+      if (enhancedGameState.quarter >= 4 && timeSeconds <= 300) {
+        this.performanceMetrics.clutchTimeDetections++;
+      }
       
       this.performanceMetrics.totalAlerts += alerts.length;
       
-      const totalTime = Date.now() - startTime;
-      if (totalTime > 100) {
-        console.log(`⚠️ WNBA Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
-      }
+      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
+      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
       
       return alerts;
-    } catch (error) {
-      const totalTime = Date.now() - startTime;
-      console.error(`❌ WNBA Alert generation failed after ${totalTime}ms:`, error);
-      return [];
+    } finally {
+      const alertTime = Date.now() - startTime;
+      this.performanceMetrics.alertGenerationTime.push(alertTime);
+      this.performanceMetrics.totalRequests++;
+      
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.alertGenerationTime.length > 100) {
+        this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-100);
+      }
     }
   }
 
@@ -205,7 +344,7 @@ export class WNBAEngine extends BaseSportEngine {
         // Only enhance high-priority alerts (>= 85 probability)
         const probability = await this.calculateProbability(gameState);
         
-        if (probability >= 85 && this.crossSportAI.configured) {
+        if (probability >= 85) {
           console.log(`🧠 WNBA AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
           
           // Build cross-sport context for WNBA
@@ -233,28 +372,13 @@ export class WNBAEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
-          
-          // Update alert with AI enhancement
-          enhancedAlerts.push({
-            ...alert,
-            message: aiResponse.enhancedMessage,
-            context: {
-              ...alert.context,
-              aiEnhanced: true,
-              aiInsights: aiResponse.contextualInsights,
-              aiRecommendation: aiResponse.actionableRecommendation,
-              urgencyLevel: aiResponse.urgencyLevel,
-              bettingContext: aiResponse.bettingContext,
-              confidence: aiResponse.confidence,
-              sportSpecificData: aiResponse.sportSpecificData,
-              processingTime: aiResponse.aiProcessingTime
-            }
-          });
-        } else {
-          // Keep original alert for lower-priority situations
-          enhancedAlerts.push(alert);
+          // Queue for async AI enhancement (non-blocking) and return base alert immediately
+          await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
+          console.log(`🚀 WNBA Async AI: Queued ${alert.type} for background enhancement`);
         }
+        
+        // Always return base alert immediately (async enhancement happens via WebSocket)
+        enhancedAlerts.push(alert);
       } catch (error) {
         console.error(`❌ WNBA AI Enhancement failed for ${alert.type}:`, error);
         // Fallback to original alert on error
@@ -268,6 +392,241 @@ export class WNBAEngine extends BaseSportEngine {
     }
 
     return enhancedAlerts;
+  }
+
+  /**
+   * Compose time-based, actionable alerts using AlertComposer
+   */
+  private async composeTimeBasedAlerts(alerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
+    const composedAlerts: AlertResult[] = [];
+    
+    for (const alert of alerts) {
+      try {
+        // Generate enhanced payload with time-sensitive intelligence
+        const enhancedPayload = await alertComposer.composeEnhancedAlert(alert, gameState, {
+          // Add any WNBA-specific context
+          recentLineMovement: this.getRecentLineMovement(gameState),
+          sharpMoney: this.getSharpMoneyIndicator(gameState)
+        });
+        
+        // Create enhanced alert with rich messaging
+        const enhancedAlert: AlertResult = {
+          ...alert,
+          message: enhancedPayload.headline,
+          context: {
+            ...alert.context,
+            enhanced: enhancedPayload,
+            displayText: alertComposer.formatForDisplay(enhancedPayload),
+            mobileText: alertComposer.formatForMobileNotification(enhancedPayload),
+            timing: enhancedPayload.timing,
+            action: enhancedPayload.action,
+            insight: enhancedPayload.insight,
+            riskReward: enhancedPayload.riskReward
+          }
+        };
+        
+        composedAlerts.push(enhancedAlert);
+        console.log(`⚡ WNBA Alert Composed: ${alert.type} - ${enhancedPayload.timing.urgencyLevel} priority`);
+      } catch (error) {
+        console.error(`Failed to compose WNBA alert:`, error);
+        composedAlerts.push(alert); // Fallback to original
+      }
+    }
+    
+    return composedAlerts;
+  }
+  
+  /**
+   * Get recent line movement for context
+   */
+  private getRecentLineMovement(gameState: GameState): any {
+    // In production, this would connect to real-time odds feeds
+    // For now, simulate based on game state
+    const key = `${gameState.gameId}_line`;
+    const previous = this.lineMovementCache.get(key);
+    const current = {
+      total: gameState.homeScore + gameState.awayScore,
+      spread: gameState.homeScore - gameState.awayScore,
+      timestamp: Date.now()
+    };
+    
+    if (previous && (current.timestamp - previous.timestamp) < 60000) {
+      const totalMove = current.total - previous.total;
+      const spreadMove = current.spread - previous.spread;
+      
+      if (Math.abs(totalMove) >= 0.5 || Math.abs(spreadMove) >= 0.5) {
+        this.lineMovementCache.set(key, current);
+        return {
+          totalMove,
+          spreadMove,
+          timeAgo: Math.floor((current.timestamp - previous.timestamp) / 1000)
+        };
+      }
+    }
+    
+    this.lineMovementCache.set(key, current);
+    return null;
+  }
+  
+  /**
+   * Get sharp money indicators
+   */
+  private getSharpMoneyIndicator(gameState: GameState): any {
+    // In production, this would use real betting data
+    // Simulate based on game flow for WNBA
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    const quarter = gameState.quarter || 1;
+    
+    if (scoreDiff <= 2 && quarter >= 4) {
+      return { indicator: 'heavy', direction: 'over', confidence: 85 };
+    }
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining || '');
+    if (quarter >= 4 && timeSeconds <= 120) {
+      return { indicator: 'moderate', direction: 'over', confidence: 70 };
+    }
+    
+    return null;
+  }
+
+  // Send alerts to both WebSocket and Telegram simultaneously
+  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    if (!alerts || alerts.length === 0) return;
+    
+    try {
+      console.log(`🚀 Simultaneously delivering ${alerts.length} WNBA alerts to WebSocket and Telegram`);
+      
+      // Create delivery promises for parallel execution
+      const deliveryPromises: Promise<void>[] = [];
+      
+      // 1. WebSocket delivery promise
+      deliveryPromises.push(this.deliverAlertsToWebSocket(alerts, gameState));
+      
+      // 2. Telegram delivery promise
+      deliveryPromises.push(this.deliverAlertsToTelegram(alerts, gameState));
+      
+      // Execute both deliveries simultaneously
+      await Promise.all(deliveryPromises);
+      
+      console.log(`✅ Synchronized delivery complete for ${alerts.length} alerts`);
+      
+    } catch (error) {
+      console.error('❌ Synchronized alert delivery system error:', error);
+    }
+  }
+
+  private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      const wsBroadcast = (global as any).wsBroadcast;
+      if (!wsBroadcast) {
+        console.warn('📡 WebSocket broadcast function not available');
+        return;
+      }
+
+      for (const alert of alerts) {
+        const alertData = {
+          type: 'new_alert',
+          data: {
+            id: alert.alertKey,
+            type: alert.type,
+            sport: 'WNBA',
+            priority: alert.priority,
+            message: alert.message,
+            context: alert.context,
+            gameId: gameState.gameId,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            possession: gameState.possession,
+            shotClock: (gameState as any).shotClock || 24,
+            fouls: {
+              home: (gameState as any).homeFouls || 0,
+              away: (gameState as any).awayFouls || 0
+            },
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        wsBroadcast(alertData);
+        console.log(`📡 ✅ WebSocket: ${alert.type} alert broadcasted`);
+      }
+    } catch (error) {
+      console.error('📡 ❌ WebSocket delivery error:', error);
+    }
+  }
+
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      // Get all users with Telegram enabled
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(user => 
+        user.telegramEnabled && 
+        user.telegramBotToken && 
+        user.telegramChatId &&
+        user.telegramBotToken !== 'default_key' &&
+        user.telegramChatId !== 'test-chat-id'
+      );
+      
+      if (telegramUsers.length === 0) {
+        console.log('📱 ℹ️ No users with valid Telegram configurations found');
+        return;
+      }
+      
+      console.log(`📱 🚀 Delivering ${alerts.length} WNBA alerts to ${telegramUsers.length} Telegram users`);
+      
+      // Send alerts to each user
+      for (const alert of alerts) {
+        // Double-check alert hasn't been sent (extra safety)
+        const telegramKey = `telegram_${alert.alertKey}`;
+        if (this.hasAlertBeenSent(gameState.gameId, telegramKey)) {
+          console.log(`📱 🚫 Telegram alert already sent: ${telegramKey}`);
+          continue;
+        }
+        
+        for (const user of telegramUsers) {
+          try {
+            const telegramConfig: TelegramConfig = {
+              botToken: user.telegramBotToken!,
+              chatId: user.telegramChatId!
+            };
+            
+            const telegramAlert = {
+              id: alert.alertKey,
+              type: alert.type,
+              title: alert.message.split('|')[0].trim(), // Extract title from message
+              description: alert.message,
+              gameInfo: {
+                awayTeam: gameState.awayTeam,
+                homeTeam: gameState.homeTeam,
+                score: {
+                  away: gameState.awayScore,
+                  home: gameState.homeScore
+                },
+                quarter: gameState.quarter,
+                timeRemaining: gameState.timeRemaining,
+                possession: gameState.possession
+              }
+            };
+            
+            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
+            
+            if (sent) {
+              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
+              // Mark this specific telegram alert as sent after successful delivery
+              this.markAlertSent(gameState.gameId, telegramKey);
+            } else {
+              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
+            }
+          } catch (error) {
+            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('📱 ❌ Telegram delivery system error:', error);
+    }
   }
 
   // These legacy methods are now replaced by the modular alert cylinder system
@@ -315,12 +674,12 @@ export class WNBAEngine extends BaseSportEngine {
       
       // Log performance stats for monitoring
       const metrics = this.getPerformanceMetrics();
-      if (metrics.totalRequests > 0) {
-        console.log(`🏀 WNBA Engine Performance: ${metrics.totalRequests} requests, ${metrics.averageAlertGenerationTime}ms avg, ${metrics.loadedModules} modules, ${metrics.cacheHitRate}% cache hit rate`);
+      if (metrics.performance.totalRequests > 0) {
+        console.log(`🏀 WNBA Engine Performance: ${metrics.performance.totalRequests} requests, ${metrics.performance.avgAlertGenerationTime}ms avg, ${this.alertModules.size} modules, ${metrics.performance.cacheHitRate}% cache hit rate`);
         
         // Warn on performance degradation
-        if (metrics.averageAlertGenerationTime > 150) {
-          console.warn(`⚠️ WNBA Engine performance degraded: ${metrics.averageAlertGenerationTime}ms average (target: <150ms)`);
+        if (metrics.performance.avgAlertGenerationTime > 150) {
+          console.warn(`⚠️ WNBA Engine performance degraded: ${metrics.performance.avgAlertGenerationTime}ms average (target: <150ms)`);
         }
       }
     } catch (error) {
@@ -464,34 +823,55 @@ export class WNBAEngine extends BaseSportEngine {
     console.log(`🔧 Initialized ${this.alertModules.size} WNBA alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
   }
 
-  // Get performance metrics for monitoring and optimization
   getPerformanceMetrics() {
-    const avgAlertTime = this.performanceMetrics.alertGenerationTime.length > 0 
-      ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b) / this.performanceMetrics.alertGenerationTime.length 
+    const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
+      ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
       : 0;
-    const avgModuleTime = this.performanceMetrics.moduleLoadTime.length > 0 
-      ? this.performanceMetrics.moduleLoadTime.reduce((a, b) => a + b) / this.performanceMetrics.moduleLoadTime.length 
+
+    const avgAlertTime = this.performanceMetrics.alertGenerationTime.length > 0
+      ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.alertGenerationTime.length
       : 0;
-    const avgEnhanceTime = this.performanceMetrics.enhanceDataTime.length > 0 
-      ? this.performanceMetrics.enhanceDataTime.reduce((a, b) => a + b) / this.performanceMetrics.enhanceDataTime.length 
+
+    const avgEnhanceTime = this.performanceMetrics.gameStateEnhancementTime.length > 0
+      ? this.performanceMetrics.gameStateEnhancementTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.gameStateEnhancementTime.length
       : 0;
-    const avgProbabilityTime = this.performanceMetrics.probabilityCalculationTime.length > 0 
-      ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b) / this.performanceMetrics.probabilityCalculationTime.length 
+
+    const cacheHitRate = this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
+      ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
+      : 0;
+      
+    const deduplicationRate = this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked > 0
+      ? (this.performanceMetrics.duplicatesBlocked / (this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked)) * 100
       : 0;
 
     return {
       sport: 'WNBA',
-      totalRequests: this.performanceMetrics.totalRequests,
-      totalAlerts: this.performanceMetrics.totalAlerts,
-      averageAlertGenerationTime: Math.round(avgAlertTime * 100) / 100,
-      averageModuleLoadTime: Math.round(avgModuleTime * 100) / 100,
-      averageEnhanceDataTime: Math.round(avgEnhanceTime * 100) / 100,
-      averageProbabilityCalculationTime: Math.round(avgProbabilityTime * 100) / 100,
-      cacheHitRate: this.performanceMetrics.totalRequests > 0 
-        ? Math.round((this.performanceMetrics.cacheHits / this.performanceMetrics.totalRequests) * 10000) / 100 
-        : 0,
-      loadedModules: this.alertModules.size,
-      activeAlertTypes: Array.from(this.alertModules.keys())
+      performance: {
+        avgResponseTime: avgCalculationTime + avgAlertTime + avgEnhanceTime,
+        avgCalculationTime,
+        avgAlertGenerationTime: avgAlertTime,
+        avgEnhancementTime: avgEnhanceTime,
+        cacheHitRate,
+        deduplicationRate,
+        totalRequests: this.performanceMetrics.totalRequests,
+        totalAlerts: this.performanceMetrics.totalAlerts,
+        alertsSent: this.performanceMetrics.alertsSent,
+        duplicatesBlocked: this.performanceMetrics.duplicatesBlocked,
+        cacheHits: this.performanceMetrics.cacheHits,
+        cacheMisses: this.performanceMetrics.cacheMisses
+      },
+      sportSpecific: {
+        clutchTimeDetections: this.performanceMetrics.clutchTimeDetections,
+        fourthQuarterSituations: this.performanceMetrics.fourthQuarterSituations,
+        overtimeDetections: this.performanceMetrics.overtimeDetections,
+        activeGameTracking: this.sentAlerts.size,
+        totalTrackedAlerts: this.alertTimestamps.size
+      },
+      recentPerformance: {
+        calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),
+        alertTimes: this.performanceMetrics.alertGenerationTime.slice(-20),
+        enhancementTimes: this.performanceMetrics.gameStateEnhancementTime.slice(-20)
+      }
     };
   }
 
