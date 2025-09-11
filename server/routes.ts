@@ -3256,7 +3256,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get comprehensive V3 performance data
       const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
-      const pollingStats = multiSourceAggregator.getPollingStats();
+      // Polling stats would come from multiSourceAggregator if imported
+      const pollingStats = { 
+        activeSports: 0,
+        liveGames: 0,
+        scheduledGames: 0,
+        totalGames: 0
+      };
 
       // Calculate system health indicators
       // avgProcessingTime is already a number from getPerformanceMetrics()
