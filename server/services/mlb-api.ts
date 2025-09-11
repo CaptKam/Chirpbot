@@ -121,11 +121,21 @@ export class MLBApiService {
           console.log(`🔴 MLB: Game ${game.gamePk} marked as live due to live data indicators (abstractGameState: ${game.status.abstractGameState}, detailedState: ${game.status.detailedState})`);
         }
         
+        // Compute initial status from API state
+        const mappedStatus = this.mapGameStatus(game.status.detailedState);
+        
+        // Reconcile status with computed isLive (fixes status/isLive reconciliation issue)
+        const finalStatus = isLive ? 'live' : mappedStatus;
+        
+        if (isLive && mappedStatus !== 'live') {
+          console.log(`🔄 MLB: Game ${game.gamePk} status reconciled: ${mappedStatus} → live (isLive=true)`);
+        }
+        
         return {
           id: game.gamePk.toString(),
           homeTeam: { id: game.teams.home.team.id.toString(), name: game.teams.home.team.name, abbreviation: game.teams.home.team.abbreviation, score: homeScore },
           awayTeam: { id: game.teams.away.team.id.toString(), name: game.teams.away.team.name, abbreviation: game.teams.away.team.abbreviation, score: awayScore },
-          status: this.mapGameStatus(game.status.detailedState),
+          status: finalStatus,
           startTime: game.gameDate,
           venue: game.venue.name,
           inning: game.linescore?.currentInning || null,

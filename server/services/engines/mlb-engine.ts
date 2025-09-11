@@ -149,8 +149,11 @@ export class MLBEngine extends BaseSportEngine {
     const startTime = Date.now();
     
     try {
-      // Get live data from MLB API if game is live
-      if (gameState.isLive && gameState.gameId) {
+      console.log(`🔧 MLB Enhancement: Game ${gameState.gameId} - status=${gameState.status}, isLive=${gameState.isLive}`);
+      
+      // Get live data from MLB API for any non-final game (fixes catch-22 gating loop)
+      if (gameState.gameId && gameState.status !== 'final') {
+        console.log(`✅ MLB Enhancement: Fetching enhanced data for non-final game ${gameState.gameId}`);
         const { MLBApiService } = await import('../mlb-api');
         const mlbApi = new MLBApiService();
         const enhancedData = await mlbApi.getEnhancedGameData(gameState.gameId);
@@ -177,7 +180,7 @@ export class MLBEngine extends BaseSportEngine {
             // Weather fetch failed, continue without it
           }
 
-          return {
+          const enhancedGameState = {
             ...gameState,
             hasFirst: enhancedData.runners?.first || false,
             hasSecond: enhancedData.runners?.second || false,
@@ -192,8 +195,12 @@ export class MLBEngine extends BaseSportEngine {
             currentBatter: enhancedData.currentBatter || gameState.currentBatter,
             currentPitcher: enhancedData.currentPitcher || gameState.currentPitcher,
             onDeckBatter: enhancedData.onDeckBatter || gameState.onDeckBatter,
-            weatherContext
+            weatherContext,
+            // Force isLive=true for games with rich live data indicators
+            isLive: true
           };
+          console.log(`🚀 MLB Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, runners=[${enhancedGameState.hasFirst ? '1B' : ''}${enhancedGameState.hasSecond ? '2B' : ''}${enhancedGameState.hasThird ? '3B' : ''}], outs=${enhancedGameState.outs}, inning=${enhancedGameState.inning}`);
+          return enhancedGameState;
         } else {
           this.performanceMetrics.cacheMisses++;
         }
