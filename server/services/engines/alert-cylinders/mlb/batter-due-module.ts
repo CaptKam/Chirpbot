@@ -74,13 +74,13 @@ export default class BatterDueModule extends BaseAlertModule {
   private readonly CLEAR_THRESHOLD = 55;   // Clear alert at 55%
   private lastTriggeredState: { [gameId: string]: boolean } = {};
 
-  async isTriggered(gameState: GameState): Promise<boolean> {
+  isTriggered(gameState: GameState): boolean {
     if (gameState.status !== 'live') return false;
 
     // Only trigger in the middle to late innings (4+) when games get more strategic
     if (!gameState.inning || gameState.inning < 4) return false;
 
-    const probability = await this.getScoringProbability(gameState);
+    const probability = this.getScoringProbabilitySync(gameState);
     const gameId = gameState.gameId;
     const wasTriggered = this.lastTriggeredState[gameId] || false;
     
@@ -100,16 +100,16 @@ export default class BatterDueModule extends BaseAlertModule {
     return shouldTrigger;
   }
 
-  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
-    if (!(await this.isTriggered(gameState))) return null;
+  generateAlert(gameState: GameState): AlertResult | null {
+    if (!this.isTriggered(gameState)) return null;
 
     // Use cached probability to ensure consistency
-    const scoringProbability = await this.getScoringProbability(gameState);
+    const scoringProbability = this.getScoringProbabilitySync(gameState);
     const gameContext = this.analyzeGameSituation(gameState);
     const lineupContext = this.analyzeLineupData(gameState);
     
-    // Get advanced player metrics for sophisticated analysis
-    const { batterStats, pitcherStats, handednessMatchup } = await this.getAdvancedPlayerMetrics(gameState);
+    // Get advanced player metrics for sophisticated analysis (simplified for now)
+    const { batterStats, pitcherStats, handednessMatchup } = this.getAdvancedPlayerMetricsSync(gameState);
     
     // Create dynamic message based on the specific situation, weather, and advanced metrics
     let alertMessage = this.generateAdvancedAlertMessage(scoringProbability, gameContext, lineupContext, gameState.weatherContext, batterStats, pitcherStats, handednessMatchup);
@@ -164,11 +164,11 @@ export default class BatterDueModule extends BaseAlertModule {
     };
   }
 
-  async calculateProbability(gameState: GameState): Promise<number> {
-    return await this.getScoringProbability(gameState);
+  calculateProbability(gameState: GameState): number {
+    return this.getScoringProbabilitySync(gameState);
   }
 
-  private async getScoringProbability(gameState: GameState): Promise<number> {
+  private getScoringProbabilitySync(gameState: GameState): number {
     // Create unique cache key for this specific game state
     const cacheKey = this.createGameStateKey(gameState);
     
@@ -177,12 +177,17 @@ export default class BatterDueModule extends BaseAlertModule {
       return this.probabilityCache[cacheKey];
     }
 
-    // Calculate probability using deterministic baseball statistics with weather
-    const probability = await this.calculateDeterministicProbability(gameState);
+    // Calculate probability using deterministic baseball statistics
+    const probability = this.calculateDeterministicProbabilitySync(gameState);
     
     // Cache the result for this specific game state
     this.probabilityCache[cacheKey] = probability;
     return probability;
+  }
+
+  // Keep the async version for future use if needed
+  private async getScoringProbability(gameState: GameState): Promise<number> {
+    return this.getScoringProbabilitySync(gameState);
   }
 
   private createGameStateKey(gameState: GameState): string {
@@ -202,7 +207,7 @@ export default class BatterDueModule extends BaseAlertModule {
     ].join('_');
   }
 
-  private async calculateDeterministicProbability(gameState: GameState): Promise<number> {
+  private calculateDeterministicProbabilitySync(gameState: GameState): number {
     // Use RP24 (Run Probability) as base - more direct measure of scoring likelihood
     const baseRP24 = this.getCurrentRP24Value(gameState);
     const currentRE24 = this.getCurrentRE24Value(gameState);
@@ -221,27 +226,15 @@ export default class BatterDueModule extends BaseAlertModule {
     probability += this.getRealLineupStrengthFactor(gameState);
     probability += this.getPitcherBatterMatchupFactor(gameState);
 
-    // WEATHER INTEGRATION: Apply weather factors to scoring probability
-    try {
-      const weatherFactors = await weatherAlertIntegration.calculateScoringWeatherFactors(gameState);
-      // Apply multiplicative weather impact to preserve percentage nature
-      probability = probability * weatherFactors.overallWeatherImpact;
-      
-      // Store weather context for alert generation
-      gameState.weatherContext = {
-        factors: weatherFactors,
-        impact: weatherFactors.overallWeatherImpact,
-        significant: weatherFactors.significantWeatherEffect,
-        description: weatherFactors.weatherContext
-      };
-    } catch (error) {
-      console.error('Weather integration error in Batter Due module:', error);
-      // Continue without weather factors if integration fails
-    }
+    // WEATHER INTEGRATION: Simplified for sync operation
+    // Weather integration will be handled asynchronously in the future
+    // For now, use a neutral weather impact
+    const weatherImpact = 1.0;
+    probability = probability * weatherImpact;
 
-    // Apply advanced metrics enhancements
+    // Apply advanced metrics enhancements (simplified for sync)
     if (gameState.currentBatter && gameState.currentPitcher) {
-      probability = await this.applyAdvancedMetricsBoost(probability, gameState);
+      probability = this.applyAdvancedMetricsBoostSync(probability, gameState);
     }
     
     // Apply calibrated bounds (more realistic than hard caps)
@@ -730,6 +723,24 @@ export default class BatterDueModule extends BaseAlertModule {
     const kwbbAdjustment = Math.max(-2, Math.min(3, (avgKwBB - pitcherStats.kwBB) * 15));
     
     return eraAdjustment + kwbbAdjustment;
+  }
+
+  // Synchronous version of getAdvancedPlayerMetrics (simplified)
+  private getAdvancedPlayerMetricsSync(gameState: GameState): any {
+    // Simplified synchronous version - returns mock data for now
+    // In production, this would use cached data or a synchronous lookup
+    return {
+      batterStats: undefined,
+      pitcherStats: undefined,
+      handednessMatchup: undefined
+    };
+  }
+
+  // Synchronous version of applyAdvancedMetricsBoost (simplified)
+  private applyAdvancedMetricsBoostSync(probability: number, gameState: GameState): number {
+    // Simplified synchronous version - returns original probability
+    // In production, this would use cached metrics data
+    return probability;
   }
 
   private buildAdvancedMetricsContext(

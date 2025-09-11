@@ -78,14 +78,14 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     }
   };
 
-  async isTriggered(gameState: GameState): Promise<boolean> {
+  isTriggered(gameState: GameState): boolean {
     // Defensive live game check
     if (gameState.status !== 'live' && !gameState.isLive) return false;
 
     // Must have potential stealing scenarios
     if (!this.hasStealingOpportunity(gameState)) return false;
 
-    const probability = await this.calculateStealProbability(gameState);
+    const probability = this.calculateStealProbabilitySync(gameState);
     const gameId = gameState.gameId;
     const wasTriggered = this.lastTriggeredState[gameId] || false;
     
@@ -101,10 +101,10 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     return shouldTrigger;
   }
 
-  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
-    if (!(await this.isTriggered(gameState))) return null;
+  generateAlert(gameState: GameState): AlertResult | null {
+    if (!this.isTriggered(gameState)) return null;
 
-    const stealProbability = await this.calculateStealProbability(gameState);
+    const stealProbability = this.calculateStealProbabilitySync(gameState);
     const stealAnalysis = this.analyzeStealSituation(gameState);
     const alertMessage = this.generateStealMessage(stealProbability, stealAnalysis, gameState.weatherContext);
 
@@ -150,8 +150,62 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     };
   }
 
-  async calculateProbability(gameState: GameState): Promise<number> {
-    return await this.calculateStealProbability(gameState);
+  calculateProbability(gameState: GameState): number {
+    return this.calculateStealProbabilitySync(gameState);
+  }
+
+  private createGameStateKey(gameState: GameState): string {
+    // Create a unique key that represents the exact game state
+    return [
+      gameState.gameId,
+      gameState.inning,
+      gameState.isTopInning ? 'top' : 'bottom',
+      gameState.hasFirst ? '1' : '0',
+      gameState.hasSecond ? '1' : '0', 
+      gameState.hasThird ? '1' : '0',
+      gameState.outs,
+      gameState.balls,
+      gameState.strikes,
+      gameState.homeScore,
+      gameState.awayScore
+    ].join('_');
+  }
+
+  private calculateDeterministicStealProbability(gameState: GameState): number {
+    // Base steal attempt rate based on situation
+    let baseProbability = 0;
+    const hasFirst = gameState.hasFirst || false;
+    const hasSecond = gameState.hasSecond || false;
+    const hasThird = gameState.hasThird || false;
+
+    // Determine base probability based on runners
+    if (hasFirst && !hasSecond) {
+      baseProbability = this.STEAL_ATTEMPT_RATES['1B_to_2B'].base * 100;
+    } else if (!hasFirst && hasSecond) {
+      baseProbability = this.STEAL_ATTEMPT_RATES['2B_to_3B'].base * 100;
+    } else if (hasFirst && hasThird) {
+      baseProbability = this.STEAL_ATTEMPT_RATES['1B_3B_double'].base * 100;
+    }
+
+    // Apply count leverage
+    const countKey = `${gameState.balls || 0}-${gameState.strikes || 0}`;
+    const countLeverage = this.COUNT_LEVERAGE[countKey] || 1.0;
+    baseProbability *= countLeverage;
+
+    // Apply inning leverage
+    const inningLeverage = this.INNING_LEVERAGE[gameState.inning || 5] || 1.0;
+    baseProbability *= inningLeverage;
+
+    // Apply game situation modifiers
+    const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+    if (scoreDiff <= 2) {
+      baseProbability *= this.SITUATION_MODIFIERS.close_game;
+    } else if (scoreDiff >= 5) {
+      baseProbability *= this.SITUATION_MODIFIERS.blowout;
+    }
+
+    // Cap probability within reasonable bounds
+    return Math.min(25, Math.max(0, baseProbability));
   }
 
   private hasStealingOpportunity(gameState: GameState): boolean {
@@ -170,6 +224,23 @@ export default class StealLikelihoodModule extends BaseAlertModule {
            (hasFirst && hasThird);      // First and third (double steal)
   }
 
+  private calculateStealProbabilitySync(gameState: GameState): number {
+    const cacheKey = this.createGameStateKey(gameState);
+    
+    // Return cached value if available to prevent flapping
+    if (this.probabilityCache[cacheKey] !== undefined) {
+      return this.probabilityCache[cacheKey];
+    }
+
+    // Calculate the steal probability synchronously
+    const probability = this.calculateDeterministicStealProbability(gameState);
+    
+    // Cache the result
+    this.probabilityCache[cacheKey] = probability;
+    return probability;
+  }
+
+  // Keep async version for future use
   private async calculateStealProbability(gameState: GameState): Promise<number> {
     const cacheKey = this.createGameStateKey(gameState);
     
