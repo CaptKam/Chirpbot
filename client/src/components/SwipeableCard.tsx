@@ -842,10 +842,62 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* V3 Alert Message Display - Primary Message Renderer */}
+              {/* V3 Alert Message Display - Unified Message Renderer */}
               {(() => {
-                const payload = (alertData as any)?.payload;
-                const v3Message = payload?.message?.trim();
+                // Extract V3 message from all possible locations
+                const extractV3Message = (): string | null => {
+                  // 1. Check direct message field (where V3 messages are actually sent)
+                  if (alertData.message && typeof alertData.message === 'string') {
+                    const msg = alertData.message.trim();
+                    // V3 messages typically have emojis and specific formatting
+                    if (msg.includes('📊') || msg.includes('🔴') || msg.includes('⚡') || 
+                        msg.includes('🎯') || msg.includes('💰') || msg.includes('🏈') || 
+                        msg.includes('🏀') || msg.includes('⚾') || msg.includes('🥎') ||
+                        msg.includes('%') && (msg.includes('scoring') || msg.includes('chance'))) {
+                      return msg;
+                    }
+                  }
+                  
+                  // 2. Check payload.message (legacy location)
+                  const payload = (alertData as any)?.payload;
+                  if (payload) {
+                    // If payload is a string, try to parse it
+                    let parsedPayload = payload;
+                    if (typeof payload === 'string') {
+                      try {
+                        parsedPayload = JSON.parse(payload);
+                      } catch {
+                        // Not JSON, treat as direct message
+                        return payload.trim();
+                      }
+                    }
+                    
+                    // Check parsed payload for message
+                    if (parsedPayload?.message && typeof parsedPayload.message === 'string') {
+                      return parsedPayload.message.trim();
+                    }
+                    
+                    // Check nested payload.payload.message
+                    if (parsedPayload?.payload?.message && typeof parsedPayload.payload.message === 'string') {
+                      return parsedPayload.payload.message.trim();
+                    }
+                  }
+                  
+                  return null;
+                };
+                
+                const v3Message = extractV3Message();
+                
+                // Debug log to verify V3 message extraction
+                if (alertData.id) {
+                  console.log('🔍 V3 Message Extraction:', {
+                    alertId: alertData.id,
+                    directMessage: alertData.message?.substring(0, 50),
+                    extractedV3: v3Message?.substring(0, 50),
+                    hasV3: !!v3Message,
+                    sport: alertData.sport
+                  });
+                }
                 
                 // V3 Message Display - Only render if V3 message exists
                 if (v3Message) {
@@ -965,8 +1017,37 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               {/* Legacy Alert Message - Only render when no V3 message available */}
               {(() => {
-                const payload = (alertData as any)?.payload;
-                const v3Message = payload?.message?.trim();
+                // Use the same extraction logic to check for V3 message
+                const extractV3Message = (): string | null => {
+                  // Check direct message field first
+                  if (alertData.message && typeof alertData.message === 'string') {
+                    const msg = alertData.message.trim();
+                    if (msg.includes('📊') || msg.includes('🔴') || msg.includes('⚡') || 
+                        msg.includes('🎯') || msg.includes('💰') || msg.includes('🏈') || 
+                        msg.includes('🏀') || msg.includes('⚾') || msg.includes('🥎') ||
+                        msg.includes('%') && (msg.includes('scoring') || msg.includes('chance'))) {
+                      return msg;
+                    }
+                  }
+                  
+                  const payload = (alertData as any)?.payload;
+                  if (payload) {
+                    let parsedPayload = payload;
+                    if (typeof payload === 'string') {
+                      try {
+                        parsedPayload = JSON.parse(payload);
+                      } catch {
+                        return payload.trim();
+                      }
+                    }
+                    if (parsedPayload?.message) return parsedPayload.message.trim();
+                    if (parsedPayload?.payload?.message) return parsedPayload.payload.message.trim();
+                  }
+                  
+                  return null;
+                };
+                
+                const v3Message = extractV3Message();
                 
                 // Only render legacy message if no V3 message exists
                 if (!v3Message) {
