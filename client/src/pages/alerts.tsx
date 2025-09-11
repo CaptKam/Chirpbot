@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import AlertFooter from '@/components/AlertFooter';
-import { SwipeableCard } from '@/components/SwipeableCard';
+import { AdvancedAlertCard } from '@/components/AdvancedAlertCard';
 import { SimpleAlertCard } from '@/components/SimpleAlertCard';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -217,10 +217,9 @@ export default function AlertsPage() {
                   className="border-emerald-500/30"
                 />
               ) : (
-                // Use Complex Card for detailed game state alerts
-                <SwipeableCard 
+                // Use Advanced Alert Card for professional V3 display
+                <AdvancedAlertCard 
                   alertId={alert.id}
-                  children={null}
                   alertData={{
                     id: alert.id,
                     type: alert.type,
@@ -266,7 +265,7 @@ export default function AlertsPage() {
                     betbookData: alert.context?.betbookData,
                     gameInfo: alert.context?.gameInfo
                   }}
-                  className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
+                  className="mb-4"
                 />
               )}
             </motion.div>
