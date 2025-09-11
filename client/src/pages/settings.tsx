@@ -303,16 +303,21 @@ export default function Settings() {
       const settings = telegramSettings as any;
       setTelegramEnabled(settings.telegramEnabled || false);
       setTelegramChatId(settings.telegramChatId || "");
-      // Don't populate token for security (backend returns "***")
-      if (settings.telegramBotToken && settings.telegramBotToken !== "***") {
+      // Show placeholder for configured tokens (backend returns "***" for security)
+      if (settings.telegramBotToken === "***") {
+        setTelegramBotToken("••••••••••••••••••••••••••••••••••••••••••••••"); // Placeholder to show token is configured
+      } else if (settings.telegramBotToken && settings.telegramBotToken !== "***") {
         setTelegramBotToken(settings.telegramBotToken);
       }
     }
   }, [telegramSettings]);
 
   const handleTelegramSave = () => {
+    // Don't send placeholder dots - send empty string to keep existing token
+    const tokenToSend = telegramBotToken.startsWith('••••') ? '' : telegramBotToken;
+    
     updateTelegramMutation.mutate({
-      botToken: telegramBotToken,
+      botToken: tokenToSend,
       chatId: telegramChatId,
       enabled: telegramEnabled
     });
@@ -549,7 +554,7 @@ export default function Settings() {
                     <Input
                       id="bot-token"
                       type="password"
-                      placeholder="Enter your Telegram bot token"
+                      placeholder={telegramBotToken.startsWith('••••') ? "Bot token configured - enter new token to change" : "Enter your Telegram bot token"}
                       value={telegramBotToken}
                       onChange={(e) => setTelegramBotToken(e.target.value)}
                       data-testid="input-telegram-bot-token"
