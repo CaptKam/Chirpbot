@@ -447,11 +447,11 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main message */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.ai?.enhancedTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+          {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
-        {(alertData.ai?.enhancedMessage || alertData.description) && (
+        {(alertData.context?.aiCallToAction || alertData.description) && (
           <p className="text-sm text-slate-300">
-            {alertData.ai?.enhancedMessage || alertData.description}
+            {alertData.context?.aiCallToAction || alertData.description}
           </p>
         )}
       </div>
@@ -564,7 +564,6 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
     
     // Extract betting data if available
     const betbookData = alertData.context?.betbookData;
-    const gameStartTime = alertData.context?.gameTime || alertData.context?.startTime;
     
     return (
       <>
@@ -581,7 +580,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           </div>
           <div className="flex items-center gap-2">
             <div className="text-xs text-slate-400">
-              {gameStartTime ? gameStartTime : formatTime(alertData.createdAt || alertData.timestamp)}
+              {alertData.context?.gameInfo?.startTime || formatTime(alertData.createdAt || alertData.timestamp)}
             </div>
             <Badge variant="outline" className="border-green-500/50 text-green-400">
               LIVE
@@ -603,9 +602,9 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
                   {awayTeamName}
                 </div>
                 <div className="text-xs text-slate-400">Away Team</div>
-                {alertData.context?.awayRecord && (
+                {alertData.context?.gameInfo?.awayRecord && (
                   <div className="text-xs font-medium text-slate-300">
-                    {alertData.context.awayRecord}
+                    {alertData.context.gameInfo.awayRecord}
                   </div>
                 )}
               </div>
@@ -622,9 +621,9 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
                   {homeTeamName}
                 </div>
                 <div className="text-xs text-slate-400">Home Team</div>
-                {alertData.context?.homeRecord && (
+                {alertData.context?.gameInfo?.homeRecord && (
                   <div className="text-xs font-medium text-slate-300">
-                    {alertData.context.homeRecord}
+                    {alertData.context.gameInfo.homeRecord}
                   </div>
                 )}
               </div>
@@ -641,7 +640,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-slate-400">Venue: </span>
-                <span className="text-white">{alertData.context?.venue || 'TBD'}</span>
+                <span className="text-white">{alertData.context?.gameInfo?.venue || 'TBD'}</span>
               </div>
               <div>
                 <span className="text-slate-400">Inning: </span>
@@ -698,20 +697,20 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
         <div className="space-y-3">
           <div className="text-xs text-slate-400 uppercase tracking-wide">Game Factors</div>
           
-          {alertData.context?.pitchingMatchup && (
+          {alertData.context?.gameInfo?.pitchingMatchup && (
             <div className="flex items-center gap-2">
               <User className={`w-4 h-4 ${theme.text}`} />
               <span className="text-sm text-slate-300">
-                {alertData.context.pitchingMatchup.away} vs {alertData.context.pitchingMatchup.home}
+                {alertData.context.gameInfo.pitchingMatchup.away} vs {alertData.context.gameInfo.pitchingMatchup.home}
               </span>
             </div>
           )}
           
-          {alertData.context?.seriesRecord && (
+          {alertData.context?.gameInfo?.seriesRecord && (
             <div className="flex items-center gap-2">
               <Trophy className={`w-4 h-4 ${theme.text}`} />
               <span className="text-sm text-slate-300">
-                Season series: {alertData.context.seriesRecord}
+                Season series: {alertData.context.gameInfo.seriesRecord}
               </span>
             </div>
           )}
@@ -736,7 +735,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
             <div className="flex items-center gap-2">
               <Target className={`w-4 h-4 ${theme.text}`} />
               <span className="text-sm text-slate-300">
-                Umpire: {alertData.context?.umpire || 'TBD'} • Stadium: {alertData.context?.stadium || 'Home'}
+                Umpire: {alertData.context?.gameInfo?.umpire || 'TBD'} • Stadium: {alertData.context?.gameInfo?.stadium || 'Home'}
               </span>
             </div>
           )}
@@ -747,7 +746,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           <div className="mt-4 pt-4 border-t border-slate-700">
             <div className="text-xs text-slate-400 mb-2">Quick Bet Access</div>
             <div className="grid grid-cols-2 gap-2">
-              {betbookData.sportsbookLinks.slice(0, 4).map((sportsbook, index) => (
+              {betbookData.sportsbookLinks.slice(0, 4).map((sportsbook: any, index: number) => (
                 <Button
                   key={index}
                   variant="outline"
@@ -859,10 +858,10 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Situation display */}
       <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 rounded-lg p-4 mb-4 border border-red-500/20">
         <div className="text-lg font-bold text-white mb-2">
-          {alertData.ai?.enhancedTitle || alertData.title || alertData.message}
+          {alertData.context?.aiTitle || alertData.title || alertData.message}
         </div>
         <div className="text-sm text-slate-300">
-          {alertData.ai?.enhancedMessage || alertData.description}
+          {alertData.context?.aiCallToAction || alertData.description}
         </div>
       </div>
 
@@ -929,11 +928,11 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main alert */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.ai?.enhancedTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+          {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
-        {(alertData.ai?.enhancedMessage || alertData.description) && (
+        {(alertData.context?.aiCallToAction || alertData.description) && (
           <p className="text-sm text-slate-300">
-            {alertData.ai?.enhancedMessage || alertData.description}
+            {alertData.context?.aiCallToAction || alertData.description}
           </p>
         )}
       </div>
@@ -1062,11 +1061,11 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main content */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.ai?.enhancedTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+          {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
-        {(alertData.ai?.enhancedMessage || alertData.description) && (
+        {(alertData.context?.aiCallToAction || alertData.description) && (
           <p className="text-sm text-slate-300">
-            {alertData.ai?.enhancedMessage || alertData.description}
+            {alertData.context?.aiCallToAction || alertData.description}
           </p>
         )}
       </div>
