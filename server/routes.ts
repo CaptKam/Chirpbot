@@ -1396,7 +1396,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             hasThird: payload.context?.third || payload.context?.hasThird,
             // Include AI data
             betbookData: payload.betbookData || null,
-            gameInfo: payload.gameInfo || null
+            gameInfo: payload.gameInfo || null,
+            // Include full payload for V3 message access
+            payload: payload
           });
         } catch (error) {
           console.error(`Error processing alert for ${row.id}:`, error);

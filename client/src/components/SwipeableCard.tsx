@@ -842,11 +842,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* V3 Alert Message Display */}
+              {/* V3 Alert Message Display - Primary Message Renderer */}
               {(() => {
-                // Cast payload properly - it's a JSON field containing the message
                 const payload = (alertData as any)?.payload;
-                const v3Message = payload?.message;
+                const v3Message = payload?.message?.trim();
                 console.log('🔍 V3 Message Debug:', { 
                   alertId: alertData?.id, 
                   hasPayload: !!payload,
@@ -854,22 +853,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   v3Message 
                 });
                 
+                // V3 Message Display - Only render if V3 message exists
                 if (v3Message) {
                   return (
                     <div className="mb-3">
                       <p className="text-base md:text-lg font-medium leading-snug text-white" data-testid="text-alert-message">
                         {v3Message}
-                      </p>
-                    </div>
-                  );
-                }
-                
-                // Fallback to AI title if available
-                if (alertData?.context?.aiTitle) {
-                  return (
-                    <div className="mb-1">
-                      <p className="text-base font-bold text-white">
-                        {alertData.context.aiTitle}
                       </p>
                     </div>
                   );
@@ -980,85 +969,95 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               )}
 
-              {/* Alert Message - Compact Design */}
-              <div className={`rounded-lg p-3 mb-3 border ${getSportColors(alertData.sport || 'MLB').alertBg} ${getSportColors(alertData.sport || 'MLB').alertBorder}`}>
-                {/* Main Alert Message with Compact Typography */}
-                <div className="text-center">
-                  {/* Main Situation - Clean and Simple */}
-                  <p className="text-white text-sm font-semibold leading-tight">
-                    {(() => {
-                      // Use AI title if available
-                      if (alertData?.context?.aiTitle) {
-                        return alertData.context.aiTitle;
-                      }
-                      
-                      let message = alertData.message || '';
-                      // Remove emojis and clean up
-                      message = message.replace(/[\\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\\u{2700}-\u{27BF}]/gu, '').trim();
+              {/* Legacy Alert Message - Only render when no V3 message available */}
+              {(() => {
+                const payload = (alertData as any)?.payload;
+                const v3Message = payload?.message?.trim();
+                
+                // Only render legacy message if no V3 message exists
+                if (!v3Message) {
+                  return (
+                    <div className={`rounded-lg p-3 mb-3 border ${getSportColors(alertData.sport || 'MLB').alertBg} ${getSportColors(alertData.sport || 'MLB').alertBorder}`}>
+                      {/* Main Alert Message with Compact Typography */}
+                      <div className="text-center">
+                        {/* Main Situation - Clean and Simple */}
+                        <p className="text-white text-sm font-semibold leading-tight">
+                          {(() => {
+                            // Use AI title if available
+                            if (alertData?.context?.aiTitle) {
+                              return alertData.context.aiTitle;
+                            }
+                            
+                            let message = alertData.message || '';
+                            // Remove emojis and clean up
+                            message = message.replace(/[\\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\\u{2700}-\u{27BF}]/gu, '').trim();
 
-                      // Extract the main situation text based on sport
-                      if (alertData.sport === 'MLB') {
-                        // For baseball, extract situation after colon
-                        const parts = message.split(':');
-                        if (parts.length > 1) {
-                          return parts[1].trim().replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '');
-                        }
-                      } else if (alertData.sport === 'NFL' || alertData.sport === 'CFL') {
-                        // For football, clean up the message
-                        if (message.includes('Red Zone')) {
-                          return message.replace(/.*Red Zone[:\s-]*/i, '').replace(/\s*-\s*\d+%.*$/i, '');
-                        } else if (message.includes('Two Minute Warning')) {
-                          return 'Two minute warning - critical game situation';
-                        } else if (message.includes('Game Starting')) {
-                          const awayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away';
-                          const homeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home';
-                          return `${awayTeam} vs ${homeTeam} - Game Starting`;
-                        }
-                      } else if (alertData.sport === 'NBA' || alertData.sport === 'WNBA') {
-                        // For basketball, clean up the message
-                        if (message.includes('Clutch Time')) {
-                          return 'Final 5 minutes - close game situation';
-                        } else if (message.includes('Two Minute Warning')) {
-                          return 'Two minute warning - critical game situation';
-                        } else if (message.includes('Game Starting')) {
-                          const awayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away';
-                          const homeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home';
-                          return `${awayTeam} vs ${homeTeam} - Game Starting`;
-                        }
-                      }
+                            // Extract the main situation text based on sport
+                            if (alertData.sport === 'MLB') {
+                              // For baseball, extract situation after colon
+                              const parts = message.split(':');
+                              if (parts.length > 1) {
+                                return parts[1].trim().replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '');
+                              }
+                            } else if (alertData.sport === 'NFL' || alertData.sport === 'CFL') {
+                              // For football, clean up the message
+                              if (message.includes('Red Zone')) {
+                                return message.replace(/.*Red Zone[:\s-]*/i, '').replace(/\s*-\s*\d+%.*$/i, '');
+                              } else if (message.includes('Two Minute Warning')) {
+                                return 'Two minute warning - critical game situation';
+                              } else if (message.includes('Game Starting')) {
+                                const awayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away';
+                                const homeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home';
+                                return `${awayTeam} vs ${homeTeam} - Game Starting`;
+                              }
+                            } else if (alertData.sport === 'NBA' || alertData.sport === 'WNBA') {
+                              // For basketball, clean up the message
+                              if (message.includes('Clutch Time')) {
+                                return 'Final 5 minutes - close game situation';
+                              } else if (message.includes('Two Minute Warning')) {
+                                return 'Two minute warning - critical game situation';
+                              } else if (message.includes('Game Starting')) {
+                                const awayTeam = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away';
+                                const homeTeam = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home';
+                                return `${awayTeam} vs ${homeTeam} - Game Starting`;
+                              }
+                            }
 
-                      // Fallback: remove percentage text and return clean message
-                      return message.replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '').replace(/\s*-\s*\d+%.*$/i, '');
-                    })()}
-                  </p>
-
-
-                </div>
-
-                {/* Priority Indicator - Compact */}
-                {alertData.priority && alertData.priority >= 80 && (
-                  <div className="flex items-center justify-center gap-1 mt-1 pt-1 border-t border-emerald-500/20">
-                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
-                    <span className="text-red-300 text-xs font-medium uppercase tracking-wide">
-                      HIGH VALUE
-                    </span>
-                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
-                  </div>
-                )}
-
-                {/* AI Insights - Enhanced */}
-                {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
-                  <div className="mt-2 p-2 bg-blue-500/15 rounded-lg border border-blue-400/30">
-                    <div className="space-y-1">
-                      {alertData.context.aiInsights.map((insight: string, idx: number) => (
-                        <p key={idx} className="text-xs text-blue-200 leading-relaxed text-center">
-                          {insight}
+                            // Fallback: remove percentage text and return clean message
+                            return message.replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '').replace(/\s*-\s*\d+%.*$/i, '');
+                          })()}
                         </p>
-                      ))}
+                      </div>
+
+                      {/* Priority Indicator - Compact */}
+                      {alertData.priority && alertData.priority >= 80 && (
+                        <div className="flex items-center justify-center gap-1 mt-1 pt-1 border-t border-emerald-500/20">
+                          <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
+                          <span className="text-red-300 text-xs font-medium uppercase tracking-wide">
+                            HIGH VALUE
+                          </span>
+                          <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
+                        </div>
+                      )}
+
+                      {/* AI Insights - Enhanced */}
+                      {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
+                        <div className="mt-2 p-2 bg-blue-500/15 rounded-lg border border-blue-400/30">
+                          <div className="space-y-1">
+                            {alertData.context.aiInsights.map((insight: string, idx: number) => (
+                              <p key={idx} className="text-xs text-blue-200 leading-relaxed text-center">
+                                {insight}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
+                  );
+                }
+                
+                return null;
+              })()}
 
               {/* AI Call to Action */}
               {alertData?.context?.aiCallToAction && (
