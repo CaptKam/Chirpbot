@@ -80,6 +80,20 @@ export default function AlertsPage() {
     return grouped;
   }, [alerts]);
 
+  // Calculate alert counts for each sport including 'all'
+  const alertCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      'all': alerts.length
+    };
+    
+    // Initialize counts for all sports
+    ['MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL'].forEach(sport => {
+      counts[sport] = alertsBySport[sport]?.length || 0;
+    });
+    
+    return counts;
+  }, [alerts, alertsBySport]);
+
   const filteredAlerts = filter === 'all' 
     ? (alerts as Alert[] || [])
     : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
@@ -170,8 +184,9 @@ export default function AlertsPage() {
       {/* Filter Tabs */}
       <SportTabs 
         sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
-        selectedSport={filter} 
-        onSportChange={setFilter} 
+        activeSport={filter} 
+        onSportChange={setFilter}
+        alertCounts={alertCounts}
       />
 
       {/* Alerts Content - Responsive Grid */}
