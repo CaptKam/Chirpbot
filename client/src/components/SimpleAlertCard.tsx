@@ -3,7 +3,7 @@ import { motion, PanInfo } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain, Target, Activity } from 'lucide-react';
+import { Trash2, Bell, Clock, AlertTriangle, TrendingUp, Users, Brain } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -172,50 +172,6 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
-  // Calculate alert status and visual indicators
-  const alertStatus = getAlertStatus(alert.type, alert.createdAt, 
-    (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
-  );
-  const isLive = alertStatus.status === 'ACTIVE';
-  const isNewAlert = alertStatus.minutesAgo < 1; // Alert less than 1 minute old
-  const confidence = alert.confidence || alert.payload?.gameInfo?.v3Analysis?.confidence || 0;
-  const confidenceLevel = confidence >= 90 ? 'high' : confidence >= 70 ? 'medium' : 'low';
-  const confidenceColor = confidence >= 90 ? 'bg-green-500/20 text-green-400 border-green-400/30' : 
-                          confidence >= 70 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30' : 
-                          'bg-gray-500/20 text-gray-400 border-gray-400/30';
-  
-  // Priority border color (4px wide vertical bar on left)
-  const priorityBorderColor = alert.priority >= 90 ? 'border-l-4 border-l-red-500' :
-                               alert.priority >= 80 ? 'border-l-4 border-l-orange-500' :
-                               alert.priority >= 70 ? 'border-l-4 border-l-yellow-500' :
-                               'border-l-4 border-l-blue-500';
-  
-  // Check if game is live
-  const isGameLive = alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined;
-  
-  // Format game time/period
-  const getGameTimeDisplay = () => {
-    if (alert.context?.quarter) {
-      return `Q${alert.context.quarter} ${alert.context.timeRemaining || ''}`;
-    } else if (alert.context?.inning) {
-      return `${alert.context.isTopInning ? '▲' : '▼'} ${alert.context.inning}`;
-    } else if (alert.context?.period) {
-      return `P${alert.context.period} ${alert.context.timeRemaining || ''}`;
-    }
-    return '';
-  };
-  
-  const gameTimeDisplay = getGameTimeDisplay();
-  
-  // Get sport-specific accent color
-  const sportAccentColor = alert.sport === 'MLB' ? 'text-green-400/60' :
-                           alert.sport === 'NFL' ? 'text-orange-400/60' :
-                           alert.sport === 'NBA' ? 'text-purple-400/60' :
-                           alert.sport === 'WNBA' ? 'text-pink-400/60' :
-                           alert.sport === 'CFL' ? 'text-red-400/60' :
-                           alert.sport === 'NCAAF' ? 'text-blue-400/60' :
-                           'text-gray-400/60';
-
 
 
   const getAlertIcon = (type: string) => {
@@ -343,7 +299,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
   }, []);
 
   return (
-    <div className="relative overflow-hidden rounded-lg mx-2 sm:mx-0">
+    <div className="relative overflow-hidden rounded-xl mx-2 sm:mx-0">
       {/* Sportsbooks Panel (Left Swipe) */}
       <div className={`absolute inset-y-0 right-0 w-60 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -360,13 +316,11 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                   }}
                   className="h-11 w-11 sm:h-10 sm:w-10 p-1 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20 touch-manipulation"
                   style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
-                  data-testid={`button-sportsbook-${sportsbook.name.toLowerCase()}`}
                 >
                   <img
                     src={sportsbook.logo}
                     alt={sportsbook.name}
                     className="w-full h-full rounded object-contain"
-                    data-testid={`img-sportsbook-logo-${sportsbook.name.toLowerCase()}`}
                   />
                 </Button>
                 <span className="text-xs text-white/80 font-medium">{sportsbook.name}</span>
@@ -387,7 +341,6 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           }}
           disabled={isDeleting}
           className="h-12 w-12 p-0 rounded-full bg-red-500/20 ring-1 ring-red-500/30"
-          data-testid="button-delete-alert"
         >
           <Trash2 className="w-5 h-5 text-red-400" />
         </Button>
@@ -412,23 +365,13 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <div className={`${className} transition-all duration-200 relative border border-gray-700/50 ${priorityBorderColor} ${
-          isNewAlert ? 'ring-2 ring-emerald-500 ring-opacity-50 animate-pulse' : ''
-        } shadow-lg hover:shadow-xl rounded-lg min-h-[120px] bg-slate-900/95`}>
-
-          {/* Alert Status Badge - Top Left Corner */}
-          <div className="absolute top-2 left-6 z-10">
-            {isLive ? (
-              <Badge className="bg-green-500/20 text-green-400 border-green-400/30 animate-pulse" data-testid="badge-status-live">
-                <Activity className="h-3 w-3 mr-1" />
-                LIVE
-              </Badge>
-            ) : (
-              <Badge className="bg-gray-600/20 text-gray-400 border-gray-400/30" data-testid="badge-status-expired">
-                EXPIRED
-              </Badge>
-            )}
-          </div>
+        <div className={`${className} transition-all duration-200 relative border-2 ${
+          getAlertStatus(alert.type, alert.createdAt, 
+            (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
+          ).status === 'ACTIVE' 
+            ? 'border-emerald-500 shadow-emerald-500/20' 
+            : 'border-gray-500/50 shadow-gray-500/10'
+        } shadow-lg rounded-xl`}>
 
           <GameCardTemplate
             gameId={alert.id}
@@ -450,90 +393,22 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             showWeather={false}
             showVenue={false}
             showEnhancedMLB={false}
-            className="bg-transparent border-white/10"
+            className="bg-white/5 border-white/10"
           >
           </GameCardTemplate>
 
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
-          <div className="p-4 pt-0 flex flex-col">
+          <div className="p-4 pt-0">
 
-            {/* Alert Message with Confidence Badge */}
+            {/* Alert Message - Simple */}
             <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-slate-100 text-base font-medium leading-relaxed line-clamp-2 flex-1">
-                  {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
-                </p>
-                {confidence > 0 && (
-                  <Badge className={`${confidenceColor} flex items-center gap-1`} data-testid="badge-confidence">
-                    <Target className="h-3 w-3" />
-                    <span className="font-semibold">{Math.round(confidence)}%</span>
-                  </Badge>
-                )}
-              </div>
+              <p className="text-slate-100 text-base font-medium leading-relaxed">
+                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
+              </p>
             </div>
 
-            {/* Game State and Footer Info */}
-            <div className="flex items-center justify-between mt-auto">
-              <div className="flex items-center gap-2">
-                {/* Sport Badge with Live Game Indicator */}
-                <div className="flex items-center gap-1">
-                  <Badge variant="outline" className={`text-xs border-gray-600 ${sportAccentColor}`}>
-                    {alert.sport || 'UNKNOWN'}
-                  </Badge>
-                  {isGameLive && (
-                    <div className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" data-testid="indicator-live-pulse"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" data-testid="indicator-live-dot"></span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Game State Indicator */}
-                {alert.sport === 'MLB' && alert.context?.inning && (
-                  <div className="flex items-center gap-1 text-xs text-gray-400">
-                    <span className="font-medium">
-                      {alert.context.isTopInning ? '▲' : '▼'} {alert.context.inning}
-                    </span>
-                    {alert.context.outs !== undefined && (
-                      <span className="text-gray-500">• {alert.context.outs} out{alert.context.outs !== 1 ? 's' : ''}</span>
-                    )}
-                  </div>
-                )}
-                
-                {(alert.sport === 'NFL' || alert.sport === 'NBA' || alert.sport === 'NCAAF') && alert.context?.quarter && (
-                  <div className="flex items-center gap-1 text-xs text-gray-400">
-                    <span className="font-medium">Q{alert.context.quarter}</span>
-                    {alert.context.timeRemaining && (
-                      <span className="text-gray-500">• {alert.context.timeRemaining}</span>
-                    )}
-                  </div>
-                )}
-                
-                {(alert.sport === 'WNBA' || alert.sport === 'CFL') && alert.context?.period && (
-                  <div className="flex items-center gap-1 text-xs text-gray-400">
-                    <span className="font-medium">P{alert.context.period}</span>
-                    {alert.context.timeRemaining && (
-                      <span className="text-gray-500">• {alert.context.timeRemaining}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              {/* Enhanced Time Display */}
-              <div className="flex items-center gap-1 text-xs">
-                <span className="text-gray-400" data-testid="text-timestamp">
-                  {formatTime(alert.createdAt)}
-                </span>
-                {gameTimeDisplay && (
-                  <>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-gray-300" data-testid="text-game-time">
-                      {gameTimeDisplay}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
+
+
 
           </div>
         </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, PanInfo } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calculator, Activity, Clock, Check } from 'lucide-react';
+import { Trash2, ExternalLink, Download, TrendingUp, Target, Zap, Brain, Calculator, Activity, Clock } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -301,40 +301,6 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       isLive: false
     };
   }, [liveGameData, alertData]);
-
-  // Calculate alert status and visual indicators
-  const alertStatus = alertData ? getAlertStatus(alertData.type, alertData.createdAt, 
-    liveGameData?.status || 'scheduled'
-  ) : { status: 'EXPIRED', minutesAgo: 999 };
-  const isAlertLive = alertStatus.status === 'ACTIVE';
-  const isNewAlert = alertStatus.minutesAgo < 1; // Alert less than 1 minute old
-  const confidence = alertData?.confidence || alertData?.payload?.gameInfo?.v3Analysis?.confidence || 0;
-  const confidenceColor = confidence >= 90 ? 'bg-green-500/20 text-green-400 border-green-400/30' : 
-                          confidence >= 70 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30' : 
-                          'bg-gray-500/20 text-gray-400 border-gray-400/30';
-  
-  // Priority border color (4px wide vertical bar on left)
-  const priorityBorderColor = (alertData?.priority || 0) >= 90 ? 'border-l-4 border-l-red-500' :
-                               (alertData?.priority || 0) >= 80 ? 'border-l-4 border-l-orange-500' :
-                               (alertData?.priority || 0) >= 70 ? 'border-l-4 border-l-yellow-500' :
-                               'border-l-4 border-l-blue-500';
-  
-  // Check if game is live
-  const isGameLive = displayScores.isLive || (liveGameData?.status === 'live');
-  
-  // Format game time/period
-  const getGameTimeDisplay = () => {
-    if (alertData?.context?.quarter) {
-      return `Q${alertData.context.quarter} ${alertData.context.timeRemaining || ''}`;
-    } else if (alertData?.context?.inning) {
-      return `${alertData.context.isTopInning ? '▲' : '▼'} ${alertData.context.inning}`;
-    } else if (alertData?.context?.period) {
-      return `P${alertData.context.period} ${alertData.context.timeRemaining || ''}`;
-    }
-    return '';
-  };
-  
-  const gameTimeDisplay = getGameTimeDisplay();
 
   // Debug score data
   React.useEffect(() => {
@@ -796,57 +762,26 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
       >
-        <Card className={`${className} border border-gray-700/50 ${priorityBorderColor} ${
-          isNewAlert ? 'ring-2 ring-emerald-500 ring-opacity-50 animate-pulse' : ''
-        } shadow-lg hover:shadow-xl rounded-lg min-h-[160px] transition-all duration-200 bg-slate-900/95`} {...props}>
+        <Card className={`${className} border-2 ${
+          getAlertStatus(alertData.type, alertData.createdAt || '', liveGameData?.status).status === 'ACTIVE'
+            ? 'border-emerald-500 shadow-emerald-500/20'
+            : 'border-gray-500 shadow-gray-500/20'
+        } shadow-lg`} {...props}>
           {/* Render the redesigned alert card content here */}
           {/* The actual alert content is expected to be passed as children or within alertData */}
           {/* Assuming alertData is passed and contains the alert details */}
           {alertData ? (
-            <div className="p-4 relative flex flex-col" key={`alert-${alertData.id}-${Date.now()}`}>
+            <div className="p-6 relative" key={`alert-${alertData.id}-${Date.now()}`}>
 
-              {/* Alert Status Badge - Top Left Corner */}
-              <div className="absolute top-2 left-2 z-10">
-                {isAlertLive ? (
-                  <Badge className="bg-green-500/20 text-green-400 border-green-400/30 animate-pulse" data-testid="badge-status-live">
-                    <Activity className="h-3 w-3 mr-1" />
-                    LIVE
+              {/* Clean Header - Calendar Page Style */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Badge
+                    variant="outline"
+                    className={`px-2 py-1 text-xs font-bold rounded-full ${getSportColors(alertData.sport || 'MLB').badge}`}
+                  >
+                    {alertData.sport}
                   </Badge>
-                ) : (
-                  <Badge className="bg-gray-600/20 text-gray-400 border-gray-400/30" data-testid="badge-status-expired">
-                    EXPIRED
-                  </Badge>
-                )}
-              </div>
-              
-              {/* Confidence Score Badge - Top Right */}
-              {confidence > 0 && (
-                <div className="absolute top-2 right-2 z-10">
-                  <Badge className={`${confidenceColor} flex items-center gap-1`} data-testid="badge-confidence">
-                    <Target className="h-3 w-3" />
-                    <span className="font-semibold">{Math.round(confidence)}%</span>
-                  </Badge>
-                </div>
-              )}
-              
-              {/* Clean Header - Fixed height */}
-              <div className="flex items-center justify-between mb-2 pt-8">
-                <div className="flex items-center space-x-2 flex-1">
-                  {/* Sport Badge with Live Game Indicator */}
-                  <div className="flex items-center gap-1">
-                    <Badge
-                      variant="outline"
-                      className={`px-2 py-1 text-xs font-bold rounded-full ${getSportColors(alertData.sport || 'MLB').badge}`}
-                    >
-                      {alertData.sport}
-                    </Badge>
-                    {isGameLive && (
-                      <div className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" data-testid="indicator-live-pulse"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" data-testid="indicator-live-dot"></span>
-                      </div>
-                    )}
-                  </div>
                   {alertData.context?.scoringProbability && (
                     <div className={`inline-flex items-center gap-1 rounded-full px-2 py-1 border ${getSportColors(alertData.sport || 'MLB').probability}`}>
                       <div className={`w-1 h-1 rounded-full animate-pulse ${alertData.sport === 'MLB' ? 'bg-green-400' : 
@@ -861,7 +796,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       </span>
                     </div>
                   )}
-                  <span className="text-slate-100 text-xs font-semibold uppercase tracking-wider truncate max-w-[150px]">
+                  <span className="text-slate-100 text-xs font-semibold uppercase tracking-wider">
                     {(() => {
                       // Dynamic alert type based on sport and context
                       if (alertData.sport === 'MLB') {
@@ -891,34 +826,33 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     })()}
                   </span>
                 </div>
-                {/* Enhanced Time Display */}
-                <div className="flex items-center gap-1 text-xs whitespace-nowrap ml-2">
+                <div className="flex items-center text-xs">
                   <Clock className="w-3 h-3 text-slate-200 mr-1" />
-                  <span className="text-slate-400 font-medium" data-testid="text-timestamp">
-                    {formatTime(alertData.createdAt || '')}
+                  <span className="text-slate-200 font-medium">
+                    {(() => {
+                      const alertTime = new Date(alertData.createdAt || '');
+                      const now = new Date();
+                      const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
+
+                      if (diffMinutes < 1) return 'Just now';
+                      if (diffMinutes < 60) return `${diffMinutes}m`;
+                      return `${Math.floor(diffMinutes / 60)}h`;
+                    })()}
                   </span>
-                  {gameTimeDisplay && (
-                    <>
-                      <span className="text-gray-500">•</span>
-                      <span className="text-slate-300" data-testid="text-game-time">
-                        {gameTimeDisplay}
-                      </span>
-                    </>
-                  )}
                 </div>
               </div>
 
               {/* AI-Enhanced Title */}
               {alertData?.context?.aiTitle && (
                 <div className="mb-1">
-                  <h3 className="text-base font-bold text-white line-clamp-1">
+                  <h3 className="text-base font-bold text-white">
                     {alertData.context.aiTitle}
                   </h3>
                 </div>
               )}
 
-              {/* Game Card Template - Fixed height section */}
-              <div className="mb-3 flex-1">
+              {/* Game Card Template - Calendar Page Style with Live Scores */}
+              <div className="mb-4">
                 <GameCardTemplate
                   gameId={alertData.id}
                   homeTeam={{
@@ -956,12 +890,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               </div>
 
-              {/* Alert Message - Compact Design with line clamp */}
-              <div className={`rounded-lg p-3 mb-2 border ${getSportColors(alertData.sport || 'MLB').alertBg} ${getSportColors(alertData.sport || 'MLB').alertBorder}`}>
+              {/* Alert Message - Compact Design */}
+              <div className={`rounded-lg p-3 mb-3 border ${getSportColors(alertData.sport || 'MLB').alertBg} ${getSportColors(alertData.sport || 'MLB').alertBorder}`}>
                 {/* Main Alert Message with Compact Typography */}
                 <div className="text-center">
                   {/* Main Situation - Clean and Simple */}
-                  <p className="text-white text-sm font-semibold leading-tight line-clamp-2">
+                  <p className="text-white text-sm font-semibold leading-tight">
                     {(() => {
                       let message = alertData.message || '';
 
@@ -1018,12 +952,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   </div>
                 )}
 
-                {/* AI Insights - Enhanced with line clamp */}
+                {/* AI Insights - Enhanced */}
                 {alertData.context?.aiInsights && !alertData?.context?.aiBettingAdvice && (
                   <div className="mt-2 p-2 bg-blue-500/15 rounded-lg border border-blue-400/30">
                     <div className="space-y-1">
                       {alertData.context.aiInsights.map((insight: string, idx: number) => (
-                        <p key={idx} className="text-xs text-blue-200 leading-relaxed text-center line-clamp-2">
+                        <p key={idx} className="text-xs text-blue-200 leading-relaxed text-center">
                           {insight}
                         </p>
                       ))}
@@ -1034,8 +968,8 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
               {/* AI Call to Action */}
               {alertData?.context?.aiCallToAction && (
-                <div className="mt-auto p-1.5 bg-green-500/10 rounded border border-green-500/30">
-                  <p className="text-xs font-medium text-green-300 line-clamp-1">
+                <div className="mb-1 p-1.5 bg-green-500/10 rounded border border-green-500/30">
+                  <p className="text-xs font-medium text-green-300">
                     {alertData.context.aiCallToAction}
                   </p>
                 </div>

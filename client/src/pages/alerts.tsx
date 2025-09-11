@@ -3,17 +3,15 @@ import { motion } from 'framer-motion';
 import AlertFooter from '@/components/AlertFooter';
 import { SwipeableCard } from '@/components/SwipeableCard';
 import { SimpleAlertCard } from '@/components/SimpleAlertCard';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Clock, TrendingUp, Users, Bell, Activity, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Clock, TrendingUp, Users, Bell, Activity } from 'lucide-react';
 import { AlertLoading } from '@/components/sports-loading';
 import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
-import { EmptyState, AlertLoadingGrid, ErrorState, LoadingMore } from '@/components/alert-states';
-import { useToast } from '@/hooks/use-toast';
 
 interface Alert {
   id: string;
@@ -58,47 +56,12 @@ interface AlertStats {
 
 export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF' | 'WNBA' | 'CFL'>('all');
-  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
-  const { toast } = useToast();
 
   // Fetch alerts using React Query
-  const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts, isError: alertsError, error: alertError } = useQuery({
+  const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
     queryKey: ['/api/alerts'],
     refetchInterval: 30000, // Refetch every 30 seconds
   });
-
-  // Update last refresh time when data is fetched
-  useEffect(() => {
-    if (alerts && !alertsLoading) {
-      setLastRefreshTime(new Date());
-    }
-  }, [alerts, alertsLoading]);
-
-  // Refresh mutation with feedback
-  const refreshMutation = useMutation({
-    mutationFn: async () => {
-      const result = await refetchAlerts();
-      return result;
-    },
-    onSuccess: () => {
-      setLastRefreshTime(new Date());
-      toast({
-        title: "Alerts refreshed",
-        description: "Successfully refreshed all alerts",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Refresh failed",
-        description: "Failed to refresh alerts. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleRefresh = () => {
-    refreshMutation.mutate();
-  };
 
   // Fetch alert stats
   const { data: stats, isLoading: statsLoading } = useQuery<AlertStats>({
@@ -116,20 +79,6 @@ export default function AlertsPage() {
     });
     return grouped;
   }, [alerts]);
-
-  // Calculate alert counts for each sport including 'all'
-  const alertCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      'all': alerts.length
-    };
-    
-    // Initialize counts for all sports
-    ['MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL'].forEach(sport => {
-      counts[sport] = alertsBySport[sport]?.length || 0;
-    });
-    
-    return counts;
-  }, [alerts, alertsBySport]);
 
   const filteredAlerts = filter === 'all' 
     ? (alerts as Alert[] || [])
@@ -191,45 +140,8 @@ export default function AlertsPage() {
     return simpleAlertTypes.includes(alertType);
   };
 
-  // Show loading state with skeleton cards
   if (alertsLoading || statsLoading) {
-    return (
-      <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-        <PageHeader 
-          title="Live Alerts" 
-          subtitle="Loading real-time sports notifications..."
-          icon={Bell}
-        />
-        <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6">
-          <SportTabs 
-            sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
-            activeSport={filter} 
-            onSportChange={setFilter}
-            alertCounts={{}}
-          />
-          <AlertLoadingGrid count={6} />
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state if loading failed
-  if (alertsError) {
-    return (
-      <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-        <PageHeader 
-          title="Live Alerts" 
-          subtitle="Real-time sports notifications"
-          icon={Bell}
-        />
-        <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6">
-          <ErrorState 
-            message={alertError?.message || "Failed to load alerts"}
-            onRetry={handleRefresh}
-          />
-        </div>
-      </div>
-    );
+    return <AlertLoading />;
   }
 
   const AlertSkeleton = () => (
@@ -258,29 +170,34 @@ export default function AlertsPage() {
       {/* Filter Tabs */}
       <SportTabs 
         sports={['all', 'MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'WNBA', 'CFL']} 
-        activeSport={filter} 
-        onSportChange={setFilter}
-        alertCounts={alertCounts}
+        selectedSport={filter} 
+        onSportChange={setFilter} 
       />
 
-      {/* Alerts Content - Responsive Grid */}
-      <div className="pb-8">
+      {/* Alerts Content */}
+      <div className="pb-8 space-y-4">
         {filteredAlerts.length === 0 ? (
-          <EmptyState 
-            sport={filter}
-            onRefresh={handleRefresh}
-            isRefreshing={refreshMutation.isLoading}
-            lastRefreshTime={lastRefreshTime}
-          />
+          <Card className="bg-white/5 backdrop-blur-sm border-white/10">
+            <CardContent className="p-8 text-center">
+              <Bell className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-100 text-base">No alerts for {filter === 'all' ? 'any sport' : filter}</p>
+              <Button 
+                onClick={() => refetchAlerts()} 
+                variant="outline" 
+                className="mt-4 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10"
+              >
+                Refresh Alerts
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredAlerts.map((alert: Alert, index: number) => (
+          filteredAlerts.map((alert: Alert, index: number) => (
             <motion.div
               key={alert.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex flex-col h-full"
+              transition={{ delay: index * 0.1 }}
+              className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
             >
               {shouldUseSimpleCard(alert.type) ? (
                 // Use Simple Card for basic alerts
@@ -297,7 +214,7 @@ export default function AlertsPage() {
                     createdAt: alert.createdAt,
                     context: alert.context
                   }}
-                  className="border-emerald-500/30 h-full"
+                  className="border-emerald-500/30"
                 />
               ) : (
                 // Use Complex Card for detailed game state alerts
@@ -349,12 +266,11 @@ export default function AlertsPage() {
                     betbookData: alert.context?.betbookData,
                     gameInfo: alert.context?.gameInfo
                   }}
-                  className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200 h-full"
+                  className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-emerald-500/30 transition-all duration-200"
                 />
               )}
             </motion.div>
-          ))}
-          </div>
+          ))
         )}
       </div>
       </div>
