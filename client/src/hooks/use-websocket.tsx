@@ -64,7 +64,15 @@ export function useWebSocket() {
                   timestamp: alertData.createdAt,
                   seen: false,
                   sentToTelegram: false,
-                  context: alertData.payload?.context || {}
+                  context: alertData.payload?.context || {},
+                  // Preserve AI enhancement data
+                  ai: alertData.ai ? {
+                    enhancedTitle: alertData.ai.enhancedTitle,
+                    enhancedMessage: alertData.ai.enhancedMessage,
+                    confidence: alertData.ai.confidence,
+                    enhanced: alertData.ai.enhanced,
+                    ...alertData.ai
+                  } : undefined
                 };
 
                 // Update the alerts list in the query cache

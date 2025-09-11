@@ -447,11 +447,11 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main message */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+          {alertData.ai?.enhancedTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
-        {alertData.description && (
+        {(alertData.ai?.enhancedMessage || alertData.description) && (
           <p className="text-sm text-slate-300">
-            {alertData.description}
+            {alertData.ai?.enhancedMessage || alertData.description}
           </p>
         )}
       </div>
@@ -859,10 +859,10 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Situation display */}
       <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 rounded-lg p-4 mb-4 border border-red-500/20">
         <div className="text-lg font-bold text-white mb-2">
-          {alertData.title || alertData.message}
+          {alertData.ai?.enhancedTitle || alertData.title || alertData.message}
         </div>
         <div className="text-sm text-slate-300">
-          {alertData.description}
+          {alertData.ai?.enhancedMessage || alertData.description}
         </div>
       </div>
 
@@ -929,8 +929,13 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main alert */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+          {alertData.ai?.enhancedTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
+        {(alertData.ai?.enhancedMessage || alertData.description) && (
+          <p className="text-sm text-slate-300">
+            {alertData.ai?.enhancedMessage || alertData.description}
+          </p>
+        )}
       </div>
 
       {/* Momentum indicators */}
@@ -1057,11 +1062,11 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main content */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+          {alertData.ai?.enhancedTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
-        {alertData.description && (
+        {(alertData.ai?.enhancedMessage || alertData.description) && (
           <p className="text-sm text-slate-300">
-            {alertData.description}
+            {alertData.ai?.enhancedMessage || alertData.description}
           </p>
         )}
       </div>
