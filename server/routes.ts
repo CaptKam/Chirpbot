@@ -3256,12 +3256,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get comprehensive V3 performance data
       const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
-      // Polling stats would come from multiSourceAggregator if imported
+      // Polling stats placeholder for admin metrics endpoint
       const pollingStats = { 
         activeSports: 0,
         liveGames: 0,
         scheduledGames: 0,
-        totalGames: 0
+        totalGames: 0,
+        finalGames: 0,
+        delayedGames: 0,
+        suspendedGames: 0,
+        criticalGames: 0,
+        highPriorityGames: 0,
+        individualPollingActive: false
       };
 
       // Calculate system health indicators
