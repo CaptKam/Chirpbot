@@ -216,6 +216,30 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
   const { toast } = useToast();
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
+  // Helper function to convert raw alert types to user-friendly categories
+  const getAlertCategory = (alertType: string): string => {
+    if (alertType.includes('RUNNER_ON_THIRD') || alertType.includes('BASES_LOADED') || alertType.includes('FIRST_AND_THIRD') || alertType.includes('SECOND_AND_THIRD')) {
+      return 'SCORING OPPORTUNITY';
+    }
+    if (alertType.includes('GAME_START')) {
+      return 'GAME START';
+    }
+    if (alertType.includes('WEATHER') || alertType.includes('WIND')) {
+      return 'WEATHER IMPACT';
+    }
+    if (alertType.includes('SEVENTH_INNING_STRETCH')) {
+      return 'MILESTONE';
+    }
+    if (alertType.includes('BATTER_DUE') || alertType.includes('ON_DECK')) {
+      return 'PLAYER FOCUS';
+    }
+    if (alertType.includes('STEAL')) {
+      return 'STRATEGIC PLAY';
+    }
+    // Remove sport prefix and convert to title case
+    return alertType.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '').replace(/_/g, ' ');
+  };
+
   // Get theme based on sport
   const theme = SPORT_THEMES[alertData.sport as keyof typeof SPORT_THEMES] || SPORT_THEMES.MLB;
   const category = getAlertCategory(alertData.type);
@@ -372,6 +396,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
     };
   }, []);
 
+
   // Render different layouts based on alert category
   const renderAlertContent = () => {
     switch (category) {
@@ -401,7 +426,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           <div className="relative">
             <div className={`absolute inset-0 ${theme.pulse} rounded-full blur-xl opacity-40 animate-pulse`} />
             <Badge className={`${theme.badge} border relative z-10 px-3 py-1`}>
-              {alertData.type.replace(/_/g, ' ')}
+              {getAlertCategory(alertData.type)}
             </Badge>
           </div>
           <Badge variant="outline" className="border-slate-600 text-slate-300">
@@ -422,7 +447,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main message */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.title || alertData.message}
+          {alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
         {alertData.description && (
           <p className="text-sm text-slate-300">
@@ -904,7 +929,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main alert */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.title || alertData.message}
+          {alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
       </div>
 
@@ -949,7 +974,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Player alert header */}
       <div className="flex items-center justify-between mb-4">
         <Badge className={`${theme.badge} border px-3 py-1`}>
-          {alertData.type.replace(/_/g, ' ')}
+          {getAlertCategory(alertData.type)}
         </Badge>
         <div className="flex items-center gap-2">
           <User className="w-4 h-4 text-slate-400" />
@@ -1024,7 +1049,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Standard header */}
       <div className="flex items-center justify-between mb-4">
         <Badge className={`${theme.badge} border px-3 py-1`}>
-          {alertData.type.replace(/_/g, ' ')}
+          {getAlertCategory(alertData.type)}
         </Badge>
         <span className="text-xs text-slate-400">{formatTime(alertData.createdAt || alertData.timestamp)}</span>
       </div>
@@ -1032,7 +1057,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       {/* Main content */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.title || alertData.message}
+          {alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
         {alertData.description && (
           <p className="text-sm text-slate-300">
