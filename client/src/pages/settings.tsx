@@ -299,7 +299,35 @@ export default function Settings() {
       return;
     }
     
-    updateAlertPreferenceMutation.mutate({ alertType, enabled });
+    // Optimistic update - update cache immediately for smooth UX
+    const queryKey = [`/api/user/${user.id}/alert-preferences/${activeSport.toLowerCase()}`];
+    const previousData = queryClient.getQueryData(queryKey);
+    
+    // Update cache optimistically
+    queryClient.setQueryData(queryKey, (oldData: any) => {
+      if (!oldData || !Array.isArray(oldData)) return oldData;
+      
+      // Find existing preference for this alert type
+      const existingIndex = oldData.findIndex((pref: any) => pref.alertType === alertType);
+      
+      if (existingIndex >= 0) {
+        // Update existing preference
+        const newData = [...oldData];
+        newData[existingIndex] = { ...newData[existingIndex], enabled };
+        return newData;
+      } else {
+        // Add new preference
+        return [...oldData, { alertType, enabled, sport: activeSport }];
+      }
+    });
+    
+    // Perform mutation with rollback on error
+    updateAlertPreferenceMutation.mutate({ alertType, enabled }, {
+      onError: () => {
+        // Rollback optimistic update on error
+        queryClient.setQueryData(queryKey, previousData);
+      }
+    });
   };
 
   // Populate Telegram settings from query data
