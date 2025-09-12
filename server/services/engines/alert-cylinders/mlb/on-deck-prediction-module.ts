@@ -183,10 +183,16 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     if (!gameState.weatherContext) return 0;
 
     const windSpeed = gameState.weatherContext.windSpeed || 0;
-    const windDirection = gameState.weatherContext.windDirection || '';
+    
+    // Ensure windDirection is always a string with proper type checking
+    let windDirection = '';
+    if (gameState.weatherContext.windDirection != null) {
+      // Convert to string if not already a string
+      windDirection = String(gameState.weatherContext.windDirection).toLowerCase();
+    }
 
     // Favorable wind conditions
-    if (windSpeed >= 10) {
+    if (windSpeed >= 10 && windDirection) {
       if (windDirection.includes('out') || windDirection.includes('center')) {
         return 10; // 10% bonus for strong favorable wind
       } else if (windDirection.includes('in')) {
@@ -240,7 +246,11 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     // Add wind if significant
     let windText = '';
     if (gameState.weatherContext?.windSpeed && gameState.weatherContext.windSpeed >= 8) {
-      const windDir = gameState.weatherContext.windDirection || 'unknown';
+      // Ensure windDirection is properly converted to string
+      let windDir = 'unknown';
+      if (gameState.weatherContext.windDirection != null) {
+        windDir = String(gameState.weatherContext.windDirection);
+      }
       windText = ` | Wind: ${gameState.weatherContext.windSpeed}mph ${windDir}`;
     }
 
