@@ -288,8 +288,8 @@ export default class BatterDueModule extends BaseAlertModule {
   private getRealLineupStrengthFactor(gameState: GameState): number {
     const lineupData = gameState.lineupData;
     if (!lineupData) {
-      // Fallback to estimative method if no real data available
-      return this.getFallbackLineupFactor(gameState);
+      // No fallback - return neutral factor when real lineup data unavailable
+      return 0;
     }
     
     let lineupFactor = 0;
@@ -329,29 +329,6 @@ export default class BatterDueModule extends BaseAlertModule {
     return lineupFactor;
   }
 
-  private getFallbackLineupFactor(gameState: GameState): number {
-    // Fallback to original synthetic method if no real lineup data
-    const inning = gameState.inning || 1;
-    const outs = gameState.outs || 0;
-    const estimatedPosition = ((inning - 1) * 3 + outs) % 9 + 1;
-    
-    const strength = this.getBatterStrengthByPosition(estimatedPosition);
-    switch (strength) {
-      case 'elite': return 6;
-      case 'strong': return 4;
-      case 'average': return 2;
-      case 'weak': return 0;
-    }
-    return 2;
-  }
-
-  private getBatterStrengthByPosition(position: number): 'elite' | 'strong' | 'average' | 'weak' {
-    // Standard MLB batting order strength patterns (deterministic)
-    if (position >= 1 && position <= 2) return 'elite';   // 1-2: Best contact/speed hitters
-    if (position >= 3 && position <= 5) return 'strong';  // 3-5: Best power hitters  
-    if (position >= 6 && position <= 7) return 'average'; // 6-7: Average hitters
-    return 'weak'; // 8-9: Weakest hitters (including pitcher in NL)
-  }
 
   private generateAlertMessage(scoringProbability: number, gameContext: any, lineupContext: any, weatherContext?: any): string {
     const roundedProb = Math.round(scoringProbability);
@@ -726,10 +703,25 @@ export default class BatterDueModule extends BaseAlertModule {
     return eraAdjustment + kwbbAdjustment;
   }
 
-  // Synchronous version of getAdvancedPlayerMetrics (simplified)
+  // Synchronous version of getAdvancedPlayerMetrics - only uses real cached data
   private getAdvancedPlayerMetricsSync(gameState: GameState): any {
-    // Simplified synchronous version - returns mock data for now
-    // In production, this would use cached data or a synchronous lookup
+    // Only return cached data if available, no mock/fallback data
+    const cacheKey = `${gameState.gameId}_${gameState.currentBatter}_${gameState.currentPitcher}`;
+    const cached = this.playerStatsCache[cacheKey];
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < this.PLAYER_CACHE_TTL) {
+      const handednessMatchup = cached.batter && cached.pitcher ? 
+        advancedPlayerStats.analyzeHandednessMatchup(cached.batter.handedness, cached.pitcher.handedness) : undefined;
+      
+      return {
+        batterStats: cached.batter,
+        pitcherStats: cached.pitcher,
+        handednessMatchup
+      };
+    }
+    
+    // Return undefined if no authentic cached data available
     return {
       batterStats: undefined,
       pitcherStats: undefined,
@@ -737,11 +729,48 @@ export default class BatterDueModule extends BaseAlertModule {
     };
   }
 
-  // Synchronous version of applyAdvancedMetricsBoost (simplified)
+  // Synchronous version of applyAdvancedMetricsBoost - only uses authentic cached data
   private applyAdvancedMetricsBoostSync(probability: number, gameState: GameState): number {
-    // Simplified synchronous version - returns original probability
-    // In production, this would use cached metrics data
-    return probability;
+    // Only apply enhancements if real cached data is available
+    const { batterStats, pitcherStats, handednessMatchup } = this.getAdvancedPlayerMetricsSync(gameState);
+    
+    if (!batterStats && !pitcherStats && !handednessMatchup) {
+      // No authentic player data available, return original probability without enhancement
+      return probability;
+    }
+    
+    let enhancedProbability = probability;
+    
+    // Apply xwOBA quality multiplier only if real data available
+    if (batterStats?.xwOBA) {
+      const xwobaMultiplier = this.calculateXwOBAMultiplier(batterStats.xwOBA);
+      enhancedProbability *= xwobaMultiplier;
+    }
+    
+    // Apply wRC+ run creation adjustment only if real data available
+    if (batterStats?.wRCPlus) {
+      const wrcPlusAdjustment = this.calculateWRCPlusAdjustment(batterStats.wRCPlus);
+      enhancedProbability += wrcPlusAdjustment;
+    }
+    
+    // Apply handedness matchup modifier only if real data available
+    if (handednessMatchup) {
+      enhancedProbability *= handednessMatchup.expectedWOBAModifier;
+    }
+    
+    // Apply recent performance trends only if real data available
+    if (batterStats?.recent.trend) {
+      const trendAdjustment = this.calculateTrendAdjustment(batterStats.recent.trend, batterStats.recent.wRCPlus);
+      enhancedProbability += trendAdjustment;
+    }
+    
+    // Apply pitcher quality counter-adjustment only if real data available
+    if (pitcherStats) {
+      const pitcherAdjustment = this.calculatePitcherQualityAdjustment(pitcherStats);
+      enhancedProbability += pitcherAdjustment;
+    }
+    
+    return enhancedProbability;
   }
 
   private buildAdvancedMetricsContext(

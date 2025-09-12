@@ -160,7 +160,7 @@ export class NFLApiService {
       
       // Rate limiting based on game state
       if (!this.canMakeCall(`getEnhancedGameData_${gameId}`, gameState)) {
-        return this.getCached(cacheKey) || this.getFallbackGameData();
+        return this.getCached(cacheKey) || null;
       }
 
       console.log(`🔄 NFL API: Fetching enhanced data for ${gameState} game ${gameId}`);
@@ -306,17 +306,7 @@ export class NFLApiService {
         }
       }
       
-      // Strategy 4: Generate deterministic player names as last resort
-      if (!currentPlayer && possession) {
-        const homeTeam = homeCompetitor?.team?.displayName;
-        const awayTeam = awayCompetitor?.team?.displayName;
-        
-        if (possessionSide === 'home' && homeTeam) {
-          currentPlayer = this.generateDeterministicPlayerName(homeTeam, 'QB', quarter);
-        } else if (possessionSide === 'away' && awayTeam) {
-          currentPlayer = this.generateDeterministicPlayerName(awayTeam, 'QB', quarter);
-        }
-      }
+      // No fake player generation - leave null if no real player found
 
       console.log(`🔍 NFL enhanced data for game ${gameId}:`, {
         quarter, timeRemaining, down, yardsToGo, fieldPosition, possession, 
@@ -352,42 +342,12 @@ export class NFLApiService {
       
     } catch (error) {
       console.error(`❌ Failed to fetch NFL enhanced data for ${gameId}:`, error);
-      // Return cached data or fallback
-      return this.getCached(cacheKey) || this.getFallbackGameData();
+      // Return cached data or null
+      return this.getCached(cacheKey) || null;
     }
   }
 
-  private getFallbackGameData(): any {
-    return {
-      quarter: 0,
-      timeRemaining: '',
-      down: null,
-      yardsToGo: null,
-      fieldPosition: null,
-      possession: null,
-      homeScore: 0,
-      awayScore: 0,
-      gameState: 'unknown',
-      error: 'Failed to fetch live data'
-    };
-  }
 
-  // Generate deterministic player names for consistent alerts
-  private generateDeterministicPlayerName(teamName: string, position: string, quarter: number): string {
-    // Create deterministic names based on team and context
-    const teamAbbrev = teamName.split(' ').pop() || teamName.slice(0, 4);
-    const quarterSuffix = quarter > 4 ? 'OT' : `Q${quarter}`;
-    
-    if (position === 'QB') {
-      return `${teamAbbrev} ${quarterSuffix} Quarterback`;
-    } else if (position === 'RB') {
-      return `${teamAbbrev} ${quarterSuffix} Running Back`;
-    } else if (position === 'WR') {
-      return `${teamAbbrev} ${quarterSuffix} Receiver`;
-    }
-    
-    return `${teamAbbrev} ${quarterSuffix} Player`;
-  }
 
   // Clear cache for specific game or all cache
   clearCache(gameId?: string): void {
