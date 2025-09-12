@@ -576,7 +576,12 @@ Make every word count. Users need instant clarity and value.
       line.length < 60 && line.includes(context.alertType)
     );
 
-    return titleLine?.replace(/^title:?\s*/i, '').trim() || 
+    // Remove markdown formatting, numbered list prefixes, and title labels
+    return titleLine?.replace(/^\d+\.\s*\*\*title:\*\*\s*/i, '')  // Remove "1. **Title:** "
+                    ?.replace(/^\*\*title:\*\*\s*/i, '')         // Remove "**Title:** "
+                    ?.replace(/^title:?\s*/i, '')               // Remove "Title: "
+                    ?.replace(/^\d+\.\s*/g, '')                 // Remove "1. "
+                    ?.trim() || 
            `🚨 ${context.alertType.replace('_', ' ')} Alert`;
   }
 
