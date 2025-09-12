@@ -387,34 +387,25 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
   }
 
   private isBowlGame(gameState: GameState): boolean {
-    // Use explicit bowl game indicators from game data
+    // Simplified bowl game detection - would need more sophisticated logic in production
     const gameId = gameState.gameId?.toString() || '';
-    return gameId.includes('bowl') || (gameState.isBowlGame === true);
+    return gameId.includes('bowl') || (gameState.quarter && gameState.quarter >= 1 && this.isDecemberOrJanuary());
   }
 
   private isPlayoffGame(gameState: GameState): boolean {
-    // Use explicit playoff indicators from game data
+    // Simplified playoff detection
     const gameId = gameState.gameId?.toString() || '';
-    return gameId.includes('playoff') || gameId.includes('championship') || (gameState.isPlayoffGame === true);
+    return gameId.includes('playoff') || gameId.includes('championship');
   }
 
   private hasConferenceChampionshipImplications(gameState: GameState): boolean {
-    // Use explicit championship implications data if available
-    if (gameState.hasChampionshipImplications !== undefined) {
-      return gameState.hasChampionshipImplications;
-    }
-    
-    // Fall back to basic same-conference check only if no explicit data
+    // Would need more sophisticated conference standings analysis
     return this.isLateSeasonGame() && this.determineConference(gameState.homeTeam) === this.determineConference(gameState.awayTeam);
   }
 
   private getUnderdogRecentScoring(gameState: GameState): number {
-    // Only use actual recent scoring data if available
-    if (gameState.recentScoring) {
-      const underdog = this.getUnderdogTeam(gameState);
-      return gameState.recentScoring[underdog] || 0;
-    }
-    return 0;
+    // Placeholder - would analyze recent scoring from game data
+    return gameState.recentScoring?.underdog || 0;
   }
 
   private getTimePressureLevel(gameState: GameState): string {
@@ -453,11 +444,13 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
   }
 
   private getMomentumShiftLevel(gameState: GameState): string {
-    // Only use explicit momentum data from game state
     if (gameState.momentumShift) return gameState.momentumShift;
     
-    // Return neutral if no momentum data available
-    return 'NEUTRAL';
+    // Simple momentum detection based on score trends
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    if (scoreDiff >= 14) return 'STRONG';
+    if (scoreDiff >= 7) return 'MODERATE';
+    return 'SLIGHT';
   }
 
   private getUnderdogPerformanceLevel(gameState: GameState): string {

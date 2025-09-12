@@ -110,7 +110,7 @@ export class WeatherService {
     }
     
     if (!this.apiKey) {
-      console.warn('⚠️ OpenWeatherMap API key not configured - weather data will be unavailable');
+      console.warn('⚠️ OpenWeatherMap API key not configured - using fallback data');
       console.warn('⚠️ Set OPENWEATHERMAP_API_KEY in Secrets for live weather data');
     }
   }
@@ -122,7 +122,7 @@ export class WeatherService {
     return true;
   }
 
-  async getWeatherForTeam(teamName: string): Promise<WeatherData | null> {
+  async getWeatherForTeam(teamName: string): Promise<WeatherData> {
     const now = Date.now();
     const cached = this.weatherCache.get(teamName);
     
@@ -134,13 +134,16 @@ export class WeatherService {
     const stadium = STADIUMS[teamName];
     
     if (!stadium) {
-      console.warn(`🌤️ No stadium coordinates found for ${teamName} - no weather data available`);
-      return null;
+      console.warn(`🌤️ No stadium coordinates found for ${teamName}, using fallback`);
+      const fallbackData = this.getFallbackWeather();
+      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
+      return fallbackData;
     }
 
     if (!this.apiKey) {
-      console.warn(`🌤️ OpenWeatherMap API key not configured - no weather data available for ${teamName}`);
-      return null;
+      const fallbackData = this.getFallbackWeather();
+      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
+      return fallbackData;
     }
 
     try {
@@ -172,11 +175,23 @@ export class WeatherService {
       return weatherData;
     } catch (error) {
       console.error(`🌤️ Weather API error for ${teamName}:`, error);
-      console.warn(`🌤️ No weather data available for ${teamName} due to API failure`);
-      return null;
+      const fallbackData = this.getFallbackWeather();
+      this.weatherCache.set(teamName, { data: fallbackData, timestamp: now });
+      return fallbackData;
     }
   }
 
+  private getFallbackWeather(): WeatherData {
+    return {
+      temperature: 72,
+      condition: 'Clear',
+      windSpeed: 5,
+      windDirection: 270,
+      humidity: 50,
+      pressure: 1013,
+      timestamp: new Date().toISOString()
+    };
+  }
 
   // Calculate home run probability based on weather conditions (MLB)
   calculateHomeRunFactor(weather: WeatherData): number {
@@ -427,7 +442,7 @@ export class WeatherService {
 
   // Get current weather data source
   getDataSource(): string {
-    return this.apiKey ? 'OpenWeatherMap API' : 'No Data (API key missing)';
+    return this.apiKey ? 'OpenWeatherMap API' : 'Fallback Data';
   }
 }
 

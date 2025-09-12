@@ -197,6 +197,8 @@ export default class ComebackPotentialModule extends BaseAlertModule {
       adjustment += 0.10; // Above average offense
     }
 
+    // Additional factors would include actual team offensive statistics
+    // This is a simplified version for demonstration
     
     return adjustment;
   }
@@ -236,14 +238,10 @@ export default class ComebackPotentialModule extends BaseAlertModule {
   }
 
   private getTimeoutAdjustment(gameState: GameState): number {
-    // Only apply timeout adjustments if actual timeout data is available
-    if (gameState.timeouts && gameState.timeouts.trailing !== undefined) {
-      const trailingTeam = this.getTrailingTeam(gameState);
-      const timeoutsRemaining = gameState.timeouts[trailingTeam] || 0;
-      
-      if (gameState.quarter === 4 && timeoutsRemaining > 0) {
-        return 1 + (timeoutsRemaining * 0.05); // 5% boost per timeout
-      }
+    // Placeholder - would check actual timeout data if available
+    // For now, assume trailing teams in 4th quarter have timeouts available
+    if (gameState.quarter === 4) {
+      return 1.1; // Slight boost assuming timeout management
     }
     return 1.0;
   }
@@ -365,10 +363,16 @@ export default class ComebackPotentialModule extends BaseAlertModule {
   }
 
   private getMomentumLevel(gameState: GameState): string {
-    // Only use explicit momentum data from the game state
+    // Simplified momentum detection - would use more sophisticated analysis in production
     if (gameState.momentum) return gameState.momentum;
     
-    // If no momentum data available, return neutral
+    // Basic momentum inference from recent scoring
+    const trailingTeam = this.getTrailingTeam(gameState);
+    const recentScoring = gameState.recentScoring;
+    
+    if (recentScoring && recentScoring[trailingTeam] >= 14) return 'STRONG_POSITIVE';
+    if (recentScoring && recentScoring[trailingTeam] >= 7) return 'MODERATE_POSITIVE';
+    
     return 'NEUTRAL';
   }
 
@@ -421,17 +425,11 @@ export default class ComebackPotentialModule extends BaseAlertModule {
   }
 
   private getTimeoutsSituation(gameState: GameState): any {
-    // Only return timeout data if available from game state
-    if (gameState.timeouts) {
-      const trailingTeam = this.getTrailingTeam(gameState);
-      return {
-        trailingTeamTimeouts: gameState.timeouts[trailingTeam] || 0,
-        clockManagement: gameState.quarter === 4 ? 'Critical' : 'Normal'
-      };
-    }
-    
-    // Return null if no timeout data available
-    return null;
+    // Placeholder - would use actual timeout data if available
+    return {
+      trailingTeamTimeouts: 'Unknown',
+      clockManagement: gameState.quarter === 4 ? 'Critical' : 'Normal'
+    };
   }
 
   private isRivalryGame(gameState: GameState): boolean {

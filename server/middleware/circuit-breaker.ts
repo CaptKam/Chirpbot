@@ -18,8 +18,6 @@ interface CircuitBreakerState {
   };
 }
 
-import fetch from 'node-fetch';
-
 export class CircuitBreaker {
   private state: CircuitBreakerState;
   private readonly options: Required<CircuitBreakerOptions>;
@@ -172,8 +170,8 @@ export const weatherApiCircuit = new CircuitBreaker('WEATHER_API', {
 export async function protectedFetch(
   circuit: CircuitBreaker,
   url: string,
-  options?: any
-): Promise<any> {
+  options?: RequestInit
+): Promise<Response> {
   return circuit.execute(async () => {
     const response = await fetch(url, options);
     

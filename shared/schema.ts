@@ -70,22 +70,6 @@ export const globalAlertSettings = pgTable("global_alert_settings", {
   updatedBy: varchar("updated_by").references(() => users.id), // Admin who made the change
 });
 
-// Alerts table for storing all alerts with demo support
-export const alerts = pgTable("alerts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  alertKey: varchar("alert_key").notNull(),
-  sport: text("sport").notNull(),
-  gameId: text("game_id").notNull(),
-  type: text("type").notNull(),
-  state: text("state").notNull(),
-  score: integer("score").notNull().default(0),
-  payload: jsonb("payload").notNull(),
-  // Demo support columns
-  isDemo: boolean("is_demo").notNull().default(false),
-  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -162,15 +146,6 @@ export const insertUserAlertPreferencesSchema = createInsertSchema(userAlertPref
 
 export type InsertUserAlertPreferences = z.infer<typeof insertUserAlertPreferencesSchema>;
 export type UserAlertPreferences = typeof userAlertPreferences.$inferSelect;
-
-// Alert schemas and types
-export const insertAlertSchema = createInsertSchema(alerts).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertAlert = z.infer<typeof insertAlertSchema>;
-export type Alert = typeof alerts.$inferSelect;
 
 // Enhanced game states table for storing live game data with player and weather context
 export const gameStates = pgTable("game_states", {

@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, gameStates, alerts, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertGameState, type InsertAlert, type Alert } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, gameStates, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertGameState } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -282,35 +282,10 @@ export const storage = {
     return await db.select().from(userMonitoredTeams);
   },
 
-  // Alerts operations using Drizzle schema
+  // Alerts operations (using raw SQL since alerts table not in schema)
   async getAllAlerts() {
-    return await db.select().from(alerts).orderBy(desc(alerts.createdAt));
-  },
-
-  async getAlertsByUser(userId: string) {
-    return await db.select().from(alerts)
-      .where(eq(alerts.userId, userId))
-      .orderBy(desc(alerts.createdAt));
-  },
-
-  async getDemoAlerts() {
-    return await db.select().from(alerts)
-      .where(eq(alerts.isDemo, true))
-      .orderBy(desc(alerts.createdAt));
-  },
-
-  async createAlert(alertData: InsertAlert) {
-    const result = await db.insert(alerts).values(alertData).returning();
-    return result[0];
-  },
-
-  async createDemoAlert(alertData: Omit<InsertAlert, 'isDemo'>) {
-    const demoAlertData = { ...alertData, isDemo: true };
-    return await this.createAlert(demoAlertData);
-  },
-
-  async clearDemoAlerts() {
-    await db.delete(alerts).where(eq(alerts.isDemo, true));
+    const result = await db.execute(sql`SELECT id, created_at FROM alerts ORDER BY created_at DESC`);
+    return Array.isArray(result) ? result : (result.rows || []);
   },
 
   // User monitored teams

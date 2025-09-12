@@ -1125,29 +1125,29 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
         dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
-        <div className="h-full flex flex-col justify-center p-6 space-y-4">
+        <div className="h-full flex flex-col justify-center p-4 space-y-3">
           {/* Quick Bet Header */}
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-              <DollarSign className="w-5 h-5 text-white" />
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <DollarSign className="w-4 h-4 text-white" />
             </div>
-            <div className="space-y-1">
-              <p className="text-white font-bold text-base leading-tight">Quick Bet</p>
-              <p className="text-blue-200 text-sm leading-tight">Live Sportsbooks</p>
+            <div>
+              <p className="text-white font-bold text-sm">Quick Bet</p>
+              <p className="text-blue-200 text-xs">Live Sportsbooks</p>
             </div>
           </div>
 
           {/* Sportsbooks Grid */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {sportsbooks.slice(0, 4).map((sportsbook) => (
-              <div key={sportsbook.name} className="flex flex-col items-center space-y-2">
+              <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
                 <Button
                   onClick={() => {
                     handleSportsbookClick(sportsbook);
                     setDragX(0);
                   }}
-                  className="h-14 w-14 p-2 rounded-xl bg-white/95 hover:bg-white shadow-xl ring-2 ring-white/40 hover:ring-white/60 transition-all duration-200"
-                  style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
+                  className="h-12 w-12 p-1.5 rounded-xl bg-white/90 shadow-xl ring-2 ring-white/30"
+                  style={{ backgroundColor: `${sportsbook.color}20`, borderColor: `${sportsbook.color}40` }}
                   data-testid={`advanced-sportsbook-${sportsbook.name.toLowerCase()}`}
                 >
                   <img
@@ -1156,7 +1156,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
                     className="w-full h-full rounded-lg object-contain"
                   />
                 </Button>
-                <span className="text-xs text-white/95 font-medium text-center leading-tight min-h-[2rem] flex items-center">{sportsbook.name}</span>
+                <span className="text-xs text-white/90 font-medium text-center">{sportsbook.name}</span>
               </div>
             ))}
           </div>
