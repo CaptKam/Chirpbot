@@ -104,9 +104,9 @@ export default function Settings() {
     });
   }
 
-  // Helper to get alert preference, defaulting to true if not found or not loaded
-  const getAlertPreference = (sport: string, alertType: string): boolean => {
-    if (preferencesLoading) return true; // Default to true while loading to avoid brief disablings
+  // Helper to get alert preference, returning undefined during loading to prevent false UI states
+  const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
+    if (isSettingsLoading) return undefined; // Return undefined while loading to show skeleton UI
 
     // Check if the alert is globally disabled by admin (only if user is admin and global settings are loaded)
     if (user?.role === 'admin' && globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
