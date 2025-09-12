@@ -35,9 +35,9 @@ export async function sendTelegramAlert(
     console.log(`📱 🔧 Chat ID: ${chatId}`);
     console.log(`📱 🔧 Is test data: ${botToken === 'default_key' || chatId === 'test-chat-id'}`);
 
-    if (!botToken || !chatId || botToken === "default_key" || chatId === "test-chat-id") {
-      console.log("📱 ❌ Telegram credentials not properly configured - using test/default values");
-      console.log("📱 💡 Please update your Telegram settings with real bot token and chat ID");
+    if (!botToken || !chatId || botToken === "default_key" || chatId === "test-chat-id" || botToken.trim() === '' || chatId.trim() === '') {
+      console.log("📱 ❌ Telegram credentials not properly configured - missing or using test/default values");
+      console.log("📱 💡 Please configure proper Telegram bot token and chat ID in Settings");
       return false;
     }
 
@@ -124,13 +124,22 @@ export async function sendTelegramAlert(
       });
 
       const result = await response.json();
-      console.log(`📱 Telegram API response:`, result);
+      console.log(`📱 Telegram API response status: ${response.status}`);
       
       if (response.ok && result.ok === true) {
         console.log(`📱 ✅ Successfully sent Telegram message`);
         return true;
       } else {
-        console.error(`📱 ❌ Telegram API error:`, result);
+        console.error(`📱 ❌ Telegram API error (${response.status}):`, result);
+        
+        // Provide specific error guidance
+        if (response.status === 401) {
+          console.error(`📱 🔑 Invalid bot token - check your bot token in Settings`);
+        } else if (response.status === 400 && result.description?.includes('chat not found')) {
+          console.error(`📱 💬 Invalid chat ID - check your chat ID in Settings`);
+        } else if (response.status === 429) {
+          console.error(`📱 ⏰ Rate limited - too many requests`);
+        }
         
         // Try with plain text if MarkdownV2 failed
         if (result.description?.includes('parse') || result.description?.includes('markdown')) {
@@ -180,19 +189,25 @@ export async function testTelegramConnection(config: TelegramConfig): Promise<bo
   try {
     const { botToken, chatId } = config;
 
-    if (!botToken || !chatId || botToken === "default_key" || chatId === "default_key") {
-      console.log("Missing Telegram credentials for test");
+    if (!botToken || !chatId || botToken === "default_key" || chatId === "default_key" || botToken.trim() === '' || chatId.trim() === '') {
+      console.log("📱 ❌ Missing or invalid Telegram credentials for test");
       return false;
     }
 
+    console.log(`📱 🧪 Testing bot token validity...`);
     // First check if bot token is valid
     const botResponse = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
     const botResult = await botResponse.json();
 
     if (!botResponse.ok || !botResult.ok) {
-      console.error("Invalid bot token:", botResult);
+      console.error("📱 ❌ Invalid bot token:", botResult);
+      if (botResponse.status === 401) {
+        console.error("📱 🔑 Bot token is invalid - create a new bot with @BotFather");
+      }
       return false;
     }
+
+    console.log(`📱 ✅ Bot token valid - bot name: ${botResult.result.username}`);
 
     // Then send actual test message
     console.log(`Sending test message to Chat ID: ${chatId}`);

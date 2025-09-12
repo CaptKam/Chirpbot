@@ -493,7 +493,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 AI Betting Analysis</span>
                   <span className="text-green-300 text-xs">
-                    {alertData.context.aiBettingAdvice.confidence}% Confidence
+                    {alertData.context.aiBettingAdvice.confidence.toFixed(1)}% confidence
                   </span>
                 </div>
                 <p className="text-xs font-medium text-green-100 mb-2">
@@ -554,7 +554,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 Betting Analysis</span>
                   <span className="text-green-300 text-xs">
-                    {alertData.context?.scoringProbability || alertData.confidence}% Confidence
+                    {alertData.context?.scoringProbability || alertData.confidence}% confidence
                   </span>
                 </div>
                 <p className="text-xs text-green-100 mb-2">
@@ -611,7 +611,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       <Brain className="w-3 h-3 text-purple-400" />
                       <span className="text-xs text-purple-100 font-medium">AI Analysis</span>
                       <span className="text-xs text-green-300 font-mono">
-                        {alertData.context.confidence || alertData.confidence}% confidence
+                        {alertData.context.confidence.toFixed(1)}% confidence
                       </span>
                     </div>
 
@@ -792,7 +792,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         alertData.sport === 'NCAAF' ? 'bg-blue-400' :
                         alertData.sport === 'NHL' ? 'bg-cyan-400' : 'bg-emerald-400'}`}></div>
                       <span className="text-xs font-semibold">
-                        {alertData.context.scoringProbability}%
+                        {alertData.context.scoringProbability.toFixed(1)}%
                       </span>
                     </div>
                   )}
@@ -857,7 +857,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       return msg;
                     }
                   }
-                  
+
                   // 2. Check payload.message (legacy location)
                   const payload = (alertData as any)?.payload;
                   if (payload) {
@@ -871,23 +871,23 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         return payload.trim();
                       }
                     }
-                    
+
                     // Check parsed payload for message
                     if (parsedPayload?.message && typeof parsedPayload.message === 'string') {
                       return parsedPayload.message.trim();
                     }
-                    
+
                     // Check nested payload.payload.message
                     if (parsedPayload?.payload?.message && typeof parsedPayload.payload.message === 'string') {
                       return parsedPayload.payload.message.trim();
                     }
                   }
-                  
+
                   return null;
                 };
-                
+
                 const v3Message = extractV3Message();
-                
+
                 // Debug log to verify V3 message extraction
                 if (alertData.id) {
                   console.log('🔍 V3 Message Extraction:', {
@@ -898,7 +898,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     sport: alertData.sport
                   });
                 }
-                
+
                 // V3 Message Display - Only render if V3 message exists
                 if (v3Message) {
                   return (
@@ -909,7 +909,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </div>
                   );
                 }
-                
+
                 return null;
               })()}
 
@@ -969,7 +969,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         )}
                       </div>
                     )}
-                    
+
                     {/* On Deck */}
                     {alertData.context?.onDeckBatter && (
                       <div className="space-y-1">
@@ -983,7 +983,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         )}
                       </div>
                     )}
-                    
+
                     {/* Wind Conditions */}
                     {alertData.context?.windSpeed && (
                       <div className="space-y-1">
@@ -999,7 +999,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         )}
                       </div>
                     )}
-                    
+
                     {/* Scoring Probability */}
                     {alertData.context?.scoringProbability && (
                       <div className="space-y-1">
@@ -1007,7 +1007,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                           <TrendingUp className="w-3 h-3 text-emerald-400" />
                           <span className="text-xs text-emerald-400 font-semibold uppercase">Probability</span>
                         </div>
-                        <p className="text-lg text-white font-bold">{alertData.context.scoringProbability}%</p>
+                        <p className="text-lg text-white font-bold">{alertData.context.scoringProbability.toFixed(1)}%</p>
                         <p className="text-xs text-emerald-300">Scoring Chance</p>
                       </div>
                     )}
@@ -1029,7 +1029,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       return msg;
                     }
                   }
-                  
+
                   const payload = (alertData as any)?.payload;
                   if (payload) {
                     let parsedPayload = payload;
@@ -1043,12 +1043,12 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     if (parsedPayload?.message) return parsedPayload.message.trim();
                     if (parsedPayload?.payload?.message) return parsedPayload.payload.message.trim();
                   }
-                  
+
                   return null;
                 };
-                
+
                 const v3Message = extractV3Message();
-                
+
                 // Only render legacy message if no V3 message exists
                 if (!v3Message) {
                   return (
@@ -1062,22 +1062,22 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                             if (alertData?.context?.aiTitle) {
                               return alertData.context.aiTitle;
                             }
-                            
+
                             let message = alertData.message || '';
                             // Remove emojis and clean up
-                            message = message.replace(/[\\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\\u{2700}-\u{27BF}]/gu, '').trim();
+                            message = message.replace(/[\\{1F300}-\\{1F9FF}]|[\u{2600}-\u{26FF}]|[\\{2700}-\u{27BF}]/gu, '').trim();
 
                             // Extract the main situation text based on sport
                             if (alertData.sport === 'MLB') {
                               // For baseball, extract situation after colon
                               const parts = message.split(':');
                               if (parts.length > 1) {
-                                return parts[1].trim().replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '');
+                                return parts[1].trim().replace(/\\s*-\\s*\\d+%\\s+chance\\s+to\\s+score!?/i, '');
                               }
                             } else if (alertData.sport === 'NFL' || alertData.sport === 'CFL') {
                               // For football, clean up the message
                               if (message.includes('Red Zone')) {
-                                return message.replace(/.*Red Zone[:\s-]*/i, '').replace(/\s*-\s*\d+%.*$/i, '');
+                                return message.replace(/.*Red Zone[:\\s-]*/i, '').replace(/\\s*-\\s*\\d+%.*$/i, '');
                               } else if (message.includes('Two Minute Warning')) {
                                 return 'Two minute warning - critical game situation';
                               } else if (message.includes('Game Starting')) {
@@ -1099,7 +1099,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                             }
 
                             // Fallback: remove percentage text and return clean message
-                            return message.replace(/\s*-\s*\d+%\s*chance\s+to\s+score!?/i, '').replace(/\s*-\s*\d+%.*$/i, '');
+                            return message.replace(/\\s*-\\s*\\d+%\\s+chance\\s+to\\s+score!?/i, '').replace(/\\s*-\\s*\\d+%.*$/i, '');
                           })()}
                         </p>
                       </div>
@@ -1130,7 +1130,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                     </div>
                   );
                 }
-                
+
                 return null;
               })()}
 
