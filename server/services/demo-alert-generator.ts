@@ -1,6 +1,26 @@
 import { storage } from "../storage";
 import type { InsertAlert } from "../../shared/schema";
 
+interface DemoAlertPayload {
+  homeTeam?: string;
+  awayTeam?: string;
+  homeScore?: number;
+  awayScore?: number;
+  inning?: number;
+  isTopInning?: boolean;
+  priority?: number;
+  confidence?: number;
+  message?: string;
+  context?: string;
+  aiAdvice?: string;
+  betting?: {
+    home?: number;
+    away?: number;
+    total?: number;
+  };
+  [key: string]: any;
+}
+
 export class DemoAlertGenerator {
   private demoUserId: string;
 
@@ -14,7 +34,7 @@ export class DemoAlertGenerator {
     // Clear existing demo alerts first
     await storage.clearDemoAlerts();
     
-    const alerts: Omit<InsertAlert, 'isDemo'>[] = [
+    const alerts: Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> = [
       ...this.getMLBDemoAlerts(),
       ...this.getNFLDemoAlerts(), 
       ...this.getNBADemoAlerts(),
@@ -41,7 +61,7 @@ export class DemoAlertGenerator {
     console.log(`✅ Generated ${alerts.length} demo alerts successfully`);
   }
 
-  private getMLBDemoAlerts(): Omit<InsertAlert, 'isDemo'>[] {
+  private getMLBDemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
     return [
       // High-stakes situations (8 alerts)
       {
@@ -277,7 +297,6 @@ export class DemoAlertGenerator {
           homeTeam: 'Minnesota Twins',
           awayTeam: 'Oakland Athletics',
           homeScore: 5,
-          awayTeam: 'Oakland Athletics',
           awayScore: 2,
           inning: 6,
           isTopInning: false,
@@ -604,7 +623,7 @@ export class DemoAlertGenerator {
     ];
   }
 
-  private getNFLDemoAlerts(): Omit<InsertAlert, 'isDemo'>[] {
+  private getNFLDemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
     return [
       // Red zone and scoring opportunities (6 alerts)
       {
@@ -1016,7 +1035,7 @@ export class DemoAlertGenerator {
     ];
   }
 
-  private getNBADemoAlerts(): Omit<InsertAlert, 'isDemo'>[] {
+  private getNBADemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
     return [
       // Clutch time and close games (5 alerts)
       {
@@ -1326,7 +1345,7 @@ export class DemoAlertGenerator {
     ];
   }
 
-  private getNCAAFDemoAlerts(): Omit<InsertAlert, 'isDemo'>[] {
+  private getNCAAFDemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
     return [
       // College football chaos and upsets (8 alerts)
       {
@@ -1634,7 +1653,7 @@ export class DemoAlertGenerator {
     ];
   }
 
-  private getWNBADemoAlerts(): Omit<InsertAlert, 'isDemo'>[] {
+  private getWNBADemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
     return [
       // Championship and playoff alerts (8 alerts)
       {
@@ -1942,7 +1961,7 @@ export class DemoAlertGenerator {
     ];
   }
 
-  private getCFLDemoAlerts(): Omit<InsertAlert, 'isDemo'>[] {
+  private getCFLDemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
     return [
       // Grey Cup and championship implications (4 alerts)
       {

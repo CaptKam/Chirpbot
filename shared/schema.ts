@@ -79,25 +79,7 @@ export const alerts = pgTable("alerts", {
   type: text("type").notNull(),
   state: text("state").notNull(),
   score: integer("score").notNull().default(0),
-  payload: jsonb("payload").$type<{
-    homeTeam?: string;
-    awayTeam?: string;
-    homeScore?: number;
-    awayScore?: number;
-    inning?: number;
-    isTopInning?: boolean;
-    priority?: number;
-    confidence?: number;
-    message?: string;
-    context?: string;
-    aiAdvice?: string;
-    betting?: {
-      home?: number;
-      away?: number;
-      total?: number;
-    };
-    [key: string]: any;
-  }>().notNull(),
+  payload: jsonb("payload").notNull(),
   // Demo support columns
   isDemo: boolean("is_demo").notNull().default(false),
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
