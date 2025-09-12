@@ -228,7 +228,7 @@ async function startServer() {
     const HOST = "0.0.0.0"; // Always bind to 0.0.0.0 for Replit deployment
 
     // Store server reference for graceful shutdown  
-    httpServer = server;
+    (globalThis as any).httpServer = httpServer;
 
     // Enhanced error handling for server startup
     server.on('error', (error: any) => {

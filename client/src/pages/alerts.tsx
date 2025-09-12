@@ -74,7 +74,7 @@ export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF' | 'WNBA' | 'CFL'>('all');
 
   // Fetch alerts using React Query
-  const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
+  const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -87,8 +87,8 @@ export default function AlertsPage() {
 
   // Group alerts by sport for better organization
   const alertsBySport = useMemo(() => {
-    const grouped: Record<string, any[]> = {};
-    alerts.forEach((alert: any) => {
+    const grouped: Record<string, Alert[]> = {};
+    (alerts as Alert[]).forEach((alert: Alert) => {
       const sport = alert.sport || 'OTHER';
       if (!grouped[sport]) grouped[sport] = [];
       grouped[sport].push(alert);
@@ -168,7 +168,7 @@ export default function AlertsPage() {
         <SportTabs 
           sports={['all', ...getSeasonAwareSports()]} 
           activeSport={filter} 
-          onSportChange={setFilter}
+          onSportChange={(sport) => setFilter(sport as typeof filter)}
           data-testid="sport-filter-tabs" 
         />
 
@@ -195,7 +195,7 @@ export default function AlertsPage() {
       <SportTabs 
         sports={['all', ...getSeasonAwareSports()]} 
         activeSport={filter} 
-        onSportChange={setFilter}
+        onSportChange={(sport) => setFilter(sport as typeof filter)}
         data-testid="sport-filter-tabs" 
       />
 
