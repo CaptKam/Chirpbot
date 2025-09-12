@@ -18,7 +18,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     runners_1st_2nd: 60,
     runner_1st: 45,
     bases_empty: 30
-  };
+  } as const;
 
   // Player performance multipliers (simplified for now, could be fetched from real stats)
   private readonly POWER_HITTERS = [
@@ -121,7 +121,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     const { hasFirst, hasSecond, hasThird, outs } = gameState;
     
     // Determine base situation
-    let situation = 'bases_empty';
+    let situation: keyof typeof this.SITUATION_PROBABILITIES = 'bases_empty';
     if (hasFirst && hasSecond && hasThird) {
       situation = 'bases_loaded';
     } else if (hasSecond && hasThird) {
@@ -138,7 +138,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
       situation = 'runner_1st';
     }
 
-    let probability = this.SITUATION_PROBABILITIES[situation] || 30;
+    let probability = this.SITUATION_PROBABILITIES[situation];
 
     // Adjust for outs
     if (outs === 0) {
