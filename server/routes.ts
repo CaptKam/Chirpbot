@@ -43,8 +43,7 @@ async function requireAuthentication(req: express.Request, res: express.Response
 }
 
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  const httpServer = createServer(app);
+export async function registerRoutes(app: Express, httpServer: Server): Promise<Server> {
 
   // Add memory management and request deduplication middleware FIRST (before any logging)
   app.use(memoryManager.middleware());
@@ -325,12 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }, 30000);
 
-  // Ensure cleanup on server shutdown
-  process.on('SIGINT', () => {
-    console.log('🛑 Server shutting down, cleaning up intervals...');
-    clearInterval(heartbeatInterval);
-    process.exit(0);
-  });
+  // Cleanup handled by index.ts - removed duplicate SIGINT handler
 
   // Broadcast function with backpressure handling
   function broadcast(data: any) {

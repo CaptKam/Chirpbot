@@ -3,6 +3,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import helmet from "helmet";
 import cors from "cors";
+import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
@@ -12,6 +13,13 @@ import { AIEnhancementService } from "./services/ai-enhancements";
 import { AIContextController } from "./services/ai-context-controller";
 import { pool } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
+
+// Startup guard to prevent double initialization
+if ((globalThis as any).__SERVER_STARTED__) {
+  console.log('🔄 Server already started, skipping duplicate initialization');
+  process.exit(0);
+}
+(globalThis as any).__SERVER_STARTED__ = true;
 
 // Keep track of server and monitoring timer for graceful shutdown
 let httpServer: any = null;
@@ -86,11 +94,10 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (error: any) => {
   console.error('⚠️ Uncaught Exception:', error);
 
-  // For EADDRINUSE, try to recover without exiting
+  // For EADDRINUSE, exit immediately so workflow can restart cleanly
   if (error.code === 'EADDRINUSE') {
-    console.log('🔄 Port already in use - will retry in 5 seconds...');
-    // Don't exit - just wait and let the retry logic handle it
-    return;
+    console.error('❌ Port already in use - exiting to allow clean restart');
+    process.exit(1);
   }
 
   // For database errors, try to reconnect
@@ -184,9 +191,11 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+async function startServer() {
   try {
-    const server = await registerRoutes(app);
+    // Create HTTP server once in index.ts only
+    const httpServer = createServer(app);
+    const server = await registerRoutes(app, httpServer);
 
     // Production optimization: Skip database seeding in production
     const isProduction = process.env.NODE_ENV === 'production';
@@ -218,7 +227,7 @@ app.use((req, res, next) => {
     const PORT = parseInt(process.env.PORT || "5000", 10);
     const HOST = "0.0.0.0"; // Always bind to 0.0.0.0 for Replit deployment
 
-    // Store server reference for graceful shutdown
+    // Store server reference for graceful shutdown  
     httpServer = server;
 
     // Enhanced error handling for server startup
@@ -341,7 +350,10 @@ app.use((req, res, next) => {
     console.log('🔄 Server will continue running with auto-recovery enabled');
     // DON'T EXIT - Keep the process alive
   }
-})().catch((error) => {
+}
+
+// Only start server if this file is the main entry point
+startServer().catch((error) => {
   console.error('⚠️ Non-critical error:', error);
   console.log('🔄 Server continuing with auto-recovery...');
   // DON'T EXIT - Keep running
