@@ -165,18 +165,7 @@ export class AdaptivePollingManager {
   private analyzeGameState(game: any): 'scheduled' | 'live' | 'final' | 'delayed' | 'suspended' {
     const status = game.status?.toLowerCase() || '';
     
-    // STRICT: Only mark as live if status explicitly indicates it's live AND not in pre-game state
-    // Do NOT rely on game.isLive flag or enhanced data to prevent runaway live-state loops
-    const isPreGameOrScheduled = status.includes('preview') || status.includes('pre-game') || 
-                                status.includes('scheduled') || status.includes('warmup');
-    
-    // Must be explicitly marked as live by official status
-    const isOfficiallyLive = status.includes('live') || status.includes('progress') || status.includes('inning');
-    
-    if (isOfficiallyLive && !isPreGameOrScheduled) {
-      return 'live';
-    }
-    
+    // Check for final state first
     if (status.includes('final') || status.includes('completed')) {
       return 'final';
     }
@@ -187,6 +176,37 @@ export class AdaptivePollingManager {
     
     if (status.includes('suspended')) {
       return 'suspended';
+    }
+    
+    // For MLB games, check actual game data to determine if live
+    if (this.sport === 'MLB') {
+      const inning = game.inning || 0;
+      const homeScore = game.homeTeam?.score || game.homeScore || 0;
+      const awayScore = game.awayTeam?.score || game.awayScore || 0;
+      
+      // Game is live if:
+      // - Inning > 1 (game has progressed beyond first inning)
+      // - OR inning === 1 AND there's a score (runs have been scored)
+      // - OR status indicates live
+      if (inning > 1 || (inning === 1 && (homeScore > 0 || awayScore > 0))) {
+        return 'live';
+      }
+      
+      // Also check if isLive flag is explicitly set
+      if (game.isLive === true) {
+        return 'live';
+      }
+    }
+    
+    // STRICT: Only mark as live if status explicitly indicates it's live AND not in pre-game state
+    const isPreGameOrScheduled = status.includes('preview') || status.includes('pre-game') || 
+                                status.includes('scheduled') || status.includes('warmup');
+    
+    // Must be explicitly marked as live by official status
+    const isOfficiallyLive = status.includes('live') || status.includes('progress') || status.includes('inning');
+    
+    if (isOfficiallyLive && !isPreGameOrScheduled) {
+      return 'live';
     }
     
     return 'scheduled';

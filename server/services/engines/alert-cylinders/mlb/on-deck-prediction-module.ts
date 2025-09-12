@@ -187,10 +187,13 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
 
     // Favorable wind conditions
     if (windSpeed >= 10) {
-      if (windDirection.includes('out') || windDirection.includes('center')) {
-        return 10; // 10% bonus for strong favorable wind
-      } else if (windDirection.includes('in')) {
-        return -5; // 5% penalty for wind blowing in
+      // Ensure windDirection is a string before calling .includes()
+      if (typeof windDirection === 'string') {
+        if (windDirection.includes('out') || windDirection.includes('center')) {
+          return 10; // 10% bonus for strong favorable wind
+        } else if (windDirection.includes('in')) {
+          return -5; // 5% penalty for wind blowing in
+        }
       }
     }
 
