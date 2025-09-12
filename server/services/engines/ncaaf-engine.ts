@@ -34,8 +34,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
   private async initializeCrossSportAI() {
     try {
-      const { CrossSportAI } = await import('../cross-sport-ai-enhancement');
-      this.crossSportAI = new CrossSportAI();
+      const { CrossSportAIEnhancement } = await import('../cross-sport-ai-enhancement');
+      this.crossSportAI = new CrossSportAIEnhancement();
     } catch (error) {
       console.error('❌ Failed to initialize CrossSportAI:', error);
       this.crossSportAI = { configured: false };
