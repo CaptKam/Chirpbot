@@ -15,7 +15,7 @@ export default class WindChangeModule extends BaseAlertModule {
   } = {};
 
   // Minimum changes to trigger alert
-  private readonly MIN_SPEED_CHANGE = 6; // mph
+  private readonly MIN_SPEED_CHANGE = 5; // mph
   private readonly ALERT_COOLDOWN = 10 * 60 * 1000; // 10 minutes between wind alerts
   private readonly MEASUREMENT_INTERVAL = 2 * 60 * 1000; // Check every 2 minutes
 

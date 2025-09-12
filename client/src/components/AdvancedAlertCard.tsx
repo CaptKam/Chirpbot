@@ -450,9 +450,9 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
         </h3>
         {/* Show AI enhanced message if available */}
-        {alertData.context?.aiTitle && (
+        {alertData.context?.aiMessage && (
           <p className="text-sm text-blue-200 mb-2 p-2 bg-blue-500/10 rounded border border-blue-400/30">
-            🤖 <strong>AI Enhanced:</strong> {alertData.context.aiTitle}
+            🤖 <strong>AI Enhanced:</strong> {alertData.context.aiMessage}
           </p>
         )}
         {(alertData.context?.aiCallToAction || alertData.description) && (
@@ -530,7 +530,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           <span className={`text-xs font-bold ${confidenceData.color} flex items-center gap-1`}>
             {confidenceData.icon}
             {confidence}% {confidenceData.label}
-            {alertData.context?.aiInsights && alertData.context.aiInsights.length > 0 && (
+            {alertData.context?.aiEnhanced && (
               <Badge className="ml-2 bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs">
                 AI ENHANCED
               </Badge>
@@ -566,13 +566,13 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           ))}
           
           {/* AI Recommendation */}
-          {alertData.context?.recommendation && (
+          {alertData.context?.aiRecommendation && (
             <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/30">
               <div className="flex items-center gap-2 mb-1">
                 <Target className="w-4 h-4 text-green-400" />
                 <span className="text-green-400 text-xs font-bold">AI RECOMMENDATION</span>
               </div>
-              <p className="text-sm text-green-100">{alertData.context.recommendation}</p>
+              <p className="text-sm text-green-100">{alertData.context.aiRecommendation}</p>
             </div>
           )}
         </div>
@@ -611,13 +611,13 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
         </div>
 
         {/* AI Enhanced Message Display */}
-        {alertData.context?.aiCallToAction && (
+        {alertData.context?.aiMessage && (
           <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg p-3 mb-4 border border-blue-500/30">
             <div className="flex items-center gap-2 mb-2">
               <Brain className="w-4 h-4 text-blue-400" />
               <span className="text-blue-400 text-sm font-bold">AI Enhanced Alert</span>
             </div>
-            <p className="text-sm text-blue-100">{alertData.context.aiCallToAction}</p>
+            <p className="text-sm text-blue-100">{alertData.context.aiMessage}</p>
           </div>
         )}
 
@@ -1222,10 +1222,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
         whileDrag={{ scale: 1.01, cursor: "grabbing" }}
         onClick={() => !isDragging && onTap?.()}
       >
-        <Card className={cn(
-          `relative ${theme.bg} backdrop-blur-sm ${theme.border} border transition-all duration-200 overflow-hidden`,
-          className
-        )}>
+        <Card className={`relative ${theme.bg} backdrop-blur-sm ${theme.border} border transition-all duration-200 overflow-hidden`}>
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.gradient}" />
           
           <div className="p-4">

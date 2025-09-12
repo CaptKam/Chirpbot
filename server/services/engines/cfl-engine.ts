@@ -38,8 +38,7 @@ export class CFLEngine extends BaseSportEngine {
         // V3-15: Core CFL professional Canadian football alert types
         'CFL_FOURTH_QUARTER', 'CFL_FINAL_MINUTES', 'CFL_GREY_CUP_IMPLICATIONS',
         // V3-15: Advanced CFL Canadian-specific alert types  
-        'CFL_THIRD_DOWN_SITUATION', 'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME',
-        'CFL_MASSIVE_WEATHER'
+        'CFL_THIRD_DOWN_SITUATION', 'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME'
       ];
 
       if (!validCFLAlerts.includes(alertType)) {
@@ -337,7 +336,7 @@ export class CFLEngine extends BaseSportEngine {
       const validCFLAlerts = [
         'CFL_GAME_START', 'CFL_TWO_MINUTE_WARNING', 'CFL_FOURTH_QUARTER', 
         'CFL_FINAL_MINUTES', 'CFL_GREY_CUP_IMPLICATIONS', 'CFL_THIRD_DOWN_SITUATION',
-        'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME', 'CFL_MASSIVE_WEATHER'
+        'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME'
       ];
 
       const cflEnabledTypes = enabledTypes.filter(alertType =>
@@ -362,45 +361,6 @@ export class CFLEngine extends BaseSportEngine {
 
     } catch (error) {
       console.error(`❌ Failed to initialize CFL engine for user ${userId}:`, error);
-    }
-  }
-
-  // Load alert cylinder module for specific alert type
-  async loadAlertModule(alertType: string): Promise<any | null> {
-    const startTime = Date.now();
-    
-    try {
-      const moduleMap: Record<string, string> = {
-        'CFL_GAME_START': './alert-cylinders/cfl/game-start-module.ts',
-        'CFL_TWO_MINUTE_WARNING': './alert-cylinders/cfl/two-minute-warning-module.ts',
-        'CFL_FOURTH_QUARTER': './alert-cylinders/cfl/fourth-quarter-module.ts',
-        'CFL_FINAL_MINUTES': './alert-cylinders/cfl/final-minutes-module.ts',
-        'CFL_GREY_CUP_IMPLICATIONS': './alert-cylinders/cfl/grey-cup-implications-module.ts',
-        'CFL_THIRD_DOWN_SITUATION': './alert-cylinders/cfl/third-down-situation-module.ts',
-        'CFL_ROUGE_OPPORTUNITY': './alert-cylinders/cfl/rouge-opportunity-module.ts',
-        'CFL_OVERTIME': './alert-cylinders/cfl/overtime-module.ts',
-        'CFL_MASSIVE_WEATHER': './alert-cylinders/cfl/massive-weather-module.ts'
-      };
-
-      const modulePath = moduleMap[alertType];
-      if (!modulePath) {
-        console.log(`❌ No CFL module found for alert type: ${alertType}`);
-        return null;
-      }
-
-      const module = await import(modulePath);
-      const loadTime = Date.now() - startTime;
-      this.performanceMetrics.moduleLoadTime.push(loadTime);
-      
-      if (loadTime > 50) {
-        console.log(`⚠️ CFL Slow module load: ${alertType} took ${loadTime}ms`);
-      }
-      
-      return new module.default();
-    } catch (error) {
-      const loadTime = Date.now() - startTime;
-      console.error(`❌ Failed to load CFL alert module ${alertType} after ${loadTime}ms:`, error);
-      return null;
     }
   }
 

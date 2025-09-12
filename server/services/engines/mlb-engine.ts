@@ -41,30 +41,6 @@ export class MLBEngine extends BaseSportEngine {
   }
   
   /**
-   * Normalize alert types for betting system compatibility
-   * Converts module types like "MLB_BASES_LOADED_NO_OUTS" to betting types like "BASES_LOADED"
-   */
-  private normalizeAlertType(moduleType: string): string {
-    const typeMap: Record<string, string> = {
-      'MLB_BASES_LOADED_NO_OUTS': 'BASES_LOADED',
-      'MLB_BASES_LOADED_ONE_OUT': 'BASES_LOADED',
-      'MLB_RUNNER_ON_THIRD_NO_OUTS': 'RISP',
-      'MLB_RUNNER_ON_THIRD_ONE_OUT': 'RISP',
-      'MLB_FIRST_AND_THIRD_NO_OUTS': 'RISP',
-      'MLB_SECOND_AND_THIRD_NO_OUTS': 'RISP',
-      'MLB_SECOND_AND_THIRD_ONE_OUT': 'RISP',
-      'MLB_GAME_START': 'GAME_START',
-      'MLB_SEVENTH_INNING_STRETCH': 'LATE_INNINGS',
-      'MLB_STEAL_LIKELIHOOD': 'STEAL_SITUATION',
-      'MLB_BATTER_DUE': 'CLUTCH_BATTER',
-      'MLB_ON_DECK_PREDICTION': 'NEXT_BATTER',
-      'MLB_WIND_CHANGE': 'WEATHER_CHANGE'
-    };
-    
-    return typeMap[moduleType] || moduleType;
-  }
-  
-  /**
    * Check if an alert has already been sent recently
    */
   private hasAlertBeenSent(gameId: string, alertKey: string): boolean {
@@ -248,19 +224,9 @@ export class MLBEngine extends BaseSportEngine {
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
       
-      // Add normalized types for betting system compatibility
-      const alertsWithNormalizedTypes = rawAlerts.map(alert => ({
-        ...alert,
-        normalizedType: this.normalizeAlertType(alert.type),
-        context: {
-          ...alert.context,
-          normalizedType: this.normalizeAlertType(alert.type)
-        }
-      }));
-      
       // Filter out duplicate alerts before processing
       const dedupedAlerts: AlertResult[] = [];
-      for (const alert of alertsWithNormalizedTypes) {
+      for (const alert of rawAlerts) {
         // Check if this alert has already been sent
         if (!this.hasAlertBeenSent(enhancedGameState.gameId, alert.alertKey)) {
           dedupedAlerts.push(alert);

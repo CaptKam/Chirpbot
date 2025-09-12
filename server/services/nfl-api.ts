@@ -163,7 +163,7 @@ export class NFLApiService {
         return this.getCached(cacheKey) || this.getFallbackGameData();
       }
 
-      console.log(`🔄 NFL API: Fetching enhanced data for ${gameState} game ${gameId}`);
+      console.log(`🔄 NFL API: Fetching enhanced data for game ${gameId}`);
       const response = await protectedFetch(
         espnApiCircuit,
         `${this.baseUrl}/summary?event=${gameId}`
@@ -194,135 +194,6 @@ export class NFLApiService {
         quarter, timeRemaining, down, yardsToGo, fieldPosition, possession, homeScore, awayScore
       });
 
-      // Extract team competitor data for proper team ID to abbreviation mapping
-      const homeCompetitor = competitions.competitors?.find((c: any) => c.homeAway === 'home');
-      const awayCompetitor = competitions.competitors?.find((c: any) => c.homeAway === 'away');
-      
-      // Map possession team ID to actual team info
-      let possessionSide = null; // 'home' or 'away'
-      let possessionTeamId = null;
-      let possessionTeamAbbrev = null;
-      
-      if (possession && homeCompetitor && awayCompetitor) {
-        // Check if possession matches home team ID
-        if (possession.toString() === homeCompetitor.team?.id?.toString()) {
-          possessionSide = 'home';
-          possessionTeamId = homeCompetitor.team.id.toString();
-          possessionTeamAbbrev = homeCompetitor.team.abbreviation;
-        }
-        // Check if possession matches away team ID  
-        else if (possession.toString() === awayCompetitor.team?.id?.toString()) {
-          possessionSide = 'away';
-          possessionTeamId = awayCompetitor.team.id.toString();
-          possessionTeamAbbrev = awayCompetitor.team.abbreviation;
-        }
-        
-        console.log(`🔍 NFL possession mapping for game ${gameId}: possession=${possession}, possessionSide=${possessionSide}, teamAbbrev=${possessionTeamAbbrev}`);
-      }
-      
-      // Extract player data from ESPN's detailed game data
-      let currentPlayer = null;
-      let currentQuarterback = null;
-      let preGameHomeQB = null;
-      let preGameAwayQB = null;
-      
-      // Strategy 1: Extract from plays data if available
-      const drives = data.drives?.current || data.drives?.previous?.[0];
-      if (drives?.plays?.length > 0) {
-        const lastPlay = drives.plays[drives.plays.length - 1];
-        if (lastPlay.participants?.length > 0) {
-          const primaryParticipant = lastPlay.participants[0];
-          currentPlayer = primaryParticipant.athlete?.displayName || primaryParticipant.athlete?.fullName;
-          console.log(`✅ NFL extracted player from plays: ${currentPlayer}`);
-        }
-      }
-      
-      // Strategy 2: Extract from roster data with correct team ID mapping
-      if (data.rosters && possessionTeamId) {
-        const possessingTeamRoster = data.rosters.find((r: any) => 
-          r.team?.id?.toString() === possessionTeamId
-        );
-        if (possessingTeamRoster?.roster?.length > 0) {
-          const qb = possessingTeamRoster.roster.find((p: any) => 
-            p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
-          );
-          if (qb) {
-            currentQuarterback = qb.athlete?.displayName || qb.athlete?.fullName;
-            if (!currentPlayer) currentPlayer = currentQuarterback;
-            console.log(`✅ NFL extracted QB from roster: ${currentQuarterback}`);
-          }
-        }
-      }
-      
-      // Strategy 3: Pre-game QB fallbacks for scheduled games
-      if (data.rosters && (gameState === 'scheduled' || !currentPlayer)) {
-        console.log(`🔄 NFL extracting pre-game QBs for game ${gameId}`);
-        
-        // Extract home team QB
-        if (homeCompetitor) {
-          const homeRoster = data.rosters.find((r: any) => 
-            r.team?.id?.toString() === homeCompetitor.team?.id?.toString()
-          );
-          if (homeRoster?.roster?.length > 0) {
-            const homeQB = homeRoster.roster.find((p: any) => 
-              p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
-            );
-            if (homeQB) {
-              preGameHomeQB = homeQB.athlete?.displayName || homeQB.athlete?.fullName;
-              console.log(`✅ NFL home QB: ${preGameHomeQB}`);
-            }
-          }
-        }
-        
-        // Extract away team QB
-        if (awayCompetitor) {
-          const awayRoster = data.rosters.find((r: any) => 
-            r.team?.id?.toString() === awayCompetitor.team?.id?.toString()
-          );
-          if (awayRoster?.roster?.length > 0) {
-            const awayQB = awayRoster.roster.find((p: any) => 
-              p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
-            );
-            if (awayQB) {
-              preGameAwayQB = awayQB.athlete?.displayName || awayQB.athlete?.fullName;
-              console.log(`✅ NFL away QB: ${preGameAwayQB}`);
-            }
-          }
-        }
-        
-        // Use pre-game QB if no current player found
-        if (!currentPlayer) {
-          if (possessionSide === 'home' && preGameHomeQB) {
-            currentPlayer = preGameHomeQB;
-            currentQuarterback = preGameHomeQB;
-          } else if (possessionSide === 'away' && preGameAwayQB) {
-            currentPlayer = preGameAwayQB;
-            currentQuarterback = preGameAwayQB;
-          } else if (preGameHomeQB) {
-            // Default to home QB if no possession info
-            currentPlayer = preGameHomeQB;
-            currentQuarterback = preGameHomeQB;
-          }
-        }
-      }
-      
-      // Strategy 4: Generate deterministic player names as last resort
-      if (!currentPlayer && possession) {
-        const homeTeam = homeCompetitor?.team?.displayName;
-        const awayTeam = awayCompetitor?.team?.displayName;
-        
-        if (possessionSide === 'home' && homeTeam) {
-          currentPlayer = this.generateDeterministicPlayerName(homeTeam, 'QB', quarter);
-        } else if (possessionSide === 'away' && awayTeam) {
-          currentPlayer = this.generateDeterministicPlayerName(awayTeam, 'QB', quarter);
-        }
-      }
-
-      console.log(`🔍 NFL enhanced data for game ${gameId}:`, {
-        quarter, timeRemaining, down, yardsToGo, fieldPosition, possession, 
-        homeScore, awayScore, currentPlayer, currentQuarterback
-      });
-
       const enhancedData = {
         quarter,
         timeRemaining,
@@ -330,20 +201,9 @@ export class NFLApiService {
         yardsToGo,
         fieldPosition,
         possession,
-        possessionSide,
-        possessionTeamAbbrev,
         homeScore: parseInt(homeScore) || 0,
         awayScore: parseInt(awayScore) || 0,
-        gameState: competitions.status?.type?.state || 'unknown',
-        currentPlayer,
-        currentQuarterback: currentQuarterback || currentPlayer,
-        preGameHomeQB,
-        preGameAwayQB,
-        // Add NFL-specific contextual info
-        redZone: fieldPosition ? parseInt(fieldPosition) <= 20 : false,
-        goalLine: fieldPosition ? parseInt(fieldPosition) <= 10 : false,
-        fourthDown: down === 4,
-        twoMinuteWarning: timeRemaining && timeRemaining.includes('2:') && (quarter === 2 || quarter === 4)
+        gameState: competitions.status?.type?.state || 'unknown'
       };
 
       // Cache with state-appropriate TTL
@@ -370,23 +230,6 @@ export class NFLApiService {
       gameState: 'unknown',
       error: 'Failed to fetch live data'
     };
-  }
-
-  // Generate deterministic player names for consistent alerts
-  private generateDeterministicPlayerName(teamName: string, position: string, quarter: number): string {
-    // Create deterministic names based on team and context
-    const teamAbbrev = teamName.split(' ').pop() || teamName.slice(0, 4);
-    const quarterSuffix = quarter > 4 ? 'OT' : `Q${quarter}`;
-    
-    if (position === 'QB') {
-      return `${teamAbbrev} ${quarterSuffix} Quarterback`;
-    } else if (position === 'RB') {
-      return `${teamAbbrev} ${quarterSuffix} Running Back`;
-    } else if (position === 'WR') {
-      return `${teamAbbrev} ${quarterSuffix} Receiver`;
-    }
-    
-    return `${teamAbbrev} ${quarterSuffix} Player`;
   }
 
   // Clear cache for specific game or all cache

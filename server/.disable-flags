@@ -1,6 +1,6 @@
 {
   "weather_disabled": false,
-  "ai_disabled": true,
-  "openai_disabled": true,
-  "timestamp": "2025-09-12T20:03:07.847Z"
+  "ai_disabled": false,
+  "openai_disabled": false,
+  "timestamp": "2025-01-08T22:41:07.847Z"
 }

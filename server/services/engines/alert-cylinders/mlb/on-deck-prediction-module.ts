@@ -18,7 +18,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     runners_1st_2nd: 60,
     runner_1st: 45,
     bases_empty: 30
-  } as const;
+  };
 
   // Player performance multipliers (simplified for now, could be fetched from real stats)
   private readonly POWER_HITTERS = [
@@ -121,7 +121,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     const { hasFirst, hasSecond, hasThird, outs } = gameState;
     
     // Determine base situation
-    let situation: keyof typeof this.SITUATION_PROBABILITIES = 'bases_empty';
+    let situation = 'bases_empty';
     if (hasFirst && hasSecond && hasThird) {
       situation = 'bases_loaded';
     } else if (hasSecond && hasThird) {
@@ -138,7 +138,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
       situation = 'runner_1st';
     }
 
-    let probability = this.SITUATION_PROBABILITIES[situation];
+    let probability = this.SITUATION_PROBABILITIES[situation] || 30;
 
     // Adjust for outs
     if (outs === 0) {
@@ -183,16 +183,10 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     if (!gameState.weatherContext) return 0;
 
     const windSpeed = gameState.weatherContext.windSpeed || 0;
-    
-    // Ensure windDirection is always a string with proper type checking
-    let windDirection = '';
-    if (gameState.weatherContext.windDirection != null) {
-      // Convert to string if not already a string
-      windDirection = String(gameState.weatherContext.windDirection).toLowerCase();
-    }
+    const windDirection = gameState.weatherContext.windDirection || '';
 
     // Favorable wind conditions
-    if (windSpeed >= 10 && windDirection) {
+    if (windSpeed >= 10) {
       if (windDirection.includes('out') || windDirection.includes('center')) {
         return 10; // 10% bonus for strong favorable wind
       } else if (windDirection.includes('in')) {
@@ -246,11 +240,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     // Add wind if significant
     let windText = '';
     if (gameState.weatherContext?.windSpeed && gameState.weatherContext.windSpeed >= 8) {
-      // Ensure windDirection is properly converted to string
-      let windDir = 'unknown';
-      if (gameState.weatherContext.windDirection != null) {
-        windDir = String(gameState.weatherContext.windDirection);
-      }
+      const windDir = gameState.weatherContext.windDirection || 'unknown';
       windText = ` | Wind: ${gameState.weatherContext.windSpeed}mph ${windDir}`;
     }
 

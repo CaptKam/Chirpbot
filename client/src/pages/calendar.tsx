@@ -350,7 +350,7 @@ export default function Calendar() {
     <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       <PageHeader 
         title="ChirpBot" 
-        subtitle="Game Calendar & Monitoring" 
+        subtitle="V2 Alert System" 
       />
 
       {/* Sport Tabs */}
@@ -369,7 +369,7 @@ export default function Calendar() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center space-x-3">
-              <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
+              <h2 className="text-lg font-black uppercase tracking-wider text-slate-100">
                 {isSameDay(selectedDate, new Date()) ? "Today's Games" : format(selectedDate, 'MMMM d, yyyy')}
                 {teamFilter && (
                   <span className="text-sm font-normal text-emerald-400 ml-2">
@@ -381,8 +381,7 @@ export default function Calendar() {
                 variant="outline"
                 size="default"
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="bg-emerald-500/20 backdrop-blur-sm border-emerald-500/50 ring-1 ring-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30 hover:text-emerald-200 hover:border-emerald-400 hover:ring-emerald-400/50 transition-all duration-200 font-semibold"
-                data-testid="button-date-picker"
+                className="bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30 hover:text-emerald-200 hover:border-emerald-400 transition-all duration-200 font-semibold"
               >
                 <CalendarIcon className="w-4 h-4 mr-2" />
                 Pick Date
@@ -392,54 +391,59 @@ export default function Calendar() {
                   variant="outline"
                   size="sm"
                   onClick={() => setTeamFilter(null)}
-                  className="bg-red-500/20 backdrop-blur-sm border-red-500/50 ring-1 ring-red-500/30 text-red-300 hover:bg-red-500/30 hover:ring-red-400/50 transition-all duration-200"
-                  data-testid="button-clear-filter"
+                  className="bg-red-500/20 border-red-500/50 text-red-300 hover:bg-red-500/30"
                 >
                   Clear Filter
                 </Button>
               )}
             </div>
-            
+            <div className="flex items-center space-x-4 mt-1">
+              <span className="text-sm font-semibold text-emerald-400">
+                {games.filter(g => g.status === 'live').length} Live
+              </span>
+              <span className="text-sm font-semibold text-emerald-300">
+                {games.filter(g => g.status === 'scheduled').length} Scheduled
+              </span>
+              <span className="text-sm font-semibold text-slate-400">
+                {games.filter(g => g.status === 'final').length} Final
+              </span>
+            </div>
           </div>
-          <div className="px-3 py-1 rounded-xl bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
-            <span className="text-sm font-semibold text-slate-300" data-testid="text-selected-count">
-              {selectedCount}/{games.length} Selected
-            </span>
-          </div>
+          <span className="text-sm font-semibold text-slate-300">
+            {selectedCount}/{games.length} Selected
+          </span>
         </div>
 
         {/* Date Picker */}
         {showDatePicker && (
-          <div className="mb-4 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5" data-testid="date-picker-container">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+          <Card className="mb-4 bg-white/5 backdrop-blur-sm border-white/10">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-                  className="text-slate-300 hover:text-slate-100 hover:bg-emerald-500/10 rounded-xl transition-all duration-200"
-                  data-testid="button-previous-day"
+                  className="text-slate-300 hover:text-slate-100"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">
+                <h3 className="text-lg font-semibold text-slate-100">
                   {format(selectedDate, 'MMMM yyyy')}
                 </h3>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-                  className="text-slate-300 hover:text-slate-100 hover:bg-emerald-500/10 rounded-xl transition-all duration-200"
-                  data-testid="button-next-day"
+                  className="text-slate-300 hover:text-slate-100"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
               
               {/* Week View */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="text-center text-xs font-bold uppercase tracking-wide text-slate-400 py-2">
+                  <div key={day} className="text-center text-xs font-semibold text-slate-400 py-2">
                     {day}
                   </div>
                 ))}
@@ -456,14 +460,13 @@ export default function Calendar() {
                       setSelectedDate(date);
                       setShowDatePicker(false);
                     }}
-                    className={`h-10 text-sm rounded-xl transition-all duration-200 ${
+                    className={`h-10 text-sm ${
                       isSameDay(date, selectedDate)
-                        ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30 backdrop-blur-sm shadow-lg shadow-emerald-500/10'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         : isSameDay(date, new Date())
-                        ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30 backdrop-blur-sm'
-                        : 'text-slate-300 hover:text-slate-100 hover:bg-white/5 hover:ring-1 hover:ring-white/10 backdrop-blur-sm'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'text-slate-300 hover:text-slate-100 hover:bg-white/5'
                     }`}
-                    data-testid={`button-date-${format(date, 'yyyy-MM-dd')}`}
                   >
                     {format(date, 'd')}
                   </Button>
@@ -471,7 +474,7 @@ export default function Calendar() {
               </div>
               
               {/* Quick Navigation */}
-              <div className="flex space-x-3 pt-4 border-t border-white/10">
+              <div className="flex space-x-2 mt-4">
                 <Button
                   variant="outline"
                   size="sm"
@@ -479,8 +482,7 @@ export default function Calendar() {
                     setSelectedDate(new Date());
                     setShowDatePicker(false);
                   }}
-                  className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 ring-1 ring-emerald-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
-                  data-testid="button-today"
+                  className="text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
                 >
                   Today
                 </Button>
@@ -491,14 +493,13 @@ export default function Calendar() {
                     setSelectedDate(addDays(new Date(), 1));
                     setShowDatePicker(false);
                   }}
-                  className="text-blue-400 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 ring-1 ring-blue-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
-                  data-testid="button-tomorrow"
+                  className="text-blue-400 border-blue-500/30 hover:bg-blue-500/10"
                 >
                   Tomorrow
                 </Button>
               </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {isLoading ? (
@@ -509,12 +510,9 @@ export default function Calendar() {
             ))}
           </div>
         ) : games.length === 0 ? (
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 text-center shadow-xl shadow-emerald-500/5" data-testid="empty-state">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
-              <CalendarIcon className="w-8 h-8 text-emerald-400" />
-            </div>
-            <h3 className="text-xl font-black uppercase tracking-wide text-slate-100 mb-2">No Games Scheduled</h3>
-            <p className="text-sm text-slate-400">Check back later or try a different sport</p>
+          <div className="text-center py-8 text-slate-300">
+            <p className="text-lg font-medium">No games scheduled for today</p>
+            <p className="text-sm mt-2 text-slate-400">Check back later or try a different sport</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -584,15 +582,13 @@ export default function Calendar() {
             {/* Tomorrow's Games Section */}
             {hasGamesWithinTwoDays && hasTomorrowGames && isSameDay(selectedDate, new Date()) && tomorrowGames.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center space-x-3 pt-6 border-t border-white/10">
-                  <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
+                <div className="flex items-center space-x-3 pt-4 border-t border-white/10">
+                  <h2 className="text-lg font-black uppercase tracking-wider text-slate-100">
                     Tomorrow's Games
                   </h2>
-                  <div className="px-3 py-1 rounded-xl bg-blue-500/20 ring-1 ring-blue-500/30 backdrop-blur-sm">
-                    <span className="text-sm font-semibold text-blue-300" data-testid="text-tomorrow-date">
-                      {format(addDays(selectedDate, 1), 'MMMM d, yyyy')}
-                    </span>
-                  </div>
+                  <span className="text-sm font-semibold text-slate-300">
+                    {format(addDays(selectedDate, 1), 'MMMM d, yyyy')}
+                  </span>
                 </div>
                 
                 {tomorrowGames
