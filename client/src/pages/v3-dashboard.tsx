@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { 
   Activity, 
   Clock, 
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { AuthLoading } from '@/components/sports-loading';
 import { useAuth } from "@/hooks/useAuth";
+import { PageHeader } from '@/components/PageHeader';
 
 // Sport icons mapping
 const SportIcons = {
@@ -31,24 +33,24 @@ const SportIcons = {
   WNBA: "🏀"
 };
 
-// Performance grade colors
+// Performance grade colors - emerald-based system
 const getGradeColor = (grade: string) => {
   switch (grade) {
-    case 'A+': case 'A': return 'text-green-500';
-    case 'B': return 'text-blue-500';
-    case 'C': return 'text-yellow-500';
-    case 'D': return 'text-orange-500';
-    default: return 'text-red-500';
+    case 'A+': case 'A': return 'text-emerald-400';
+    case 'B': return 'text-emerald-300';
+    case 'C': return 'text-yellow-400';
+    case 'D': return 'text-orange-400';
+    default: return 'text-red-400';
   }
 };
 
-// Response time status colors
+// Response time status colors - emerald-based system
 const getResponseTimeStatus = (time: number) => {
-  if (time < 100) return { color: 'text-green-500', status: 'Excellent' };
-  if (time < 150) return { color: 'text-blue-500', status: 'Good' };
-  if (time < 200) return { color: 'text-yellow-500', status: 'Fair' };
-  if (time < 250) return { color: 'text-orange-500', status: 'Acceptable' };
-  return { color: 'text-red-500', status: 'Needs Attention' };
+  if (time < 100) return { color: 'text-emerald-400', status: 'Excellent' };
+  if (time < 150) return { color: 'text-emerald-300', status: 'Good' };
+  if (time < 200) return { color: 'text-yellow-400', status: 'Fair' };
+  if (time < 250) return { color: 'text-orange-400', status: 'Acceptable' };
+  return { color: 'text-red-400', status: 'Needs Attention' };
 };
 
 interface V3MetricsData {
@@ -108,35 +110,33 @@ function MetricCard({
   status?: 'good' | 'warning' | 'error' | 'neutral';
 }) {
   const statusColors = {
-    good: 'border-green-500 bg-green-50 dark:bg-green-950/20',
-    warning: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20',
-    error: 'border-red-500 bg-red-50 dark:bg-red-950/20',
-    neutral: 'border-gray-200 dark:border-gray-700'
+    good: 'ring-emerald-500/30',
+    warning: 'ring-yellow-500/30',
+    error: 'ring-red-500/30',
+    neutral: 'ring-white/10'
   };
 
   return (
-    <Card className={`${statusColors[status]} transition-all hover:scale-105`}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              {icon}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{title}</p>
-              <p className="text-2xl font-bold">
-                {value}{unit}
-                {trend !== undefined && (
-                  <span className={`ml-2 text-sm ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {trend > 0 ? '↗' : '↘'} {Math.abs(trend)}%
-                  </span>
-                )}
-              </p>
-            </div>
+    <div className={`bg-white/5 backdrop-blur-sm ring-1 ${statusColors[status]} border-0 rounded-xl p-4 shadow-xl shadow-emerald-500/5 transition-all hover:scale-105 hover:bg-white/10`} data-testid={`metric-card-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
+            {icon}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-300 uppercase tracking-wide">{title}</p>
+            <p className="text-2xl font-black text-slate-100">
+              {value}{unit}
+              {trend !== undefined && (
+                <span className={`ml-2 text-sm font-bold ${trend > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {trend > 0 ? '↗' : '↘'} {Math.abs(trend)}%
+                </span>
+              )}
+            </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -145,71 +145,74 @@ function SportEngineCard({ sport, metrics }: { sport: string, metrics: any }) {
   const grade = metrics.performance?.grade || 'N/A';
   
   return (
-    <Card className="hover:shadow-lg transition-all" data-testid={`sport-engine-${sport.toLowerCase()}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-2xl">{SportIcons[sport as keyof typeof SportIcons]}</span>
-            <span className="font-bold">{sport}</span>
+    <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5 hover:bg-white/10 hover:ring-emerald-500/30 transition-all" data-testid={`sport-engine-${sport.toLowerCase()}`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <span className="text-2xl">{SportIcons[sport as keyof typeof SportIcons]}</span>
+          <span className="font-black text-slate-100 text-lg uppercase tracking-wide">{sport}</span>
+        </div>
+        <div className={`px-3 py-1 rounded-xl text-xs font-semibold uppercase tracking-wide ${
+          metrics.performance?.error 
+            ? 'bg-red-500/20 ring-1 ring-red-500/30 text-red-400' 
+            : 'bg-emerald-500/20 ring-1 ring-emerald-500/30 text-emerald-400'
+        }`}>
+          {metrics.performance?.error ? "Error" : "Active"}
+        </div>
+      </div>
+      
+      {metrics.performance?.error ? (
+        <div className="text-center py-6">
+          <AlertTriangle className="mx-auto mb-3 text-red-400" size={32} />
+          <p className="text-sm text-red-400 font-medium">Metrics Unavailable</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-slate-300 font-medium">Response Time</span>
+            <span className={`font-bold ${responseTimeStatus.color} text-lg`}>
+              {metrics.performance?.avgResponseTime?.toFixed(1) || 0}ms
+            </span>
           </div>
-          <Badge variant={metrics.performance?.error ? "destructive" : "default"}>
-            {metrics.performance?.error ? "Error" : "Active"}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {metrics.performance?.error ? (
-          <div className="text-center py-4">
-            <AlertTriangle className="mx-auto mb-2 text-red-500" size={24} />
-            <p className="text-sm text-red-600 dark:text-red-400">Metrics Unavailable</p>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-slate-300 font-medium">Grade</span>
+            <span className={`font-black text-xl ${getGradeColor(grade)}`}>
+              {grade}
+            </span>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Response Time</span>
-              <span className={`font-bold ${responseTimeStatus.color}`}>
-                {metrics.performance?.avgResponseTime?.toFixed(1) || 0}ms
+          
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-slate-300 font-medium">Cache Hit Rate</span>
+            <span className="font-bold text-slate-100 text-lg">
+              {metrics.performance?.cacheHitRate?.toFixed(1) || 0}%
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-slate-300 font-medium">Total Alerts</span>
+            <span className="font-bold text-slate-100 text-lg">
+              {metrics.performance?.totalAlerts || 0}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center pt-2 border-t border-white/10">
+            <span className="text-sm text-slate-300 font-medium">V3 Target</span>
+            <div className="flex items-center space-x-2">
+              {(metrics.performance?.avgResponseTime || 0) < 250 ? (
+                <CheckCircle className="text-emerald-400" size={16} />
+              ) : (
+                <AlertTriangle className="text-red-400" size={16} />
+              )}
+              <span className={`text-sm font-bold ${
+                (metrics.performance?.avgResponseTime || 0) < 250 ? 'text-emerald-400' : 'text-red-400'
+              }`}>
+                {(metrics.performance?.avgResponseTime || 0) < 250 ? 'Achieved' : 'Needs Work'}
               </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Grade</span>
-              <span className={`font-bold text-lg ${getGradeColor(grade)}`}>
-                {grade}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Cache Hit Rate</span>
-              <span className="font-bold">
-                {metrics.performance?.cacheHitRate?.toFixed(1) || 0}%
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Total Alerts</span>
-              <span className="font-bold">
-                {metrics.performance?.totalAlerts || 0}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-300">V3 Target</span>
-              <div className="flex items-center space-x-1">
-                {(metrics.performance?.avgResponseTime || 0) < 250 ? (
-                  <CheckCircle className="text-green-500" size={16} />
-                ) : (
-                  <AlertTriangle className="text-red-500" size={16} />
-                )}
-                <span className="text-sm">
-                  {(metrics.performance?.avgResponseTime || 0) < 250 ? 'Achieved' : 'Needs Work'}
-                </span>
-              </div>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -219,49 +222,53 @@ function V3AchievementCard({ achievements }: { achievements: any }) {
   const totalCount = achievements.sub250msTargets?.length || 6;
 
   return (
-    <Card className="border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Trophy className="text-yellow-500" size={24} />
-          <span>V3 Optimization Achievement</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-              {successRate.toFixed(1)}%
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300">Overall V3 Success Rate</p>
-          </div>
-          
-          <div className="text-center">
-            <div className="text-2xl font-bold">
-              {achievedCount}/{totalCount}
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300">Sports Achieving Sub-250ms</p>
-          </div>
-          
-          <Progress value={successRate} className="w-full" />
-          
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {achievements.sub250msTargets?.map((target: any) => (
-              <div 
-                key={target.sport} 
-                className={`p-2 rounded text-center text-sm ${
-                  target.achieved 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                }`}
-              >
-                <div className="font-bold">{target.sport}</div>
-                <div className="text-xs">{target.responseTime.toFixed(1)}ms</div>
-              </div>
-            ))}
-          </div>
+    <div className="bg-white/5 backdrop-blur-sm ring-2 ring-emerald-500/30 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/10 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
+      <div className="flex items-center space-x-3 mb-6">
+        <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
+          <Trophy className="text-emerald-400" size={24} />
         </div>
-      </CardContent>
-    </Card>
+        <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">V3 Optimization Achievement</h3>
+      </div>
+      
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="text-5xl font-black text-emerald-400 mb-2">
+            {successRate.toFixed(1)}%
+          </div>
+          <p className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Overall V3 Success Rate</p>
+        </div>
+        
+        <div className="text-center">
+          <div className="text-3xl font-black text-slate-100 mb-2">
+            {achievedCount}/{totalCount}
+          </div>
+          <p className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Sports Achieving Sub-250ms</p>
+        </div>
+        
+        <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500 ease-out rounded-full"
+            style={{ width: `${Math.min(successRate, 100)}%` }}
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3 mt-6">
+          {achievements.sub250msTargets?.map((target: any) => (
+            <div 
+              key={target.sport} 
+              className={`p-3 rounded-xl text-center border-0 ring-1 transition-all ${
+                target.achieved 
+                  ? 'bg-emerald-500/20 ring-emerald-500/30 text-emerald-300' 
+                  : 'bg-red-500/20 ring-red-500/30 text-red-300'
+              }`}
+            >
+              <div className="font-black text-sm uppercase tracking-wide">{target.sport}</div>
+              <div className="text-xs font-semibold opacity-80">{target.responseTime.toFixed(1)}ms</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -299,78 +306,108 @@ export default function V3Dashboard() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card className="border-red-500 bg-red-50 dark:bg-red-950/20">
-          <CardContent className="p-6 text-center">
-            <AlertTriangle className="mx-auto mb-4 text-red-500" size={48} />
-            <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-2">
+      <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased">
+        <PageHeader 
+          title="V3 Performance Dashboard" 
+          subtitle="Real-time monitoring of multi-sport intelligence platform performance"
+          icon={BarChart3}
+        />
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-red-500/30 border-0 rounded-xl p-8 shadow-xl shadow-red-500/5 text-center">
+            <div className="p-3 rounded-lg bg-red-500/20 ring-1 ring-red-500/30 w-fit mx-auto mb-6">
+              <AlertTriangle className="text-red-400" size={48} />
+            </div>
+            <h3 className="text-2xl font-black uppercase tracking-wide text-slate-100 mb-4">
               Failed to Load Performance Metrics
             </h3>
-            <p className="text-red-600 dark:text-red-300 mb-4">
+            <p className="text-slate-300 mb-6 font-medium">
               Unable to retrieve V3 performance data from the server.
             </p>
-            <button 
+            <Button 
               onClick={() => refetch()}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold px-6 py-3 rounded-xl transition-all hover:scale-105"
               data-testid="button-retry"
             >
               Retry
-            </button>
-          </CardContent>
-        </Card>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!metricsData) {
-    return <div>No data available</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased">
+        <PageHeader 
+          title="V3 Performance Dashboard" 
+          subtitle="Real-time monitoring of multi-sport intelligence platform performance"
+          icon={BarChart3}
+        />
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 shadow-xl shadow-emerald-500/5 text-center">
+            <div className="p-3 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 w-fit mx-auto mb-6">
+              <BarChart3 className="text-emerald-400" size={48} />
+            </div>
+            <h3 className="text-2xl font-black uppercase tracking-wide text-slate-100 mb-4">
+              No Data Available
+            </h3>
+            <p className="text-slate-300 font-medium">
+              Performance metrics are currently unavailable.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6" data-testid="v3-dashboard">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">V3 Performance Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Real-time monitoring of multi-sport intelligence platform performance
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased" data-testid="v3-dashboard">
+      <PageHeader 
+        title="V3 Performance Dashboard" 
+        subtitle="Real-time monitoring of multi-sport intelligence platform performance"
+        icon={BarChart3}
+      >
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="px-3 py-1">
-            <Activity className="w-4 h-4 mr-2" />
-            Live
-          </Badge>
-          <span className="text-sm text-gray-500">
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-emerald-500/30 border-0 rounded-xl px-3 py-1 flex items-center space-x-2">
+            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">Live</span>
+          </div>
+          <span className="text-xs text-slate-400 font-medium">
             Last updated: {new Date(metricsData.timestamp).toLocaleTimeString()}
           </span>
         </div>
-      </div>
+      </PageHeader>
+      
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
 
       {/* Performance Warnings */}
       {metricsData.performanceWarnings && metricsData.performanceWarnings.length > 0 && (
-        <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-yellow-700 dark:text-yellow-400">
-              <AlertTriangle size={20} />
-              <span>Performance Warnings</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {metricsData.performanceWarnings.map((warning, index) => (
-                <div key={index} className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded flex justify-between items-center">
-                  <div>
-                    <span className="font-bold">{warning.sport}</span>: {warning.warning}
-                  </div>
-                  <Badge variant={warning.severity === 'high' ? 'destructive' : 'secondary'}>
-                    {warning.responseTime.toFixed(1)}ms
-                  </Badge>
-                </div>
-              ))}
+        <div className="bg-white/5 backdrop-blur-sm ring-1 ring-yellow-500/30 border-0 rounded-xl p-6 shadow-xl shadow-yellow-500/5">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 rounded-lg bg-yellow-500/20 ring-1 ring-yellow-500/30">
+              <AlertTriangle className="text-yellow-400" size={20} />
             </div>
-          </CardContent>
-        </Card>
+            <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">Performance Warnings</h3>
+          </div>
+          <div className="space-y-3">
+            {metricsData.performanceWarnings.map((warning, index) => (
+              <div key={index} className="bg-yellow-500/10 backdrop-blur-sm ring-1 ring-yellow-500/20 border-0 rounded-xl p-4 flex justify-between items-center">
+                <div>
+                  <span className="font-bold text-slate-100">{warning.sport}</span>
+                  <span className="text-slate-300">: {warning.warning}</span>
+                </div>
+                <div className={`px-3 py-1 rounded-xl text-xs font-semibold uppercase tracking-wide ${
+                  warning.severity === 'high' 
+                    ? 'bg-red-500/20 ring-1 ring-red-500/30 text-red-400' 
+                    : 'bg-yellow-500/20 ring-1 ring-yellow-500/30 text-yellow-400'
+                }`}>
+                  {warning.responseTime.toFixed(1)}ms
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Overview Metrics */}
@@ -408,45 +445,69 @@ export default function V3Dashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-          <TabsTrigger value="engines" data-testid="tab-engines">Sport Engines</TabsTrigger>
-          <TabsTrigger value="achievements" data-testid="tab-achievements">V3 Achievements</TabsTrigger>
-          <TabsTrigger value="system" data-testid="tab-system">System Health</TabsTrigger>
-        </TabsList>
+        <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-2 mb-6">
+          <div className="grid grid-cols-4 gap-2">
+            <TabsTrigger 
+              value="overview" 
+              data-testid="tab-overview"
+              className="data-[state=active]:bg-emerald-500/20 data-[state=active]:ring-1 data-[state=active]:ring-emerald-500/30 data-[state=active]:text-emerald-400 text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="engines" 
+              data-testid="tab-engines"
+              className="data-[state=active]:bg-emerald-500/20 data-[state=active]:ring-1 data-[state=active]:ring-emerald-500/30 data-[state=active]:text-emerald-400 text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
+            >
+              Sport Engines
+            </TabsTrigger>
+            <TabsTrigger 
+              value="achievements" 
+              data-testid="tab-achievements"
+              className="data-[state=active]:bg-emerald-500/20 data-[state=active]:ring-1 data-[state=active]:ring-emerald-500/30 data-[state=active]:text-emerald-400 text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
+            >
+              V3 Achievements
+            </TabsTrigger>
+            <TabsTrigger 
+              value="system" 
+              data-testid="tab-system"
+              className="data-[state=active]:bg-emerald-500/20 data-[state=active]:ring-1 data-[state=active]:ring-emerald-500/30 data-[state=active]:text-emerald-400 text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
+            >
+              System Health
+            </TabsTrigger>
+          </div>
+        </div>
         
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <V3AchievementCard achievements={metricsData.v3Achievements} />
             
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BarChart3 className="text-blue-500" size={20} />
-                  <span>Performance Grades</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {metricsData.v3Achievements.performanceGrades.map((grade) => (
-                    <div key={grade.sport} className="flex justify-between items-center">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg">{SportIcons[grade.sport as keyof typeof SportIcons]}</span>
-                        <span className="font-medium">{grade.sport}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-lg font-bold ${getGradeColor(grade.grade)}`}>
-                          {grade.grade}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          ({grade.responseTime.toFixed(1)}ms)
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
+                  <BarChart3 className="text-emerald-400" size={20} />
                 </div>
-              </CardContent>
-            </Card>
+                <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">Performance Grades</h3>
+              </div>
+              <div className="space-y-4">
+                {metricsData.v3Achievements.performanceGrades.map((grade) => (
+                  <div key={grade.sport} className="flex justify-between items-center p-3 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">{SportIcons[grade.sport as keyof typeof SportIcons]}</span>
+                      <span className="font-bold text-slate-100">{grade.sport}</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className={`text-xl font-black ${getGradeColor(grade.grade)}`}>
+                        {grade.grade}
+                      </span>
+                      <span className="text-sm text-slate-400 font-medium">
+                        ({grade.responseTime.toFixed(1)}ms)
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </TabsContent>
         
@@ -460,74 +521,80 @@ export default function V3Dashboard() {
         
         <TabsContent value="achievements" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sub-250ms Achievement Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {metricsData.v3Achievements.sub250msTargets.map((target) => (
-                    <div key={target.sport} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-xl">{SportIcons[target.sport as keyof typeof SportIcons]}</span>
-                        <div>
-                          <div className="font-medium">{target.sport}</div>
-                          <div className="text-sm text-gray-500">{target.responseTime.toFixed(1)}ms</div>
-                        </div>
+            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
+                  <Target className="text-emerald-400" size={20} />
+                </div>
+                <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">Sub-250ms Achievement Status</h3>
+              </div>
+              <div className="space-y-4">
+                {metricsData.v3Achievements.sub250msTargets.map((target) => (
+                  <div key={target.sport} className="flex items-center justify-between p-4 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl">
+                    <div className="flex items-center space-x-4">
+                      <span className="text-xl">{SportIcons[target.sport as keyof typeof SportIcons]}</span>
+                      <div>
+                        <div className="font-bold text-slate-100">{target.sport}</div>
+                        <div className="text-sm text-slate-400 font-medium">{target.responseTime.toFixed(1)}ms</div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        {target.achieved ? (
-                          <CheckCircle className="text-green-500" size={20} />
-                        ) : (
-                          <AlertTriangle className="text-red-500" size={20} />
-                        )}
-                        <span className={`font-bold ${target.achieved ? 'text-green-600' : 'text-red-600'}`}>
-                          {target.achieved ? 'Achieved' : 'Needs Work'}
-                        </span>
-                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      {target.achieved ? (
+                        <CheckCircle className="text-emerald-400" size={20} />
+                      ) : (
+                        <AlertTriangle className="text-red-400" size={20} />
+                      )}
+                      <span className={`font-bold text-sm uppercase tracking-wide ${
+                        target.achieved ? 'text-emerald-400' : 'text-red-400'
+                      }`}>
+                        {target.achieved ? 'Achieved' : 'Needs Work'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
+                  <TrendingUp className="text-emerald-400" size={20} />
+                </div>
+                <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">Recommendations</h3>
+              </div>
+              {metricsData.recommendations.length > 0 ? (
+                <div className="space-y-3">
+                  {metricsData.recommendations.map((recommendation, index) => (
+                    <div key={index} className="p-4 bg-emerald-500/10 backdrop-blur-sm ring-1 ring-emerald-500/20 rounded-xl border-l-4 border-emerald-400">
+                      <p className="text-slate-300 font-medium">{recommendation}</p>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Recommendations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {metricsData.recommendations.length > 0 ? (
-                  <div className="space-y-2">
-                    {metricsData.recommendations.map((recommendation, index) => (
-                      <div key={index} className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border-l-4 border-blue-500">
-                        <p className="text-sm">{recommendation}</p>
-                      </div>
-                    ))}
+              ) : (
+                <div className="text-center py-8">
+                  <div className="p-3 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 w-fit mx-auto mb-4">
+                    <CheckCircle className="text-emerald-400" size={48} />
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <CheckCircle className="mx-auto mb-2 text-green-500" size={48} />
-                    <p className="text-green-600 dark:text-green-400 font-medium">
-                      All systems performing optimally!
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  <p className="text-emerald-400 font-bold text-lg">
+                    All systems performing optimally!
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
         
         <TabsContent value="system" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <MetricCard
-              icon={<Monitor className="text-blue-500" size={20} />}
+              icon={<Monitor className="text-emerald-400" size={20} />}
               title="Active Engines"
               value={`${metricsData.systemHealth.healthyEngines}/${metricsData.systemHealth.activeEngines}`}
               status={metricsData.systemHealth.overallHealth > 90 ? 'good' : 'warning'}
             />
             
             <MetricCard
-              icon={<Zap className="text-green-500" size={20} />}
+              icon={<Zap className="text-emerald-400" size={20} />}
               title="System Health"
               value={metricsData.systemHealth.overallHealth.toFixed(1)}
               unit="%"
@@ -535,7 +602,7 @@ export default function V3Dashboard() {
             />
             
             <MetricCard
-              icon={<Activity className="text-purple-500" size={20} />}
+              icon={<Activity className="text-emerald-400" size={20} />}
               title="Alert Efficiency"
               value={metricsData.systemHealth.alertGenerationEfficiency.toFixed(1)}
               unit="%"
@@ -543,50 +610,51 @@ export default function V3Dashboard() {
             />
           </div>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>System Status Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium mb-3">Engine Status</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Total Engines:</span>
-                      <span className="font-bold">{metricsData.systemHealth.activeEngines}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Healthy Engines:</span>
-                      <span className="font-bold text-green-600">{metricsData.systemHealth.healthyEngines}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Overall Health:</span>
-                      <span className="font-bold">{metricsData.systemHealth.overallHealth.toFixed(1)}%</span>
-                    </div>
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
+                <Monitor className="text-emerald-400" size={20} />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">System Status Details</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4">
+                <h4 className="font-bold text-slate-100 mb-4 uppercase tracking-wide">Engine Status</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 font-medium">Total Engines:</span>
+                    <span className="font-bold text-slate-100">{metricsData.systemHealth.activeEngines}</span>
                   </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-3">Performance Metrics</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Memory Efficiency:</span>
-                      <span className="font-bold">{metricsData.systemHealth.memoryEfficiency.toFixed(1)}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Requests:</span>
-                      <span className="font-bold">{metricsData.summary.totalRequests.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Alerts:</span>
-                      <span className="font-bold">{metricsData.summary.totalAlerts.toLocaleString()}</span>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 font-medium">Healthy Engines:</span>
+                    <span className="font-bold text-emerald-400">{metricsData.systemHealth.healthyEngines}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 font-medium">Overall Health:</span>
+                    <span className="font-bold text-slate-100">{metricsData.systemHealth.overallHealth.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              
+              <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4">
+                <h4 className="font-bold text-slate-100 mb-4 uppercase tracking-wide">Performance Metrics</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 font-medium">Memory Efficiency:</span>
+                    <span className="font-bold text-slate-100">{metricsData.systemHealth.memoryEfficiency.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 font-medium">Total Requests:</span>
+                    <span className="font-bold text-slate-100">{metricsData.summary.totalRequests.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 font-medium">Total Alerts:</span>
+                    <span className="font-bold text-slate-100">{metricsData.summary.totalAlerts.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
