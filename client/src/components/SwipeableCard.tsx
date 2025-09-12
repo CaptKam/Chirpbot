@@ -904,7 +904,11 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                   return (
                     <div className="mb-3">
                       <p className="text-base md:text-lg font-medium leading-snug text-white" data-testid="text-alert-message">
-                        {v3Message}
+                        {v3Message
+                          .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove markdown bold
+                          .replace(/\*(.*?)\*/g, '$1')      // Remove markdown italic
+                          .replace(/__(.*?)__/g, '$1')      // Remove markdown underline
+                        }
                       </p>
                     </div>
                   );

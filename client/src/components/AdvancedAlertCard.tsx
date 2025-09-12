@@ -200,6 +200,13 @@ const getMomentumIndicator = (context: any): { trend: 'up' | 'down' | 'neutral';
   return { trend: 'neutral', label: 'Stable' };
 };
 
+// Helper to get a default title if none provided
+const getDefaultTitle = (alertData: Alert): string => {
+  const category = getAlertCategory(alertData.type);
+  const teamNames = `${alertData.homeTeam?.name || 'Home Team'} vs ${alertData.awayTeam?.name || 'Away Team'}`;
+  return `${category} alert for ${teamNames}`;
+};
+
 interface AdvancedAlertCardProps {
   alertData: Alert;
   alertId: string;
@@ -446,9 +453,16 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* Main message */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
-        </h3>
+        {/* Alert Title - Enhanced with better formatting */}
+              <div className="mb-3">
+                <h2 className="text-xl md:text-2xl font-bold leading-tight text-white tracking-tight">
+                  {(alertData.title || getDefaultTitle(alertData))
+                    .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove markdown bold
+                    .replace(/\*(.*?)\*/g, '$1')      // Remove markdown italic
+                    .replace(/__(.*?)__/g, '$1')      // Remove markdown underline
+                  }
+                </h2>
+              </div>
         {/* Show AI enhanced message if available */}
         {alertData.context?.aiMessage && (
           <p className="text-sm text-blue-200 mb-2 p-2 bg-blue-500/10 rounded border border-blue-400/30">
@@ -564,7 +578,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               <span className="text-sm text-slate-300">{insight}</span>
             </div>
           ))}
-          
+
           {/* AI Recommendation */}
           {alertData.context?.aiRecommendation && (
             <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/30">
@@ -583,10 +597,10 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
   const GameStartLayout = () => {
     const awayTeamName = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away Team';
     const homeTeamName = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home Team';
-    
+
     // Extract betting data if available
     const betbookData = alertData.context?.betbookData;
-    
+
     return (
       <>
         {/* Header with pulsing animation */}
@@ -642,12 +656,12 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
                 )}
               </div>
             </div>
-            
+
             <div className="flex flex-col items-center">
               <div className="text-3xl font-bold text-slate-300 mb-1">VS</div>
               <div className="text-xs text-slate-500">First Pitch</div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="text-lg font-bold text-white">
@@ -667,7 +681,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               />
             </div>
           </div>
-          
+
           {/* Game context */}
           <div className="border-t border-slate-700 pt-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -715,7 +729,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
                 <div className="text-xs text-slate-400">Away</div>
               </div>
             </div>
-            
+
             {/* AI Betting Advice */}
             {betbookData.aiAdvice && (
               <div className="mt-3 pt-3 border-t border-slate-700">
@@ -729,7 +743,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
         {/* Key matchup factors and weather */}
         <div className="space-y-3">
           <div className="text-xs text-slate-400 uppercase tracking-wide">Game Factors</div>
-          
+
           {alertData.context?.gameInfo?.pitchingMatchup && (
             <div className="flex items-center gap-2">
               <User className={`w-4 h-4 ${theme.text}`} />
@@ -738,7 +752,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               </span>
             </div>
           )}
-          
+
           {alertData.context?.gameInfo?.seriesRecord && (
             <div className="flex items-center gap-2">
               <Trophy className={`w-4 h-4 ${theme.text}`} />
@@ -747,14 +761,14 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               </span>
             </div>
           )}
-          
+
           <div className="flex items-center gap-2">
             <Activity className={`w-4 h-4 ${theme.text}`} />
             <span className="text-sm text-slate-300">
               Last 10: {awayTeamName.split(' ').pop()} 7-3, {homeTeamName.split(' ').pop()} 6-4
             </span>
           </div>
-          
+
           {weatherData && (
             <div className="flex items-center gap-2">
               <Wind className={`w-4 h-4 ${theme.text}`} />
@@ -763,7 +777,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               </span>
             </div>
           )}
-          
+
           {alertData.sport === 'MLB' && (
             <div className="flex items-center gap-2">
               <Target className={`w-4 h-4 ${theme.text}`} />
@@ -890,12 +904,28 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* Situation display */}
       <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 rounded-lg p-4 mb-4 border border-red-500/20">
-        <div className="text-lg font-bold text-white mb-2">
-          {alertData.context?.aiTitle || alertData.title || alertData.message}
-        </div>
-        <div className="text-sm text-slate-300">
-          {alertData.context?.aiCallToAction || alertData.description}
-        </div>
+        {/* Alert Title - Enhanced with better formatting */}
+              <div className="mb-3">
+                <h2 className="text-xl md:text-2xl font-bold leading-tight text-white tracking-tight">
+                  {(alertData.title || getDefaultTitle(alertData))
+                    .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove markdown bold
+                    .replace(/\*(.*?)\*/g, '$1')      // Remove markdown italic
+                    .replace(/__(.*?)__/g, '$1')      // Remove markdown underline
+                  }
+                </h2>
+              </div>
+        {/* Alert Description */}
+              {alertData.description && (
+                <div className="mb-4">
+                  <p className="text-base md:text-lg leading-relaxed text-slate-100">
+                    {alertData.description
+                      .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove markdown bold
+                      .replace(/\*(.*?)\*/g, '$1')      // Remove markdown italic
+                      .replace(/__(.*?)__/g, '$1')      // Remove markdown underline
+                    }
+                  </p>
+                </div>
+              )}
       </div>
 
       {/* Win probability shift */}
@@ -960,9 +990,16 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* Main alert */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
-        </h3>
+        {/* Alert Title - Enhanced with better formatting */}
+              <div className="mb-3">
+                <h2 className="text-xl md:text-2xl font-bold leading-tight text-white tracking-tight">
+                  {(alertData.title || getDefaultTitle(alertData))
+                    .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove markdown bold
+                    .replace(/\*(.*?)\*/g, '$1')      // Remove markdown italic
+                    .replace(/__(.*?)__/g, '$1')      // Remove markdown underline
+                  }
+                </h2>
+              </div>
         {(alertData.context?.aiCallToAction || alertData.description) && (
           <p className="text-sm text-slate-300">
             {alertData.context?.aiCallToAction || alertData.description}
@@ -1093,14 +1130,28 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* Main content */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
-        </h3>
-        {(alertData.context?.aiCallToAction || alertData.description) && (
-          <p className="text-sm text-slate-300">
-            {alertData.context?.aiCallToAction || alertData.description}
-          </p>
-        )}
+        {/* Alert Title - Enhanced with better formatting */}
+              <div className="mb-3">
+                <h2 className="text-xl md:text-2xl font-bold leading-tight text-white tracking-tight">
+                  {(alertData.title || getDefaultTitle(alertData))
+                    .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove markdown bold
+                    .replace(/\*(.*?)\*/g, '$1')      // Remove markdown italic
+                    .replace(/__(.*?)__/g, '$1')      // Remove markdown underline
+                  }
+                </h2>
+              </div>
+        {/* Alert Description */}
+              {alertData.description && (
+                <div className="mb-4">
+                  <p className="text-base md:text-lg leading-relaxed text-slate-100">
+                    {alertData.description
+                      .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove markdown bold
+                      .replace(/\*(.*?)\*/g, '$1')      // Remove markdown italic
+                      .replace(/__(.*?)__/g, '$1')      // Remove markdown underline
+                    }
+                  </p>
+                </div>
+              )}
       </div>
 
       {/* Confidence indicator */}
@@ -1224,7 +1275,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
       >
         <Card className={`relative ${theme.bg} backdrop-blur-sm ${theme.border} border transition-all duration-200 overflow-hidden`}>
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.gradient}" />
-          
+
           <div className="p-4">
             {renderAlertContent()}
           </div>

@@ -403,7 +403,14 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
             {/* Alert Message - Simple */}
             <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
               <p className="text-slate-100 text-base font-medium leading-relaxed">
-                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
+                {alert.message
+                  .replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '')  // Remove emojis
+                  .replace(/\[object Object\]/g, '')                    // Remove object strings
+                  .replace(/\*\*(.*?)\*\*/g, '$1')                     // Remove markdown bold
+                  .replace(/\*(.*?)\*/g, '$1')                         // Remove markdown italic
+                  .replace(/__(.*?)__/g, '$1')                         // Remove markdown underline
+                  .trim()
+                }
               </p>
             </div>
 
