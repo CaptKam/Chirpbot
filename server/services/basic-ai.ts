@@ -70,8 +70,8 @@ export class BasicAI {
 
   // Simple AI enhancement for medium-value alerts
   async enhanceAlert(context: AlertContext): Promise<AIEnhancement> {
-    // Only enhance medium-probability alerts to save API costs
-    if (context.probability < 40) {
+    // Only enhance low-medium-probability alerts and above to enable advanced AI features
+    if (context.probability < 25) {
       return {
         confidence: context.probability,
         insights: '',

@@ -55,7 +55,7 @@ export class AdaptivePollingManager {
   private readonly SPORT_POLLING_CONFIGS: Record<Sport, PollingConfig> = {
     MLB: {
       scheduled: { interval: 10000, cacheTTL: 30000 },    // 10s for pre-game
-      live: { interval: 250, cacheTTL: 1000 },            // 250ms for live games
+      live: { interval: 750, cacheTTL: 1500 },            // 750ms for live games (reduced from 250ms)
       final: { interval: 60000, cacheTTL: 300000 },       // 1min for completed games  
       delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
       suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
@@ -146,8 +146,8 @@ export class AdaptivePollingManager {
 
       this.gameStates.set(gameId, pollingState);
       
-      // Only start individual polling for live/critical games
-      if (gameState === 'live' || criticality === 'critical') {
+      // Only start individual polling for OFFICIALLY live games (not just critical scheduled games)
+      if (gameState === 'live') {
         await this.startIndividualPolling(gameId);
       }
     }
@@ -165,7 +165,15 @@ export class AdaptivePollingManager {
   private analyzeGameState(game: any): 'scheduled' | 'live' | 'final' | 'delayed' | 'suspended' {
     const status = game.status?.toLowerCase() || '';
     
-    if (game.isLive || status.includes('live') || status.includes('progress')) {
+    // STRICT: Only mark as live if status explicitly indicates it's live AND not in pre-game state
+    // Do NOT rely on game.isLive flag or enhanced data to prevent runaway live-state loops
+    const isPreGameOrScheduled = status.includes('preview') || status.includes('pre-game') || 
+                                status.includes('scheduled') || status.includes('warmup');
+    
+    // Must be explicitly marked as live by official status
+    const isOfficiallyLive = status.includes('live') || status.includes('progress') || status.includes('inning');
+    
+    if (isOfficiallyLive && !isPreGameOrScheduled) {
       return 'live';
     }
     
@@ -874,19 +882,9 @@ export class AdaptivePollingManager {
     const newState = this.analyzeGameState(gameData);
     const newCriticality = this.calculateGameCriticality(gameData);
     
-    // CRITICAL FIX: Check if game has live indicators and promote to live status
-    if (this.sport === 'MLB' && gameData && newState === 'live' && gameData.status === 'scheduled') {
-      // Check for live indicators in enhanced data
-      const hasLiveIndicators = gameData.runners || gameData.balls !== undefined || 
-                               gameData.strikes !== undefined || gameData.outs !== undefined ||
-                               (gameData.inning && gameData.inning > 0);
-      
-      if (hasLiveIndicators) {
-        console.log(`🚀 Promotion: scheduled → live via enhanced data for game ${gameId}`);
-        gameData.isLive = true;
-        gameData.status = 'live';
-      }
-    }
+    // DO NOT promote scheduled/pre-game games to live status based on enhanced data
+    // This was causing runaway live-state loops preventing server startup
+    // Games should only be live if explicitly marked as such by official game status
     
     // Detect state transitions
     if (newState !== currentState.currentState) {
@@ -919,7 +917,8 @@ export class AdaptivePollingManager {
    * Handle game state transitions
    */
   private async handleStateTransition(gameId: string, oldState: string, newState: string): Promise<void> {
-    // Game going live - start individual polling
+    // Game going live - start individual polling ONLY if truly live by official status
+    // Do NOT start individual polling for scheduled games marked as "live" due to enhanced data
     if (newState === 'live' && oldState !== 'live') {
       console.log(`🚀 Game ${gameId} went live - starting individual polling`);
       await this.startIndividualPolling(gameId);

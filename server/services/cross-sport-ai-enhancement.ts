@@ -143,9 +143,9 @@ export class CrossSportAIEnhancement {
         return this.getFallbackResponse(context, startTime);
       }
 
-      // Only enhance low-priority alerts and above to control costs 
-      if (context.probability < 40) {
-        console.log(`⏭️ Cross-Sport AI: Skipping ${context.sport} alert (${context.probability}% < 40% threshold)`);
+      // Only enhance low-priority alerts and above to enable advanced AI features 
+      if (context.probability < 25) {
+        console.log(`⏭️ Cross-Sport AI: Skipping ${context.sport} alert (${context.probability}% < 25% threshold)`);
         return this.getFallbackResponse(context, startTime);
       }
 

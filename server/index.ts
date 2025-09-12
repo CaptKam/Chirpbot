@@ -315,17 +315,19 @@ app.use((req, res, next) => {
             serveStatic(app);
           }
 
-          // Start alert generation with staggered initialization
-          console.log('🚨 Starting alert generation...');
+          // Defer alert generation to ensure server stability
+          console.log('🚨 Deferring alert generation startup...');
           setTimeout(() => {
+            console.log('🚨 Starting alert generation (server is stable)...');
             alertGenerator.generateLiveGameAlerts();
-          }, 1000); // Stagger by 1 second
+          }, 5000); // Wait 5 seconds for server stability
 
-          // Start alert cleanup service  
-          console.log('🧹 Starting alert cleanup service...');
+          // Defer alert cleanup service startup  
+          console.log('🧹 Deferring alert cleanup service startup...');
           setTimeout(() => {
+            console.log('🧹 Starting alert cleanup service (server is stable)...');
             alertCleanupService.startCleanup();
-          }, 2000); // Stagger by 2 seconds
+          }, 7000); // Wait 7 seconds for server stability
           
           console.log('✅ Background initialization complete - all systems operational!');
         } catch (error) {

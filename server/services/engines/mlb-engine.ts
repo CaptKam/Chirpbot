@@ -328,8 +328,8 @@ export class MLBEngine extends BaseSportEngine {
             currentPitcher: enhancedData.currentPitcher || gameState.currentPitcher,
             onDeckBatter: enhancedData.onDeckBatter || gameState.onDeckBatter,
             weatherContext,
-            // Respect original game status - don't force live for finished games
-            isLive: gameState.status === 'final' ? false : (gameState.isLive || true)
+            // Respect original game status - only force false for finished games, preserve original live state
+            isLive: gameState.status === 'final' ? false : gameState.isLive
           };
           console.log(`🚀 MLB Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, runners=[${enhancedGameState.hasFirst ? '1B' : ''}${enhancedGameState.hasSecond ? '2B' : ''}${enhancedGameState.hasThird ? '3B' : ''}], outs=${enhancedGameState.outs}, inning=${enhancedGameState.inning}`);
           return enhancedGameState;
@@ -360,10 +360,10 @@ export class MLBEngine extends BaseSportEngine {
 
     for (const alert of rawAlerts) {
       try {
-        // Only enhance high-priority alerts (>= 85 probability)
+        // Only enhance medium-priority alerts and above (>= 50 probability) to enable advanced AI features
         const probability = await this.calculateProbability(gameState);
         
-        if (probability >= 85) {
+        if (probability >= 50) {
           console.log(`🧠 MLB AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
           
           // Build cross-sport context for MLB

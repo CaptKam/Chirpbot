@@ -100,13 +100,7 @@ export class MLBApiService {
         const homeScore = game.linescore?.teams?.home?.runs ?? game.teams.home.score ?? 0;
         const awayScore = game.linescore?.teams?.away?.runs ?? game.teams.away.score ?? 0;
         
-        // Enhanced isLive detection - check multiple indicators of live game data
-        const hasLinescore = !!game.linescore;
-        const hasActiveInning = game.linescore?.currentInning > 0;
-        const hasInningState = !!game.linescore?.inningState;
-        const hasOuts = game.linescore?.outs !== undefined && game.linescore?.outs !== null;
-        const hasRunners = game.linescore?.offense?.first || game.linescore?.offense?.second || game.linescore?.offense?.third;
-        const hasActiveCount = game.linescore?.balls !== undefined || game.linescore?.strikes !== undefined;
+        // STRICT live detection - ONLY use official status, DO NOT use enhanced data
         const statusIndicatesLive = game.status.abstractGameState === 'Live' || 
                                    game.status.detailedState?.toLowerCase().includes('progress') ||
                                    game.status.detailedState?.toLowerCase().includes('inning');
@@ -116,25 +110,17 @@ export class MLBApiService {
                               game.status.detailedState?.toLowerCase().includes('final') ||
                               game.status.detailedState?.toLowerCase().includes('completed');
         
-        // A game is live if:
-        // 1. The abstractGameState says it's live OR  
-        // 2. We have rich live data indicators (linescore with active inning, outs data, etc.) AND the game is not finished
-        const isLive = statusIndicatesLive || 
-                      (!isGameFinished && hasLinescore && hasActiveInning && (hasInningState || hasOuts || hasRunners || hasActiveCount));
+        // Check if game is in pre-game/scheduled state
+        const isPreGameOrScheduled = game.status.abstractGameState === 'Preview' || 
+                                   game.status.detailedState?.toLowerCase().includes('pre-game') ||
+                                   game.status.detailedState?.toLowerCase().includes('scheduled') ||
+                                   game.status.detailedState?.toLowerCase().includes('warmup');
         
-        if (isLive && !statusIndicatesLive) {
-          console.log(`🔴 MLB: Game ${game.gamePk} marked as live due to live data indicators (abstractGameState: ${game.status.abstractGameState}, detailedState: ${game.status.detailedState})`);
-        }
+        // ONLY mark as live if official status explicitly says so AND not in pre-game/final state
+        const isLive = statusIndicatesLive && !isPreGameOrScheduled && !isGameFinished;
         
-        // Compute initial status from API state
-        const mappedStatus = this.mapGameStatus(game.status.detailedState);
-        
-        // Reconcile status with computed isLive (fixes status/isLive reconciliation issue)
-        const finalStatus = isLive ? 'live' : mappedStatus;
-        
-        if (isLive && mappedStatus !== 'live') {
-          console.log(`🔄 MLB: Game ${game.gamePk} status reconciled: ${mappedStatus} → live (isLive=true)`);
-        }
+        // Use ONLY the mapped status from official API state - DO NOT override with isLive
+        const finalStatus = this.mapGameStatus(game.status.detailedState);
         
         return {
           id: game.gamePk.toString(),
