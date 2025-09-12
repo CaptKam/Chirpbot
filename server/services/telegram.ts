@@ -125,13 +125,13 @@ export async function sendTelegramAlert(
 
       const result = await response.json();
       console.log(`📱 Telegram API response status: ${response.status}`);
-      
+
       if (response.ok && result.ok === true) {
         console.log(`📱 ✅ Successfully sent Telegram message`);
         return true;
       } else {
         console.error(`📱 ❌ Telegram API error (${response.status}):`, result);
-        
+
         // Provide specific error guidance
         if (response.status === 401) {
           console.error(`📱 🔑 Invalid bot token - check your bot token in Settings`);
@@ -140,7 +140,7 @@ export async function sendTelegramAlert(
         } else if (response.status === 429) {
           console.error(`📱 ⏰ Rate limited - too many requests`);
         }
-        
+
         // Try with plain text if MarkdownV2 failed
         if (result.description?.includes('parse') || result.description?.includes('markdown')) {
           console.log(`📱 🔄 Retrying with plain text...`);
@@ -155,19 +155,19 @@ export async function sendTelegramAlert(
               disable_web_page_preview: false,
             }),
           });
-          
+
           const plainResult = await plainResponse.json();
           if (plainResponse.ok && plainResult.ok === true) {
             console.log(`📱 ✅ Successfully sent plain text Telegram message`);
             return true;
           }
         }
-        
+
         return false;
       }
     } catch (fetchError: any) {
       console.error(`📱 ❌ Telegram network error:`, fetchError);
-      
+
       // Handle rate limiting
       if (fetchError.message?.includes('429')) {
         console.warn('📱 ⚠️ Telegram rate limit hit, dropping alert');

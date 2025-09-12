@@ -730,11 +730,14 @@ export class MLBEngine extends BaseSportEngine {
             const telegramAlert = {
               id: alert.alertKey,
               type: alert.type,
-              title: alert.message.split('|')[0].trim(), // Extract title from message
+              title: alert.message.split('|')[0].trim(),
               description: alert.message,
               gameInfo: {
+                sport: 'MLB',
                 awayTeam: gameState.awayTeam,
                 homeTeam: gameState.homeTeam,
+                awayScore: gameState.awayScore,
+                homeScore: gameState.homeScore,
                 score: {
                   away: gameState.awayScore,
                   home: gameState.homeScore
