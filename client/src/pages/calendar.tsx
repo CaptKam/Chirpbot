@@ -399,23 +399,7 @@ export default function Calendar() {
                 </Button>
               )}
             </div>
-            <div className="flex items-center space-x-4 mt-1">
-              <div className="px-3 py-1 rounded-xl bg-emerald-500/20 ring-1 ring-emerald-500/30 backdrop-blur-sm">
-                <span className="text-sm font-semibold text-emerald-400" data-testid="text-live-count">
-                  {games.filter(g => g.status === 'live').length} Live
-                </span>
-              </div>
-              <div className="px-3 py-1 rounded-xl bg-blue-500/20 ring-1 ring-blue-500/30 backdrop-blur-sm">
-                <span className="text-sm font-semibold text-blue-300" data-testid="text-scheduled-count">
-                  {games.filter(g => g.status === 'scheduled').length} Scheduled
-                </span>
-              </div>
-              <div className="px-3 py-1 rounded-xl bg-slate-500/20 ring-1 ring-slate-500/30 backdrop-blur-sm">
-                <span className="text-sm font-semibold text-slate-300" data-testid="text-final-count">
-                  {games.filter(g => g.status === 'final').length} Final
-                </span>
-              </div>
-            </div>
+            
           </div>
           <div className="px-3 py-1 rounded-xl bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
             <span className="text-sm font-semibold text-slate-300" data-testid="text-selected-count">
