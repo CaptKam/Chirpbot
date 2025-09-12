@@ -166,23 +166,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
 }
 
 export default function Calendar() {
-  // Set default sport based on current season - NFL has highest priority in September
-  const getCurrentDefaultSport = () => {
-    const currentMonth = new Date().getMonth() + 1; // 1-12
-    
-    // September-February: NFL season (highest priority)
-    if (currentMonth >= 9 || currentMonth <= 2) return "NFL";
-    // August-January: NCAAF also active but lower priority
-    if (currentMonth >= 8 || currentMonth === 1) return "NFL"; // NFL still higher priority
-    // April-October: MLB season
-    if (currentMonth >= 4 && currentMonth <= 10) return "MLB";
-    // October-June: NBA season  
-    if (currentMonth >= 10 || currentMonth <= 6) return "NBA";
-    
-    return "NFL"; // Default fallback
-  };
-  
-  const [activeSport, setActiveSport] = useState(getCurrentDefaultSport());
+  const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -393,13 +377,6 @@ export default function Calendar() {
                   </span>
                 )}
               </h2>
-              
-              {/* Season Data Notice */}
-              {activeSport === 'MLB' && isSameDay(selectedDate, new Date()) && (
-                <div className="bg-amber-500/20 backdrop-blur-sm border-amber-500/50 ring-1 ring-amber-500/30 text-amber-300 px-3 py-1 rounded-lg text-xs font-semibold">
-                  📅 Historical 2024 Season (2025 season not yet available)
-                </div>
-              )}
               <Button
                 variant="outline"
                 size="default"
