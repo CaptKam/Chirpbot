@@ -2,6 +2,15 @@
 
 ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time notifications and AI-enhanced insights across 6 major sports leagues: MLB, NFL, NCAAF, NBA, WNBA, and CFL. It has evolved into a comprehensive system featuring sub-250ms response times, cross-sport AI enhancement with 0ms intelligent caching for repeated scenarios, and predictive alert capabilities. The platform monitors teams using authentic API data sources to generate intelligent alerts for high-impact game situations and anticipates high-value betting opportunities.
 
+# Recent Changes
+
+**September 12, 2025**: Fixed AdvancedAlertCard betting insights panel functionality
+- ✅ Verified swipe gesture implementation with proper drag handlers and motion controls
+- ✅ Confirmed betting panel layout with 320px width, "Quick Bet" header, and 2x2 sportsbook grid
+- ✅ Fixed server startup issues that were preventing frontend from serving properly
+- ✅ Resolved all TypeScript compilation errors in alert card components
+- ✅ Enhanced panel margins, positioning, and sportsbook button visibility for better UX
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.

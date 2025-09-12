@@ -469,15 +469,16 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl mx-2 sm:mx-0">
+    <div className="relative overflow-visible rounded-xl mx-2 sm:mx-0">
       {/* AI Betting Insights Panel (Left Swipe) - Only show when swiped left */}
-      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-opacity duration-300 ${
-        dragX < -50 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      <div className={`absolute inset-y-0 right-0 w-80 bg-gradient-to-l from-blue-500/20 via-purple-500/10 to-transparent transition-all duration-300 border-l border-slate-700/50 rounded-r-xl ${
+        dragX < -50 ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none translate-x-8'
       }`}>
-        {(alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) ? (
-          <div className="h-full flex flex-col justify-center p-4 space-y-3">
+        {/* Always show the betting panel when swiped left, regardless of data availability */}
+        {dragX < -50 && (
+          <div className="h-full flex flex-col justify-start py-6 px-4 space-y-4 overflow-y-auto max-h-full">
             {/* AI Insights Header */}
-            <div className="flex items-center space-x-2 mb-2">
+            <div className="flex items-center space-x-2 mb-1 flex-shrink-0">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <Brain className="w-4 h-4 text-white" />
               </div>
@@ -488,28 +489,28 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
             </div>
 
             {/* AI Betting Advice */}
-            {alertData?.context?.aiBettingAdvice && (
+            {(alertData?.context?.aiBettingAdvice || alertData?.betbookData?.aiAdvice) && (
               <div className="mt-3 p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/30">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-xs font-bold uppercase tracking-wide">💰 AI Betting Analysis</span>
                   <span className="text-green-300 text-xs">
-                    {alertData.context.aiBettingAdvice.confidence.toFixed(1)}% confidence
+                    {(alertData?.context?.aiBettingAdvice?.confidence || alertData?.probability || 75).toFixed(1)}% confidence
                   </span>
                 </div>
                 <p className="text-xs font-medium text-green-100 mb-2">
-                  {alertData.context.aiBettingAdvice.recommendation}
+                  {alertData?.context?.aiBettingAdvice?.recommendation || alertData?.betbookData?.aiAdvice || "High-value betting situation detected"}
                 </p>
 
                 {/* Reasoning */}
                 <div className="space-y-1 mb-2">
-                  {alertData.context.aiBettingAdvice.reasoning?.map((reason: string, idx: number) => (
+                  {(alertData?.context?.aiBettingAdvice?.reasoning || alertData?.context?.reasons || []).slice(0, 2).map((reason: string, idx: number) => (
                     <p key={idx} className="text-xs text-green-100">• {reason}</p>
                   ))}
                 </div>
 
                 {/* Suggested Bets */}
                 <div className="flex flex-wrap gap-1">
-                  {alertData.context.aiBettingAdvice.suggestedBets?.map((bet: string, idx: number) => (
+                  {(alertData?.context?.aiBettingAdvice?.suggestedBets || [`${alertData?.sport === 'MLB' ? 'Over' : 'Live bet'} recommended`]).map((bet: string, idx: number) => (
                     <span key={idx} className="px-2 py-1 text-xs bg-green-600/20 text-green-300 rounded">
                       {bet}
                     </span>
@@ -611,7 +612,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       <Brain className="w-3 h-3 text-purple-400" />
                       <span className="text-xs text-purple-100 font-medium">AI Analysis</span>
                       <span className="text-xs text-green-300 font-mono">
-                        {alertData.context.confidence.toFixed(1)}% confidence
+                        {(alertData.context?.confidence || 75).toFixed(1)}% confidence
                       </span>
                     </div>
 
@@ -639,10 +640,10 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </div>
             )}
 
-            {/* Quick Sportsbook Access */}
-            <div className="space-y-2">
+            {/* Quick Sportsbook Access - Always visible */}
+            <div className="space-y-3 flex-shrink-0">
               <p className="text-xs text-blue-200 font-medium tracking-wide uppercase">Quick Bet</p>
-              <div className="flex space-x-2">
+              <div className="grid grid-cols-2 gap-3">
                 {sportsbooks.slice(0, 4).map((sportsbook) => (
                   <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
                     <Button
@@ -650,7 +651,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         handleSportsbookClick(sportsbook);
                         setDragX(0);
                       }}
-                      className="h-10 w-10 p-1 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20"
+                      className="h-12 w-12 p-1.5 rounded-lg bg-white/90 shadow-lg ring-2 ring-white/20 hover:scale-105 transition-transform"
                       style={{ backgroundColor: `${sportsbook.color}15`, borderColor: `${sportsbook.color}30` }}
                       data-testid={`ai-sportsbook-${sportsbook.name.toLowerCase()}`}
                     >
@@ -660,16 +661,16 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                         className="w-full h-full rounded object-contain"
                       />
                     </Button>
-                    <span className="text-xs text-white/80 font-medium">{sportsbook.name}</span>
+                    <span className="text-xs text-white/80 font-medium text-center">{sportsbook.name}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2 mt-3 pt-3 border-t border-slate-700/30">
+            <div className="flex gap-2 mt-3 pt-3 border-t border-slate-700/30 flex-shrink-0">
               <button
-                className="flex-1 px-3 py-2 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded"
+                className="flex-1 px-3 py-2 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard.writeText(displayMessage);
@@ -679,7 +680,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 📋 Copy
               </button>
               <button
-                className="flex-1 px-3 py-2 text-xs font-medium bg-blue-500/20 text-blue-400 rounded"
+                className="flex-1 px-3 py-2 text-xs font-medium bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   // Share alert
@@ -696,19 +697,27 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
               </button>
             </div>
           </div>
-        ) : (
-          // Fallback to original sportsbook buttons when no AI data
-          (<div className="h-full flex flex-col items-center justify-center p-4 space-y-3">
-            <h4 className="text-sm text-white/90 font-semibold tracking-wide">Sports Betting</h4>
+        )}
+        {/* Fallback betting panel for when no AI data available */}
+        {dragX < -50 && !(alertData?.betbookData || alertData?.context?.reasons || alertData?.context?.aiBettingAdvice || alertData?.context?.aiGameProjection) && (
+          <div className="h-full flex flex-col items-center justify-center p-4 space-y-4">
+            <div className="text-center space-y-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto">
+                <Target className="w-4 h-4 text-white" />
+              </div>
+              <h4 className="text-sm text-white/90 font-semibold tracking-wide">Sports Betting</h4>
+              <p className="text-xs text-white/70">Bet on this game situation</p>
+            </div>
+            
             <div className="grid grid-cols-2 gap-3">
-              {sportsbooks.map((sportsbook) => (
+              {sportsbooks.slice(0, 4).map((sportsbook) => (
                 <div key={sportsbook.name} className="flex flex-col items-center space-y-1">
                   <Button
                     onClick={() => {
                       handleSportsbookClick(sportsbook);
                       setDragX(0);
                     }}
-                    className="h-12 w-12 p-1.5 rounded-xl bg-white/90 shadow-xl ring-2 ring-white/30"
+                    className="h-12 w-12 p-1.5 rounded-xl bg-white/90 shadow-xl ring-2 ring-white/30 hover:scale-105 transition-transform"
                     style={{ backgroundColor: `${sportsbook.color}20`, borderColor: `${sportsbook.color}40` }}
                     data-testid={`sportsbook-${sportsbook.name.toLowerCase()}`}
                   >
@@ -1065,7 +1074,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
                             let message = alertData.message || '';
                             // Remove emojis and clean up
-                            message = message.replace(/[\\{1F300}-\\{1F9FF}]|[\u{2600}-\u{26FF}]|[\\{2700}-\u{27BF}]/gu, '').trim();
+                            message = message.replace(/[\\u{1F300}-\\u{1F9FF}]|[\\u{2600}-\u{26FF}]|[\\u{2700}-\\u{27BF}]/gu, '').trim();
 
                             // Extract the main situation text based on sport
                             if (alertData.sport === 'MLB') {
