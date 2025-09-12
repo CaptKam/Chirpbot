@@ -13,6 +13,7 @@ export interface GameState {
 export interface AlertResult {
   alertKey: string;
   type: string;
+  normalizedType?: string; // Simplified type for betting system (e.g., "BASES_LOADED" instead of "MLB_BASES_LOADED_NO_OUTS")
   message: string;
   context: any;
   priority: number;

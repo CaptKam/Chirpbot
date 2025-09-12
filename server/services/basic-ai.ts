@@ -35,8 +35,9 @@ export class BasicAI {
 
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
-    // Check for disable flags first
-    this.isConfigured = this.checkIfEnabled() && !!this.apiKey;
+    // AI Enhancement disabled by user request
+    this.isConfigured = false;
+    console.log('🚫 AI Enhancement: DISABLED by user configuration');
   }
 
   // Check if AI system is enabled via disable flags
