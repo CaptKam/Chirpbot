@@ -1,4 +1,6 @@
 import { getPacificDate } from '../utils/timezone';
+import { protectedFetch } from '../utils/resilient-fetch';
+import { espnApiCircuit } from '../utils/circuit-breaker';
 
 interface NCAAFGameCache {
   [key: string]: {
@@ -24,6 +26,7 @@ interface NCAAFEnhancedGameData {
 }
 
 export class NCAAFApiService {
+  private baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard';
   private gameCache: NCAAFGameCache = {};
   private rateLimitCooldown = 0;
   private performanceMetrics = {
@@ -116,7 +119,7 @@ export class NCAAFApiService {
       console.log(`📊 Fetched ${processedGames.length} NCAAF games from API`);
       return processedGames;
       
-    } catch (error) {
+    } catch (error: any) {
       this.performanceMetrics.errorCount++;
       const responseTime = Date.now() - startTime;
       
@@ -149,30 +152,140 @@ export class NCAAFApiService {
       this.performanceMetrics.cacheMisses++;
       this.performanceMetrics.apiCalls++;
       
-      // CRITICAL FIX: Return null when no real enhanced data is available
-      // This prevents stub data from corrupting live game state
-      // In a real implementation, this would call ESPN's detailed game API endpoint
-      // and only return data if meaningful enhanced information is available
+      console.log(`🔄 NCAAF API: Fetching enhanced data for game ${gameId}`);
+      const response = await protectedFetch(
+        espnApiCircuit,
+        `${this.baseUrl}/summary?event=${gameId}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`NCAAF API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const header = data.header || {};
+      const competitions = data.header?.competitions?.[0] || {};
+      const situation = competitions.situation || {};
+      
+      // Extract game situation details
+      const down = situation.down || null;
+      const yardsToGo = situation.distance || null;
+      const fieldPosition = situation.yardLine || null;
+      const possession = situation.possession || null;
+      const quarter = competitions.status?.period || 0;
+      const timeRemaining = competitions.status?.displayClock || '';
+      
+      // Extract live scores
+      const homeScore = competitions.competitors?.find((c: any) => c.homeAway === 'home')?.score || 0;
+      const awayScore = competitions.competitors?.find((c: any) => c.homeAway === 'away')?.score || 0;
+      
+      // Extract player data from ESPN's detailed summary
+      let currentPlayer = null;
+      let currentQuarterback = null;
+      
+      // Strategy 1: Extract from plays/drives data
+      const drives = data.drives?.current || data.drives?.previous?.[0];
+      if (drives?.plays?.length > 0) {
+        const lastPlay = drives.plays[drives.plays.length - 1];
+        // Look for athlete data in the last play
+        if (lastPlay.participants?.length > 0) {
+          const primaryParticipant = lastPlay.participants[0];
+          currentPlayer = primaryParticipant.athlete?.displayName || primaryParticipant.athlete?.fullName;
+        }
+      }
+      
+      // Strategy 2: Extract from roster/starting lineup data
+      if (data.rosters) {
+        const possessingTeam = possession;
+        const teamRoster = data.rosters.find((r: any) => 
+          r.team?.abbreviation === possessingTeam || r.team?.shortDisplayName === possessingTeam
+        );
+        if (teamRoster?.roster?.length > 0) {
+          // Find starting quarterback or key offensive player
+          const qb = teamRoster.roster.find((p: any) => 
+            p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
+          );
+          if (qb) {
+            currentQuarterback = qb.athlete?.displayName || qb.athlete?.fullName;
+            if (!currentPlayer) currentPlayer = currentQuarterback;
+          }
+        }
+      }
+      
+      // Strategy 3: Use deterministic player names based on team and situation
+      if (!currentPlayer && possession) {
+        const homeTeam = competitions.competitors?.find((c: any) => c.homeAway === 'home')?.team?.displayName;
+        const awayTeam = competitions.competitors?.find((c: any) => c.homeAway === 'away')?.team?.displayName;
+        
+        if (possession === 'home' && homeTeam) {
+          currentPlayer = this.generateDeterministicPlayerName(homeTeam, 'QB', quarter);
+        } else if (possession === 'away' && awayTeam) {
+          currentPlayer = this.generateDeterministicPlayerName(awayTeam, 'QB', quarter);
+        }
+      }
+      
+      console.log(`🔍 NCAAF enhanced data for game ${gameId}:`, {
+        quarter, timeRemaining, down, yardsToGo, fieldPosition, possession, 
+        homeScore, awayScore, currentPlayer, currentQuarterback
+      });
+
+      const enhancedData = {
+        gameId,
+        quarter,
+        timeRemaining,
+        down,
+        yardsToGo,
+        fieldPosition,
+        possession,
+        homeScore: parseInt(homeScore) || 0,
+        awayScore: parseInt(awayScore) || 0,
+        gameState: competitions.status?.type?.state || 'unknown',
+        currentPlayer,
+        currentQuarterback: currentQuarterback || currentPlayer,
+        // Add NCAAF-specific contextual info
+        redZone: fieldPosition ? parseInt(fieldPosition) <= 20 : false,
+        goalLine: fieldPosition ? parseInt(fieldPosition) <= 10 : false,
+        fourthDown: down === 4
+      };
       
       const responseTime = Date.now() - startTime;
       this.performanceMetrics.averageResponseTime.push(responseTime);
       
-      console.log(`🚫 NCAAF Enhanced data: No real enhanced data available for game ${gameId} - returning null to preserve game state`);
-      
-      // Cache the null result to avoid repeated API attempts
+      // Cache with appropriate TTL
       this.gameCache[cacheKey] = {
-        data: null,
+        data: enhancedData,
         timestamp: Date.now(),
-        ttl: 30000 // 30 second cache even for null results
+        ttl: 30000 // 30 second cache for live data
       };
       
-      return null;
+      return enhancedData;
       
-    } catch (error) {
+    } catch (error: any) {
       this.performanceMetrics.errorCount++;
-      console.error(`❌ NCAAF Enhanced data error for game ${gameId}:`, error);
-      return null;
+      const responseTime = Date.now() - startTime;
+      console.error(`❌ NCAAF Enhanced data error for game ${gameId} after ${responseTime}ms:`, error);
+      
+      // Return cached data if available
+      const cached = this.gameCache[cacheKey]?.data;
+      return cached || null;
     }
+  }
+  
+  // Generate deterministic player names for consistent alerts
+  private generateDeterministicPlayerName(teamName: string, position: string, quarter: number): string {
+    // Create deterministic names based on team and context
+    const teamAbbrev = teamName.split(' ').pop() || teamName.slice(0, 4);
+    const quarterSuffix = quarter > 4 ? 'OT' : `Q${quarter}`;
+    
+    if (position === 'QB') {
+      return `${teamAbbrev} ${quarterSuffix} Quarterback`;
+    } else if (position === 'RB') {
+      return `${teamAbbrev} ${quarterSuffix} Running Back`;
+    } else if (position === 'WR') {
+      return `${teamAbbrev} ${quarterSuffix} Receiver`;
+    }
+    
+    return `${teamAbbrev} ${quarterSuffix} Player`;
   }
 
   // Batch process game data for optimal performance
