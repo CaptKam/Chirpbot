@@ -66,13 +66,13 @@ export default function Settings() {
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
   // Global settings query to check admin-disabled alerts (only for admin users)
-  const { data: globalSettings } = useQuery({
+  const { data: globalSettings, isLoading: globalSettingsLoading } = useQuery({
     queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated && user?.role === 'admin',
   });
 
   // Available alert types query from cylinders (accessible to all authenticated users)
-  const { data: availableAlerts } = useQuery({
+  const { data: availableAlerts, isLoading: availableAlertsLoading } = useQuery({
     queryKey: [`/api/available-alerts/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
   });
@@ -90,6 +90,11 @@ export default function Settings() {
     queryKey: [`/api/user/${user?.id}/telegram`],
     enabled: !!user?.id && isAuthenticated,
   });
+
+  // Unified loading state - coordinate all loading states
+  const isSettingsLoading = preferencesLoading || 
+                           availableAlertsLoading || 
+                           (user?.role === 'admin' && globalSettingsLoading);
 
   // Create a map of current preferences for easy lookup
   const preferenceMap = new Map();
