@@ -1,6 +1,5 @@
 import { getPacificDate } from '../utils/timezone';
-import { protectedFetch } from '../utils/resilient-fetch';
-import { espnApiCircuit } from '../utils/circuit-breaker';
+import { espnApiCircuit, protectedFetch } from '../middleware/circuit-breaker';
 
 interface NCAAFGameCache {
   [key: string]: {
@@ -26,7 +25,7 @@ interface NCAAFEnhancedGameData {
 }
 
 export class NCAAFApiService {
-  private baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard';
+  private baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football';
   private gameCache: NCAAFGameCache = {};
   private rateLimitCooldown = 0;
   private performanceMetrics = {
@@ -179,9 +178,37 @@ export class NCAAFApiService {
       const homeScore = competitions.competitors?.find((c: any) => c.homeAway === 'home')?.score || 0;
       const awayScore = competitions.competitors?.find((c: any) => c.homeAway === 'away')?.score || 0;
       
+      // Extract team competitor data for proper team ID to abbreviation mapping
+      const homeCompetitor = competitions.competitors?.find((c: any) => c.homeAway === 'home');
+      const awayCompetitor = competitions.competitors?.find((c: any) => c.homeAway === 'away');
+      
+      // Map possession team ID to actual team info
+      let possessionSide = null; // 'home' or 'away'
+      let possessionTeamId = null;
+      let possessionTeamAbbrev = null;
+      
+      if (possession && homeCompetitor && awayCompetitor) {
+        // Check if possession matches home team ID
+        if (possession.toString() === homeCompetitor.team?.id?.toString()) {
+          possessionSide = 'home';
+          possessionTeamId = homeCompetitor.team.id.toString();
+          possessionTeamAbbrev = homeCompetitor.team.abbreviation;
+        }
+        // Check if possession matches away team ID  
+        else if (possession.toString() === awayCompetitor.team?.id?.toString()) {
+          possessionSide = 'away';
+          possessionTeamId = awayCompetitor.team.id.toString();
+          possessionTeamAbbrev = awayCompetitor.team.abbreviation;
+        }
+        
+        console.log(`🔍 NCAAF possession mapping for game ${gameId}: possession=${possession}, possessionSide=${possessionSide}, teamAbbrev=${possessionTeamAbbrev}`);
+      }
+      
       // Extract player data from ESPN's detailed summary
       let currentPlayer = null;
       let currentQuarterback = null;
+      let preGameHomeQB = null;
+      let preGameAwayQB = null;
       
       // Strategy 1: Extract from plays/drives data
       const drives = data.drives?.current || data.drives?.previous?.[0];
@@ -191,35 +218,88 @@ export class NCAAFApiService {
         if (lastPlay.participants?.length > 0) {
           const primaryParticipant = lastPlay.participants[0];
           currentPlayer = primaryParticipant.athlete?.displayName || primaryParticipant.athlete?.fullName;
+          console.log(`✅ NCAAF extracted player from plays: ${currentPlayer}`);
         }
       }
       
-      // Strategy 2: Extract from roster/starting lineup data
-      if (data.rosters) {
-        const possessingTeam = possession;
-        const teamRoster = data.rosters.find((r: any) => 
-          r.team?.abbreviation === possessingTeam || r.team?.shortDisplayName === possessingTeam
+      // Strategy 2: Extract from roster/starting lineup data with correct team ID mapping
+      if (data.rosters && possessionTeamId) {
+        const possessingTeamRoster = data.rosters.find((r: any) => 
+          r.team?.id?.toString() === possessionTeamId
         );
-        if (teamRoster?.roster?.length > 0) {
+        if (possessingTeamRoster?.roster?.length > 0) {
           // Find starting quarterback or key offensive player
-          const qb = teamRoster.roster.find((p: any) => 
+          const qb = possessingTeamRoster.roster.find((p: any) => 
             p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
           );
           if (qb) {
             currentQuarterback = qb.athlete?.displayName || qb.athlete?.fullName;
             if (!currentPlayer) currentPlayer = currentQuarterback;
+            console.log(`✅ NCAAF extracted QB from roster: ${currentQuarterback}`);
           }
         }
       }
       
-      // Strategy 3: Use deterministic player names based on team and situation
-      if (!currentPlayer && possession) {
-        const homeTeam = competitions.competitors?.find((c: any) => c.homeAway === 'home')?.team?.displayName;
-        const awayTeam = competitions.competitors?.find((c: any) => c.homeAway === 'away')?.team?.displayName;
+      // Strategy 3: Pre-game QB fallbacks for scheduled games
+      if (data.rosters && (!currentPlayer || competitions.status?.type?.state === 'pre')) {
+        console.log(`🔄 NCAAF extracting pre-game QBs for game ${gameId}`);
         
-        if (possession === 'home' && homeTeam) {
+        // Extract home team QB
+        if (homeCompetitor) {
+          const homeRoster = data.rosters.find((r: any) => 
+            r.team?.id?.toString() === homeCompetitor.team?.id?.toString()
+          );
+          if (homeRoster?.roster?.length > 0) {
+            const homeQB = homeRoster.roster.find((p: any) => 
+              p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
+            );
+            if (homeQB) {
+              preGameHomeQB = homeQB.athlete?.displayName || homeQB.athlete?.fullName;
+              console.log(`✅ NCAAF home QB: ${preGameHomeQB}`);
+            }
+          }
+        }
+        
+        // Extract away team QB
+        if (awayCompetitor) {
+          const awayRoster = data.rosters.find((r: any) => 
+            r.team?.id?.toString() === awayCompetitor.team?.id?.toString()
+          );
+          if (awayRoster?.roster?.length > 0) {
+            const awayQB = awayRoster.roster.find((p: any) => 
+              p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
+            );
+            if (awayQB) {
+              preGameAwayQB = awayQB.athlete?.displayName || awayQB.athlete?.fullName;
+              console.log(`✅ NCAAF away QB: ${preGameAwayQB}`);
+            }
+          }
+        }
+        
+        // Use pre-game QB if no current player found
+        if (!currentPlayer) {
+          if (possessionSide === 'home' && preGameHomeQB) {
+            currentPlayer = preGameHomeQB;
+            currentQuarterback = preGameHomeQB;
+          } else if (possessionSide === 'away' && preGameAwayQB) {
+            currentPlayer = preGameAwayQB;
+            currentQuarterback = preGameAwayQB;
+          } else if (preGameHomeQB) {
+            // Default to home QB if no possession info
+            currentPlayer = preGameHomeQB;
+            currentQuarterback = preGameHomeQB;
+          }
+        }
+      }
+      
+      // Strategy 4: Use deterministic player names as last resort
+      if (!currentPlayer && possession) {
+        const homeTeam = homeCompetitor?.team?.displayName;
+        const awayTeam = awayCompetitor?.team?.displayName;
+        
+        if (possessionSide === 'home' && homeTeam) {
           currentPlayer = this.generateDeterministicPlayerName(homeTeam, 'QB', quarter);
-        } else if (possession === 'away' && awayTeam) {
+        } else if (possessionSide === 'away' && awayTeam) {
           currentPlayer = this.generateDeterministicPlayerName(awayTeam, 'QB', quarter);
         }
       }
@@ -237,11 +317,15 @@ export class NCAAFApiService {
         yardsToGo,
         fieldPosition,
         possession,
+        possessionSide,
+        possessionTeamAbbrev,
         homeScore: parseInt(homeScore) || 0,
         awayScore: parseInt(awayScore) || 0,
         gameState: competitions.status?.type?.state || 'unknown',
         currentPlayer,
         currentQuarterback: currentQuarterback || currentPlayer,
+        preGameHomeQB,
+        preGameAwayQB,
         // Add NCAAF-specific contextual info
         redZone: fieldPosition ? parseInt(fieldPosition) <= 20 : false,
         goalLine: fieldPosition ? parseInt(fieldPosition) <= 10 : false,

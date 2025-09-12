@@ -858,6 +858,36 @@ export class AdaptivePollingManager {
       for (const gameId of gamesToPoll) {
         const gameData = gameMap.get(gameId);
         if (gameData) {
+          // For user-monitored scheduled games in pre-game window, fetch enhanced data
+          const gameState = this.gameStates.get(gameId);
+          console.log(`🔍 Checking enhanced data conditions for ${this.sport} game ${gameId}: state=${gameState?.currentState}, userMonitored=${gameState?.isUserMonitored}, withinWindow=${this.isWithinPreGameWindow(gameData)}`);
+          if (gameState && gameData && gameState.currentState !== 'live' && gameState.isUserMonitored && this.isWithinPreGameWindow(gameData)) {
+            try {
+              console.log(`🔄 Fetching enhanced data for scheduled ${this.sport} game ${gameId} (user-monitored, pre-game window)`);
+              
+              let enhancedData = null;
+              if (this.sport === 'MLB' && this.apiServices.MLB) {
+                enhancedData = await this.apiServices.MLB.getEnhancedGameData(gameId);
+              } else if (this.sport === 'NFL' && this.apiServices.NFL) {
+                enhancedData = await this.apiServices.NFL.getEnhancedGameData(gameId, 'scheduled');
+              } else if (this.sport === 'NCAAF' && this.apiServices.NCAAF) {
+                enhancedData = await this.apiServices.NCAAF.getEnhancedGameData(gameId);
+              } else if (this.sport === 'WNBA' && this.apiServices.WNBA) {
+                enhancedData = await this.apiServices.WNBA.getEnhancedGameData(gameId);
+              } else if (this.sport === 'NBA' && this.apiServices.NBA) {
+                enhancedData = await this.apiServices.NBA.getEnhancedGameData(gameId);
+              }
+              
+              if (enhancedData && !enhancedData.error) {
+                // Merge enhanced data with game data
+                Object.assign(gameData, enhancedData);
+                console.log(`✅ Merged enhanced data for ${this.sport} game ${gameId}`);
+              }
+            } catch (error) {
+              console.error(`⚠️ Failed to get enhanced data for ${this.sport} game ${gameId}:`, error);
+            }
+          }
+          
           await this.updateGameState(gameId, gameData);
           const state = this.gameStates.get(gameId);
           if (state) {
@@ -866,9 +896,40 @@ export class AdaptivePollingManager {
         }
       }
       
+      // Enhanced data summary logging
+      const enhancedDataSummary = {
+        total: games.length,
+        live: games.filter(g => this.analyzeGameState(g) === 'live').length,
+        userMonitored: games.filter(g => this.gameStates.get(g.id || g.gameId)?.isUserMonitored).length,
+        withinWindow: games.filter(g => this.isWithinPreGameWindow(g)).length,
+        fetchedEnhanced: 0,
+        mergedEnhanced: 0
+      };
+      
+      console.log(`📊 ${this.sport} Enhanced Data Summary: ${enhancedDataSummary.fetchedEnhanced}/${enhancedDataSummary.total} fetched, ${enhancedDataSummary.mergedEnhanced} merged (${enhancedDataSummary.userMonitored} monitored, ${enhancedDataSummary.withinWindow} within window, ${enhancedDataSummary.live} live)`);
+      
       this.lastBatchPoll = now;
     } catch (error) {
       console.error(`❌ ${this.sport} Batch polling failed:`, error);
+    }
+  }
+
+  /**
+   * Check if a scheduled game is within pre-game window for enhanced data fetching
+   */
+  private isWithinPreGameWindow(gameData: any): boolean {
+    if (!gameData || !gameData.startTime) return false;
+    
+    try {
+      const startTime = new Date(gameData.startTime).getTime();
+      const now = Date.now();
+      const timeToStart = startTime - now;
+      
+      // Within 6 hours before game start (expanded for testing)
+      return timeToStart > 0 && timeToStart <= (6 * 60 * 60 * 1000);
+    } catch (error) {
+      console.error(`⚠️ Error checking pre-game window for game:`, error);
+      return false;
     }
   }
 
@@ -886,9 +947,9 @@ export class AdaptivePollingManager {
     // This was causing runaway live-state loops preventing server startup
     // Games should only be live if explicitly marked as such by official game status
     
-    // Persist enhanced game data to database for alert system
+    // Persist enhanced game data to database for alert system (all sports)
     try {
-      if (this.sport === 'MLB' && gameData) {
+      if (gameData) {
         await this.persistEnhancedGameData(gameId, gameData);
       }
     } catch (error) {
@@ -923,6 +984,46 @@ export class AdaptivePollingManager {
   }
 
   /**
+   * Select primary player based on sport with intelligent fallbacks
+   */
+  private selectPrimaryPlayerBySport(gameData: any): string {
+    let primaryPlayer: string | null = null;
+    
+    // Sport-aware player selection
+    if (this.sport === 'MLB') {
+      primaryPlayer = gameData.currentBatter || gameData.currentPitcher || gameData.onDeckBatter;
+    } else if (this.sport === 'NFL' || this.sport === 'NCAAF') {
+      // For football: prioritize active player, then QB, then possession-based QB
+      primaryPlayer = gameData.currentPlayer || gameData.currentQuarterback || 
+                     gameData.possessionPlayer || gameData.topPlayer;
+      
+      // Enhanced fallbacks for NFL/NCAAF pre-game
+      if (!primaryPlayer) {
+        if (gameData.possessionSide === 'home' && gameData.preGameHomeQB) {
+          primaryPlayer = gameData.preGameHomeQB;
+        } else if (gameData.possessionSide === 'away' && gameData.preGameAwayQB) {
+          primaryPlayer = gameData.preGameAwayQB;
+        } else if (gameData.preGameHomeQB) {
+          primaryPlayer = gameData.preGameHomeQB;
+        } else if (gameData.preGameAwayQB) {
+          primaryPlayer = gameData.preGameAwayQB;
+        }
+      }
+    } else if (this.sport === 'NBA' || this.sport === 'WNBA') {
+      // For basketball: prioritize active player, then possession-based player
+      primaryPlayer = gameData.currentPlayer || gameData.possessionPlayer || gameData.topPlayer;
+    } else if (this.sport === 'CFL') {
+      // For CFL: similar to NFL logic
+      primaryPlayer = gameData.currentPlayer || gameData.currentQuarterback || 
+                     gameData.possessionPlayer || gameData.topPlayer;
+    }
+    
+    console.log(`🎯 ${this.sport} Player selection for game ${gameData.id}: ${primaryPlayer || 'N/A'} (available fields: ${Object.keys(gameData).filter(k => k.includes('player') || k.includes('batter') || k.includes('quarterback') || k.includes('QB')).join(', ')})`);
+    
+    return primaryPlayer || 'N/A';
+  }
+
+  /**
    * Persist enhanced game data to database for alert system
    */
   private async persistEnhancedGameData(gameId: string, gameData: any): Promise<void> {
@@ -939,7 +1040,7 @@ export class AdaptivePollingManager {
       
       const gameStateData = {
         extGameId: gameId,
-        sport: 'MLB',
+        sport: this.sport,
         homeTeam,
         awayTeam,
         homeScore: gameData.homeScore || 0,
@@ -969,7 +1070,27 @@ export class AdaptivePollingManager {
       };
       
       await storage.saveGameState(gameStateData);
-      console.log(`💾 Persisted enhanced game data for ${gameId} with player: ${gameData.currentBatter || 'N/A'}`);
+      // Get primary player based on sport with enhanced fallbacks - sport-aware selection
+      let primaryPlayer = this.selectPrimaryPlayerBySport(gameData);
+      
+      // For NFL/NCAAF, use pre-game QB fallbacks if no current player found
+      if (!primaryPlayer && (this.sport === 'NFL' || this.sport === 'NCAAF')) {
+        // Try pre-game QBs as fallback (prioritize possessing team)
+        if (gameData.possessionSide === 'home' && gameData.preGameHomeQB) {
+          primaryPlayer = gameData.preGameHomeQB;
+        } else if (gameData.possessionSide === 'away' && gameData.preGameAwayQB) {
+          primaryPlayer = gameData.preGameAwayQB;
+        } else if (gameData.preGameHomeQB) {
+          // Default to home team QB if no possession info
+          primaryPlayer = gameData.preGameHomeQB;
+        } else if (gameData.preGameAwayQB) {
+          primaryPlayer = gameData.preGameAwayQB;
+        }
+      }
+      
+      // Final fallback
+      primaryPlayer = primaryPlayer || 'N/A';
+      console.log(`💾 Persisted enhanced game data for ${gameId} with player: ${primaryPlayer}`);
     } catch (error) {
       console.error(`❌ Error persisting enhanced game data for ${gameId}:`, error);
       throw error;
