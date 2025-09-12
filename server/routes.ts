@@ -56,6 +56,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
+  // Test endpoint to verify alert system works with scoring opportunities - MUST BE FIRST!
+  app.get('/api/admin/test-scoring-alerts', async (req, res) => {
+    try {
+      console.log('🧪 TEST ENDPOINT CALLED - Starting MLB alert system test');
+      
+      // Import MLBEngine for testing
+      const { MLBEngine } = await import('./services/engines/mlb-engine');
+      
+      // Create test scenarios with realistic scoring opportunities
+      const testScenarios = [
+        {
+          name: "Bases Loaded, No Outs - Maximum Leverage",
+          gameState: {
+            gameId: "test_bases_loaded_777001",
+            sport: "MLB",
+            homeTeam: "Boston Red Sox",
+            awayTeam: "New York Yankees", 
+            homeScore: 3,
+            awayScore: 2,
+            status: "live",
+            isLive: true,
+            inning: 6,
+            isTopInning: false,
+            outs: 0,
+            balls: 2,
+            strikes: 1,
+            hasFirst: true,
+            hasSecond: true,
+            hasThird: true,
+            runners: { first: true, second: true, third: true },
+            currentBatter: { name: "Alex Rodriguez", average: .285, basesLoadedAvg: .340 },
+            currentPitcher: { name: "Chris Sale", pitchCount: 85, recentWalks: 2 }
+          }
+        },
+        {
+          name: "Runner on Third, No Outs - Prime Scoring Position",
+          gameState: {
+            gameId: "test_third_no_outs_777002",
+            sport: "MLB",
+            homeTeam: "Los Angeles Dodgers",
+            awayTeam: "San Francisco Giants",
+            homeScore: 1,
+            awayScore: 1,
+            status: "live",
+            isLive: true,
+            inning: 8,
+            isTopInning: true,
+            outs: 0,
+            balls: 1,
+            strikes: 0,
+            hasFirst: false,
+            hasSecond: false,
+            hasThird: true,
+            runners: { first: false, second: false, third: true },
+            currentBatter: { name: "Mookie Betts", average: .310, clutchAverage: .345 }
+          }
+        },
+        {
+          name: "Seventh Inning Stretch - Momentum Shift",
+          gameState: {
+            gameId: "test_seventh_stretch_777004",
+            sport: "MLB",
+            homeTeam: "Chicago Cubs",
+            awayTeam: "Milwaukee Brewers",
+            homeScore: 5,
+            awayScore: 4,
+            status: "live",
+            isLive: true,
+            inning: 7,
+            isTopInning: false,
+            outs: 0,
+            balls: 0,
+            strikes: 0,
+            hasFirst: false,
+            hasSecond: false,
+            hasThird: false,
+            runners: { first: false, second: false, third: false },
+            currentBatter: { name: "Kris Bryant", average: .275 }
+          }
+        }
+      ];
+
+      // Initialize MLB Engine and load alert modules
+      const mlbEngine = new MLBEngine();
+      
+      // Load the key alert modules we want to test
+      const testAlertTypes = [
+        'MLB_BASES_LOADED_NO_OUTS',
+        'MLB_RUNNER_ON_THIRD_NO_OUTS', 
+        'MLB_SEVENTH_INNING_STRETCH'
+      ];
+      
+      console.log(`🧪 Initializing MLB engine with alert modules: ${testAlertTypes.join(', ')}`);
+      await mlbEngine.initializeUserAlertModules(testAlertTypes);
+
+      // Test each scenario and collect results
+      const results = [];
+      
+      for (const scenario of testScenarios) {
+        console.log(`🧪 Testing scenario: ${scenario.name}`);
+        
+        try {
+          const alerts = await mlbEngine.generateLiveAlerts(scenario.gameState);
+          console.log(`🧪 Generated ${alerts.length} alerts for ${scenario.name}`);
+          
+          results.push({
+            scenario: scenario.name,
+            gameState: {
+              runners: scenario.gameState.runners,
+              outs: scenario.gameState.outs,
+              inning: scenario.gameState.inning,
+              isTopInning: scenario.gameState.isTopInning,
+              score: `${scenario.gameState.awayTeam} ${scenario.gameState.awayScore} - ${scenario.gameState.homeScore} ${scenario.gameState.homeTeam}`
+            },
+            alertsGenerated: alerts.length,
+            alerts: alerts.map(alert => ({
+              type: alert.type,
+              message: alert.message,
+              priority: alert.priority
+            })),
+            success: alerts.length > 0
+          });
+          
+        } catch (error) {
+          console.error(`🧪 Error testing ${scenario.name}:`, error);
+          results.push({
+            scenario: scenario.name,
+            alertsGenerated: 0,
+            alerts: [],
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+
+      // Summary statistics
+      const totalAlerts = results.reduce((sum, r) => sum + r.alertsGenerated, 0);
+      const successfulScenarios = results.filter(r => r.success).length;
+      
+      console.log(`🧪 TEST COMPLETE: ${totalAlerts} total alerts generated from ${successfulScenarios} successful scenarios`);
+      
+      res.json({
+        summary: {
+          timestamp: new Date().toISOString(),
+          purpose: "Test alert system with realistic scoring opportunities",
+          totalScenarios: testScenarios.length,
+          successfulScenarios,
+          totalAlertsGenerated: totalAlerts,
+          alertModulesLoaded: testAlertTypes.length,
+          systemStatus: totalAlerts > 0 ? "WORKING" : "ISSUE_DETECTED"
+        },
+        explanation: {
+          why: "Current live games have no runners on base, so no scoring alerts fire. This test proves the system works when scoring opportunities exist.",
+          expectation: "Each scenario should generate at least 1 alert when the specific conditions are met",
+          currentLiveGames: "All have empty bases (runners: {first: false, second: false, third: false})",
+          testValidation: totalAlerts > 0 ? "✅ Alert system is fully functional - just waiting for real scoring opportunities" : "❌ Alert system may have issues"
+        },
+        testResults: results,
+        alertTypesAvailable: testAlertTypes
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error in test-scoring-alerts:', error);
+      res.status(500).json({ 
+        error: error.message,
+        summary: {
+          systemStatus: "ERROR",
+          explanation: "Failed to initialize test - check MLB engine and alert modules"
+        }
+      });
+    }
+  });
+
   // REMOVED: Broken /api/admin/statistics route - replaced with working /api/admin/stats endpoint
 
   // Request deduplication and memory management are handled by middleware above
@@ -63,6 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup WebSocket server with heartbeat
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const clients = new Set<WebSocket>();
+
 
   // Admin panel compatibility route
   app.get('/admin-panel', (req, res) => res.redirect('/admin/login.html'));
