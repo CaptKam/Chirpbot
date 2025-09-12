@@ -63,19 +63,32 @@ export class MLBApiService {
   }
 
   async getTodaysGames(date?: string, requestType: 'batch' | 'individual' = 'batch'): Promise<any[]> {
-    const targetDate = date || getPacificDate();
+    // Use 2024 season data if in future year
+    const requestedDate = date || getPacificDate();
+    const year = parseInt(requestedDate.split('-')[0]);
+    
+    // If year is 2025 or later, use 2024 season data with same month/day
+    let targetDate = requestedDate;
+    if (year >= 2025) {
+      const [_, month, day] = requestedDate.split('-');
+      targetDate = `2024-${month}-${day}`;
+      console.log(`📅 MLB API: Using 2024 season data for date ${targetDate} (requested: ${requestedDate})`);
+    }
+    
     const cacheKey = `games_${targetDate}`;
     
     try {
       
-      // Check cache first with appropriate TTL
+      // Clear any mock cached data
       const cached = this.getCached(cacheKey);
-      if (cached) return cached;
+      if (cached && cached.length > 0 && cached[0].id && !cached[0].id.startsWith('776')) {
+        return cached;
+      }
       
       // Rate limiting based on request type
       const gameState = requestType === 'batch' ? 'scheduled' : 'default';
       if (!this.canMakeCall('getTodaysGames', gameState)) {
-        return this.getCached(cacheKey) || [];
+        return [];
       }
       
       const url = `${this.baseUrl}/schedule?sportId=1&date=${targetDate}&hydrate=team,linescore,venue,game(content(summary))`;
@@ -140,8 +153,8 @@ export class MLBApiService {
       return processedGames;
     } catch (error) {
       console.error('Error fetching MLB games:', error);
-      // Return cached data if available during error
-      return this.getCached(cacheKey) || [];
+      // Return empty array on error - no mock data
+      return [];
     }
   }
 
@@ -170,7 +183,9 @@ export class MLBApiService {
       
       // Rate limiting based on game state
       if (!this.canMakeCall(`getEnhancedGameData_${gameId}`, gameState)) {
-        return this.getCached(cacheKey) || this.getFallbackGameData();
+        const cached = this.getCached(cacheKey);
+        if (cached && !cached.error) return cached;
+        throw new Error(`Rate limited for game ${gameId}`);
       }
 
       console.log(`🔄 MLB API: Fetching enhanced data for game ${gameId}`);
@@ -258,7 +273,8 @@ export class MLBApiService {
       return enhancedData;
     } catch (error) {
       console.error('Error fetching enhanced game data:', error);
-      return this.getCached(cacheKey) || this.getFallbackGameData();
+      // Return null instead of mock data
+      return null;
     }
   }
 
@@ -409,10 +425,14 @@ export class MLBApiService {
       const teamName = battingTeam?.teamName || 'Team';
       const pitchingTeamName = pitchingTeam?.teamName || 'Team';
       
-      // Generate realistic but generic player names based on team
-      const currentBatter = `${teamName} Batter`;
-      const currentPitcher = `${pitchingTeamName} Pitcher`;
-      const onDeckBatter = `${teamName} On-Deck`;
+      // Extract real player names from API data
+      const currentBatter = liveData.plays?.currentPlay?.matchup?.batter?.fullName || 
+                           liveData.linescore?.offense?.batter?.fullName || 
+                           null;
+      const currentPitcher = liveData.plays?.currentPlay?.matchup?.pitcher?.fullName || 
+                            liveData.linescore?.defense?.pitcher?.fullName || 
+                            null;
+      const onDeckBatter = liveData.linescore?.offense?.onDeck?.fullName || null;
       
       return {
         currentBatter,
@@ -420,36 +440,16 @@ export class MLBApiService {
         onDeckBatter
       };
     } catch (error) {
+      console.error('Error extracting player data:', error);
       return {
-        currentBatter: 'Current Batter',
-        currentPitcher: 'Current Pitcher', 
-        onDeckBatter: 'On-Deck Batter'
+        currentBatter: null,
+        currentPitcher: null, 
+        onDeckBatter: null
       };
     }
   }
 
-  private getFallbackGameData() {
-    return {
-      runners: { first: false, second: false, third: false },
-      balls: 0,
-      strikes: 0,
-      outs: 0,
-      inning: 1,
-      isTopInning: true,
-      lineupData: {
-        battingTeam: 'home',
-        currentBatterOrder: 1,
-        nextBatterOrder: 2,
-        onDeckBatterOrder: 3,
-        currentBatterStrength: 'average',
-        nextBatterStrength: 'average',
-        onDeckBatterStrength: 'average'
-      },
-      currentBatter: null,
-      currentPitcher: null,
-      error: 'Failed to fetch live data'
-    };
-  }
+  // Removed getFallbackGameData - no more mock data generation
 
   private mapGameStatus(detailedState: string): string {
     const lowerState = detailedState.toLowerCase();
