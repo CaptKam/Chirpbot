@@ -15,7 +15,7 @@ export function PageHeader({
   title, 
   subtitle, 
   icon: Icon = Zap,
-  iconColor = "text-emerald-400",
+  iconColor = "text-[#10B981]",
   iconBgColor = "bg-emerald-500/20",
   iconRingColor = "ring-emerald-500/30",
   children 
@@ -28,7 +28,7 @@ export function PageHeader({
         </div>
         <div>
           <h1 className="text-xl font-black uppercase tracking-wider text-slate-100">{title}</h1>
-          <p className="text-emerald-300/80 text-xs font-semibold">{subtitle}</p>
+          <p className="text-[#10B981]/80 text-xs font-semibold">{subtitle}</p>
         </div>
       </div>
       {children}
@@ -40,7 +40,7 @@ export function HeaderOnly({
   title, 
   subtitle, 
   icon: Icon = Zap,
-  iconColor = "text-emerald-400",
+  iconColor = "text-[#10B981]",
   iconBgColor = "bg-emerald-500/20",
   iconRingColor = "ring-emerald-500/30"
 }: Omit<PageHeaderProps, 'children'>) {
