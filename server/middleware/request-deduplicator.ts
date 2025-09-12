@@ -62,7 +62,7 @@ export class RequestDeduplicator {
       }
 
       // Skip deduplication for certain paths that should always be fresh
-      const skipPaths = ['/api/auth/', '/api/admin/', '/api/alerts/live'];
+      const skipPaths = ['/api/auth/', '/api/admin/', '/api/alerts'];
       if (skipPaths.some(path => req.path.startsWith(path))) {
         return next();
       }

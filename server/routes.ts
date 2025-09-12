@@ -1665,9 +1665,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         LIMIT ${limit}
       `);
 
+      console.log(`🔍 ALERTS API: SQL query found ${result.rows.length} raw alert rows`);
       const alerts = [];
 
       for (const row of result.rows) {
+        console.log(`🔍 ALERTS API: Processing alert ${row.id} for game ${row.game_id}, type: ${row.type}`);
         const sport = String(row.sport || 'MLB');
         const alertType = String(row.type || '');
 
@@ -1676,8 +1678,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           let payload: any = {};
           try {
             payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
+            console.log(`✅ ALERTS API: Successfully parsed payload for alert ${row.id}`);
           } catch (e) {
-            console.error('Error parsing payload:', e);
+            console.error(`❌ ALERTS API: Error parsing payload for alert ${row.id}:`, e);
             payload = {};
           }
           alerts.push({
@@ -1713,11 +1716,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             // Include full payload for V3 message access
             payload: payload
           });
+          console.log(`✅ ALERTS API: Successfully processed and added alert ${row.id} to results`);
         } catch (error) {
-          console.error(`Error processing alert for ${row.id}:`, error);
+          console.error(`❌ ALERTS API: Error processing alert for ${row.id}:`, error);
         }
       }
 
+      console.log(`🔍 ALERTS API: Final result: returning ${alerts.length} alerts to user ${currentUserId}`);
       res.json(alerts);
     } catch (error) {
       console.error("Error fetching alerts:", error);
