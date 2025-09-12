@@ -19,7 +19,19 @@ export function useWebSocket() {
     }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    // Fix port detection - use environment variable or current location port
+    const envPort = import.meta.env.VITE_WS_PORT || import.meta.env.VITE_PORT;
+    const currentPort = window.location.port;
+    const port = envPort || currentPort || '5000';
+    const wsUrl = `${protocol}//${window.location.hostname}:${port}/ws`;
+    
+    console.log('WebSocket debug info:', {
+      'window.location.port': window.location.port,
+      'envPort': envPort,
+      'currentPort': currentPort,
+      'finalPort': port,
+      'wsUrl': wsUrl
+    });
 
     try {
       // Close existing connection if it exists and is not already closing/closed
