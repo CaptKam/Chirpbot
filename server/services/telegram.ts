@@ -16,173 +16,250 @@ function escapeMd(s: string | undefined | null): string {
     .replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
 
-export async function sendTelegramAlert(
-  config: TelegramConfig,
-  alert: {
-    id?: string;
-    type: string;
-    title: string;
-    description: string;
-    aiContext?: string;
-    gameInfo: any;
+export async function sendTelegramAlert(config: TelegramConfig, alert: any): Promise<boolean> {
+  if (!config.botToken || !config.chatId) {
+    console.log('⚠️ Telegram configuration incomplete - skipping alert delivery');
+    return false;
   }
-): Promise<boolean> {
+
   try {
-    const { botToken, chatId } = config;
+    const message = formatUniversalTelegramMessage(alert);
 
-    console.log(`📱 🔍 TELEGRAM DEBUG: Attempting to send ${alert.type} alert`);
-    console.log(`📱 🔧 Bot token present: ${!!botToken}, length: ${botToken?.length || 0}`);
-    console.log(`📱 🔧 Chat ID: ${chatId}`);
-    console.log(`📱 🔧 Is test data: ${botToken === 'default_key' || chatId === 'test-chat-id'}`);
+    const telegramUrl = `https://api.telegram.org/bot${config.botToken}/sendMessage`;
+    const payload = {
+      chat_id: config.chatId,
+      text: message,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    };
 
-    if (!botToken || !chatId || botToken === "default_key" || chatId === "test-chat-id" || botToken.trim() === '' || chatId.trim() === '') {
-      console.log("📱 ❌ Telegram credentials not properly configured - missing or using test/default values");
-      console.log("📱 💡 Please configure proper Telegram bot token and chat ID in Settings");
-      return false;
-    }
+    const response = await fetch(telegramUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
 
-    // Build rich notification message with escaped markdown
-    let message = `🚨 *${escapeMd(alert.type.replace(/_/g, ' ').toUpperCase())} ALERT*\n\n*${escapeMd(alert.title)}*\n\n${escapeMd(alert.description)}\n\n`;
-
-    // Game situation section
-    message += `🎮 *GAME SITUATION*\n`;
-    message += `${escapeMd(alert.gameInfo.awayTeam)} ${alert.gameInfo.score?.away || 0} @ ${escapeMd(alert.gameInfo.homeTeam)} ${alert.gameInfo.score?.home || 0}\n`;
-
-    if (alert.gameInfo.inning && alert.gameInfo.inningState) {
-      message += `📍 ${alert.gameInfo.inningState.charAt(0).toUpperCase() + alert.gameInfo.inningState.slice(1)} ${alert.gameInfo.inning}th`;
-
-      if (alert.gameInfo.outs !== undefined) {
-        message += ` • ${alert.gameInfo.outs} out${alert.gameInfo.outs !== 1 ? 's' : ''}`;
-      }
-
-      if (alert.gameInfo.balls !== undefined && alert.gameInfo.strikes !== undefined) {
-        message += ` • ${alert.gameInfo.balls}\\-${alert.gameInfo.strikes} count`;
-      }
-
-      message += `\n`;
-    }
-
-    // Runners and scoring probability
-    if (alert.gameInfo.runners) {
-      const runnersOn = [];
-      if (alert.gameInfo.runners.first) runnersOn.push('1st');
-      if (alert.gameInfo.runners.second) runnersOn.push('2nd');
-      if (alert.gameInfo.runners.third) runnersOn.push('3rd');
-
-      if (runnersOn.length > 0) {
-        message += `🏃 Runners: ${runnersOn.join(', ')}`;
-        if (alert.gameInfo.scoringProbability) {
-          message += ` • ${alert.gameInfo.scoringProbability}% scoring chance`;
-        }
-        message += `\n`;
-      }
-    }
-
-    // Team planning section - current matchup
-    if (alert.gameInfo.currentBatter || alert.gameInfo.currentPitcher) {
-      message += `\n🎯 *TEAM PLANNING*\n`;
-
-      if (alert.gameInfo.currentBatter) {
-        const batter = alert.gameInfo.currentBatter;
-        message += `🏏 Batter: ${escapeMd(batter.name)} \\(${escapeMd(batter.batSide)}\\)\n`;
-        message += `   Stats: ${batter.stats.avg.toFixed(3)} AVG, ${batter.stats.hr} HR, ${batter.stats.rbi} RBI, ${batter.stats.ops.toFixed(3)} OPS\n`;
-      }
-
-      if (alert.gameInfo.currentPitcher) {
-        const pitcher = alert.gameInfo.currentPitcher;
-        message += `⚾ Pitcher: ${escapeMd(pitcher.name)} \\(${escapeMd(pitcher.throwHand)}\\)\n`;
-        message += `   Stats: ${pitcher.stats.era.toFixed(2)} ERA, ${pitcher.stats.whip.toFixed(2)} WHIP, ${pitcher.stats.strikeOuts} K, ${pitcher.stats.wins}\\-${pitcher.stats.losses} W\\-L\n`;
-      }
-    }
-
-    if (alert.aiContext) {
-      message += `\n🤖 *AI ANALYSIS:*\n${escapeMd(alert.aiContext)}\n`;
-    }
-
-    // Add clickable link to view alert details
-    const appUrl = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.replit.app` : 'https://chirpbot.replit.app';
-    message += `\n🔗 [View Full Details](${appUrl}/alerts${alert.id ? `\\#${alert.id}` : ''})`;
-
-    message += `\n\n${escapeMd('#ChirpBot')} ${escapeMd('#' + alert.type.replace(/\s+/g, ''))}`;
-
-    console.log(`📱 Sending Telegram message to chat ${chatId}`);
-    console.log(`📱 Message preview: ${message.substring(0, 100)}...`);
-
-    try {
-      // Try with native fetch first as fallback
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: message,
-          parse_mode: 'MarkdownV2',
-          disable_web_page_preview: false,
-        }),
-      });
-
-      const result = await response.json();
-      console.log(`📱 Telegram API response status: ${response.status}`);
-
-      if (response.ok && result.ok === true) {
-        console.log(`📱 ✅ Successfully sent Telegram message`);
-        return true;
-      } else {
-        console.error(`📱 ❌ Telegram API error (${response.status}):`, result);
-
-        // Provide specific error guidance
-        if (response.status === 401) {
-          console.error(`📱 🔑 Invalid bot token - check your bot token in Settings`);
-        } else if (response.status === 400 && result.description?.includes('chat not found')) {
-          console.error(`📱 💬 Invalid chat ID - check your chat ID in Settings`);
-        } else if (response.status === 429) {
-          console.error(`📱 ⏰ Rate limited - too many requests`);
-        }
-
-        // Try with plain text if MarkdownV2 failed
-        if (result.description?.includes('parse') || result.description?.includes('markdown')) {
-          console.log(`📱 🔄 Retrying with plain text...`);
-          const plainResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              chat_id: chatId,
-              text: message.replace(/[\\*_`\[\]()~>#+=|{}.!-]/g, ''), // Strip markdown
-              disable_web_page_preview: false,
-            }),
-          });
-
-          const plainResult = await plainResponse.json();
-          if (plainResponse.ok && plainResult.ok === true) {
-            console.log(`📱 ✅ Successfully sent plain text Telegram message`);
-            return true;
-          }
-        }
-
-        return false;
-      }
-    } catch (fetchError: any) {
-      console.error(`📱 ❌ Telegram network error:`, fetchError);
-
-      // Handle rate limiting
-      if (fetchError.message?.includes('429')) {
-        console.warn('📱 ⚠️ Telegram rate limit hit, dropping alert');
-      } else if (fetchError.message?.includes('404')) {
-        // Invalid bot token - disable future attempts
-        console.warn('📱 ⚠️ Invalid Telegram bot token detected. Please update TELEGRAM_BOT_TOKEN in environment settings.');
-      } else {
-        console.error('📱 ❌ Telegram send error:', fetchError.message);
-      }
+    if (response.ok) {
+      const sport = alert.gameInfo?.sport || 'UNKNOWN';
+      console.log(`📱 ✅ Telegram alert sent successfully for ${sport}`);
+      return true;
+    } else {
+      const errorData = await response.text();
+      console.error('📱 ❌ Telegram API error:', errorData);
       return false;
     }
   } catch (error) {
-    console.error("Failed to send Telegram alert:", error);
+    console.error('📱 ❌ Telegram send error:', error);
     return false;
   }
+}
+
+/**
+ * Universal Telegram message formatter for all sports
+ * Follows V3 Law #7: Consistent Alert Structure & 3-Second Readability
+ */
+function formatUniversalTelegramMessage(alert: any): string {
+  const gameInfo = alert.gameInfo;
+  const sport = gameInfo?.sport || 'UNKNOWN';
+  const emoji = getSportEmoji(sport);
+
+  // Clean alert type - remove sport prefix and format
+  const alertType = alert.type
+    .replace(/^(MLB|NFL|NCAAF|NBA|WNBA|CFL|NHL)_/, '')
+    .replace(/_/g, ' ');
+
+  // Team names and scores
+  const awayTeam = gameInfo.awayTeam || 'Away';
+  const homeTeam = gameInfo.homeTeam || 'Home';
+  const awayScore = gameInfo.score?.away ?? gameInfo.awayScore ?? 0;
+  const homeScore = gameInfo.score?.home ?? gameInfo.homeScore ?? 0;
+
+  // Build situation line based on sport
+  const situationLine = buildSituationLine(sport, gameInfo);
+
+  // Generate hashtag
+  const hashtag = `#${sport}Alert #ChirpBot`;
+
+  // Assemble message with consistent structure
+  const messageParts = [
+    `${emoji} ${alertType.toUpperCase()} ALERT`,
+    `${awayTeam} ${awayScore} @ ${homeTeam} ${homeScore}`,
+    situationLine,
+    `🔗 View Alert Details`,
+    hashtag
+  ].filter(Boolean);
+
+  return messageParts.join('\n');
+}
+
+/**
+ * Build sport-specific situation line
+ */
+function buildSituationLine(sport: string, gameInfo: any): string {
+  if (!gameInfo) return '';
+
+  switch (sport) {
+    case 'MLB':
+      return buildMLBSituation(gameInfo);
+    case 'NFL':
+    case 'NCAAF':
+    case 'CFL':
+      return buildFootballSituation(gameInfo);
+    case 'NBA':
+    case 'WNBA':
+      return buildBasketballSituation(gameInfo);
+    case 'NHL':
+      return buildHockeySituation(gameInfo);
+    default:
+      return buildGenericSituation(gameInfo);
+  }
+}
+
+/**
+ * MLB situation formatting
+ */
+function buildMLBSituation(gameInfo: any): string {
+  const parts = [];
+
+  // Inning and half
+  if (gameInfo.inning && gameInfo.inningState) {
+    const inningDisplay = gameInfo.inningState === 'top' ? `Top ${gameInfo.inning}` : `Bot ${gameInfo.inning}`;
+    parts.push(inningDisplay);
+  }
+
+  // Outs
+  if (gameInfo.outs !== undefined) {
+    parts.push(`${gameInfo.outs} outs`);
+  }
+
+  // Count
+  if (gameInfo.balls !== undefined && gameInfo.strikes !== undefined) {
+    parts.push(`${gameInfo.balls}-${gameInfo.strikes} count`);
+  }
+
+  // Runners
+  const runnersDisplay = formatMLBRunners(gameInfo.runners);
+  if (runnersDisplay) {
+    parts.push(runnersDisplay);
+  }
+
+  return parts.length > 0 ? `📍 ${parts.join(' • ')}` : '';
+}
+
+/**
+ * Football situation formatting (NFL, NCAAF, CFL)
+ */
+function buildFootballSituation(gameInfo: any): string {
+  const parts = [];
+
+  // Quarter and time
+  if (gameInfo.quarter && gameInfo.timeRemaining) {
+    parts.push(`Q${gameInfo.quarter}`);
+    parts.push(gameInfo.timeRemaining);
+  }
+
+  // Down and distance
+  if (gameInfo.down && gameInfo.yardsToGo) {
+    parts.push(`${gameInfo.down}${getOrdinalSuffix(gameInfo.down)} & ${gameInfo.yardsToGo}`);
+  }
+
+  return parts.length > 0 ? `📍 ${parts.join(' • ')}` : '';
+}
+
+/**
+ * Basketball situation formatting (NBA, WNBA)
+ */
+function buildBasketballSituation(gameInfo: any): string {
+  const parts = [];
+
+  // Quarter/Period and time
+  if (gameInfo.quarter && gameInfo.timeRemaining) {
+    const quarterDisplay = gameInfo.quarter <= 4 ? `Q${gameInfo.quarter}` : `OT${gameInfo.quarter - 4}`;
+    parts.push(quarterDisplay);
+    parts.push(gameInfo.timeRemaining);
+  }
+
+  // Shot clock (if relevant)
+  if (gameInfo.shotClock && gameInfo.shotClock < 24) {
+    parts.push(`${gameInfo.shotClock}s shot clock`);
+  }
+
+  return parts.length > 0 ? `📍 ${parts.join(' • ')}` : '';
+}
+
+/**
+ * Hockey situation formatting
+ */
+function buildHockeySituation(gameInfo: any): string {
+  const parts = [];
+
+  // Period and time
+  if (gameInfo.period && gameInfo.timeRemaining) {
+    parts.push(`P${gameInfo.period}`);
+    parts.push(gameInfo.timeRemaining);
+  }
+
+  return parts.length > 0 ? `📍 ${parts.join(' • ')}` : '';
+}
+
+/**
+ * Generic situation formatting
+ */
+function buildGenericSituation(gameInfo: any): string {
+  const parts = [];
+
+  if (gameInfo.quarter && gameInfo.timeRemaining) {
+    parts.push(`Q${gameInfo.quarter}`);
+    parts.push(gameInfo.timeRemaining);
+  } else if (gameInfo.period && gameInfo.timeRemaining) {
+    parts.push(`P${gameInfo.period}`);
+    parts.push(gameInfo.timeRemaining);
+  } else if (gameInfo.inning) {
+    parts.push(`Inning ${gameInfo.inning}`);
+  }
+
+  return parts.length > 0 ? `📍 ${parts.join(' • ')}` : '';
+}
+
+/**
+ * Get sport emoji
+ */
+function getSportEmoji(sport: string): string {
+  const sportEmojis: Record<string, string> = {
+    'MLB': '⚾',
+    'NFL': '🏈',
+    'NCAAF': '🏈',
+    'NBA': '🏀',
+    'WNBA': '🏀',
+    'CFL': '🏈',
+    'NHL': '🏒'
+  };
+  return sportEmojis[sport] || '🚨';
+}
+
+/**
+ * Format MLB runners display
+ */
+function formatMLBRunners(runners: any): string {
+  if (!runners) return '';
+
+  const positions = [];
+  if (runners.first) positions.push('1B');
+  if (runners.second) positions.push('2B');
+  if (runners.third) positions.push('3B');
+
+  return positions.length > 0 ? positions.join(', ') : '';
+}
+
+/**
+ * Get ordinal suffix for numbers
+ */
+function getOrdinalSuffix(num: number): string {
+  const suffixes = ['th', 'st', 'nd', 'rd'];
+  const remainder = num % 100;
+  return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
 }
 
 export async function testTelegramConnection(config: TelegramConfig): Promise<boolean> {
