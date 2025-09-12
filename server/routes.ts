@@ -538,6 +538,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { sport = 'MLB', date } = req.query;
       let games = [];
 
+      console.log(`📅 Calendar API: Request for ${sport} games on date ${date || 'today'}`);
+
       const { getSeasonAwareSports } = await import('../shared/season-manager');
       const SPORTS = getSeasonAwareSports();
 
@@ -589,7 +591,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       const { getPacificDate } = await import('./utils/timezone');
-      res.json({ games, date: date || getPacificDate() });
+      const responseDate = date || getPacificDate();
+      
+      // Debug logging for calendar issue
+      console.log(`📅 Calendar API: ${sport} games for ${responseDate} - returning ${games.length} games`);
+      if (games.length > 0) {
+        const statuses = games.map(g => g.status).join(', ');
+        console.log(`📊 Calendar API: Game statuses: ${statuses}`);
+        const firstGame = games[0];
+        console.log(`📋 Calendar API: Sample game: ${firstGame.awayTeam.name} @ ${firstGame.homeTeam.name} (Status: ${firstGame.status})`);
+      }
+      
+      res.json({ games, date: responseDate });
     } catch (error) {
       console.error('Error fetching games:', error);
       res.status(500).json({ message: 'Failed to fetch games' });
