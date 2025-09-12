@@ -11,29 +11,35 @@ export default class GameStartModule extends BaseAlertModule {
     if (!gameState.gameId) return false;
     
     const currentState = this.gameStates.get(gameState.gameId);
-    const isLiveGame = gameState.status === 'live' && 
-                      gameState.quarter === 1 && 
-                      this.parseTimeToSeconds(gameState.timeRemaining) >= 600; // First 2 minutes of quarter
+    const currentStatus = gameState.status || 'scheduled';
     
-    // Only trigger if game is now live AND we haven't triggered for this game yet
-    if (isLiveGame) {
-      // If we haven't seen this game before, or if we've seen it but it wasn't live before
-      if (!currentState || (!currentState.hasTriggered)) {
-        // Update our tracking
-        this.gameStates.set(gameState.gameId, { 
-          status: 'live',
-          hasTriggered: true 
-        });
-        return true;
-      }
-    } else {
-      // Game is not live yet, track it but don't trigger
-      if (!currentState) {
-        this.gameStates.set(gameState.gameId, { 
-          status: gameState.status || 'scheduled',
-          hasTriggered: false 
-        });
-      }
+    // Detect status transition from scheduled/pre-game to live
+    const statusTransition = !currentState || 
+      (currentState.status !== 'live' && currentStatus === 'live');
+    
+    // Broader detection: game is live and in early quarters (1-2)
+    const isEarlyLiveGame = currentStatus === 'live' && 
+      (!gameState.quarter || gameState.quarter <= 2);
+    
+    // Trigger if: status transition to live OR early live game we haven't seen before
+    const shouldTrigger = (statusTransition && isEarlyLiveGame) || 
+      (isEarlyLiveGame && !currentState);
+    
+    if (shouldTrigger && (!currentState || !currentState.hasTriggered)) {
+      // Update our tracking
+      this.gameStates.set(gameState.gameId, { 
+        status: currentStatus,
+        hasTriggered: true 
+      });
+      return true;
+    }
+    
+    // Always track game state, even if not triggering
+    if (!currentState) {
+      this.gameStates.set(gameState.gameId, { 
+        status: currentStatus,
+        hasTriggered: false 
+      });
     }
     
     return false;

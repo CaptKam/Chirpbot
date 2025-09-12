@@ -1080,7 +1080,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
                             let message = alertData.message || '';
                             // Remove emojis and clean up
-                            message = message.replace(/[\\u{1F300}-\\u{1F9FF}]|[\\u{2600}-\u{26FF}]|[\\u{2700}-\\u{27BF}]/gu, '').trim();
+                            message = message.replace(/[\\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
 
                             // Extract the main situation text based on sport
                             if (alertData.sport === 'MLB') {

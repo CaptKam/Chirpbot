@@ -12,27 +12,35 @@ export default class GameStartModule extends BaseAlertModule {
     if (!gameState.gameId) return false;
     
     const currentState = this.gameStates.get(gameState.gameId);
-    const isLiveGame = gameState.isLive && gameState.inning === 1 && gameState.isTopInning;
+    const currentStatus = gameState.status || (gameState.isLive ? 'live' : 'scheduled');
     
-    // Only trigger if game is now live AND we haven't triggered for this game yet
-    if (isLiveGame) {
-      // If we haven't seen this game before, or if we've seen it but it wasn't live before
-      if (!currentState || (!currentState.hasTriggered)) {
-        // Update our tracking
-        this.gameStates.set(gameState.gameId, { 
-          status: 'live',
-          hasTriggered: true 
-        });
-        return true;
-      }
-    } else {
-      // Game is not live yet, track it but don't trigger
-      if (!currentState) {
-        this.gameStates.set(gameState.gameId, { 
-          status: gameState.status || 'scheduled',
-          hasTriggered: false 
-        });
-      }
+    // Detect status transition from scheduled/pre-game to live
+    const statusTransition = !currentState || 
+      (currentState.status !== 'live' && currentStatus === 'live');
+    
+    // Broader detection: game is live and in early innings (1-3)
+    const isEarlyLiveGame = (gameState.isLive || currentStatus === 'live') && 
+      (!gameState.inning || gameState.inning <= 3);
+    
+    // Trigger if: status transition to live OR early live game we haven't seen before
+    const shouldTrigger = (statusTransition && isEarlyLiveGame) || 
+      (isEarlyLiveGame && !currentState);
+    
+    if (shouldTrigger && (!currentState || !currentState.hasTriggered)) {
+      // Update our tracking
+      this.gameStates.set(gameState.gameId, { 
+        status: currentStatus,
+        hasTriggered: true 
+      });
+      return true;
+    }
+    
+    // Always track game state, even if not triggering
+    if (!currentState) {
+      this.gameStates.set(gameState.gameId, { 
+        status: currentStatus,
+        hasTriggered: false 
+      });
     }
     
     return false;
