@@ -251,7 +251,7 @@ export default function AlertsPage() {
                     createdAt: alert.createdAt,
                     context: alert.context
                   }}
-                  className={`bg-white/5 backdrop-blur-sm border-0 rounded-xl shadow-xl shadow-emerald-500/5 ${getAlertColor(alert.priority)}`}
+                  className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl shadow-xl shadow-emerald-500/5"
                   data-testid={`simple-alert-${alert.id}`}
                 />
               ) : (
@@ -315,7 +315,7 @@ export default function AlertsPage() {
                     betbookData: alert.context?.betbookData,
                     gameInfo: alert.context?.gameInfo
                   }}
-                  className={`bg-white/5 backdrop-blur-sm border-0 rounded-xl shadow-xl shadow-emerald-500/5 ${getAlertColor(alert.priority)}`}
+                  className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl shadow-xl shadow-emerald-500/5"
                   data-testid={`advanced-alert-${alert.id}`}
                 />
               )}
