@@ -419,7 +419,7 @@ export default function Settings() {
               </div>
             </div>
 
-            {preferencesLoading ? (
+            {isSettingsLoading || !availableAlerts ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
@@ -442,6 +442,26 @@ export default function Settings() {
                         return true;
                       }).map((alertType) => {
                         const isEnabled = getAlertPreference(activeSport, alertType.key);
+                        
+                        // Show skeleton if preference is still loading
+                        if (isEnabled === undefined) {
+                          return (
+                            <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 opacity-60">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <h4 className="text-sm font-semibold text-slate-100">
+                                    {alertType.label}
+                                  </h4>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  {alertType.description}
+                                </p>
+                              </div>
+                              <div className="w-10 h-6 bg-slate-600 rounded-full animate-pulse"></div>
+                            </div>
+                          );
+                        }
+                        
                         return (
                           <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                             <div className="flex-1">
