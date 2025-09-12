@@ -404,18 +404,24 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     setIsDragging(false);
-    const threshold = 80; // Lower threshold for better responsiveness
+    const threshold = 120; // Increased threshold for more deliberate swipes
     const velocity = info.velocity.x;
+    const minDistance = 60; // Minimum distance before any gesture is considered
 
-    // Use velocity for more natural swipe detection
-    if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 300) {
+    // Require both sufficient distance AND velocity for activation
+    // This prevents accidental triggers from light touches
+    if (Math.abs(info.offset.x) < minDistance) {
+      // Too small movement - return to center
       setDragX(0);
-    } else if (info.offset.x > threshold || velocity > 300) {
-      // Swiped right - show delete
+    } else if (Math.abs(info.offset.x) < threshold && Math.abs(velocity) < 500) {
+      // Not enough distance or velocity - return to center
+      setDragX(0);
+    } else if ((info.offset.x > threshold && velocity > -200) || velocity > 500) {
+      // Swiped right - show delete (allow slower swipes if distance is sufficient)
       setDragX(120);
       startAutoReturnTimer();
-    } else if (info.offset.x < -threshold || velocity < -300) {
-      // Swiped left - show sportsbooks
+    } else if ((info.offset.x < -threshold && velocity < 200) || velocity < -500) {
+      // Swiped left - show sportsbooks (allow slower swipes if distance is sufficient)
       setDragX(-360);
       startAutoReturnTimer();
     } else {
@@ -731,7 +737,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               ))}
             </div>
-          </div>)
+          </div>
         )}
       </div>
       {/* Delete Menu (Right Swipe) - Only show when swiped right */}
@@ -755,7 +761,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
       <motion.div
         drag="x"
         dragConstraints={{ left: -400, right: 150 }}
-        dragElastic={0.15}
+        dragElastic={0.08}
         dragMomentum={true}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
@@ -763,9 +769,9 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
         animate={{ x: dragX }}
         transition={{
           type: "spring",
-          damping: 20,
-          stiffness: 250,
-          mass: 0.6
+          damping: 25,
+          stiffness: 300,
+          mass: 0.8
         }}
         className="relative z-10"
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
