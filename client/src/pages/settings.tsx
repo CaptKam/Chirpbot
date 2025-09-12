@@ -297,11 +297,6 @@ export default function Settings() {
     updateAlertPreferenceMutation.mutate({ alertType, enabled });
   };
 
-  // Update localStorage when activeSport changes
-  useEffect(() => {
-    localStorage.setItem('settings-active-sport', activeSport);
-  }, [activeSport]);
-
   // Populate Telegram settings from query data
   useEffect(() => {
     if (telegramSettings && typeof telegramSettings === 'object') {
@@ -380,6 +375,9 @@ export default function Settings() {
         sports={SPORTS}
         activeSport={activeSport}
         onSportChange={setActiveSport}
+        onSportChangeCallback={() => {
+          localStorage.setItem('settings-active-sport', activeSport);
+        }}
       />
 
       {/* Settings Content */}
