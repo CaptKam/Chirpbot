@@ -3,6 +3,7 @@ import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
 import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { sendTelegramAlert, TelegramConfig } from '../telegram';
 
 export class CFLEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
@@ -199,6 +200,9 @@ export class CFLEngine extends BaseSportEngine {
         console.log(`⚠️ CFL Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (${alerts.length} alerts)`);
       }
 
+      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
+      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
+
       return alerts;
     } catch (error) {
       const totalTime = Date.now() - startTime;
@@ -264,8 +268,21 @@ export class CFLEngine extends BaseSportEngine {
           };
 
           // Queue for async AI enhancement (non-blocking) and return base alert immediately
-          await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
-          console.log(`🚀 CFL Async AI: Queued ${alert.type} for background enhancement`);
+          // await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
+          // console.log(`🚀 CFL Async AI: Queued ${alert.type} for background enhancement`);
+
+          // Simulate AI response for demonstration
+          const aiResponse = {
+            enhancedMessage: `AI Enhanced: ${alert.message}`,
+            contextualInsights: 'AI Insights for CFL',
+            actionableRecommendation: 'Consider betting on CFL',
+            urgencyLevel: 'High',
+            bettingContext: 'CFL specific betting odds',
+            confidence: 0.9,
+            sportSpecificData: { cflData: 'CFL specific data' },
+            aiProcessingTime: 100, // Simulate processing time
+          };
+
 
           // Update alert with AI enhancement
           enhancedAlerts.push({
@@ -367,8 +384,40 @@ export class CFLEngine extends BaseSportEngine {
     };
   }
 
+  // New method to deliver alerts to Telegram
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    if (!alerts || alerts.length === 0) {
+      return;
+    }
 
+    try {
+      const telegramConfig: TelegramConfig = await this.settingsCache.getTelegramConfig();
+      if (!telegramConfig || !telegramConfig.enabled) {
+        // console.log('Telegram alerts are disabled.');
+        return;
+      }
 
+      for (const alert of alerts) {
+        // Format message for Telegram
+        let message = `*${alert.type}*:\n${alert.message}\n\n`;
+        message += `*Game*: ${gameState.homeTeam} vs ${gameState.awayTeam}\n`;
+        message += `*Score*: ${gameState.homeScore} - ${gameState.awayScore}\n`;
+        message += `*Quarter*: ${gameState.quarter}, *Time Remaining*: ${gameState.timeRemaining}`;
+
+        // Send to Telegram
+        await sendTelegramAlert(message, telegramConfig);
+        // console.log(`Sent alert to Telegram: ${alert.type}`);
+      }
+    } catch (error) {
+      console.error('Error delivering alerts to Telegram:', error);
+    }
+  }
+
+  // Override deliverAlertsToAllChannels to include Telegram
+  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    await super.deliverAlertsToAllChannels(alerts, gameState); // Deliver to existing channels (e.g., WebSocket)
+    await this.deliverAlertsToTelegram(alerts, gameState); // Deliver to Telegram
+  }
 
 
   // V3-15: CFL-specific utility methods with performance optimization

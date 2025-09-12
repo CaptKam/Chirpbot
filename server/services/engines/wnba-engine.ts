@@ -3,6 +3,7 @@ import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
 import { asyncAIProcessor } from '../async-ai-processor';
 import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class WNBAEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
@@ -156,6 +157,9 @@ export class WNBAEngine extends BaseSportEngine {
 
       this.performanceMetrics.totalAlerts += alerts.length;
 
+      // Send alerts to both WebSocket and Telegram simultaneously
+      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
+
       const totalTime = Date.now() - startTime;
       if (totalTime > 100) {
         console.log(`⚠️ WNBA Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
@@ -240,28 +244,10 @@ export class WNBAEngine extends BaseSportEngine {
           // Queue for async AI enhancement (non-blocking) and return base alert immediately
           await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
           console.log(`🚀 WNBA Async AI: Queued ${alert.type} for background enhancement`);
-
-          // Update alert with AI enhancement
-          enhancedAlerts.push({
-            ...alert,
-            message: aiResponse.enhancedMessage,
-            context: {
-              ...alert.context,
-              aiEnhanced: true,
-              aiInsights: aiResponse.contextualInsights,
-              aiRecommendation: aiResponse.actionableRecommendation,
-              urgencyLevel: aiResponse.urgencyLevel,
-              bettingContext: aiResponse.bettingContext,
-              confidence: aiResponse.confidence,
-              sportSpecificData: aiResponse.sportSpecificData,
-              processingTime: aiResponse.aiProcessingTime
-            }
-          });
-          this.performanceMetrics.enhancedAlerts++;
-        } else {
-          // Keep original alert for lower-priority situations
-          enhancedAlerts.push(alert);
         }
+        
+        // Always return base alert immediately (async enhancement happens via WebSocket)
+        enhancedAlerts.push(alert);
       } catch (error) {
         console.error(`❌ WNBA AI Enhancement failed for ${alert.type}:`, error);
         // Fallback to original alert on error
@@ -276,6 +262,139 @@ export class WNBAEngine extends BaseSportEngine {
     }
 
     return enhancedAlerts;
+  }
+
+  // Send alerts to both WebSocket and Telegram simultaneously  
+  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    if (!alerts || alerts.length === 0) return;
+    
+    try {
+      console.log(`🚀 Simultaneously delivering ${alerts.length} WNBA alerts to WebSocket and Telegram`);
+      
+      // Create delivery promises for parallel execution
+      const deliveryPromises: Promise<void>[] = [];
+      
+      // 1. WebSocket delivery promise
+      deliveryPromises.push(this.deliverAlertsToWebSocket(alerts, gameState));
+      
+      // 2. Telegram delivery promise
+      deliveryPromises.push(this.deliverAlertsToTelegram(alerts, gameState));
+      
+      // Execute both deliveries simultaneously
+      await Promise.all(deliveryPromises);
+      
+      console.log(`✅ Synchronized delivery complete for ${alerts.length} alerts`);
+      
+    } catch (error) {
+      console.error('❌ Synchronized alert delivery system error:', error);
+    }
+  }
+
+  private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      const wsBroadcast = (global as any).wsBroadcast;
+      if (!wsBroadcast) {
+        console.warn('📡 WebSocket broadcast function not available');
+        return;
+      }
+
+      for (const alert of alerts) {
+        const alertData = {
+          type: 'new_alert',
+          data: {
+            id: alert.alertKey,
+            type: alert.type,
+            sport: 'WNBA',
+            priority: alert.priority,
+            message: alert.message,
+            context: alert.context,
+            gameId: gameState.gameId,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            period: (gameState as any).period || gameState.quarter,
+            clock: (gameState as any).clock || gameState.timeRemaining,
+            possession: gameState.possession,
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        wsBroadcast(alertData);
+        console.log(`📡 ✅ WebSocket: ${alert.type} alert broadcasted`);
+      }
+    } catch (error) {
+      console.error('📡 ❌ WebSocket delivery error:', error);
+    }
+  }
+
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      // Get all users with Telegram enabled
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(user => 
+        user.telegramEnabled && 
+        user.telegramBotToken && 
+        user.telegramChatId &&
+        user.telegramBotToken !== 'default_key' &&
+        user.telegramChatId !== 'test-chat-id'
+      );
+      
+      if (telegramUsers.length === 0) {
+        console.log('📱 ℹ️ No users with valid Telegram configurations found');
+        return;
+      }
+      
+      console.log(`📱 🚀 Delivering ${alerts.length} WNBA alerts to ${telegramUsers.length} Telegram users`);
+      
+      // Send alerts to each user
+      for (const alert of alerts) {
+        for (const user of telegramUsers) {
+          try {
+            const telegramConfig: TelegramConfig = {
+              botToken: user.telegramBotToken!,
+              chatId: user.telegramChatId!
+            };
+            
+            const telegramAlert = {
+              id: alert.alertKey,
+              type: alert.type,
+              title: alert.message.split('|')[0].trim(),
+              description: alert.message,
+              gameInfo: {
+                sport: 'WNBA',
+                awayTeam: gameState.awayTeam,
+                homeTeam: gameState.homeTeam,
+                awayScore: gameState.awayScore,
+                homeScore: gameState.homeScore,
+                score: {
+                  away: gameState.awayScore,
+                  home: gameState.homeScore
+                },
+                quarter: gameState.quarter,
+                quarterState: gameState.quarter <= 4 ? `Q${gameState.quarter}` : `OT${gameState.quarter - 4}`,
+                timeRemaining: gameState.timeRemaining,
+                possession: gameState.possession
+              }
+            };
+            
+            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
+            
+            if (sent) {
+              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
+            } else {
+              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
+            }
+          } catch (error) {
+            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('📱 ❌ Telegram delivery system error:', error);
+    }
   }
 
   // These legacy methods are now replaced by the modular alert cylinder system

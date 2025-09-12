@@ -33,7 +33,7 @@ export class NCAAFEngine extends BaseSportEngine {
       // CRITICAL FIX: Only check settings for NCAAF alert types with actual cylinder modules
       const validNCAAFAlerts = [
         'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
-        'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY', 
+        'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY',
         'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL'
       ];
 
@@ -150,6 +150,9 @@ export class NCAAFEngine extends BaseSportEngine {
 
       this.performanceMetrics.totalAlerts += processedAlerts.length;
 
+      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
+      await this.deliverAlertsToAllChannels(processedAlerts, enhancedGameState);
+
       const totalTime = Date.now() - startTime;
       if (totalTime > 150) {
         console.log(`⚠️ NCAAF Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (enhance: ${enhanceTime}ms, alerts: ${alertTime}ms)`);
@@ -235,9 +238,9 @@ export class NCAAFEngine extends BaseSportEngine {
   // Helper to determine if enhanced data is meaningful vs stub data
   private isEnhancedDataMeaningful(enhancedData: any, gameState: GameState): boolean {
     // If enhanced data has default stub values that would overwrite real data, reject it
-    if (enhancedData.quarter === 1 && enhancedData.timeRemaining === '15:00' && 
+    if (enhancedData.quarter === 1 && enhancedData.timeRemaining === '15:00' &&
         enhancedData.homeScore === 0 && enhancedData.awayScore === 0 &&
-        (gameState.quarter !== 1 || gameState.timeRemaining !== '15:00' || 
+        (gameState.quarter !== 1 || gameState.timeRemaining !== '15:00' ||
          gameState.homeScore !== 0 || gameState.awayScore !== 0)) {
       return false; // This is clearly stub data that would corrupt real game data
     }
@@ -354,8 +357,8 @@ export class NCAAFEngine extends BaseSportEngine {
         cacheMisses: this.performanceMetrics.cacheMisses
       },
       sportSpecific: {
-        aiEnhancementRate: this.performanceMetrics.totalAlerts > 0 
-          ? (this.performanceMetrics.enhancedAlerts / this.performanceMetrics.totalAlerts) * 100 
+        aiEnhancementRate: this.performanceMetrics.totalAlerts > 0
+          ? (this.performanceMetrics.enhancedAlerts / this.performanceMetrics.totalAlerts) * 100
           : 0,
         redZoneDetections: this.performanceMetrics.redZoneDetections,
         fourthDownSituations: this.performanceMetrics.fourthDownSituations,
@@ -395,7 +398,7 @@ export class NCAAFEngine extends BaseSportEngine {
       // CRITICAL FIX: Only include NCAAF alerts that have actual cylinder modules implemented
       const validNCAAFAlerts = [
         'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
-        'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY', 
+        'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY',
         'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL'
       ];
 
