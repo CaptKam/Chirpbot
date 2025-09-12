@@ -34,8 +34,8 @@ export class NCAAFEngine extends BaseSportEngine {
 
   private async initializeCrossSportAI() {
     try {
-      const { CrossSportAI } = await import('../cross-sport-ai-enhancement');
-      this.crossSportAI = new CrossSportAI();
+      const { CrossSportAIEnhancement } = await import('../cross-sport-ai-enhancement');
+      this.crossSportAI = new CrossSportAIEnhancement();
     } catch (error) {
       console.error('❌ Failed to initialize CrossSportAI:', error);
       this.crossSportAI = { configured: false };
@@ -48,7 +48,8 @@ export class NCAAFEngine extends BaseSportEngine {
       const validNCAAFAlerts = [
         'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
         'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY',
-        'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL'
+        'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL',
+        'NCAAF_MASSIVE_WEATHER'
       ];
 
       if (!validNCAAFAlerts.includes(alertType)) {
@@ -329,7 +330,8 @@ export class NCAAFEngine extends BaseSportEngine {
       'NCAAF_FOURTH_DOWN_DECISION',
       'NCAAF_UPSET_OPPORTUNITY',
       'NCAAF_RED_ZONE_EFFICIENCY',
-      'NCAAF_COMEBACK_POTENTIAL'
+      'NCAAF_COMEBACK_POTENTIAL',
+      'NCAAF_MASSIVE_WEATHER'
     ];
   }
 
@@ -413,7 +415,8 @@ export class NCAAFEngine extends BaseSportEngine {
       const validNCAAFAlerts = [
         'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
         'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY',
-        'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL'
+        'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL',
+        'NCAAF_MASSIVE_WEATHER'
       ];
 
       const ncaafEnabledTypes = enabledTypes.filter(alertType =>
@@ -451,7 +454,8 @@ export class NCAAFEngine extends BaseSportEngine {
         'NCAAF_FOURTH_DOWN_DECISION': './alert-cylinders/ncaaf/fourth-down-decision-module.ts',
         'NCAAF_UPSET_OPPORTUNITY': './alert-cylinders/ncaaf/upset-opportunity-module.ts',
         'NCAAF_RED_ZONE_EFFICIENCY': './alert-cylinders/ncaaf/red-zone-efficiency-module.ts',
-        'NCAAF_COMEBACK_POTENTIAL': './alert-cylinders/ncaaf/comeback-potential-module.ts'
+        'NCAAF_COMEBACK_POTENTIAL': './alert-cylinders/ncaaf/comeback-potential-module.ts',
+        'NCAAF_MASSIVE_WEATHER': './alert-cylinders/ncaaf/massive-weather-module.ts'
       };
 
       const modulePath = moduleMap[alertType];

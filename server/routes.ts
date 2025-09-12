@@ -43,8 +43,7 @@ async function requireAuthentication(req: express.Request, res: express.Response
 }
 
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  const httpServer = createServer(app);
+export async function registerRoutes(app: Express, httpServer: Server): Promise<Server> {
 
   // Add memory management and request deduplication middleware FIRST (before any logging)
   app.use(memoryManager.middleware());
@@ -325,12 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }, 30000);
 
-  // Ensure cleanup on server shutdown
-  process.on('SIGINT', () => {
-    console.log('🛑 Server shutting down, cleaning up intervals...');
-    clearInterval(heartbeatInterval);
-    process.exit(0);
-  });
+  // Cleanup handled by index.ts - removed duplicate SIGINT handler
 
   // Broadcast function with backpressure handling
   function broadcast(data: any) {
@@ -1649,6 +1643,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // Get user details to check if this is a demo user
+      const user = await storage.getUserById(currentUserId);
+      if (!user) {
+        console.log(`⚠️ ALERTS API: User not found for ID: ${currentUserId}`);
+        res.json([]);
+        return;
+      }
+
+      const isDemoUser = user.username === 'demo';
+      console.log(`🔍 ALERTS API: User ${user.username} is ${isDemoUser ? 'DEMO' : 'REAL'} user`);
+
+      // Demo users get demo alerts only, skip monitored games filtering
+      if (isDemoUser) {
+        console.log(`🎯 DEMO USER: Fetching demo alerts only`);
+        const demoAlerts = await storage.getDemoAlerts();
+        
+        if (!demoAlerts || demoAlerts.length === 0) {
+          console.log(`📝 No demo alerts found`);
+          res.json([]);
+          return;
+        }
+
+        // Transform demo alerts to match expected format
+        const transformedAlerts = demoAlerts.map((alert: any) => ({
+          id: alert.id,
+          alertKey: alert.alertKey,
+          type: alert.type,
+          message: alert.payload?.message || `${alert.type} alert`,
+          gameId: alert.gameId,
+          sport: alert.sport,
+          homeTeam: alert.payload?.homeTeam || 'Home Team',
+          awayTeam: alert.payload?.awayTeam || 'Away Team',
+          homeScore: alert.payload?.homeScore,
+          awayScore: alert.payload?.awayScore,
+          confidence: alert.payload?.confidence || alert.score || 85,
+          priority: alert.payload?.priority || 80,
+          context: alert.payload?.context || '',
+          aiAdvice: alert.payload?.aiAdvice || '',
+          betting: alert.payload?.betting || {},
+          timestamp: alert.createdAt,
+          created_at: alert.createdAt
+        }));
+
+        console.log(`📊 Returning ${transformedAlerts.length} demo alerts`);
+        res.json(transformedAlerts);
+        return;
+      }
+
       // Get user's monitored games
       const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
       const monitoredGameIds = monitoredGames.map(game => game.gameId);
@@ -1661,12 +1703,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Get alerts from database - filter by monitored game IDs
+      // Get alerts from database - filter by monitored game IDs and exclude demo alerts for real users
       const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
       const result = await db.execute(sql`
         SELECT id, type, game_id, sport, score, payload, created_at
         FROM alerts
         WHERE game_id IN (${sql.raw(monitoredGameIds.map(id => `'${id}'`).join(','))})
+        AND (is_demo IS NULL OR is_demo = false)
         ORDER BY created_at DESC
         LIMIT ${limit}
       `);

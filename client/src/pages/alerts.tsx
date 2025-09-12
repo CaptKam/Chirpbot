@@ -55,11 +55,26 @@ interface AlertStats {
   monitoredGames: number;
 }
 
+// AlertSkeleton component defined ABOVE its usage to prevent temporal dead zone error
+const AlertSkeleton = () => (
+  <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5 animate-pulse">
+    <div className="flex items-center justify-between mb-4">
+      <div className="h-6 bg-emerald-500/20 rounded-lg w-32 animate-pulse"></div>
+      <div className="h-4 bg-emerald-500/15 rounded w-16 animate-pulse"></div>
+    </div>
+    <div className="h-4 bg-emerald-500/15 rounded w-full mb-4 animate-pulse"></div>
+    <div className="flex items-center justify-between">
+      <div className="h-6 bg-emerald-500/20 rounded-lg w-48 animate-pulse"></div>
+      <div className="h-6 bg-emerald-500/15 rounded w-12 animate-pulse"></div>
+    </div>
+  </div>
+);
+
 export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF' | 'WNBA' | 'CFL'>('all');
 
   // Fetch alerts using React Query
-  const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
+  const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -72,8 +87,8 @@ export default function AlertsPage() {
 
   // Group alerts by sport for better organization
   const alertsBySport = useMemo(() => {
-    const grouped: Record<string, any[]> = {};
-    alerts.forEach((alert: any) => {
+    const grouped: Record<string, Alert[]> = {};
+    (alerts as Alert[]).forEach((alert: Alert) => {
       const sport = alert.sport || 'OTHER';
       if (!grouped[sport]) grouped[sport] = [];
       grouped[sport].push(alert);
@@ -99,10 +114,10 @@ export default function AlertsPage() {
   };
 
   const getAlertColor = (priority: number) => {
-    if (priority >= 90) return 'bg-red-500';
-    if (priority >= 80) return 'bg-orange-500';
-    if (priority >= 70) return 'bg-yellow-500';
-    return 'bg-blue-500';
+    if (priority >= 90) return 'bg-emerald-400 ring-2 ring-emerald-300';
+    if (priority >= 80) return 'bg-emerald-500/80 ring-1 ring-emerald-400';
+    if (priority >= 70) return 'bg-emerald-500/60 ring-1 ring-emerald-500/50';
+    return 'bg-emerald-500/40 ring-1 ring-emerald-500/30';
   };
 
   const formatTime = (dateString: string) => {
@@ -142,54 +157,75 @@ export default function AlertsPage() {
   };
 
   if (alertsLoading || statsLoading) {
-    return <AlertLoading />;
+    return (
+      <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen" data-testid="alerts-loading">
+        <PageHeader 
+          title="ChirpBot" 
+          subtitle="Real-Time Alert Dashboard"
+        />
+        
+        {/* Filter Tabs - placeholder during loading */}
+        <SportTabs 
+          sports={['all', ...getSeasonAwareSports()]} 
+          activeSport={filter} 
+          onSportChange={(sport) => setFilter(sport as typeof filter)}
+          data-testid="sport-filter-tabs" 
+        />
+
+        <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6" data-testid="alerts-container">
+          <div className="pb-8 space-y-4" data-testid="alerts-skeleton-list">
+            {Array.from({ length: 5 }, (_, index) => (
+              <AlertSkeleton key={`skeleton-${index}`} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  const AlertSkeleton = () => (
-    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-5 animate-pulse">
-      <div className="flex items-center justify-between mb-4">
-        <div className="h-6 bg-slate-700 rounded w-32"></div>
-        <div className="h-4 bg-slate-700 rounded w-16"></div>
-      </div>
-      <div className="h-4 bg-slate-700 rounded w-full mb-4"></div>
-      <div className="flex items-center justify-between">
-        <div className="h-6 bg-slate-700 rounded w-48"></div>
-        <div className="h-6 bg-slate-700 rounded w-12"></div>
-      </div>
-    </div>
-  );
 
   return (
-    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
+    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen" data-testid="alerts-page">
       <PageHeader 
         title="ChirpBot" 
-        subtitle="V2 Alert System"
+        subtitle="Real-Time Alert Dashboard"
       />
       
       {/* Filter Tabs - moved outside constraining div for full width */}
       <SportTabs 
         sports={['all', ...getSeasonAwareSports()]} 
         activeSport={filter} 
-        onSportChange={setFilter} 
+        onSportChange={(sport) => setFilter(sport as typeof filter)}
+        data-testid="sport-filter-tabs" 
       />
 
-      <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6">
+      <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6" data-testid="alerts-container">
         {/* Alerts Content */}
-        <div className="pb-8 space-y-4">
+        <div className="pb-8 space-y-4" data-testid="alerts-list">
         {filteredAlerts.length === 0 ? (
-          <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-            <CardContent className="p-8 text-center">
-              <Bell className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-              <p className="text-slate-100 text-base">No alerts for {filter === 'all' ? 'any sport' : filter}</p>
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 shadow-xl shadow-emerald-500/5">
+            <div className="text-center">
+              <div className="h-16 w-16 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center mx-auto mb-6">
+                <Bell className="h-8 w-8 text-emerald-500" />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-wide text-slate-100 mb-2">
+                No Alerts Available
+              </h3>
+              <p className="text-slate-300 text-base mb-6">
+                No alerts for {filter === 'all' ? 'any sport' : filter} at the moment
+              </p>
               <Button 
                 onClick={() => refetchAlerts()} 
                 variant="outline" 
-                className="mt-4 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10"
+                size="lg"
+                className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500 transition-all duration-300 px-8 py-3 font-bold uppercase tracking-wide"
+                data-testid="button-refresh-alerts"
               >
+                <Activity className="w-4 h-4 mr-2" />
                 Refresh Alerts
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : (
           filteredAlerts.map((alert: Alert, index: number) => (
             <motion.div
@@ -198,6 +234,7 @@ export default function AlertsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
+              data-testid={`alert-card-${alert.id}`}
             >
               {shouldUseSimpleCard(alert.type) ? (
                 // Use Simple Card for basic alerts
@@ -214,7 +251,8 @@ export default function AlertsPage() {
                     createdAt: alert.createdAt,
                     context: alert.context
                   }}
-                  className="border-emerald-500/30"
+                  className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl shadow-xl shadow-emerald-500/5"
+                  data-testid={`simple-alert-${alert.id}`}
                 />
               ) : (
                 // Use Advanced Alert Card for professional V3 display
@@ -244,6 +282,7 @@ export default function AlertsPage() {
                       aiMessage: alert.context?.aiMessage,
                       aiTitle: alert.context?.aiTitle,
                       aiInsights: alert.context?.aiInsights,
+                      recommendation: alert.context?.aiRecommendation || alert.context?.recommendation,
                       aiRecommendation: alert.context?.aiRecommendation,
                       aiCallToAction: alert.context?.aiCallToAction,
                       aiBettingAdvice: alert.context?.aiBettingAdvice,
@@ -276,7 +315,8 @@ export default function AlertsPage() {
                     betbookData: alert.context?.betbookData,
                     gameInfo: alert.context?.gameInfo
                   }}
-                  className="mb-4"
+                  className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl shadow-xl shadow-emerald-500/5"
+                  data-testid={`advanced-alert-${alert.id}`}
                 />
               )}
             </motion.div>

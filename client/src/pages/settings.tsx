@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle, Monitor, BarChart3 } from "lucide-react";
+import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle, Monitor, BarChart3, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -379,28 +379,30 @@ export default function Settings() {
   return (
     <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       {/* Header */}
-      <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-            <Zap className="w-5 h-5 text-emerald-400" />
+      <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0B1220]/70 border-b border-white/10 text-slate-100 px-4 py-6">
+        <div className="mx-auto max-w-7xl flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="h-10 w-10 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-[#10B981]" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
+              <p className="text-[#10B981]/80 text-xs font-medium">Settings Dashboard</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
-            <p className="text-emerald-300/80 text-xs font-medium">V2 Alert System</p>
-          </div>
+          {isAuthenticated && (
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="border-emerald-500/30 text-[#10B981] hover:bg-emerald-500/10 hover:border-[#10B981] transition-all duration-300"
+              data-testid="logout-button"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          )}
         </div>
-        {isAuthenticated && (
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            size="sm"
-            className="text-slate-300 hover:text-slate-100 hover:bg-white/10"
-            data-testid="logout-button"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
-        )}
       </header>
 
       {/* Sport Tabs */}
@@ -414,42 +416,53 @@ export default function Settings() {
       />
 
       {/* Settings Content */}
-      <div className="p-4 space-y-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
         {/* Selected Sport Display */}
-        <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-          <h2 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-2">
-            Selected Sport
-          </h2>
+        <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="h-12 w-12 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
+              <Target className="w-6 h-6 text-[#10B981]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
+                Sport Configuration
+              </h2>
+              <p className="text-sm text-slate-300">
+                Manage your {activeSport} alert preferences and notifications
+              </p>
+            </div>
+          </div>
           <div className="flex items-center space-x-3">
-            <div className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg font-bold uppercase tracking-wide ring-1 ring-emerald-500/30">
+            <div className="px-4 py-2 bg-[#10B981]/20 text-[#10B981] rounded-lg font-bold uppercase tracking-wide ring-1 ring-[#10B981]/30 shadow-lg shadow-emerald-500/25">
               {activeSport}
             </div>
+            <ArrowRight className="w-5 h-5 text-slate-400" />
             <p className="text-sm text-slate-300">
-              Configure settings for {activeSport} alerts and notifications.
+              Real-time alert configuration panel
             </p>
           </div>
-        </Card>
+        </div>
 
         {/* Alert Preferences */}
         {isAuthenticated && (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-                <Bell className="w-5 h-5 text-emerald-400" />
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="h-12 w-12 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
+                <Bell className="w-6 h-6 text-[#10B981]" />
               </div>
               <div>
-                <h2 className="text-lg font-black uppercase tracking-wide text-slate-100">
+                <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
                   {activeSport} Alert Preferences
                 </h2>
                 <p className="text-sm text-slate-300">
-                  Toggle individual alert types for {activeSport} games
+                  Configure real-time notifications for {activeSport} game situations
                 </p>
               </div>
             </div>
 
             {isSettingsLoading || !availableAlerts ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
               <div className="w-full">
@@ -457,7 +470,7 @@ export default function Settings() {
                 <div className="space-y-6">
                   {/* Core Game Alerts */}
                   <div className="space-y-3">
-                    <h3 className="text-md font-bold text-emerald-400 uppercase tracking-wide">
+                    <h3 className="text-lg font-black text-[#10B981] uppercase tracking-wide">
                       {activeSport === 'MLB' ? '⚾' : activeSport === 'NFL' ? '🏈' : activeSport === 'NCAAF' ? '🏈' : activeSport === 'WNBA' ? '🏀' : activeSport === 'CFL' ? '🏈' : '🏀'} {activeSport} Game Alerts
                     </h3>
                     <div className="space-y-3">
@@ -491,14 +504,14 @@ export default function Settings() {
                         }
                         
                         return (
-                          <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                          <div key={alertType.key} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-[#10B981]/30 transition-all duration-300 group">
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
-                                <h4 className="text-sm font-semibold text-slate-100">
+                                <h4 className="text-sm font-semibold text-slate-100 group-hover:text-[#10B981] transition-colors">
                                   {alertType.label}
                                 </h4>
                                 {updateAlertPreferenceMutation.isPending && (
-                                  <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                  <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
                                 )}
                               </div>
                               <p className="text-xs text-slate-400 mt-1">
@@ -510,7 +523,7 @@ export default function Settings() {
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                               disabled={updateAlertPreferenceMutation.isPending}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                              className="data-[state=checked]:bg-emerald-500"
+                              className="data-[state=checked]:bg-[#10B981]"
                             />
                           </div>
                         );
@@ -538,54 +551,54 @@ export default function Settings() {
                     
               </div>
             )}
-          </Card>
+          </div>
         )}
 
         {/* User Info Section */}
         {isAuthenticated && user && (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center">
-                <SettingsIcon className="w-6 h-6 text-emerald-400" />
+              <div className="h-12 w-12 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
+                <SettingsIcon className="w-6 h-6 text-[#10B981]" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-100">Account Settings</h2>
+                <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">Account Settings</h2>
                 <p className="text-sm text-slate-300">
-                  Logged in as <span className="text-emerald-400 font-medium">{user.username}</span>
+                  Logged in as <span className="text-[#10B981] font-semibold">{user.username}</span>
                 </p>
                 {user.email && (
                   <p className="text-xs text-slate-400">{user.email}</p>
                 )}
               </div>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Telegram Configuration Section */}
         {isAuthenticated && user && (
-          <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-6">
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="w-12 h-12 bg-blue-500/20 ring-1 ring-blue-500/30 rounded-full flex items-center justify-center">
-                <Send className="w-6 h-6 text-blue-400" />
+              <div className="h-12 w-12 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
+                <Send className="w-6 h-6 text-[#10B981]" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-100">Telegram Notifications</h2>
+                <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">Telegram Notifications</h2>
                 <p className="text-sm text-slate-300">
-                  Configure your personal Telegram bot for alert notifications
+                  Configure your personal Telegram bot for instant alert delivery
                 </p>
               </div>
             </div>
 
             {telegramLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
               <div className="space-y-6">
                 {/* Enable/Disable Toggle */}
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-[#10B981]/30 transition-all duration-300 group">
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-100">Enable Telegram Notifications</h4>
+                    <h4 className="text-sm font-semibold text-slate-100 group-hover:text-[#10B981] transition-colors">Enable Telegram Notifications</h4>
                     <p className="text-xs text-slate-400 mt-1">
                       Receive real-time alerts via your personal Telegram bot
                     </p>
@@ -594,7 +607,7 @@ export default function Settings() {
                     checked={telegramEnabled}
                     onCheckedChange={setTelegramEnabled}
                     data-testid="toggle-telegram-enabled"
-                    className="data-[state=checked]:bg-blue-500"
+                    className="data-[state=checked]:bg-[#10B981]"
                   />
                 </div>
 
@@ -611,7 +624,7 @@ export default function Settings() {
                       value={telegramBotToken}
                       onChange={(e) => setTelegramBotToken(e.target.value)}
                       data-testid="input-telegram-bot-token"
-                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-blue-500"
+                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981]/30 transition-all duration-300"
                     />
                     <p className="text-xs text-slate-400 mt-1">
                       Get this from @BotFather on Telegram
@@ -628,7 +641,7 @@ export default function Settings() {
                       value={telegramChatId}
                       onChange={(e) => setTelegramChatId(e.target.value)}
                       data-testid="input-telegram-chat-id"
-                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-blue-500"
+                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981]/30 transition-all duration-300"
                     />
                     <p className="text-xs text-slate-400 mt-1">
                       Send /start to your bot, then message @userinfobot to get your chat ID
@@ -637,23 +650,23 @@ export default function Settings() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex space-x-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Button
                     onClick={testTelegramConnection}
                     disabled={testingConnection || !telegramBotToken || !telegramChatId}
                     variant="outline"
                     size="sm"
                     data-testid="button-test-telegram"
-                    className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                    className="border-emerald-500/30 text-[#10B981] hover:bg-emerald-500/10 hover:border-[#10B981] transition-all duration-300 group"
                   >
                     {testingConnection ? (
-                      <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin mr-2" />
                     ) : connectionTestResult === 'success' ? (
-                      <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
+                      <CheckCircle className="w-4 h-4 mr-2 text-[#10B981]" />
                     ) : connectionTestResult === 'error' ? (
                       <XCircle className="w-4 h-4 mr-2 text-red-400" />
                     ) : (
-                      <Send className="w-4 h-4 mr-2" />
+                      <Send className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
                     )}
                     Test Connection
                   </Button>
@@ -663,20 +676,20 @@ export default function Settings() {
                     disabled={updateTelegramMutation.isPending}
                     size="sm"
                     data-testid="button-save-telegram"
-                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                    className="bg-[#10B981] hover:bg-emerald-600 text-slate-900 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] transition-all duration-300 group font-semibold"
                   >
                     {updateTelegramMutation.isPending ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mr-2" />
                     ) : (
-                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <CheckCircle className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                     )}
                     Save Settings
                   </Button>
                 </div>
 
                 {/* Help Text */}
-                <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                  <h4 className="text-sm font-semibold text-blue-300 mb-2">How to Set Up Your Telegram Bot:</h4>
+                <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/20 ring-1 ring-emerald-500/20">
+                  <h4 className="text-sm font-semibold text-[#10B981] mb-2">How to Set Up Your Telegram Bot:</h4>
                   <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
                     <li>Open Telegram and search for @BotFather</li>
                     <li>Send /newbot and follow the instructions to create your bot</li>
@@ -688,7 +701,7 @@ export default function Settings() {
                 </div>
               </div>
             )}
-          </Card>
+          </div>
         )}
         
         
