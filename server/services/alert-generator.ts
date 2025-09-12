@@ -1156,6 +1156,8 @@ export class AlertGenerator {
 
   // Process alerts for a specific sport
   private async processSport(sport: string): Promise<number> {
+    let totalAlerts = 0;
+    
     if (this.logLevel !== 'quiet') {
       console.log(`🚀 Processing ${sport} alerts...`);
     }
