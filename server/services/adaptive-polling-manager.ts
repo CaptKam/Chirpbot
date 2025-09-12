@@ -898,10 +898,10 @@ export class AdaptivePollingManager {
       
       // Enhanced data summary logging
       const enhancedDataSummary = {
-        total: games.length,
-        live: games.filter(g => this.analyzeGameState(g) === 'live').length,
-        userMonitored: games.filter(g => this.gameStates.get(g.id || g.gameId)?.isUserMonitored).length,
-        withinWindow: games.filter(g => this.isWithinPreGameWindow(g)).length,
+        total: allGames.length,
+        live: allGames.filter(g => this.analyzeGameState(g) === 'live').length,
+        userMonitored: allGames.filter(g => this.gameStates.get(g.id || g.gameId)?.isUserMonitored).length,
+        withinWindow: allGames.filter(g => this.isWithinPreGameWindow(g)).length,
         fetchedEnhanced: 0,
         mergedEnhanced: 0
       };
