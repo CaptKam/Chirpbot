@@ -886,6 +886,15 @@ export class AdaptivePollingManager {
     // This was causing runaway live-state loops preventing server startup
     // Games should only be live if explicitly marked as such by official game status
     
+    // Persist enhanced game data to database for alert system
+    try {
+      if (this.sport === 'MLB' && gameData) {
+        await this.persistEnhancedGameData(gameId, gameData);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to persist enhanced game data for ${gameId}:`, error);
+    }
+    
     // Detect state transitions
     if (newState !== currentState.currentState) {
       console.log(`🔄 Game ${gameId}: ${currentState.currentState} → ${newState}`);
@@ -910,6 +919,60 @@ export class AdaptivePollingManager {
       // Recalculate interval with new criticality
       const newInterval = this.calculatePollInterval(newState, newCriticality, currentState.isUserMonitored);
       currentState.pollInterval = newInterval;
+    }
+  }
+
+  /**
+   * Persist enhanced game data to database for alert system
+   */
+  private async persistEnhancedGameData(gameId: string, gameData: any): Promise<void> {
+    try {
+      // Import storage dynamically to avoid circular dependencies
+      const { storage } = await import('../storage');
+      
+      // Extract enhanced data with weather context integration
+      const weatherContext = gameData.weatherContext || {};
+      
+      // Get team names from gameData or game state
+      const homeTeam = gameData.homeTeam?.name || gameData.homeTeam || 'Unknown Home';
+      const awayTeam = gameData.awayTeam?.name || gameData.awayTeam || 'Unknown Away';
+      
+      const gameStateData = {
+        extGameId: gameId,
+        sport: 'MLB',
+        homeTeam,
+        awayTeam,
+        homeScore: gameData.homeScore || 0,
+        awayScore: gameData.awayScore || 0,
+        status: gameData.status || 'live',
+        inning: gameData.inning,
+        isTopInning: gameData.isTopInning,
+        balls: gameData.balls || 0,
+        strikes: gameData.strikes || 0,
+        outs: gameData.outs || 0,
+        hasFirst: gameData.runners?.first || false,
+        hasSecond: gameData.runners?.second || false,
+        hasThird: gameData.runners?.third || false,
+        currentBatter: gameData.currentBatter,
+        currentPitcher: gameData.currentPitcher,
+        onDeckBatter: gameData.onDeckBatter,
+        windSpeed: weatherContext.windSpeed,
+        windDirection: weatherContext.windDirection,
+        temperature: weatherContext.temperature,
+        humidity: weatherContext.humidity,
+        enhancedData: {
+          lineupData: gameData.lineupData || null,
+          weatherContext: weatherContext || null,
+          gameState: JSON.stringify(gameData.gameState || {}),
+          lastUpdated: gameData.lastUpdated || new Date().toISOString()
+        }
+      };
+      
+      await storage.saveGameState(gameStateData);
+      console.log(`💾 Persisted enhanced game data for ${gameId} with player: ${gameData.currentBatter || 'N/A'}`);
+    } catch (error) {
+      console.error(`❌ Error persisting enhanced game data for ${gameId}:`, error);
+      throw error;
     }
   }
 

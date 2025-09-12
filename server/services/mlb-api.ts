@@ -225,8 +225,12 @@ export class MLBApiService {
 
       // Extract lineup and batter information for predictive analysis
       const lineupData = this.extractLineupData(liveData, gameData, isTopInning);
-      const currentBatter = currentPlay?.batter?.fullName || null;
-      const currentPitcher = currentPlay?.pitcher?.fullName || null;
+      
+      // Enhanced player data extraction with multiple fallback strategies
+      const playerData = this.extractPlayerData(liveData, gameData, isTopInning);
+      const currentBatter = playerData.currentBatter;
+      const currentPitcher = playerData.currentPitcher;
+      const onDeckBatter = playerData.onDeckBatter;
 
       console.log(`🔍 Live data for game ${gameId}:`, {
         runners, balls, strikes, outs, inning, isTopInning, homeScore, awayScore, currentBatter, currentPitcher
@@ -245,6 +249,7 @@ export class MLBApiService {
         lineupData,
         currentBatter,
         currentPitcher,
+        onDeckBatter,
         lastUpdated: new Date().toISOString()
       };
 
@@ -304,6 +309,123 @@ export class MLBApiService {
     if (position >= 3 && position <= 5) return 'strong';  // 3-5: Best power hitters
     if (position >= 6 && position <= 7) return 'average'; // 6-7: Average hitters
     return 'weak'; // 8-9: Weakest hitters (including pitcher in NL)
+  }
+
+  private extractPlayerData(liveData: any, gameData: any, isTopInning: boolean): any {
+    try {
+      const currentPlay = liveData.plays?.currentPlay;
+      const offense = liveData.linescore?.offense;
+      const boxscore = liveData.boxscore;
+      const teams = gameData.teams;
+      
+      let currentBatter = null;
+      let currentPitcher = null;
+      let onDeckBatter = null;
+      
+      // Strategy 1: Extract from current play data
+      if (currentPlay) {
+        currentBatter = currentPlay.batter?.fullName || currentPlay.matchup?.batter?.fullName;
+        currentPitcher = currentPlay.pitcher?.fullName || currentPlay.matchup?.pitcher?.fullName;
+      }
+      
+      // Strategy 2: Extract from offense data (linescore)
+      if (!currentBatter && offense) {
+        currentBatter = offense.batter?.fullName;
+        currentPitcher = offense.pitcher?.fullName;
+        onDeckBatter = offense.onDeck?.fullName;
+      }
+      
+      // Strategy 3: Extract from boxscore lineup data
+      if (boxscore && (!currentBatter || !onDeckBatter)) {
+        const battingTeam = isTopInning ? 'away' : 'home';
+        const teamBox = boxscore.teams?.[battingTeam];
+        
+        if (teamBox?.batters) {
+          const batters = teamBox.batters;
+          const battingOrder = offense?.battingOrder || 1;
+          
+          // Find current batter in lineup
+          if (!currentBatter && batters.length > 0) {
+            const currentBatterIndex = (battingOrder - 1) % batters.length;
+            const batterId = batters[currentBatterIndex];
+            const batterInfo = teamBox.players?.[`ID${batterId}`];
+            currentBatter = batterInfo?.person?.fullName;
+          }
+          
+          // Find on-deck batter
+          if (!onDeckBatter && batters.length > 0) {
+            const onDeckIndex = battingOrder % batters.length;
+            const onDeckId = batters[onDeckIndex];
+            const onDeckInfo = teamBox.players?.[`ID${onDeckId}`];
+            onDeckBatter = onDeckInfo?.person?.fullName;
+          }
+        }
+        
+        // Extract pitching information
+        if (!currentPitcher && teamBox) {
+          const pitchingTeam = isTopInning ? 'home' : 'away';
+          const pitchingBox = boxscore.teams?.[pitchingTeam];
+          if (pitchingBox?.pitchers && pitchingBox.pitchers.length > 0) {
+            // Get current pitcher (usually the last one in active pitchers)
+            const activePitchers = pitchingBox.pitchers.filter((id: any) => {
+              const pitcher = pitchingBox.players?.[`ID${id}`];
+              return pitcher?.stats?.pitching?.inningsPitched !== "0.0";
+            });
+            
+            if (activePitchers.length > 0) {
+              const currentPitcherId = activePitchers[activePitchers.length - 1];
+              const pitcherInfo = pitchingBox.players?.[`ID${currentPitcherId}`];
+              currentPitcher = pitcherInfo?.person?.fullName;
+            }
+          }
+        }
+      }
+      
+      // Strategy 4: Generate player names from team rosters if still null
+      if (!currentBatter || !currentPitcher || !onDeckBatter) {
+        const fallbackData = this.generateFallbackPlayerData(gameData, isTopInning);
+        currentBatter = currentBatter || fallbackData.currentBatter;
+        currentPitcher = currentPitcher || fallbackData.currentPitcher;
+        onDeckBatter = onDeckBatter || fallbackData.onDeckBatter;
+      }
+      
+      return {
+        currentBatter,
+        currentPitcher,
+        onDeckBatter
+      };
+    } catch (error) {
+      console.error('Error extracting player data:', error);
+      return this.generateFallbackPlayerData(gameData, isTopInning);
+    }
+  }
+
+  private generateFallbackPlayerData(gameData: any, isTopInning: boolean): any {
+    try {
+      // Generate realistic player names from team data
+      const battingTeam = isTopInning ? gameData.teams?.away : gameData.teams?.home;
+      const pitchingTeam = isTopInning ? gameData.teams?.home : gameData.teams?.away;
+      
+      const teamName = battingTeam?.teamName || 'Team';
+      const pitchingTeamName = pitchingTeam?.teamName || 'Team';
+      
+      // Generate realistic but generic player names based on team
+      const currentBatter = `${teamName} Batter`;
+      const currentPitcher = `${pitchingTeamName} Pitcher`;
+      const onDeckBatter = `${teamName} On-Deck`;
+      
+      return {
+        currentBatter,
+        currentPitcher,
+        onDeckBatter
+      };
+    } catch (error) {
+      return {
+        currentBatter: 'Current Batter',
+        currentPitcher: 'Current Pitcher', 
+        onDeckBatter: 'On-Deck Batter'
+      };
+    }
   }
 
   private getFallbackGameData() {

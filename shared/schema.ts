@@ -147,6 +147,53 @@ export const insertUserAlertPreferencesSchema = createInsertSchema(userAlertPref
 export type InsertUserAlertPreferences = z.infer<typeof insertUserAlertPreferencesSchema>;
 export type UserAlertPreferences = typeof userAlertPreferences.$inferSelect;
 
+// Enhanced game states table for storing live game data with player and weather context
+export const gameStates = pgTable("game_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  extGameId: text("ext_game_id").notNull(), // External game ID from API (e.g., "776362")
+  sport: text("sport").notNull(), // MLB, NFL, NBA, etc.
+  homeTeam: text("home_team").notNull(),
+  awayTeam: text("away_team").notNull(),
+  homeScore: integer("home_score").default(0),
+  awayScore: integer("away_score").default(0),
+  status: text("status").notNull(), // scheduled, live, final
+  inning: integer("inning"),
+  isTopInning: boolean("is_top_inning"),
+  balls: integer("balls").default(0),
+  strikes: integer("strikes").default(0),
+  outs: integer("outs").default(0),
+  // Base runners
+  hasFirst: boolean("has_first").default(false),
+  hasSecond: boolean("has_second").default(false),
+  hasThird: boolean("has_third").default(false),
+  // Enhanced player data
+  currentBatter: text("current_batter"),
+  currentPitcher: text("current_pitcher"),
+  onDeckBatter: text("on_deck_batter"),
+  // Weather context
+  windSpeed: integer("wind_speed"), // mph
+  windDirection: text("wind_direction"), // N, NE, E, SE, S, SW, W, NW
+  temperature: integer("temperature"), // Fahrenheit
+  humidity: integer("humidity"), // percentage
+  // Enhanced data payload for flexibility
+  enhancedData: jsonb("enhanced_data").$type<{
+    lineupData?: any;
+    weatherContext?: any;
+    gameState?: string;
+    lastUpdated?: string;
+  }>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertGameStateSchema = createInsertSchema(gameStates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGameState = z.infer<typeof insertGameStateSchema>;
+export type GameState = typeof gameStates.$inferSelect;
 
 // Game types for live sports data
 export interface Game {

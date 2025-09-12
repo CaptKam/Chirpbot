@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, type InsertUserMonitoredTeam, type InsertUserAlertPreferences } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, gameStates, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertGameState } from "../shared/schema";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -641,6 +641,74 @@ export const storage = {
     } catch (error) {
       console.error(`Error checking if alert ${alertType} is globally enabled for ${sport}:`, error);
       return false; // Default to false if error occurs
+    }
+  },
+
+  // Game State operations for enhanced game data persistence
+  async saveGameState(gameStateData: InsertGameState): Promise<any> {
+    try {
+      // First try to update existing record
+      const existing = await db.select()
+        .from(gameStates)
+        .where(and(
+          eq(gameStates.extGameId, gameStateData.extGameId),
+          eq(gameStates.sport, gameStateData.sport)
+        ));
+
+      if (existing.length > 0) {
+        // Update existing record
+        const result = await db.update(gameStates)
+          .set({
+            ...gameStateData,
+            updatedAt: new Date()
+          })
+          .where(and(
+            eq(gameStates.extGameId, gameStateData.extGameId),
+            eq(gameStates.sport, gameStateData.sport)
+          ))
+          .returning();
+        return result[0];
+      } else {
+        // Insert new record
+        const result = await db.insert(gameStates)
+          .values([gameStateData])
+          .returning();
+        return result[0];
+      }
+    } catch (error) {
+      console.error('Error saving game state:', error);
+      throw error;
+    }
+  },
+
+  async getGameState(extGameId: string, sport: string): Promise<any> {
+    try {
+      const result = await db.select()
+        .from(gameStates)
+        .where(and(
+          eq(gameStates.extGameId, extGameId),
+          eq(gameStates.sport, sport)
+        ))
+        .orderBy(desc(gameStates.updatedAt))
+        .limit(1);
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error getting game state:', error);
+      return null;
+    }
+  },
+
+  async getGameStates(sport: string, limit: number = 50): Promise<any[]> {
+    try {
+      const result = await db.select()
+        .from(gameStates)
+        .where(eq(gameStates.sport, sport))
+        .orderBy(desc(gameStates.updatedAt))
+        .limit(limit);
+      return result;
+    } catch (error) {
+      console.error('Error getting game states:', error);
+      return [];
     }
   }
 };
