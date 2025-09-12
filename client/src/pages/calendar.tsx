@@ -377,6 +377,13 @@ export default function Calendar() {
                   </span>
                 )}
               </h2>
+              
+              {/* Season Data Notice */}
+              {activeSport === 'MLB' && isSameDay(selectedDate, new Date()) && (
+                <div className="bg-amber-500/20 backdrop-blur-sm border-amber-500/50 ring-1 ring-amber-500/30 text-amber-300 px-3 py-1 rounded-lg text-xs font-semibold">
+                  📅 Showing 2024 Season Data
+                </div>
+              )}
               <Button
                 variant="outline"
                 size="default"
