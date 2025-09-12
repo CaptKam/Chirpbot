@@ -6,6 +6,7 @@ import { CrossSportContext } from '../cross-sport-ai-enhancement';
 
 export class NCAAFEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
+  private crossSportAI: any = { configured: false }; // Add crossSportAI property
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -26,6 +27,19 @@ export class NCAAFEngine extends BaseSportEngine {
   constructor() {
     super('NCAAF');
     this.settingsCache = new SettingsCache(storage);
+    
+    // Initialize crossSportAI - import it dynamically to avoid circular dependencies
+    this.initializeCrossSportAI();
+  }
+
+  private async initializeCrossSportAI() {
+    try {
+      const { CrossSportAI } = await import('../cross-sport-ai-enhancement');
+      this.crossSportAI = new CrossSportAI();
+    } catch (error) {
+      console.error('❌ Failed to initialize CrossSportAI:', error);
+      this.crossSportAI = { configured: false };
+    }
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -460,6 +474,157 @@ export class NCAAFEngine extends BaseSportEngine {
       console.error(`❌ Failed to load NCAAF alert module ${alertType} after ${loadTime}ms:`, error);
       return null;
     }
+  }
+
+  // Send alerts to both WebSocket and Telegram simultaneously
+  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    if (!alerts || alerts.length === 0) return;
+    
+    try {
+      console.log(`🚀 Simultaneously delivering ${alerts.length} NCAAF alerts to WebSocket and Telegram`);
+      
+      // Create delivery promises for parallel execution
+      const deliveryPromises: Promise<void>[] = [];
+      
+      // 1. WebSocket delivery promise
+      deliveryPromises.push(this.deliverAlertsToWebSocket(alerts, gameState));
+      
+      // 2. Telegram delivery promise
+      deliveryPromises.push(this.deliverAlertsToTelegram(alerts, gameState));
+      
+      // Execute both deliveries simultaneously
+      await Promise.all(deliveryPromises);
+      
+      console.log(`✅ Synchronized delivery complete for ${alerts.length} alerts`);
+      
+    } catch (error) {
+      console.error('❌ Synchronized NCAAF alert delivery system error:', error);
+    }
+  }
+
+  private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      const wsBroadcast = (global as any).wsBroadcast;
+      if (!wsBroadcast) {
+        console.warn('📡 WebSocket broadcast function not available');
+        return;
+      }
+
+      for (const alert of alerts) {
+        const alertData = {
+          type: 'new_alert',
+          data: {
+            id: alert.alertKey,
+            type: alert.type,
+            sport: 'NCAAF',
+            priority: alert.priority,
+            message: alert.message,
+            context: alert.context,
+            gameId: gameState.gameId,
+            homeTeam: gameState.homeTeam,
+            awayTeam: gameState.awayTeam,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            quarter: gameState.quarter,
+            timeRemaining: gameState.timeRemaining,
+            down: gameState.down,
+            yardsToGo: gameState.yardsToGo,
+            fieldPosition: gameState.fieldPosition,
+            possession: gameState.possession,
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        wsBroadcast(alertData);
+        console.log(`📡 ✅ WebSocket: ${alert.type} alert broadcasted`);
+      }
+    } catch (error) {
+      console.error('📡 ❌ WebSocket delivery error:', error);
+    }
+  }
+
+  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
+    try {
+      // Get all users with Telegram enabled
+      const allUsers = await storage.getAllUsers();
+      const telegramUsers = allUsers.filter(user => 
+        user.telegramChatId && user.notificationsEnabled !== false
+      );
+
+      if (telegramUsers.length === 0) {
+        console.log('📱 No Telegram users found - skipping Telegram delivery');
+        return;
+      }
+
+      console.log(`📱 🚀 Delivering ${alerts.length} NCAAF alerts to ${telegramUsers.length} Telegram users`);
+
+      // Import Telegram service
+      const { TelegramService } = await import('../telegram');
+      const telegramService = new TelegramService();
+
+      for (const alert of alerts) {
+        console.log(`📱 🔍 TELEGRAM DEBUG: Attempting to send ${alert.type} alert`);
+        
+        const success = await telegramService.sendAlert({
+          type: alert.type,
+          message: alert.message,
+          context: alert.context,
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          quarter: gameState.quarter,
+          timeRemaining: gameState.timeRemaining,
+          sport: 'NCAAF'
+        }, telegramUsers);
+
+        if (success) {
+          console.log(`📱 ✅ Sent ${alert.type} alert to ${telegramUsers.length} users`);
+        } else {
+          console.log(`📱 ❌ Failed to send ${alert.type} alert`);
+        }
+      }
+    } catch (error) {
+      console.error('📱 ❌ Telegram delivery error:', error);
+    }
+  }
+
+  // College football specific helper methods
+  private hasPlayoffImplications(gameState: GameState): boolean {
+    // Check if either team has playoff implications (ranked teams, conference championships, etc.)
+    return gameState.homeRank <= 25 || gameState.awayRank <= 25;
+  }
+
+  private getChampionshipContext(gameState: GameState): string {
+    if (gameState.homeRank <= 4 || gameState.awayRank <= 4) {
+      return 'playoff_contender';
+    }
+    if (gameState.homeRank <= 25 || gameState.awayRank <= 25) {
+      return 'ranked_matchup';
+    }
+    return 'regular_season';
+  }
+
+  private getCollegeSpecificFactors(gameState: GameState): any {
+    return {
+      homeFieldAdvantage: true, // College football has strong home field advantage
+      studentSection: true,
+      rivalryGame: this.isRivalryGame(gameState),
+      conferenceImplications: true
+    };
+  }
+
+  private getRecruitingImplications(gameState: GameState): any {
+    return {
+      nationalExposure: gameState.homeRank <= 25 || gameState.awayRank <= 25,
+      bigGamePerformance: true
+    };
+  }
+
+  private isRivalryGame(gameState: GameState): boolean {
+    // In a real implementation, this would check a database of rivalry games
+    return false;
   }
 
   // Initialize alert cylinder modules for enabled alert types (optimized)
