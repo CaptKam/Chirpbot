@@ -36,10 +36,11 @@ import { AuthLoading, StatsLoading } from '@/components/sports-loading';
     ],
     NFL: {
     "Game Situations": [
-      { key: "RED_ZONE", label: "Red Zone Situations", description: "Team inside the 20-yard line" },
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical 4th down conversion attempts" },
-      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-half pressure situations" },
+      { key: "NFL_GAME_START", label: "Game Start", description: "Alert when NFL game begins" },
+      { key: "NFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Start of second half (3rd quarter)" },
+      { key: "NFL_RED_ZONE", label: "Red Zone Situations", description: "Team inside the 20-yard line" },
+      { key: "NFL_FOURTH_DOWN", label: "Fourth Down", description: "Critical 4th down conversion attempts" },
+      { key: "NFL_TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-half pressure situations" },
     ]
   },
   NBA: {
