@@ -6,11 +6,20 @@ export default class RedZoneModule extends BaseAlertModule {
   sport = 'NCAAF';
 
   isTriggered(gameState: GameState): boolean {
+    console.log(`🔍 NCAAF Red Zone check for ${gameState.gameId}: status=${gameState.status}, fieldPos=${gameState.fieldPosition}, quarter=${gameState.quarter}`);
+    
     // Team is in red zone (within 20 yards of goal line)
-    return gameState.status === 'live' && 
+    const isTriggered = gameState.status === 'live' && 
            gameState.fieldPosition !== undefined && 
+           gameState.fieldPosition !== null &&
            gameState.fieldPosition <= 20 &&
            gameState.fieldPosition > 0;
+    
+    if (isTriggered) {
+      console.log(`🎯 NCAAF Red Zone TRIGGERED for ${gameState.gameId}: ${gameState.fieldPosition} yard line`);
+    }
+    
+    return isTriggered;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

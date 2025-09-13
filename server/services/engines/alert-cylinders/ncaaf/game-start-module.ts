@@ -12,12 +12,15 @@ export default class GameStartModule extends BaseAlertModule {
     if (!gameState.gameId) return false;
     
     const currentState = this.gameStates.get(gameState.gameId);
-    const isLiveGame = gameState.status === 'live' && gameState.quarter === 1 && this.parseTimeToSeconds(gameState.timeRemaining) < (15 * 60);
+    
+    // More flexible game start detection - trigger for any live game we haven't seen before
+    const isLiveGame = gameState.status === 'live' && (gameState.quarter === 1 || gameState.quarter === 2);
     
     // Only trigger if game is now live AND we haven't triggered for this game yet
     if (isLiveGame) {
       // If we haven't seen this game before, or if we've seen it but it wasn't live before
-      if (!currentState || (!currentState.hasTriggered)) {
+      if (!currentState || (!currentState.hasTriggered && currentState.status !== 'live')) {
+        console.log(`🎯 NCAAF Game Start triggered for ${gameState.gameId}: Q${gameState.quarter}, ${gameState.timeRemaining}`);
         // Update our tracking
         this.gameStates.set(gameState.gameId, { 
           status: 'live',

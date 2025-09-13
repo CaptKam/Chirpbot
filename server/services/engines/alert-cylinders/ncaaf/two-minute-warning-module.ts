@@ -7,17 +7,36 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
   sport = 'NCAAF';
 
   isTriggered(gameState: GameState): boolean {
+    console.log(`🔍 NCAAF Two Minute check for ${gameState.gameId}: status=${gameState.status}, Q${gameState.quarter}, time=${gameState.timeRemaining}, scores=${gameState.homeScore}-${gameState.awayScore}`);
+    
     // Must be a live game
-    if (gameState.status !== 'live') return false;
+    if (gameState.status !== 'live') {
+      console.log(`❌ Two Minute: Game not live (${gameState.status})`);
+      return false;
+    }
     
     // Must be in 2nd or 4th quarter (end of half situations)
-    if (gameState.quarter !== 2 && gameState.quarter !== 4) return false;
+    if (gameState.quarter !== 2 && gameState.quarter !== 4) {
+      console.log(`❌ Two Minute: Wrong quarter (Q${gameState.quarter})`);
+      return false;
+    }
     
     // Must be within 2 minutes
-    if (!this.isWithinTwoMinutes(gameState.timeRemaining)) return false;
+    const withinTwoMins = this.isWithinTwoMinutes(gameState.timeRemaining);
+    if (!withinTwoMins) {
+      console.log(`❌ Two Minute: Not within 2 minutes (${gameState.timeRemaining})`);
+      return false;
+    }
     
     // Must be a close game to be interesting
-    return this.isCloseGame(gameState);
+    const isClose = this.isCloseGame(gameState);
+    if (!isClose) {
+      console.log(`❌ Two Minute: Game not close enough (${gameState.homeScore}-${gameState.awayScore})`);
+      return false;
+    }
+    
+    console.log(`🎯 NCAAF Two Minute WARNING TRIGGERED for ${gameState.gameId}`);
+    return true;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
