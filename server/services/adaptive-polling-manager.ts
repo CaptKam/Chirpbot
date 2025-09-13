@@ -113,6 +113,49 @@ export class AdaptivePollingManager {
     this.apiServices = apiServices;
     this.mlbEngine = new MLBEngine(); // Initialize MLB engine for alert generation
     console.log(`🎯 AdaptivePollingManager initialized for ${sport} with intelligent intervals`);
+    
+    // Initialize MLB engine modules asynchronously after construction
+    if (sport === 'MLB') {
+      this.initializeMLBEngineModules();
+    }
+  }
+  
+  // Initialize MLB engine with all available alert modules
+  private async initializeMLBEngineModules(): Promise<void> {
+    try {
+      console.log(`🔧 Initializing MLB engine alert modules for adaptive polling...`);
+      
+      // Load all available MLB alert modules
+      const allMLBAlerts = [
+        'MLB_GAME_START',
+        'MLB_SEVENTH_INNING_STRETCH',
+        'MLB_RUNNER_ON_THIRD_NO_OUTS',
+        'MLB_FIRST_AND_THIRD_NO_OUTS',
+        'MLB_SECOND_AND_THIRD_NO_OUTS',
+        'MLB_FIRST_AND_SECOND',
+        'MLB_BASES_LOADED_NO_OUTS',
+        'MLB_RUNNER_ON_THIRD_ONE_OUT',
+        'MLB_FIRST_AND_THIRD_ONE_OUT',
+        'MLB_SECOND_AND_THIRD_ONE_OUT',
+        'MLB_BASES_LOADED_ONE_OUT',
+        'MLB_RUNNER_ON_THIRD_TWO_OUTS',
+        'MLB_FIRST_AND_THIRD_TWO_OUTS',
+        'MLB_BATTER_DUE',
+        'MLB_STEAL_LIKELIHOOD',
+        'MLB_ON_DECK_PREDICTION',
+        'MLB_WIND_CHANGE',
+        'MLB_LATE_INNING_CLOSE',
+        'MLB_SCORING_OPPORTUNITY',
+        'MLB_PITCHING_CHANGE'
+      ];
+      
+      // Initialize all modules for the polling engine
+      await this.mlbEngine.initializeUserAlertModules(allMLBAlerts);
+      
+      console.log(`✅ MLB engine initialized with ${allMLBAlerts.length} alert modules for adaptive polling`);
+    } catch (error) {
+      console.error(`❌ Failed to initialize MLB engine modules:`, error);
+    }
   }
 
   /**
