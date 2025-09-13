@@ -612,37 +612,6 @@ export class NCAAFEngine extends BaseSportEngine {
   }
 
   // College football specific helper methods
-  private hasPlayoffImplications(gameState: GameState): boolean {
-    // Check if either team has playoff implications (ranked teams, conference championships, etc.)
-    return gameState.homeRank <= 25 || gameState.awayRank <= 25;
-  }
-
-  private getChampionshipContext(gameState: GameState): string {
-    if (gameState.homeRank <= 4 || gameState.awayRank <= 4) {
-      return 'playoff_contender';
-    }
-    if (gameState.homeRank <= 25 || gameState.awayRank <= 25) {
-      return 'ranked_matchup';
-    }
-    return 'regular_season';
-  }
-
-  private getCollegeSpecificFactors(gameState: GameState): any {
-    return {
-      homeFieldAdvantage: true, // College football has strong home field advantage
-      studentSection: true,
-      rivalryGame: this.isRivalryGame(gameState),
-      conferenceImplications: true
-    };
-  }
-
-  private getRecruitingImplications(gameState: GameState): any {
-    return {
-      nationalExposure: gameState.homeRank <= 25 || gameState.awayRank <= 25,
-      bigGamePerformance: true
-    };
-  }
-
   private isRivalryGame(gameState: GameState): boolean {
     // In a real implementation, this would check a database of rivalry games
     return false;
