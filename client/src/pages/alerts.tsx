@@ -163,7 +163,7 @@ export default function AlertsPage() {
           title="ChirpBot" 
           subtitle="Real-Time Alert Dashboard"
         />
-        
+
         {/* Filter Tabs - placeholder during loading */}
         <SportTabs 
           sports={['all', ...getSeasonAwareSports()]} 
@@ -190,7 +190,7 @@ export default function AlertsPage() {
         title="ChirpBot" 
         subtitle="Real-Time Alert Dashboard"
       />
-      
+
       {/* Filter Tabs - moved outside constraining div for full width */}
       <SportTabs 
         sports={['all', ...getSeasonAwareSports()]} 

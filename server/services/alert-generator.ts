@@ -723,9 +723,7 @@ export class AlertGenerator {
       awayScore = game.awayScore.score || game.awayScore.value || 0;
     }
 
-    // Destructure game to exclude homeTeam and awayTeam objects
-    const { homeTeam: _, awayTeam: __, homeScore: ___, awayScore: ____, ...otherGameFields } = game;
-
+    // Preserve critical game data while excluding team objects
     const gameState: GameState = {
       gameId,
       sport,
@@ -735,7 +733,26 @@ export class AlertGenerator {
       awayScore, // Use normalized number
       status: game.status || 'live',
       isLive: game.isLive || false,
-      ...otherGameFields // Include other sport-specific fields but exclude team objects
+      // Preserve enhanced live data
+      inning: game.inning,
+      outs: game.outs,
+      balls: game.balls,
+      strikes: game.strikes,
+      isTopInning: game.isTopInning,
+      runners: game.runners,
+      hasFirst: game.hasFirst || (game.runners && game.runners.first),
+      hasSecond: game.hasSecond || (game.runners && game.runners.second),
+      hasThird: game.hasThird || (game.runners && game.runners.third),
+      currentBatter: game.currentBatter,
+      currentPitcher: game.currentPitcher,
+      weather: game.weather,
+      // Include other sport-specific fields
+      quarter: game.quarter,
+      timeRemaining: game.timeRemaining,
+      down: game.down,
+      yardsToGo: game.yardsToGo,
+      fieldPosition: game.fieldPosition,
+      possession: game.possession
     };
 
     return gameState;
@@ -949,19 +966,31 @@ export class AlertGenerator {
           timestamp: new Date().toISOString(),
           // Add betting context if available
           betbookData: context.betbookData,
-          // Add AI context if available
-          aiTitle: context.aiTitle,
-          aiInsights: context.aiInsights,
-          aiBettingAdvice: context.aiBettingAdvice,
-          aiGameProjection: context.aiGameProjection,
-          // Ensure game state context
-          homeTeam: context.homeTeam,
-          awayTeam: context.awayTeam,
+          // Add AI context if available (with fallbacks)
+          aiTitle: context.aiTitle || null,
+          aiInsights: context.aiInsights || [],
+          aiBettingAdvice: context.aiBettingAdvice || null,
+          aiGameProjection: context.aiGameProjection || null,
+          aiRecommendation: context.aiRecommendation || null,
+          aiUrgency: context.aiUrgency || null,
+          aiCallToAction: context.aiCallToAction || null,
+          aiFollowUpActions: context.aiFollowUpActions || [],
+          aiConfidenceScore: context.aiConfidenceScore || finalPriority,
+          aiProcessingTime: context.aiProcessingTime || 0,
+          // Ensure game state context with proper defaults
+          homeTeam: context.homeTeam || 'Home Team',
+          awayTeam: context.awayTeam || 'Away Team',
           homeScore: context.homeScore || 0,
           awayScore: context.awayScore || 0,
-          inning: context.inning,
-          outs: context.outs,
-          isTopInning: context.isTopInning
+          inning: context.inning || 1,
+          outs: context.outs || 0,
+          balls: context.balls || 0,
+          strikes: context.strikes || 0,
+          isTopInning: context.isTopInning !== undefined ? context.isTopInning : true,
+          // Base runners with proper defaults
+          hasFirst: context.hasFirst || false,
+          hasSecond: context.hasSecond || false,
+          hasThird: context.hasThird || false
         },
         gameInfo: {
           v3Analysis: this.generateV3Analysis(context, finalPriority, type)

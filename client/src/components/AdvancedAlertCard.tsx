@@ -217,32 +217,47 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
   const autoReturnTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   // Helper function to convert raw alert types to user-friendly categories
-  const getAlertCategory = (alertType: string): string => {
-    if (alertType.includes('RUNNER_ON_THIRD') || alertType.includes('BASES_LOADED') || alertType.includes('FIRST_AND_THIRD') || alertType.includes('SECOND_AND_THIRD')) {
-      return 'SCORING OPPORTUNITY';
-    }
-    if (alertType.includes('GAME_START')) {
-      return 'GAME START';
-    }
-    if (alertType.includes('WEATHER') || alertType.includes('WIND')) {
-      return 'WEATHER IMPACT';
-    }
-    if (alertType.includes('SEVENTH_INNING_STRETCH')) {
-      return 'MILESTONE';
-    }
-    if (alertType.includes('BATTER_DUE') || alertType.includes('ON_DECK')) {
-      return 'PLAYER FOCUS';
-    }
-    if (alertType.includes('STEAL')) {
-      return 'STRATEGIC PLAY';
-    }
-    // Remove sport prefix and convert to title case
+  const getAlertCategory2 = (alertType: string): string => {
+  if (!alertType || typeof alertType !== 'string') return 'unknown';
+  if (alertType.includes('BASES_LOADED')) return 'scoring';
+    if (alertType.includes('RISP')) return 'scoring';
+    if (alertType.includes('RED_ZONE_OPPORTUNITY')) return 'scoring';
+    if (alertType.includes('POWER_PLAY')) return 'scoring';
+    if (alertType.includes('CLUTCH_TIME')) return 'scoring';
+
+    if (alertType.includes('MLB_GAME_START') || alertType.includes('GAME_START')) return 'game_start';
+    if (alertType.includes('NFL_GAME_START')) return 'game_start';
+    if (alertType.includes('NBA_GAME_START')) return 'game_start';
+    if (alertType.includes('WNBA_GAME_START')) return 'game_start';
+
+    if (alertType.includes('WEATHER_IMPACT')) return 'weather';
+    if (alertType.includes('STADIUM_CONDITIONS')) return 'weather';
+    if (alertType.includes('WIND_CHANGE')) return 'weather';
+
+    if (alertType.includes('TWO_MINUTE_WARNING')) return 'critical';
+    if (alertType.includes('FOURTH_DOWN')) return 'critical';
+    if (alertType.includes('OVERTIME')) return 'critical';
+    if (alertType.includes('FINAL_DRIVE')) return 'critical';
+    if (alertType.includes('EMPTY_NET')) return 'critical';
+
+    if (alertType.includes('HOT_HITTER')) return 'momentum';
+    if (alertType.includes('COLD_STREAK')) return 'momentum';
+    if (alertType.includes('COMEBACK_POTENTIAL')) return 'momentum';
+    if (alertType.includes('BLOWOUT')) return 'momentum';
+
+    if (alertType.includes('POWER_HITTER')) return 'player';
+    if (alertType.includes('STAR_BATTER')) return 'player';
+    if (alertType.includes('BATTER_DUE')) return 'player';
+    if (alertType.includes('ON_DECK_PREDICTION')) return 'player';
+
+    // Fallback for unmapped types
     return alertType.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '').replace(/_/g, ' ');
   };
 
+
   // Get theme based on sport
   const theme = SPORT_THEMES[alertData.sport as keyof typeof SPORT_THEMES] || SPORT_THEMES.MLB;
-  const category = getAlertCategory(alertData.type);
+  const category = getAlertCategory2(alertData.type);
 
   // Fetch live game data
   const { data: liveGameData } = useQuery({
@@ -400,17 +415,17 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
   // Render different layouts based on alert category
   const renderAlertContent = () => {
     switch (category) {
-      case 'SCORING':
+      case 'scoring':
         return <ScoringOpportunityLayout />;
-      case 'GAME_START':
+      case 'game_start':
         return <GameStartLayout />;
-      case 'WEATHER':
+      case 'weather':
         return <WeatherImpactLayout />;
-      case 'CRITICAL':
+      case 'critical':
         return <CriticalMomentLayout />;
-      case 'MOMENTUM':
+      case 'momentum':
         return <MomentumShiftLayout />;
-      case 'PLAYER':
+      case 'player':
         return <PlayerFocusLayout />;
       default:
         return <DefaultLayout />;
@@ -564,7 +579,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               <span className="text-sm text-slate-300">{insight}</span>
             </div>
           ))}
-          
+
           {/* AI Recommendation */}
           {alertData.context?.recommendation && (
             <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/30">
@@ -583,10 +598,10 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
   const GameStartLayout = () => {
     const awayTeamName = typeof alertData.awayTeam === 'string' ? alertData.awayTeam : alertData.awayTeam?.name || 'Away Team';
     const homeTeamName = typeof alertData.homeTeam === 'string' ? alertData.homeTeam : alertData.homeTeam?.name || 'Home Team';
-    
+
     // Extract betting data if available
     const betbookData = alertData.context?.betbookData;
-    
+
     return (
       <>
         {/* Header with pulsing animation */}
@@ -642,12 +657,12 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
                 )}
               </div>
             </div>
-            
+
             <div className="flex flex-col items-center">
               <div className="text-3xl font-bold text-slate-300 mb-1">VS</div>
               <div className="text-xs text-slate-500">First Pitch</div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="text-lg font-bold text-white">
@@ -667,7 +682,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               />
             </div>
           </div>
-          
+
           {/* Game context */}
           <div className="border-t border-slate-700 pt-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -715,7 +730,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
                 <div className="text-xs text-slate-400">Away</div>
               </div>
             </div>
-            
+
             {/* AI Betting Advice */}
             {betbookData.aiAdvice && (
               <div className="mt-3 pt-3 border-t border-slate-700">
@@ -729,7 +744,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
         {/* Key matchup factors and weather */}
         <div className="space-y-3">
           <div className="text-xs text-slate-400 uppercase tracking-wide">Game Factors</div>
-          
+
           {alertData.context?.gameInfo?.pitchingMatchup && (
             <div className="flex items-center gap-2">
               <User className={`w-4 h-4 ${theme.text}`} />
@@ -738,7 +753,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               </span>
             </div>
           )}
-          
+
           {alertData.context?.gameInfo?.seriesRecord && (
             <div className="flex items-center gap-2">
               <Trophy className={`w-4 h-4 ${theme.text}`} />
@@ -747,14 +762,14 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               </span>
             </div>
           )}
-          
+
           <div className="flex items-center gap-2">
             <Activity className={`w-4 h-4 ${theme.text}`} />
             <span className="text-sm text-slate-300">
               Last 10: {awayTeamName.split(' ').pop()} 7-3, {homeTeamName.split(' ').pop()} 6-4
             </span>
           </div>
-          
+
           {weatherData && (
             <div className="flex items-center gap-2">
               <Wind className={`w-4 h-4 ${theme.text}`} />
@@ -763,7 +778,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               </span>
             </div>
           )}
-          
+
           {alertData.sport === 'MLB' && (
             <div className="flex items-center gap-2">
               <Target className={`w-4 h-4 ${theme.text}`} />
@@ -1227,7 +1242,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           className
         )}>
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.gradient}" />
-          
+
           <div className="p-4">
             {renderAlertContent()}
           </div>
