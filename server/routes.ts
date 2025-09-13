@@ -3407,18 +3407,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           availableAlerts = await tempEngine.getAvailableAlertTypes();
         }
 
-        // Filter out globally disabled alerts for all users
+        // Get global settings but show all alerts (don't filter out disabled ones)
         const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
-        const enabledAlerts = availableAlerts.filter(alertType => {
-          const isGloballyEnabled = globalSettings[alertType] === true;
-          if (!isGloballyEnabled) {
-            console.log(`🚫 Filtering out globally disabled alert: ${alertType} for sport ${sport.toUpperCase()}`);
-          }
-          return isGloballyEnabled;
-        });
 
-        // Convert to the format expected by the frontend
-        const alertConfig = enabledAlerts.map(alertType => {
+        // Convert to the format expected by the frontend, including globally disabled alerts
+        const alertConfig = availableAlerts.map(alertType => {
+          const isGloballyEnabled = globalSettings[alertType] === true;
           const displayName = alertType
             .replace(`${sport.toUpperCase()}_`, '')
             .split('_')
@@ -3428,11 +3422,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           return {
             key: alertType,
             label: displayName,
-            description: `${displayName} alerts for ${sport.toUpperCase()} games`
+            description: `${displayName} alerts for ${sport.toUpperCase()} games`,
+            globallyEnabled: isGloballyEnabled
           };
         });
 
-        console.log(`📋 Available alerts for ${sport.toUpperCase()}: ${enabledAlerts.length}/${availableAlerts.length} (${availableAlerts.length - enabledAlerts.length} globally disabled)`);
+        const globallyEnabledCount = alertConfig.filter(alert => alert.globallyEnabled).length;
+        console.log(`📋 Available alerts for ${sport.toUpperCase()}: ${globallyEnabledCount}/${availableAlerts.length} globally enabled, ${availableAlerts.length - globallyEnabledCount} globally disabled`);
         res.json(alertConfig);
       } catch (error) {
         console.error(`❌ Error getting available alerts for ${sport}:`, error);

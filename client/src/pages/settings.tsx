@@ -478,6 +478,7 @@ export default function Settings() {
                     <div className="space-y-3">
                       {(availableAlerts as any[] || []).map((alertType) => {
                         const isEnabled = getAlertPreference(activeSport, alertType.key);
+                        const isGloballyDisabled = alertType.globallyEnabled === false;
                         
                         // Show skeleton if preference is still loading
                         if (isEnabled === undefined) {
@@ -499,24 +500,40 @@ export default function Settings() {
                         }
                         
                         return (
-                          <div key={alertType.key} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-[#10B981]/30 transition-all duration-300 group">
+                          <div key={alertType.key} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${
+                            isGloballyDisabled 
+                              ? 'bg-red-500/5 border-red-500/20 opacity-60' 
+                              : 'bg-white/5 border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-[#10B981]/30'
+                          }`}>
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
-                                <h4 className="text-sm font-semibold text-slate-100 group-hover:text-[#10B981] transition-colors">
+                                <h4 className={`text-sm font-semibold transition-colors ${
+                                  isGloballyDisabled 
+                                    ? 'text-red-400' 
+                                    : 'text-slate-100 group-hover:text-[#10B981]'
+                                }`}>
                                   {alertType.label}
+                                  {isGloballyDisabled && (
+                                    <span className="ml-2 text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full">
+                                      Globally Disabled
+                                    </span>
+                                  )}
                                 </h4>
                                 {updateAlertPreferenceMutation.isPending && (
                                   <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
                                 )}
                               </div>
-                              <p className="text-xs text-slate-400 mt-1">
-                                {alertType.description}
+                              <p className={`text-xs mt-1 ${isGloballyDisabled ? 'text-red-400/70' : 'text-slate-400'}`}>
+                                {isGloballyDisabled 
+                                  ? 'This alert type has been disabled by an administrator and cannot be enabled.' 
+                                  : alertType.description
+                                }
                               </p>
                             </div>
                             <Switch
-                              checked={isEnabled}
+                              checked={isEnabled && !isGloballyDisabled}
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={updateAlertPreferenceMutation.isPending}
+                              disabled={updateAlertPreferenceMutation.isPending || isGloballyDisabled}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
                               className="data-[state=checked]:bg-[#10B981]"
                             />
