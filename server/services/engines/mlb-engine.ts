@@ -143,7 +143,11 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_BATTER_DUE',
         'MLB_STEAL_LIKELIHOOD',
         'MLB_ON_DECK_PREDICTION',
-        'MLB_WIND_CHANGE'
+        'MLB_WIND_CHANGE',
+        'MLB_LATE_INNING_CLOSE',
+        'MLB_SCORING_OPPORTUNITY',
+        'MLB_PITCHING_CHANGE',
+        'TEST_ALERT'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -440,7 +444,11 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_BATTER_DUE',
         'MLB_STEAL_LIKELIHOOD',
         'MLB_ON_DECK_PREDICTION',
-        'MLB_WIND_CHANGE'
+        'MLB_WIND_CHANGE',
+        'MLB_LATE_INNING_CLOSE',
+        'MLB_SCORING_OPPORTUNITY',
+        'MLB_PITCHING_CHANGE',
+        'TEST_ALERT'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
@@ -483,7 +491,12 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_BATTER_DUE': './alert-cylinders/mlb/batter-due-module.ts',
         'MLB_STEAL_LIKELIHOOD': './alert-cylinders/mlb/steal-likelihood-module.ts',
         'MLB_ON_DECK_PREDICTION': './alert-cylinders/mlb/on-deck-prediction-module.ts',
-        'MLB_WIND_CHANGE': './alert-cylinders/mlb/wind-change-module.ts'
+        'MLB_WIND_CHANGE': './alert-cylinders/mlb/wind-change-module.ts',
+        'MLB_FIRST_AND_SECOND': './alert-cylinders/mlb/first-and-second-module.ts',
+        'MLB_LATE_INNING_CLOSE': './alert-cylinders/mlb/late-inning-close-module.ts',
+        'MLB_SCORING_OPPORTUNITY': './alert-cylinders/mlb/scoring-opportunity-module.ts',
+        'MLB_PITCHING_CHANGE': './alert-cylinders/mlb/pitching-change-module.ts',
+        'TEST_ALERT': './alert-cylinders/test-alert-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
@@ -493,7 +506,9 @@ export class MLBEngine extends BaseSportEngine {
       }
 
       const module = await import(modulePath);
-      return new module.default();
+      const instance = new module.default();
+      console.log(`✅ MLB ENGINE: Successfully registered alert module: ${alertType} from ${modulePath}`);
+      return instance;
     } catch (error) {
       console.error(`❌ Failed to load MLB alert module ${alertType}:`, error);
       return null;
