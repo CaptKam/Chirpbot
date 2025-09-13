@@ -4,6 +4,8 @@ import { NCAAFApiService } from './ncaaf-api';
 import { WNBAApiService } from './wnba-api';
 import { NBAApiService } from './nba-api';
 import { CFLApiService } from './cfl-api';
+import { MLBEngine } from './engines/mlb-engine';
+import { GameState, AlertResult } from './engines/base-engine';
 
 export type Sport = 'MLB' | 'NFL' | 'NCAAF' | 'WNBA' | 'NBA' | 'CFL';
 
@@ -50,6 +52,7 @@ export class AdaptivePollingManager {
   private lastBatchPoll: number = 0;
   private isEnabled: boolean = true;
   private sport: Sport;
+  private mlbEngine: MLBEngine;
 
   // Sport-specific intelligent polling intervals
   private readonly SPORT_POLLING_CONFIGS: Record<Sport, PollingConfig> = {
@@ -108,6 +111,7 @@ export class AdaptivePollingManager {
   constructor(sport: Sport, apiServices: SportApiServices) {
     this.sport = sport;
     this.apiServices = apiServices;
+    this.mlbEngine = new MLBEngine(); // Initialize MLB engine for alert generation
     console.log(`🎯 AdaptivePollingManager initialized for ${sport} with intelligent intervals`);
   }
 
@@ -1111,6 +1115,45 @@ export class AdaptivePollingManager {
       // Final fallback
       primaryPlayer = primaryPlayer || 'N/A';
       console.log(`💾 Persisted enhanced game data for ${gameId} with player: ${primaryPlayer}`);
+
+      // CRITICAL FIX: Add missing alert generation call for MLB games 
+      if (this.sport === 'MLB' && gameStateData) {
+        try {
+          console.log(`🚨 Processing alerts for MLB game ${gameId}`);
+          
+          // Construct proper GameState object from persisted data
+          const gameState: GameState = {
+            gameId: gameId,
+            sport: this.sport,
+            isLive: gameStateData.status === 'live' || gameStateData.status === 'progress', 
+            homeTeam: gameStateData.homeTeam,
+            awayTeam: gameStateData.awayTeam,
+            homeScore: gameStateData.homeScore || 0,
+            awayScore: gameStateData.awayScore || 0,
+            inning: gameStateData.inning || 1,
+            isTopInning: gameStateData.isTopInning || false,
+            outs: gameStateData.outs || 0,
+            balls: gameStateData.balls || 0,
+            strikes: gameStateData.strikes || 0,
+            hasFirst: gameStateData.hasFirst || false,
+            hasSecond: gameStateData.hasSecond || false,
+            hasThird: gameStateData.hasThird || false,
+            currentBatter: gameStateData.currentBatter,
+            currentPitcher: gameStateData.currentPitcher,
+            windSpeed: gameStateData.windSpeed,
+            windDirection: gameStateData.windDirection,
+            temperature: gameStateData.temperature
+          };
+
+          // Generate alerts using MLB engine
+          const alertResults = await this.mlbEngine.generateLiveAlerts(gameState);
+          if (alertResults && alertResults.length > 0) {
+            console.log(`✅ Generated ${alertResults.length} alerts for MLB game ${gameId}`);
+          }
+        } catch (alertError) {
+          console.error(`❌ Alert generation failed for MLB game ${gameId}:`, alertError);
+        }
+      }
     } catch (error) {
       console.error(`❌ Error persisting enhanced game data for ${gameId}:`, error);
       throw error;
