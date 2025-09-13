@@ -459,29 +459,56 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
         </div>
       </div>
 
-      {/* Main message */}
+      {/* AI Enhanced Message Display - Prioritize AI content */}
       <div className="mb-4">
-        {/* Prioritize AI enhanced title first */}
-        {alertData.context?.aiTitle ? (
+        {(alertData.context?.aiTitle || alertData.context?.aiMessage || alertData.context?.aiCallToAction) ? (
           <>
-            <h3 className="text-lg font-semibold text-white mb-2">
-              {alertData.context.aiTitle}
-            </h3>
-            <p className="text-xs text-blue-400 mb-2 flex items-center gap-1">
-              <Brain className="w-3 h-3" />
-              AI Enhanced Alert
-            </p>
+            {/* AI Enhanced Header */}
+            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg p-3 mb-3 border border-blue-500/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Brain className="w-4 h-4 text-blue-400" />
+                <span className="text-blue-400 text-sm font-bold">AI Enhanced Alert</span>
+                {alertData.context?.aiConfidenceScore && (
+                  <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs">
+                    {alertData.context.aiConfidenceScore}% CONFIDENCE
+                  </Badge>
+                )}
+              </div>
+              
+              {/* AI Title */}
+              {alertData.context?.aiTitle && (
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  {alertData.context.aiTitle}
+                </h3>
+              )}
+              
+              {/* AI Message if no title */}
+              {!alertData.context?.aiTitle && alertData.context?.aiMessage && (
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  {alertData.context.aiMessage}
+                </h3>
+              )}
+              
+              {/* AI Call to Action */}
+              {alertData.context?.aiCallToAction && (
+                <p className="text-sm text-blue-100">
+                  {alertData.context.aiCallToAction}
+                </p>
+              )}
+            </div>
           </>
         ) : (
-          <h3 className="text-lg font-semibold text-white mb-2">
-            {alertData.context?.aiMessage || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
-          </h3>
-        )}
-        
-        {(alertData.context?.aiCallToAction || alertData.description) && (
-          <p className="text-sm text-slate-300">
-            {alertData.context?.aiCallToAction || alertData.description}
-          </p>
+          /* Fallback to basic message */
+          <>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              {alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+            </h3>
+            {alertData.description && (
+              <p className="text-sm text-slate-300">
+                {alertData.description}
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -546,25 +573,38 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
         </div>
       )}
 
-      {/* AI Confidence bar */}
+      {/* AI Confidence bar - Enhanced */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-slate-400">AI CONFIDENCE</span>
           <span className={`text-xs font-bold ${confidenceData.color} flex items-center gap-1`}>
             {confidenceData.icon}
-            {confidence}% {confidenceData.label}
-            {alertData.context?.aiInsights && alertData.context.aiInsights.length > 0 && (
+            {alertData.context?.aiConfidenceScore || confidence}% {confidenceData.label}
+            {(alertData.context?.aiInsights && alertData.context.aiInsights.length > 0) || 
+             (alertData.context?.aiTitle || alertData.context?.aiMessage) && (
               <Badge className="ml-2 bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs">
                 AI ENHANCED
               </Badge>
             )}
           </span>
         </div>
-        <Progress value={confidence} className="h-2" />
+        <Progress 
+          value={alertData.context?.aiConfidenceScore || confidence} 
+          className="h-2" 
+        />
+        
+        {/* AI Processing Time */}
+        {alertData.context?.aiProcessingTime && (
+          <div className="flex justify-end mt-1">
+            <span className="text-xs text-slate-500">
+              AI processed in {alertData.context.aiProcessingTime}ms
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Expandable insights */}
-      {aiInsights.length > 0 && (
+      {/* Enhanced AI Insights and Recommendations */}
+      {(aiInsights.length > 0 || alertData.context?.aiRecommendation || alertData.context?.aiBettingAdvice) && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full text-left"
@@ -572,30 +612,58 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           <div className="flex items-center justify-between py-2">
             <span className={`text-sm ${theme.text} flex items-center gap-2`}>
               <Brain className="w-4 h-4" />
-              View AI Insights ({aiInsights.length})
+              View AI Analysis ({aiInsights.length > 0 ? aiInsights.length : '+'})
             </span>
             <ChevronRight className={`w-4 h-4 ${theme.text} transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
           </div>
         </button>
       )}
 
-      {isExpanded && aiInsights.length > 0 && (
-        <div className="mt-2 space-y-2 border-t border-slate-700 pt-3">
-          {aiInsights.map((insight: string, idx: number) => (
-            <div key={idx} className="flex items-start gap-2">
-              <Sparkles className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-slate-300">{insight}</span>
+      {isExpanded && (
+        <div className="mt-2 space-y-3 border-t border-slate-700 pt-3">
+          {/* AI Insights */}
+          {aiInsights.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs text-slate-400 uppercase tracking-wide">AI Insights</div>
+              {aiInsights.map((insight: string, idx: number) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-slate-300">{insight}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
 
           {/* AI Recommendation */}
-          {alertData.context?.recommendation && (
-            <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/30">
-              <div className="flex items-center gap-2 mb-1">
+          {alertData.context?.aiRecommendation && (
+            <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+              <div className="flex items-center gap-2 mb-2">
                 <Target className="w-4 h-4 text-green-400" />
                 <span className="text-green-400 text-xs font-bold">AI RECOMMENDATION</span>
               </div>
-              <p className="text-sm text-green-100">{alertData.context.recommendation}</p>
+              <p className="text-sm text-green-100">{alertData.context.aiRecommendation}</p>
+            </div>
+          )}
+
+          {/* AI Betting Advice */}
+          {alertData.context?.aiBettingAdvice && (
+            <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="w-4 h-4 text-purple-400" />
+                <span className="text-purple-400 text-xs font-bold">AI BETTING INSIGHTS</span>
+              </div>
+              <p className="text-sm text-purple-100">{alertData.context.aiBettingAdvice}</p>
+            </div>
+          )}
+
+          {/* AI Game Projection */}
+          {alertData.context?.aiGameProjection && (
+            <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="w-4 h-4 text-cyan-400" />
+                <span className="text-cyan-400 text-xs font-bold">AI GAME PROJECTION</span>
+              </div>
+              <p className="text-sm text-cyan-100">{alertData.context.aiGameProjection}</p>
             </div>
           )}
         </div>
@@ -638,13 +706,18 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg p-3 mb-4 border border-blue-500/30">
             <div className="flex items-center gap-2 mb-2">
               <Brain className="w-4 h-4 text-blue-400" />
-              <span className="text-blue-400 text-sm font-bold">AI Enhanced Alert</span>
+              <span className="text-blue-400 text-sm font-bold">🤖 AI Enhanced Alert</span>
+              {alertData.context?.aiConfidenceScore && (
+                <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs ml-2">
+                  {alertData.context.aiConfidenceScore}% CONFIDENCE
+                </Badge>
+              )}
             </div>
             {alertData.context?.aiTitle && (
-              <p className="text-sm font-semibold text-white mb-2">{alertData.context.aiTitle}</p>
+              <h3 className="text-lg font-semibold text-white mb-2">{alertData.context.aiTitle}</h3>
             )}
             {!alertData.context?.aiTitle && alertData.context?.aiMessage && (
-              <p className="text-sm font-semibold text-white mb-2">{alertData.context.aiMessage}</p>
+              <h3 className="text-lg font-semibold text-white mb-2">{alertData.context.aiMessage}</h3>
             )}
             {alertData.context?.aiCallToAction && (
               <p className="text-sm text-blue-100">{alertData.context.aiCallToAction}</p>
