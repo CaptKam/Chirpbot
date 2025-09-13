@@ -554,7 +554,7 @@ export class NCAAFEngine extends BaseSportEngine {
       // Get all users with Telegram enabled
       const allUsers = await storage.getAllUsers();
       const telegramUsers = allUsers.filter(user => 
-        user.telegramChatId && user.notificationsEnabled !== false
+        user.telegramChatId && user.telegramBotToken
       );
 
       if (telegramUsers.length === 0) {
@@ -565,30 +565,45 @@ export class NCAAFEngine extends BaseSportEngine {
       console.log(`📱 🚀 Delivering ${alerts.length} NCAAF alerts to ${telegramUsers.length} Telegram users`);
 
       // Import Telegram service
-      const { TelegramService } = await import('../telegram');
-      const telegramService = new TelegramService();
+      const { sendTelegramAlert } = await import('../telegram');
 
       for (const alert of alerts) {
         console.log(`📱 🔍 TELEGRAM DEBUG: Attempting to send ${alert.type} alert`);
         
-        const success = await telegramService.sendAlert({
-          type: alert.type,
-          message: alert.message,
-          context: alert.context,
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          sport: 'NCAAF'
-        }, telegramUsers);
+        // Send to each user individually
+        for (const user of telegramUsers) {
+          try {
+            const telegramConfig = {
+              botToken: user.telegramBotToken!,
+              chatId: user.telegramChatId!
+            };
 
-        if (success) {
-          console.log(`📱 ✅ Sent ${alert.type} alert to ${telegramUsers.length} users`);
-        } else {
-          console.log(`📱 ❌ Failed to send ${alert.type} alert`);
+            const alertData = {
+              type: alert.type,
+              message: alert.message,
+              context: alert.context,
+              gameInfo: {
+                gameId: gameState.gameId,
+                homeTeam: gameState.homeTeam,
+                awayTeam: gameState.awayTeam,
+                homeScore: gameState.homeScore,
+                awayScore: gameState.awayScore,
+                quarter: gameState.quarter,
+                timeRemaining: gameState.timeRemaining,
+                sport: 'NCAAF'
+              }
+            };
+
+            const success = await sendTelegramAlert(telegramConfig, alertData);
+            
+            if (success) {
+              console.log(`📱 ✅ Sent ${alert.type} alert to user ${user.username}`);
+            } else {
+              console.log(`📱 ❌ Failed to send ${alert.type} alert to user ${user.username}`);
+            }
+          } catch (userError) {
+            console.error(`📱 ❌ Error sending alert to user ${user.username}:`, userError);
+          }
         }
       }
     } catch (error) {
