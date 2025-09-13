@@ -5,6 +5,10 @@ import { queryClient } from '@/lib/queryClient';
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const maxReconnectAttempts = 5;
   
   // WebSocket functionality DISABLED
   console.log('🚫 WebSocket disabled - real-time alerts not available');
