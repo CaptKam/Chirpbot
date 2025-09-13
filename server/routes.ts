@@ -3688,6 +3688,39 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Reset global alert settings to defaults (clears all database overrides)
+  app.post('/api/admin/reset-global-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport } = req.body;
+      if (!sport) {
+        return res.status(400).json({ message: 'Sport parameter is required' });
+      }
+
+      console.log(`🔄 Admin resetting global alerts to defaults for ${sport}`);
+
+      // Clear all existing global settings for this sport to use defaults
+      await storage.clearGlobalAlertSettings(sport.toUpperCase());
+
+      // Get defaults will now return the default values since no database overrides exist
+      const defaults = await storage.getGlobalAlertSettings(sport.toUpperCase());
+      const enabledCount = Object.values(defaults).filter(enabled => enabled).length;
+
+      res.json({
+        message: `Global alert settings reset to defaults for ${sport.toUpperCase()}`,
+        sport: sport.toUpperCase(),
+        enabledCount,
+        settings: defaults
+      });
+    } catch (error) {
+      console.error('Error resetting global alerts:', error);
+      res.status(500).json({ message: 'Failed to reset global alerts' });
+    }
+  });
+
   app.put('/api/admin/apply-global-settings', async (req, res) => {
     try {
       if (!req.session.adminUserId) {

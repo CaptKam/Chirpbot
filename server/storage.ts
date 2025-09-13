@@ -669,6 +669,18 @@ export const storage = {
     }
   },
 
+  // Clear all global alert settings for a sport (resets to defaults)
+  async clearGlobalAlertSettings(sport: string): Promise<void> {
+    try {
+      await db.delete(globalAlertSettings)
+        .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
+      console.log(`🔄 Cleared all global alert settings for ${sport}, will use defaults`);
+    } catch (error) {
+      console.error(`Error clearing global alert settings for ${sport}:`, error);
+      throw error;
+    }
+  },
+
   // Game State operations for enhanced game data persistence
   async saveGameState(gameStateData: InsertGameState): Promise<any> {
     try {
