@@ -116,22 +116,22 @@ export class BasicAI {
     }
   }
 
-  // Build focused prompt for sports betting insights
+  // Build focused prompt for exciting sports alerts
   private buildPrompt(context: AlertContext): string {
     return `
-Analyze this ${context.sport} betting situation:
+Create an EXCITING alert for this ${context.sport} moment:
 
 GAME: ${context.teams.away} @ ${context.teams.home}
 SITUATION: ${context.situation}
-ALERT TYPE: ${context.type}
-PROBABILITY: ${context.probability}%
+ALERT: ${context.type}
+EXCITEMENT LEVEL: ${context.probability}%
 ${context.weather ? `WEATHER: ${context.weather.temperature}°F, ${context.weather.condition}` : ''}
 
-Provide:
-1. Comprehensive betting analysis with statistical foundation
-2. Strategic recommendation with detailed rationale (Over/Under/Spread/Props)
+Create TWO lines:
+1. A THRILLING headline that captures the drama
+2. An urgent call-to-action that makes fans want to watch NOW
 
-Focus on advanced betting intelligence, market inefficiencies, and data-driven insights.
+Use exciting sports terminology, create urgency, and make it feel like the most important moment in sports!
     `.trim();
   }
 
@@ -148,7 +148,7 @@ Focus on advanced betting intelligence, market inefficiencies, and data-driven i
         messages: [
           {
             role: 'system',
-            content: 'You are an elite sports betting analyst with advanced knowledge of statistical modeling, situational analysis, and market dynamics. Provide sophisticated, data-driven insights that demonstrate professional-level expertise. Use precise terminology and analytical depth appropriate for experienced bettors and industry professionals.'
+            content: 'You are an exciting sports broadcaster creating urgent, engaging alerts for live games. Write with energy and enthusiasm! Use dynamic action words, vivid descriptions, and create a sense of urgency. Keep messages short, punchy, and thrilling. Focus on the drama, tension, and excitement of the moment. Make fans feel like they NEED to watch this game RIGHT NOW!'
           },
           {
             role: 'user',

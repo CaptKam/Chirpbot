@@ -29,7 +29,7 @@ export class AsyncAIProcessor {
   private jobQueue: Map<string, AsyncAIJob> = new Map();
   private processingQueue: Set<string> = new Set();
   private results: Map<string, AsyncAIResult> = new Map();
-  private readonly AI_TIMEOUT_MS = 5000; // 5 second timeout for AI processing
+  private readonly AI_TIMEOUT_MS = 8000; // 8 second timeout for AI processing
   private readonly MAX_RETRIES = 1;
   private readonly MAX_QUEUE_SIZE = 1000;
   private readonly RESULT_TTL = 300000; // 5 minutes
@@ -62,7 +62,20 @@ export class AsyncAIProcessor {
       'MLB_SECOND_AND_THIRD_ONE_OUT',
       'MLB_SEVENTH_INNING_STRETCH',
       'MLB_BATTER_DUE',
-      'MLB_STEAL_LIKELIHOOD'
+      'MLB_STEAL_LIKELIHOOD',
+      'MLB_LATE_INNING_CLOSE',
+      'MLB_FIRST_AND_SECOND',
+      'MLB_SCORING_OPPORTUNITY',
+      'MLB_PITCHING_CHANGE',
+      'MLB_FIRST_AND_THIRD_ONE_OUT',
+      'MLB_FIRST_AND_THIRD_TWO_OUTS',
+      'MLB_RUNNER_ON_THIRD_TWO_OUTS',
+      'MLB_BASES_LOADED_TWO_OUTS',
+      'MLB_ON_DECK_PREDICTION',
+      'MLB_WIND_CHANGE',
+      'MLB_GAME_END',
+      'MLB_SCORING_CHANGE',
+      'MLB_MOMENTUM_SHIFT'
     ],
     'NFL': [
       'NFL_RED_ZONE',
@@ -70,33 +83,85 @@ export class AsyncAIProcessor {
       'NFL_TWO_MINUTE_WARNING',
       'NFL_RED_ZONE_OPPORTUNITY',
       'NFL_GOAL_LINE_STAND',
-      'NFL_OVERTIME'
+      'NFL_OVERTIME',
+      'NFL_GAME_START',
+      'NFL_SCORING_CHANGE',
+      'NFL_TOUCHDOWN',
+      'NFL_FIELD_GOAL_ATTEMPT',
+      'NFL_TURNOVER',
+      'NFL_THIRD_DOWN',
+      'NFL_HALFTIME',
+      'NFL_FIRST_DOWN',
+      'NFL_GAME_END',
+      'NFL_MOMENTUM_SHIFT',
+      'NFL_COMEBACK_ALERT'
     ],
     'NBA': [
       'NBA_CLUTCH_PERFORMANCE',
       'NBA_FINAL_MINUTES',
       'NBA_OVERTIME',
       'NBA_TWO_MINUTE_WARNING',
-      'NBA_GAME_WINNER_OPPORTUNITY'
+      'NBA_GAME_WINNER_OPPORTUNITY',
+      'NBA_GAME_START',
+      'NBA_HALFTIME',
+      'NBA_SCORING_RUN',
+      'NBA_MOMENTUM_SHIFT',
+      'NBA_BUZZER_BEATER',
+      'NBA_FREE_THROW_SITUATION',
+      'NBA_TIMEOUT',
+      'NBA_TECHNICAL_FOUL',
+      'NBA_GAME_END',
+      'NBA_QUARTER_END',
+      'NBA_COMEBACK_ALERT'
     ],
     'NCAAF': [
       'NCAAF_RED_ZONE_EFFICIENCY',
       'NCAAF_FOURTH_DOWN_DECISION',
       'NCAAF_TWO_MINUTE_WARNING',
       'NCAAF_OVERTIME',
-      'NCAAF_GOAL_LINE'
+      'NCAAF_GOAL_LINE',
+      'NCAAF_GAME_START',
+      'NCAAF_HALFTIME',
+      'NCAAF_SCORING_CHANGE',
+      'NCAAF_TURNOVER',
+      'NCAAF_THIRD_DOWN',
+      'NCAAF_FIELD_GOAL_ATTEMPT',
+      'NCAAF_TOUCHDOWN',
+      'NCAAF_GAME_END',
+      'NCAAF_MOMENTUM_SHIFT',
+      'NCAAF_COMEBACK_ALERT'
     ],
     'CFL': [
       'CFL_ROUGE_OPPORTUNITY',
       'CFL_TWO_MINUTE_WARNING',
       'CFL_OVERTIME',
-      'CFL_FOURTH_DOWN'
+      'CFL_FOURTH_DOWN',
+      'CFL_GAME_START',
+      'CFL_HALFTIME',
+      'CFL_RED_ZONE',
+      'CFL_THIRD_DOWN',
+      'CFL_SCORING_CHANGE',
+      'CFL_TURNOVER',
+      'CFL_FIELD_GOAL_ATTEMPT',
+      'CFL_TOUCHDOWN',
+      'CFL_GAME_END',
+      'CFL_MOMENTUM_SHIFT'
     ],
     'WNBA': [
       'WNBA_CLUTCH_TIME_OPPORTUNITY',
       'WNBA_FINAL_MINUTES',
       'WNBA_TWO_MINUTE_WARNING',
-      'WNBA_OVERTIME'
+      'WNBA_OVERTIME',
+      'WNBA_GAME_START',
+      'WNBA_HALFTIME',
+      'WNBA_SCORING_RUN',
+      'WNBA_MOMENTUM_SHIFT',
+      'WNBA_FREE_THROW_SITUATION',
+      'WNBA_TIMEOUT',
+      'WNBA_QUARTER_END',
+      'WNBA_GAME_END',
+      'WNBA_COMEBACK_ALERT',
+      'WNBA_BUZZER_BEATER'
     ]
   };
 
