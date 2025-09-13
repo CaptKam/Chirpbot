@@ -1,6 +1,4 @@
 
-#!/usr/bin/env node
-
 /**
  * Alert System Debug Check - Comprehensive Diagnostic Tool
  * Checks all critical components of the alert system
@@ -298,10 +296,10 @@ async function runAlertSystemDebugCheck() {
     
     try {
       // Check if WebSocket broadcast function exists
-      const wsBroadcast = (global as any).wsBroadcast;
+      const wsBroadcast = global.wsBroadcast;
       results.webSocketStatus = {
         broadcastFunctionExists: typeof wsBroadcast === 'function',
-        globalWSExists: !!(global as any).wss
+        globalWSExists: !!global.wss
       };
       
       console.log(`   Broadcast function: ${results.webSocketStatus.broadcastFunctionExists ? '✅' : '❌'}`);
