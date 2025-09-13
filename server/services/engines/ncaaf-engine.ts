@@ -49,7 +49,7 @@ export class NCAAFEngine extends BaseSportEngine {
         'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
         'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY',
         'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL',
-        'NCAAF_MASSIVE_WEATHER'
+        'NCAAF_SECOND_HALF_KICKOFF', 'NCAAF_MASSIVE_WEATHER'
       ];
 
       if (!validNCAAFAlerts.includes(alertType)) {
@@ -416,7 +416,7 @@ export class NCAAFEngine extends BaseSportEngine {
         'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
         'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY',
         'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL',
-        'NCAAF_MASSIVE_WEATHER'
+        'NCAAF_SECOND_HALF_KICKOFF', 'NCAAF_MASSIVE_WEATHER'
       ];
 
       const ncaafEnabledTypes = enabledTypes.filter(alertType =>
@@ -455,7 +455,8 @@ export class NCAAFEngine extends BaseSportEngine {
         'NCAAF_UPSET_OPPORTUNITY': './alert-cylinders/ncaaf/upset-opportunity-module.ts',
         'NCAAF_RED_ZONE_EFFICIENCY': './alert-cylinders/ncaaf/red-zone-efficiency-module.ts',
         'NCAAF_COMEBACK_POTENTIAL': './alert-cylinders/ncaaf/comeback-potential-module.ts',
-        'NCAAF_MASSIVE_WEATHER': './alert-cylinders/ncaaf/massive-weather-module.ts'
+        'NCAAF_MASSIVE_WEATHER': './alert-cylinders/ncaaf/massive-weather-module.ts',
+        'NCAAF_SECOND_HALF_KICKOFF': './alert-cylinders/ncaaf/second-half-kickoff-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
