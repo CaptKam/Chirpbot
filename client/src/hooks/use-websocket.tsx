@@ -61,65 +61,98 @@ export function useWebSocket() {
             if (!queryState?.isFetching && currentData) {
               console.log('✅ Query settled, applying immediate WebSocket update');
 
-              queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
-                if (!Array.isArray(oldData)) return oldData;
+              // Handle new alerts with user preference filtering
+              wsRef.current.onmessage = async (event) => {
+                try {
+                  const data = JSON.parse(event.data);
+                  console.log('📋 WebSocket received alert:', data.id, data.type);
 
-                console.log('📋 Cache update - Old alerts:', oldData.length);
+                  if (data.type && data.id) {
+                    // Check if user has this alert type enabled
+                    const userResponse = await fetch('/api/auth/user', { credentials: 'include' });
+                    if (userResponse.ok) {
+                      const user = await userResponse.json();
+                      if (user?.id) {
+                        // Get user preferences
+                        const prefsResponse = await fetch(`/api/user-settings/${user.id}`, { credentials: 'include' });
+                        if (prefsResponse.ok) {
+                          const userSettings = await prefsResponse.json();
+                          const alertTypeEnabled = userSettings.some((setting: any) => 
+                            setting.alertType === data.type && setting.enabled
+                          );
 
-                // Check if alert already exists
-                const existingAlert = oldData.find((alert: any) => 
-                  alert.id === message.alert.id || alert.alertKey === message.alert.id
-                );
+                          if (!alertTypeEnabled) {
+                            console.log(`🚫 Alert type ${data.type} disabled for user - skipping`);
+                            return;
+                          }
+                        }
+                      }
+                    }
 
-                if (existingAlert) {
-                  console.log('📋 Cache update - Alert already exists, skipping');
-                  return oldData;
+                    queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
+                      if (!Array.isArray(oldData)) return oldData;
+
+                      console.log('📋 Cache update - Old alerts:', oldData.length);
+
+                      // Check if alert already exists
+                      const existingAlert = oldData.find((alert: any) => 
+                        alert.id === data.id || alert.alertKey === data.id
+                      );
+
+                      if (existingAlert) {
+                        console.log('📋 Cache update - Alert already exists, skipping');
+                        return oldData;
+                      }
+
+                      // Transform WebSocket alert to match frontend format
+                      const transformedAlert = {
+                        id: data.id || data.alertKey,
+                        alertKey: data.alertKey || data.id,
+                        type: data.type || data.alertType,
+                        sport: data.sport,
+                        gameId: data.gameId,
+                        message: data.payload?.message || 'New alert',
+                        title: data.payload?.message || 'New alert',
+                        description: data.payload?.message || 'New alert',
+                        homeTeam: data.payload?.context?.homeTeam || 'Home Team',
+                        awayTeam: data.payload?.context?.awayTeam || 'Away Team',
+                        homeScore: data.payload?.context?.homeScore || 0,
+                        awayScore: data.payload?.context?.awayScore || 0,
+                        priority: data.score || 50,
+                        confidence: data.score || 50,
+                        createdAt: data.createdAt || new Date().toISOString(),
+                        timestamp: data.createdAt || new Date().toISOString(),
+                        seen: false,
+                        sentToTelegram: false,
+                        // Include context for alert footer
+                        context: data.payload?.context || {},
+                        inning: data.payload?.context?.inning,
+                        isTopInning: data.payload?.context?.isTopInning,
+                        outs: data.payload?.context?.outs,
+                        balls: data.payload?.context?.balls,
+                        strikes: data.payload?.context?.strikes,
+                        hasFirst: data.payload?.context?.hasFirst,
+                        hasSecond: data.payload?.context?.hasSecond,
+                        hasThird: data.payload?.context?.hasThird,
+                        // Include full payload for compatibility
+                        payload: data.payload
+                      };
+
+                      const newData = [transformedAlert, ...oldData];
+
+                      // Sort by timestamp (newest first) and limit to 100 alerts
+                      const sortedData = newData
+                        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .slice(0, 100);
+
+                      console.log('🔄 Sorted alerts:', sortedData.length);
+                      return sortedData;
+                    });
+                  }
+                } catch (error) {
+                  console.error('Error parsing WebSocket message:', error);
                 }
-
-                // Transform WebSocket alert to match frontend format
-                const transformedAlert = {
-                  id: message.alert.id || message.alert.alertKey,
-                  alertKey: message.alert.alertKey || message.alert.id,
-                  type: message.alert.type || message.alert.alertType,
-                  sport: message.alert.sport,
-                  gameId: message.alert.gameId,
-                  message: message.alert.payload?.message || 'New alert',
-                  title: message.alert.payload?.message || 'New alert',
-                  description: message.alert.payload?.message || 'New alert',
-                  homeTeam: message.alert.payload?.context?.homeTeam || 'Home Team',
-                  awayTeam: message.alert.payload?.context?.awayTeam || 'Away Team',
-                  homeScore: message.alert.payload?.context?.homeScore || 0,
-                  awayScore: message.alert.payload?.context?.awayScore || 0,
-                  priority: message.alert.score || 50,
-                  confidence: message.alert.score || 50,
-                  createdAt: message.alert.createdAt || new Date().toISOString(),
-                  timestamp: message.alert.createdAt || new Date().toISOString(),
-                  seen: false,
-                  sentToTelegram: false,
-                  // Include context for alert footer
-                  context: message.alert.payload?.context || {},
-                  inning: message.alert.payload?.context?.inning,
-                  isTopInning: message.alert.payload?.context?.isTopInning,
-                  outs: message.alert.payload?.context?.outs,
-                  balls: message.alert.payload?.context?.balls,
-                  strikes: message.alert.payload?.context?.strikes,
-                  hasFirst: message.alert.payload?.context?.hasFirst,
-                  hasSecond: message.alert.payload?.context?.hasSecond,
-                  hasThird: message.alert.payload?.context?.hasThird,
-                  // Include full payload for compatibility
-                  payload: message.alert.payload
-                };
-
-                const newData = [transformedAlert, ...oldData];
-
-                // Sort by timestamp (newest first) and limit to 100 alerts
-                const sortedData = newData
-                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .slice(0, 100);
-
-                console.log('🔄 Sorted alerts:', sortedData.length);
-                return sortedData;
-              });
+              };
             } else {
               console.log('⏳ Query is loading or no data, WebSocket update queued for next refetch');
             }

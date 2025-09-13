@@ -12,6 +12,8 @@ import { AlertGenerator } from "./services/alert-generator";
 import { requestDeduplicator } from "./middleware/request-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { pool } from "./db";
+import { alertsTable, settings, eq, desc } from "./db/schema";
+
 // Extend session data interface
 declare module 'express-session' {
   interface SessionData {
@@ -60,10 +62,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/admin/test-scoring-alerts', async (req, res) => {
     try {
       console.log('🧪 TEST ENDPOINT CALLED - Starting MLB alert system test');
-      
+
       // Import MLBEngine for testing
       const { MLBEngine } = await import('./services/engines/mlb-engine');
-      
+
       // Create test scenarios with realistic scoring opportunities
       const testScenarios = [
         {
@@ -72,7 +74,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             gameId: "test_bases_loaded_777001",
             sport: "MLB",
             homeTeam: "Boston Red Sox",
-            awayTeam: "New York Yankees", 
+            awayTeam: "New York Yankees",
             homeScore: 3,
             awayScore: 2,
             status: "live",
@@ -140,27 +142,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Initialize MLB Engine and load alert modules
       const mlbEngine = new MLBEngine();
-      
+
       // Load the key alert modules we want to test
       const testAlertTypes = [
         'MLB_BASES_LOADED_NO_OUTS',
-        'MLB_RUNNER_ON_THIRD_NO_OUTS', 
+        'MLB_RUNNER_ON_THIRD_NO_OUTS',
         'MLB_SEVENTH_INNING_STRETCH'
       ];
-      
+
       console.log(`🧪 Initializing MLB engine with alert modules: ${testAlertTypes.join(', ')}`);
       await mlbEngine.initializeUserAlertModules(testAlertTypes);
 
       // Test each scenario and collect results
       const results = [];
-      
+
       for (const scenario of testScenarios) {
         console.log(`🧪 Testing scenario: ${scenario.name}`);
-        
+
         try {
           const alerts = await mlbEngine.generateLiveAlerts(scenario.gameState);
           console.log(`🧪 Generated ${alerts.length} alerts for ${scenario.name}`);
-          
+
           results.push({
             scenario: scenario.name,
             gameState: {
@@ -178,7 +180,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             })),
             success: alerts.length > 0
           });
-          
+
         } catch (error) {
           console.error(`🧪 Error testing ${scenario.name}:`, error);
           results.push({
@@ -194,9 +196,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Summary statistics
       const totalAlerts = results.reduce((sum, r) => sum + r.alertsGenerated, 0);
       const successfulScenarios = results.filter(r => r.success).length;
-      
+
       console.log(`🧪 TEST COMPLETE: ${totalAlerts} total alerts generated from ${successfulScenarios} successful scenarios`);
-      
+
       res.json({
         summary: {
           timestamp: new Date().toISOString(),
@@ -216,10 +218,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         testResults: results,
         alertTypesAvailable: testAlertTypes
       });
-      
+
     } catch (error: any) {
       console.error('❌ Error in test-scoring-alerts:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: error.message,
         summary: {
           systemStatus: "ERROR",
@@ -235,11 +237,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/admin/enable-master-alerts', async (req, res) => {
     try {
       console.log('🔧 Admin: Enabling master alerts globally...');
-      
+
       // Enable all MLB alert types in global settings
       const mlbAlerts = [
         'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH', 
+        'MLB_SEVENTH_INNING_STRETCH',
         'MLB_RUNNER_ON_THIRD_NO_OUTS',
         'MLB_FIRST_AND_THIRD_NO_OUTS',
         'MLB_SECOND_AND_THIRD_NO_OUTS',
@@ -250,7 +252,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         'MLB_BASES_LOADED_ONE_OUT',
         'MLB_BATTER_DUE',
         'MLB_STEAL_LIKELIHOOD',
-        'MLB_ON_DECK_PREDICTION', 
+        'MLB_ON_DECK_PREDICTION',
         'MLB_WIND_CHANGE'
       ];
 
@@ -276,8 +278,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       });
     } catch (error: any) {
       console.error('❌ Error enabling master alerts:', error);
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         error: error.message,
         message: 'Failed to enable master alerts'
       });
@@ -288,15 +290,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/admin/enable-first-and-second', async (req, res) => {
     try {
       console.log('🔧 Admin: Enabling MLB_FIRST_AND_SECOND for all users...');
-      
+
       // Enable globally first
       await storage.enableGlobalAlert('MLB', 'MLB_FIRST_AND_SECOND');
       console.log('✅ MLB_FIRST_AND_SECOND enabled globally');
-      
+
       // Enable for all existing users
       const users = await storage.getAllUsers();
       let userCount = 0;
-      
+
       for (const user of users) {
         try {
           await storage.enableUserAlert(user.id, 'MLB', 'MLB_FIRST_AND_SECOND');
@@ -317,8 +319,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       });
     } catch (error: any) {
       console.error('❌ Error enabling MLB_FIRST_AND_SECOND:', error);
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         error: error.message,
         message: 'Failed to enable MLB_FIRST_AND_SECOND'
       });
@@ -328,7 +330,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Request deduplication and memory management are handled by middleware above
 
   // WebSocket server for real-time alerts
-  const wss = new WebSocketServer({ 
+  const wss = new WebSocketServer({
     server: httpServer,
     path: '/realtime-alerts'
   });
@@ -464,7 +466,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   asyncAIProcessor.setOnEnhancedAlert(async (enhancedAlert, userId, sport, wasActuallyEnhanced) => {
     const enhancementStatus = wasActuallyEnhanced ? 'AI Enhanced' : 'Gated (No AI)';
     console.log(`📝 Alert generated (${enhancementStatus}): ${sport} ${enhancedAlert.type}`);
-    
+
     // Broadcast the enhanced alert to all connected WebSocket clients
     broadcast({
       type: 'new_alert',
@@ -496,9 +498,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   console.log('🚀 AsyncAIProcessor integrated with WebSocket broadcast system');
 
   // Basic health check
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
+  app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
   // Environment and database diagnostics endpoint for production debugging
   app.get('/api/environment-status', async (req, res) => {
@@ -588,7 +588,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const isProduction = process.env.NODE_ENV === 'production';
       const hasUsers = diagnostics.database.userCount > 0;
       const likelyEnvironment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
-      
+
       diagnostics.analysis = {
         likelyEnvironment,
         hasUserData: hasUsers,
@@ -601,12 +601,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (!diagnostics.database.connected) {
         diagnostics.analysis.recommendations.push('Database connection failed - check DATABASE_URL');
       }
-      
+
       if (diagnostics.database.userCount === 0) {
         diagnostics.analysis.recommendations.push('No users found - likely empty production database');
         diagnostics.analysis.recommendations.push('Consider data migration from development to production');
       }
-      
+
       if (!diagnostics.session.authenticated) {
         diagnostics.analysis.recommendations.push('User not authenticated - check session/login status');
       }
@@ -1751,6 +1751,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
 
       // Get current user from session
       const currentUserId = req.session?.userId;
@@ -1778,7 +1779,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (isDemoUser) {
         console.log(`🎯 DEMO USER: Fetching demo alerts only`);
         const demoAlerts = await storage.getDemoAlerts();
-        
+
         if (!demoAlerts || demoAlerts.length === 0) {
           console.log(`📝 No demo alerts found`);
           res.json([]);
@@ -2061,9 +2062,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       let totalEngines = 0;
       const responseTimes: number[] = [];
+      const sportsToMonitor = ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL']; // Include CFL
 
-      for (const [sport, engine] of Object.entries(engines)) {
+      for (const sport of sportsToMonitor) {
         try {
+          const engine = engines[sport.toLowerCase() as keyof typeof engines];
+          if (!engine) {
+            console.warn(`Engine not found for sport: ${sport}`);
+            continue;
+          }
           const metrics = engine.getPerformanceMetrics();
           sportMetrics[sport.toUpperCase()] = metrics;
 
@@ -2084,7 +2091,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             avgResponseTime = (metrics as any).performance.avgResponseTime || 0;
             cacheHitRate = (metrics as any).performance.cacheHitRate || 0;
           } else {
-            // Flattened format (NCAAF, etc.)
+            // Flattened format (NCAAF, CFL, etc.)
             totalRequests = (metrics as any).totalRequests || 0;
             totalAlerts = (metrics as any).totalAlerts || 0;
             cacheHits = (metrics as any).cacheHits || 0;
@@ -2186,7 +2193,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Real-time performance warnings
       const performanceWarnings: any[] = [];
       responseTimes.forEach((time, index) => {
-        const sport = Object.keys(engines)[index];
+        const sport = sportsToMonitor[index];
         if (time > 250) {
           performanceWarnings.push({
             sport: sport.toUpperCase(),
@@ -2201,6 +2208,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         timestamp: new Date().toISOString(),
         summary: {
           totalSports: totalEngines,
+          totalSportsMonitored: sportsToMonitor.length,
           totalRequests: aggregatedStats.totalRequests,
           totalAlerts: aggregatedStats.totalAlerts,
           avgResponseTime: Math.round(aggregatedStats.avgResponseTime * 100) / 100,
@@ -2520,6 +2528,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         timestamp: new Date().toISOString(),
         summary: {
           totalSports: totalEngines,
+          totalSportsMonitored: sportsToMonitor.length,
           totalRequests: aggregatedStats.totalRequests,
           totalAlerts: aggregatedStats.totalAlerts,
           avgResponseTime: Math.round(aggregatedStats.avgResponseTime * 100) / 100,
@@ -3770,7 +3779,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Import health monitor
   const { getHealthMonitor } = await import('./services/alert-health-monitor');
   const healthMonitor = getHealthMonitor();
-  
+
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
@@ -3788,7 +3797,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Initialize health monitor with alert generator and interval
   healthMonitor.initialize(alertGenerator, monitoringInterval);
-  
+
   // Store monitoring interval globally for graceful shutdown cleanup
   (global as any).setMonitoringInterval(monitoringInterval);
 
@@ -3801,13 +3810,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { getHealthMonitor } = await import('./services/alert-health-monitor');
       const healthMonitor = getHealthMonitor();
       const healthStatus = healthMonitor.getHealthStatus();
-      
+
       // Determine HTTP status code based on health
       let statusCode = 200;
       if (healthStatus.status === 'critical') statusCode = 503;
       else if (healthStatus.status === 'unhealthy') statusCode = 500;
       else if (healthStatus.status === 'degraded') statusCode = 207;
-      
+
       res.status(statusCode).json({
         status: healthStatus.status,
         summary: healthStatus.summary,
@@ -3836,20 +3845,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       });
     }
   });
-  
+
   // Force recovery endpoint (admin only)
   app.post('/api/health/alerts/recover', async (req, res) => {
     try {
       if (!req.session.adminUserId) {
         return res.status(401).json({ message: 'Admin authentication required' });
       }
-      
+
       const { getHealthMonitor } = await import('./services/alert-health-monitor');
       const healthMonitor = getHealthMonitor();
-      
+
       console.log('🔧 Admin requested manual alert system recovery');
       await healthMonitor.forceRecovery();
-      
+
       res.json({
         success: true,
         message: 'Alert system recovery initiated',
@@ -3864,7 +3873,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       });
     }
   });
-  
+
   app.get('/api/v3/performance-metrics', async (req, res) => {
     try {
       if (!req.session.adminUserId) {
@@ -3874,7 +3883,1389 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Get comprehensive V3 performance data
       const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
       // Polling stats placeholder for admin metrics endpoint
-      const pollingStats = { 
+      const pollingStats = {
+        activeSports: 0,
+        liveGames: 0,
+        scheduledGames: 0,
+        totalGames: 0,
+        finalGames: 0,
+        delayedGames: 0,
+        suspendedGames: 0,
+        criticalGames: 0,
+        highPriorityGames: 0,
+        individualPollingActive: false
+      };
+
+      // Calculate system health indicators
+      // avgProcessingTime is already a number from getPerformanceMetrics()
+      const avgProcessingTime = aiMetrics.avgProcessingTime || 0;
+
+      const cacheHitRate = (aiMetrics.cacheHits + aiMetrics.cacheMisses) > 0
+        ? Math.round((aiMetrics.cacheHits / (aiMetrics.cacheHits + aiMetrics.cacheMisses)) * 100)
+        : 0;
+
+      const systemHealthScore = Math.min(100, Math.max(0,
+        100 - (aiMetrics.failedJobs / Math.max(1, aiMetrics.totalJobs) * 50) -
+        (avgProcessingTime > 250 ? 20 : 0) +
+        (cacheHitRate > 80 ? 15 : 0)
+      ));
+
+      const v3Metrics = {
+        summary: {
+          systemHealth: systemHealthScore > 90 ? "Excellent" : systemHealthScore > 75 ? "Good" : "Fair",
+          systemHealthScore: Math.round(systemHealthScore),
+          avgResponseTime: `${avgProcessingTime}ms`,
+          aiCacheHitRate: cacheHitRate,
+          totalSportsEngines: 6,
+          timestamp: new Date().toISOString()
+        },
+        aiEnhancement: {
+          totalJobs: aiMetrics.totalJobs,
+          completedJobs: aiMetrics.completedJobs,
+          failedJobs: aiMetrics.failedJobs,
+          timeoutJobs: aiMetrics.timeoutJobs,
+          queuedJobs: aiMetrics.queuedJobs,
+          processingJobs: aiMetrics.processingJobs,
+          avgProcessingTime: avgProcessingTime,
+          cacheHits: aiMetrics.cacheHits,
+          cacheMisses: aiMetrics.cacheMisses,
+          cacheHitRate: cacheHitRate,
+          gatedAlerts: aiMetrics.gatedAlerts,
+          highValueAlerts: aiMetrics.highValueAlerts
+        },
+        gamePolling: {
+          totalGames: pollingStats.totalGames,
+          liveGames: pollingStats.liveGames,
+          scheduledGames: pollingStats.scheduledGames,
+          finalGames: pollingStats.finalGames,
+          delayedGames: pollingStats.delayedGames,
+          suspendedGames: pollingStats.suspendedGames,
+          criticalGames: pollingStats.criticalGames,
+          highPriorityGames: pollingStats.highPriorityGames,
+          individualPollingActive: pollingStats.individualPollingActive
+        },
+        engines: {
+          mlb: { status: "active", responseTime: "<180ms", description: "Official MLB.com API" },
+          nfl: { status: "active", responseTime: "<220ms", description: "ESPN API Integration" },
+          ncaaf: { status: "active", responseTime: "<240ms", description: "ESPN College Football" },
+          nba: { status: "active", responseTime: "<210ms", description: "ESPN NBA Integration" },
+          wnba: { status: "active", responseTime: "<230ms", description: "ESPN WNBA Integration" },
+          cfl: { status: "active", responseTime: "<250ms", description: "ESPN CFL Integration" }
+        },
+        crossSportFeatures: {
+          asyncAIProcessing: "✅ 0ms cache hits",
+          weatherIntegration: "✅ Real-time conditions",
+          unifiedPolling: "✅ Adaptive intervals",
+          intelligentCaching: "✅ 30s TTL optimization",
+          webSocketBroadcasting: "✅ Real-time alerts",
+          performanceDashboard: "✅ Admin monitoring"
+        }
+      };
+
+      res.json(v3Metrics);
+    } catch (error: any) {
+      console.error('Error fetching V3 performance metrics:', error);
+      res.status(500).json({
+        error: 'Failed to fetch V3 performance metrics',
+        details: error.message
+      });
+    }
+  });
+
+  app.post('/api/admin/logout', (req, res) => {
+    req.session.adminUserId = undefined;
+    res.json({ message: 'Admin logout successful' });
+  });
+
+  // Alias route for admin dashboard compatibility - client expects /api/admin-auth/logout
+  app.post('/api/admin-auth/logout', (req, res) => {
+    req.session.adminUserId = undefined;
+    res.json({ message: 'Admin logout successful' });
+  });
+
+  // Check if admin users exist (public endpoint for troubleshooting)
+  app.get('/api/admin-auth/check', async (req, res) => {
+    try {
+      const adminUsers = await storage.getUsersByRole('admin');
+      res.json({
+        hasAdminUsers: adminUsers.length > 0,
+        adminCount: adminUsers.length,
+        adminUsernames: adminUsers.map(u => u.username)
+      });
+    } catch (error) {
+      console.error('Error checking admin users:', error);
+      res.status(500).json({ message: 'Error checking admin users' });
+    }
+  });
+
+  // Debug endpoint to diagnose cookie/session issues
+  app.get('/api/admin-auth/debug', async (req, res) => {
+    const cookieHeader = req.headers.cookie || 'none';
+    const hasCbSid = cookieHeader.includes('cb.sid');
+    const hasConnectSid = cookieHeader.includes('connect.sid');
+
+    res.json({
+      host: req.hostname,
+      origin: req.headers.origin || 'none',
+      cookiePresent: hasCbSid || hasConnectSid,
+      cookieType: hasCbSid ? 'cb.sid' : hasConnectSid ? 'connect.sid' : 'none',
+      sessionId: req.sessionID ? req.sessionID.slice(0, 8) + '...' : 'none',
+      adminUserId: req.session?.adminUserId || 'none',
+      userId: req.session?.userId || 'none',
+      authenticated: !!(req.session?.adminUserId || req.session?.userId),
+      headers: {
+        host: req.headers.host,
+        origin: req.headers.origin || 'none',
+        referer: req.headers.referer || 'none'
+      }
+    });
+  });
+
+  // Global Alert Management Endpoints
+  app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport } = req.params;
+
+      // Get the global settings from storage
+      const settings = await storage.getGlobalAlertSettings(sport);
+
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching global alert settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global alert settings' });
+    }
+  });
+
+  // Health check endpoint for monitoring and auto-recovery
+  app.get('/api/health', async (req, res) => {
+    try {
+      // Basic health check - server is responding
+      const memUsage = process.memoryUsage();
+      const memPercent = memUsage.heapUsed / memUsage.heapTotal;
+
+      // Get deduplication stats
+      const dedupeStats = requestDeduplicator.getStats();
+
+      // Get circuit breaker stats
+      const { mlbApiCircuit, espnApiCircuit, weatherApiCircuit } = await import('./middleware/circuit-breaker');
+      const circuitBreakerStatus = {
+        mlbApi: mlbApiCircuit.getStatus(),
+        espnApi: espnApiCircuit.getStatus(),
+        weatherApi: weatherApiCircuit.getStatus()
+      };
+
+      // Get memory management stats
+      const memoryStats = memoryManager.getStats();
+
+      const healthStatus = {
+        status: memPercent > 0.9 ? 'degraded' : 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: {
+          ...memUsage,
+          percentage: Math.round(memPercent * 100),
+          management: memoryStats
+        },
+        pid: process.pid,
+        deduplication: {
+          ...dedupeStats,
+          effectiveness: dedupeStats.cacheSize > 0 ?
+            `Serving ${dedupeStats.cacheSize} cached responses` : 'No cached responses yet'
+        },
+        circuitBreakers: circuitBreakerStatus
+      };
+
+      res.status(200).json(healthStatus);
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(503).json({
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Get available alert types from cylinders - accessible to all authenticated users
+  app.get('/api/available-alerts/:sport', async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { sport } = req.params;
+
+      try {
+        let availableAlerts: string[] = [];
+
+        // Get available alert types from the specific sport engine
+        if (sport.toUpperCase() === 'NCAAF') {
+          const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+          const tempEngine = new NCAAFEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+          console.log(`🔍 NCAAF Engine returned ${availableAlerts.length} alert types:`, availableAlerts);
+        } else if (sport.toUpperCase() === 'MLB') {
+          const { MLBEngine } = await import('./services/engines/mlb-engine');
+          const tempEngine = new MLBEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else if (sport.toUpperCase() === 'NFL') {
+          const { NFLEngine } = await import('./services/engines/nfl-engine');
+          const tempEngine = new NFLEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+          console.log(`🔍 NFL Engine returned ${availableAlerts.length} alert types:`, availableAlerts);
+        } else if (sport.toUpperCase() === 'WNBA') {
+          const { WNBAEngine } = await import('./services/engines/wnba-engine');
+          const tempEngine = new WNBAEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else if (sport.toUpperCase() === 'CFL') {
+          const { CFLEngine } = await import('./services/engines/cfl-engine');
+          const tempEngine = new CFLEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else {
+          // Fallback to base engine for other sports
+          const { BaseSportEngine } = await import('./services/engines/base-engine');
+          const tempEngine = new (class extends BaseSportEngine {
+            async calculateProbability() { return 0; }
+          })(sport.toUpperCase());
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        }
+
+        // Get global settings but show all alerts (don't filter out disabled ones)
+        const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
+
+        // Convert to the format expected by the frontend, including globally disabled alerts
+        const alertConfig = availableAlerts.map(alertType => {
+          const isGloballyEnabled = globalSettings[alertType] === true;
+          const displayName = alertType
+            .replace(`${sport.toUpperCase()}_`, '')
+            .split('_')
+            .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+            .join(' ');
+
+          return {
+            key: alertType,
+            label: displayName,
+            description: `${displayName} alerts for ${sport.toUpperCase()} games`,
+            globallyEnabled: isGloballyEnabled
+          };
+        });
+
+        const globallyEnabledCount = alertConfig.filter(alert => alert.globallyEnabled).length;
+        console.log(`📋 Available alerts for ${sport.toUpperCase()}: ${globallyEnabledCount}/${availableAlerts.length} globally enabled, ${availableAlerts.length - globallyEnabledCount} globally disabled`);
+        res.json(alertConfig);
+      } catch (error) {
+        console.error(`❌ Error getting available alerts for ${sport}:`, error);
+        res.json([]); // Return empty array if no cylinders found
+      }
+    } catch (error) {
+      console.error('Error fetching available alerts:', error);
+      res.status(500).json({ message: 'Failed to fetch available alerts' });
+    }
+  });
+
+  app.get('/api/admin/master-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const enabled = await storage.getMasterAlertEnabled();
+      res.json({ enabled });
+    } catch (error) {
+      console.error('Error fetching master alerts status:', error);
+      res.status(500).json({ message: 'Failed to fetch master alerts status' });
+    }
+  });
+
+  app.put('/api/admin/master-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { enabled } = req.body;
+
+      // Actually persist the master alerts setting to the database
+      await storage.setMasterAlertEnabled(enabled, req.session.adminUserId);
+
+      res.json({
+        message: `Master alerts ${enabled ? 'enabled' : 'disabled'} successfully`,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating master alerts:', error);
+      res.status(500).json({ message: 'Failed to update master alerts' });
+    }
+  });
+
+  app.put('/api/admin/global-alert-category', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, category, alertKeys, enabled } = req.body;
+
+      // Update the category settings which will apply to all users
+      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
+
+      res.json({
+        message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
+        sport,
+        category,
+        alertKeys,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating category settings:', error);
+      res.status(500).json({ message: 'Failed to update category settings' });
+    }
+  });
+
+  app.put('/api/admin/global-alert-setting', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, alertType, enabled } = req.body;
+
+      // Update the global setting which will apply to all users
+      await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
+
+      res.json({
+        message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
+        sport,
+        alertType,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating alert setting:', error);
+      res.status(500).json({ message: 'Failed to update alert setting' });
+    }
+  });
+
+  // Global settings endpoint for user settings page
+  app.get('/api/admin/global-settings', async (req, res) => {
+    try {
+      // This endpoint should return the same data as the sport-specific endpoint
+      // but for all sports. For now, return MLB settings since that's what's being used
+      const mlbSettings = await storage.getGlobalAlertSettings('MLB');
+      res.json(mlbSettings);
+    } catch (error) {
+      console.error('Error fetching global settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global settings' });
+    }
+  });
+
+  // Quick fix endpoint to enable critical MLB alerts
+  app.post('/api/admin/quick-enable-mlb', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const criticalAlerts = [
+        'MLB_GAME_START',
+        'MLB_SEVENTH_INNING_STRETCH'
+      ];
+
+      const results = [];
+      for (const alertType of criticalAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'Critical MLB alerts enabled successfully',
+        enabledAlerts: results,
+        nextStep: 'Alerts should start generating within 15 seconds if you have valid Telegram credentials'
+      });
+    } catch (error) {
+      console.error('Error enabling critical alerts:', error);
+      res.status(500).json({ message: 'Failed to enable critical alerts' });
+    }
+  });
+
+  // Enable all alerts for testing
+  app.post('/api/admin/enable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const allAlerts = [
+        'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'
+      ];
+
+      const results = [];
+      for (const alertType of allAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'All MLB alerts enabled for testing',
+        enabledAlerts: results,
+        count: results.length
+      });
+    } catch (error) {
+      console.error('Error enabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to enable all alerts' });
+    }
+  });
+
+  // Disable ALL alerts across entire system
+  app.post('/api/admin/disable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      console.log('🚫 ADMIN REQUEST: Disabling all alerts globally');
+
+      // Define all alert types across all sports
+      const allAlertTypes = {
+        'MLB': [
+          'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'
+        ],
+        'NFL': [
+          'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'NCAAF': [
+          'NCAAF_GAME_START', 'NCAAF_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'NCAAF_TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'CFL': [
+          'CFL_GAME_START', 'CFL_TWO_MINUTE_WARNING', 'CFL_FOURTH_QUARTER',
+          'CFL_FINAL_MINUTES', 'CFL_GREY_CUP_IMPLICATIONS', 'CFL_THIRD_DOWN_SITUATION',
+          'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME'
+        ],
+        'WNBA': [
+          'WNBA_GAME_START', 'WNBA_FOURTH_QUARTER', 'WNBA_CLOSE_GAME', 'WNBA_OVERTIME',
+          'WNBA_HIGH_SCORING', 'WNBA_COMEBACK', 'WNBA_CLUTCH_PERFORMANCE', 'WNBA_TWO_MINUTE_WARNING'
+        ],
+        'NBA': [
+          'NBA_FOURTH_QUARTER', 'NBA_CLOSE_GAME', 'NBA_OVERTIME',
+          'NBA_HIGH_SCORING', 'NBA_COMEBACK', 'NBA_CLUTCH_PERFORMANCE'
+        ],
+        'NHL': [
+          'NHL_THIRD_PERIOD', 'NHL_CLOSE_GAME', 'NHL_OVERTIME',
+          'NHL_POWER_PLAY', 'NHL_PENALTY_KILL', 'NHL_CLUTCH_PERFORMANCE'
+        ]
+      };
+
+      let totalDisabled = 0;
+      const results = [];
+
+      // Disable all alert types globally
+      for (const [sport, alertTypes] of Object.entries(allAlertTypes)) {
+        for (const alertType of alertTypes) {
+          try {
+            await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
+            results.push({ sport, alertType, disabled: true });
+            totalDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable ${sport}.${alertType}:`, error);
+            results.push({ sport, alertType, disabled: false, error: (error as Error).message });
+          }
+        }
+      }
+
+      // Disable Telegram for all users
+      const allUsers = await storage.getAllUsers();
+      let telegramDisabled = 0;
+
+      for (const user of allUsers) {
+        if (user.telegramEnabled) {
+          try {
+            await storage.updateUserTelegramSettings(user.id, '', '', false);
+            telegramDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable Telegram for user ${user.username}:`, error);
+          }
+        }
+      }
+
+      res.json({
+        message: 'ALL alert features disabled globally',
+        summary: {
+          alertTypesDisabled: totalDisabled,
+          telegramUsersDisabled: telegramDisabled,
+          totalUsers: allUsers.length
+        },
+        details: results,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`✅ Successfully disabled ${totalDisabled} alert types and ${telegramDisabled} Telegram configurations`);
+
+    } catch (error) {
+      console.error('Error disabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to disable all alerts' });
+    }
+  });
+
+  // Reset global alert settings to defaults (clears all database overrides)
+  app.post('/api/admin/reset-global-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport } = req.body;
+      if (!sport) {
+        return res.status(400).json({ message: 'Sport parameter is required' });
+      }
+
+      console.log(`🔄 Admin resetting global alerts to defaults for ${sport}`);
+
+      // Clear all existing global settings for this sport to use defaults
+      await storage.clearGlobalAlertSettings(sport.toUpperCase());
+
+      // Get defaults will now return the default values since no database overrides exist
+      const defaults = await storage.getGlobalAlertSettings(sport.toUpperCase());
+      const enabledCount = Object.values(defaults).filter(enabled => enabled).length;
+
+      res.json({
+        message: `Global alert settings reset to defaults for ${sport.toUpperCase()}`,
+        sport: sport.toUpperCase(),
+        enabledCount,
+        settings: defaults
+      });
+    } catch (error) {
+      console.error('Error resetting global alerts:', error);
+      res.status(500).json({ message: 'Failed to reset global alerts' });
+    }
+  });
+
+  app.put('/api/admin/apply-global-settings', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, settings } = req.body;
+
+      // Use the storage method to apply settings to all users
+      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
+
+      res.json({
+        message: `Global settings applied to ${result.usersUpdated} users successfully`,
+        sport,
+        ...result
+      });
+    } catch (error) {
+      console.error('Error applying global settings:', error);
+      res.status(500).json({ message: 'Failed to apply global settings' });
+    }
+  });
+
+
+  // Import health monitor
+  const { getHealthMonitor } = await import('./services/alert-health-monitor');
+  const healthMonitor = getHealthMonitor();
+
+  // Generate alerts from today's completed games
+  const alertGenerator = new AlertGenerator();
+  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
+
+  // Start live game monitoring with robust error handling
+  const monitoringInterval = setInterval(async () => {
+    try {
+      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+      await alertGenerator.generateLiveGameAlerts();
+    } catch (error: any) {
+      console.error('⚠️ Non-critical error in live monitoring:', error.message);
+      // Don't crash - just continue monitoring
+    }
+  }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
+
+  // Initialize health monitor with alert generator and interval
+  healthMonitor.initialize(alertGenerator, monitoringInterval);
+
+  // Store monitoring interval globally for graceful shutdown cleanup
+  (global as any).setMonitoringInterval(monitoringInterval);
+
+  console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
+
+  // V3 Performance Metrics API (admin-only)
+  // Health check endpoint for alert generation system
+  app.get('/api/health/alerts', async (req, res) => {
+    try {
+      const { getHealthMonitor } = await import('./services/alert-health-monitor');
+      const healthMonitor = getHealthMonitor();
+      const healthStatus = healthMonitor.getHealthStatus();
+
+      // Determine HTTP status code based on health
+      let statusCode = 200;
+      if (healthStatus.status === 'critical') statusCode = 503;
+      else if (healthStatus.status === 'unhealthy') statusCode = 500;
+      else if (healthStatus.status === 'degraded') statusCode = 207;
+
+      res.status(statusCode).json({
+        status: healthStatus.status,
+        summary: healthStatus.summary,
+        recommendations: healthStatus.recommendations,
+        metrics: {
+          checksPerformed: healthStatus.checksPerformed,
+          alertsGenerated: healthStatus.alertsGenerated,
+          lastCheckTime: healthStatus.lastCheckTime,
+          lastAlertTime: healthStatus.lastAlertGeneratedTime,
+          timeSinceLastCheck: healthStatus.timeSinceLastCheck,
+          timeSinceLastAlert: healthStatus.timeSinceLastAlert,
+          consecutiveFailures: healthStatus.consecutiveFailures,
+          uptimeSeconds: healthStatus.uptimeSeconds,
+          memoryUsageMB: healthStatus.memoryUsageMB,
+          isAutoRecovering: healthStatus.isAutoRecovering,
+          recoveryAttempts: healthStatus.recoveryAttempts
+        },
+        lastError: healthStatus.lastError
+      });
+    } catch (error: any) {
+      console.error('Error fetching health status:', error);
+      res.status(500).json({
+        status: 'error',
+        error: error.message,
+        summary: 'Failed to fetch health status'
+      });
+    }
+  });
+
+  // Force recovery endpoint (admin only)
+  app.post('/api/health/alerts/recover', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { getHealthMonitor } = await import('./services/alert-health-monitor');
+      const healthMonitor = getHealthMonitor();
+
+      console.log('🔧 Admin requested manual alert system recovery');
+      await healthMonitor.forceRecovery();
+
+      res.json({
+        success: true,
+        message: 'Alert system recovery initiated',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error forcing recovery:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: 'Failed to initiate recovery'
+      });
+    }
+  });
+
+  app.get('/api/v3/performance-metrics', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      // Get comprehensive V3 performance data
+      const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
+      // Polling stats placeholder for admin metrics endpoint
+      const pollingStats = {
+        activeSports: 0,
+        liveGames: 0,
+        scheduledGames: 0,
+        totalGames: 0,
+        finalGames: 0,
+        delayedGames: 0,
+        suspendedGames: 0,
+        criticalGames: 0,
+        highPriorityGames: 0,
+        individualPollingActive: false
+      };
+
+      // Calculate system health indicators
+      // avgProcessingTime is already a number from getPerformanceMetrics()
+      const avgProcessingTime = aiMetrics.avgProcessingTime || 0;
+
+      const cacheHitRate = (aiMetrics.cacheHits + aiMetrics.cacheMisses) > 0
+        ? Math.round((aiMetrics.cacheHits / (aiMetrics.cacheHits + aiMetrics.cacheMisses)) * 100)
+        : 0;
+
+      const systemHealthScore = Math.min(100, Math.max(0,
+        100 - (aiMetrics.failedJobs / Math.max(1, aiMetrics.totalJobs) * 50) -
+        (avgProcessingTime > 250 ? 20 : 0) +
+        (cacheHitRate > 80 ? 15 : 0)
+      ));
+
+      const v3Metrics = {
+        summary: {
+          systemHealth: systemHealthScore > 90 ? "Excellent" : systemHealthScore > 75 ? "Good" : "Fair",
+          systemHealthScore: Math.round(systemHealthScore),
+          avgResponseTime: `${avgProcessingTime}ms`,
+          aiCacheHitRate: cacheHitRate,
+          totalSportsEngines: 6,
+          timestamp: new Date().toISOString()
+        },
+        aiEnhancement: {
+          totalJobs: aiMetrics.totalJobs,
+          completedJobs: aiMetrics.completedJobs,
+          failedJobs: aiMetrics.failedJobs,
+          timeoutJobs: aiMetrics.timeoutJobs,
+          queuedJobs: aiMetrics.queuedJobs,
+          processingJobs: aiMetrics.processingJobs,
+          avgProcessingTime: avgProcessingTime,
+          cacheHits: aiMetrics.cacheHits,
+          cacheMisses: aiMetrics.cacheMisses,
+          cacheHitRate: cacheHitRate,
+          gatedAlerts: aiMetrics.gatedAlerts,
+          highValueAlerts: aiMetrics.highValueAlerts
+        },
+        gamePolling: {
+          totalGames: pollingStats.totalGames,
+          liveGames: pollingStats.liveGames,
+          scheduledGames: pollingStats.scheduledGames,
+          finalGames: pollingStats.finalGames,
+          delayedGames: pollingStats.delayedGames,
+          suspendedGames: pollingStats.suspendedGames,
+          criticalGames: pollingStats.criticalGames,
+          highPriorityGames: pollingStats.highPriorityGames,
+          individualPollingActive: pollingStats.individualPollingActive
+        },
+        engines: {
+          mlb: { status: "active", responseTime: "<180ms", description: "Official MLB.com API" },
+          nfl: { status: "active", responseTime: "<220ms", description: "ESPN API Integration" },
+          ncaaf: { status: "active", responseTime: "<240ms", description: "ESPN College Football" },
+          nba: { status: "active", responseTime: "<210ms", description: "ESPN NBA Integration" },
+          wnba: { status: "active", responseTime: "<230ms", description: "ESPN WNBA Integration" },
+          cfl: { status: "active", responseTime: "<250ms", description: "ESPN CFL Integration" }
+        },
+        crossSportFeatures: {
+          asyncAIProcessing: "✅ 0ms cache hits",
+          weatherIntegration: "✅ Real-time conditions",
+          unifiedPolling: "✅ Adaptive intervals",
+          intelligentCaching: "✅ 30s TTL optimization",
+          webSocketBroadcasting: "✅ Real-time alerts",
+          performanceDashboard: "✅ Admin monitoring"
+        }
+      };
+
+      res.json(v3Metrics);
+    } catch (error: any) {
+      console.error('Error fetching V3 performance metrics:', error);
+      res.status(500).json({
+        error: 'Failed to fetch V3 performance metrics',
+        details: error.message
+      });
+    }
+  });
+
+  app.post('/api/admin/logout', (req, res) => {
+    req.session.adminUserId = undefined;
+    res.json({ message: 'Admin logout successful' });
+  });
+
+  // Alias route for admin dashboard compatibility - client expects /api/admin-auth/logout
+  app.post('/api/admin-auth/logout', (req, res) => {
+    req.session.adminUserId = undefined;
+    res.json({ message: 'Admin logout successful' });
+  });
+
+  // Check if admin users exist (public endpoint for troubleshooting)
+  app.get('/api/admin-auth/check', async (req, res) => {
+    try {
+      const adminUsers = await storage.getUsersByRole('admin');
+      res.json({
+        hasAdminUsers: adminUsers.length > 0,
+        adminCount: adminUsers.length,
+        adminUsernames: adminUsers.map(u => u.username)
+      });
+    } catch (error) {
+      console.error('Error checking admin users:', error);
+      res.status(500).json({ message: 'Error checking admin users' });
+    }
+  });
+
+  // Debug endpoint to diagnose cookie/session issues
+  app.get('/api/admin-auth/debug', async (req, res) => {
+    const cookieHeader = req.headers.cookie || 'none';
+    const hasCbSid = cookieHeader.includes('cb.sid');
+    const hasConnectSid = cookieHeader.includes('connect.sid');
+
+    res.json({
+      host: req.hostname,
+      origin: req.headers.origin || 'none',
+      cookiePresent: hasCbSid || hasConnectSid,
+      cookieType: hasCbSid ? 'cb.sid' : hasConnectSid ? 'connect.sid' : 'none',
+      sessionId: req.sessionID ? req.sessionID.slice(0, 8) + '...' : 'none',
+      adminUserId: req.session?.adminUserId || 'none',
+      userId: req.session?.userId || 'none',
+      authenticated: !!(req.session?.adminUserId || req.session?.userId),
+      headers: {
+        host: req.headers.host,
+        origin: req.headers.origin || 'none',
+        referer: req.headers.referer || 'none'
+      }
+    });
+  });
+
+  // Global Alert Management Endpoints
+  app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport } = req.params;
+
+      // Get the global settings from storage
+      const settings = await storage.getGlobalAlertSettings(sport);
+
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching global alert settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global alert settings' });
+    }
+  });
+
+  // Health check endpoint for monitoring and auto-recovery
+  app.get('/api/health', async (req, res) => {
+    try {
+      // Basic health check - server is responding
+      const memUsage = process.memoryUsage();
+      const memPercent = memUsage.heapUsed / memUsage.heapTotal;
+
+      // Get deduplication stats
+      const dedupeStats = requestDeduplicator.getStats();
+
+      // Get circuit breaker stats
+      const { mlbApiCircuit, espnApiCircuit, weatherApiCircuit } = await import('./middleware/circuit-breaker');
+      const circuitBreakerStatus = {
+        mlbApi: mlbApiCircuit.getStatus(),
+        espnApi: espnApiCircuit.getStatus(),
+        weatherApi: weatherApiCircuit.getStatus()
+      };
+
+      // Get memory management stats
+      const memoryStats = memoryManager.getStats();
+
+      const healthStatus = {
+        status: memPercent > 0.9 ? 'degraded' : 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: {
+          ...memUsage,
+          percentage: Math.round(memPercent * 100),
+          management: memoryStats
+        },
+        pid: process.pid,
+        deduplication: {
+          ...dedupeStats,
+          effectiveness: dedupeStats.cacheSize > 0 ?
+            `Serving ${dedupeStats.cacheSize} cached responses` : 'No cached responses yet'
+        },
+        circuitBreakers: circuitBreakerStatus
+      };
+
+      res.status(200).json(healthStatus);
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(503).json({
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Get available alert types from cylinders - accessible to all authenticated users
+  app.get('/api/available-alerts/:sport', async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { sport } = req.params;
+
+      try {
+        let availableAlerts: string[] = [];
+
+        // Get available alert types from the specific sport engine
+        if (sport.toUpperCase() === 'NCAAF') {
+          const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
+          const tempEngine = new NCAAFEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+          console.log(`🔍 NCAAF Engine returned ${availableAlerts.length} alert types:`, availableAlerts);
+        } else if (sport.toUpperCase() === 'MLB') {
+          const { MLBEngine } = await import('./services/engines/mlb-engine');
+          const tempEngine = new MLBEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else if (sport.toUpperCase() === 'NFL') {
+          const { NFLEngine } = await import('./services/engines/nfl-engine');
+          const tempEngine = new NFLEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+          console.log(`🔍 NFL Engine returned ${availableAlerts.length} alert types:`, availableAlerts);
+        } else if (sport.toUpperCase() === 'WNBA') {
+          const { WNBAEngine } = await import('./services/engines/wnba-engine');
+          const tempEngine = new WNBAEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else if (sport.toUpperCase() === 'CFL') {
+          const { CFLEngine } = await import('./services/engines/cfl-engine');
+          const tempEngine = new CFLEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        } else {
+          // Fallback to base engine for other sports
+          const { BaseSportEngine } = await import('./services/engines/base-engine');
+          const tempEngine = new (class extends BaseSportEngine {
+            async calculateProbability() { return 0; }
+          })(sport.toUpperCase());
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+        }
+
+        // Get global settings but show all alerts (don't filter out disabled ones)
+        const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
+
+        // Convert to the format expected by the frontend, including globally disabled alerts
+        const alertConfig = availableAlerts.map(alertType => {
+          const isGloballyEnabled = globalSettings[alertType] === true;
+          const displayName = alertType
+            .replace(`${sport.toUpperCase()}_`, '')
+            .split('_')
+            .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+            .join(' ');
+
+          return {
+            key: alertType,
+            label: displayName,
+            description: `${displayName} alerts for ${sport.toUpperCase()} games`,
+            globallyEnabled: isGloballyEnabled
+          };
+        });
+
+        const globallyEnabledCount = alertConfig.filter(alert => alert.globallyEnabled).length;
+        console.log(`📋 Available alerts for ${sport.toUpperCase()}: ${globallyEnabledCount}/${availableAlerts.length} globally enabled, ${availableAlerts.length - globallyEnabledCount} globally disabled`);
+        res.json(alertConfig);
+      } catch (error) {
+        console.error(`❌ Error getting available alerts for ${sport}:`, error);
+        res.json([]); // Return empty array if no cylinders found
+      }
+    } catch (error) {
+      console.error('Error fetching available alerts:', error);
+      res.status(500).json({ message: 'Failed to fetch available alerts' });
+    }
+  });
+
+  app.get('/api/admin/master-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const enabled = await storage.getMasterAlertEnabled();
+      res.json({ enabled });
+    } catch (error) {
+      console.error('Error fetching master alerts status:', error);
+      res.status(500).json({ message: 'Failed to fetch master alerts status' });
+    }
+  });
+
+  app.put('/api/admin/master-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { enabled } = req.body;
+
+      // Actually persist the master alerts setting to the database
+      await storage.setMasterAlertEnabled(enabled, req.session.adminUserId);
+
+      res.json({
+        message: `Master alerts ${enabled ? 'enabled' : 'disabled'} successfully`,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating master alerts:', error);
+      res.status(500).json({ message: 'Failed to update master alerts' });
+    }
+  });
+
+  app.put('/api/admin/global-alert-category', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, category, alertKeys, enabled } = req.body;
+
+      // Update the category settings which will apply to all users
+      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
+
+      res.json({
+        message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
+        sport,
+        category,
+        alertKeys,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating category settings:', error);
+      res.status(500).json({ message: 'Failed to update category settings' });
+    }
+  });
+
+  app.put('/api/admin/global-alert-setting', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, alertType, enabled } = req.body;
+
+      // Update the global setting which will apply to all users
+      await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
+
+      res.json({
+        message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
+        sport,
+        alertType,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating alert setting:', error);
+      res.status(500).json({ message: 'Failed to update alert setting' });
+    }
+  });
+
+  // Global settings endpoint for user settings page
+  app.get('/api/admin/global-settings', async (req, res) => {
+    try {
+      // This endpoint should return the same data as the sport-specific endpoint
+      // but for all sports. For now, return MLB settings since that's what's being used
+      const mlbSettings = await storage.getGlobalAlertSettings('MLB');
+      res.json(mlbSettings);
+    } catch (error) {
+      console.error('Error fetching global settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global settings' });
+    }
+  });
+
+  // Quick fix endpoint to enable critical MLB alerts
+  app.post('/api/admin/quick-enable-mlb', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const criticalAlerts = [
+        'MLB_GAME_START',
+        'MLB_SEVENTH_INNING_STRETCH'
+      ];
+
+      const results = [];
+      for (const alertType of criticalAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'Critical MLB alerts enabled successfully',
+        enabledAlerts: results,
+        nextStep: 'Alerts should start generating within 15 seconds if you have valid Telegram credentials'
+      });
+    } catch (error) {
+      console.error('Error enabling critical alerts:', error);
+      res.status(500).json({ message: 'Failed to enable critical alerts' });
+    }
+  });
+
+  // Enable all alerts for testing
+  app.post('/api/admin/enable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const allAlerts = [
+        'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'
+      ];
+
+      const results = [];
+      for (const alertType of allAlerts) {
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        results.push({ alertType, enabled: true });
+      }
+
+      res.json({
+        message: 'All MLB alerts enabled for testing',
+        enabledAlerts: results,
+        count: results.length
+      });
+    } catch (error) {
+      console.error('Error enabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to enable all alerts' });
+    }
+  });
+
+  // Disable ALL alerts across entire system
+  app.post('/api/admin/disable-all-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      console.log('🚫 ADMIN REQUEST: Disabling all alerts globally');
+
+      // Define all alert types across all sports
+      const allAlertTypes = {
+        'MLB': [
+          'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'
+        ],
+        'NFL': [
+          'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'NCAAF': [
+          'NCAAF_GAME_START', 'NCAAF_SECOND_HALF_KICKOFF', 'RED_ZONE', 'FOURTH_DOWN',
+          'NCAAF_TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
+        ],
+        'CFL': [
+          'CFL_GAME_START', 'CFL_TWO_MINUTE_WARNING', 'CFL_FOURTH_QUARTER',
+          'CFL_FINAL_MINUTES', 'CFL_GREY_CUP_IMPLICATIONS', 'CFL_THIRD_DOWN_SITUATION',
+          'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME'
+        ],
+        'WNBA': [
+          'WNBA_GAME_START', 'WNBA_FOURTH_QUARTER', 'WNBA_CLOSE_GAME', 'WNBA_OVERTIME',
+          'WNBA_HIGH_SCORING', 'WNBA_COMEBACK', 'WNBA_CLUTCH_PERFORMANCE', 'WNBA_TWO_MINUTE_WARNING'
+        ],
+        'NBA': [
+          'NBA_FOURTH_QUARTER', 'NBA_CLOSE_GAME', 'NBA_OVERTIME',
+          'NBA_HIGH_SCORING', 'NBA_COMEBACK', 'NBA_CLUTCH_PERFORMANCE'
+        ],
+        'NHL': [
+          'NHL_THIRD_PERIOD', 'NHL_CLOSE_GAME', 'NHL_OVERTIME',
+          'NHL_POWER_PLAY', 'NHL_PENALTY_KILL', 'NHL_CLUTCH_PERFORMANCE'
+        ]
+      };
+
+      let totalDisabled = 0;
+      const results = [];
+
+      // Disable all alert types globally
+      for (const [sport, alertTypes] of Object.entries(allAlertTypes)) {
+        for (const alertType of alertTypes) {
+          try {
+            await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
+            results.push({ sport, alertType, disabled: true });
+            totalDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable ${sport}.${alertType}:`, error);
+            results.push({ sport, alertType, disabled: false, error: (error as Error).message });
+          }
+        }
+      }
+
+      // Disable Telegram for all users
+      const allUsers = await storage.getAllUsers();
+      let telegramDisabled = 0;
+
+      for (const user of allUsers) {
+        if (user.telegramEnabled) {
+          try {
+            await storage.updateUserTelegramSettings(user.id, '', '', false);
+            telegramDisabled++;
+          } catch (error) {
+            console.error(`Failed to disable Telegram for user ${user.username}:`, error);
+          }
+        }
+      }
+
+      res.json({
+        message: 'ALL alert features disabled globally',
+        summary: {
+          alertTypesDisabled: totalDisabled,
+          telegramUsersDisabled: telegramDisabled,
+          totalUsers: allUsers.length
+        },
+        details: results,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`✅ Successfully disabled ${totalDisabled} alert types and ${telegramDisabled} Telegram configurations`);
+
+    } catch (error) {
+      console.error('Error disabling all alerts:', error);
+      res.status(500).json({ message: 'Failed to disable all alerts' });
+    }
+  });
+
+  // Reset global alert settings to defaults (clears all database overrides)
+  app.post('/api/admin/reset-global-alerts', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport } = req.body;
+      if (!sport) {
+        return res.status(400).json({ message: 'Sport parameter is required' });
+      }
+
+      console.log(`🔄 Admin resetting global alerts to defaults for ${sport}`);
+
+      // Clear all existing global settings for this sport to use defaults
+      await storage.clearGlobalAlertSettings(sport.toUpperCase());
+
+      // Get defaults will now return the default values since no database overrides exist
+      const defaults = await storage.getGlobalAlertSettings(sport.toUpperCase());
+      const enabledCount = Object.values(defaults).filter(enabled => enabled).length;
+
+      res.json({
+        message: `Global alert settings reset to defaults for ${sport.toUpperCase()}`,
+        sport: sport.toUpperCase(),
+        enabledCount,
+        settings: defaults
+      });
+    } catch (error) {
+      console.error('Error resetting global alerts:', error);
+      res.status(500).json({ message: 'Failed to reset global alerts' });
+    }
+  });
+
+  app.put('/api/admin/apply-global-settings', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, settings } = req.body;
+
+      // Use the storage method to apply settings to all users
+      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
+
+      res.json({
+        message: `Global settings applied to ${result.usersUpdated} users successfully`,
+        sport,
+        ...result
+      });
+    } catch (error) {
+      console.error('Error applying global settings:', error);
+      res.status(500).json({ message: 'Failed to apply global settings' });
+    }
+  });
+
+
+  // Import health monitor
+  const { getHealthMonitor } = await import('./services/alert-health-monitor');
+  const healthMonitor = getHealthMonitor();
+
+  // Generate alerts from today's completed games
+  const alertGenerator = new AlertGenerator();
+  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
+
+  // Start live game monitoring with robust error handling
+  const monitoringInterval = setInterval(async () => {
+    try {
+      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
+      await alertGenerator.generateLiveGameAlerts();
+    } catch (error: any) {
+      console.error('⚠️ Non-critical error in live monitoring:', error.message);
+      // Don't crash - just continue monitoring
+    }
+  }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
+
+  // Initialize health monitor with alert generator and interval
+  healthMonitor.initialize(alertGenerator, monitoringInterval);
+
+  // Store monitoring interval globally for graceful shutdown cleanup
+  (global as any).setMonitoringInterval(monitoringInterval);
+
+  console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
+
+  // V3 Performance Metrics API (admin-only)
+  // Health check endpoint for alert generation system
+  app.get('/api/health/alerts', async (req, res) => {
+    try {
+      const { getHealthMonitor } = await import('./services/alert-health-monitor');
+      const healthMonitor = getHealthMonitor();
+      const healthStatus = healthMonitor.getHealthStatus();
+
+      // Determine HTTP status code based on health
+      let statusCode = 200;
+      if (healthStatus.status === 'critical') statusCode = 503;
+      else if (healthStatus.status === 'unhealthy') statusCode = 500;
+      else if (healthStatus.status === 'degraded') statusCode = 207;
+
+      res.status(statusCode).json({
+        status: healthStatus.status,
+        summary: healthStatus.summary,
+        recommendations: healthStatus.recommendations,
+        metrics: {
+          checksPerformed: healthStatus.checksPerformed,
+          alertsGenerated: healthStatus.alertsGenerated,
+          lastCheckTime: healthStatus.lastCheckTime,
+          lastAlertTime: healthStatus.lastAlertGeneratedTime,
+          timeSinceLastCheck: healthStatus.timeSinceLastCheck,
+          timeSinceLastAlert: healthStatus.timeSinceLastAlert,
+          consecutiveFailures: healthStatus.consecutiveFailures,
+          uptimeSeconds: healthStatus.uptimeSeconds,
+          memoryUsageMB: healthStatus.memoryUsageMB,
+          isAutoRecovering: healthStatus.isAutoRecovering,
+          recoveryAttempts: healthStatus.recoveryAttempts
+        },
+        lastError: healthStatus.lastError
+      });
+    } catch (error: any) {
+      console.error('Error fetching health status:', error);
+      res.status(500).json({
+        status: 'error',
+        error: error.message,
+        summary: 'Failed to fetch health status'
+      });
+    }
+  });
+
+  // Force recovery endpoint (admin only)
+  app.post('/api/health/alerts/recover', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { getHealthMonitor } = await import('./services/alert-health-monitor');
+      const healthMonitor = getHealthMonitor();
+
+      console.log('🔧 Admin requested manual alert system recovery');
+      await healthMonitor.forceRecovery();
+
+      res.json({
+        success: true,
+        message: 'Alert system recovery initiated',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error forcing recovery:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: 'Failed to initiate recovery'
+      });
+    }
+  });
+
+  app.get('/api/v3/performance-metrics', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      // Get comprehensive V3 performance data
+      const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
+      // Polling stats placeholder for admin metrics endpoint
+      const pollingStats = {
         activeSports: 0,
         liveGames: 0,
         scheduledGames: 0,

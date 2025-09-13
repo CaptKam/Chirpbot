@@ -152,7 +152,7 @@ export class AlertGenerator {
   private aiContextController: AIContextController;
   private logLevel: 'verbose' | 'quiet' = 'verbose'; // Default to verbose logging
   private healthMonitor = getHealthMonitor();
-  
+
   // Error recovery tracking
   private engineFailures: Map<string, EngineFailureRecord> = new Map();
   private readonly retryConfig: RetryConfig = {
@@ -209,7 +209,7 @@ export class AlertGenerator {
       this.nflApi = nflApi;
       this.adaptivePollingManagers.set('NFL', new AdaptivePollingManager('NFL', { NFL: nflApi }));
       console.log('🏈 NFL AdaptivePollingManager initialized with V3-2 intervals');
-      
+
       // Clear any failure records on successful initialization
       this.engineFailures.delete('NFL');
       this.clearFallbackPolling('NFL');
@@ -218,7 +218,7 @@ export class AlertGenerator {
       await this.handleEngineFailure('NFL', error as Error);
     }
   }
-  
+
   // Handle sport engine failures with automatic recovery
   private async handleEngineFailure(sport: string, error: Error): Promise<void> {
     const failure = this.engineFailures.get(sport) || {
@@ -228,28 +228,28 @@ export class AlertGenerator {
       isInRecovery: false,
       nextRetryTime: new Date()
     };
-    
+
     failure.failureCount++;
     failure.lastFailureTime = new Date();
-    
+
     // Calculate next retry time with exponential backoff
     const delay = Math.min(
       this.retryConfig.initialDelay * Math.pow(this.retryConfig.backoffMultiplier, failure.failureCount - 1),
       this.retryConfig.maxDelay
     );
     failure.nextRetryTime = new Date(Date.now() + delay);
-    
+
     this.engineFailures.set(sport, failure);
-    
+
     // Report to health monitor
     this.healthMonitor.recordError(error);
     this.healthMonitor.recordEngineFailure(sport);
-    
+
     console.log(`🔧 ${sport} engine failure #${failure.failureCount}. Activating fallback polling. Next retry in ${delay}ms`);
-    
+
     // Activate fallback polling for this sport
     await this.activateFallbackPolling(sport);
-    
+
     // Schedule automatic recovery attempt
     if (failure.failureCount <= this.retryConfig.maxRetries) {
       setTimeout(() => this.attemptEngineRecovery(sport), delay);
@@ -258,15 +258,15 @@ export class AlertGenerator {
       // Continue with fallback polling indefinitely
     }
   }
-  
+
   // Activate fallback polling for a failed sport
   private async activateFallbackPolling(sport: string): Promise<void> {
     // Clear any existing fallback polling
     this.clearFallbackPolling(sport);
-    
+
     console.log(`🔄 Activating fallback polling for ${sport}`);
     this.healthMonitor.recordFallbackPolling(sport, true);
-    
+
     // Create a simple polling mechanism that checks for game updates
     const fallbackInterval = setInterval(async () => {
       try {
@@ -276,10 +276,10 @@ export class AlertGenerator {
         // Don't stop fallback polling on errors
       }
     }, 60000); // Check every minute as fallback
-    
+
     this.fallbackPollingActive.set(sport, fallbackInterval);
   }
-  
+
   // Clear fallback polling for a sport
   private clearFallbackPolling(sport: string): void {
     const interval = this.fallbackPollingActive.get(sport);
@@ -290,11 +290,11 @@ export class AlertGenerator {
       this.healthMonitor.recordFallbackPolling(sport, false);
     }
   }
-  
+
   // Perform basic fallback check for a sport
   private async performFallbackCheck(sport: string): Promise<void> {
     console.log(`📋 Performing fallback check for ${sport}`);
-    
+
     try {
       // Try to get basic game data depending on sport
       switch (sport) {
@@ -321,17 +321,17 @@ export class AlertGenerator {
       console.error(`❌ Fallback check failed for ${sport}:`, error);
     }
   }
-  
+
   // Attempt to recover a failed engine
   private async attemptEngineRecovery(sport: string): Promise<void> {
     const failure = this.engineFailures.get(sport);
     if (!failure || failure.isInRecovery) return;
-    
+
     failure.isInRecovery = true;
     this.engineFailures.set(sport, failure);
-    
+
     console.log(`🔧 Attempting recovery for ${sport} engine (attempt ${failure.failureCount}/${this.retryConfig.maxRetries})`);
-    
+
     try {
       // Try to reinitialize the specific sport's polling manager
       switch (sport) {
@@ -347,7 +347,7 @@ export class AlertGenerator {
         default:
           console.warn(`⚠️ No recovery handler for ${sport}`);
       }
-      
+
       console.log(`✅ ${sport} engine recovered successfully`);
       this.engineFailures.delete(sport);
       this.clearFallbackPolling(sport);
@@ -358,7 +358,7 @@ export class AlertGenerator {
       await this.handleEngineFailure(sport, error as Error);
     }
   }
-  
+
   // Initialize WNBA polling manager with error recovery
   private async initializeWNBAPollingManager(): Promise<void> {
     try {
@@ -367,7 +367,7 @@ export class AlertGenerator {
       this.wnbaApi = wnbaApi;
       this.adaptivePollingManagers.set('WNBA', new AdaptivePollingManager('WNBA', { WNBA: wnbaApi }));
       console.log('🏀 WNBA AdaptivePollingManager initialized');
-      
+
       this.engineFailures.delete('WNBA');
       this.clearFallbackPolling('WNBA');
     } catch (error) {
@@ -375,7 +375,7 @@ export class AlertGenerator {
       await this.handleEngineFailure('WNBA', error as Error);
     }
   }
-  
+
   // Initialize CFL polling manager with error recovery
   private async initializeCFLPollingManager(): Promise<void> {
     try {
@@ -384,7 +384,7 @@ export class AlertGenerator {
       this.cflApi = cflApi;
       this.adaptivePollingManagers.set('CFL', new AdaptivePollingManager('CFL', { CFL: cflApi }));
       console.log('🏈 CFL AdaptivePollingManager initialized');
-      
+
       this.engineFailures.delete('CFL');
       this.clearFallbackPolling('CFL');
     } catch (error) {
@@ -626,13 +626,13 @@ export class AlertGenerator {
       if (this.logLevel !== 'quiet') {
         console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
       }
-      
+
       // Record health monitoring metrics
       if (totalAlerts > 0) {
         this.healthMonitor.recordAlertGenerated(totalAlerts);
       }
       this.healthMonitor.recordSuccessfulPoll();
-      
+
     } catch (error: any) {
       console.error('❌ Critical error in generateLiveGameAlerts:', error);
       // Record error in health monitor
@@ -1161,7 +1161,7 @@ export class AlertGenerator {
 
           // PRESERVE ORIGINAL V3 MESSAGE - Don't let AI overwrite it!
           const originalV3Message = message; // Store the perfect V3 format message
-          
+
           if (aiEnhancedAlert.confidenceScore > finalPriority) {
             // AI has enhanced the alert - ADD insights but KEEP original message
             context.aiMessage = aiEnhancedAlert.message; // Store AI message separately
@@ -1188,7 +1188,7 @@ export class AlertGenerator {
               console.log(`📊 AI Context Controller: Alert not enhanced (confidence: ${aiEnhancedAlert.confidenceScore} vs ${finalPriority})`);
             }
           }
-          
+
           // CRITICAL: Always use the original V3 message for non-AI fields, preserve AI enhancements
           const finalAlert = {
             type,
@@ -1473,7 +1473,7 @@ export class AlertGenerator {
   // Process alerts for a specific sport
   private async processSport(sport: string): Promise<number> {
     let totalAlerts = 0;
-    
+
     if (this.logLevel !== 'quiet') {
       console.log(`🚀 Processing ${sport} alerts...`);
     }
