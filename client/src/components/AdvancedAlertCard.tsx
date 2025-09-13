@@ -461,11 +461,11 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* Main message */}
       <div className="mb-4">
-        {/* Prioritize AI enhanced message first */}
-        {alertData.context?.aiMessage ? (
+        {/* Prioritize AI enhanced title first */}
+        {alertData.context?.aiTitle ? (
           <>
             <h3 className="text-lg font-semibold text-white mb-2">
-              {alertData.context.aiMessage}
+              {alertData.context.aiTitle}
             </h3>
             <p className="text-xs text-blue-400 mb-2 flex items-center gap-1">
               <Brain className="w-3 h-3" />
@@ -474,7 +474,7 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           </>
         ) : (
           <h3 className="text-lg font-semibold text-white mb-2">
-            {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+            {alertData.context?.aiMessage || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
           </h3>
         )}
         
@@ -640,11 +640,11 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
               <Brain className="w-4 h-4 text-blue-400" />
               <span className="text-blue-400 text-sm font-bold">AI Enhanced Alert</span>
             </div>
-            {alertData.context?.aiMessage && (
-              <p className="text-sm font-semibold text-white mb-2">{alertData.context.aiMessage}</p>
-            )}
-            {alertData.context?.aiTitle && !alertData.context?.aiMessage && (
+            {alertData.context?.aiTitle && (
               <p className="text-sm font-semibold text-white mb-2">{alertData.context.aiTitle}</p>
+            )}
+            {!alertData.context?.aiTitle && alertData.context?.aiMessage && (
+              <p className="text-sm font-semibold text-white mb-2">{alertData.context.aiMessage}</p>
             )}
             {alertData.context?.aiCallToAction && (
               <p className="text-sm text-blue-100">{alertData.context.aiCallToAction}</p>
