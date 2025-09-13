@@ -10,6 +10,8 @@ export function useWebSocket() {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const maxReconnectAttempts = 10; // Increased limit for better reconnection
   const [forceReset, setForceReset] = useState(0); // Force connection reset
+  const pendingUpdatesRef = useRef<any[]>([]); // Queue for pending WebSocket updates
+  const isInitialLoadRef = useRef(true); // Track if initial query is still loading
 
   const connectWithCleanup = useCallback(() => {
     // Prevent further connections if max attempts are reached, but allow reset on component mount
@@ -23,9 +25,10 @@ export function useWebSocket() {
     // Use the same host:port as the current page - works for all deployment scenarios
     const wsUrl = `${protocol}//${window.location.host}/realtime-alerts`;
     
-    console.log('WebSocket debug info:', {
+    console.log('🔗 ChirpBot WebSocket connecting:', {
       'window.location.host': window.location.host,
-      'wsUrl': wsUrl
+      'wsUrl': wsUrl,
+      'attempt': reconnectAttempts + 1
     });
 
     try {
@@ -38,7 +41,7 @@ export function useWebSocket() {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('✅ ChirpBot WebSocket connected successfully');
         setIsConnected(true);
         setReconnectAttempts(0); // Reset reconnect attempts on successful connection
       };
@@ -80,24 +83,60 @@ export function useWebSocket() {
                   }
                 };
 
-                // Update the alerts list in the query cache
-                queryClient.setQueryData<any[]>(["/api/alerts"], (oldAlerts) => {
-                  try {
-                    if (!oldAlerts) return [transformedAlert];
-
-                    // Check if alert already exists to prevent duplicates
-                    const exists = oldAlerts.some(alert =>
-                      alert.id === transformedAlert.id
-                    );
-                    if (exists) return oldAlerts;
-
-                    // Add new alert at the beginning of the list
-                    return [transformedAlert, ...oldAlerts];
-                  } catch (error) {
-                    console.error('Error updating alerts cache:', error);
-                    return oldAlerts || [];
-                  }
+                console.log('📋 WebSocket received alert:', transformedAlert.id, transformedAlert.type);
+                
+                // Check if initial load is still happening - if so, queue the update
+                const currentQueryData = queryClient.getQueryData(["/api/alerts"]);
+                const queryState = queryClient.getQueryState(["/api/alerts"]);
+                const isQueryLoading = queryState?.status === 'pending' || queryState?.fetchStatus === 'fetching';
+                
+                console.log('🔍 Query state check:', {
+                  hasData: !!currentQueryData,
+                  isLoading: isQueryLoading,
+                  dataLength: Array.isArray(currentQueryData) ? currentQueryData.length : 'not-array'
                 });
+
+                // If query is still loading or we don't have initial data, delay the update slightly
+                if (isQueryLoading || !currentQueryData) {
+                  console.log('⏳ Query still loading, delaying WebSocket update...');
+                  setTimeout(() => {
+                    console.log('⏰ Applying delayed WebSocket update');
+                    applyWebSocketUpdate(transformedAlert);
+                  }, 100);
+                } else {
+                  console.log('✅ Query settled, applying immediate WebSocket update');
+                  applyWebSocketUpdate(transformedAlert);
+                }
+                
+                function applyWebSocketUpdate(alert: any) {
+                  // Update the alerts list in the query cache
+                  queryClient.setQueryData<any[]>(["/api/alerts"], (oldAlerts) => {
+                    try {
+                      console.log('📋 Cache update - Old alerts:', oldAlerts?.length || 0);
+                      if (!oldAlerts) {
+                        console.log('📋 Cache update - No old alerts, creating new array');
+                        return [alert];
+                      }
+
+                      // Check if alert already exists to prevent duplicates
+                      const exists = oldAlerts.some(existingAlert =>
+                        existingAlert.id === alert.id
+                      );
+                      if (exists) {
+                        console.log('📋 Cache update - Alert already exists, skipping');
+                        return oldAlerts;
+                      }
+
+                      // Add new alert at the beginning of the list
+                      const newAlerts = [alert, ...oldAlerts];
+                      console.log('📋 Cache update - Added new alert, total alerts:', newAlerts.length);
+                      return newAlerts;
+                    } catch (error) {
+                      console.error('❌ Error updating alerts cache:', error);
+                      return oldAlerts || [];
+                    }
+                  });
+                }
 
                 // Only invalidate unseen count to update badges - alerts are already updated optimistically
                 queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] }).catch(error => {
@@ -116,7 +155,7 @@ export function useWebSocket() {
       ws.onclose = (event) => {
         // Only log abnormal disconnections (not normal closures)
         if (event.code !== 1000 && event.code !== 1001) {
-          console.log(`WebSocket disconnected: Code=${event.code}`);
+          console.log(`🔌 ChirpBot WebSocket disconnected: Code=${event.code}`);
         }
         setIsConnected(false);
         wsRef.current = null; // Clear the ref
@@ -132,12 +171,12 @@ export function useWebSocket() {
         if (event.code !== 1000 && event.code !== 1001 && reconnectAttempts < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000); // Exponential backoff, max 10s
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log(`Reconnecting WebSocket... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+            console.log(`🔄 ChirpBot WebSocket reconnecting... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
             setReconnectAttempts(prev => prev + 1);
             connectWithCleanup();
           }, delay);
         } else if (reconnectAttempts >= maxReconnectAttempts && event.code !== 1000 && event.code !== 1001) {
-          console.log('Max reconnection attempts reached.');
+          console.log('🚫 ChirpBot WebSocket max reconnection attempts reached.');
         }
       };
 

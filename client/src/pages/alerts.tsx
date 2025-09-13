@@ -81,6 +81,19 @@ export default function AlertsPage() {
     refetchInterval: false, // Disable polling - WebSocket provides real-time updates
   });
 
+  // Debug logging for alerts data changes
+  React.useEffect(() => {
+    console.log('🔍 Query data changed:', {
+      alertsCount: alerts?.length || 0,
+      isLoading: alertsLoading,
+      timestamp: new Date().toISOString()
+    });
+    if (alerts && alerts.length > 0) {
+      console.log('📋 First alert:', alerts[0]);
+      console.log('📋 All alert IDs:', alerts.map(a => a.id));
+    }
+  }, [alerts, alertsLoading]);
+
   // Fetch alert stats
   const { data: stats, isLoading: statsLoading } = useQuery<AlertStats>({
     queryKey: ['/api/alerts/stats'],
@@ -102,11 +115,22 @@ export default function AlertsPage() {
     ? (alerts as Alert[] || [])
     : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
 
+  // Debug logging for filtering
+  React.useEffect(() => {
+    console.log('🎯 Filter changed to:', filter);
+    console.log('📊 Raw alerts:', alerts?.length || 0);
+    console.log('📊 Filtered alerts:', filteredAlerts?.length || 0);
+    if (filteredAlerts?.length > 0) {
+      console.log('📊 First alert:', filteredAlerts[0]);
+    }
+  }, [filter, alerts, filteredAlerts]);
+
   // Stabilize alert ordering to prevent re-animations
-  const sortedAlerts = useMemo(() => 
-    [...filteredAlerts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [filteredAlerts]
-  );
+  const sortedAlerts = useMemo(() => {
+    const sorted = [...filteredAlerts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    console.log('🔄 Sorted alerts:', sorted.length);
+    return sorted;
+  }, [filteredAlerts]);
 
   const getAlertIcon = (type: string) => {
     switch (type) {
