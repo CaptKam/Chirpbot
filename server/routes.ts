@@ -3030,9 +3030,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const wnbaEngine = new WNBAEngine();
       const availableTypes = await wnbaEngine.getAvailableAlertTypes();
 
-      // Get recent WNBA alerts
-      // TODO: Implement getRecentAlerts method in storage
-      const recentAlerts: any[] = []; // await storage.getRecentAlerts('WNBA', 10);
+      // Get recent alerts (note: getRecentAlerts returns all sports, not filtered by WNBA)
+      const recentAlerts = await storage.getRecentAlerts(10);
 
       const debugInfo = {
         userId,
