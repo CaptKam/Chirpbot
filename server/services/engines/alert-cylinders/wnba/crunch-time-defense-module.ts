@@ -58,8 +58,7 @@ export default class CrunchTimeDefenseModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const defensiveScenario = this.identifyDefensiveScenario(gameState);
     const defensiveImportance = this.calculateDefensiveImportance(gameState);
     const possessionsRemaining = this.estimatePossessionsRemaining(gameState);

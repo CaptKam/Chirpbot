@@ -69,8 +69,7 @@ export default class PlayoffIntensityModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const playoffContext = this.analyzePlayoffContext(gameState);
     const intensityLevel = this.calculateIntensityLevel(gameState, playoffContext);
     const championshipImplications = this.analyzeChampionshipImplications(gameState, playoffContext);

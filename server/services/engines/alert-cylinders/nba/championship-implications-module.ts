@@ -66,8 +66,7 @@ export default class ChampionshipImplicationsModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const seasonContext = this.estimateSeasonContext(gameState);
     const championshipScenario = this.identifyChampionshipScenario(gameState, seasonContext);
     const implicationLevel = this.calculateImplicationLevel(gameState, seasonContext);

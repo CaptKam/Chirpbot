@@ -15,8 +15,7 @@ export default class FirstAndThirdNoOutsModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     // Get current batter and on-deck information
     const currentBatter = gameState.currentBatter || 'Current Batter';
     const onDeckBatter = gameState.onDeckBatter || '';

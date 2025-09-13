@@ -86,8 +86,7 @@ export default class WindChangeModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const gameId = gameState.gameId;
     const currentWind = gameState.weatherContext!;
     const previous = this.previousWindData[gameId];

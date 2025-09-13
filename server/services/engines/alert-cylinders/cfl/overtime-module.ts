@@ -10,8 +10,7 @@ export default class OvertimeModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const overtimePeriod = gameState.quarter - 4;
     const overtimeText = overtimePeriod === 1 ? "Overtime" : `${overtimePeriod}${this.getOrdinalSuffix(overtimePeriod)} Overtime`;
     

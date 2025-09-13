@@ -102,8 +102,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const stealProbability = this.calculateStealProbabilitySync(gameState);
     const stealAnalysis = this.analyzeStealSituation(gameState);
     const alertMessage = this.generateStealMessage(stealProbability, stealAnalysis, gameState.weatherContext, gameState);

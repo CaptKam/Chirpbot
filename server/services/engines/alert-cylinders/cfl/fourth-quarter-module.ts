@@ -11,8 +11,7 @@ export default class CFLFourthQuarterModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
     const isCloseGame = scoreDiff <= 7; // One touchdown game in CFL
     const intensityLevel = isCloseGame ? 'CRUCIAL' : 'INTENSE';

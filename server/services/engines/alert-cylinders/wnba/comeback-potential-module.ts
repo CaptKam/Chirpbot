@@ -51,8 +51,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const comebackScenario = this.identifyComebackScenario(gameState);
     const comebackProbability = this.calculateComebackProbability(gameState);
     const requiredPace = this.calculateRequiredPace(gameState);

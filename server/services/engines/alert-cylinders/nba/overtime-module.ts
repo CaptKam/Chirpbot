@@ -12,8 +12,7 @@ export default class OvertimeModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const overtimePeriod = gameState.quarter - 4;
     const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
     const timeRemaining = gameState.timeRemaining || '5:00';

@@ -49,8 +49,7 @@ export default class FourthDownDecisionModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const goForItProbability = this.calculateGoForItProbability(gameState);
     const confidenceLevel = this.getConfidenceLevel(goForItProbability);
     const situationDescription = this.getSituationDescription(gameState);

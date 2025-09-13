@@ -101,8 +101,7 @@ export default class BatterDueModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     // Use cached probability to ensure consistency
     const scoringProbability = this.getScoringProbabilitySync(gameState);
     const gameContext = this.analyzeGameSituation(gameState);

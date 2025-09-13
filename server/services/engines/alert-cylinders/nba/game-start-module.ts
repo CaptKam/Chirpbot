@@ -40,8 +40,7 @@ export default class GameStartModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const timeRemaining = gameState.timeRemaining || '12:00';
 
     return {

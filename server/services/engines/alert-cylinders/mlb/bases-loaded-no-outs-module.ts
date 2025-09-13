@@ -23,8 +23,7 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     // Enhanced context for AlertComposer
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
     const isCloseGame = scoreDiff <= 3;

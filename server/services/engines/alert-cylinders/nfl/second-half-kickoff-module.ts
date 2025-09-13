@@ -12,8 +12,7 @@ export default class SecondHalfKickoffModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     return {
       alertKey: `${gameState.gameId}_second_half_kickoff`,
       type: this.alertType,

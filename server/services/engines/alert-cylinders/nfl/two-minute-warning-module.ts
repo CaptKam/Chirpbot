@@ -45,8 +45,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const isFirstHalf = gameState.quarter === 2;
     const halfText = isFirstHalf ? '1st Half' : '2nd Half';
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);

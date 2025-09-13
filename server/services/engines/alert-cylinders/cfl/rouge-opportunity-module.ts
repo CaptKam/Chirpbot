@@ -16,8 +16,7 @@ export default class RougeOpportunityModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const distance = gameState.fieldPosition ? 
       `${gameState.fieldPosition + 10}` : // Add 10 for end zone depth
       "unknown";

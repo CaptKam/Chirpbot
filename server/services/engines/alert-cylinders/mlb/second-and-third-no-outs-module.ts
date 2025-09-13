@@ -15,8 +15,7 @@ export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     return {
       alertKey: `${gameState.gameId}_second_third_no_outs`,
       type: this.alertType,

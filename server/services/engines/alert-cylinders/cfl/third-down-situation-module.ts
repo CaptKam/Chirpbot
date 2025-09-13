@@ -12,8 +12,7 @@ export default class ThirdDownSituationModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const yardageText = gameState.yardsToGo 
       ? gameState.yardsToGo <= 3 
         ? "short yardage" 

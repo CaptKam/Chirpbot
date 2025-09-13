@@ -11,8 +11,7 @@ export default class LowScoringQuarterModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const totalScore = gameState.homeScore + gameState.awayScore;
     
     return {

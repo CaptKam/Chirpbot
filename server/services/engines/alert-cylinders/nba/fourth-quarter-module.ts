@@ -13,8 +13,7 @@ export default class FourthQuarterModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
     const priority = scoreDiff <= 5 ? 95 : (scoreDiff <= 10 ? 90 : 85);
     const timeRemaining = gameState.timeRemaining || '12:00';

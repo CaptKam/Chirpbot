@@ -42,7 +42,8 @@ export default class GameStartModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
+    // Don't call isTriggered() again - it was already called by the engine
+    // and has side effects that change internal state
 
     return {
       alertKey: `${gameState.gameId}_game_start`,

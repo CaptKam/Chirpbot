@@ -15,8 +15,7 @@ export default class BasesLoadedOneOutModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     return {
       alertKey: `${gameState.gameId}_bases_loaded_one_out`,
       type: this.alertType,

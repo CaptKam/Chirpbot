@@ -45,8 +45,7 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const upsetProbability = this.calculateUpsetProbability(gameState);
     const upsetMagnitude = this.getUpsetMagnitude(gameState);
     const momentumFactors = this.getMomentumFactors(gameState);

@@ -45,8 +45,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const gameId = gameState.gameId;
     const onDeckBatter = gameState.onDeckBatter || 'Unknown';
     const situationKey = this.getSituationKey(gameState);

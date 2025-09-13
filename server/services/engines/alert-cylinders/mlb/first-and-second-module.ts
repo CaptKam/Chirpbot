@@ -14,8 +14,7 @@ export default class FirstAndSecondModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const scoringProb = gameState.outs === 0 ? 68 : gameState.outs === 1 ? 58 : 42;
     const priority = gameState.outs === 0 ? 75 : gameState.outs === 1 ? 65 : 55;
 

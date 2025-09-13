@@ -13,8 +13,7 @@ export default class FourthDownModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const priority = gameState.yardsToGo <= 3 ? 95 : 85; // Higher priority for short yardage
     const fieldPosition = gameState.fieldPosition || 50;
     const yardsToGo = gameState.yardsToGo || 10;

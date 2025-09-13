@@ -23,10 +23,7 @@ export default class RedZoneModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) {
-      return null;
-    }
-
+    // isTriggered() already called by engine - removed duplicate check
     const probability = this.calculateProbability(gameState);
     const down = gameState.down || 1;
     const yardsToGo = gameState.yardsToGo || 10;

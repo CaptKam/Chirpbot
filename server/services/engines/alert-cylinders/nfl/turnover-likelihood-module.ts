@@ -45,8 +45,7 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const turnoverRisk = this.calculateTurnoverRisk(gameState);
     const riskLevel = this.getRiskLevel(turnoverRisk);
     const riskFactors = this.identifyRiskFactors(gameState);

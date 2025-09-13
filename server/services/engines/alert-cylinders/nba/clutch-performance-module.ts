@@ -56,8 +56,7 @@ export default class ClutchPerformanceModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const clutchScenario = this.identifyClutchScenario(gameState);
     const clutchIntensity = this.calculateClutchIntensity(gameState);
     const superstarContext = this.analyzeSuperstarClutchContext(gameState);

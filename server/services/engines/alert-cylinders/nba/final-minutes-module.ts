@@ -16,8 +16,7 @@ export default class FinalMinutesModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
     const timeRemaining = gameState.timeRemaining || '0:00';
     const timeSeconds = this.parseTimeToSeconds(timeRemaining);

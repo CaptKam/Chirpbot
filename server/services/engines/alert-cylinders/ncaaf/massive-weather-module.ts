@@ -89,8 +89,7 @@ export default class MassiveWeatherModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const gameId = gameState.gameId;
     const currentWeather = gameState.weatherContext!;
     const current = this.previousWeatherData[gameId];

@@ -50,8 +50,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    if (!this.isTriggered(gameState)) return null;
-
+    // isTriggered() already called by engine - removed duplicate check
     const comebackProbability = this.calculateComebackProbability(gameState);
     const confidenceLevel = this.getConfidenceLevel(comebackProbability);
     const trailingTeam = this.getTrailingTeam(gameState);
