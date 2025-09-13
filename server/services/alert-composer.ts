@@ -483,7 +483,8 @@ export class AlertComposer {
         return undefined;
       }
       
-      const weather = await weatherService.getGameWeather(gameState.gameId, gameState.sport);
+      const homeTeam = gameState.homeTeam || gameState.venue;
+      const weather = homeTeam ? await weatherService.getWeatherForTeam(homeTeam) : undefined;
       
       if (weather?.windSpeed && weather.windSpeed >= 15) {
         const direction = weather.windDirection || 'variable';
