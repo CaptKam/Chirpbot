@@ -409,6 +409,7 @@ export const storage = {
           // On-deck batter predictions
           'MLB_ON_DECK_PREDICTION': true,
           // Additional MLB alerts
+          'MLB_FIRST_AND_SECOND': true,
           'MLB_BATTER_DUE': true,
           'MLB_STEAL_LIKELIHOOD': true,
           'MLB_WIND_CHANGE': true,
@@ -425,39 +426,54 @@ export const storage = {
           'NFL_SECOND_HALF_KICKOFF': true,
           'NFL_TWO_MINUTE_WARNING': true,
           'NFL_RED_ZONE': true,
-          'FOURTH_DOWN': true
+          'NFL_FOURTH_DOWN': true,
+          'NFL_RED_ZONE_OPPORTUNITY': true,
+          'NFL_TURNOVER_LIKELIHOOD': true,
+          'NFL_MASSIVE_WEATHER': true
         },
         'ncaaf': {
           'NCAAF_GAME_START': true,
-          'NCAAF_SECOND_HALF_KICKOFF': true,
           'NCAAF_TWO_MINUTE_WARNING': true,
           'NCAAF_RED_ZONE': true,
-          'FOURTH_DOWN': true,
-          'OVERTIME': true,
-          'CLUTCH_TIME': true
+          'NCAAF_FOURTH_DOWN_DECISION': true,
+          'NCAAF_UPSET_OPPORTUNITY': true,
+          'NCAAF_RED_ZONE_EFFICIENCY': true,
+          'NCAAF_COMEBACK_POTENTIAL': true,
+          'NCAAF_MASSIVE_WEATHER': true
         },
         'cfl': {
           'CFL_GAME_START': true,
-          'CFL_SECOND_HALF_KICKOFF': true,
           'CFL_TWO_MINUTE_WARNING': true,
-          'THIRD_DOWN': true,
-          'THREE_MINUTE_WARNING': true
+          'CFL_FOURTH_QUARTER': true,
+          'CFL_FINAL_MINUTES': true,
+          'CFL_GREY_CUP_IMPLICATIONS': true,
+          'CFL_THIRD_DOWN_SITUATION': true,
+          'CFL_ROUGE_OPPORTUNITY': true,
+          'CFL_OVERTIME': true,
+          'CFL_MASSIVE_WEATHER': true
         },
         'wnba': {
           'WNBA_GAME_START': true,
           'WNBA_TWO_MINUTE_WARNING': true,
           'FINAL_MINUTES': true,
+          'FOURTH_QUARTER': true,
           'HIGH_SCORING_QUARTER': true,
           'LOW_SCORING_QUARTER': true,
-          'FOURTH_QUARTER': true
+          'WNBA_CLUTCH_TIME_OPPORTUNITY': true,
+          'WNBA_COMEBACK_POTENTIAL': true,
+          'WNBA_CRUNCH_TIME_DEFENSE': true,
+          'WNBA_CHAMPIONSHIP_IMPLICATIONS': true
         },
         'nba': {
+          'NBA_CHAMPIONSHIP_IMPLICATIONS': true,
+          'NBA_CLUTCH_PERFORMANCE': true,
+          'NBA_FINAL_MINUTES': true,
           'NBA_FOURTH_QUARTER': true,
-          'NBA_CLOSE_GAME': true,
+          'NBA_GAME_START': true,
           'NBA_OVERTIME': true,
-          'NBA_HIGH_SCORING': true,
-          'NBA_COMEBACK': true,
-          'NBA_CLUTCH_PERFORMANCE': true
+          'NBA_PLAYOFF_INTENSITY': true,
+          'NBA_SUPERSTAR_ANALYTICS': true,
+          'NBA_TWO_MINUTE_WARNING': true
         },
         'nhl': {
           'NHL_THIRD_PERIOD': true,
