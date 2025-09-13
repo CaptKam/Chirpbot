@@ -735,6 +735,73 @@ export const storage = {
       console.error('Error getting game states:', error);
       return [];
     }
+  },
+
+  // Missing storage methods for enabling alerts
+  async enableGlobalAlert(sport: string, alertType: string) {
+    try {
+      console.log(`🔧 Enabling global alert: ${sport} ${alertType}`);
+      
+      // Check if global setting already exists
+      const existing = await db.execute(sql`
+        SELECT * FROM global_alert_settings 
+        WHERE sport = ${sport} AND alert_type = ${alertType}
+      `);
+      
+      if (existing.rows.length > 0) {
+        // Update existing setting to enabled
+        await db.execute(sql`
+          UPDATE global_alert_settings 
+          SET enabled = true, updated_at = ${new Date()}
+          WHERE sport = ${sport} AND alert_type = ${alertType}
+        `);
+      } else {
+        // Create new global setting
+        await db.execute(sql`
+          INSERT INTO global_alert_settings (sport, alert_type, enabled, created_at, updated_at)
+          VALUES (${sport}, ${alertType}, true, ${new Date()}, ${new Date()})
+        `);
+      }
+      
+      console.log(`✅ Global alert enabled: ${sport} ${alertType}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to enable global alert ${sport} ${alertType}:`, error);
+      return false;
+    }
+  },
+
+  async enableUserAlert(userId: string, sport: string, alertType: string) {
+    try {
+      console.log(`🔧 Enabling user alert: ${userId} ${sport} ${alertType}`);
+      
+      // Check if user preference already exists
+      const existing = await db.execute(sql`
+        SELECT * FROM user_alert_preferences 
+        WHERE user_id = ${userId} AND sport = ${sport} AND alert_type = ${alertType}
+      `);
+      
+      if (existing.rows.length > 0) {
+        // Update existing preference to enabled
+        await db.execute(sql`
+          UPDATE user_alert_preferences 
+          SET enabled = true, updated_at = ${new Date()}
+          WHERE user_id = ${userId} AND sport = ${sport} AND alert_type = ${alertType}
+        `);
+      } else {
+        // Create new user preference
+        await db.execute(sql`
+          INSERT INTO user_alert_preferences (user_id, sport, alert_type, enabled, created_at, updated_at)
+          VALUES (${userId}, ${sport}, ${alertType}, true, ${new Date()}, ${new Date()})
+        `);
+      }
+      
+      console.log(`✅ User alert enabled: ${userId} ${sport} ${alertType}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to enable user alert ${userId} ${sport} ${alertType}:`, error);
+      return false;
+    }
   }
 };
 

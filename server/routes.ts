@@ -231,10 +231,104 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // REMOVED: Broken /api/admin/statistics route - replaced with working /api/admin/stats endpoint
 
+  // Admin API to enable master alerts globally
+  app.post('/api/admin/enable-master-alerts', async (req, res) => {
+    try {
+      console.log('🔧 Admin: Enabling master alerts globally...');
+      
+      // Enable all MLB alert types in global settings
+      const mlbAlerts = [
+        'MLB_GAME_START',
+        'MLB_SEVENTH_INNING_STRETCH', 
+        'MLB_RUNNER_ON_THIRD_NO_OUTS',
+        'MLB_FIRST_AND_THIRD_NO_OUTS',
+        'MLB_SECOND_AND_THIRD_NO_OUTS',
+        'MLB_FIRST_AND_SECOND',  // This is the key one that was missing
+        'MLB_BASES_LOADED_NO_OUTS',
+        'MLB_RUNNER_ON_THIRD_ONE_OUT',
+        'MLB_SECOND_AND_THIRD_ONE_OUT',
+        'MLB_BASES_LOADED_ONE_OUT',
+        'MLB_BATTER_DUE',
+        'MLB_STEAL_LIKELIHOOD',
+        'MLB_ON_DECK_PREDICTION', 
+        'MLB_WIND_CHANGE'
+      ];
+
+      let enabledCount = 0;
+      for (const alertType of mlbAlerts) {
+        try {
+          await storage.enableGlobalAlert('MLB', alertType);
+          enabledCount++;
+          console.log(`✅ Globally enabled: ${alertType}`);
+        } catch (error) {
+          console.log(`⚠️ Failed to enable ${alertType}:`, error);
+        }
+      }
+
+      console.log(`🎯 Master alerts enabled: ${enabledCount}/${mlbAlerts.length} alert types`);
+
+      res.json({
+        success: true,
+        message: `Successfully enabled ${enabledCount} MLB alert types globally`,
+        alertTypes: mlbAlerts,
+        enabledCount,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Error enabling master alerts:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        message: 'Failed to enable master alerts'
+      });
+    }
+  });
+
+  // Admin API to specifically enable MLB_FIRST_AND_SECOND for all users
+  app.post('/api/admin/enable-first-and-second', async (req, res) => {
+    try {
+      console.log('🔧 Admin: Enabling MLB_FIRST_AND_SECOND for all users...');
+      
+      // Enable globally first
+      await storage.enableGlobalAlert('MLB', 'MLB_FIRST_AND_SECOND');
+      console.log('✅ MLB_FIRST_AND_SECOND enabled globally');
+      
+      // Enable for all existing users
+      const users = await storage.getAllUsers();
+      let userCount = 0;
+      
+      for (const user of users) {
+        try {
+          await storage.enableUserAlert(user.id, 'MLB', 'MLB_FIRST_AND_SECOND');
+          userCount++;
+          console.log(`✅ Enabled MLB_FIRST_AND_SECOND for user ${user.username}`);
+        } catch (error) {
+          console.log(`⚠️ Failed to enable for user ${user.username}:`, error);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `MLB_FIRST_AND_SECOND enabled globally and for ${userCount} users`,
+        usersEnabled: userCount,
+        totalUsers: users.length,
+        alertType: 'MLB_FIRST_AND_SECOND',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Error enabling MLB_FIRST_AND_SECOND:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        message: 'Failed to enable MLB_FIRST_AND_SECOND'
+      });
+    }
+  });
+
   // Request deduplication and memory management are handled by middleware above
 
   // Setup WebSocket server with heartbeat
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ server: httpServer, path: '/realtime-alerts' });
   const clients = new Set<WebSocket>();
 
 

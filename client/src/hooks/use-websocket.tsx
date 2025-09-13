@@ -23,7 +23,7 @@ export function useWebSocket() {
     const envPort = import.meta.env.VITE_WS_PORT || import.meta.env.VITE_PORT;
     const currentPort = window.location.port;
     const port = envPort || currentPort || '5000';
-    const wsUrl = `${protocol}//${window.location.hostname}:${port}/ws`;
+    const wsUrl = `${protocol}//${window.location.hostname}:${port}/realtime-alerts`;
     
     console.log('WebSocket debug info:', {
       'window.location.port': window.location.port,
