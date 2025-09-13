@@ -5,13 +5,14 @@ import { queryClient } from '@/lib/queryClient';
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const maxReconnectAttempts = 10; // Increased limit for better reconnection
-  const [forceReset, setForceReset] = useState(0); // Force connection reset
+  
+  // WebSocket functionality DISABLED
+  console.log('🚫 WebSocket disabled - real-time alerts not available');
 
   const connectWithCleanup = useCallback(() => {
+    // WebSocket connection disabled
+    console.log('⚠️ WebSocket connection disabled - alerts require page refresh');
+    setIsConnected(false);
     // Prevent further connections if max attempts are reached, but allow reset on component mount
     if (reconnectAttempts >= maxReconnectAttempts) {
       console.log('Max WebSocket reconnection attempts reached. Will reset on next attempt...');
@@ -176,28 +177,9 @@ export function useWebSocket() {
   }, [reconnectAttempts]); // Depend on reconnectAttempts to manage retry logic
 
   useEffect(() => {
-    connectWithCleanup();
-
-    return () => {
-      // Clear any pending reconnect timeouts when the component unmounts or effect re-runs
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      // Close the WebSocket connection if it's open or connecting
-      if (wsRef.current) {
-        try {
-          // Use a flag or check readyState to avoid closing an already closing/closed socket
-          if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
-            wsRef.current.close();
-          }
-        } catch (error) {
-          console.error("Error closing WebSocket connection:", error);
-        } finally {
-          wsRef.current = null; // Ensure ref is cleared on cleanup
-        }
-      }
-    };
-  }, [connectWithCleanup]); // Effect depends on connectWithCleanup which captures reconnectAttempts
+    // WebSocket disabled - no connection attempt
+    console.log('🚫 WebSocket useEffect disabled');
+  }, []);
 
   return {
     isConnected,

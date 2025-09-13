@@ -327,38 +327,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Request deduplication and memory management are handled by middleware above
 
-  // Setup WebSocket server with heartbeat
-  const wss = new WebSocketServer({ server: httpServer, path: '/realtime-alerts' });
-  const clients = new Set<WebSocket>();
-
+  // WebSocket server DISABLED - real-time alerts not available
+  console.log('⚠️ WebSocket server disabled - alerts require manual page refresh');
 
   // Admin panel compatibility route
   app.get('/admin-panel', (req, res) => res.redirect('/admin/login.html'));
 
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
-
-  function heartbeat(this: any) {
-    this.isAlive = true;
-  }
-
-  wss.on('connection', (ws: any) => {
-    ws.isAlive = true;
-    clients.add(ws);
-    console.log('WebSocket client connected');
-
-    ws.on('pong', heartbeat);
-
-    ws.on('close', () => {
-      clients.delete(ws);
-      console.log('WebSocket client disconnected');
-    });
-
-    ws.on('error', (error: Error) => {
-      console.error('WebSocket error:', error);
-      clients.delete(ws);
-    });
-  });
 
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
@@ -407,64 +383,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Heartbeat interval to detect zombie connections
-  const heartbeatInterval = setInterval(() => {
-    wss.clients.forEach((ws: any) => {
-      if (ws.isAlive === false) {
-        return ws.terminate();
-      }
-      ws.isAlive = false;
-      ws.ping();
-    });
-  }, 30000);
+  // WebSocket heartbeat and broadcast DISABLED
+  console.log('⚠️ WebSocket broadcast system disabled');
 
-  // Cleanup handled by index.ts - removed duplicate SIGINT handler
-
-  // Broadcast function with backpressure handling
+  // Disabled broadcast function - no-op
   function broadcast(data: any) {
-    const payload = JSON.stringify(data);
-    clients.forEach((client: any) => {
-      if (client.readyState === WebSocket.OPEN && client.bufferedAmount < 1_000_000) {
-        client.send(payload);
-      }
-    });
+    // WebSocket broadcasting disabled - alerts only available via API refresh
+    console.log('🚫 WebSocket broadcast disabled - alert would have been sent:', data.type);
   }
 
-  // Export broadcast function for use by other services
+  // Export disabled broadcast function
   (global as any).wsBroadcast = broadcast;
 
   // Initialize Async AI Processor for background AI enhancement
   const { asyncAIProcessor } = await import('./services/async-ai-processor');
 
-  // Set up callback for broadcasting enhanced alerts via WebSocket
+  // AsyncAI WebSocket integration DISABLED
   asyncAIProcessor.setOnEnhancedAlert(async (enhancedAlert, userId, sport, wasActuallyEnhanced) => {
-    try {
-      // Format enhanced alert for WebSocket broadcast
-      const alertData = {
-        type: 'enhanced_alert',
-        alert: {
-          id: enhancedAlert.alertKey,
-          type: enhancedAlert.type,
-          sport: sport,
-          priority: enhancedAlert.priority,
-          message: enhancedAlert.message,
-          context: enhancedAlert.context,
-          gameId: enhancedAlert.context?.gameId,
-          homeTeam: enhancedAlert.context?.homeTeam,
-          awayTeam: enhancedAlert.context?.awayTeam,
-          timestamp: new Date().toISOString(),
-          // userId removed for privacy - no longer broadcasted to all clients
-          aiEnhanced: wasActuallyEnhanced, // Truthfully reflect if AI was actually applied
-          asyncProcessed: wasActuallyEnhanced // Only true if async AI processing occurred
-        }
-      };
-
-      broadcast(alertData);
-      const enhancementStatus = wasActuallyEnhanced ? 'AI Enhanced' : 'Gated (No AI)';
-      console.log(`🚀 Async Alert (${enhancementStatus}): ${sport} ${enhancedAlert.type} broadcasted to WebSocket clients`);
-    } catch (error) {
-      console.error('❌ Failed to broadcast enhanced alert:', error);
-    }
+    // WebSocket broadcasting disabled - alerts stored in database only
+    const enhancementStatus = wasActuallyEnhanced ? 'AI Enhanced' : 'Gated (No AI)';
+    console.log(`📝 Alert stored (${enhancementStatus}): ${sport} ${enhancedAlert.type} - WebSocket disabled, refresh page to see`);
   });
 
   console.log('🚀 AsyncAIProcessor integrated with WebSocket broadcast system');
