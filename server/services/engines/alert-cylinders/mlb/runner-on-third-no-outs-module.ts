@@ -6,13 +6,55 @@ export default class RunnerOnThirdNoOutsModule extends BaseAlertModule {
   sport = 'MLB';
 
   isTriggered(gameState: GameState): boolean {
-    if (!gameState.isLive) return false;
+    if (!gameState.isLive) {
+      console.log(`🔍 MLB_RUNNER_ON_THIRD_NO_OUTS: Game ${gameState.gameId} not live`);
+      return false;
+    }
 
     const { hasFirst, hasSecond, hasThird, outs } = gameState;
+    
+    console.log(`🔍 MLB_RUNNER_ON_THIRD_NO_OUTS Check: Game ${gameState.gameId} - 1B:${hasFirst}, 2B:${hasSecond}, 3B:${hasThird}, outs:${outs}`);
 
     // Specifically: Runner on 3rd, 0 outs (~84% scoring probability)
-    return !hasFirst && !hasSecond && hasThird && outs === 0;
+    const triggered = !hasFirst && !hasSecond && hasThird && outs === 0;
+    
+    if (triggered) {
+      console.log(`✅ MLB_RUNNER_ON_THIRD_NO_OUTS: TRIGGERED for game ${gameState.gameId}`);
+    } else {
+      console.log(`⏸️ MLB_RUNNER_ON_THIRD_NO_OUTS: Not triggered for game ${gameState.gameId}`);
+    }
+    
+    return triggered;
   }
+
+  generateAlert(gameState: GameState): AlertResult | null {
+    return {
+      alertKey: `${gameState.gameId}_runner_on_third_no_outs`,
+      type: this.alertType,
+      message: `🚨 RUNNER ON 3RD, NO OUTS! | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | 84% scoring probability | Prime RBI opportunity`,
+      context: {
+        gameId: gameState.gameId,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        homeScore: gameState.homeScore,
+        awayScore: gameState.awayScore,
+        inning: gameState.inning,
+        isTopInning: gameState.isTopInning,
+        hasFirst: false,
+        hasSecond: false,
+        hasThird: true,
+        outs: 0,
+        scenarioName: 'Runner on Third, No Outs',
+        scoringProbability: 84
+      },
+      priority: 84
+    };
+  }
+
+  calculateProbability(): number {
+    return 84;
+  }
+}
 
   generateAlert(gameState: GameState): AlertResult | null {
     // isTriggered() already called by engine - removed duplicate check

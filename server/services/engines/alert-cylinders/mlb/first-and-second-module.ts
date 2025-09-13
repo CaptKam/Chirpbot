@@ -5,12 +5,25 @@ export default class FirstAndSecondModule extends BaseAlertModule {
   sport = 'MLB';
 
   isTriggered(gameState: GameState): boolean {
-    if (!gameState.isLive) return false;
+    if (!gameState.isLive) {
+      console.log(`🔍 MLB_FIRST_AND_SECOND: Game ${gameState.gameId} not live`);
+      return false;
+    }
 
     const { hasFirst, hasSecond, hasThird, outs } = gameState;
 
-    // Specifically: 1st + 2nd, any outs (58-68% scoring probability depending on outs)
-    return hasFirst && hasSecond && !hasThird && outs < 3;
+    console.log(`🔍 MLB_FIRST_AND_SECOND Check: Game ${gameState.gameId} - 1B:${hasFirst}, 2B:${hasSecond}, 3B:${hasThird}, outs:${outs}`);
+
+    // Specifically: 1st + 2nd, any outs (~58% scoring probability)
+    const triggered = hasFirst && hasSecond && !hasThird;
+
+    if (triggered) {
+      console.log(`✅ MLB_FIRST_AND_SECOND: TRIGGERED for game ${gameState.gameId}`);
+    } else {
+      console.log(`⏸️ MLB_FIRST_AND_SECOND: Not triggered for game ${gameState.gameId}`);
+    }
+
+    return triggered;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

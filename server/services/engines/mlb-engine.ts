@@ -9,7 +9,7 @@ import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 export class MLBEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
   private lineMovementCache: Map<string, any> = new Map(); // Track line movements
-  
+
   // Deduplication tracking - tracks sent alerts to prevent duplicates
   private sentAlerts: Map<string, Set<string>> = new Map(); // gameId -> Set of alertKeys
   private alertTimestamps: Map<string, number> = new Map(); // alertKey -> timestamp
@@ -17,7 +17,7 @@ export class MLBEngine extends BaseSportEngine {
   private readonly ALERT_COOLDOWN_MS = 300000; // 5 minutes cooldown per alert
   private readonly CLEANUP_INTERVAL_MS = 600000; // Clean up old entries every 10 minutes
   private readonly MAX_ALERTS_PER_GAME = 50; // Prevent memory overload per game
-  
+
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -39,7 +39,7 @@ export class MLBEngine extends BaseSportEngine {
     super('MLB');
     this.settingsCache = new SettingsCache(storage);
   }
-  
+
   /**
    * Check if an alert has already been sent recently
    */
@@ -51,17 +51,17 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`🚫 MLB Duplicate blocked: ${alertKey} (sent ${Math.round((Date.now() - lastSent) / 1000)}s ago)`);
       return true;
     }
-    
+
     // Check if we've sent too many alerts for this game
     const gameAlerts = this.sentAlerts.get(gameId);
     if (gameAlerts && gameAlerts.size >= this.MAX_ALERTS_PER_GAME) {
       console.log(`⚠️ MLB Alert limit reached for game ${gameId} (${gameAlerts.size} alerts)`);
       return true;
     }
-    
+
     return false;
   }
-  
+
   /**
    * Mark an alert as sent
    */
@@ -71,30 +71,30 @@ export class MLBEngine extends BaseSportEngine {
       this.sentAlerts.set(gameId, new Set());
     }
     this.sentAlerts.get(gameId)!.add(alertKey);
-    
+
     // Track timestamp
     this.alertTimestamps.set(alertKey, Date.now());
     this.performanceMetrics.alertsSent++;
-    
+
     console.log(`✅ MLB Alert tracked: ${alertKey} for game ${gameId}`);
-    
+
     // Periodic cleanup to prevent memory leaks
     this.cleanupOldAlerts();
   }
-  
+
   /**
    * Clean up old alert tracking data to prevent memory leaks
    */
   private cleanupOldAlerts(): void {
     const now = Date.now();
-    
+
     // Only run cleanup periodically
     if (now - this.lastCleanup < this.CLEANUP_INTERVAL_MS) {
       return;
     }
-    
+
     console.log(`🧹 MLB Alert cleanup: Removing alerts older than ${this.ALERT_COOLDOWN_MS}ms`);
-    
+
     // Clean up old timestamps
     let removedCount = 0;
     for (const [alertKey, timestamp] of this.alertTimestamps.entries()) {
@@ -103,7 +103,7 @@ export class MLBEngine extends BaseSportEngine {
         removedCount++;
       }
     }
-    
+
     // Clean up game tracking for finished games (no alerts in last hour)
     const oneHourAgo = now - 3600000;
     for (const [gameId, alerts] of this.sentAlerts.entries()) {
@@ -115,13 +115,13 @@ export class MLBEngine extends BaseSportEngine {
           break;
         }
       }
-      
+
       if (!hasRecentAlert) {
         this.sentAlerts.delete(gameId);
         console.log(`🧹 MLB Removed tracking for game ${gameId}`);
       }
     }
-    
+
     this.lastCleanup = now;
     console.log(`🧹 MLB Alert cleanup complete: removed ${removedCount} old alerts`);
   }
@@ -164,7 +164,7 @@ export class MLBEngine extends BaseSportEngine {
 
   async calculateProbability(gameState: GameState): Promise<number> {
     const startTime = Date.now();
-    
+
     try {
       if (!gameState.isLive) return 0;
 
@@ -194,7 +194,7 @@ export class MLBEngine extends BaseSportEngine {
     if (gameState.hasThird) runnerBonus += 15; // Runner on third
     if (gameState.hasSecond) runnerBonus += 10; // Runner on second
     if (gameState.hasFirst) runnerBonus += 5; // Runner on first
-    
+
     probability += runnerBonus;
 
     // Keep probability within reasonable bounds
@@ -204,7 +204,7 @@ export class MLBEngine extends BaseSportEngine {
       const calculationTime = Date.now() - startTime;
       this.performanceMetrics.probabilityCalculationTime.push(calculationTime);
       this.performanceMetrics.totalRequests++;
-      
+
       // Keep only last 100 measurements for performance
       if (this.performanceMetrics.probabilityCalculationTime.length > 100) {
         this.performanceMetrics.probabilityCalculationTime = this.performanceMetrics.probabilityCalculationTime.slice(-100);
@@ -215,20 +215,20 @@ export class MLBEngine extends BaseSportEngine {
   // Override to add MLB-specific game state normalization
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const startTime = Date.now();
-    
+
     try {
       // Early exit if game is not valid
       if (!gameState.gameId) {
         console.log('⚠️ MLB: No gameId provided, skipping alert generation');
         return [];
       }
-      
+
       // Enhance game state with MLB-specific data if needed
       const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
 
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
-      
+
       // Filter out duplicate alerts before processing
       const dedupedAlerts: AlertResult[] = [];
       for (const alert of rawAlerts) {
@@ -239,21 +239,21 @@ export class MLBEngine extends BaseSportEngine {
           this.markAlertSent(enhancedGameState.gameId, alert.alertKey);
         }
       }
-      
+
       // If all alerts were duplicates, return early
       if (dedupedAlerts.length === 0) {
         console.log(`🔄 MLB: All ${rawAlerts.length} alerts were duplicates for game ${enhancedGameState.gameId}`);
         return [];
       }
-      
+
       console.log(`✅ MLB: Processing ${dedupedAlerts.length} new alerts (blocked ${rawAlerts.length - dedupedAlerts.length} duplicates)`);
-      
+
       // Enhance alerts with time-sensitive intelligence via AlertComposer
       const composedAlerts = await this.composeTimeBasedAlerts(dedupedAlerts, enhancedGameState);
-      
+
       // Process alerts with cross-sport AI enhancement for high-priority situations
       const alerts = await this.processEnhancedMLBAlerts(composedAlerts, enhancedGameState);
-      
+
       // Track MLB-specific metrics
       if (enhancedGameState.hasFirst && enhancedGameState.hasSecond && enhancedGameState.hasThird) {
         this.performanceMetrics.basesLoadedSituations++;
@@ -264,17 +264,17 @@ export class MLBEngine extends BaseSportEngine {
       if (enhancedGameState.hasThird && enhancedGameState.outs <= 1) {
         this.performanceMetrics.runnerScoringOpportunities++;
       }
-      
+
       this.performanceMetrics.totalAlerts += alerts.length;
-      
+
       // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
       await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
-      
+
       return alerts;
     } finally {
       const alertTime = Date.now() - startTime;
       this.performanceMetrics.alertGenerationTime.push(alertTime);
-      
+
       // Keep only last 100 measurements for performance
       if (this.performanceMetrics.alertGenerationTime.length > 100) {
         this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-100);
@@ -284,10 +284,10 @@ export class MLBEngine extends BaseSportEngine {
 
   private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
     const startTime = Date.now();
-    
+
     try {
       console.log(`🔧 MLB Enhancement: Game ${gameState.gameId} - status=${gameState.status}, isLive=${gameState.isLive}`);
-      
+
       // Get live data from MLB API for any non-final game (fixes catch-22 gating loop)
       if (gameState.gameId && gameState.status !== 'final') {
         console.log(`✅ MLB Enhancement: Fetching enhanced data for non-final game ${gameState.gameId}`);
@@ -348,7 +348,7 @@ export class MLBEngine extends BaseSportEngine {
     } finally {
       const enhanceTime = Date.now() - startTime;
       this.performanceMetrics.gameStateEnhancementTime.push(enhanceTime);
-      
+
       // Keep only last 100 measurements for performance
       if (this.performanceMetrics.gameStateEnhancementTime.length > 100) {
         this.performanceMetrics.gameStateEnhancementTime = this.performanceMetrics.gameStateEnhancementTime.slice(-100);
@@ -367,10 +367,10 @@ export class MLBEngine extends BaseSportEngine {
       try {
         // Only enhance medium-priority alerts and above (>= 50 probability) to enable advanced AI features
         const probability = await this.calculateProbability(gameState);
-        
+
         if (probability >= 50) {
           console.log(`🧠 MLB AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
-          
+
           // Build cross-sport context for MLB
           const aiContext: CrossSportContext = {
             sport: 'MLB',
@@ -400,7 +400,7 @@ export class MLBEngine extends BaseSportEngine {
           await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
           console.log(`🚀 MLB Async AI: Queued ${alert.type} for background enhancement`);
         }
-        
+
         // Always return base alert immediately (async enhancement happens via WebSocket)
         enhancedAlerts.push(alert);
       } catch (error) {
@@ -521,12 +521,12 @@ export class MLBEngine extends BaseSportEngine {
     const currentTypes = Array.from(this.alertModules.keys()).sort();
     const newTypes = [...enabledAlertTypes].sort();
     const typesChanged = JSON.stringify(currentTypes) !== JSON.stringify(newTypes);
-    
+
     if (!typesChanged && this.alertModules.size > 0) {
       console.log(`🔄 MLB alert cylinders already loaded: ${this.alertModules.size} modules`);
       return; // Reuse existing modules
     }
-    
+
     // Only clear when types have actually changed
     if (typesChanged) {
       this.alertModules.clear();
@@ -549,7 +549,7 @@ export class MLBEngine extends BaseSportEngine {
    */
   private async composeTimeBasedAlerts(alerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
     const composedAlerts: AlertResult[] = [];
-    
+
     for (const alert of alerts) {
       try {
         // Generate enhanced payload with time-sensitive intelligence
@@ -558,7 +558,7 @@ export class MLBEngine extends BaseSportEngine {
           recentLineMovement: this.getRecentLineMovement(gameState),
           sharpMoney: this.getSharpMoneyIndicator(gameState)
         });
-        
+
         // Create enhanced alert with rich messaging
         const enhancedAlert: AlertResult = {
           ...alert,
@@ -574,7 +574,7 @@ export class MLBEngine extends BaseSportEngine {
             riskReward: enhancedPayload.riskReward
           }
         };
-        
+
         composedAlerts.push(enhancedAlert);
         console.log(`⚡ MLB Alert Composed: ${alert.type} - ${enhancedPayload.timing.urgencyLevel} priority`);
       } catch (error) {
@@ -582,10 +582,10 @@ export class MLBEngine extends BaseSportEngine {
         composedAlerts.push(alert); // Fallback to original
       }
     }
-    
+
     return composedAlerts;
   }
-  
+
   /**
    * Get recent line movement for context
    */
@@ -599,11 +599,11 @@ export class MLBEngine extends BaseSportEngine {
       spread: gameState.homeScore - gameState.awayScore,
       timestamp: Date.now()
     };
-    
+
     if (previous && (current.timestamp - previous.timestamp) < 60000) {
       const totalMove = current.total - previous.total;
       const spreadMove = current.spread - previous.spread;
-      
+
       if (Math.abs(totalMove) >= 0.5 || Math.abs(spreadMove) >= 0.5) {
         this.lineMovementCache.set(key, current);
         return {
@@ -613,11 +613,11 @@ export class MLBEngine extends BaseSportEngine {
         };
       }
     }
-    
+
     this.lineMovementCache.set(key, current);
     return null;
   }
-  
+
   /**
    * Get sharp money indicators
    */
@@ -626,39 +626,39 @@ export class MLBEngine extends BaseSportEngine {
     // Simulate based on game flow
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
     const inning = gameState.inning || 1;
-    
+
     if (scoreDiff <= 1 && inning >= 7) {
       return { indicator: 'heavy', direction: 'over', confidence: 85 };
     }
     if (gameState.hasFirst && gameState.hasSecond && gameState.hasThird) {
       return { indicator: 'moderate', direction: 'over', confidence: 70 };
     }
-    
+
     return null;
   }
-  
+
   // Get performance metrics for V3 dashboard
   // Send alerts to Telegram for users with notifications enabled
   private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
     if (!alerts || alerts.length === 0) return;
-    
+
     try {
       console.log(`🚀 Simultaneously delivering ${alerts.length} MLB alerts to WebSocket and Telegram`);
-      
+
       // Create delivery promises for parallel execution
       const deliveryPromises: Promise<void>[] = [];
-      
+
       // 1. WebSocket delivery promise
       deliveryPromises.push(this.deliverAlertsToWebSocket(alerts, gameState));
-      
+
       // 2. Telegram delivery promise
       deliveryPromises.push(this.deliverAlertsToTelegram(alerts, gameState));
-      
+
       // Execute both deliveries simultaneously
       await Promise.all(deliveryPromises);
-      
+
       console.log(`✅ Synchronized delivery complete for ${alerts.length} alerts`);
-      
+
     } catch (error) {
       console.error('❌ Synchronized alert delivery system error:', error);
     }
@@ -720,14 +720,14 @@ export class MLBEngine extends BaseSportEngine {
         user.telegramBotToken !== 'default_key' &&
         user.telegramChatId !== 'test-chat-id'
       );
-      
+
       if (telegramUsers.length === 0) {
         console.log('📱 ℹ️ No users with valid Telegram configurations found');
         return;
       }
-      
+
       console.log(`📱 🚀 Delivering ${alerts.length} MLB alerts to ${telegramUsers.length} Telegram users`);
-      
+
       // Send alerts to each user
       for (const alert of alerts) {
         // Double-check alert hasn't been sent (extra safety)
@@ -736,14 +736,14 @@ export class MLBEngine extends BaseSportEngine {
           console.log(`📱 🚫 Telegram alert already sent: ${telegramKey}`);
           continue;
         }
-        
+
         for (const user of telegramUsers) {
           try {
             const telegramConfig: TelegramConfig = {
               botToken: user.telegramBotToken!,
               chatId: user.telegramChatId!
             };
-            
+
             const telegramAlert = {
               id: alert.alertKey,
               type: alert.type,
@@ -771,9 +771,9 @@ export class MLBEngine extends BaseSportEngine {
                 }
               }
             };
-            
+
             const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
-            
+
             if (sent) {
               console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
               // Mark this specific telegram alert as sent after successful delivery
@@ -807,7 +807,7 @@ export class MLBEngine extends BaseSportEngine {
     const cacheHitRate = this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
       ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
       : 0;
-      
+
     const deduplicationRate = this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked > 0
       ? (this.performanceMetrics.duplicatesBlocked / (this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked)) * 100
       : 0;
