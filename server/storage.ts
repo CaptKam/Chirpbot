@@ -832,6 +832,37 @@ export const storage = {
       console.error(`❌ Failed to enable user alert ${userId} ${sport} ${alertType}:`, error);
       return false;
     }
+  },
+
+  // Master alerts control
+  async isMasterAlertsEnabled(): Promise<boolean> {
+    try {
+      // Check if any global alert settings exist and are enabled
+      const result = await db.execute(sql`
+        SELECT COUNT(*) as enabled_count 
+        FROM global_alert_settings 
+        WHERE enabled = true
+      `);
+      const enabledCount = parseInt(result.rows[0]?.enabled_count || '0');
+      return enabledCount > 0;
+    } catch (error) {
+      console.error('Error checking master alerts status:', error);
+      return true; // Default to enabled if error
+    }
+  },
+
+  // Recent alerts retrieval
+  async getRecentAlerts(limit: number = 20): Promise<Alert[]> {
+    try {
+      const result = await db.select()
+        .from(alerts)
+        .orderBy(desc(alerts.createdAt))
+        .limit(limit);
+      return result;
+    } catch (error) {
+      console.error('Error getting recent alerts:', error);
+      return [];
+    }
   }
 };
 
