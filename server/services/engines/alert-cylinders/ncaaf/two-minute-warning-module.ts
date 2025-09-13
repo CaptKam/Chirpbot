@@ -19,17 +19,10 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       return false;
     }
 
-    // Must be within 2 minutes
-    const withinTwoMins = this.isWithinTwoMinutes(gameState.timeRemaining);
-    if (!withinTwoMins) {
-      console.log(`❌ Two Minute: Not within 2 minutes (${gameState.timeRemaining})`);
-      return false;
-    }
-
-    // Must be a competitive game (within 3 touchdowns for college football)
-    const isCompetitive = this.isCompetitiveGame(gameState);
-    if (!isCompetitive) {
-      console.log(`❌ Two Minute: Game not competitive (${gameState.homeScore}-${gameState.awayScore})`);
+    // Must be exactly at 2:00 remaining (within 5 second window)
+    const exactlyTwoMinutes = this.isExactlyTwoMinutes(gameState.timeRemaining);
+    if (!exactlyTwoMinutes) {
+      console.log(`❌ Two Minute: Not exactly 2:00 remaining (${gameState.timeRemaining})`);
       return false;
     }
 
@@ -40,39 +33,11 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
   generateAlert(gameState: GameState): AlertResult | null {
     if (!this.isTriggered(gameState)) return null;
 
-    const isHalftime = gameState.quarter === 2;
-    const isEndOfGame = gameState.quarter === 4;
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    const isFirstHalf = gameState.quarter === 2;
+    const halfText = isFirstHalf ? '1st Half' : '2nd Half';
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
-    // Determine priority and message based on game situation
-    let priority = 80;
-    let emoji = '⏱️';
-    let message = '';
-
-    if (isEndOfGame) {
-      if (scoreDiff <= 3) {
-        // Field goal game
-        priority = 95;
-        emoji = '🚨';
-        message = `${emoji} NCAAF CRUNCH TIME! ${this.getScoreDisplay(gameState)} - ${gameState.timeRemaining} left in 4th quarter!`;
-      } else if (scoreDiff <= 7) {
-        // One touchdown game
-        priority = 90;
-        emoji = '⏰';
-        message = `${emoji} NCAAF Final Two Minutes! ${this.getScoreDisplay(gameState)} - ${gameState.timeRemaining} remaining!`;
-      } else {
-        // Competitive but not super close
-        priority = 85;
-        emoji = '⏱️';
-        message = `${emoji} NCAAF Two Minutes Left! ${this.getScoreDisplay(gameState)} - ${gameState.timeRemaining} in 4th quarter`;
-      }
-    } else {
-      // Halftime approaching
-      priority = 80;
-      emoji = '⏱️';
-      message = `${emoji} NCAAF Halftime Approaching! ${this.getScoreDisplay(gameState)} - ${gameState.timeRemaining} left in 2nd quarter`;
-    }
+    const message = `⏰ Two Minutes Remaining in the ${halfText}! ${this.getScoreDisplay(gameState)}`;
 
     return {
       alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
@@ -87,57 +52,30 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
         quarter: gameState.quarter,
         timeRemaining: gameState.timeRemaining,
         timeSeconds,
-        scoreDiff,
-        isHalftime,
-        isEndOfGame,
-        isCompetitive: scoreDiff <= 21,
-        gamePhase: isHalftime ? 'APPROACHING_HALFTIME' : 'FINAL_MINUTES'
+        halfText,
+        isFirstHalf,
+        twoMinuteWarning: true
       },
-      priority
+      priority: 88
     };
   }
 
   calculateProbability(gameState: GameState): number {
     if (!this.isTriggered(gameState)) return 0;
-
-    let probability = 70; // Base probability for two-minute situations
-
-    // Higher probability for end of game vs halftime
-    if (gameState.quarter === 4) {
-      probability += 20;
-    } else {
-      probability += 10;
-    }
-
-    // Adjust for how close the game is
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    if (scoreDiff <= 3) probability += 15; // Field goal game
-    else if (scoreDiff <= 7) probability += 10; // One touchdown
-    else if (scoreDiff <= 14) probability += 5; // Two touchdowns
-
-    // Time factor - closer to end = higher probability
-    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
-    if (timeSeconds <= 60) probability += 10; // Final minute
-
-    return Math.min(probability, 100);
+    return 95; // High probability since it's exactly at 2:00 mark
   }
 
-  private isWithinTwoMinutes(timeRemaining: string): boolean {
+  private isExactlyTwoMinutes(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
 
     try {
-      const [minutes, seconds] = timeRemaining.split(':').map(Number);
+      const [minutes, seconds] = timeString.split(':').map(Number);
       const totalSeconds = minutes * 60 + seconds;
-      return totalSeconds <= 120 && totalSeconds > 0; // 2 minutes = 120 seconds
+      // Allow for 5-second window around exactly 2:00 (115-125 seconds)
+      return totalSeconds >= 115 && totalSeconds <= 125;
     } catch (error) {
       return false;
     }
-  }
-
-  private isCompetitiveGame(gameState: GameState): boolean {
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    // For college football, games within 3 touchdowns (21 points) are still interesting
-    return scoreDiff <= 21;
   }
 
   private parseTimeToSeconds(timeString: string): number {
