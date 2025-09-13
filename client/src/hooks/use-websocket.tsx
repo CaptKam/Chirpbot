@@ -10,13 +10,10 @@ export function useWebSocket() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const maxReconnectAttempts = 5;
   
-  // WebSocket functionality DISABLED
-  console.log('🚫 WebSocket disabled - real-time alerts not available');
+  // WebSocket functionality ENABLED
+  console.log('🔌 WebSocket enabled - real-time alerts available');
 
   const connectWithCleanup = useCallback(() => {
-    // WebSocket connection disabled
-    console.log('⚠️ WebSocket connection disabled - alerts require page refresh');
-    setIsConnected(false);
     // Prevent further connections if max attempts are reached, but allow reset on component mount
     if (reconnectAttempts >= maxReconnectAttempts) {
       console.log('Max WebSocket reconnection attempts reached. Will reset on next attempt...');
@@ -181,9 +178,25 @@ export function useWebSocket() {
   }, [reconnectAttempts]); // Depend on reconnectAttempts to manage retry logic
 
   useEffect(() => {
-    // WebSocket disabled - no connection attempt
-    console.log('🚫 WebSocket useEffect disabled');
-  }, []);
+    // Initialize WebSocket connection
+    console.log('🔌 Initializing WebSocket connection');
+    connectWithCleanup();
+
+    // Cleanup function
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close(1000, 'Component unmounting');
+      }
+      
+      setIsConnected(false);
+      setReconnectAttempts(0);
+    };
+  }, [connectWithCleanup]);
 
   return {
     isConnected,

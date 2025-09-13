@@ -327,8 +327,37 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Request deduplication and memory management are handled by middleware above
 
-  // WebSocket server DISABLED - real-time alerts not available
-  console.log('⚠️ WebSocket server disabled - alerts require manual page refresh');
+  // WebSocket server for real-time alerts
+  const wss = new WebSocketServer({ 
+    server: httpServer,
+    path: '/realtime-alerts'
+  });
+
+  const clients = new Set<WebSocket>();
+
+  wss.on('connection', (ws: WebSocket) => {
+    console.log('🔌 New WebSocket connection established');
+    clients.add(ws);
+
+    ws.on('close', () => {
+      clients.delete(ws);
+      console.log('🔌 WebSocket connection closed');
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      clients.delete(ws);
+    });
+
+    // Send initial connection confirmation
+    ws.send(JSON.stringify({
+      type: 'connection_established',
+      message: 'Real-time alerts enabled',
+      timestamp: new Date().toISOString()
+    }));
+  });
+
+  console.log('✅ WebSocket server enabled - real-time alerts active');
 
   // Admin panel compatibility route
   app.get('/admin-panel', (req, res) => res.redirect('/admin/login.html'));
@@ -383,13 +412,45 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // WebSocket heartbeat and broadcast DISABLED
-  console.log('⚠️ WebSocket broadcast system disabled');
+  // WebSocket heartbeat to keep connections alive
+  const heartbeatInterval = setInterval(() => {
+    clients.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      } else {
+        clients.delete(ws);
+      }
+    });
+  }, 30000); // Heartbeat every 30 seconds
 
-  // Disabled broadcast function - no-op
+  // Broadcast function to send alerts to all connected clients
   function broadcast(data: any) {
-    // WebSocket broadcasting disabled - alerts only available via API refresh
-    console.log('🚫 WebSocket broadcast disabled - alert would have been sent:', data.type);
+    if (clients.size === 0) {
+      console.log('📡 No WebSocket clients connected for broadcast');
+      return;
+    }
+
+    const message = JSON.stringify(data);
+    let successCount = 0;
+    let failureCount = 0;
+
+    clients.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(message);
+          successCount++;
+        } catch (error) {
+          console.error('Error sending WebSocket message:', error);
+          clients.delete(ws);
+          failureCount++;
+        }
+      } else {
+        clients.delete(ws);
+        failureCount++;
+      }
+    });
+
+    console.log(`📡 WebSocket broadcast: ${successCount} sent, ${failureCount} failed, type: ${data.type}`);
   }
 
   // Export disabled broadcast function
@@ -398,11 +459,33 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Initialize Async AI Processor for background AI enhancement
   const { asyncAIProcessor } = await import('./services/async-ai-processor');
 
-  // AsyncAI WebSocket integration DISABLED
+  // AsyncAI WebSocket integration ENABLED
   asyncAIProcessor.setOnEnhancedAlert(async (enhancedAlert, userId, sport, wasActuallyEnhanced) => {
-    // WebSocket broadcasting disabled - alerts stored in database only
     const enhancementStatus = wasActuallyEnhanced ? 'AI Enhanced' : 'Gated (No AI)';
-    console.log(`📝 Alert stored (${enhancementStatus}): ${sport} ${enhancedAlert.type} - WebSocket disabled, refresh page to see`);
+    console.log(`📝 Alert generated (${enhancementStatus}): ${sport} ${enhancedAlert.type}`);
+    
+    // Broadcast the enhanced alert to all connected WebSocket clients
+    broadcast({
+      type: 'new_alert',
+      alert: {
+        id: enhancedAlert.id || enhancedAlert.alertKey,
+        alertKey: enhancedAlert.alertKey,
+        alertType: enhancedAlert.type,
+        type: enhancedAlert.type,
+        sport: sport,
+        gameId: enhancedAlert.gameId,
+        score: enhancedAlert.score || enhancedAlert.confidence || 85,
+        payload: enhancedAlert.payload || enhancedAlert,
+        createdAt: enhancedAlert.createdAt || new Date().toISOString(),
+        wasActuallyEnhanced,
+        context: enhancedAlert.context,
+        ai: wasActuallyEnhanced ? {
+          enhancedTitle: enhancedAlert.payload?.aiTitle,
+          enhancedMessage: enhancedAlert.payload?.aiCallToAction
+        } : undefined
+      },
+      timestamp: new Date().toISOString()
+    });
   });
 
   console.log('🚀 AsyncAIProcessor integrated with WebSocket broadcast system');
