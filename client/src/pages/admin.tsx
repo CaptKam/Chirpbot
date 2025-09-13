@@ -59,15 +59,20 @@ import { AuthLoading, StatsLoading } from '@/components/sports-loading';
   },
   CFL: {
     "Game Situations": [
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Third Down (CFL)", description: "Critical down conversion attempts" },
+      { key: "CFL_GAME_START", label: "Game Start", description: "Alert when CFL game begins" },
+      { key: "CFL_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Start of second half (3rd quarter)" },
+      { key: "CFL_FOURTH_QUARTER", label: "Fourth Quarter", description: "Start of fourth quarter" },
+      { key: "CFL_FINAL_MINUTES", label: "Final Minutes", description: "Critical final minutes of game" },
+      { key: "CFL_TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "Two minutes remaining in the half" },
     ]
   },
   NCAAF: {
     "Game Situations": [
-      { key: "CLOSE_GAME", label: "Close Game Alert", description: "Games with tight scores" },
-      { key: "FOURTH_DOWN", label: "Fourth Down", description: "Critical conversion attempts" },
-      { key: "TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "End-of-quarter/half pressure situations" },
+      { key: "NCAAF_GAME_START", label: "Game Start", description: "Alert when NCAAF game begins" },
+      { key: "NCAAF_SECOND_HALF_KICKOFF", label: "Second Half Kickoff", description: "Start of second half (3rd quarter)" },
+      { key: "NCAAF_RED_ZONE", label: "Red Zone Situations", description: "Team inside the 20-yard line" },
+      { key: "NCAAF_FOURTH_DOWN_DECISION", label: "Fourth Down Decisions", description: "Critical 4th down conversion attempts" },
+      { key: "NCAAF_TWO_MINUTE_WARNING", label: "Two Minute Warning", description: "Two minutes remaining in the half" },
     ]
   }
 };

@@ -433,6 +433,7 @@ export const storage = {
         },
         'ncaaf': {
           'NCAAF_GAME_START': true,
+          'NCAAF_SECOND_HALF_KICKOFF': true,
           'NCAAF_TWO_MINUTE_WARNING': true,
           'NCAAF_RED_ZONE': true,
           'NCAAF_FOURTH_DOWN_DECISION': true,
@@ -443,6 +444,7 @@ export const storage = {
         },
         'cfl': {
           'CFL_GAME_START': true,
+          'CFL_SECOND_HALF_KICKOFF': true,
           'CFL_TWO_MINUTE_WARNING': true,
           'CFL_FOURTH_QUARTER': true,
           'CFL_FINAL_MINUTES': true,
@@ -769,13 +771,13 @@ export const storage = {
   async enableGlobalAlert(sport: string, alertType: string) {
     try {
       console.log(`🔧 Enabling global alert: ${sport} ${alertType}`);
-      
+
       // Check if global setting already exists
       const existing = await db.execute(sql`
         SELECT * FROM global_alert_settings 
         WHERE sport = ${sport} AND alert_type = ${alertType}
       `);
-      
+
       if (existing.rows.length > 0) {
         // Update existing setting to enabled
         await db.execute(sql`
@@ -790,7 +792,7 @@ export const storage = {
           VALUES (${sport}, ${alertType}, true, ${new Date()}, ${new Date()})
         `);
       }
-      
+
       console.log(`✅ Global alert enabled: ${sport} ${alertType}`);
       return true;
     } catch (error) {
@@ -802,13 +804,13 @@ export const storage = {
   async enableUserAlert(userId: string, sport: string, alertType: string) {
     try {
       console.log(`🔧 Enabling user alert: ${userId} ${sport} ${alertType}`);
-      
+
       // Check if user preference already exists
       const existing = await db.execute(sql`
         SELECT * FROM user_alert_preferences 
         WHERE user_id = ${userId} AND sport = ${sport} AND alert_type = ${alertType}
       `);
-      
+
       if (existing.rows.length > 0) {
         // Update existing preference to enabled
         await db.execute(sql`
@@ -823,7 +825,7 @@ export const storage = {
           VALUES (${userId}, ${sport}, ${alertType}, true, ${new Date()}, ${new Date()})
         `);
       }
-      
+
       console.log(`✅ User alert enabled: ${userId} ${sport} ${alertType}`);
       return true;
     } catch (error) {
