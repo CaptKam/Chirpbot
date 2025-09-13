@@ -3410,7 +3410,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         // Filter out globally disabled alerts for all users
         const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
         const enabledAlerts = availableAlerts.filter(alertType => {
-          const isGloballyEnabled = globalSettings[alertType] !== false;
+          const isGloballyEnabled = globalSettings[alertType] === true;
           if (!isGloballyEnabled) {
             console.log(`🚫 Filtering out globally disabled alert: ${alertType} for sport ${sport.toUpperCase()}`);
           }
