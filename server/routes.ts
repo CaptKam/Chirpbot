@@ -3390,6 +3390,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           const { NFLEngine } = await import('./services/engines/nfl-engine');
           const tempEngine = new NFLEngine();
           availableAlerts = await tempEngine.getAvailableAlertTypes();
+          console.log(`🔍 NFL Engine returned ${availableAlerts.length} alert types:`, availableAlerts);
         } else if (sport.toUpperCase() === 'WNBA') {
           const { WNBAEngine } = await import('./services/engines/wnba-engine');
           const tempEngine = new WNBAEngine();
