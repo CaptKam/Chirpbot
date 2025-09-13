@@ -1,205 +1,179 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import type { WebSocketMessage, Alert } from '@/types';
-import { queryClient } from '@/lib/queryClient';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+interface WebSocketMessage {
+  type: string;
+  alert?: any;
+  timestamp?: string;
+}
 
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const queryClient = useQueryClient();
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
-  
-  // WebSocket functionality ENABLED
-  console.log('🔌 WebSocket enabled - real-time alerts available');
 
-  const connectWithCleanup = useCallback(() => {
-    // Prevent further connections if max attempts are reached, but allow reset on component mount
-    if (reconnectAttempts >= maxReconnectAttempts) {
-      console.log('Max WebSocket reconnection attempts reached. Will reset on next attempt...');
-      setIsConnected(false);
-      return;
-    }
-
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    // Use the same host:port as the current page - works for all deployment scenarios
-    const wsUrl = `${protocol}//${window.location.host}/realtime-alerts`;
-    
-    console.log('WebSocket debug info:', {
-      'window.location.host': window.location.host,
-      'wsUrl': wsUrl
-    });
-
+  const connect = useCallback(() => {
     try {
-      // Close existing connection if it exists and is not already closing/closed
-      if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-        wsRef.current.close();
-      }
+      // Get the protocol and host from the current window location
+      const isSecure = window.location.protocol === 'https:';
+      const protocol = isSecure ? 'wss:' : 'ws:';
 
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
+      // For Replit development environment, use the current host
+      // This works for both development and production
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/realtime-alerts`;
 
-      ws.onopen = () => {
+      console.log('WebSocket debug info:', {
+        'window.location.host': window.location.host,
+        wsUrl
+      });
+
+      wsRef.current = new WebSocket(wsUrl);
+
+      wsRef.current.onopen = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
-        setReconnectAttempts(0); // Reset reconnect attempts on successful connection
+        setConnectionError(null);
+        reconnectAttempts.current = 0;
       };
 
-      ws.onmessage = (event) => {
+      wsRef.current.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
-          setLastMessage(message);
-          // Handle 'new_alert' specifically with enhanced error handling
-          if (message.type === 'new_alert') {
-            try {
-              const alertData = (message as any).alert || (message as any).data;
-              if (alertData && typeof alertData === 'object') {
-                // Transform backend alert structure to frontend Alert type
-                const transformedAlert: any = {
-                  id: alertData.id || alertData.alertKey,
-                  type: alertData.alertType || alertData.type,
-                  sport: alertData.sport,
-                  gameId: alertData.gameId,
-                  message: alertData.payload?.message || 'New alert',
-                  title: alertData.payload?.message || 'New alert',
-                  description: alertData.payload?.message || 'New alert', 
-                  homeTeam: alertData.payload?.context?.homeTeam,
-                  awayTeam: alertData.payload?.context?.awayTeam,
-                  homeScore: alertData.payload?.context?.homeScore,
-                  awayScore: alertData.payload?.context?.awayScore,
-                  priority: alertData.score || 50,
-                  confidence: alertData.score || 50,
-                  createdAt: alertData.createdAt,
-                  timestamp: alertData.createdAt,
+
+          if (message.type === 'new_alert' && message.alert) {
+            console.log('📋 WebSocket received alert:', message.alert.id, message.alert.type);
+
+            // Check current query state
+            const currentData = queryClient.getQueryData(['/api/alerts']);
+            console.log('🔍 Query state check:', {
+              hasData: !!currentData,
+              isLoading: queryClient.getQueryState(['/api/alerts'])?.isFetching,
+              dataLength: Array.isArray(currentData) ? currentData.length : 0
+            });
+
+            // Only update if query is settled (not loading)
+            const queryState = queryClient.getQueryState(['/api/alerts']);
+            if (!queryState?.isFetching && currentData) {
+              console.log('✅ Query settled, applying immediate WebSocket update');
+
+              queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
+                if (!Array.isArray(oldData)) return oldData;
+
+                console.log('📋 Cache update - Old alerts:', oldData.length);
+
+                // Check if alert already exists
+                const existingAlert = oldData.find((alert: any) => 
+                  alert.id === message.alert.id || alert.alertKey === message.alert.id
+                );
+
+                if (existingAlert) {
+                  console.log('📋 Cache update - Alert already exists, skipping');
+                  return oldData;
+                }
+
+                // Transform WebSocket alert to match frontend format
+                const transformedAlert = {
+                  id: message.alert.id || message.alert.alertKey,
+                  alertKey: message.alert.alertKey || message.alert.id,
+                  type: message.alert.type || message.alert.alertType,
+                  sport: message.alert.sport,
+                  gameId: message.alert.gameId,
+                  message: message.alert.payload?.message || 'New alert',
+                  title: message.alert.payload?.message || 'New alert',
+                  description: message.alert.payload?.message || 'New alert',
+                  homeTeam: message.alert.payload?.context?.homeTeam || 'Home Team',
+                  awayTeam: message.alert.payload?.context?.awayTeam || 'Away Team',
+                  homeScore: message.alert.payload?.context?.homeScore || 0,
+                  awayScore: message.alert.payload?.context?.awayScore || 0,
+                  priority: message.alert.score || 50,
+                  confidence: message.alert.score || 50,
+                  createdAt: message.alert.createdAt || new Date().toISOString(),
+                  timestamp: message.alert.createdAt || new Date().toISOString(),
                   seen: false,
                   sentToTelegram: false,
-                  // Preserve AI enhancement data if available
-                  context: {
-                    ...alertData.payload?.context,
-                    aiTitle: alertData.ai?.enhancedTitle,
-                    aiCallToAction: alertData.ai?.enhancedMessage,
-                    ...(alertData.context || {})
-                  }
+                  // Include context for alert footer
+                  context: message.alert.payload?.context || {},
+                  inning: message.alert.payload?.context?.inning,
+                  isTopInning: message.alert.payload?.context?.isTopInning,
+                  outs: message.alert.payload?.context?.outs,
+                  balls: message.alert.payload?.context?.balls,
+                  strikes: message.alert.payload?.context?.strikes,
+                  hasFirst: message.alert.payload?.context?.hasFirst,
+                  hasSecond: message.alert.payload?.context?.hasSecond,
+                  hasThird: message.alert.payload?.context?.hasThird,
+                  // Include full payload for compatibility
+                  payload: message.alert.payload
                 };
 
-                // Update the alerts list in the query cache
-                queryClient.setQueryData<any[]>(["/api/alerts"], (oldAlerts) => {
-                  try {
-                    if (!oldAlerts) return [transformedAlert];
+                const newData = [transformedAlert, ...oldData];
 
-                    // Check if alert already exists to prevent duplicates
-                    const exists = oldAlerts.some(alert =>
-                      alert.id === transformedAlert.id
-                    );
-                    if (exists) return oldAlerts;
+                // Sort by timestamp (newest first) and limit to 100 alerts
+                const sortedData = newData
+                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .slice(0, 100);
 
-                    // Add new alert at the beginning of the list
-                    return [transformedAlert, ...oldAlerts];
-                  } catch (error) {
-                    console.error('Error updating alerts cache:', error);
-                    return oldAlerts || [];
-                  }
-                });
-
-                // Refresh both queries to ensure consistency
-                queryClient.invalidateQueries({ queryKey: ["/api/alerts"] }).catch(error => {
-                  console.error('Error invalidating alerts queries:', error);
-                });
-                queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] }).catch(error => {
-                  console.error('Error invalidating unseen count query:', error);
-                });
-              }
-            } catch (error) {
-              console.error('Error processing new_alert message:', error);
+                console.log('🔄 Sorted alerts:', sortedData.length);
+                return sortedData;
+              });
+            } else {
+              console.log('⏳ Query is loading or no data, WebSocket update queued for next refetch');
             }
           }
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          console.error('Error parsing WebSocket message:', error);
         }
       };
 
-      ws.onclose = (event) => {
-        // Only log abnormal disconnections (not normal closures)
-        if (event.code !== 1000 && event.code !== 1001) {
-          console.log(`WebSocket disconnected: Code=${event.code}`);
-        }
+      wsRef.current.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
-        wsRef.current = null; // Clear the ref
 
-        // Clear any existing reconnect timeout to avoid duplicates
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
-        }
+        // Only attempt reconnection if it wasn't a normal closure
+        if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+          console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
 
-        // Attempt to reconnect only if it was not a clean closure (code 1000 or 1001)
-        // and if we haven't reached the max reconnect attempts
-        if (event.code !== 1000 && event.code !== 1001 && reconnectAttempts < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000); // Exponential backoff, max 10s
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log(`Reconnecting WebSocket... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
-            setReconnectAttempts(prev => prev + 1);
-            connectWithCleanup();
+            reconnectAttempts.current++;
+            connect();
           }, delay);
-        } else if (reconnectAttempts >= maxReconnectAttempts && event.code !== 1000 && event.code !== 1001) {
-          console.log('Max reconnection attempts reached.');
+        } else if (reconnectAttempts.current >= maxReconnectAttempts) {
+          setConnectionError('Failed to reconnect to WebSocket after multiple attempts');
         }
       };
 
-      ws.onerror = () => {
-        // Don't log the error event itself as it doesn't contain useful information
-        // The actual error details will be in the onclose event
-        // Don't trigger reconnection here as onclose will always be called after onerror
-        setIsConnected(false);
-        // Clear any existing timeout to avoid duplicates
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
-        }
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setConnectionError('WebSocket connection error');
       };
+
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
-      setIsConnected(false);
-      // Clear any existing timeout
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      // Attempt to reconnect on creation failure
-      if (reconnectAttempts < maxReconnectAttempts) {
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-        reconnectTimeoutRef.current = setTimeout(() => {
-          console.log(`Retrying WebSocket connection... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
-          setReconnectAttempts(prev => prev + 1);
-          connectWithCleanup();
-        }, delay);
-      }
+      setConnectionError('Failed to create WebSocket connection');
     }
-  }, [reconnectAttempts]); // Depend on reconnectAttempts to manage retry logic
+  }, [queryClient]);
 
   useEffect(() => {
-    // Initialize WebSocket connection
-    console.log('🔌 Initializing WebSocket connection');
-    connectWithCleanup();
+    connect();
 
-    // Cleanup function
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
       }
-      
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      if (wsRef.current) {
         wsRef.current.close(1000, 'Component unmounting');
       }
-      
-      setIsConnected(false);
-      setReconnectAttempts(0);
     };
-  }, [connectWithCleanup]);
+  }, [connect]);
 
   return {
     isConnected,
-    lastMessage,
+    connectionError,
+    reconnect: connect
   };
 }
