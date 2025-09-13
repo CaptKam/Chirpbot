@@ -457,7 +457,12 @@ export class NCAAFEngine extends BaseSportEngine {
         'NCAAF_RED_ZONE_EFFICIENCY': './alert-cylinders/ncaaf/red-zone-efficiency-module.ts',
         'NCAAF_COMEBACK_POTENTIAL': './alert-cylinders/ncaaf/comeback-potential-module.ts',
         'NCAAF_MASSIVE_WEATHER': './alert-cylinders/ncaaf/massive-weather-module.ts',
-        'NCAAF_SECOND_HALF_KICKOFF': './alert-cylinders/ncaaf/second-half-kickoff-module.ts'
+        'NCAAF_SECOND_HALF_KICKOFF': './alert-cylinders/ncaaf/second-half-kickoff-module.ts',
+        'NCAAF_CLOSE_GAME': './alert-cylinders/ncaaf/close-game-module.ts',
+        'NCAAF_SCORING_PLAY': './alert-cylinders/ncaaf/scoring-play-module.ts',
+        'NCAAF_FOURTH_QUARTER': './alert-cylinders/ncaaf/fourth-quarter-module.ts',
+        'NCAAF_HALFTIME': './alert-cylinders/ncaaf/halftime-module.ts',
+        'TEST_ALERT': './alert-cylinders/test-alert-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
@@ -474,7 +479,9 @@ export class NCAAFEngine extends BaseSportEngine {
         console.log(`⚠️ NCAAF Slow module load: ${alertType} took ${loadTime}ms`);
       }
 
-      return new module.default();
+      const instance = new module.default();
+      console.log(`✅ NCAAF ENGINE: Successfully registered alert module: ${alertType} from ${modulePath}`);
+      return instance;
     } catch (error) {
       const loadTime = Date.now() - startTime;
       console.error(`❌ Failed to load NCAAF alert module ${alertType} after ${loadTime}ms:`, error);
