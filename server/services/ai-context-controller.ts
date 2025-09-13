@@ -588,11 +588,17 @@ Make every word count. Users need instant clarity and value.
   private extractMessage(lines: string[], context: AlertContext): string {
     const messageLine = lines.find(line => 
       line.toLowerCase().includes('message') ||
-      (line.length > 30 && line.length < 120)
+      (line.length > 30 && line.length < 200)
     );
 
-    return messageLine?.replace(/^message:?\s*/i, '').trim() || 
-           context.originalMessage;
+    const aiMessage = messageLine?.replace(/^message:?\s*/i, '').trim();
+    
+    // Return AI enhanced message if it looks valid, otherwise fallback
+    if (aiMessage && aiMessage.length > 10 && aiMessage !== context.originalMessage) {
+      return aiMessage;
+    }
+    
+    return context.originalMessage;
   }
 
   private extractInsights(lines: string[], context: AlertContext): string[] {

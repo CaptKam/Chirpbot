@@ -461,15 +461,23 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* Main message */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white mb-2">
-          {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
-        </h3>
-        {/* Show AI enhanced message if available */}
-        {alertData.context?.aiTitle && (
-          <p className="text-sm text-blue-200 mb-2 p-2 bg-blue-500/10 rounded border border-blue-400/30">
-            🤖 <strong>AI Enhanced:</strong> {alertData.context.aiTitle}
-          </p>
+        {/* Prioritize AI enhanced message first */}
+        {alertData.context?.aiMessage ? (
+          <>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              {alertData.context.aiMessage}
+            </h3>
+            <p className="text-xs text-blue-400 mb-2 flex items-center gap-1">
+              <Brain className="w-3 h-3" />
+              AI Enhanced Alert
+            </p>
+          </>
+        ) : (
+          <h3 className="text-lg font-semibold text-white mb-2">
+            {alertData.context?.aiTitle || alertData.title || alertData.message || `${getAlertCategory(alertData.type)} alert for ${alertData.homeTeam} vs ${alertData.awayTeam}`}
+          </h3>
         )}
+        
         {(alertData.context?.aiCallToAction || alertData.description) && (
           <p className="text-sm text-slate-300">
             {alertData.context?.aiCallToAction || alertData.description}
@@ -626,13 +634,21 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
         </div>
 
         {/* AI Enhanced Message Display */}
-        {alertData.context?.aiCallToAction && (
+        {(alertData.context?.aiMessage || alertData.context?.aiTitle || alertData.context?.aiCallToAction) && (
           <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg p-3 mb-4 border border-blue-500/30">
             <div className="flex items-center gap-2 mb-2">
               <Brain className="w-4 h-4 text-blue-400" />
               <span className="text-blue-400 text-sm font-bold">AI Enhanced Alert</span>
             </div>
-            <p className="text-sm text-blue-100">{alertData.context.aiCallToAction}</p>
+            {alertData.context?.aiMessage && (
+              <p className="text-sm font-semibold text-white mb-2">{alertData.context.aiMessage}</p>
+            )}
+            {alertData.context?.aiTitle && !alertData.context?.aiMessage && (
+              <p className="text-sm font-semibold text-white mb-2">{alertData.context.aiTitle}</p>
+            )}
+            {alertData.context?.aiCallToAction && (
+              <p className="text-sm text-blue-100">{alertData.context.aiCallToAction}</p>
+            )}
           </div>
         )}
 
