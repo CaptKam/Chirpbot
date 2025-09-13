@@ -551,28 +551,54 @@ export class NCAAFEngine extends BaseSportEngine {
 
   private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
     try {
-      // Get all users with Telegram enabled
+      // Get all users with Telegram configured
       const allUsers = await storage.getAllUsers();
       const telegramUsers = allUsers.filter(user => 
-        user.telegramChatId && user.telegramBotToken
+        user.telegramChatId && user.telegramBotToken && user.telegramEnabled
       );
 
       if (telegramUsers.length === 0) {
-        console.log('📱 No Telegram users found - skipping Telegram delivery');
+        console.log('📱 No Telegram-enabled users found - skipping Telegram delivery');
         return;
       }
 
-      console.log(`📱 🚀 Delivering ${alerts.length} NCAAF alerts to ${telegramUsers.length} Telegram users`);
+      console.log(`📱 🔍 Pre-filtering ${telegramUsers.length} Telegram users for NCAAF alert preferences...`);
 
       // Import Telegram service
       const { sendTelegramAlert } = await import('../telegram');
 
       for (const alert of alerts) {
-        console.log(`📱 🔍 TELEGRAM DEBUG: Attempting to send ${alert.type} alert`);
+        console.log(`📱 🎯 Processing ${alert.type} alert for user preference filtering`);
         
-        // Send to each user individually
+        let eligibleUsers = 0;
+        let skippedUsers = 0;
+        
+        // Filter users for this specific alert type and NCAAF sport
         for (const user of telegramUsers) {
           try {
+            // CRITICAL FIX: Check user's NCAAF alert preferences for this specific alert type
+            const userNcaafPrefs = await storage.getUserAlertPreferencesBySport(user.id, 'NCAAF');
+            
+            // Find the specific alert type preference
+            const alertTypePref = userNcaafPrefs.find(pref => pref.alertType === alert.type);
+            
+            // User must have the specific alert type enabled for NCAAF
+            if (!alertTypePref || !alertTypePref.enabled) {
+              console.log(`📱 ❌ User ${user.username || user.id}: Alert ${alert.type} not enabled for NCAAF - skipping`);
+              skippedUsers++;
+              continue;
+            }
+
+            // Additional check: ensure user has Telegram enabled
+            if (user.telegramEnabled === false) {
+              console.log(`📱 ❌ User ${user.username || user.id}: Telegram notifications disabled - skipping`);
+              skippedUsers++;
+              continue;
+            }
+
+            // User is eligible - send the alert
+            eligibleUsers++;
+            
             const telegramConfig = {
               botToken: user.telegramBotToken!,
               chatId: user.telegramChatId!
@@ -597,14 +623,17 @@ export class NCAAFEngine extends BaseSportEngine {
             const success = await sendTelegramAlert(telegramConfig, alertData);
             
             if (success) {
-              console.log(`📱 ✅ Sent ${alert.type} alert to user ${user.username}`);
+              console.log(`📱 ✅ Sent ${alert.type} alert to user ${user.username || user.id} (has NCAAF.${alert.type} enabled)`);
             } else {
-              console.log(`📱 ❌ Failed to send ${alert.type} alert to user ${user.username}`);
+              console.log(`📱 ❌ Failed to send ${alert.type} alert to user ${user.username || user.id}`);
             }
           } catch (userError) {
-            console.error(`📱 ❌ Error sending alert to user ${user.username}:`, userError);
+            console.error(`📱 ❌ Error processing user ${user.username || user.id} for ${alert.type}:`, userError);
+            skippedUsers++;
           }
         }
+        
+        console.log(`📱 📊 Alert ${alert.type}: Sent to ${eligibleUsers} users, skipped ${skippedUsers} users (preference filtering)`);
       }
     } catch (error) {
       console.error('📱 ❌ Telegram delivery error:', error);
