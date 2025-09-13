@@ -3382,6 +3382,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
           const tempEngine = new NCAAFEngine();
           availableAlerts = await tempEngine.getAvailableAlertTypes();
+          console.log(`🔍 NCAAF Engine returned ${availableAlerts.length} alert types:`, availableAlerts);
         } else if (sport.toUpperCase() === 'MLB') {
           const { MLBEngine } = await import('./services/engines/mlb-engine');
           const tempEngine = new MLBEngine();
