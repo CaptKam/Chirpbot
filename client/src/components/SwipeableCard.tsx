@@ -842,75 +842,173 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                 </div>
               </div>
 
-              {/* V3 Alert Message Display - Unified Message Renderer */}
+              {/* Enhanced Alert Message Display with Full Context */}
               {(() => {
-                // Extract V3 message from all possible locations
-                const extractV3Message = (): string | null => {
-                  // 1. Check direct message field (where V3 messages are actually sent)
+                // Extract message from all possible locations with better parsing
+                const extractAlertMessage = (): { message: string; context: any } => {
+                  let message = '';
+                  let context = {};
+
+                  // 1. Try direct message field first
                   if (alertData.message && typeof alertData.message === 'string') {
-                    const msg = alertData.message.trim();
-                    // V3 messages typically have emojis and specific formatting
-                    if (msg.includes('📊') || msg.includes('🔴') || msg.includes('⚡') || 
-                        msg.includes('🎯') || msg.includes('💰') || msg.includes('🏈') || 
-                        msg.includes('🏀') || msg.includes('⚾') || msg.includes('🥎') ||
-                        msg.includes('%') && (msg.includes('scoring') || msg.includes('chance'))) {
-                      return msg;
-                    }
+                    message = alertData.message.trim();
                   }
 
-                  // 2. Check payload.message (legacy location)
+                  // 2. Try payload parsing with better error handling
                   const payload = (alertData as any)?.payload;
                   if (payload) {
-                    // If payload is a string, try to parse it
                     let parsedPayload = payload;
+                    
+                    // Parse if string
                     if (typeof payload === 'string') {
                       try {
                         parsedPayload = JSON.parse(payload);
                       } catch {
-                        // Not JSON, treat as direct message
-                        return payload.trim();
+                        // If not JSON, use as direct message
+                        if (!message && payload.trim()) {
+                          message = payload.trim();
+                        }
                       }
                     }
 
-                    // Check parsed payload for message
-                    if (parsedPayload?.message && typeof parsedPayload.message === 'string') {
-                      return parsedPayload.message.trim();
-                    }
-
-                    // Check nested payload.payload.message
-                    if (parsedPayload?.payload?.message && typeof parsedPayload.payload.message === 'string') {
-                      return parsedPayload.payload.message.trim();
+                    // Extract message and context from parsed payload
+                    if (parsedPayload && typeof parsedPayload === 'object') {
+                      if (parsedPayload.message && !message) {
+                        message = parsedPayload.message;
+                      }
+                      if (parsedPayload.context) {
+                        context = parsedPayload.context;
+                      }
+                      // Check nested payload
+                      if (parsedPayload.payload?.message && !message) {
+                        message = parsedPayload.payload.message;
+                      }
+                      if (parsedPayload.payload?.context) {
+                        context = { ...context, ...parsedPayload.payload.context };
+                      }
                     }
                   }
 
-                  return null;
+                  // 3. Fallback to alertData.context if available
+                  if (alertData.context) {
+                    context = { ...context, ...alertData.context };
+                  }
+
+                  return { message: message || 'Alert triggered', context };
                 };
 
-                const v3Message = extractV3Message();
+                const { message, context } = extractAlertMessage();
 
-                // Debug log to verify V3 message extraction
-                if (alertData.id) {
-                  console.log('🔍 V3 Message Extraction:', {
-                    alertId: alertData.id,
-                    directMessage: alertData.message?.substring(0, 50),
-                    extractedV3: v3Message?.substring(0, 50),
-                    hasV3: !!v3Message,
-                    sport: alertData.sport
-                  });
-                }
+                // Debug what we found
+                console.log('🔍 Alert Message Debug:', {
+                  alertId: alertData.id,
+                  extractedMessage: message.substring(0, 100),
+                  hasContext: Object.keys(context).length > 0,
+                  contextKeys: Object.keys(context),
+                  sport: alertData.sport,
+                  type: alertData.type
+                });
 
-                // V3 Message Display - Only render if V3 message exists
-                if (v3Message) {
-                  return (
-                    <div className="mb-3">
+                return (
+                  <div className="mb-3 space-y-2">
+                    {/* Main Alert Message */}
+                    <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700">
                       <p className="text-base md:text-lg font-medium leading-snug text-white" data-testid="text-alert-message">
-                        {v3Message}
+                        {message}
                       </p>
+                      
+                      {/* Alert Type Badge */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="px-2 py-1 text-xs font-semibold bg-blue-500/20 text-blue-300 rounded">
+                          {alertData.type?.replace(/_/g, ' ') || 'GAME ALERT'}
+                        </span>
+                        {alertData.priority && (
+                          <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                            alertData.priority >= 80 ? 'bg-red-500/20 text-red-300' : 
+                            alertData.priority >= 60 ? 'bg-yellow-500/20 text-yellow-300' : 
+                            'bg-green-500/20 text-green-300'
+                          }`}>
+                            Priority: {alertData.priority}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  );
-                }
 
-                return null;
+                    {/* Context Details */}
+                    {Object.keys(context).length > 0 && (
+                      <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-600">
+                        <h4 className="text-sm font-semibold text-slate-300 mb-2">📊 Alert Details:</h4>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {context.reasons && Array.isArray(context.reasons) && (
+                            <div className="col-span-2">
+                              <span className="text-green-400 font-medium">Reasons:</span>
+                              <ul className="mt-1 space-y-1">
+                                {context.reasons.map((reason: string, idx: number) => (
+                                  <li key={idx} className="text-slate-300">• {reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {context.scoringProbability && (
+                            <div>
+                              <span className="text-blue-400 font-medium">Scoring Chance:</span>
+                              <div className="text-white font-bold">{context.scoringProbability.toFixed(1)}%</div>
+                            </div>
+                          )}
+                          
+                          {context.confidence && (
+                            <div>
+                              <span className="text-purple-400 font-medium">Confidence:</span>
+                              <div className="text-white font-bold">{context.confidence}%</div>
+                            </div>
+                          )}
+                          
+                          {context.inning && (
+                            <div>
+                              <span className="text-yellow-400 font-medium">Inning:</span>
+                              <div className="text-white">{context.isTopInning ? 'Top' : 'Bottom'} {context.inning}</div>
+                            </div>
+                          )}
+                          
+                          {context.outs !== undefined && (
+                            <div>
+                              <span className="text-orange-400 font-medium">Outs:</span>
+                              <div className="text-white">{context.outs}</div>
+                            </div>
+                          )}
+                          
+                          {(context.hasFirst || context.hasSecond || context.hasThird) && (
+                            <div className="col-span-2">
+                              <span className="text-green-400 font-medium">Runners:</span>
+                              <div className="text-white">
+                                {[
+                                  context.hasFirst && '1B',
+                                  context.hasSecond && '2B', 
+                                  context.hasThird && '3B'
+                                ].filter(Boolean).join(', ') || 'None'}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {context.currentBatter && (
+                            <div className="col-span-2">
+                              <span className="text-cyan-400 font-medium">At Bat:</span>
+                              <div className="text-white">{context.currentBatter}</div>
+                            </div>
+                          )}
+                          
+                          {context.recommendation && (
+                            <div className="col-span-2 mt-2 p-2 bg-green-500/10 rounded border border-green-500/30">
+                              <span className="text-green-400 font-medium">💰 Betting Recommendation:</span>
+                              <div className="text-green-200 text-sm mt-1">{context.recommendation}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
               })()}
 
               {/* Game Card Template - Calendar Page Style with Live Scores */}

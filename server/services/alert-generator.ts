@@ -936,11 +936,33 @@ export class AlertGenerator {
         }
       }
 
-      // Enhanced payload with AI insights
+      // Enhanced payload with AI insights and full context
       const enhancedPayload = {
         message,
-        context,
-        betbookData: context.betbookData,
+        context: {
+          ...context,
+          // Ensure key context fields are always present
+          sport: sport,
+          gameId: gameId,
+          alertType: type,
+          priority: finalPriority,
+          timestamp: new Date().toISOString(),
+          // Add betting context if available
+          betbookData: context.betbookData,
+          // Add AI context if available
+          aiTitle: context.aiTitle,
+          aiInsights: context.aiInsights,
+          aiBettingAdvice: context.aiBettingAdvice,
+          aiGameProjection: context.aiGameProjection,
+          // Ensure game state context
+          homeTeam: context.homeTeam,
+          awayTeam: context.awayTeam,
+          homeScore: context.homeScore || 0,
+          awayScore: context.awayScore || 0,
+          inning: context.inning,
+          outs: context.outs,
+          isTopInning: context.isTopInning
+        },
         gameInfo: {
           v3Analysis: this.generateV3Analysis(context, finalPriority, type)
         }
