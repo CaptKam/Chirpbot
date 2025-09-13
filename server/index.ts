@@ -4,6 +4,8 @@ import connectPgSimple from "connect-pg-simple";
 import helmet from "helmet";
 import cors from "cors";
 import { createServer } from "http";
+import path from "path";
+import fs from "fs";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
@@ -18,8 +20,8 @@ import { SingleInstanceLock } from "./utils/singleton-lock";
 // 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
 console.log('🔒 Checking for existing ChirpBot instances...');
 
-// Determine target port early
-const TARGET_PORT = parseInt(process.env.PORT || "5000", 10);
+// Determine target port early - use platform PORT or default to 3000
+const TARGET_PORT = parseInt(process.env.PORT || "3000", 10);
 const ALLOW_DYNAMIC_PORT = process.env.ALLOW_DYNAMIC_PORT === 'true';
 
 // Create and acquire singleton lock
@@ -266,6 +268,23 @@ async function startServer() {
     
     const server = await registerRoutes(app, httpServer);
 
+    // Setup frontend serving IMMEDIATELY - before server.listen
+    const staticRoot = path.resolve(process.cwd(), 'dist/public');
+    const indexPath = path.join(staticRoot, 'index.html');
+    
+    if (fs.existsSync(indexPath)) {
+      console.log('✅ Built assets detected - serving static files from', staticRoot);
+      app.use(express.static(staticRoot));
+      
+      // SPA catch-all for all non-API routes
+      app.get(/^\/(?!api|admin|realtime-alerts).*$/, (_req, res) => {
+        res.sendFile(indexPath);
+      });
+      console.log('✅ Static SPA serving configured - frontend ready');
+    } else {
+      console.log('🔧 No built assets found - will use Vite dev middleware');
+    }
+
     // Production optimization: Skip database seeding in production
     const isProduction = process.env.NODE_ENV === 'production';
     const skipSeed = isProduction && process.env.SKIP_SEED_IN_PROD !== 'false';
@@ -361,19 +380,15 @@ async function startServer() {
             console.log('🚫 AI Services: Configuration issue detected - check OpenAI API key');
           }
 
-          // Setup frontend serving (Vite or static)
-          if (app.get("env") === "development") {
-            try {
-              await setupVite(app, server);
-              console.log('✅ Vite development server setup complete');
-            } catch (viteError) {
-              console.error('⚠️ Vite setup failed, but continuing with server startup:', viteError);
-              // Fallback: serve static files if Vite fails
+          // Frontend serving is now handled before server.listen (moved earlier for immediate mounting)
+          // Fallback: setup Vite dev middleware if static assets weren't detected
+          if (!fs.existsSync(path.resolve(process.cwd(), 'dist/public/index.html'))) {
+            if (app.get("env") === "development") {
               try {
-                serveStatic(app);
-                console.log('🔄 Fallback to static file serving');
-              } catch (staticError) {
-                console.error('⚠️ Static file serving also failed, serving minimal fallback');
+                await setupVite(app, server);
+                console.log('✅ Vite development server setup complete');
+              } catch (viteError) {
+                console.error('⚠️ Vite setup failed, serving minimal fallback');
                 // Minimal fallback - just serve a basic response
                 app.use('*', (req, res) => {
                   res.status(200).send(`
@@ -388,9 +403,9 @@ async function startServer() {
                   `);
                 });
               }
+            } else {
+              serveStatic(app);
             }
-          } else {
-            serveStatic(app);
           }
 
           // START ALERT GENERATION IMMEDIATELY - MISSION CRITICAL

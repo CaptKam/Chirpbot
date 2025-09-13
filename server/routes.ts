@@ -12,7 +12,8 @@ import { AlertGenerator } from "./services/alert-generator";
 import { requestDeduplicator } from "./middleware/request-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { pool } from "./db";
-import { alertsTable, settings, eq, desc } from "./db/schema";
+import { alerts as alertsTable, settings } from "../shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -2208,7 +2209,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         timestamp: new Date().toISOString(),
         summary: {
           totalSports: totalEngines,
-          totalSportsMonitored: sportsToMonitor.length,
+          totalSportsMonitored: totalEngines,
           totalRequests: aggregatedStats.totalRequests,
           totalAlerts: aggregatedStats.totalAlerts,
           avgResponseTime: Math.round(aggregatedStats.avgResponseTime * 100) / 100,
@@ -2528,7 +2529,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         timestamp: new Date().toISOString(),
         summary: {
           totalSports: totalEngines,
-          totalSportsMonitored: sportsToMonitor.length,
+          totalSportsMonitored: totalEngines,
           totalRequests: aggregatedStats.totalRequests,
           totalAlerts: aggregatedStats.totalAlerts,
           avgResponseTime: Math.round(aggregatedStats.avgResponseTime * 100) / 100,
@@ -3251,7 +3252,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         timestamp: new Date().toISOString(),
         summary: {
           totalSports: totalEngines,
-          totalSportsMonitored: sportsToMonitor.length,
+          totalSportsMonitored: totalEngines,
           totalRequests: aggregatedStats.totalRequests,
           totalAlerts: aggregatedStats.totalAlerts,
           avgResponseTime: Math.round(aggregatedStats.avgResponseTime * 100) / 100,
