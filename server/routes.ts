@@ -2571,48 +2571,40 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { username, password } = req.body;
 
       if (!username || !password) {
-        return res.status(400).json({ message: 'Username and password are required' });
+        return res.status(400).json({ success: false, message: 'Username and password are required' });
       }
 
       // Find user by username
       const user = await storage.getUserByUsername(username);
       if (!user) {
         console.log('❌ Admin login failed: user not found:', username);
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
       // Check if user is admin
       if (user.role !== 'admin') {
         console.log('❌ Admin login failed: not admin:', username);
-        return res.status(403).json({ message: 'Admin access required' });
+        return res.status(403).json({ success: false, message: 'Admin access required' });
       }
 
       // Verify password
       if (!user.password) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         console.log('❌ Admin login failed: invalid password:', username);
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
       // Store both admin and regular session for flexibility
       req.session.adminUserId = user.id;
       req.session.userId = user.id;
 
-      // Force session save to ensure persistence
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-        } else {
-          console.log('✅ Admin session saved for:', username);
-        }
-      });
-
       console.log('✅ Admin login successful:', username);
       res.json({
+        success: true,
         message: 'Admin login successful',
         user: {
           id: user.id,
@@ -2622,7 +2614,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       });
     } catch (error) {
       console.error('Admin login error:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ success: false, message: 'Internal server error' });
     }
   });
 

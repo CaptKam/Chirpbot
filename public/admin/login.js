@@ -74,12 +74,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const data = await response.json();
 
-            if (response.ok && data.success) {
-                // Login successful
-                console.log('Login successful, redirecting to dashboard...');
-                window.location.href = '/admin/dashboard.html';
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Login successful
+                    console.log('Login successful, redirecting to dashboard...');
+                    window.location.href = '/admin/dashboard.html';
+                } else {
+                    // Login failed
+                    showError(data.message || 'Invalid credentials. Please try again.');
+                }
             } else {
-                // Login failed
+                // HTTP error
+                const data = await response.json().catch(() => ({ message: 'Connection error' }));
                 showError(data.message || 'Invalid credentials. Please try again.');
             }
         } catch (error) {
