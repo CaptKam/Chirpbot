@@ -99,10 +99,7 @@ export function useWebSocket() {
                   }
                 });
 
-                // Refresh both queries to ensure consistency
-                queryClient.invalidateQueries({ queryKey: ["/api/alerts"] }).catch(error => {
-                  console.error('Error invalidating alerts queries:', error);
-                });
+                // Only invalidate unseen count to update badges - alerts are already updated optimistically
                 queryClient.invalidateQueries({ queryKey: ["/api/alerts/unseen/count"] }).catch(error => {
                   console.error('Error invalidating unseen count query:', error);
                 });
