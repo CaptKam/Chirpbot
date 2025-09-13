@@ -218,8 +218,8 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
   // Helper function to convert raw alert types to user-friendly categories
   const getAlertCategory2 = (alertType: string): string => {
-  if (!alertType || typeof alertType !== 'string') return 'unknown';
-  if (alertType.includes('BASES_LOADED')) return 'scoring';
+    if (!alertType || typeof alertType !== 'string') return 'unknown';
+    if (alertType.includes('BASES_LOADED')) return 'scoring';
     if (alertType.includes('RISP')) return 'scoring';
     if (alertType.includes('RED_ZONE_OPPORTUNITY')) return 'scoring';
     if (alertType.includes('POWER_PLAY')) return 'scoring';
