@@ -331,6 +331,7 @@ export class NCAAFEngine extends BaseSportEngine {
       'NCAAF_UPSET_OPPORTUNITY',
       'NCAAF_RED_ZONE_EFFICIENCY',
       'NCAAF_COMEBACK_POTENTIAL',
+      'NCAAF_SECOND_HALF_KICKOFF',
       'NCAAF_MASSIVE_WEATHER'
     ];
   }
