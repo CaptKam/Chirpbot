@@ -453,8 +453,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     console.log(`📡 WebSocket broadcast: ${successCount} sent, ${failureCount} failed, type: ${data.type}`);
   }
 
-  // Export disabled broadcast function
+  // Export broadcast function with multiple names for compatibility
   (global as any).wsBroadcast = broadcast;
+  (global as any).broadcastWebSocketMessage = broadcast;
 
   // Initialize Async AI Processor for background AI enhancement
   const { asyncAIProcessor } = await import('./services/async-ai-processor');
@@ -468,20 +469,24 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     broadcast({
       type: 'new_alert',
       alert: {
-        id: enhancedAlert.id || enhancedAlert.alertKey,
+        id: enhancedAlert.alertKey,
         alertKey: enhancedAlert.alertKey,
         alertType: enhancedAlert.type,
         type: enhancedAlert.type,
         sport: sport,
-        gameId: enhancedAlert.gameId,
-        score: enhancedAlert.score || enhancedAlert.confidence || 85,
-        payload: enhancedAlert.payload || enhancedAlert,
-        createdAt: enhancedAlert.createdAt || new Date().toISOString(),
+        gameId: enhancedAlert.context?.gameId || enhancedAlert.alertKey.split('_')[0],
+        score: enhancedAlert.priority || 85,
+        payload: {
+          ...enhancedAlert,
+          sport: sport,
+          wasActuallyEnhanced
+        },
+        createdAt: new Date().toISOString(),
         wasActuallyEnhanced,
         context: enhancedAlert.context,
-        ai: wasActuallyEnhanced ? {
-          enhancedTitle: enhancedAlert.payload?.aiTitle,
-          enhancedMessage: enhancedAlert.payload?.aiCallToAction
+        ai: wasActuallyEnhanced && enhancedAlert.context ? {
+          enhancedTitle: enhancedAlert.context.aiTitle || enhancedAlert.message,
+          enhancedMessage: enhancedAlert.context.aiCallToAction || enhancedAlert.message
         } : undefined
       },
       timestamp: new Date().toISOString()
