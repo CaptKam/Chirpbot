@@ -615,20 +615,26 @@ export class AlertGenerator {
           .filter(pref => pref.enabled)
           .map(pref => pref.alertType);
 
-        // Handle inherited defaults for MLB
+        // Handle inherited defaults for MLB - but respect explicit user disables
         if (enabledAlertTypes.length === 0 && sport === 'MLB') {
           const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
           const hasAnyEnabledGlobally = Object.values(globalSettings).some(enabled => enabled === true);
 
           if (hasAnyEnabledGlobally) {
-            // User inherits global settings - get the enabled alert types
+            // Check for explicit user disables first
+            const allUserPrefs = await storage.getUserAlertPreferencesBySport(user.id, sport.toUpperCase());
+            const explicitlyDisabled = new Set(
+              allUserPrefs.filter(pref => pref.enabled === false).map(pref => pref.alertType)
+            );
+
+            // User inherits global settings - but exclude explicitly disabled alerts
             const globalEnabledTypes = Object.entries(globalSettings)
-              .filter(([_, enabled]) => enabled)
+              .filter(([alertType, enabled]) => enabled && !explicitlyDisabled.has(alertType))
               .map(([alertType]) => alertType);
             enabledAlertTypes.push(...globalEnabledTypes);
 
             if (this.logLevel !== 'quiet') {
-              console.log(`👤 User ${user.username}: Inherited ${enabledAlertTypes.length} global ${sport} settings`);
+              console.log(`👤 User ${user.username}: Inherited ${enabledAlertTypes.length} global ${sport} settings (excluded ${explicitlyDisabled.size} user-disabled)`);
             }
           }
         }
