@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import AlertFooter from '@/components/AlertFooter';
 import { AdvancedAlertCard } from '@/components/AdvancedAlertCard';
 import { SimpleAlertCard } from '@/components/SimpleAlertCard';
@@ -227,15 +227,22 @@ export default function AlertsPage() {
             </div>
           </div>
         ) : (
-          filteredAlerts.map((alert: Alert, index: number) => (
-            <motion.div
-              key={alert.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
-              data-testid={`alert-card-${alert.id}`}
-            >
+          <AnimatePresence mode="popLayout">
+            {filteredAlerts.map((alert: Alert, index: number) => (
+              <motion.div
+                key={alert.id}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ 
+                  duration: 0.2,
+                  ease: "easeOut",
+                  layout: { duration: 0.3 }
+                }}
+                className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
+                data-testid={`alert-card-${alert.id}`}
+              >
               {shouldUseSimpleCard(alert.type) ? (
                 // Use Simple Card for basic alerts
                 <SimpleAlertCard 
@@ -319,8 +326,9 @@ export default function AlertsPage() {
                   data-testid={`advanced-alert-${alert.id}`}
                 />
               )}
-            </motion.div>
-          ))
+              </motion.div>
+            ))}
+          </AnimatePresence>
         )}
         </div>
       </div>
