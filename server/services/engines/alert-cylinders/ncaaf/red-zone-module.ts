@@ -8,18 +8,34 @@ export default class RedZoneModule extends BaseAlertModule {
   isTriggered(gameState: GameState): boolean {
     console.log(`🔍 NCAAF Red Zone check for ${gameState.gameId}: status=${gameState.status}, fieldPos=${gameState.fieldPosition}, quarter=${gameState.quarter}`);
     
-    // Team is in red zone (within 20 yards of goal line)
-    const isTriggered = gameState.status === 'live' && 
-           gameState.fieldPosition !== undefined && 
-           gameState.fieldPosition !== null &&
-           gameState.fieldPosition <= 20 &&
-           gameState.fieldPosition > 0;
-    
-    if (isTriggered) {
-      console.log(`🎯 NCAAF Red Zone TRIGGERED for ${gameState.gameId}: ${gameState.fieldPosition} yard line`);
+    // Must be a live game
+    if (gameState.status !== 'live') {
+      console.log(`❌ Red Zone: Game not live (${gameState.status})`);
+      return false;
     }
     
-    return isTriggered;
+    // Primary check: Team is in red zone (within 20 yards of goal line)
+    if (gameState.fieldPosition !== undefined && 
+        gameState.fieldPosition !== null &&
+        gameState.fieldPosition <= 20 &&
+        gameState.fieldPosition > 0) {
+      console.log(`🎯 NCAAF Red Zone TRIGGERED for ${gameState.gameId}: ${gameState.fieldPosition} yard line`);
+      return true;
+    }
+    
+    // RELAXED: Fallback for close games in Q4 when field position is missing
+    if (gameState.fieldPosition === null || gameState.fieldPosition === undefined) {
+      const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+      const isCloseQ4Game = gameState.quarter === 4 && scoreDiff <= 7;
+      
+      if (isCloseQ4Game) {
+        console.log(`🎯 NCAAF Red Zone TRIGGERED (Q4 close game fallback) for ${gameState.gameId}: score diff ${scoreDiff}`);
+        return true;
+      }
+    }
+    
+    console.log(`❌ Red Zone: Not in red zone or fallback conditions`);
+    return false;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

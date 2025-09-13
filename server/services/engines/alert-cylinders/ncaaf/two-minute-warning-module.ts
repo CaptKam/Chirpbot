@@ -19,10 +19,10 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       return false;
     }
 
-    // Must be exactly at 2:00 remaining (within 5 second window)
-    const exactlyTwoMinutes = this.isExactlyTwoMinutes(gameState.timeRemaining);
-    if (!exactlyTwoMinutes) {
-      console.log(`❌ Two Minute: Not exactly 2:00 remaining (${gameState.timeRemaining})`);
+    // RELAXED: Must be under 2:30 remaining (instead of exactly 2:00)
+    const underTwoThirty = this.isUnderTwoThirty(gameState.timeRemaining);
+    if (!underTwoThirty) {
+      console.log(`❌ Two Minute: Not under 2:30 remaining (${gameState.timeRemaining})`);
       return false;
     }
 
@@ -64,17 +64,21 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     return 95; // High probability since it's exactly at 2:00 mark
   }
 
-  private isExactlyTwoMinutes(timeRemaining: string): boolean {
+  private isUnderTwoThirty(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
 
     try {
-      const [minutes, seconds] = timeString.split(':').map(Number);
+      const [minutes, seconds] = timeRemaining.split(':').map(Number);
       const totalSeconds = minutes * 60 + seconds;
-      // Allow for 5-second window around exactly 2:00 (115-125 seconds)
-      return totalSeconds >= 115 && totalSeconds <= 125;
+      // RELAXED: Trigger when under 2:30 (150 seconds)
+      return totalSeconds <= 150 && totalSeconds > 0;
     } catch (error) {
       return false;
     }
+  }
+
+  private isExactlyTwoMinutes(timeRemaining: string): boolean {
+    return this.isUnderTwoThirty(timeRemaining); // Use relaxed version
   }
 
   private parseTimeToSeconds(timeString: string): number {
