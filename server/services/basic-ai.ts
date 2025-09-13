@@ -1,6 +1,13 @@
 // Basic AI System - Simple and efficient OpenAI integration
 // Provides AI-enhanced alerts without complexity
 
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 interface AlertContext {
   sport: string;
   gameId: string;
@@ -42,8 +49,6 @@ export class BasicAI {
   // Check if AI system is enabled via disable flags
   private checkIfEnabled(): boolean {
     try {
-      const fs = require('fs');
-      const path = require('path');
       const disableFlagsPath = path.join(__dirname, '../.disable-flags');
       
       if (fs.existsSync(disableFlagsPath)) {
