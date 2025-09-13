@@ -478,33 +478,9 @@ export class AlertGenerator {
         ON CONFLICT (alert_key) DO NOTHING
       `);
 
-      // Broadcast alert immediately to web clients via WebSocket
-      try {
-        const wsBroadcast = (global as any).wsBroadcast;
-        if (wsBroadcast && typeof wsBroadcast === 'function') {
-          const wsAlertData = {
-            type: 'new_alert',
-            alert: {
-              id: alertData.alertKey,
-              alertKey: alertData.alertKey,
-              sport: alertData.sport,
-              gameId: alertData.gameId,
-              alertType: alertData.type,
-              state: alertData.state,
-              score: alertData.score,
-              payload: JSON.parse(alertData.payload),
-              createdAt: new Date().toISOString()
-            }
-          };
-
-          wsBroadcast(wsAlertData);
-          console.log(`📡 WebSocket broadcast sent for ${alertData.type} alert (saveAlert method)`);
-        } else {
-          console.warn('📡 WebSocket broadcast function not available (saveAlert method)');
-        }
-      } catch (broadcastError) {
-        console.error('📡 WebSocket broadcast failed (saveAlert method):', broadcastError);
-      }
+      // REMOVED: WebSocket broadcast is now handled by asyncAIProcessor.setOnEnhancedAlert in routes.ts
+      // This prevents duplicate broadcasts. The alert is sent to AsyncAI for enhancement
+      // and then broadcast once from the single broadcast source.
     } catch (error) {
       console.error('Error saving alert:', error);
     }
@@ -1279,35 +1255,9 @@ export class AlertGenerator {
         console.log(`🚨 REAL-TIME ALERT: ${message}`);
       }
 
-      // Broadcast alert immediately to web clients via WebSocket
-      try {
-        const wsBroadcast = (global as any).wsBroadcast;
-        if (wsBroadcast && typeof wsBroadcast === 'function') {
-          const alertData = {
-            type: 'new_alert',
-            alert: {
-              id: alertKey,
-              alertKey,
-              sport,
-              gameId,
-              alertType: type,
-              state: 'NEW',
-              score: finalPriority,
-              payload: enhancedPayload,
-              createdAt: new Date().toISOString()
-            }
-          };
-
-          wsBroadcast(alertData);
-          if (this.logLevel !== 'quiet') {
-            console.log(`📡 WebSocket broadcast sent for ${type} alert`);
-          }
-        } else {
-          console.warn('📡 WebSocket broadcast function not available');
-        }
-      } catch (broadcastError) {
-        console.error('📡 WebSocket broadcast failed:', broadcastError);
-      }
+      // REMOVED: WebSocket broadcast is now handled by asyncAIProcessor.setOnEnhancedAlert in routes.ts
+      // This prevents duplicate broadcasts. The alert is sent to AsyncAI for enhancement
+      // and then broadcast once from the single broadcast source.
 
       // DISABLED: Send to Telegram for users monitoring this game
       // ALL TELEGRAM NOTIFICATIONS HAVE BEEN DISABLED

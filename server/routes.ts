@@ -426,11 +426,43 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     });
   }, 30000); // Heartbeat every 30 seconds
 
+  // Server-side deduplication for WebSocket broadcasts
+  const recentBroadcasts = new Map<string, number>(); // alertKey -> timestamp
+  const BROADCAST_DEDUPE_TTL = 10000; // 10 seconds
+
+  // Clean up old entries periodically
+  setInterval(() => {
+    const now = Date.now();
+    for (const [alertKey, timestamp] of recentBroadcasts.entries()) {
+      if (now - timestamp > BROADCAST_DEDUPE_TTL) {
+        recentBroadcasts.delete(alertKey);
+      }
+    }
+  }, 60000); // Clean every minute
+
   // Broadcast function to send alerts to all connected clients
   function broadcast(data: any) {
     if (clients.size === 0) {
       console.log('📡 No WebSocket clients connected for broadcast');
       return;
+    }
+
+    // Extract alertKey for deduplication
+    const alertKey = data.alert?.alertKey || data.alert?.id;
+    
+    if (alertKey) {
+      const now = Date.now();
+      const lastBroadcast = recentBroadcasts.get(alertKey);
+      
+      // Check if this alert was recently broadcast
+      if (lastBroadcast && (now - lastBroadcast) < BROADCAST_DEDUPE_TTL) {
+        console.log(`🚫 Duplicate broadcast prevented for alert: ${alertKey} (sent ${now - lastBroadcast}ms ago)`);
+        return;
+      }
+      
+      // Record this broadcast
+      recentBroadcasts.set(alertKey, now);
+      console.log(`✅ Broadcasting new alert: ${alertKey}`);
     }
 
     const message = JSON.stringify(data);
@@ -453,7 +485,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
     });
 
-    console.log(`📡 WebSocket broadcast: ${successCount} sent, ${failureCount} failed, type: ${data.type}`);
+    console.log(`📡 WebSocket broadcast: ${successCount} sent, ${failureCount} failed, type: ${data.type}, alertKey: ${alertKey || 'unknown'}`);
   }
 
   // Export broadcast function with multiple names for compatibility
