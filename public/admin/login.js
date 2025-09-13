@@ -75,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (response.ok) {
-                const data = await response.json();
                 if (data.success) {
                     // Login successful
                     console.log('Login successful, redirecting to dashboard...');

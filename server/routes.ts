@@ -3407,8 +3407,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           availableAlerts = await tempEngine.getAvailableAlertTypes();
         }
 
+        // Filter out globally disabled alerts for all users
+        const globalSettings = await storage.getGlobalAlertSettings(sport.toUpperCase());
+        const enabledAlerts = availableAlerts.filter(alertType => {
+          const isGloballyEnabled = globalSettings[alertType] !== false;
+          if (!isGloballyEnabled) {
+            console.log(`🚫 Filtering out globally disabled alert: ${alertType} for sport ${sport.toUpperCase()}`);
+          }
+          return isGloballyEnabled;
+        });
+
         // Convert to the format expected by the frontend
-        const alertConfig = availableAlerts.map(alertType => {
+        const alertConfig = enabledAlerts.map(alertType => {
           const displayName = alertType
             .replace(`${sport.toUpperCase()}_`, '')
             .split('_')
@@ -3422,6 +3432,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           };
         });
 
+        console.log(`📋 Available alerts for ${sport.toUpperCase()}: ${enabledAlerts.length}/${availableAlerts.length} (${availableAlerts.length - enabledAlerts.length} globally disabled)`);
         res.json(alertConfig);
       } catch (error) {
         console.error(`❌ Error getting available alerts for ${sport}:`, error);

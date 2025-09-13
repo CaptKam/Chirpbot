@@ -474,14 +474,7 @@ export default function Settings() {
                       {activeSport === 'MLB' ? '⚾' : activeSport === 'NFL' ? '🏈' : activeSport === 'NCAAF' ? '🏈' : activeSport === 'WNBA' ? '🏀' : activeSport === 'CFL' ? '🏈' : '🏀'} {activeSport} Game Alerts
                     </h3>
                     <div className="space-y-3">
-                      {(availableAlerts as any[] || []).filter((alertType) => {
-                        // For admin users, only show alerts that are globally enabled
-                        if (user?.role === 'admin' && globalSettings && typeof globalSettings === 'object') {
-                          return (globalSettings as Record<string, boolean>)[alertType.key] !== false;
-                        }
-                        // For regular users, show all available alerts (they can't modify global settings anyway)
-                        return true;
-                      }).map((alertType) => {
+                      {(availableAlerts as any[] || []).map((alertType) => {
                         const isEnabled = getAlertPreference(activeSport, alertType.key);
                         
                         // Show skeleton if preference is still loading
