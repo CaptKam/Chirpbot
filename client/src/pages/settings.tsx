@@ -75,6 +75,8 @@ export default function Settings() {
   const { data: availableAlerts, isLoading: availableAlertsLoading } = useQuery({
     queryKey: [`/api/available-alerts/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
+    staleTime: 30 * 1000, // 30 seconds to catch admin changes quickly
+    refetchInterval: 60 * 1000, // Refetch every minute to catch admin toggle changes
   });
 
   // Alert preferences query
