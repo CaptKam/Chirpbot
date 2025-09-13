@@ -76,7 +76,9 @@ export default function AlertsPage() {
   // Fetch alerts using React Query
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 10000, // Reduced to 10 seconds
+    staleTime: 5000, // Prevent unnecessary refetches
+    refetchOnWindowFocus: false, // Reduce animation triggers
   });
 
   // Fetch alert stats
@@ -99,6 +101,12 @@ export default function AlertsPage() {
   const filteredAlerts = filter === 'all' 
     ? (alerts as Alert[] || [])
     : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
+
+  // Stabilize alert ordering to prevent re-animations
+  const sortedAlerts = useMemo(() => 
+    [...filteredAlerts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [filteredAlerts]
+  );
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -227,22 +235,23 @@ export default function AlertsPage() {
             </div>
           </div>
         ) : (
-          <AnimatePresence mode="popLayout">
-            {filteredAlerts.map((alert: Alert, index: number) => (
+          <AnimatePresence initial={false} mode="sync">
+            {sortedAlerts.map((alert: Alert, index: number) => (
               <motion.div
                 key={alert.id}
-                layout
+                layoutId={alert.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ 
-                  duration: 0.2,
-                  ease: "easeOut",
-                  layout: { duration: 0.3 }
+                  duration: 0.15,
+                  ease: "easeOut"
                 }}
-                className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
+                style={{ willChange: 'transform, opacity' }}
+                className={index === sortedAlerts.length - 1 ? 'mb-8' : ''}
                 data-testid={`alert-card-${alert.id}`}
               >
+                <div>
               {shouldUseSimpleCard(alert.type) ? (
                 // Use Simple Card for basic alerts
                 <SimpleAlertCard 
@@ -326,6 +335,7 @@ export default function AlertsPage() {
                   data-testid={`advanced-alert-${alert.id}`}
                 />
               )}
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>
