@@ -3742,6 +3742,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
 
+  // Import health monitor
+  const { getHealthMonitor } = await import('./services/alert-health-monitor');
+  const healthMonitor = getHealthMonitor();
+  
   // Generate alerts from today's completed games
   const alertGenerator = new AlertGenerator();
   alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
@@ -3757,12 +3761,85 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
 
+  // Initialize health monitor with alert generator and interval
+  healthMonitor.initialize(alertGenerator, monitoringInterval);
+  
   // Store monitoring interval globally for graceful shutdown cleanup
   (global as any).setMonitoringInterval(monitoringInterval);
 
   console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 
   // V3 Performance Metrics API (admin-only)
+  // Health check endpoint for alert generation system
+  app.get('/api/health/alerts', async (req, res) => {
+    try {
+      const { getHealthMonitor } = await import('./services/alert-health-monitor');
+      const healthMonitor = getHealthMonitor();
+      const healthStatus = healthMonitor.getHealthStatus();
+      
+      // Determine HTTP status code based on health
+      let statusCode = 200;
+      if (healthStatus.status === 'critical') statusCode = 503;
+      else if (healthStatus.status === 'unhealthy') statusCode = 500;
+      else if (healthStatus.status === 'degraded') statusCode = 207;
+      
+      res.status(statusCode).json({
+        status: healthStatus.status,
+        summary: healthStatus.summary,
+        recommendations: healthStatus.recommendations,
+        metrics: {
+          checksPerformed: healthStatus.checksPerformed,
+          alertsGenerated: healthStatus.alertsGenerated,
+          lastCheckTime: healthStatus.lastCheckTime,
+          lastAlertTime: healthStatus.lastAlertGeneratedTime,
+          timeSinceLastCheck: healthStatus.timeSinceLastCheck,
+          timeSinceLastAlert: healthStatus.timeSinceLastAlert,
+          consecutiveFailures: healthStatus.consecutiveFailures,
+          uptimeSeconds: healthStatus.uptimeSeconds,
+          memoryUsageMB: healthStatus.memoryUsageMB,
+          isAutoRecovering: healthStatus.isAutoRecovering,
+          recoveryAttempts: healthStatus.recoveryAttempts
+        },
+        lastError: healthStatus.lastError
+      });
+    } catch (error: any) {
+      console.error('Error fetching health status:', error);
+      res.status(500).json({
+        status: 'error',
+        error: error.message,
+        summary: 'Failed to fetch health status'
+      });
+    }
+  });
+  
+  // Force recovery endpoint (admin only)
+  app.post('/api/health/alerts/recover', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+      
+      const { getHealthMonitor } = await import('./services/alert-health-monitor');
+      const healthMonitor = getHealthMonitor();
+      
+      console.log('🔧 Admin requested manual alert system recovery');
+      await healthMonitor.forceRecovery();
+      
+      res.json({
+        success: true,
+        message: 'Alert system recovery initiated',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error forcing recovery:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: 'Failed to initiate recovery'
+      });
+    }
+  });
+  
   app.get('/api/v3/performance-metrics', async (req, res) => {
     try {
       if (!req.session.adminUserId) {

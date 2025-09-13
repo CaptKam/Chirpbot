@@ -325,19 +325,29 @@ async function startServer() {
             serveStatic(app);
           }
 
-          // Defer alert generation to ensure server stability
-          console.log('🚨 Deferring alert generation startup...');
-          setTimeout(() => {
-            console.log('🚨 Starting alert generation (server is stable)...');
+          // START ALERT GENERATION IMMEDIATELY - MISSION CRITICAL
+          console.log('🚨 STARTING ALERT GENERATION IMMEDIATELY...');
+          try {
             alertGenerator.generateLiveGameAlerts();
-          }, 5000); // Wait 5 seconds for server stability
+            console.log('✅ ALERT GENERATION ACTIVE - MONITORING ALL GAMES');
+          } catch (alertError) {
+            console.error('⚠️ CRITICAL: Alert generation failed to start:', alertError);
+            // AUTO-RECOVERY: Retry after 2 seconds
+            setTimeout(() => {
+              console.log('🔄 AUTO-RECOVERY: Retrying alert generation...');
+              alertGenerator.generateLiveGameAlerts();
+            }, 2000);
+          }
 
-          // Defer alert cleanup service startup  
-          console.log('🧹 Deferring alert cleanup service startup...');
-          setTimeout(() => {
-            console.log('🧹 Starting alert cleanup service (server is stable)...');
+          // Start cleanup service immediately
+          console.log('🧹 Starting alert cleanup service...');
+          try {
             alertCleanupService.startCleanup();
-          }, 7000); // Wait 7 seconds for server stability
+            console.log('✅ Alert cleanup service active');
+          } catch (cleanupError) {
+            console.error('⚠️ Alert cleanup failed to start:', cleanupError);
+            // Non-critical, continue anyway
+          }
           
           console.log('✅ Background initialization complete - all systems operational!');
         } catch (error) {

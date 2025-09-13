@@ -10,6 +10,7 @@ import { BasicAI } from "./basic-ai";
 import { AIEnhancementService, GameContext } from './ai-enhancements';
 import { AIContextController, AlertContext } from './ai-context-controller';
 import { AdaptivePollingManager } from './adaptive-polling-manager';
+import { getHealthMonitor } from './alert-health-monitor';
 
 // Import sport engines
 import { MLBEngine } from './engines/mlb-engine';
@@ -134,6 +135,7 @@ export class AlertGenerator {
   private aiEnhancementService: AIEnhancementService;
   private aiContextController: AIContextController;
   private logLevel: 'verbose' | 'quiet' = 'verbose'; // Default to verbose logging
+  private healthMonitor = getHealthMonitor();
 
   // Sport-specific engines
   private sportEngines: Map<string, BaseSportEngine>;
@@ -253,6 +255,8 @@ export class AlertGenerator {
 
     if (alerts.length > 0) {
       console.log(`Generated ${alerts.length} alerts for game ${game.gameId}: ${game.awayTeam} vs ${game.homeTeam}`);
+      // Track that alerts were generated
+      this.healthMonitor.recordAlertGenerated(alerts.length);
     }
   }
 
@@ -310,6 +314,9 @@ export class AlertGenerator {
       console.log('⚡ Real-time monitoring: Checking for live game alerts...');
     }
 
+    // Record health check - we're starting to check for alerts
+    this.healthMonitor.recordCheck();
+
     try {
       // Clear settings cache to ensure fresh sport-specific configurations
       this.settingsCache.clearAll();
@@ -318,11 +325,14 @@ export class AlertGenerator {
       // Check if any alerts are globally enabled before proceeding
       const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts().catch(error => {
         console.error('❌ Error checking globally enabled alerts:', error);
+        this.healthMonitor.recordError(error);
         return false; // Fail safely
       });
 
       if (!hasAnyEnabledAlerts) {
         console.log('🚫 No alert types are globally enabled by admin - skipping all alert generation');
+        // Still record successful poll even if no alerts are enabled
+        this.healthMonitor.recordSuccessfulPoll();
         return;
       }
 
@@ -406,8 +416,17 @@ export class AlertGenerator {
       if (this.logLevel !== 'quiet') {
         console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
       }
-    } catch (error) {
+      
+      // Record health monitoring metrics
+      if (totalAlerts > 0) {
+        this.healthMonitor.recordAlertGenerated(totalAlerts);
+      }
+      this.healthMonitor.recordSuccessfulPoll();
+      
+    } catch (error: any) {
       console.error('❌ Critical error in generateLiveGameAlerts:', error);
+      // Record error in health monitor
+      this.healthMonitor.recordError(error);
       // Don't re-throw - this prevents crashes
     }
   }
@@ -465,6 +484,10 @@ export class AlertGenerator {
           const alerts = await this.processGamesWithEngine(sport, games);
           if (this.logLevel !== 'quiet') {
             console.log(`📊 Generated ${alerts} ${sport} alerts`);
+          }
+          // Track alerts generated per sport
+          if (alerts > 0) {
+            this.healthMonitor.recordAlertGenerated(alerts);
           }
         } catch (processError) {
           console.error(`❌ Error processing ${sport} games:`, processError);
