@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import AlertFooter from '@/components/AlertFooter';
 import { AdvancedAlertCard } from '@/components/AdvancedAlertCard';
 import { SimpleAlertCard } from '@/components/SimpleAlertCard';
@@ -73,26 +73,11 @@ const AlertSkeleton = () => (
 export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF' | 'WNBA' | 'CFL'>('all');
 
-  // Fetch alerts using React Query - WebSocket handles real-time updates
+  // Fetch alerts using React Query
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
-    staleTime: 30000, // Keep data fresh for 30 seconds
-    refetchOnWindowFocus: false, // WebSocket handles updates
-    refetchInterval: false, // Disable polling - WebSocket provides real-time updates
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
-
-  // Debug logging for alerts data changes
-  React.useEffect(() => {
-    console.log('🔍 Query data changed:', {
-      alertsCount: alerts?.length || 0,
-      isLoading: alertsLoading,
-      timestamp: new Date().toISOString()
-    });
-    if (alerts && alerts.length > 0) {
-      console.log('📋 First alert:', alerts[0]);
-      console.log('📋 All alert IDs:', alerts.map(a => a.id));
-    }
-  }, [alerts, alertsLoading]);
 
   // Fetch alert stats
   const { data: stats, isLoading: statsLoading } = useQuery<AlertStats>({
@@ -114,23 +99,6 @@ export default function AlertsPage() {
   const filteredAlerts = filter === 'all' 
     ? (alerts as Alert[] || [])
     : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
-
-  // Debug logging for filtering
-  React.useEffect(() => {
-    console.log('🎯 Filter changed to:', filter);
-    console.log('📊 Raw alerts:', alerts?.length || 0);
-    console.log('📊 Filtered alerts:', filteredAlerts?.length || 0);
-    if (filteredAlerts?.length > 0) {
-      console.log('📊 First alert:', filteredAlerts[0]);
-    }
-  }, [filter, alerts, filteredAlerts]);
-
-  // Stabilize alert ordering to prevent re-animations
-  const sortedAlerts = useMemo(() => {
-    const sorted = [...filteredAlerts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    console.log('🔄 Sorted alerts:', sorted.length);
-    return sorted;
-  }, [filteredAlerts]);
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -259,23 +227,15 @@ export default function AlertsPage() {
             </div>
           </div>
         ) : (
-          <AnimatePresence initial={false} mode="sync">
-            {sortedAlerts.map((alert: Alert, index: number) => (
-              <motion.div
-                key={alert.id}
-                layoutId={alert.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ 
-                  duration: 0.15,
-                  ease: "easeOut"
-                }}
-                style={{ willChange: 'transform, opacity' }}
-                className={index === sortedAlerts.length - 1 ? 'mb-8' : ''}
-                data-testid={`alert-card-${alert.id}`}
-              >
-                <div>
+          filteredAlerts.map((alert: Alert, index: number) => (
+            <motion.div
+              key={alert.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
+              data-testid={`alert-card-${alert.id}`}
+            >
               {shouldUseSimpleCard(alert.type) ? (
                 // Use Simple Card for basic alerts
                 <SimpleAlertCard 
@@ -359,10 +319,8 @@ export default function AlertsPage() {
                   data-testid={`advanced-alert-${alert.id}`}
                 />
               )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+            </motion.div>
+          ))
         )}
         </div>
       </div>

@@ -270,9 +270,9 @@ export class AlertGenerator {
       }
 
       await db.execute(sql`
-        INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at, user_id)
+        INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertData.alertKey}, ${alertData.sport}, ${alertData.gameId},
-                ${alertData.type}, ${alertData.state}, ${alertData.score}, ${alertData.payload}, NOW(), NULL)
+                ${alertData.type}, ${alertData.state}, ${alertData.score}, ${alertData.payload}, NOW())
         ON CONFLICT (alert_key) DO NOTHING
       `);
 
@@ -600,8 +600,7 @@ export class AlertGenerator {
                 alert.message,
                 alert.context,
                 alert.priority,
-                sport,
-                userInfo.userId
+                sport
               );
               alertCount += saved;
             }
@@ -870,7 +869,7 @@ export class AlertGenerator {
     };
   }
 
-  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number | undefined, sport: string = 'MLB', userId?: string): Promise<number> {
+  private async saveRealTimeAlert(alertKey: string, type: string, gameId: string, message: string, context: any, priority: number | undefined, sport: string = 'MLB'): Promise<number> {
     try {
       // Ensure priority has a default value
       let finalPriority = priority || 50;
@@ -1056,9 +1055,9 @@ export class AlertGenerator {
 
       // Insert new alert
       await db.execute(sql`
-        INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at, user_id)
+        INSERT INTO alerts (id, alert_key, sport, game_id, type, state, score, payload, created_at)
         VALUES (gen_random_uuid(), ${alertKey}, ${sport}, ${gameId},
-                ${type}, 'NEW', ${finalPriority}, ${JSON.stringify(enhancedPayload)}, NOW(), ${userId})
+                ${type}, 'NEW', ${finalPriority}, ${JSON.stringify(enhancedPayload)}, NOW())
       `);
 
       if (this.logLevel !== 'quiet') {
@@ -1345,8 +1344,7 @@ export class AlertGenerator {
             alert.message,
             alert.context,
             alert.priority,
-            sport,
-            undefined  // Global alert, visible to all users
+            sport
           );
         }
       } catch (error) {
