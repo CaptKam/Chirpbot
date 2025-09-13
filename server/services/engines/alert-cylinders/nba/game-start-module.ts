@@ -13,7 +13,7 @@ export default class GameStartModule extends BaseAlertModule {
     const currentState = this.gameStates.get(gameState.gameId);
     const isLiveGame = gameState.status === 'live' && 
                       gameState.quarter === 1 && 
-                      this.parseTimeToSeconds(gameState.timeRemaining) >= 600; // First 2 minutes of quarter
+                      this.parseTimeToSeconds(gameState.timeRemaining) < (12 * 60); // Clock has started (less than 12:00)
     
     // Only trigger if game is now live AND we haven't triggered for this game yet
     if (isLiveGame) {

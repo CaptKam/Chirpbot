@@ -37,7 +37,7 @@ export default class GameStartModule extends BaseAlertModule {
     return false;
   }
 
-  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
+  generateAlert(gameState: GameState): AlertResult | null {
     // Only fire once at actual game start
     if (gameState.inning !== 1 || gameState.outs !== 0) {
       return null;

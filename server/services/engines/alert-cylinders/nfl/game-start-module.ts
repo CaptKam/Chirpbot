@@ -11,7 +11,7 @@ export default class GameStartModule extends BaseAlertModule {
     if (!gameState.gameId) return false;
 
     const currentState = this.gameStates.get(gameState.gameId);
-    const isLiveGame = gameState.status === 'live' && gameState.quarter === 1 && gameState.timeRemaining === '15:00';
+    const isLiveGame = gameState.status === 'live' && gameState.quarter === 1 && this.parseTimeToSeconds(gameState.timeRemaining) < (15 * 60);
 
     // Only trigger if game is now live AND we haven't triggered for this game yet
     if (isLiveGame) {
@@ -37,7 +37,7 @@ export default class GameStartModule extends BaseAlertModule {
     return false;
   }
 
-  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
+  generateAlert(gameState: GameState): AlertResult | null {
     // Only fire at the very start of the game
     if (gameState.quarter !== 1 || (gameState.timeRemaining && gameState.timeRemaining < 14.5 * 60)) {
       return null;
@@ -121,5 +121,20 @@ export default class GameStartModule extends BaseAlertModule {
 
   calculateProbability(gameState: GameState): number {
     return this.isTriggered(gameState) ? 100 : 0;
+  }
+
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString || timeString === '0:00') return 0;
+    
+    try {
+      const cleanTime = timeString.trim().split(' ')[0];
+      if (cleanTime.includes(':')) {
+        const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
+        return (minutes * 60) + seconds;
+      }
+      return parseInt(cleanTime) || 0;
+    } catch (error) {
+      return 0;
+    }
   }
 }
