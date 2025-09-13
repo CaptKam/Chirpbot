@@ -491,9 +491,7 @@ export class AlertComposer {
         return `Wind ${weather.windSpeed}mph ${direction} - ${weather.windSpeed >= 20 ? 'Significant' : 'Moderate'} impact on ball flight`;
       }
       
-      if (weather?.precipitation && weather.precipitation > 0) {
-        return `${weather.precipitation}% chance of rain - Potential delays/unders value`;
-      }
+      // Remove precipitation check as it's not available in WeatherData interface
       
       if (weather?.temperature && (weather.temperature <= 40 || weather.temperature >= 95)) {
         return `Extreme temp ${weather.temperature}°F - ${weather.temperature <= 40 ? 'Favors pitchers' : 'Favors hitters'}`;
