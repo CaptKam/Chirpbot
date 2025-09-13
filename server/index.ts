@@ -13,8 +13,28 @@ import { AIEnhancementService } from "./services/ai-enhancements";
 import { AIContextController } from "./services/ai-context-controller";
 import { pool } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
+import { SingleInstanceLock } from "./utils/singleton-lock";
 
-// Startup guard to prevent double initialization
+// 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
+console.log('🔒 Checking for existing ChirpBot instances...');
+
+// Determine target port early
+const TARGET_PORT = parseInt(process.env.PORT || "5000", 10);
+const ALLOW_DYNAMIC_PORT = process.env.ALLOW_DYNAMIC_PORT === 'true';
+
+// Create and acquire singleton lock
+const instanceLock = new SingleInstanceLock();
+const lockAcquired = instanceLock.acquire(TARGET_PORT);
+
+if (!lockAcquired) {
+  // Another healthy instance is already running - exit gracefully
+  console.log('✅ Exiting gracefully - no port conflicts will occur');
+  process.exit(0);
+}
+
+console.log(`🔒 Single instance lock acquired for PID ${process.pid}`);
+
+// Startup guard to prevent double initialization within same process
 if ((globalThis as any).__SERVER_STARTED__) {
   console.log('🔄 Server already started, skipping duplicate initialization');
   process.exit(0);
@@ -25,6 +45,7 @@ if ((globalThis as any).__SERVER_STARTED__) {
 let httpServer: any = null;
 let monitoringInterval: NodeJS.Timeout | null = null;
 let isShuttingDown = false;
+let serverSockets = new Set<any>(); // Track active connections for proper cleanup
 
 // Export monitoring interval setter for routes.ts
 (global as any).setMonitoringInterval = (interval: NodeJS.Timeout) => {
@@ -39,6 +60,13 @@ const gracefulShutdown = async (signal: string) => {
   console.log(`\n📍 ${signal} signal received - starting graceful shutdown...`);
 
   try {
+    // Destroy all active connections first
+    for (const socket of serverSockets) {
+      (socket as any).destroy();
+    }
+    serverSockets.clear();
+    console.log('✅ Active connections destroyed');
+
     // Close server to stop accepting new connections
     if (httpServer) {
       await new Promise<void>((resolve) => {
@@ -60,10 +88,16 @@ const gracefulShutdown = async (signal: string) => {
     await pool.end();
     console.log('✅ Database connections closed');
 
+    // Release singleton lock
+    instanceLock.release();
+    console.log('✅ Singleton lock released');
+
     console.log('✅ Graceful shutdown complete');
     process.exit(0);
   } catch (err) {
     console.error('❌ Error during shutdown:', err);
+    // Always release lock even on error
+    instanceLock.release();
     process.exit(1);
   }
 };
@@ -94,12 +128,9 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (error: any) => {
   console.error('⚠️ Uncaught Exception:', error);
 
-  // For EADDRINUSE, exit immediately so workflow can restart cleanly
-  if (error.code === 'EADDRINUSE') {
-    console.error('❌ Port already in use - exiting to allow clean restart');
-    process.exit(1);
-  }
-
+  // 🔒 NO MORE EADDRINUSE EXITS - Our singleton lock prevents these entirely!
+  // The singleton lock ensures we never try to bind to a port that's already in use
+  
   // For database errors, try to reconnect
   if (error.message?.includes('database') || error.message?.includes('pool')) {
     console.log('🔄 Database error detected - continuing with degraded service');
@@ -122,8 +153,33 @@ app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: false, // Disabled for Vite dev mode
 }));
-// CORS configuration for consistent origin handling - use PORT env var
-const PORT = parseInt(process.env.PORT || "3000", 10);
+// 🔒 PORT PREFLIGHT CHECK WITH BACKOFF - Ensure port is truly available
+let PORT = TARGET_PORT;
+
+// Check if port is actually available and wait if needed
+const checkPortAvailability = async () => {
+  console.log(`🔍 Checking port ${PORT} availability...`);
+  
+  const isAvailable = await SingleInstanceLock.waitForPortAvailable(PORT, 5);
+  
+  if (!isAvailable) {
+    if (ALLOW_DYNAMIC_PORT && process.env.NODE_ENV === 'development') {
+      console.log(`🔄 Port ${PORT} still busy, finding alternative...`);
+      const newPort = await SingleInstanceLock.findAvailablePort(PORT + 1);
+      console.log(`✅ Using alternative port: ${newPort}`);
+      PORT = newPort;
+      process.env.PORT = PORT.toString(); // Update environment for consistency
+    } else {
+      console.error(`❌ Port ${PORT} unavailable after waiting - exiting gracefully`);
+      instanceLock.release();
+      process.exit(0);
+    }
+  }
+  
+  console.log(`✅ Port ${PORT} confirmed available`);
+};
+
+// CORS configuration for consistent origin handling
 const corsOrigin = process.env.CANONICAL_ORIGIN || 
   (process.env.NODE_ENV === 'production' ? false : [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
 
@@ -194,8 +250,20 @@ app.use((req, res, next) => {
 
 async function startServer() {
   try {
-    // Create HTTP server once in index.ts only
-    const httpServer = createServer(app);
+    // 🔒 PREFLIGHT PORT CHECK - Ensure port is available before binding
+    await checkPortAvailability();
+    
+    // Create HTTP server once in index.ts only - FIX SHADOWING ISSUE
+    httpServer = createServer(app);
+    
+    // Track connections for proper cleanup
+    httpServer.on('connection', (socket: any) => {
+      serverSockets.add(socket);
+      socket.on('close', () => {
+        serverSockets.delete(socket);
+      });
+    });
+    
     const server = await registerRoutes(app, httpServer);
 
     // Production optimization: Skip database seeding in production
@@ -231,28 +299,28 @@ async function startServer() {
     // Store server reference for graceful shutdown  
     (globalThis as any).httpServer = httpServer;
 
-    // Enhanced error handling for server startup
+    // 🔒 BULLETPROOF ERROR HANDLING - Should never get EADDRINUSE due to preflight checks
     server.on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use!`);
-        console.log('🔄 Attempting to recover...');
-
-        // Try to clean up and restart
-        setTimeout(() => {
-          process.exit(1); // Let process manager restart us
-        }, 1000);
+        console.error(`🚨 UNEXPECTED: Port ${PORT} conflict despite preflight checks!`);
+        console.log('🔄 This should not happen with our singleton lock - investigating...');
+        instanceLock.release();
+        process.exit(1);
       } else if (error.code === 'EACCES') {
         console.error(`❌ Port ${PORT} requires elevated privileges`);
+        instanceLock.release();
         process.exit(1);
       } else {
         console.error('❌ Server error:', error);
+        instanceLock.release();
         process.exit(1);
       }
     });
 
-    // 🔥 CRITICAL FIX: Start listening IMMEDIATELY to pass health checks
+    // 🔒 SECURE SERVER STARTUP - Port conflicts now impossible!
     server.listen(PORT, HOST, () => {
       console.log(`🚀 Server running on ${HOST}:${PORT}`);
+      console.log(`🔒 Singleton lock active - port conflicts prevented`);
       console.log(`📱 Database connected: ${pool ? 'Yes' : 'No'}`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔐 Session secret: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);

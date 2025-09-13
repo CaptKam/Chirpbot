@@ -3776,32 +3776,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
 
-  // Import health monitor
-  const { getHealthMonitor } = await import('./services/alert-health-monitor');
-  const healthMonitor = getHealthMonitor();
 
-  // Generate alerts from today's completed games
-  const alertGenerator = new AlertGenerator();
-  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
-
-  // Start live game monitoring with robust error handling
-  const monitoringInterval = setInterval(async () => {
-    try {
-      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-      await alertGenerator.generateLiveGameAlerts();
-    } catch (error: any) {
-      console.error('⚠️ Non-critical error in live monitoring:', error.message);
-      // Don't crash - just continue monitoring
-    }
-  }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
-
-  // Initialize health monitor with alert generator and interval
-  healthMonitor.initialize(alertGenerator, monitoringInterval);
-
-  // Store monitoring interval globally for graceful shutdown cleanup
-  (global as any).setMonitoringInterval(monitoringInterval);
-
-  console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 
   // V3 Performance Metrics API (admin-only)
   // Health check endpoint for alert generation system
@@ -4467,32 +4442,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
 
-  // Import health monitor
-  const { getHealthMonitor } = await import('./services/alert-health-monitor');
-  const healthMonitor = getHealthMonitor();
 
-  // Generate alerts from today's completed games
-  const alertGenerator = new AlertGenerator();
-  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
-
-  // Start live game monitoring with robust error handling
-  const monitoringInterval = setInterval(async () => {
-    try {
-      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-      await alertGenerator.generateLiveGameAlerts();
-    } catch (error: any) {
-      console.error('⚠️ Non-critical error in live monitoring:', error.message);
-      // Don't crash - just continue monitoring
-    }
-  }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
-
-  // Initialize health monitor with alert generator and interval
-  healthMonitor.initialize(alertGenerator, monitoringInterval);
-
-  // Store monitoring interval globally for graceful shutdown cleanup
-  (global as any).setMonitoringInterval(monitoringInterval);
-
-  console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 
   // V3 Performance Metrics API (admin-only)
   // Health check endpoint for alert generation system
@@ -5158,32 +5108,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
 
-  // Import health monitor
-  const { getHealthMonitor } = await import('./services/alert-health-monitor');
-  const healthMonitor = getHealthMonitor();
 
-  // Generate alerts from today's completed games
-  const alertGenerator = new AlertGenerator();
-  alertGenerator.generateAlertsFromCompletedGames().catch(console.error);
-
-  // Start live game monitoring with robust error handling
-  const monitoringInterval = setInterval(async () => {
-    try {
-      console.log('⚡ Real-time monitoring: Checking for live game alerts...');
-      await alertGenerator.generateLiveGameAlerts();
-    } catch (error: any) {
-      console.error('⚠️ Non-critical error in live monitoring:', error.message);
-      // Don't crash - just continue monitoring
-    }
-  }, 30000); // Check every 30 seconds - EMERGENCY MEMORY FIX
-
-  // Initialize health monitor with alert generator and interval
-  healthMonitor.initialize(alertGenerator, monitoringInterval);
-
-  // Store monitoring interval globally for graceful shutdown cleanup
-  (global as any).setMonitoringInterval(monitoringInterval);
-
-  console.log('✅ ALERT SYSTEM ACTIVE - Live monitoring enabled');
 
   // V3 Performance Metrics API (admin-only)
   // Health check endpoint for alert generation system
