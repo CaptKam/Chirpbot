@@ -123,6 +123,22 @@ function getBetbookData(context: any): BetbookData {
   };
 }
 
+// Error recovery configuration
+interface RetryConfig {
+  maxRetries: number;
+  initialDelay: number;
+  maxDelay: number;
+  backoffMultiplier: number;
+}
+
+interface EngineFailureRecord {
+  sport: string;
+  failureCount: number;
+  lastFailureTime: Date;
+  isInRecovery: boolean;
+  nextRetryTime: Date;
+}
+
 export class AlertGenerator {
   private mlbApi: MLBApiService;
   private ncaafApi: NCAAFApiService;
@@ -136,6 +152,16 @@ export class AlertGenerator {
   private aiContextController: AIContextController;
   private logLevel: 'verbose' | 'quiet' = 'verbose'; // Default to verbose logging
   private healthMonitor = getHealthMonitor();
+  
+  // Error recovery tracking
+  private engineFailures: Map<string, EngineFailureRecord> = new Map();
+  private readonly retryConfig: RetryConfig = {
+    maxRetries: 3,
+    initialDelay: 1000, // 1 second
+    maxDelay: 30000,    // 30 seconds
+    backoffMultiplier: 2
+  };
+  private fallbackPollingActive: Map<string, NodeJS.Timeout> = new Map();
 
   // Sport-specific engines
   private sportEngines: Map<string, BaseSportEngine>;
@@ -174,20 +200,196 @@ export class AlertGenerator {
     this.initializeNFLPollingManager();
   }
 
-  // Initialize NFL polling manager with dynamic NFL API
-  private initializeNFLPollingManager(): void {
+  // Initialize NFL polling manager with dynamic NFL API and recovery
+  private async initializeNFLPollingManager(): Promise<void> {
     try {
       // Dynamic import to avoid circular dependencies
-      import('./nfl-api').then(({ NFLApiService }) => {
-        const nflApi = new NFLApiService();
-        this.nflApi = nflApi;
-        this.adaptivePollingManagers.set('NFL', new AdaptivePollingManager('NFL', { NFL: nflApi }));
-        console.log('🏈 NFL AdaptivePollingManager initialized with V3-2 intervals');
-      }).catch(error => {
-        console.error('❌ Failed to initialize NFL AdaptivePollingManager:', error);
-      });
+      const { NFLApiService } = await import('./nfl-api');
+      const nflApi = new NFLApiService();
+      this.nflApi = nflApi;
+      this.adaptivePollingManagers.set('NFL', new AdaptivePollingManager('NFL', { NFL: nflApi }));
+      console.log('🏈 NFL AdaptivePollingManager initialized with V3-2 intervals');
+      
+      // Clear any failure records on successful initialization
+      this.engineFailures.delete('NFL');
+      this.clearFallbackPolling('NFL');
     } catch (error) {
-      console.error('❌ Error setting up NFL polling manager:', error);
+      console.error('❌ Failed to initialize NFL AdaptivePollingManager:', error);
+      await this.handleEngineFailure('NFL', error as Error);
+    }
+  }
+  
+  // Handle sport engine failures with automatic recovery
+  private async handleEngineFailure(sport: string, error: Error): Promise<void> {
+    const failure = this.engineFailures.get(sport) || {
+      sport,
+      failureCount: 0,
+      lastFailureTime: new Date(),
+      isInRecovery: false,
+      nextRetryTime: new Date()
+    };
+    
+    failure.failureCount++;
+    failure.lastFailureTime = new Date();
+    
+    // Calculate next retry time with exponential backoff
+    const delay = Math.min(
+      this.retryConfig.initialDelay * Math.pow(this.retryConfig.backoffMultiplier, failure.failureCount - 1),
+      this.retryConfig.maxDelay
+    );
+    failure.nextRetryTime = new Date(Date.now() + delay);
+    
+    this.engineFailures.set(sport, failure);
+    
+    // Report to health monitor
+    this.healthMonitor.recordError(error);
+    this.healthMonitor.recordEngineFailure(sport);
+    
+    console.log(`🔧 ${sport} engine failure #${failure.failureCount}. Activating fallback polling. Next retry in ${delay}ms`);
+    
+    // Activate fallback polling for this sport
+    await this.activateFallbackPolling(sport);
+    
+    // Schedule automatic recovery attempt
+    if (failure.failureCount <= this.retryConfig.maxRetries) {
+      setTimeout(() => this.attemptEngineRecovery(sport), delay);
+    } else {
+      console.error(`❌ ${sport} engine failed ${failure.failureCount} times. Manual intervention required.`);
+      // Continue with fallback polling indefinitely
+    }
+  }
+  
+  // Activate fallback polling for a failed sport
+  private async activateFallbackPolling(sport: string): Promise<void> {
+    // Clear any existing fallback polling
+    this.clearFallbackPolling(sport);
+    
+    console.log(`🔄 Activating fallback polling for ${sport}`);
+    this.healthMonitor.recordFallbackPolling(sport, true);
+    
+    // Create a simple polling mechanism that checks for game updates
+    const fallbackInterval = setInterval(async () => {
+      try {
+        await this.performFallbackCheck(sport);
+      } catch (error) {
+        console.error(`❌ Fallback polling error for ${sport}:`, error);
+        // Don't stop fallback polling on errors
+      }
+    }, 60000); // Check every minute as fallback
+    
+    this.fallbackPollingActive.set(sport, fallbackInterval);
+  }
+  
+  // Clear fallback polling for a sport
+  private clearFallbackPolling(sport: string): void {
+    const interval = this.fallbackPollingActive.get(sport);
+    if (interval) {
+      clearInterval(interval);
+      this.fallbackPollingActive.delete(sport);
+      console.log(`✅ Cleared fallback polling for ${sport}`);
+      this.healthMonitor.recordFallbackPolling(sport, false);
+    }
+  }
+  
+  // Perform basic fallback check for a sport
+  private async performFallbackCheck(sport: string): Promise<void> {
+    console.log(`📋 Performing fallback check for ${sport}`);
+    
+    try {
+      // Try to get basic game data depending on sport
+      switch (sport) {
+        case 'NFL':
+          if (this.nflApi) {
+            const games = await this.nflApi.getTodaysGames();
+            console.log(`📊 Fallback: Found ${games.length} ${sport} games`);
+          }
+          break;
+        case 'WNBA':
+          if (this.wnbaApi) {
+            const games = await this.wnbaApi.getTodaysGames();
+            console.log(`📊 Fallback: Found ${games.length} ${sport} games`);
+          }
+          break;
+        case 'CFL':
+          if (this.cflApi) {
+            const games = await this.cflApi.getTodaysGames();
+            console.log(`📊 Fallback: Found ${games.length} ${sport} games`);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error(`❌ Fallback check failed for ${sport}:`, error);
+    }
+  }
+  
+  // Attempt to recover a failed engine
+  private async attemptEngineRecovery(sport: string): Promise<void> {
+    const failure = this.engineFailures.get(sport);
+    if (!failure || failure.isInRecovery) return;
+    
+    failure.isInRecovery = true;
+    this.engineFailures.set(sport, failure);
+    
+    console.log(`🔧 Attempting recovery for ${sport} engine (attempt ${failure.failureCount}/${this.retryConfig.maxRetries})`);
+    
+    try {
+      // Try to reinitialize the specific sport's polling manager
+      switch (sport) {
+        case 'NFL':
+          await this.initializeNFLPollingManager();
+          break;
+        case 'WNBA':
+          await this.initializeWNBAPollingManager();
+          break;
+        case 'CFL':
+          await this.initializeCFLPollingManager();
+          break;
+        default:
+          console.warn(`⚠️ No recovery handler for ${sport}`);
+      }
+      
+      console.log(`✅ ${sport} engine recovered successfully`);
+      this.engineFailures.delete(sport);
+      this.clearFallbackPolling(sport);
+      this.healthMonitor.recordEngineRecovery(sport);
+    } catch (error) {
+      failure.isInRecovery = false;
+      console.error(`❌ Recovery failed for ${sport}:`, error);
+      await this.handleEngineFailure(sport, error as Error);
+    }
+  }
+  
+  // Initialize WNBA polling manager with error recovery
+  private async initializeWNBAPollingManager(): Promise<void> {
+    try {
+      const { WNBAApiService } = await import('./wnba-api');
+      const wnbaApi = new WNBAApiService();
+      this.wnbaApi = wnbaApi;
+      this.adaptivePollingManagers.set('WNBA', new AdaptivePollingManager('WNBA', { WNBA: wnbaApi }));
+      console.log('🏀 WNBA AdaptivePollingManager initialized');
+      
+      this.engineFailures.delete('WNBA');
+      this.clearFallbackPolling('WNBA');
+    } catch (error) {
+      console.error('❌ Failed to initialize WNBA AdaptivePollingManager:', error);
+      await this.handleEngineFailure('WNBA', error as Error);
+    }
+  }
+  
+  // Initialize CFL polling manager with error recovery
+  private async initializeCFLPollingManager(): Promise<void> {
+    try {
+      const { CFLApiService } = await import('./cfl-api');
+      const cflApi = new CFLApiService();
+      this.cflApi = cflApi;
+      this.adaptivePollingManagers.set('CFL', new AdaptivePollingManager('CFL', { CFL: cflApi }));
+      console.log('🏈 CFL AdaptivePollingManager initialized');
+      
+      this.engineFailures.delete('CFL');
+      this.clearFallbackPolling('CFL');
+    } catch (error) {
+      console.error('❌ Failed to initialize CFL AdaptivePollingManager:', error);
+      await this.handleEngineFailure('CFL', error as Error);
     }
   }
 
@@ -345,6 +547,7 @@ export class AlertGenerator {
           // 🎯 STEP 1: Check if sport has globally enabled alerts
           const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport).catch(error => {
             console.error(`❌ Error getting ${sport} settings:`, error);
+            this.healthMonitor.recordError(error);
             return [];
           });
 
@@ -357,7 +560,11 @@ export class AlertGenerator {
           }
 
           // 🎯 STEP 2: Check if any users have active monitoring for this sport (NEW OPTIMIZATION)
-          const usersWithActiveMonitoring = await this.getUsersWithActiveMonitoring(sport);
+          const usersWithActiveMonitoring = await this.getUsersWithActiveMonitoring(sport).catch(error => {
+            console.error(`❌ Error checking active monitoring for ${sport}:`, error);
+            this.healthMonitor.recordError(error);
+            return []; // Continue with no users rather than failing
+          });
 
           if (usersWithActiveMonitoring.length === 0) {
             if (['MLB', 'NFL'].includes(sport)) {
@@ -405,6 +612,9 @@ export class AlertGenerator {
               totalAlerts += alerts;
             } catch (processError) {
               console.error(`❌ Error processing ${sport} games:`, processError);
+              this.healthMonitor.recordError(processError as Error);
+              // Try fallback polling for this sport
+              await this.activateFallbackPolling(sport);
             }
           }
         } catch (sportError) {
@@ -504,11 +714,16 @@ export class AlertGenerator {
 
     if (!engine) {
       console.log(`❌ No engine found for sport: ${sport}`);
+      await this.handleEngineFailure(sport, new Error(`No engine available for ${sport}`));
       return 0;
     }
 
     // 🎯 NEW OPTIMIZED FLOW: Check user preferences FIRST before any game processing
-    const usersWithActiveMonitoring = await this.getUsersWithActiveMonitoring(sport);
+    const usersWithActiveMonitoring = await this.getUsersWithActiveMonitoring(sport).catch(error => {
+      console.error(`❌ Error getting active monitoring users for ${sport}:`, error);
+      this.healthMonitor.recordError(error);
+      return []; // Continue with empty array rather than failing
+    });
 
     if (usersWithActiveMonitoring.length === 0) {
       console.log(`🚫 No users actively monitoring ${sport} games - skipping all processing`);

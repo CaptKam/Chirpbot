@@ -37,11 +37,14 @@ export class AlertModuleManager {
     this.sport = sport;
   }
 
-  // Dynamically load alert module when user enables it
-  async loadAlertModule(alertType: string): Promise<void> {
+  // Dynamically load alert module with retry capability
+  async loadAlertModule(alertType: string, retryCount: number = 0): Promise<boolean> {
     if (this.activeModules.has(alertType)) {
-      return; // Already loaded
+      return true; // Already loaded
     }
+
+    const maxRetries = 3;
+    const retryDelay = 1000 * Math.pow(2, retryCount); // Exponential backoff
 
     try {
       // Dynamic import based on sport and alert type
@@ -51,8 +54,18 @@ export class AlertModuleManager {
 
       this.activeModules.set(alertType, module);
       console.log(`✅ Loaded ${alertType} module for ${this.sport}`);
+      return true;
     } catch (error) {
       console.error(`❌ Failed to load ${alertType} module for ${this.sport}:`, error);
+      
+      if (retryCount < maxRetries) {
+        console.log(`🔄 Retrying ${alertType} module load in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return await this.loadAlertModule(alertType, retryCount + 1);
+      }
+      
+      console.error(`❌ ${alertType} module failed to load after ${maxRetries} attempts`);
+      return false;
     }
   }
 
@@ -64,9 +77,10 @@ export class AlertModuleManager {
     }
   }
 
-  // Process all active modules for this game state
+  // Process all active modules for this game state with resilience
   processAlerts(gameState: GameState): AlertResult[] {
     const alerts: AlertResult[] = [];
+    const failedModules: string[] = [];
 
     for (const [alertType, module] of this.activeModules) {
       try {
@@ -78,7 +92,13 @@ export class AlertModuleManager {
         }
       } catch (error) {
         console.error(`❌ Error processing ${alertType} module:`, error);
+        failedModules.push(alertType);
+        // Continue processing other modules - don't let one failure stop all alerts
       }
+    }
+
+    if (failedModules.length > 0) {
+      console.log(`⚠️ ${failedModules.length} modules failed but ${alerts.length} alerts were still generated`);
     }
 
     return alerts;
@@ -100,9 +120,11 @@ export abstract class BaseSportEngine {
 
   abstract calculateProbability(gameState: GameState): Promise<number>;
 
-  // Generate live alerts using loaded modules
+  // Generate live alerts using loaded modules with resilience
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
+    const failedModules: string[] = [];
+    const successfulModules: string[] = [];
 
     console.log(`🔍 Generating alerts for game ${gameState.gameId} with ${this.alertModules.size} loaded modules`);
     
@@ -117,12 +139,15 @@ export abstract class BaseSportEngine {
           if (alert) {
             console.log(`📢 Generated ${alertType} alert: ${alert.message}`);
             alerts.push(alert);
+            successfulModules.push(alertType);
           }
         } else {
           console.log(`⏸️ ${alertType} not triggered for game ${gameState.gameId}`);
         }
       } catch (error) {
         console.error(`❌ Error generating ${alertType} alert:`, error);
+        failedModules.push(alertType);
+        // Continue with other modules - don't let one failure stop all alerts
       }
     }
 

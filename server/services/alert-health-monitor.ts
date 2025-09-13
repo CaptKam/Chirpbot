@@ -20,6 +20,9 @@ interface HealthMetrics {
   recoveryAttempts: number;
   pollingIntervalMs: number;
   memoryUsageMB: number;
+  engineFailures: Map<string, { count: number; lastFailure: Date; recovered: boolean }>;
+  cylinderFailures: Map<string, { count: number; lastFailure: Date }>;
+  fallbackPollingActive: Set<string>;
 }
 
 export class AlertHealthMonitor {
@@ -38,7 +41,10 @@ export class AlertHealthMonitor {
     isAutoRecovering: false,
     recoveryAttempts: 0,
     pollingIntervalMs: 30000,
-    memoryUsageMB: 0
+    memoryUsageMB: 0,
+    engineFailures: new Map(),
+    cylinderFailures: new Map(),
+    fallbackPollingActive: new Set()
   };
 
   private startTime: Date;
@@ -159,9 +165,39 @@ export class AlertHealthMonitor {
       ? now.getTime() - this.metrics.lastAlertGeneratedTime.getTime()
       : Number.MAX_SAFE_INTEGER;
 
+    // Check engine failures
+    let activeEngineFailures = 0;
+    this.metrics.engineFailures.forEach(failure => {
+      if (!failure.recovered) {
+        activeEngineFailures++;
+      }
+    });
+    
+    // Check cylinder failures
+    const recentCylinderFailures = Array.from(this.metrics.cylinderFailures.values())
+      .filter(f => now.getTime() - f.lastFailure.getTime() < 300000) // Last 5 minutes
+      .length;
+    
     // Determine health status
     let status: 'healthy' | 'degraded' | 'unhealthy' | 'critical' = 'healthy';
     const warnings: string[] = [];
+    
+    // Add engine/cylinder failure warnings
+    if (activeEngineFailures > 0) {
+      warnings.push(`${activeEngineFailures} engine failures`);
+      if (activeEngineFailures >= 3) {
+        status = 'critical';
+      } else {
+        status = 'degraded';
+      }
+    }
+    
+    if (recentCylinderFailures > 0) {
+      warnings.push(`${recentCylinderFailures} cylinder failures`);
+      if (status === 'healthy') {
+        status = 'degraded';
+      }
+    }
 
     // Critical: No checks in last 45 seconds
     if (timeSinceLastCheck > this.MAX_TIME_WITHOUT_CHECK) {
@@ -285,6 +321,53 @@ export class AlertHealthMonitor {
       }, 30000); // Wait 30 seconds before next attempt
     } finally {
       this.metrics.isAutoRecovering = false;
+    }
+  }
+
+  /**
+   * Record a sport engine failure
+   */
+  public recordEngineFailure(sport: string): void {
+    const failure = this.metrics.engineFailures.get(sport) || { count: 0, lastFailure: new Date(), recovered: false };
+    failure.count++;
+    failure.lastFailure = new Date();
+    failure.recovered = false;
+    this.metrics.engineFailures.set(sport, failure);
+    console.log(`📊 Health Monitor: ${sport} engine failure #${failure.count} recorded`);
+  }
+  
+  /**
+   * Record a sport engine recovery
+   */
+  public recordEngineRecovery(sport: string): void {
+    const failure = this.metrics.engineFailures.get(sport);
+    if (failure) {
+      failure.recovered = true;
+      console.log(`📊 Health Monitor: ${sport} engine recovered after ${failure.count} failures`);
+    }
+  }
+  
+  /**
+   * Record an alert cylinder failure
+   */
+  public recordCylinderFailure(cylinderName: string): void {
+    const failure = this.metrics.cylinderFailures.get(cylinderName) || { count: 0, lastFailure: new Date() };
+    failure.count++;
+    failure.lastFailure = new Date();
+    this.metrics.cylinderFailures.set(cylinderName, failure);
+    console.log(`📊 Health Monitor: Alert cylinder ${cylinderName} failure #${failure.count} recorded`);
+  }
+  
+  /**
+   * Record fallback polling activation
+   */
+  public recordFallbackPolling(sport: string, active: boolean): void {
+    if (active) {
+      this.metrics.fallbackPollingActive.add(sport);
+      console.log(`📊 Health Monitor: Fallback polling activated for ${sport}`);
+    } else {
+      this.metrics.fallbackPollingActive.delete(sport);
+      console.log(`📊 Health Monitor: Fallback polling deactivated for ${sport}`);
     }
   }
 
