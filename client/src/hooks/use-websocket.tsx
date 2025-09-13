@@ -8,28 +8,23 @@ export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const maxReconnectAttempts = 5; // Set a limit for reconnection attempts
+  const maxReconnectAttempts = 10; // Increased limit for better reconnection
+  const [forceReset, setForceReset] = useState(0); // Force connection reset
 
   const connectWithCleanup = useCallback(() => {
-    // Prevent further connections if max attempts are reached
+    // Prevent further connections if max attempts are reached, but allow reset on component mount
     if (reconnectAttempts >= maxReconnectAttempts) {
-      console.log('Max WebSocket reconnection attempts reached.');
+      console.log('Max WebSocket reconnection attempts reached. Will reset on next attempt...');
       setIsConnected(false);
       return;
     }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    // Fix port detection - use environment variable or current location port
-    const envPort = import.meta.env.VITE_WS_PORT || import.meta.env.VITE_PORT;
-    const currentPort = window.location.port;
-    const port = envPort || currentPort || '5000';
-    const wsUrl = `${protocol}//${window.location.hostname}:${port}/realtime-alerts`;
+    // Use the same host:port as the current page - works for all deployment scenarios
+    const wsUrl = `${protocol}//${window.location.host}/realtime-alerts`;
     
     console.log('WebSocket debug info:', {
-      'window.location.port': window.location.port,
-      'envPort': envPort,
-      'currentPort': currentPort,
-      'finalPort': port,
+      'window.location.host': window.location.host,
       'wsUrl': wsUrl
     });
 

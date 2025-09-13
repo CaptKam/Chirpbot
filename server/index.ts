@@ -122,9 +122,10 @@ app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: false, // Disabled for Vite dev mode
 }));
-// CORS configuration for consistent origin handling
+// CORS configuration for consistent origin handling - use PORT env var
+const PORT = parseInt(process.env.PORT || "3000", 10);
 const corsOrigin = process.env.CANONICAL_ORIGIN || 
-  (process.env.NODE_ENV === 'production' ? false : ['http://localhost:5000', 'http://127.0.0.1:5000']);
+  (process.env.NODE_ENV === 'production' ? false : [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
 
 app.use(cors({
   origin: corsOrigin,
@@ -221,10 +222,10 @@ async function startServer() {
     });
 
     // ALWAYS serve the app on the port specified in the environment variable PORT
-    // Other ports are firewalled. Default to 5000 if not specified.
+    // Other ports are firewalled. Default to 3000 to avoid Vite conflicts.
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
-    const PORT = parseInt(process.env.PORT || "5000", 10);
+    // PORT already defined above for CORS
     const HOST = "0.0.0.0"; // Always bind to 0.0.0.0 for Replit deployment
 
     // Store server reference for graceful shutdown  

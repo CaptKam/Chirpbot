@@ -59,14 +59,52 @@ export class SettingsCache {
         return cached.data;
       }
       
-      return {};
+      // 🔥 CRITICAL FIX: Return fallback defaults for key alert types instead of empty {}
+      return this.getDefaultAlertSettings(sport);
     }
+  }
+
+  // 🔥 EMERGENCY DEFAULTS - Critical alert modules that should ALWAYS be enabled
+  private getDefaultAlertSettings(sport: string): Record<string, boolean> {
+    if (sport === 'MLB') {
+      return {
+        'MLB_GAME_START': true,
+        'MLB_SEVENTH_INNING_STRETCH': true,
+        'MLB_RUNNER_ON_THIRD_NO_OUTS': true,
+        'MLB_FIRST_AND_THIRD_NO_OUTS': true,
+        'MLB_SECOND_AND_THIRD_NO_OUTS': true,
+        'MLB_FIRST_AND_SECOND': true,
+        'MLB_BASES_LOADED_NO_OUTS': true,
+        'MLB_RUNNER_ON_THIRD_ONE_OUT': true,
+        'MLB_SECOND_AND_THIRD_ONE_OUT': true,
+        'MLB_BASES_LOADED_ONE_OUT': true,
+        'MLB_BATTER_DUE': true,
+        'MLB_STEAL_LIKELIHOOD': true,
+        'MLB_ON_DECK_PREDICTION': true,
+        'MLB_WIND_CHANGE': true
+      };
+    }
+    // Add defaults for other sports
+    return {};
   }
 
   // Check if specific alert type is enabled (with caching)
   async isAlertEnabled(sport: string, alertType: string): Promise<boolean> {
+    // 🔥 FORCE ENABLE OVERRIDE - bypass all caching for emergency recovery
+    if (process.env.CHIRPBOT_ALERTS_FORCE_ENABLE === 'true') {
+      console.log(`🚨 FORCE ENABLE: ${alertType} (emergency override active)`);
+      return true;
+    }
+
     const settings = await this.getGlobalSettings(sport);
-    return settings[alertType] !== false; // Default to enabled
+    const isEnabled = settings[alertType] !== false; // Default to enabled
+    
+    // Debug logging for suppressed alerts
+    if (!isEnabled) {
+      console.log(`❌ Alert suppressed by settings: ${alertType} (${sport})`);
+    }
+    
+    return isEnabled;
   }
 
   // Pre-filter disabled alert types to skip processing entirely
