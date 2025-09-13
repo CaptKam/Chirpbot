@@ -974,7 +974,28 @@ export class AlertGenerator {
             }
           }
           
-          // CRITICAL: Always use the original V3 message, never the AI's message
+          // CRITICAL: Always use the original V3 message for non-AI fields, preserve AI enhancements
+          const finalAlert = {
+            type,
+            sport,
+            message: originalV3Message, // Keep the V3 format intact
+            title: originalV3Message,   // V3 title
+            homeTeam,
+            awayTeam,
+            priority: finalPriority,
+            confidence,
+            gameId,
+            context: {
+              ...context,
+              // AI enhancements are preserved in context
+              originalV3Message: originalV3Message
+            },
+            createdAt: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
+            id: `${sport}_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          };
+
+          // CRITICAL: Never override AI content, keep V3 in message field the AI's message
           message = originalV3Message;
 
         } catch (error) {
