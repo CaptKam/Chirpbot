@@ -612,7 +612,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
                       <Brain className="w-3 h-3 text-purple-400" />
                       <span className="text-xs text-purple-100 font-medium">AI Analysis</span>
                       <span className="text-xs text-green-300 font-mono">
-                        {alertData.context.confidence.toFixed(1)}% confidence
+                        {alertData.context?.confidence?.toFixed(1)}% confidence
                       </span>
                     </div>
 
@@ -1164,7 +1164,7 @@ export function SwipeableCard({ children, alertId, className, onTap, alertData, 
 
                             let message = alertData.message || '';
                             // Remove emojis and clean up
-                            message = message.replace(/[\\{1F300}-\\{1F9FF}]|[\u{2600}-\u{26FF}]|[\\{2700}-\u{27BF}]/gu, '').trim();
+                            message = message.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
 
                             // Extract the main situation text based on sport
                             if (alertData.sport === 'MLB') {
