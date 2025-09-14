@@ -281,11 +281,12 @@ export class UnifiedAlertGenerator {
         return 0;
       }
 
-      // Process each sport
+      // Process each sport in parallel for better performance
       const sports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
       let totalAlerts = 0;
 
-      for (const sport of sports) {
+      const sportProcessingPromises = sports.map(async (sport) => {
+        let sportAlerts = 0;
         try {
           const enabledAlerts = await this.settingsCache!.getEnabledAlertTypes(sport).catch(error => {
             console.error(`❌ Error getting ${sport} settings:`, error);
@@ -348,7 +349,7 @@ export class UnifiedAlertGenerator {
           if (games.length > 0) {
             try {
               const alerts = await this.processGamesWithEngine(sport, games);
-              totalAlerts += alerts;
+              sportAlerts += alerts;
             } catch (processError) {
               console.error(`❌ Error processing ${sport} games:`, processError);
               this.healthMonitor?.recordError(processError as Error);
@@ -358,7 +359,12 @@ export class UnifiedAlertGenerator {
         } catch (sportError) {
           console.error(`❌ Sport ${sport} processing failed:`, sportError);
         }
-      }
+        return sportAlerts;
+      });
+
+      // Wait for all sports to complete processing
+      const sportResults = await Promise.all(sportProcessingPromises);
+      totalAlerts = sportResults.reduce((sum, alerts) => sum + alerts, 0);
 
       if (this.logLevel !== 'quiet') {
         console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);
