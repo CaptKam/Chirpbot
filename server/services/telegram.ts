@@ -61,20 +61,22 @@ export async function sendTelegramAlert(config: TelegramConfig, alert: any): Pro
  * Follows V3 Law #7: Consistent Alert Structure & 3-Second Readability
  */
 function formatUniversalTelegramMessage(alert: any): string {
-  const gameInfo = alert.gameInfo;
+  // Null-safe gameInfo extraction
+  const gameInfo = alert?.gameInfo ?? {};
   const sport = gameInfo?.sport || 'UNKNOWN';
   const emoji = getSportEmoji(sport);
 
-  // Clean alert type - remove sport prefix and format
-  const alertType = alert.type
+  // Clean alert type - remove sport prefix and format (null-safe)
+  const typeStr = String(alert?.type ?? 'ALERT');
+  const alertType = typeStr
     .replace(/^(MLB|NFL|NCAAF|NBA|WNBA|CFL|NHL)_/, '')
     .replace(/_/g, ' ');
 
-  // Team names and scores
-  const awayTeam = gameInfo.awayTeam || 'Away';
-  const homeTeam = gameInfo.homeTeam || 'Home';
-  const awayScore = gameInfo.score?.away ?? gameInfo.awayScore ?? 0;
-  const homeScore = gameInfo.score?.home ?? gameInfo.homeScore ?? 0;
+  // Team names and scores (null-safe)
+  const awayTeam = gameInfo?.awayTeam ?? 'Away';
+  const homeTeam = gameInfo?.homeTeam ?? 'Home';
+  const awayScore = gameInfo?.score?.away ?? gameInfo?.awayScore ?? 0;
+  const homeScore = gameInfo?.score?.home ?? gameInfo?.homeScore ?? 0;
 
   // Build situation line based on sport
   const situationLine = buildSituationLine(sport, gameInfo);
@@ -123,24 +125,24 @@ function buildSituationLine(sport: string, gameInfo: any): string {
 function buildMLBSituation(gameInfo: any): string {
   const parts = [];
 
-  // Inning and half
-  if (gameInfo.inning && gameInfo.inningState) {
+  // Inning and half (null-safe)
+  if (gameInfo?.inning && gameInfo?.inningState) {
     const inningDisplay = gameInfo.inningState === 'top' ? `Top ${gameInfo.inning}` : `Bot ${gameInfo.inning}`;
     parts.push(inningDisplay);
   }
 
-  // Outs
-  if (gameInfo.outs !== undefined) {
+  // Outs (null-safe)
+  if (gameInfo?.outs !== undefined) {
     parts.push(`${gameInfo.outs} outs`);
   }
 
-  // Count
-  if (gameInfo.balls !== undefined && gameInfo.strikes !== undefined) {
+  // Count (null-safe)
+  if (gameInfo?.balls !== undefined && gameInfo?.strikes !== undefined) {
     parts.push(`${gameInfo.balls}-${gameInfo.strikes} count`);
   }
 
-  // Runners
-  const runnersDisplay = formatMLBRunners(gameInfo.runners);
+  // Runners (null-safe)
+  const runnersDisplay = formatMLBRunners(gameInfo?.runners);
   if (runnersDisplay) {
     parts.push(runnersDisplay);
   }
@@ -154,14 +156,14 @@ function buildMLBSituation(gameInfo: any): string {
 function buildFootballSituation(gameInfo: any): string {
   const parts = [];
 
-  // Quarter and time
-  if (gameInfo.quarter && gameInfo.timeRemaining) {
+  // Quarter and time (null-safe)
+  if (gameInfo?.quarter && gameInfo?.timeRemaining) {
     parts.push(`Q${gameInfo.quarter}`);
     parts.push(gameInfo.timeRemaining);
   }
 
-  // Down and distance
-  if (gameInfo.down && gameInfo.yardsToGo) {
+  // Down and distance (null-safe)
+  if (gameInfo?.down && gameInfo?.yardsToGo) {
     parts.push(`${gameInfo.down}${getOrdinalSuffix(gameInfo.down)} & ${gameInfo.yardsToGo}`);
   }
 
@@ -174,15 +176,15 @@ function buildFootballSituation(gameInfo: any): string {
 function buildBasketballSituation(gameInfo: any): string {
   const parts = [];
 
-  // Quarter/Period and time
-  if (gameInfo.quarter && gameInfo.timeRemaining) {
+  // Quarter/Period and time (null-safe)
+  if (gameInfo?.quarter && gameInfo?.timeRemaining) {
     const quarterDisplay = gameInfo.quarter <= 4 ? `Q${gameInfo.quarter}` : `OT${gameInfo.quarter - 4}`;
     parts.push(quarterDisplay);
     parts.push(gameInfo.timeRemaining);
   }
 
-  // Shot clock (if relevant)
-  if (gameInfo.shotClock && gameInfo.shotClock < 24) {
+  // Shot clock (if relevant) (null-safe)
+  if (gameInfo?.shotClock && gameInfo.shotClock < 24) {
     parts.push(`${gameInfo.shotClock}s shot clock`);
   }
 
@@ -195,8 +197,8 @@ function buildBasketballSituation(gameInfo: any): string {
 function buildHockeySituation(gameInfo: any): string {
   const parts = [];
 
-  // Period and time
-  if (gameInfo.period && gameInfo.timeRemaining) {
+  // Period and time (null-safe)
+  if (gameInfo?.period && gameInfo?.timeRemaining) {
     parts.push(`P${gameInfo.period}`);
     parts.push(gameInfo.timeRemaining);
   }
@@ -210,13 +212,14 @@ function buildHockeySituation(gameInfo: any): string {
 function buildGenericSituation(gameInfo: any): string {
   const parts = [];
 
-  if (gameInfo.quarter && gameInfo.timeRemaining) {
+  // Null-safe property access
+  if (gameInfo?.quarter && gameInfo?.timeRemaining) {
     parts.push(`Q${gameInfo.quarter}`);
     parts.push(gameInfo.timeRemaining);
-  } else if (gameInfo.period && gameInfo.timeRemaining) {
+  } else if (gameInfo?.period && gameInfo?.timeRemaining) {
     parts.push(`P${gameInfo.period}`);
     parts.push(gameInfo.timeRemaining);
-  } else if (gameInfo.inning) {
+  } else if (gameInfo?.inning) {
     parts.push(`Inning ${gameInfo.inning}`);
   }
 
@@ -246,9 +249,9 @@ function formatMLBRunners(runners: any): string {
   if (!runners) return '';
 
   const positions = [];
-  if (runners.first) positions.push('1B');
-  if (runners.second) positions.push('2B');
-  if (runners.third) positions.push('3B');
+  if (runners?.first) positions.push('1B');
+  if (runners?.second) positions.push('2B');
+  if (runners?.third) positions.push('3B');
 
   return positions.length > 0 ? positions.join(', ') : '';
 }
