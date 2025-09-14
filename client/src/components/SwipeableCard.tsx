@@ -12,6 +12,7 @@ import { TeamLogo } from '@/components/team-logo';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { Alert } from '@/types';
 import { BaseballDiamond } from '@/components/baseball-diamond';
+import { getPrimaryMessage, cleanMessage, hasAIContent } from '@/utils/alert-message';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';

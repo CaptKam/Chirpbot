@@ -20,6 +20,7 @@ import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { BaseballDiamond } from '@/components/baseball-diamond';
 import { Alert } from '@/types';
 import { cn } from '@/lib/utils';
+import { getPrimaryMessage, getSecondaryMessage, cleanMessage, hasAIContent } from '@/utils/alert-message';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -473,23 +474,21 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
             )}
           </div>
           
-          {/* Primary AI Title */}
-          {alertData.context?.aiTitle && (
-            <h3 className="text-lg font-semibold text-white mb-2">
-              {alertData.context.aiTitle}
-            </h3>
-          )}
+          {/* AI Enhanced Primary Message */}
+          <h3 className="text-lg font-semibold text-white mb-2">
+            {cleanMessage(getPrimaryMessage(alertData))}
+          </h3>
           
-          {/* AI Message */}
-          {alertData.context?.aiMessage && (
-            <h3 className="text-lg font-semibold text-white mb-2">
-              {alertData.context.aiMessage}
-            </h3>
+          {/* AI Secondary Message */}
+          {getSecondaryMessage(alertData) && getSecondaryMessage(alertData) !== getPrimaryMessage(alertData) && (
+            <p className="text-sm text-blue-100">
+              {cleanMessage(getSecondaryMessage(alertData))}
+            </p>
           )}
           
           {/* AI Call to Action */}
           {alertData.context?.aiCallToAction && (
-            <p className="text-sm text-blue-100">
+            <p className="text-sm text-blue-100 mt-1">
               {alertData.context.aiCallToAction}
             </p>
           )}

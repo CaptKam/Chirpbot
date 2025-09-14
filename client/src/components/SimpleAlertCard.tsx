@@ -9,6 +9,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { BaseballDiamond } from './baseball-diamond';
+import { getPrimaryMessage, cleanMessage, hasAIContent } from '@/utils/alert-message';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -400,10 +401,18 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           {/* Alert Message and Footer - Below the standardized GameCardTemplate */}
           <div className="p-4 pt-0">
 
-            {/* Alert Message - Simple */}
+            {/* Alert Message - AI Enhanced */}
             <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
+              {hasAIContent(alert) && (
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="w-4 h-4 text-blue-400" />
+                  <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs">
+                    AI ENHANCED
+                  </Badge>
+                </div>
+              )}
               <p className="text-slate-100 text-base font-medium leading-relaxed">
-                {alert.message.replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '').replace(/\[object Object\]/g, '').trim()}
+                {cleanMessage(getPrimaryMessage(alert))}
               </p>
             </div>
 

@@ -505,6 +505,25 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     console.log(`📝 AI Enhanced Alert Broadcasting: ${sport} ${enhancedAlert.type}`);
 
+    // ✅ NORMALIZE AI CONTENT INTO FRONTEND FIELDS
+    // Extract AI-enhanced content from context
+    const aiEnhancedMessage = enhancedAlert.context?.aiEnhancedMessage || enhancedAlert.context?.enhancedMessage;
+    const aiEnhancedTitle = enhancedAlert.context?.aiRecommendation || enhancedAlert.context?.aiTitle;
+    const primaryMessage = aiEnhancedMessage || aiEnhancedTitle || enhancedAlert.message;
+    const titleMessage = aiEnhancedTitle || aiEnhancedMessage || enhancedAlert.title;
+    
+    console.log(`🎯 AI Content Mapping: primary="${primaryMessage?.substring(0, 50)}..." title="${titleMessage?.substring(0, 50)}..."`);
+
+    // Normalize alert object - overwrite message fields with AI content
+    const normalizedAlert = {
+      ...enhancedAlert,
+      message: primaryMessage,        // ✅ Frontend reads this
+      title: titleMessage,           // ✅ Frontend reads this  
+      primary: primaryMessage,       // ✅ Backup field
+      sport: sport,
+      wasActuallyEnhanced
+    };
+
     // Broadcast the enhanced alert to all connected WebSocket clients
     broadcast({
       type: 'new_alert',
@@ -516,17 +535,21 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         sport: sport,
         gameId: enhancedAlert.context?.gameId || enhancedAlert.alertKey.split('_')[0],
         score: enhancedAlert.priority || 85,
-        payload: {
-          ...enhancedAlert,
-          sport: sport,
-          wasActuallyEnhanced
-        },
+        
+        // ✅ NORMALIZED FIELDS - Frontend will read these
+        message: primaryMessage,       // Primary display field
+        title: titleMessage,          // Title/header field
+        primary: primaryMessage,      // Backup compatibility
+        
+        payload: normalizedAlert,
         createdAt: new Date().toISOString(),
         wasActuallyEnhanced,
         context: enhancedAlert.context,
         ai: wasActuallyEnhanced && enhancedAlert.context ? {
-          enhancedTitle: enhancedAlert.context.aiRecommendation,
-          enhancedMessage: enhancedAlert.message,
+          enhancedTitle: aiEnhancedTitle,
+          enhancedMessage: aiEnhancedMessage,
+          primary: primaryMessage,    // ✅ Primary field for consistency
+          title: titleMessage,        // ✅ Title field for consistency
           aiInsights: enhancedAlert.context.aiInsights,
           aiRecommendation: enhancedAlert.context.aiRecommendation,
           urgencyLevel: enhancedAlert.context.urgencyLevel,
