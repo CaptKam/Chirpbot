@@ -285,10 +285,15 @@ export class UnifiedAlertGenerator {
       const sports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
       let totalAlerts = 0;
 
+      // FIXED: Process sports in true parallel with Promise.allSettled for error isolation
       const sportProcessingPromises = sports.map(async (sport) => {
         let sportAlerts = 0;
         try {
-          const enabledAlerts = await this.settingsCache!.getEnabledAlertTypes(sport).catch(error => {
+          // Use cached settings to avoid sequential blocking
+          const enabledAlerts = await Promise.race([
+            this.settingsCache!.getEnabledAlertTypes(sport),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Settings timeout')), 5000))
+          ]).catch(error => {
             console.error(`❌ Error getting ${sport} settings:`, error);
             this.healthMonitor?.recordError(error);
             return [];
@@ -362,9 +367,18 @@ export class UnifiedAlertGenerator {
         return sportAlerts;
       });
 
-      // Wait for all sports to complete processing
-      const sportResults = await Promise.all(sportProcessingPromises);
-      totalAlerts = sportResults.reduce((sum, alerts) => sum + alerts, 0);
+      // FIXED: Use Promise.allSettled to prevent one sport failure from blocking others
+      const sportResults = await Promise.allSettled(sportProcessingPromises);
+      totalAlerts = sportResults
+        .filter(result => result.status === 'fulfilled')
+        .reduce((sum, result) => sum + (result as PromiseFulfilledResult<number>).value, 0);
+      
+      // Log any sport processing failures
+      const failures = sportResults.filter(result => result.status === 'rejected');
+      if (failures.length > 0) {
+        console.warn(`⚠️ ${failures.length} sports failed processing:`, 
+          failures.map(f => (f as PromiseRejectedResult).reason.message).join(', '));
+      }
 
       if (this.logLevel !== 'quiet') {
         console.log(`📊 Generated ${totalAlerts} total alerts across all sports`);

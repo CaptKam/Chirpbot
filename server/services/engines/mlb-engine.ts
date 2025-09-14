@@ -135,8 +135,11 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_FIRST_AND_SECOND',
         'MLB_BASES_LOADED_NO_OUTS',
         'MLB_RUNNER_ON_THIRD_ONE_OUT',
+        'MLB_FIRST_AND_THIRD_ONE_OUT',
         'MLB_SECOND_AND_THIRD_ONE_OUT',
         'MLB_BASES_LOADED_ONE_OUT',
+        'MLB_RUNNER_ON_THIRD_TWO_OUTS',
+        'MLB_FIRST_AND_THIRD_TWO_OUTS',
         'MLB_BATTER_DUE',
         'MLB_STEAL_LIKELIHOOD',
         'MLB_ON_DECK_PREDICTION',
@@ -144,6 +147,7 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_LATE_INNING_CLOSE',
         'MLB_SCORING_OPPORTUNITY',
         'MLB_PITCHING_CHANGE',
+        'MLB_BASES_LOADED_TWO_OUTS',
         'TEST_ALERT'
       ];
 
@@ -242,7 +246,7 @@ export class MLBEngine extends BaseSportEngine {
       if (rawAlerts.length > 0) {
         console.log(`🔄 MLB: Sending ${rawAlerts.length} raw alerts to AsyncAI processor for enhancement`);
         const { unifiedAIProcessor } = await import('../unified-ai-processor');
-        
+
         // Send each raw alert to AsyncAI processor with proper context
         for (const alert of rawAlerts) {
           const context: CrossSportContext = {
@@ -268,7 +272,7 @@ export class MLBEngine extends BaseSportEngine {
             originalMessage: alert.message,
             originalContext: alert.context
           };
-          
+
           console.log(`🎯 MLB AsyncAI: Queuing ${alert.type} alert for enhancement`);
           // NON-BLOCKING: Queue for AI enhancement in background
           unifiedAIProcessor.queueAlert(alert, context, enhancedGameState.gameId).catch(error => {
@@ -474,6 +478,10 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_LATE_INNING_CLOSE',
         'MLB_SCORING_OPPORTUNITY',
         'MLB_PITCHING_CHANGE',
+        'MLB_FIRST_AND_THIRD_ONE_OUT',
+        'MLB_FIRST_AND_THIRD_TWO_OUTS',
+        'MLB_RUNNER_ON_THIRD_TWO_OUTS',
+        'MLB_BASES_LOADED_TWO_OUTS',
         'TEST_ALERT'
       ];
 
@@ -525,6 +533,7 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_LATE_INNING_CLOSE': './alert-cylinders/mlb/late-inning-close-module.ts',
         'MLB_SCORING_OPPORTUNITY': './alert-cylinders/mlb/scoring-opportunity-module.ts',
         'MLB_PITCHING_CHANGE': './alert-cylinders/mlb/pitching-change-module.ts',
+        'MLB_BASES_LOADED_TWO_OUTS': './alert-cylinders/mlb/bases-loaded-two-outs-module.ts',
         'TEST_ALERT': './alert-cylinders/test-alert-module.ts'
       };
 

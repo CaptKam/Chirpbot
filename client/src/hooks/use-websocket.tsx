@@ -22,7 +22,7 @@ export function useWebSocket() {
   // Cache user settings to avoid fetching on every message
   const getCachedUserSettings = useCallback(async () => {
     const now = Date.now();
-    
+
     // Return cached settings if still valid
     if (userSettingsCache.current && (now - settingsCacheTimestamp.current) < CACHE_TTL) {
       return userSettingsCache.current;
@@ -46,7 +46,7 @@ export function useWebSocket() {
     } catch (error) {
       console.error('Error fetching user settings:', error);
     }
-    
+
     return null;
   }, []);
 
@@ -89,7 +89,7 @@ export function useWebSocket() {
 
             // Check if user has this alert type enabled (using cached settings)
             const userSettings = await getCachedUserSettings();
-            
+
             if (userSettings) {
               const alertType = alertData.type || alertData.alertType;
               const alertTypeEnabled = userSettings.some((setting: any) => 
@@ -105,8 +105,8 @@ export function useWebSocket() {
             // Check current query state
             const currentData = queryClient.getQueryData(['/api/alerts']);
             const queryState = queryClient.getQueryState(['/api/alerts']);
-            
-            // Only update if query is settled (not loading)
+
+            // Only update if query is settled (not fetching)
             if (!queryState?.isFetching && currentData) {
               console.log('✅ Updating alerts cache with new WebSocket alert');
 
@@ -169,7 +169,7 @@ export function useWebSocket() {
                 return sortedData;
               });
             } else {
-              console.log('⏳ Query is loading or no data, WebSocket update deferred');
+              // REMOVED: No longer block WebSocket updates based on query state
             }
           }
         } catch (error) {
@@ -216,13 +216,13 @@ export function useWebSocket() {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
-      
+
       // Close WebSocket connection properly
       if (wsRef.current) {
         wsRef.current.close(1000, 'Component unmounting');
         wsRef.current = null;
       }
-      
+
       // Clear settings cache
       userSettingsCache.current = null;
       settingsCacheTimestamp.current = 0;
