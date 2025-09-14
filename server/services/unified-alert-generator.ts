@@ -711,6 +711,18 @@ export class UnifiedAlertGenerator {
                 // Create alert for each user monitoring this game
                 for (const userId of gameMonitoringUsers) {
                   try {
+                    // CRITICAL: Validate alertResult before processing to prevent constraint violations
+                    if (!alertResult || !alertResult.type || !alertResult.alertKey || !alertResult.message) {
+                      console.error(`❌ Invalid AlertResult object from ${sport} engine:`, {
+                        alertResultExists: !!alertResult,
+                        type: alertResult?.type,
+                        alertKey: alertResult?.alertKey,
+                        message: alertResult?.message,
+                        gameId: gameId
+                      });
+                      continue; // Skip this alert and move to next user
+                    }
+
                     const alertData = {
                       alertKey: `${situationKey}_${userId}`,
                       sport: sport,
@@ -732,6 +744,18 @@ export class UnifiedAlertGenerator {
                         sportsbookLinks: betbookData.sportsbookLinks
                       }
                     };
+
+                    // CRITICAL: Final validation before database insert to prevent constraint violations
+                    if (!alertData.type || !alertData.alertKey || !alertData.userId || !alertData.sport) {
+                      console.error(`❌ Invalid alertData object before database insert:`, {
+                        type: alertData.type,
+                        alertKey: alertData.alertKey,
+                        userId: alertData.userId,
+                        sport: alertData.sport,
+                        gameId: alertData.gameId
+                      });
+                      continue; // Skip this alert
+                    }
 
                     // Check if alert already exists in database before creating
                     try {

@@ -9,25 +9,39 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
     return gameState.inning >= 7 && gameState.isLive;
   }
 
-  async generateAlert(gameState: GameState): Promise<AlertResult | null> {
-    // Trigger for any late inning situation - removed exact restrictions
-    // No timing restrictions - alert for late game scenarios
+  generateAlert(gameState: GameState): AlertResult | null {
+    // Validate required game state fields to prevent constraint violations
+    if (!gameState || !gameState.gameId || typeof gameState.inning !== 'number' || !gameState.isLive) {
+      console.warn(`⚠️ SeventhInningStretchModule: Invalid game state - gameId: ${gameState?.gameId}, inning: ${gameState?.inning}, isLive: ${gameState?.isLive}`);
+      return null;
+    }
 
-    const alertKey = `mlb_seventh_inning_${gameState.gameId}`;
+    // Validate team names and scores
+    const homeTeam = this.getTeamName(gameState.homeTeam) || 'Home Team';
+    const awayTeam = this.getTeamName(gameState.awayTeam) || 'Away Team';
+    const homeScore = typeof gameState.homeScore === 'number' ? gameState.homeScore : 0;
+    const awayScore = typeof gameState.awayScore === 'number' ? gameState.awayScore : 0;
 
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    // Only generate alert if we meet the trigger conditions
+    if (!this.isTriggered(gameState)) {
+      return null;
+    }
+
+    const alertKey = `mlb_seventh_inning_${gameState.gameId}_${gameState.inning}`;
+
+    const scoreDiff = Math.abs(homeScore - awayScore);
     const isCloseGame = scoreDiff <= 2;
-    const totalRuns = gameState.homeScore + gameState.awayScore;
+    const totalRuns = homeScore + awayScore;
 
     // Strategic context for late-game dynamics
     const context = {
       gameId: gameState.gameId,
       sport: 'MLB',
       inning: gameState.inning,
-      homeTeam: gameState.homeTeam,
-      awayTeam: gameState.awayTeam,
-      homeScore: gameState.homeScore,
-      awayScore: gameState.awayScore,
+      homeTeam: homeTeam,
+      awayTeam: awayTeam,
+      homeScore: homeScore,
+      awayScore: awayScore,
 
       // Late-game strategic context
       reasons: [
@@ -48,7 +62,7 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
       gameState: {
         competitiveness: isCloseGame ? 'Highly competitive' : scoreDiff > 5 ? 'Blowout territory' : 'Moderate lead',
         totalPace: totalRuns > 8 ? 'High-scoring affair' : totalRuns < 4 ? 'Pitcher duel' : 'Average scoring',
-        momentum: gameState.homeScore > gameState.awayScore ? 'Home team leading' : 'Away team ahead'
+        momentum: homeScore > awayScore ? 'Home team leading' : 'Away team ahead'
       },
 
       // Strategic factors
@@ -71,13 +85,22 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
         'Controlled conditions maintain consistency'
     };
 
-    return {
+    // Ensure all required fields are properly set to prevent constraint violations
+    const alertResult: AlertResult = {
       alertKey,
       type: 'MLB_SEVENTH_INNING_STRETCH',
       priority: isCloseGame ? 80 : 60,
-      message: `Seventh inning stretch - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) - Late game transition`,
+      message: `Seventh inning stretch - ${awayTeam} @ ${homeTeam} (${awayScore}-${homeScore}) - Late game transition`,
       context
     };
+
+    // Final validation to ensure no undefined fields
+    if (!alertResult.type || !alertResult.alertKey || !alertResult.message) {
+      console.error('❌ SeventhInningStretchModule: Invalid AlertResult object generated', alertResult);
+      return null;
+    }
+
+    return alertResult;
   }
 
   calculateProbability(gameState: GameState): number {
