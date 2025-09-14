@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
 import { storage } from "../storage";
-import { AlertDeduplication } from "./alert-deduplication";
+import { unifiedDeduplicator } from "./unified-deduplicator";
 import { sendTelegramAlert, type TelegramConfig } from "./telegram";
 import { SettingsCache } from "./settings-cache";
 import { AdaptivePollingManager } from './adaptive-polling-manager';
@@ -142,7 +142,7 @@ export class AlertGenerator {
   private wnbaApi: any; // Will be initialized dynamically
   private nflApi: any; // Will be initialized dynamically
   private cflApi: any; // Will be initialized dynamically
-  private deduplication: AlertDeduplication;
+  private deduplication = unifiedDeduplicator;
   private settingsCache: SettingsCache;
   private logLevel: 'verbose' | 'quiet' = 'verbose'; // Default to verbose logging
   private healthMonitor = getHealthMonitor();
@@ -166,7 +166,7 @@ export class AlertGenerator {
   constructor() {
     this.mlbApi = new MLBApiService();
     this.ncaafApi = new NCAAFApiService();
-    this.deduplication = new AlertDeduplication();
+    // Deduplication initialized above as singleton
     this.settingsCache = new SettingsCache(storage);
 
     // Initialize sport engines

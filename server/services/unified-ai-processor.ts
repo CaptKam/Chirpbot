@@ -495,6 +495,45 @@ export class UnifiedAIProcessor {
 
   // === UTILITY METHODS ===
 
+  // Get performance metrics for monitoring dashboard (API compatibility)
+  getPerformanceMetrics() {
+    const avgTime = this.performanceMetrics.avgProcessingTime.length > 0
+      ? this.performanceMetrics.avgProcessingTime.reduce((sum, time) => sum + time, 0) / this.performanceMetrics.avgProcessingTime.length
+      : 0;
+
+    return {
+      // AI Processing Metrics
+      totalRequests: this.performanceMetrics.totalRequests,
+      totalJobs: this.performanceMetrics.totalJobs,
+      completedJobs: this.performanceMetrics.completedJobs,
+      failedJobs: this.performanceMetrics.failedJobs,
+      timeoutJobs: this.performanceMetrics.timeoutJobs,
+      
+      // Cache Metrics
+      cacheHits: this.performanceMetrics.cacheHits,
+      cacheMisses: this.performanceMetrics.cacheMisses,
+      
+      // Performance Metrics
+      avgProcessingTime: avgTime,
+      
+      // Enhancement Metrics
+      successfulEnhancements: this.performanceMetrics.successfulEnhancements,
+      failedEnhancements: this.performanceMetrics.failedEnhancements,
+      
+      // Queue Status
+      queuedJobs: this.performanceMetrics.queuedJobs,
+      processingJobs: this.performanceMetrics.processingJobs,
+      
+      // Quality Metrics
+      highValueAlerts: this.performanceMetrics.highValueAlerts,
+      gatedAlerts: this.performanceMetrics.gatedAlerts,
+      fallbacksUsed: this.performanceMetrics.fallbacksUsed,
+      
+      // Sport-specific metrics
+      sportMetrics: this.performanceMetrics.sportMetrics
+    };
+  }
+
   private generateJobId(alert: AlertResult, context: CrossSportContext): string {
     return `${context.sport}_${context.gameId}_${context.alertType}_${Date.now()}`;
   }

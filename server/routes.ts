@@ -9,7 +9,7 @@ import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { AlertGenerator } from "./services/alert-generator";
-import { requestDeduplicator } from "./middleware/request-deduplicator";
+import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { pool } from "./db";
 import { alerts as alertsTable, settings } from "../shared/schema";
@@ -50,7 +50,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Add memory management and request deduplication middleware FIRST (before any logging)
   app.use(memoryManager.middleware());
-  app.use(requestDeduplicator.middleware());
+  app.use(unifiedDeduplicator.requestMiddleware());
 
   // CRITICAL FIX: Ensure API routes are protected from Vite catch-all
   app.use('/api/*', (req, res, next) => {
@@ -493,10 +493,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   (global as any).broadcastWebSocketMessage = broadcast;
 
   // Initialize Async AI Processor for background AI enhancement
-  const { asyncAIProcessor } = await import('./services/async-ai-processor');
+  const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
 
   // AsyncAI WebSocket integration ENABLED
-  asyncAIProcessor.setOnEnhancedAlert(async (enhancedAlert, userId, sport, wasActuallyEnhanced) => {
+  unifiedAIProcessor.setOnEnhancedAlert(async (enhancedAlert, userId, sport, wasActuallyEnhanced) => {
     // AI OR NOTHING: Only broadcast alerts that were actually AI enhanced
     if (!wasActuallyEnhanced) {
       console.log(`🚫 AI OR NOTHING: Refusing to broadcast non-AI alert ${sport} ${enhancedAlert.type} - USER SEES NOTHING`);
@@ -2316,7 +2316,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { NCAAFEngine } = await import('./services/engines/ncaaf-engine');
       const { CFLEngine } = await import('./services/engines/cfl-engine');
       const { WNBAEngine } = await import('./services/engines/wnba-engine');
-      const { asyncAIProcessor } = await import('./services/async-ai-processor');
+      const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
 
       // Instantiate engines but use LIVE AsyncAI singleton
       const engines = {
@@ -2329,7 +2329,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       };
 
       // Use live singleton instead of creating new instance
-      const asyncAI = asyncAIProcessor;
+      const asyncAI = unifiedAIProcessor;
 
       // Collect comprehensive AI-enhanced performance metrics
       const sportMetrics: Record<string, any> = {};
@@ -3423,7 +3423,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const memPercent = memUsage.heapUsed / memUsage.heapTotal;
 
       // Get deduplication stats
-      const dedupeStats = requestDeduplicator.getStats();
+      const dedupeStats = unifiedDeduplicator.getStats();
 
       // Get circuit breaker stats
       const { mlbApiCircuit, espnApiCircuit, weatherApiCircuit } = await import('./middleware/circuit-breaker');
@@ -3922,7 +3922,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Get comprehensive V3 performance data
-      const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
+      const aiMetrics = unifiedAIProcessor.getPerformanceMetrics();
       // Polling stats placeholder for admin metrics endpoint
       const pollingStats = {
         activeSports: 0,
@@ -4089,7 +4089,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const memPercent = memUsage.heapUsed / memUsage.heapTotal;
 
       // Get deduplication stats
-      const dedupeStats = requestDeduplicator.getStats();
+      const dedupeStats = unifiedDeduplicator.getStats();
 
       // Get circuit breaker stats
       const { mlbApiCircuit, espnApiCircuit, weatherApiCircuit } = await import('./middleware/circuit-breaker');
@@ -4588,7 +4588,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Get comprehensive V3 performance data
-      const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
+      const aiMetrics = unifiedAIProcessor.getPerformanceMetrics();
       // Polling stats placeholder for admin metrics endpoint
       const pollingStats = {
         activeSports: 0,
@@ -4755,7 +4755,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const memPercent = memUsage.heapUsed / memUsage.heapTotal;
 
       // Get deduplication stats
-      const dedupeStats = requestDeduplicator.getStats();
+      const dedupeStats = unifiedDeduplicator.getStats();
 
       // Get circuit breaker stats
       const { mlbApiCircuit, espnApiCircuit, weatherApiCircuit } = await import('./middleware/circuit-breaker');
@@ -5254,7 +5254,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Get comprehensive V3 performance data
-      const aiMetrics = asyncAIProcessor.getPerformanceMetrics();
+      const aiMetrics = unifiedAIProcessor.getPerformanceMetrics();
       // Polling stats placeholder for admin metrics endpoint
       const pollingStats = {
         activeSports: 0,
