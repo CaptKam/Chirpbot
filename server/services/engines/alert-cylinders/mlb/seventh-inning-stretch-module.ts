@@ -5,15 +5,13 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
   sport = 'MLB';
 
   isTriggered(gameState: GameState): boolean {
-    return gameState.inning === 7 && !gameState.isTopInning && 
-           gameState.isLive && gameState.outs === 0;
+    // Trigger for any late inning (7+) - removed exact timing restrictions
+    return gameState.inning >= 7 && gameState.isLive;
   }
 
   async generateAlert(gameState: GameState): Promise<AlertResult | null> {
-    // Only trigger at the start of the 7th inning
-    if (gameState.inning !== 7 || gameState.outs !== 0) {
-      return null;
-    }
+    // Trigger for any late inning situation - removed exact restrictions
+    // No timing restrictions - alert for late game scenarios
 
     const alertKey = `mlb_seventh_inning_${gameState.gameId}`;
 

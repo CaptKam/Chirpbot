@@ -65,11 +65,8 @@ export default class WindChangeModule extends BaseAlertModule {
       currentWind.windDirection
     );
 
-    // Determine if change is significant
-    const significantChange = speedChange >= this.MIN_SPEED_CHANGE || 
-                              (speedChange >= 3 && directionChanged);
-
-    if (significantChange) {
+    // Always alert on any wind change - removed significance thresholds
+    if (speedChange > 0 || directionChanged) {
       // Update data
       this.previousWindData[gameId] = {
         speed: currentWind.windSpeed,

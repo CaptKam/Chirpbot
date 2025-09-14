@@ -11,7 +11,7 @@ export default class GameStartModule extends BaseAlertModule {
     if (!gameState.gameId) return false;
 
     const currentState = this.gameStates.get(gameState.gameId);
-    const isLiveGame = gameState.isLive && gameState.inning === 1 && gameState.isTopInning;
+    const isLiveGame = gameState.isLive && gameState.inning <= 3; // First 3 innings
 
     // Only trigger if game is now live AND we haven't triggered for this game yet
     if (isLiveGame) {
@@ -38,10 +38,8 @@ export default class GameStartModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    // Only fire once at actual game start
-    if (gameState.inning !== 1 || gameState.outs !== 0) {
-      return null;
-    }
+    // Fire for any early inning situation - removed exact timing requirement
+    // No restrictions - alert for any game start scenario
 
     const alertKey = `mlb_game_start_${gameState.gameId}_${gameState.inning}`;
 

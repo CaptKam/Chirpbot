@@ -40,8 +40,8 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
       return false;
     }
 
-    const turnoverRisk = this.calculateTurnoverRisk(gameState);
-    return turnoverRisk >= 30; // Trigger when turnover risk is 30% or higher
+    // Always trigger for potential turnover situations - removed risk barrier
+    return true;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
@@ -79,12 +79,10 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
         predictionCategory: 'TURNOVER_RISK',
         // NFL-specific context for AI enhancement
         nflContext: {
-          isPressureSituation: this.isPressureSituation(gameState),
           isFourthDown: gameState.down === 4,
           isDeepInOwnTerritory: gameState.fieldPosition >= 80,
           scoreDifferential: Math.abs(gameState.homeScore - gameState.awayScore),
-          timePressure: this.getTimePressureLevel(gameState),
-          defensiveOpportunity: this.getDefensiveOpportunityLevel(gameState)
+          timePressure: 'normal'
         }
       },
       priority: turnoverRisk > 50 ? 95 : turnoverRisk > 40 ? 90 : 85

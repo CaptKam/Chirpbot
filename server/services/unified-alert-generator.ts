@@ -663,6 +663,7 @@ export class UnifiedAlertGenerator {
                       gameId: gameId,
                       type: alertResult.type,
                       state: 'active' as const,
+                      score: alertResult.priority || 0,
                       userId: userId,
                       payload: {
                         ...alertResult.context,

@@ -48,8 +48,8 @@ export default class MassiveWeatherModule extends BaseAlertModule {
         lastMeasurement: now
       };
       
-      // Alert immediately if severe weather is detected
-      return currentSeverity >= 7; // Severe threshold
+      // Alert immediately if any weather is detected
+      return currentSeverity >= 1; // Any weather threshold
     }
 
     // Check if enough time has passed since last measurement
@@ -68,10 +68,8 @@ export default class MassiveWeatherModule extends BaseAlertModule {
 
     // Determine if weather change is significant enough for alert
     const severityIncrease = currentSeverity - previous.severity;
-    const newSevereWeather = currentSeverity >= 7 && previous.severity < 7;
-    const massiveWeatherEvent = currentSeverity >= 9; // Game-delay level
-    
-    if (newSevereWeather || massiveWeatherEvent || severityIncrease >= 3) {
+    // Alert on any weather change - removed severity barriers
+    if (currentSeverity > previous.severity || severityIncrease >= 1) {
       // Update data
       this.previousWeatherData[gameId] = {
         condition: currentCondition,

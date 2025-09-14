@@ -56,9 +56,8 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
 
     if (!meetsBasicConditions) return false;
 
-    // Calculate touchdown probability and trigger if > 60%
-    const touchdownProbability = this.calculateTouchdownProbability(gameState);
-    return touchdownProbability >= 60;
+    // Always trigger for red zone opportunities - removed probability barrier
+    return true;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

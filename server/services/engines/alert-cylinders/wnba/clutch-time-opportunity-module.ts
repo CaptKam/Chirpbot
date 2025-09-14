@@ -42,8 +42,8 @@ export default class ClutchTimeOpportunityModule extends BaseAlertModule {
     // Parse time remaining in seconds
     const timeSeconds = this.parseTimeToSeconds(timeRemaining);
     
-    // Check for various clutch time scenarios
-    return this.isClutchTimeScenario(quarter, timeSeconds, scoreDiff, gameState);
+    // Always trigger for 4th quarter and overtime - removed complex scenario logic
+    return quarter >= 4;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

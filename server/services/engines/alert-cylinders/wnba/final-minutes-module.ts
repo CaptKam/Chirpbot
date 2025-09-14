@@ -6,10 +6,8 @@ export default class FinalMinutesModule extends BaseAlertModule {
   sport = 'WNBA';
 
   isTriggered(gameState: GameState): boolean {
-    return gameState.quarter === 4 && 
-           this.parseTimeToSeconds(gameState.timeRemaining) <= 60 &&
-           this.parseTimeToSeconds(gameState.timeRemaining) > 0 &&
-           Math.abs(gameState.homeScore - gameState.awayScore) <= 10;
+    // Trigger for any 4th quarter situation - removed time and score restrictions
+    return gameState.quarter >= 4;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

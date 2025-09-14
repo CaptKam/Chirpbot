@@ -11,7 +11,7 @@ export default class GameStartModule extends BaseAlertModule {
     if (!gameState.gameId) return false;
 
     const currentState = this.gameStates.get(gameState.gameId);
-    const isLiveGame = gameState.status === 'live' && gameState.quarter === 1 && this.parseTimeToSeconds(gameState.timeRemaining) < (15 * 60);
+    const isLiveGame = gameState.status === 'live' && gameState.quarter <= 2; // First 2 quarters
 
     // Only trigger if game is now live AND we haven't triggered for this game yet
     if (isLiveGame) {
@@ -38,10 +38,8 @@ export default class GameStartModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    // Only fire at the very start of the game
-    if (gameState.quarter !== 1 || (gameState.timeRemaining && gameState.timeRemaining < 14.5 * 60)) {
-      return null;
-    }
+    // Fire for any early game situation - removed exact timing requirement
+    // No restrictions - alert for any game start scenario
 
     const alertKey = `nfl_game_start_${gameState.gameId}`;
 
