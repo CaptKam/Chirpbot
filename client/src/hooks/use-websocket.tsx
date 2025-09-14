@@ -107,7 +107,7 @@ export function useWebSocket() {
             const queryState = queryClient.getQueryState(['/api/alerts']);
             
             // Only update if query is settled (not loading)
-            if (!queryState?.isFetching && currentData) {
+            if (queryState?.status !== 'pending' && currentData) {
               console.log('✅ Updating alerts cache with new WebSocket alert');
 
               queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
@@ -124,16 +124,16 @@ export function useWebSocket() {
                   return oldData;
                 }
 
-                // Transform WebSocket alert to match frontend format
+                // Transform WebSocket alert to match frontend format - FIX: Use proper AI fields to avoid duplication
                 const transformedAlert = {
                   id: alertData.id || alertData.alertKey,
                   alertKey: alertData.alertKey || alertData.id,
                   type: alertData.type || alertData.alertType,
                   sport: alertData.sport,
                   gameId: alertData.gameId,
-                  message: alertData.payload?.message || 'New alert',
-                  title: alertData.payload?.message || 'New alert',
-                  description: alertData.payload?.message || 'New alert',
+                  message: alertData.ai?.enhancedMessage || alertData.payload?.message || 'New alert',
+                  title: alertData.ai?.enhancedTitle || (alertData.ai?.enhancedMessage ? undefined : alertData.payload?.message) || 'Alert',
+                  description: alertData.ai?.enhancedMessage || alertData.payload?.message || 'New alert',
                   homeTeam: alertData.payload?.context?.homeTeam || 'Home Team',
                   awayTeam: alertData.payload?.context?.awayTeam || 'Away Team',
                   homeScore: alertData.payload?.context?.homeScore || 0,

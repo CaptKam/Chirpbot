@@ -466,31 +466,24 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           <div className="flex items-center gap-2 mb-2">
             <Brain className="w-4 h-4 text-blue-400" />
             <span className="text-blue-400 text-sm font-bold">🤖 AI Enhanced Alert</span>
-            {alertData.context?.aiConfidenceScore && (
+            {(alertData as any).ai?.confidence && (
               <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs">
-                {alertData.context.aiConfidenceScore}% CONFIDENCE
+                {(alertData as any).ai.confidence}% CONFIDENCE
               </Badge>
             )}
           </div>
           
-          {/* Primary AI Title */}
-          {alertData.context?.aiTitle && (
+          {/* AI Enhanced Message - FIX: Show only one to avoid duplication */}
+          {((alertData as any).ai?.enhancedMessage || alertData.message) && (
             <h3 className="text-lg font-semibold text-white mb-2">
-              {alertData.context.aiTitle}
-            </h3>
-          )}
-          
-          {/* AI Message */}
-          {alertData.context?.aiMessage && (
-            <h3 className="text-lg font-semibold text-white mb-2">
-              {alertData.context.aiMessage}
+              {(alertData as any).ai?.enhancedMessage || alertData.message}
             </h3>
           )}
           
           {/* AI Call to Action */}
-          {alertData.context?.aiCallToAction && (
+          {(alertData as any).ai?.aiRecommendation && (
             <p className="text-sm text-blue-100">
-              {alertData.context.aiCallToAction}
+              {(alertData as any).ai.aiRecommendation}
             </p>
           )}
         </div>
@@ -563,9 +556,9 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           <span className="text-xs text-slate-400">AI CONFIDENCE</span>
           <span className={`text-xs font-bold ${confidenceData.color} flex items-center gap-1`}>
             {confidenceData.icon}
-            {alertData.context?.aiConfidenceScore || confidence}% {confidenceData.label}
+            {(alertData as any).ai?.confidence || confidence}% {confidenceData.label}
             {(alertData.context?.aiInsights && alertData.context.aiInsights.length > 0) || 
-             (alertData.context?.aiTitle || alertData.context?.aiMessage) && (
+             (alertData as any).ai?.enhancedMessage && (
               <Badge className="ml-2 bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs">
                 AI ENHANCED
               </Badge>
@@ -573,22 +566,22 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           </span>
         </div>
         <Progress 
-          value={alertData.context?.aiConfidenceScore || confidence} 
+          value={(alertData as any).ai?.confidence || confidence} 
           className="h-2" 
         />
         
         {/* AI Processing Time */}
-        {alertData.context?.aiProcessingTime && (
+        {(alertData as any).ai?.processingTime && (
           <div className="flex justify-end mt-1">
             <span className="text-xs text-slate-500">
-              AI processed in {alertData.context.aiProcessingTime}ms
+              AI processed in {(alertData as any).ai.processingTime}ms
             </span>
           </div>
         )}
       </div>
 
       {/* Enhanced AI Insights and Recommendations */}
-      {(aiInsights.length > 0 || alertData.context?.aiRecommendation || alertData.context?.aiBettingAdvice) && (
+      {(aiInsights.length > 0 || (alertData as any).ai?.aiRecommendation || alertData.context?.aiBettingAdvice) && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full text-left"
@@ -619,13 +612,13 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           )}
 
           {/* AI Recommendation */}
-          {alertData.context?.aiRecommendation && (
+          {(alertData as any).ai?.aiRecommendation && (
             <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="w-4 h-4 text-green-400" />
                 <span className="text-green-400 text-xs font-bold">AI RECOMMENDATION</span>
               </div>
-              <p className="text-sm text-green-100">{alertData.context.aiRecommendation}</p>
+              <p className="text-sm text-green-100">{(alertData as any).ai.aiRecommendation}</p>
             </div>
           )}
 
@@ -690,20 +683,18 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
           <div className="flex items-center gap-2 mb-2">
             <Brain className="w-4 h-4 text-blue-400" />
             <span className="text-blue-400 text-sm font-bold">🤖 AI Enhanced Alert</span>
-            {alertData.context?.aiConfidenceScore && (
+            {(alertData as any).ai?.confidence && (
               <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs ml-2">
-                {alertData.context.aiConfidenceScore}% CONFIDENCE
+                {(alertData as any).ai.confidence}% CONFIDENCE
               </Badge>
             )}
           </div>
-          {alertData.context?.aiTitle && (
-            <h3 className="text-lg font-semibold text-white mb-2">{alertData.context.aiTitle}</h3>
+          {/* FIX: Show single AI message to avoid duplication */}
+          {((alertData as any).ai?.enhancedMessage || alertData.message) && (
+            <h3 className="text-lg font-semibold text-white mb-2">{(alertData as any).ai?.enhancedMessage || alertData.message}</h3>
           )}
-          {alertData.context?.aiMessage && (
-            <h3 className="text-lg font-semibold text-white mb-2">{alertData.context.aiMessage}</h3>
-          )}
-          {alertData.context?.aiCallToAction && (
-            <p className="text-sm text-blue-100">{alertData.context.aiCallToAction}</p>
+          {(alertData as any).ai?.aiRecommendation && (
+            <p className="text-sm text-blue-100">{(alertData as any).ai.aiRecommendation}</p>
           )}
         </div>
 
@@ -976,19 +967,15 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* AI Enhanced Situation Display */}
       <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 rounded-lg p-4 mb-4 border border-red-500/20">
-        {alertData.context?.aiTitle && (
+        {/* FIX: Show single AI message to avoid duplication */}
+        {((alertData as any).ai?.enhancedMessage || alertData.message) && (
           <div className="text-lg font-bold text-white mb-2">
-            {alertData.context.aiTitle}
+            {(alertData as any).ai?.enhancedMessage || alertData.message}
           </div>
         )}
-        {alertData.context?.aiMessage && (
-          <div className="text-lg font-bold text-white mb-2">
-            {alertData.context.aiMessage}
-          </div>
-        )}
-        {alertData.context?.aiCallToAction && (
+        {(alertData as any).ai?.aiRecommendation && (
           <div className="text-sm text-slate-300">
-            {alertData.context.aiCallToAction}
+            {(alertData as any).ai.aiRecommendation}
           </div>
         )}
       </div>
@@ -1055,19 +1042,15 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* AI Enhanced Alert Content */}
       <div className="mb-4">
-        {alertData.context?.aiTitle && (
+        {/* FIX: Show single AI message to avoid duplication */}
+        {((alertData as any).ai?.enhancedMessage || alertData.message) && (
           <h3 className="text-lg font-semibold text-white mb-2">
-            {alertData.context.aiTitle}
+            {(alertData as any).ai?.enhancedMessage || alertData.message}
           </h3>
         )}
-        {alertData.context?.aiMessage && (
-          <h3 className="text-lg font-semibold text-white mb-2">
-            {alertData.context.aiMessage}
-          </h3>
-        )}
-        {alertData.context?.aiCallToAction && (
+        {(alertData as any).ai?.aiRecommendation && (
           <p className="text-sm text-slate-300">
-            {alertData.context.aiCallToAction}
+            {(alertData as any).ai.aiRecommendation}
           </p>
         )}
       </div>
@@ -1195,19 +1178,15 @@ export function AdvancedAlertCard({ alertData, alertId, className, onTap }: Adva
 
       {/* AI Enhanced Content Only */}
       <div className="mb-4">
-        {alertData.context?.aiTitle && (
+        {/* FIX: Show single AI message to avoid duplication */}
+        {((alertData as any).ai?.enhancedMessage || alertData.message) && (
           <h3 className="text-lg font-semibold text-white mb-2">
-            {alertData.context.aiTitle}
+            {(alertData as any).ai?.enhancedMessage || alertData.message}
           </h3>
         )}
-        {alertData.context?.aiMessage && (
-          <h3 className="text-lg font-semibold text-white mb-2">
-            {alertData.context.aiMessage}
-          </h3>
-        )}
-        {alertData.context?.aiCallToAction && (
+        {(alertData as any).ai?.aiRecommendation && (
           <p className="text-sm text-slate-300">
-            {alertData.context.aiCallToAction}
+            {(alertData as any).ai.aiRecommendation}
           </p>
         )}
       </div>
