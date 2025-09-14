@@ -702,9 +702,22 @@ export class UnifiedAlertGenerator {
                       }
                     };
 
-                    // Persist the alert
-                    await storage.createAlert(alertData);
-                    totalAlerts++;
+                    // Check if alert already exists in database before creating
+                    try {
+                      await storage.createAlert(alertData);
+                      totalAlerts++;
+                    } catch (error: any) {
+                      if (error.code === '23505' && error.constraint === 'ux_alerts_key') {
+                        // Alert already exists - this is expected and not an error
+                        if (this.logLevel !== 'quiet') {
+                          console.log(`🔄 Alert already exists (expected): ${alertData.alertKey}`);
+                        }
+                        continue; // Skip this alert, move to next user
+                      } else {
+                        // Re-throw unexpected errors
+                        throw error;
+                      }
+                    }
 
                     // ✅ ONLY broadcast via WebSocket AFTER successful database save
                     try {
