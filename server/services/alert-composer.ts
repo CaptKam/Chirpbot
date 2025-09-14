@@ -555,15 +555,35 @@ export class AlertComposer {
    * Create a structured object for frontend consumption
    */
   formatForFrontend(enhanced: EnhancedAlertPayload): any {
+    const displayText = this.formatForDisplay(enhanced);
+    const mobileText = this.formatForMobileNotification(enhanced);
+    
     return {
       ...enhanced,
-      displayText: this.formatForDisplay(enhanced),
-      mobileText: this.formatForMobileNotification(enhanced),
+      // Primary message fields for easy extraction
+      message: enhanced.headline,
+      primary: enhanced.headline,
+      title: enhanced.action.primaryAction,
+      
+      // Formatted display text
+      displayText,
+      mobileText,
+      
+      // Additional metadata
       urgency: enhanced.timing.urgencyLevel,
       confidence: enhanced.action.confidence,
       expiresAt: enhanced.timing.expiresIn 
         ? new Date(Date.now() + enhanced.timing.expiresIn * 1000).toISOString()
-        : undefined
+        : undefined,
+        
+      // Ensure compatibility with existing alert structure
+      context: {
+        ...enhanced.gameContext,
+        aiMessage: displayText,
+        aiTitle: enhanced.headline,
+        aiRecommendation: enhanced.action.primaryAction,
+        enhancedMessage: displayText
+      }
     };
   }
 }

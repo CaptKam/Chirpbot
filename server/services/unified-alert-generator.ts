@@ -141,7 +141,7 @@ export class UnifiedAlertGenerator {
     this.cflApi = new CFLApiService();
     this.settingsCache = new SettingsCache(storage);
     this.healthMonitor = getHealthMonitor();
-    
+
     // Initialize health monitor with callback integration
     this.healthMonitor.initialize({
       pollingIntervalMs: 30000,
@@ -382,10 +382,10 @@ export class UnifiedAlertGenerator {
 
   private async runDemoSeed(): Promise<void> {
     console.log('🎯 Starting demo alert generation for user:', this.demoUserId);
-    
+
     // Clear existing demo alerts first
     await storage.clearDemoAlerts();
-    
+
     const alerts: Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> = [
       ...this.getMLBDemoAlerts(),
       ...this.getNFLDemoAlerts(), 
@@ -401,9 +401,9 @@ export class UnifiedAlertGenerator {
         ...alerts[i],
         userId: this.demoUserId!
       };
-      
+
       await storage.createDemoAlert(alertData);
-      
+
       if (i % 10 === 0) {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
@@ -417,7 +417,7 @@ export class UnifiedAlertGenerator {
   private normalizeGameState(game: any, sport: string): GameState {
     // Ensure we always have a valid gameId with proper fallbacks
     const gameId = game.gameId || game.id || game.gamePk?.toString() || `${sport}_${game.homeTeam?.name || 'home'}_${game.awayTeam?.name || 'away'}_${Date.now()}`;
-    
+
     return {
       gameId: gameId,
       sport: sport,
@@ -513,7 +513,7 @@ export class UnifiedAlertGenerator {
 
   private async hasAnyGloballyEnabledAlerts(): Promise<boolean> {
     if (this.mode === 'demo') return true;
-    
+
     const sports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
     for (const sport of sports) {
       const enabledAlerts = await this.settingsCache!.getEnabledAlertTypes(sport);
@@ -526,19 +526,19 @@ export class UnifiedAlertGenerator {
 
   private async getUsersWithActiveMonitoring(sport: string): Promise<any[]> {
     if (this.mode === 'demo') return [];
-    
+
     try {
       // Get all monitored games for the sport
       const allMonitoredGames = await storage.getAllMonitoredGames();
       const sportMonitoredGames = allMonitoredGames.filter(game => game.sport === sport);
-      
+
       // Extract unique users who have monitoring enabled for this sport
       const uniqueUsers = [...new Set(sportMonitoredGames.map(game => game.userId))];
-      
+
       if (this.logLevel !== 'quiet') {
         console.log(`📊 Found ${uniqueUsers.length} users monitoring ${sport} games`);
       }
-      
+
       return uniqueUsers;
     } catch (error) {
       console.error(`❌ Error getting users with active monitoring for ${sport}:`, error);
@@ -552,21 +552,21 @@ export class UnifiedAlertGenerator {
    */
   private async getUsersMonitoringGame(sport: string, gameId: string): Promise<any[]> {
     if (this.mode === 'demo') return [];
-    
+
     try {
       // Get monitored games filtered by BOTH sport AND gameId
       const allMonitoredGames = await storage.getAllMonitoredGames();
       const gameSpecificMonitoring = allMonitoredGames.filter(game => 
         game.sport === sport && game.gameId === gameId
       );
-      
+
       // Extract unique users monitoring this SPECIFIC game
       const uniqueUsers = [...new Set(gameSpecificMonitoring.map(game => game.userId))];
-      
+
       if (this.logLevel !== 'quiet') {
         console.log(`🎯 Found ${uniqueUsers.length} users monitoring ${sport} game ${gameId}`);
       }
-      
+
       return uniqueUsers;
     } catch (error) {
       console.error(`❌ Error getting users monitoring game ${sport}:${gameId}:`, error);
@@ -576,31 +576,31 @@ export class UnifiedAlertGenerator {
 
   private async processGamesWithEngine(sport: string, games: any[]): Promise<number> {
     if (this.mode === 'demo') return 0;
-    
+
     let totalAlerts = 0;
     const engine = this.sportEngines?.get(sport);
-    
+
     if (!engine) {
       console.error(`❌ No engine found for sport ${sport}`);
       return 0;
     }
-    
+
     try {
       // Get enabled alert types for this sport
       const enabledAlerts = await this.settingsCache!.getEnabledAlertTypes(sport);
-      
+
       // Initialize the engine with user alert modules
       await engine.initializeUserAlertModules(enabledAlerts);
-      
+
       // Process each game
       for (const game of games) {
         if (!game.isLive) continue; // Only process live games
-        
+
         try {
           // OPTIMIZATION: Check monitoring users FIRST (before alert processing)
           const gameId = game.gameId || game.id;
           const gameMonitoringUsers = await this.getUsersMonitoringGame(sport, gameId);
-          
+
           // Skip entire alert processing if no users monitoring this game
           if (gameMonitoringUsers.length === 0) {
             if (this.logLevel !== 'quiet') {
@@ -608,29 +608,29 @@ export class UnifiedAlertGenerator {
             }
             continue;
           }
-          
+
           // Convert game data to GameState format
           const gameState = this.normalizeGameState(game, sport);
-          
+
           // Generate alerts using the sport engine
           const alertResults = await engine.generateLiveAlerts(gameState);
-          
+
           if (alertResults && alertResults.length > 0) {
             if (this.logLevel !== 'quiet') {
               console.log(`✅ Generated ${alertResults.length} alerts for ${sport} game ${gameId} (${gameMonitoringUsers.length} monitoring users)`);
             }
-            
+
             // Process and persist each alert
             for (const alertResult of alertResults) {
               // Create sport-specific stable deduplication key (without Date.now())
               let situationKey: string;
               let alertKeyObj: any;
-              
+
               if (sport === 'MLB') {
                 // MLB-specific situationKey with baseball context
                 const baseState = `${game.hasFirst ? '1' : ''}${game.hasSecond ? '2' : ''}${game.hasThird ? '3' : ''}`;
                 situationKey = `${gameId}_${alertResult.type}_${game.inning}_${game.isTopInning ? 'top' : 'bot'}_${game.outs}_${baseState}_${game.currentBatter?.name?.replace(/[^a-zA-Z0-9]/g, '') || 'unknown'}`;
-                
+
                 alertKeyObj = {
                   gameId: gameId,
                   type: alertResult.type,
@@ -647,9 +647,9 @@ export class UnifiedAlertGenerator {
                 const time = game.timeRemaining || game.time || '15:00';
                 const homeScore = game.homeScore || 0;
                 const awayScore = game.awayScore || 0;
-                
+
                 situationKey = `${gameId}_${alertResult.type}_Q${quarter}_${time.replace(':', '')}_${homeScore}-${awayScore}`;
-                
+
                 alertKeyObj = {
                   gameId: gameId,
                   type: alertResult.type,
@@ -660,7 +660,7 @@ export class UnifiedAlertGenerator {
                   paId: situationKey
                 };
               }
-              
+
               if (this.deduplication.shouldSendAlert(alertKeyObj)) {
                 // Create betbook data
                 const betbookData = this.getBetbookData({
@@ -675,7 +675,7 @@ export class UnifiedAlertGenerator {
                   inning: game.inning,
                   outs: game.outs
                 });
-                
+
                 // Use pre-fetched monitoring users (already checked at game level)
                 // Create alert for each user monitoring this game
                 for (const userId of gameMonitoringUsers) {
@@ -701,11 +701,11 @@ export class UnifiedAlertGenerator {
                         sportsbookLinks: betbookData.sportsbookLinks
                       }
                     };
-                    
+
                     // Persist the alert
                     await storage.createAlert(alertData);
                     totalAlerts++;
-                    
+
                     // ✅ ONLY broadcast via WebSocket AFTER successful database save
                     try {
                       const broadcastFunction = (global as any).broadcastAlertAfterSave;
@@ -733,7 +733,7 @@ export class UnifiedAlertGenerator {
                     } catch (broadcastError) {
                       console.error(`❌ WebSocket broadcast failed:`, broadcastError);
                     }
-                    
+
                     // Send Telegram notification if configured
                     try {
                       const user = await storage.getUserById(userId);
@@ -751,7 +751,7 @@ export class UnifiedAlertGenerator {
                     console.error(`❌ Failed to create alert for user ${userId}:`, alertError);
                   }
                 }
-                
+
                 // Alert successfully processed and deduplication handled by shouldSendAlert()
               }
             }
@@ -760,7 +760,7 @@ export class UnifiedAlertGenerator {
           console.error(`❌ Error processing ${sport} game ${game.gameId || game.id}:`, gameError);
         }
       }
-      
+
       return totalAlerts;
     } catch (error) {
       console.error(`❌ Critical error in processGamesWithEngine for ${sport}:`, error);
@@ -770,7 +770,7 @@ export class UnifiedAlertGenerator {
 
   private async getNFLGames(): Promise<any[]> {
     if (this.mode === 'demo') return [];
-    
+
     try {
       if (!this.nflApi) {
         console.error('❌ NFL API service not initialized');
@@ -785,7 +785,7 @@ export class UnifiedAlertGenerator {
 
   private async getWNBAGames(): Promise<any[]> {
     if (this.mode === 'demo') return [];
-    
+
     try {
       if (!this.wnbaApi) {
         console.error('❌ WNBA API service not initialized');
@@ -800,7 +800,7 @@ export class UnifiedAlertGenerator {
 
   private async getCFLGames(): Promise<any[]> {
     if (this.mode === 'demo') return [];
-    
+
     try {
       if (!this.cflApi) {
         console.error('❌ CFL API service not initialized');
@@ -815,7 +815,7 @@ export class UnifiedAlertGenerator {
 
   private async initializeNFLPollingManager(): Promise<void> {
     if (this.mode === 'demo') return;
-    
+
     try {
       if (this.nflApi && this.adaptivePollingManagers) {
         this.adaptivePollingManagers.set('NFL', new AdaptivePollingManager('NFL', { NFL: this.nflApi }));
@@ -830,27 +830,27 @@ export class UnifiedAlertGenerator {
 
   private async activateFallbackPolling(sport: string): Promise<void> {
     if (this.mode === 'demo') return;
-    
+
     try {
       // Clear any existing fallback polling for this sport
       const existingInterval = this.fallbackPollingActive.get(sport);
       if (existingInterval) {
         clearInterval(existingInterval);
       }
-      
+
       // Set up fallback polling with exponential backoff
       const failureRecord = this.engineFailures.get(sport);
       const retryDelay = Math.min(
         this.retryConfig.initialDelay * Math.pow(this.retryConfig.backoffMultiplier, failureRecord?.failureCount || 0),
         this.retryConfig.maxDelay
       );
-      
+
       console.log(`🔄 Activating fallback polling for ${sport} with ${retryDelay}ms interval`);
-      
+
       const interval = setInterval(async () => {
         try {
           console.log(`⚡ Fallback polling: Checking ${sport} alerts...`);
-          
+
           // Try to generate alerts for this sport
           let games: any[] = [];
           switch (sport) {
@@ -870,7 +870,7 @@ export class UnifiedAlertGenerator {
               games = await this.getCFLGames();
               break;
           }
-          
+
           if (games.length > 0) {
             const alerts = await this.processGamesWithEngine(sport, games);
             if (alerts > 0) {
@@ -894,7 +894,7 @@ export class UnifiedAlertGenerator {
           record.failureCount++;
           record.lastFailureTime = new Date();
           this.engineFailures.set(sport, record);
-          
+
           // Stop fallback polling if we've exceeded max retries
           if (record.failureCount >= this.retryConfig.maxRetries) {
             console.error(`❌ Fallback polling exhausted for ${sport} after ${this.retryConfig.maxRetries} attempts`);
@@ -903,7 +903,7 @@ export class UnifiedAlertGenerator {
           }
         }
       }, retryDelay);
-      
+
       this.fallbackPollingActive.set(sport, interval);
     } catch (error) {
       console.error(`❌ Error setting up fallback polling for ${sport}:`, error);

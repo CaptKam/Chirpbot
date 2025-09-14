@@ -29,12 +29,21 @@ export interface AlertData {
 /**
  * Get the primary message to display in alert cards
  * Priority order:
- * 1. AI-enhanced content (highest priority)
- * 2. Direct message fields  
- * 3. Fallback to basic text
+ * 1. Alert Composer enhanced content (V3 format)
+ * 2. AI-enhanced content
+ * 3. Direct message fields  
+ * 4. Fallback to basic text
  */
 export function getPrimaryMessage(alert: AlertData): string {
-  // Try AI-enhanced content first (highest priority)
+  // Try Alert Composer V3 format first (highest priority)
+  const alertAny = alert as any;
+  if (alertAny.headline) return alertAny.headline;
+  if (alertAny.displayText) return alertAny.displayText;
+  if (alertAny.mobileText) return alertAny.mobileText;
+  if (alertAny.timing?.whyNow) return alertAny.timing.whyNow;
+  if (alertAny.action?.primaryAction) return alertAny.action.primaryAction;
+  
+  // Try AI-enhanced content
   if (alert.ai?.primary) return alert.ai.primary;
   if (alert.ai?.enhancedMessage) return alert.ai.enhancedMessage;
   if (alert.ai?.enhancedTitle) return alert.ai.enhancedTitle;
@@ -51,13 +60,28 @@ export function getPrimaryMessage(alert: AlertData): string {
   if (alert.message) return alert.message;
   if (alert.title) return alert.title;
   
-  // Try payload fields
-  if (alert.payload?.primary) return alert.payload.primary;
-  if (alert.payload?.message) return alert.payload.message;
-  if (alert.payload?.title) return alert.payload.title;
+  // Try payload fields with better parsing
+  if (alert.payload) {
+    let payload = alert.payload;
+    if (typeof payload === 'string') {
+      try {
+        payload = JSON.parse(payload);
+      } catch {
+        return payload; // If it's a string that's not JSON, use it directly
+      }
+    }
+    
+    if (payload.headline) return payload.headline;
+    if (payload.displayText) return payload.displayText;
+    if (payload.primary) return payload.primary;
+    if (payload.message) return payload.message;
+    if (payload.title) return payload.title;
+  }
   
-  // Final fallback
-  return 'Alert notification';
+  // Final fallback - construct from alert type
+  const type = alertAny.type || 'GAME_ALERT';
+  const sport = alertAny.sport || 'GAME';
+  return `${sport} ${type.replace(/_/g, ' ')} Alert`;
 }
 
 /**
