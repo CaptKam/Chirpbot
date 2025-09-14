@@ -111,7 +111,7 @@ export class UnifiedHealthMonitor {
   private readonly MAX_TIME_WITHOUT_CHECK = 180000; // 3 minutes - reduce false alarms
   private readonly MAX_TIME_WITHOUT_ALERT = 600000; // 10 minutes
   private readonly MAX_CONSECUTIVE_FAILURES = 3;
-  private readonly HEALTH_CHECK_INTERVAL = 60000; // Check every 60 seconds - reduce memory pressure
+  private readonly HEALTH_CHECK_INTERVAL = 120000; // Check every 2 minutes - reduce memory pressure
   private readonly AUTO_RECOVERY_DELAY = 5000; // Wait 5 seconds before recovery
   private readonly ENGINE_RECOVERY_DELAY = 30000; // 30 seconds
   private readonly CYLINDER_CLEANUP_AGE = 300000; // 5 minutes

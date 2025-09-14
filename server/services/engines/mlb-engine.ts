@@ -217,8 +217,19 @@ export class MLBEngine extends BaseSportEngine {
       // Early exit if game is not valid
       if (!gameState.gameId) {
         console.log('⚠️ MLB: No gameId provided, skipping alert generation');
+        console.log('⚠️ MLB: GameState received:', JSON.stringify({
+          id: gameState.id,
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          isLive: gameState.isLive,
+          status: gameState.status
+        }, null, 2));
         return [];
       }
+
+      console.log(`🎯 MLB: Processing game ${gameState.gameId} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+      console.log(`🎯 MLB: Status=${gameState.status}, isLive=${gameState.isLive}, inning=${gameState.inning}`)
 
       // Enhance game state with MLB-specific data if needed
       const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);

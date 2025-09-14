@@ -64,8 +64,11 @@ export class MLBApiService extends BaseSportApi {
       // Use ONLY the mapped status from official API state - DO NOT override with isLive
       const finalStatus = this.mapGameStatus(game.status.detailedState);
       
+      const gameId = game.gamePk.toString();
+      
       return {
-        id: game.gamePk.toString(),
+        id: gameId,
+        gameId: gameId, // Ensure gameId is explicitly set
         sport: 'MLB',
         homeTeam: { id: game.teams.home.team.id.toString(), name: game.teams.home.team.name, abbreviation: game.teams.home.team.abbreviation, score: homeScore },
         awayTeam: { id: game.teams.away.team.id.toString(), name: game.teams.away.team.name, abbreviation: game.teams.away.team.abbreviation, score: awayScore },

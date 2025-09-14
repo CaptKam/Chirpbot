@@ -5,8 +5,8 @@
 
 export class MemoryManager {
   private static instance: MemoryManager;
-  private gcThreshold = 0.92; // Trigger GC at 92% memory - less aggressive
-  private forceGcThreshold = 0.97; // Force GC at 97% memory
+  private gcThreshold = 0.85; // Trigger GC at 85% memory - more proactive
+  private forceGcThreshold = 0.92; // Force GC at 92% memory
   private lastGcTime = Date.now();
   private gcCooldown = 30000; // 30 seconds between GC attempts
 

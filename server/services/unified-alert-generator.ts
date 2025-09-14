@@ -252,6 +252,15 @@ export class UnifiedAlertGenerator {
   // === PRODUCTION PIPELINE ===
 
   private async runProductionPipeline(): Promise<number> {
+    // Check memory before processing
+    const memUsage = process.memoryUsage();
+    const memPercent = memUsage.heapUsed / memUsage.heapTotal;
+    
+    if (memPercent > 0.9) {
+      console.log('🧹 High memory usage detected, skipping this polling cycle');
+      return 0;
+    }
+
     if (this.logLevel !== 'quiet') {
       console.log('⚡ Real-time monitoring: Checking for live game alerts...');
     }
