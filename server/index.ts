@@ -369,16 +369,17 @@ async function startServer() {
           
           // Initialize and test all AI services
           console.log('🤖 Initializing AI services...');
-          const aiEngine = new BasicAI();
-          const aiEnhancementService = new AIEnhancementService();
-          const aiContextController = new AIContextController();
+          // const aiEngine = new BasicAI();
+          // const aiEnhancementService = new AIEnhancementService();
+          // const aiContextController = new AIContextController();
           
           // Verify AI system status
-          if (aiEngine.configured) {
-            console.log('✅ AI Services: FULLY ACTIVATED - OpenAI integration operational');
-          } else {
-            console.log('🚫 AI Services: Configuration issue detected - check OpenAI API key');
-          }
+          // if (aiEngine.configured) {
+          //   console.log('✅ AI Services: FULLY ACTIVATED - OpenAI integration operational');
+          // } else {
+          //   console.log('🚫 AI Services: Configuration issue detected - check OpenAI API key');
+          // }
+          console.log('⏸️ AI Services: TEMPORARILY DISABLED - being refactored');
 
           // Frontend serving is now handled before server.listen (moved earlier for immediate mounting)
           // Fallback: setup Vite dev middleware if static assets weren't detected
