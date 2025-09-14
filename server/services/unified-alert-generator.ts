@@ -259,8 +259,7 @@ export class UnifiedAlertGenerator {
     this.healthMonitor?.recordCheck();
 
     try {
-      // Clear settings cache to ensure fresh configurations
-      this.settingsCache?.clearAll();
+      // Use cached settings with intelligent TTL - no need to clear cache every cycle
 
       // Check if any alerts are globally enabled
       const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts().catch(error => {
