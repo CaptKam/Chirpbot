@@ -622,21 +622,44 @@ export class UnifiedAlertGenerator {
             
             // Process and persist each alert
             for (const alertResult of alertResults) {
-              // Create stable deduplication key (without Date.now())
-              const baseState = `${game.hasFirst ? '1' : ''}${game.hasSecond ? '2' : ''}${game.hasThird ? '3' : ''}`;
-              const situationKey = `${gameId}_${alertResult.type}_${game.inning}_${game.isTopInning ? 'top' : 'bot'}_${game.outs}_${baseState}_${game.currentBatter?.name?.replace(/[^a-zA-Z0-9]/g, '') || 'unknown'}`;
+              // Create sport-specific stable deduplication key (without Date.now())
+              let situationKey: string;
+              let alertKeyObj: any;
               
-              // Check deduplication using UnifiedDeduplicator
-              const alertKeyObj = {
-                gameId: gameId,
-                type: alertResult.type,
-                inning: game.inning,
-                half: game.isTopInning ? 'top' : 'bottom',
-                outs: game.outs,
-                bases: baseState,
-                batter: game.currentBatter?.name || 'unknown',
-                paId: situationKey  // Use stable key for deduplication
-              };
+              if (sport === 'MLB') {
+                // MLB-specific situationKey with baseball context
+                const baseState = `${game.hasFirst ? '1' : ''}${game.hasSecond ? '2' : ''}${game.hasThird ? '3' : ''}`;
+                situationKey = `${gameId}_${alertResult.type}_${game.inning}_${game.isTopInning ? 'top' : 'bot'}_${game.outs}_${baseState}_${game.currentBatter?.name?.replace(/[^a-zA-Z0-9]/g, '') || 'unknown'}`;
+                
+                alertKeyObj = {
+                  gameId: gameId,
+                  type: alertResult.type,
+                  inning: game.inning,
+                  half: game.isTopInning ? 'top' : 'bottom',
+                  outs: game.outs,
+                  bases: baseState,
+                  batter: game.currentBatter?.name || 'unknown',
+                  paId: situationKey
+                };
+              } else {
+                // NFL/NBA/NCAAF/WNBA/CFL - simpler situationKey with sport context
+                const quarter = game.quarter || game.period || 1;
+                const time = game.timeRemaining || game.time || '15:00';
+                const homeScore = game.homeScore || 0;
+                const awayScore = game.awayScore || 0;
+                
+                situationKey = `${gameId}_${alertResult.type}_Q${quarter}_${time.replace(':', '')}_${homeScore}-${awayScore}`;
+                
+                alertKeyObj = {
+                  gameId: gameId,
+                  type: alertResult.type,
+                  quarter: quarter,
+                  time: time,
+                  homeScore: homeScore,
+                  awayScore: awayScore,
+                  paId: situationKey
+                };
+              }
               
               if (this.deduplication.shouldSendAlert(alertKeyObj)) {
                 // Create betbook data
