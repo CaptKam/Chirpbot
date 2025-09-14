@@ -1,8 +1,7 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
-import { asyncAIProcessor } from '../async-ai-processor';
-import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { weatherService } from '../weather-service';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
@@ -406,8 +405,8 @@ export class NFLEngine extends BaseSportEngine {
         // Only enhance medium-priority alerts (>= 60 probability)
         const probability = await this.calculateProbability(gameState);
         
-        if (probability >= 60 && this.crossSportAI.configured) {
-          console.log(`🧠 NFL AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
+        if (probability >= 60) {
+          console.log(`🧠 NFL AI Enhancement: Queuing ${alert.type} alert (${probability}%)`);
           
           // Build cross-sport context for NFL
           const aiContext: CrossSportContext = {
@@ -434,47 +433,21 @@ export class NFLEngine extends BaseSportEngine {
               condition: gameState.weather.data?.condition || 'Clear',
               windSpeed: gameState.weather.data?.windSpeed || 0,
               humidity: gameState.weather.data?.humidity || 50,
-              impact: gameState.weather.impact?.description || 'Minimal impact',
-              // Rich NFL weather context for AI processing
-              fieldGoalDifficulty: gameState.weather.impact?.fieldGoalDifficulty || 'low',
-              passingConditions: gameState.weather.impact?.passingConditions || 'excellent',
-              preferredStrategy: gameState.weather.impact?.preferredStrategy || 'balanced',
-              weatherAlert: gameState.weather.impact?.weatherAlert || false,
-              fieldGoalFactor: gameState.weather.fieldGoalFactor || 1.0,
-              passingFactor: gameState.weather.passingFactor || 1.0,
-              runningFactor: gameState.weather.runningFactor || 1.0,
-              isOutdoorStadium: gameState.weather.isOutdoorStadium || false,
-              strategicImplications: this.getWeatherStrategicImplications(gameState.weather.impact, gameState),
-              bettingImplications: this.getWeatherBettingImplications(gameState.weather.impact, gameState)
+              impact: gameState.weather.impact?.description || 'Minimal impact'
             } : undefined,
             originalMessage: alert.message,
             originalContext: alert.context
           };
 
-          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
-          
-          // Update alert with AI enhancement
-          enhancedAlerts.push({
-            ...alert,
-            message: aiResponse.enhancedMessage,
-            context: {
-              ...alert.context,
-              aiEnhanced: true,
-              aiInsights: aiResponse.contextualInsights,
-              aiRecommendation: aiResponse.actionableRecommendation,
-              urgencyLevel: aiResponse.urgencyLevel,
-              bettingContext: aiResponse.bettingContext,
-              confidence: aiResponse.confidence,
-              sportSpecificData: aiResponse.sportSpecificData,
-              processingTime: aiResponse.aiProcessingTime
-            }
+          // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
+          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+            console.warn(`⚠️ NFL AI Queue failed for ${alert.type}:`, error);
           });
-
-          this.performanceMetrics.enhancedAlerts++;
-        } else {
-          // Keep original alert for lower-priority situations
-          enhancedAlerts.push(alert);
+          console.log(`🚀 NFL Async AI: Queued ${alert.type} for background enhancement`);
         }
+        
+        // Always return base alert immediately (async enhancement happens via WebSocket)
+        enhancedAlerts.push(alert);
       } catch (error) {
         console.error(`❌ NFL AI Enhancement failed for ${alert.type}:`, error);
         // Fallback to original alert on error
@@ -503,48 +476,9 @@ export class NFLEngine extends BaseSportEngine {
     return enhancedNFLAlerts.includes(alertType);
   }
   
-  // Enhance NFL alert with AI-generated contextual analysis
-  private async enhanceNFLAlertWithAI(alert: AlertResult, gameState: GameState): Promise<AlertResult> {
-    try {
-      // Convert GameState and AlertResult to AlertContext for AI processing
-      const alertContext: AlertContext = await this.buildNFLAlertContext(alert, gameState);
-      
-      // Note: AI enhancement now handled through unified AsyncAI pipeline
-      // This method is kept for compatibility but returns original alert
-      return {
-        ...alert,
-        context: {
-          ...alert.context,
-          aiEnhanced: false,
-          note: 'AI enhancement moved to unified pipeline'
-        }
-      };
-    } catch (error) {
-      console.error('NFL AI enhancement failed:', error);
-      // Return original alert with fallback AI context
-      return {
-        ...alert,
-        context: {
-          ...alert.context,
-          aiEnhanced: false,
-          aiError: 'AI enhancement unavailable',
-          fallbackInsight: this.getNFLFallbackInsight(alert.type, gameState)
-        }
-      };
-    }
-  }
-  
-  // Build AlertContext from NFL game state and alert for AI processing
-  private async buildNFLAlertContext(alert: AlertResult, gameState: GameState): Promise<AlertContext> {
-    const baseContext = {
-      gameId: gameState.gameId,
-      sport: 'NFL',
-      alertType: alert.type,
-      priority: alert.priority,
-      probability: await this.calculateProbability(gameState),
-      homeTeam: gameState.homeTeam,
-      awayTeam: gameState.awayTeam,
-      homeScore: gameState.homeScore,
+  // REMOVED: Old AI enhancement methods - replaced by unified AI processor
+  // AI enhancement now handled through UnifiedAIProcessor.queueAlert() in processEnhancedNFLAlerts()
+  // This ensures consistent "AI OR ORIGINAL" policy across all sports
       awayScore: gameState.awayScore,
       quarter: gameState.quarter,
       timeRemaining: gameState.timeRemaining,

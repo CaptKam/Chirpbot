@@ -1,8 +1,7 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
-import { asyncAIProcessor } from '../async-ai-processor';
-import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class WNBAEngine extends BaseSportEngine {
@@ -241,8 +240,10 @@ export class WNBAEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          // Queue for async AI enhancement (non-blocking) and return base alert immediately
-          await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
+          // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
+          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+            console.warn(`⚠️ WNBA AI Queue failed for ${alert.type}:`, error);
+          });
           console.log(`🚀 WNBA Async AI: Queued ${alert.type} for background enhancement`);
         }
         

@@ -223,70 +223,73 @@ export class UnifiedAIProcessor {
     this.onEnhancedAlert = callback;
   }
 
-  // UNIFIED ENTRY POINT: Process alert with consistent "AI OR ORIGINAL" policy
-  async processAlert(
+  // NON-BLOCKING ENTRY POINT: Queue alert for AI enhancement (engines use this)
+  queueAlert(
     alert: AlertResult, 
     context: CrossSportContext, 
     userId: string
   ): Promise<string> {
     const jobId = this.generateJobId(alert, context);
-    const startTime = Date.now();
     
-    console.log(`🎯 Unified AI: Processing ${context.sport} ${context.alertType} alert`);
+    console.log(`🎯 Unified AI: Queuing ${context.sport} ${context.alertType} for background AI enhancement`);
     
     try {
       // Check if alert qualifies for AI enhancement (gating)
       if (!this.shouldEnhanceAlert(context.alertType, context.sport, context.probability)) {
-        console.log(`🚪 AI Gating: ${context.sport} ${context.alertType} not high-value - sending ORIGINAL alert`);
-        
-        // AI OR ORIGINAL: Always deliver original alert when gated
-        if (this.onEnhancedAlert) {
-          await this.onEnhancedAlert(alert, userId, context.sport, false);
-        }
-        
+        console.log(`🚪 AI Gating: ${context.sport} ${context.alertType} not high-value - skipping AI enhancement`);
         this.performanceMetrics.gatedAlerts++;
-        return jobId;
+        this.performanceMetrics.fallbacksUsed++;
+        return Promise.resolve(jobId);
       }
 
       // Check cache first for AI-enhanced version
       const cacheKey = this.generateCacheKey(context);
       const cached = this.getCachedResponse(cacheKey);
       if (cached) {
-        console.log(`💨 Unified AI Cache Hit: ${context.sport} ${context.alertType}`);
+        console.log(`💨 Unified AI Cache Hit: ${context.sport} ${context.alertType} - sending enhanced version via WebSocket`);
         this.performanceMetrics.cacheHits++;
         
+        const startTime = Date.now();
         const enhancedAlert = this.buildEnhancedAlert(alert, cached, startTime);
+        
+        // Send enhanced version via WebSocket (non-blocking)
         if (this.onEnhancedAlert) {
-          await this.onEnhancedAlert(enhancedAlert, userId, context.sport, true);
+          this.onEnhancedAlert(enhancedAlert, userId, context.sport, true).catch(error => {
+            console.error(`❌ Failed to send cached enhanced alert via WebSocket:`, error);
+          });
         }
         
-        return jobId;
+        return Promise.resolve(jobId);
       }
 
-      // Queue for async AI processing - but send original immediately as fallback
-      await this.queueForAsyncEnhancement(alert, context, userId, jobId);
+      // Queue for async AI processing (completely non-blocking)
+      this.queueForAsyncEnhancement(alert, context, userId, jobId).catch(error => {
+        console.error(`❌ Failed to queue alert for AI enhancement:`, error);
+        this.performanceMetrics.failedEnhancements++;
+        this.performanceMetrics.fallbacksUsed++;
+      });
       
-      // AI OR ORIGINAL: Always send original alert immediately, enhancement comes later via WebSocket
-      console.log(`🚀 Unified AI: Sending ORIGINAL alert immediately, AI enhancement queued`);
-      if (this.onEnhancedAlert) {
-        await this.onEnhancedAlert(alert, userId, context.sport, false);
-      }
+      console.log(`📥 Unified AI: Alert queued for background enhancement - original was already sent`);
 
     } catch (error) {
-      console.error(`❌ Unified AI: Error processing ${context.sport} alert:`, error);
-      
-      // AI OR ORIGINAL: Always fallback to original alert on any error
-      console.log(`🛡️ Unified AI: Fallback to ORIGINAL alert due to error`);
-      if (this.onEnhancedAlert) {
-        await this.onEnhancedAlert(alert, userId, context.sport, false);
-      }
-      
+      console.error(`❌ Unified AI: Error queuing ${context.sport} alert:`, error);
       this.performanceMetrics.failedEnhancements++;
       this.performanceMetrics.fallbacksUsed++;
-      this.performanceMetrics.sportMetrics[context.sport].fallbacks++;
+      const sportKey = context.sport as keyof typeof this.performanceMetrics.sportMetrics;
+      this.performanceMetrics.sportMetrics[sportKey].fallbacks++;
     }
 
-    return jobId;
+    return Promise.resolve(jobId);
+  }
+
+  // LEGACY METHOD (for backward compatibility - will be removed)
+  async processAlert(
+    alert: AlertResult, 
+    context: CrossSportContext, 
+    userId: string
+  ): Promise<string> {
+    console.warn(`⚠️ DEPRECATED: processAlert() called instead of queueAlert() - this blocks engines!`);
+    return this.queueAlert(alert, context, userId);
   }
 
   // Check if alert qualifies for AI enhancement (unified gating)
@@ -409,13 +412,14 @@ export class UnifiedAIProcessor {
 
       this.performanceMetrics.completedJobs++;
       this.performanceMetrics.successfulEnhancements++;
-      this.performanceMetrics.sportMetrics[job.sport].successes++;
+      const sportKey = job.sport as keyof typeof this.performanceMetrics.sportMetrics;
+      this.performanceMetrics.sportMetrics[sportKey].successes++;
       
       console.log(`✅ Unified AI Enhanced: ${job.sport} ${job.context.alertType} in ${processingTime}ms`);
 
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      const isTimeout = error.message === 'AI_TIMEOUT';
+      const isTimeout = error instanceof Error && error.message === 'AI_TIMEOUT';
       
       if (isTimeout) {
         console.warn(`⏱️ Unified AI Timeout: ${job.sport} ${job.context.alertType} after ${processingTime}ms`);
@@ -433,7 +437,7 @@ export class UnifiedAIProcessor {
         processingTime,
         processedAt: Date.now(),
         status: isTimeout ? 'timeout' : 'failed',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         wasActuallyEnhanced: false
       });
 

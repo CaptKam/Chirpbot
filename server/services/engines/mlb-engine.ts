@@ -1,8 +1,7 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
-import { asyncAIProcessor } from '../async-ai-processor';
-import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
@@ -233,23 +232,39 @@ export class MLBEngine extends BaseSportEngine {
       // Process ALL generated alerts through AI enhancement before deduplication
       if (rawAlerts.length > 0) {
         console.log(`🔄 MLB: Sending ${rawAlerts.length} raw alerts to AsyncAI processor for enhancement`);
-        const { asyncAIProcessor } = await import('../async-ai-processor');
+        const { unifiedAIProcessor } = await import('../unified-ai-processor');
         
         // Send each raw alert to AsyncAI processor with proper context
         for (const alert of rawAlerts) {
-          const context = {
+          const context: CrossSportContext = {
             sport: 'MLB' as const,
             alertType: alert.type,
             gameId: enhancedGameState.gameId,
+            priority: alert.priority || 75,
             probability: alert.priority || 75,
-            quarter: enhancedGameState.inning || 1,
+            homeTeam: enhancedGameState.homeTeam || 'Home',
+            awayTeam: enhancedGameState.awayTeam || 'Away',
             homeScore: enhancedGameState.homeScore || 0,
             awayScore: enhancedGameState.awayScore || 0,
-            timestamp: Date.now()
+            isLive: enhancedGameState.isLive || false,
+            inning: enhancedGameState.inning || 1,
+            outs: enhancedGameState.outs || 0,
+            balls: enhancedGameState.balls || 0,
+            strikes: enhancedGameState.strikes || 0,
+            baseRunners: {
+              first: enhancedGameState.hasFirst || false,
+              second: enhancedGameState.hasSecond || false,
+              third: enhancedGameState.hasThird || false
+            },
+            originalMessage: alert.message,
+            originalContext: alert.context
           };
           
           console.log(`🎯 MLB AsyncAI: Queuing ${alert.type} alert for enhancement`);
-          await asyncAIProcessor.queueAlertForEnhancement(alert, context, enhancedGameState.gameId);
+          // NON-BLOCKING: Queue for AI enhancement in background
+          unifiedAIProcessor.queueAlert(alert, context, enhancedGameState.gameId).catch(error => {
+            console.warn(`⚠️ MLB AI Queue failed for ${alert.type}:`, error);
+          });
         }
       } else {
         console.log(`🔄 MLB: No alerts generated for game ${enhancedGameState.gameId}`);
@@ -395,8 +410,10 @@ export class MLBEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          // Queue for async AI enhancement (non-blocking) and return base alert immediately
-          await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
+          // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
+          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+            console.warn(`⚠️ MLB AI Queue failed for ${alert.type}:`, error);
+          });
           console.log(`🚀 MLB Async AI: Queued ${alert.type} for background enhancement`);
         }
 
@@ -491,7 +508,6 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_RUNNER_ON_THIRD_ONE_OUT': './alert-cylinders/mlb/runner-on-third-one-out-module.ts',
         'MLB_FIRST_AND_THIRD_ONE_OUT': './alert-cylinders/mlb/first-and-third-one-out-module.ts',
         'MLB_SECOND_AND_THIRD_ONE_OUT': './alert-cylinders/mlb/second-and-third-one-out-module.ts',
-        'MLB_BASES_LOADED_ONE_OUT': './alert-cylinders/mlb/bases-loaded-one-out-module.ts',
         'MLB_RUNNER_ON_THIRD_TWO_OUTS': './alert-cylinders/mlb/runner-on-third-two-outs-module.ts',
         'MLB_FIRST_AND_THIRD_TWO_OUTS': './alert-cylinders/mlb/first-and-third-two-outs-module.ts',
         'MLB_BATTER_DUE': './alert-cylinders/mlb/batter-due-module.ts',

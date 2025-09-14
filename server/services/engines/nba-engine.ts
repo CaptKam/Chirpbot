@@ -1,8 +1,7 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
-import { asyncAIProcessor } from '../async-ai-processor';
-import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
@@ -469,8 +468,8 @@ export class NBAEngine extends BaseSportEngine {
         // Only enhance high-priority alerts (>= 85 probability)
         const probability = await this.calculateProbability(gameState);
         
-        if (probability >= 85 && this.crossSportAI.configured) {
-          console.log(`🧠 NBA AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
+        if (probability >= 85) {
+          console.log(`🧠 NBA AI Enhancement: Queuing ${alert.type} alert (${probability}%)`);
           
           // Build cross-sport context for NBA
           const aiContext: CrossSportContext = {
@@ -497,28 +496,15 @@ export class NBAEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
-          
-          // Update alert with AI enhancement
-          enhancedAlerts.push({
-            ...alert,
-            message: aiResponse.enhancedMessage,
-            context: {
-              ...alert.context,
-              aiEnhanced: true,
-              aiInsights: aiResponse.contextualInsights,
-              aiRecommendation: aiResponse.actionableRecommendation,
-              urgencyLevel: aiResponse.urgencyLevel,
-              bettingContext: aiResponse.bettingContext,
-              confidence: aiResponse.confidence,
-              sportSpecificData: aiResponse.sportSpecificData,
-              processingTime: aiResponse.aiProcessingTime
-            }
+          // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
+          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+            console.warn(`⚠️ NBA AI Queue failed for ${alert.type}:`, error);
           });
-        } else {
-          // Keep original alert for lower-priority situations
-          enhancedAlerts.push(alert);
+          console.log(`🚀 NBA Async AI: Queued ${alert.type} for background enhancement`);
         }
+        
+        // Always return base alert immediately (async enhancement happens via WebSocket)
+        enhancedAlerts.push(alert);
       } catch (error) {
         console.error(`❌ NBA AI Enhancement failed for ${alert.type}:`, error);
         // Fallback to original alert on error

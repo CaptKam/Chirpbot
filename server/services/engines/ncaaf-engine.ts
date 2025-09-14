@@ -1,12 +1,11 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { SettingsCache } from '../settings-cache';
 import { storage } from '../../storage';
-import { asyncAIProcessor } from '../async-ai-processor';
-import { CrossSportContext } from '../cross-sport-ai-enhancement';
+import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 
 export class NCAAFEngine extends BaseSportEngine {
   private settingsCache: SettingsCache;
-  private crossSportAI: any = { configured: false }; // Add crossSportAI property
+  // Unified AI processor replaces crossSportAI
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -28,19 +27,10 @@ export class NCAAFEngine extends BaseSportEngine {
     super('NCAAF');
     this.settingsCache = new SettingsCache(storage);
     
-    // Initialize crossSportAI - import it dynamically to avoid circular dependencies
-    this.initializeCrossSportAI();
+    // Unified AI processor is now used for all AI enhancements
   }
 
-  private async initializeCrossSportAI() {
-    try {
-      const { CrossSportAIEnhancement } = await import('../cross-sport-ai-enhancement');
-      this.crossSportAI = new CrossSportAIEnhancement();
-    } catch (error) {
-      console.error('❌ Failed to initialize CrossSportAI:', error);
-      this.crossSportAI = { configured: false };
-    }
-  }
+  // initializeCrossSportAI method removed - unified AI processor used instead
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
@@ -704,8 +694,8 @@ export class NCAAFEngine extends BaseSportEngine {
         // Enhanced AI threshold - process medium-priority alerts and above (>= 60 probability)
         const probability = await this.calculateProbability(gameState);
 
-        if (probability >= 60 && this.crossSportAI.configured) {
-          console.log(`🧠 NCAAF AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
+        if (probability >= 60) {
+          console.log(`🧠 NCAAF AI Enhancement: Queuing ${alert.type} alert (${probability}%)`);
 
           // Build comprehensive cross-sport context for NCAAF with college-specific elements
           const aiContext: CrossSportContext = {
@@ -734,34 +724,15 @@ export class NCAAFEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          const aiResponse = await this.crossSportAI.enhanceAlert(aiContext);
-
-          // Update alert with comprehensive AI enhancement
-          enhancedAlerts.push({
-            ...alert,
-            message: aiResponse.enhancedMessage,
-            context: {
-              ...alert.context,
-              aiEnhanced: true,
-              aiInsights: aiResponse.contextualInsights,
-              aiRecommendation: aiResponse.actionableRecommendation,
-              urgencyLevel: aiResponse.urgencyLevel,
-              bettingContext: aiResponse.bettingContext,
-              gameProjection: aiResponse.gameProjection,
-              confidence: aiResponse.confidence,
-              sportSpecificData: aiResponse.sportSpecificData,
-              processingTime: aiResponse.aiProcessingTime,
-              // Additional college football context
-              collegeFactors: this.getCollegeSpecificFactors(gameState),
-              recruitingImplications: this.getRecruitingImplications(gameState)
-            }
+          // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
+          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+            console.warn(`⚠️ NCAAF AI Queue failed for ${alert.type}:`, error);
           });
-
-          this.performanceMetrics.enhancedAlerts++;
-        } else {
-          // Keep original alert for lower-priority situations
-          enhancedAlerts.push(alert);
+          console.log(`🚀 NCAAF Async AI: Queued ${alert.type} for background enhancement`);
         }
+        
+        // Always return base alert immediately (async enhancement happens via WebSocket)
+        enhancedAlerts.push(alert);
       } catch (error) {
         console.error(`❌ NCAAF AI Enhancement failed for ${alert.type}:`, error);
         // Fallback to original alert on error
