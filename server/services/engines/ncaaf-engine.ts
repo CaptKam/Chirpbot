@@ -1,10 +1,9 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
-import { SettingsCache } from '../settings-cache';
+import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 
 export class NCAAFEngine extends BaseSportEngine {
-  private settingsCache: SettingsCache;
   // Unified AI processor replaces crossSportAI
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
@@ -25,7 +24,6 @@ export class NCAAFEngine extends BaseSportEngine {
 
   constructor() {
     super('NCAAF');
-    this.settingsCache = new SettingsCache(storage);
     
     // Unified AI processor is now used for all AI enhancements
   }
@@ -47,7 +45,7 @@ export class NCAAFEngine extends BaseSportEngine {
         return false;
       }
 
-      return await this.settingsCache.isAlertEnabled(this.sport, alertType);
+      return await unifiedSettings.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`NCAAF Settings cache error for ${alertType}:`, error);
       return true; // Default to true if cache fails

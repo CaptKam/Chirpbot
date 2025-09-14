@@ -13,6 +13,7 @@ import { pool, db } from './db.ts';
 import { sql } from 'drizzle-orm';
 import express from 'express';
 import { writeFileSync } from 'fs';
+import { unifiedSettings } from './storage';
 
 // ========================================
 // TYPES AND INTERFACES
@@ -303,14 +304,15 @@ export async function runDeepAnalysis(): Promise<DeepAnalysisResult> {
     const teamCount = await db.execute(sql`SELECT COUNT(*) as count FROM teams`);
     const monitoredCount = await db.execute(sql`SELECT COUNT(*) as count FROM user_monitored_teams`);
     const prefsCount = await db.execute(sql`SELECT COUNT(*) as count FROM user_alert_preferences`);
-    const globalCount = await db.execute(sql`SELECT COUNT(*) as count FROM global_alert_settings`);
+    // Use unified settings system for diagnostics data
+    const settingsDiagnostics = await unifiedSettings.getDiagnosticsData();
 
     results.summary = {
       users: parseInt(userCount.rows[0]?.count || 0),
       teams: parseInt(teamCount.rows[0]?.count || 0),
       userMonitoredTeams: parseInt(monitoredCount.rows[0]?.count || 0),
       userAlertPreferences: parseInt(prefsCount.rows[0]?.count || 0),
-      globalAlertSettings: parseInt(globalCount.rows[0]?.count || 0),
+      globalAlertSettings: settingsDiagnostics.globalAlertSettingsCount,
     };
 
     // Check for duplicate users

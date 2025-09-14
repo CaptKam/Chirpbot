@@ -1,11 +1,10 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
-import { SettingsCache } from '../settings-cache';
+import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { sendTelegramAlert, TelegramConfig } from '../telegram';
 
 export class CFLEngine extends BaseSportEngine {
-  private settingsCache: SettingsCache;
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -26,7 +25,6 @@ export class CFLEngine extends BaseSportEngine {
 
   constructor() {
     super('CFL');
-    this.settingsCache = new SettingsCache(storage);
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -46,7 +44,7 @@ export class CFLEngine extends BaseSportEngine {
         return false;
       }
 
-      return await this.settingsCache.isAlertEnabled(this.sport, alertType);
+      return await unifiedSettings.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`CFL Settings cache error for ${alertType}:`, error);
       return true; // Default to true if cache fails

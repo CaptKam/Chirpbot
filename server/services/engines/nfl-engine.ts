@@ -1,5 +1,5 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
-import { SettingsCache } from '../settings-cache';
+import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { weatherService } from '../weather-service';
@@ -7,7 +7,6 @@ import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class NFLEngine extends BaseSportEngine {
-  private settingsCache: SettingsCache;
   private lineMovementCache: Map<string, any> = new Map(); // Track line movements
 
   // Deduplication tracking - tracks sent alerts to prevent duplicates
@@ -37,7 +36,6 @@ export class NFLEngine extends BaseSportEngine {
 
   constructor() {
     super('NFL');
-    this.settingsCache = new SettingsCache(storage);
   }
 
   /**
@@ -140,7 +138,7 @@ export class NFLEngine extends BaseSportEngine {
         return false;
       }
 
-      return await this.settingsCache.isAlertEnabled(this.sport, alertType);
+      return await unifiedSettings.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`NFL Settings cache error for ${alertType}:`, error);
       return true; // Default to true if cache fails

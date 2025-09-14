@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, gameStates, alerts, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertGameState, type InsertAlert, type Alert } from "../shared/schema";
+import { UnifiedSettings } from "./services/unified-settings";
 
 // Complete storage interface for all operations
 export const storage = {
@@ -865,5 +866,9 @@ export const storage = {
     }
   }
 };
+
+// Initialize unified settings system to avoid circular dependencies
+const unifiedSettingsInstance = new UnifiedSettings(storage);
+export { unifiedSettingsInstance as unifiedSettings };
 
 export default storage;

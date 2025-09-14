@@ -1,11 +1,10 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
-import { SettingsCache } from '../settings-cache';
+import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class WNBAEngine extends BaseSportEngine {
-  private settingsCache: SettingsCache;
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -25,7 +24,6 @@ export class WNBAEngine extends BaseSportEngine {
 
   constructor() {
     super('WNBA');
-    this.settingsCache = new SettingsCache(storage);
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -44,7 +42,7 @@ export class WNBAEngine extends BaseSportEngine {
         return false;
       }
 
-      return await this.settingsCache.isAlertEnabled(this.sport, alertType);
+      return await unifiedSettings.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`WNBA Settings cache error for ${alertType}:`, error);
       return true; // Default to true if cache fails
