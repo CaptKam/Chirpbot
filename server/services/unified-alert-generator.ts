@@ -588,12 +588,13 @@ export class UnifiedAlertGenerator {
         
         try {
           // OPTIMIZATION: Check monitoring users FIRST (before alert processing)
-          const gameMonitoringUsers = await this.getUsersMonitoringGame(sport, game.gameId);
+          const gameId = game.gameId || game.id;
+          const gameMonitoringUsers = await this.getUsersMonitoringGame(sport, gameId);
           
           // Skip entire alert processing if no users monitoring this game
           if (gameMonitoringUsers.length === 0) {
             if (this.logLevel !== 'quiet') {
-              console.log(`⏭️  Skipping ${sport} game ${game.gameId} - no users monitoring`);
+              console.log(`⏭️  Skipping ${sport} game ${gameId} - no users monitoring`);
             }
             continue;
           }
@@ -606,18 +607,18 @@ export class UnifiedAlertGenerator {
           
           if (alertResults && alertResults.length > 0) {
             if (this.logLevel !== 'quiet') {
-              console.log(`✅ Generated ${alertResults.length} alerts for ${sport} game ${game.gameId} (${gameMonitoringUsers.length} monitoring users)`);
+              console.log(`✅ Generated ${alertResults.length} alerts for ${sport} game ${gameId} (${gameMonitoringUsers.length} monitoring users)`);
             }
             
             // Process and persist each alert
             for (const alertResult of alertResults) {
               // Create stable deduplication key (without Date.now())
               const baseState = `${game.hasFirst ? '1' : ''}${game.hasSecond ? '2' : ''}${game.hasThird ? '3' : ''}`;
-              const situationKey = `${game.gameId}_${alertResult.type}_${game.inning}_${game.isTopInning ? 'top' : 'bot'}_${game.outs}_${baseState}_${game.currentBatter?.name?.replace(/[^a-zA-Z0-9]/g, '') || 'unknown'}`;
+              const situationKey = `${gameId}_${alertResult.type}_${game.inning}_${game.isTopInning ? 'top' : 'bot'}_${game.outs}_${baseState}_${game.currentBatter?.name?.replace(/[^a-zA-Z0-9]/g, '') || 'unknown'}`;
               
               // Check deduplication using UnifiedDeduplicator
               const alertKeyObj = {
-                gameId: game.gameId,
+                gameId: gameId,
                 type: alertResult.type,
                 inning: game.inning,
                 half: game.isTopInning ? 'top' : 'bottom',
@@ -649,7 +650,7 @@ export class UnifiedAlertGenerator {
                     const alertData = {
                       alertKey: `${situationKey}_${userId}`,
                       sport: sport,
-                      gameId: game.gameId,
+                      gameId: gameId,
                       type: alertResult.type,
                       state: 'active' as const,
                       userId: userId,
@@ -694,7 +695,7 @@ export class UnifiedAlertGenerator {
             }
           }
         } catch (gameError) {
-          console.error(`❌ Error processing ${sport} game ${game.gameId}:`, gameError);
+          console.error(`❌ Error processing ${sport} game ${gameId}:`, gameError);
         }
       }
       
