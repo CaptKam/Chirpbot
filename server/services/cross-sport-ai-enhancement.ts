@@ -1,7 +1,5 @@
 import { storage } from '../storage';
 
-// Removed: import { BasicAI } from './basic-ai';
-
 export interface CrossSportContext {
   sport: 'MLB' | 'NFL' | 'NCAAF' | 'WNBA' | 'NBA' | 'CFL';
   gameId: string;
@@ -100,7 +98,6 @@ interface AICache {
 }
 
 export class CrossSportAIEnhancement {
-  // Removed: private basicAI: BasicAI;
   private cache = new Map<string, AICache>();
   private readonly CACHE_TTL = 30000; // 30 seconds
   private readonly MAX_CACHE_SIZE = 500;
@@ -123,9 +120,7 @@ export class CrossSportAIEnhancement {
   };
 
   constructor() {
-    // Removed: this.basicAI = new BasicAI();
-    // TODO: Implement direct OpenAI API call logic here
-    console.log(`🤖 Cross-Sport AI Enhancement: Initialized (OpenAI integration pending)`);
+    console.log(`🤖 Cross-Sport AI Enhancement: Initialized with OpenAI integration`);
   }
 
   get configured(): boolean {

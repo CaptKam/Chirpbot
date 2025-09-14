@@ -509,25 +509,15 @@ export class NFLEngine extends BaseSportEngine {
       // Convert GameState and AlertResult to AlertContext for AI processing
       const alertContext: AlertContext = await this.buildNFLAlertContext(alert, gameState);
       
-      // Get AI enhancement from AIContextController
-      const aiEnhancement: AIEnhancedAlert = await this.aiContextController.enhanceAlertWithFullControl(alertContext);
-      
-      // Merge AI enhancement with original alert
+      // Note: AI enhancement now handled through unified AsyncAI pipeline
+      // This method is kept for compatibility but returns original alert
       return {
         ...alert,
-        message: aiEnhancement.message,
         context: {
           ...alert.context,
-          aiEnhanced: true,
-          aiInsights: aiEnhancement.insights,
-          bettingAdvice: aiEnhancement.bettingAdvice,
-          gameProjection: aiEnhancement.gameProjection,
-          urgency: aiEnhancement.urgency,
-          callToAction: aiEnhancement.callToAction,
-          confidenceScore: aiEnhancement.confidenceScore,
-          aiProcessingTime: aiEnhancement.aiProcessingTime
-        },
-        priority: Math.max(alert.priority, 90) // Boost priority for AI-enhanced alerts
+          aiEnhanced: false,
+          note: 'AI enhancement moved to unified pipeline'
+        }
       };
     } catch (error) {
       console.error('NFL AI enhancement failed:', error);
