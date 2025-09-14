@@ -229,30 +229,31 @@ export class MLBEngine extends BaseSportEngine {
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
 
-      // Filter out duplicate alerts before processing
-      const dedupedAlerts: AlertResult[] = [];
-      for (const alert of rawAlerts) {
-        // Check if this alert has already been sent
-        if (!this.hasAlertBeenSent(enhancedGameState.gameId, alert.alertKey)) {
-          dedupedAlerts.push(alert);
-          // Mark as sent immediately to prevent duplicates in same processing cycle
-          this.markAlertSent(enhancedGameState.gameId, alert.alertKey);
+      // ✅ SEND RAW ALERTS TO ASYNCAI PROCESSOR FOR ENHANCEMENT FIRST
+      // Process ALL generated alerts through AI enhancement before deduplication
+      if (rawAlerts.length > 0) {
+        console.log(`🔄 MLB: Sending ${rawAlerts.length} raw alerts to AsyncAI processor for enhancement`);
+        const { asyncAIProcessor } = await import('../async-ai-processor');
+        
+        // Send each raw alert to AsyncAI processor with proper context
+        for (const alert of rawAlerts) {
+          const context = {
+            sport: 'MLB' as const,
+            alertType: alert.type,
+            gameId: enhancedGameState.gameId,
+            probability: alert.priority || 75,
+            quarter: enhancedGameState.inning || 1,
+            homeScore: enhancedGameState.homeScore || 0,
+            awayScore: enhancedGameState.awayScore || 0,
+            timestamp: Date.now()
+          };
+          
+          console.log(`🎯 MLB AsyncAI: Queuing ${alert.type} alert for enhancement`);
+          await asyncAIProcessor.queueAlertForEnhancement(alert, context, enhancedGameState.gameId);
         }
+      } else {
+        console.log(`🔄 MLB: No alerts generated for game ${enhancedGameState.gameId}`);
       }
-
-      // If all alerts were duplicates, return early
-      if (dedupedAlerts.length === 0) {
-        console.log(`🔄 MLB: All ${rawAlerts.length} alerts were duplicates for game ${enhancedGameState.gameId}`);
-        return [];
-      }
-
-      console.log(`✅ MLB: Processing ${dedupedAlerts.length} new alerts (blocked ${rawAlerts.length - dedupedAlerts.length} duplicates)`);
-
-      // Enhance alerts with time-sensitive intelligence via AlertComposer
-      const composedAlerts = await this.composeTimeBasedAlerts(dedupedAlerts, enhancedGameState);
-
-      // Process alerts with cross-sport AI enhancement for high-priority situations
-      const alerts = await this.processEnhancedMLBAlerts(composedAlerts, enhancedGameState);
 
       // Track MLB-specific metrics
       if (enhancedGameState.hasFirst && enhancedGameState.hasSecond && enhancedGameState.hasThird) {
@@ -265,12 +266,10 @@ export class MLBEngine extends BaseSportEngine {
         this.performanceMetrics.runnerScoringOpportunities++;
       }
 
-      this.performanceMetrics.totalAlerts += alerts.length;
+      this.performanceMetrics.totalAlerts += rawAlerts.length;
 
-      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
-      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
-
-      return alerts;
+      // Return raw alerts for tracking (AsyncAI will handle the actual broadcasting)
+      return rawAlerts;
     } finally {
       const alertTime = Date.now() - startTime;
       this.performanceMetrics.alertGenerationTime.push(alertTime);
