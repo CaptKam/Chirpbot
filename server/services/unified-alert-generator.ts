@@ -556,9 +556,20 @@ export class UnifiedAlertGenerator {
     try {
       // Get monitored games filtered by BOTH sport AND gameId
       const allMonitoredGames = await storage.getAllMonitoredGames();
-      const gameSpecificMonitoring = allMonitoredGames.filter(game => 
-        game.sport === sport && game.gameId === gameId
-      );
+      const gameIdStr = gameId.toString();
+      const gameIdNum = parseInt(gameId);
+      const gameSpecificMonitoring = allMonitoredGames.filter(game => {
+        const monitoredGameId = game.gameId;
+        const monitoredGameIdStr = monitoredGameId.toString();
+        const monitoredGameIdNum = parseInt(monitoredGameId);
+
+        return game.sport === sport && (
+          monitoredGameId === gameIdStr || 
+          monitoredGameId === gameId ||
+          monitoredGameIdStr === gameIdStr ||
+          (monitoredGameIdNum === gameIdNum && !isNaN(gameIdNum))
+        );
+      });
 
       // Extract unique users monitoring this SPECIFIC game
       const uniqueUsers = [...new Set(gameSpecificMonitoring.map(game => game.userId))];

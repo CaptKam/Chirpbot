@@ -76,8 +76,49 @@ async function enableMasterAlerts() {
       }
     }
     
+    // Restore monitored games for the user
+    console.log('\n🎯 Restoring monitored games for user...');
+    
+    // Get today's MLB games
+    const { MLBApiService } = await import('./server/services/mlb-api.js');
+    const mlbApi = new MLBApiService();
+    
+    try {
+      const games = await mlbApi.getTodaysGames();
+      console.log(`📊 Found ${games.length} MLB games to monitor`);
+      
+      // Add all live/scheduled games to monitoring
+      for (const game of games) {
+        if (game.isLive || game.status === 'scheduled') {
+          try {
+            await storage.addUserMonitoredTeam(
+              admin.id,
+              game.gameId || game.id,
+              'MLB',
+              game.homeTeam.name || game.homeTeam,
+              game.awayTeam.name || game.awayTeam
+            );
+            console.log(`✅ Added monitoring: ${game.awayTeam.name || game.awayTeam} @ ${game.homeTeam.name || game.homeTeam}`);
+          } catch (error) {
+            if (!error.message.includes('already exists')) {
+              console.log(`⚠️ Could not add ${game.gameId}: ${error.message}`);
+            }
+          }
+        }
+      }
+      
+      // Verify monitoring count
+      const monitoredGames = await storage.getAllMonitoredGames();
+      const userMonitored = monitoredGames.filter(g => g.userId === admin.id);
+      console.log(`✅ User now monitoring ${userMonitored.length} games`);
+      
+    } catch (error) {
+      console.log(`⚠️ Could not restore monitored games: ${error.message}`);
+    }
+
     console.log('\n🚀 MASTER ALERT SYSTEM ACTIVATION COMPLETE!');
     console.log('✅ Live games with scoring situations should now generate alerts');
+    console.log('✅ Monitored games restored');
     console.log('✅ Check logs for alert generation activity');
     
   } catch (error) {
