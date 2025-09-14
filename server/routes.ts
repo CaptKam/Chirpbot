@@ -3449,7 +3449,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       // Basic health check - server is responding
       const memUsage = process.memoryUsage();
-      const memPercent = memUsage.heapUsed / memUsage.heapTotal;
+      const v8 = await import('v8');
+      const heapStats = v8.getHeapStatistics();
+      const memPercent = memUsage.heapUsed / heapStats.heap_size_limit;
 
       // Get deduplication stats
       const dedupeStats = unifiedDeduplicator.getStats();
