@@ -11,6 +11,7 @@ import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "
 import { AlertGenerator } from "./services/alert-generator";
 import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
+import { registerHealthRoutes } from "./services/unified-health-monitor";
 import { pool } from "./db";
 import { alerts as alertsTable, settings } from "../shared/schema";
 import { eq, desc } from "drizzle-orm";
@@ -5344,6 +5345,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       });
     }
   });
+
+  // Register unified health monitoring routes with error handling
+  try {
+    console.log('🔧 Attempting to register unified health monitoring routes...');
+    registerHealthRoutes(app);
+    console.log('✅ Unified health monitoring routes registration completed');
+  } catch (error: any) {
+    console.error('❌ CRITICAL ERROR: Failed to register unified health monitoring routes:', error.message);
+    console.error('Stack trace:', error.stack);
+    
+    // Fallback: Register basic health routes manually if needed
+    app.get('/api/health/status', (req, res) => {
+      res.status(500).json({ 
+        error: 'Health monitoring system failed to initialize',
+        message: error.message,
+        timestamp: new Date().toISOString() 
+      });
+    });
+    
+    console.log('⚠️ Fallback health routes registered due to initialization failure');
+  }
 
   return httpServer;
 }

@@ -10,7 +10,7 @@ import { unifiedDeduplicator } from "./unified-deduplicator";
 import { sendTelegramAlert, type TelegramConfig } from "./telegram";
 import { SettingsCache } from "./settings-cache";
 import { AdaptivePollingManager } from './adaptive-polling-manager';
-import { getHealthMonitor } from './alert-health-monitor';
+import { getHealthMonitor } from './unified-health-monitor';
 import type { InsertAlert } from "../../shared/schema";
 
 // Import sport engines
@@ -140,6 +140,16 @@ export class UnifiedAlertGenerator {
     this.cflApi = new CFLApiService();
     this.settingsCache = new SettingsCache(storage);
     this.healthMonitor = getHealthMonitor();
+    
+    // Initialize health monitor with callback integration
+    this.healthMonitor.initialize({
+      pollingIntervalMs: 30000,
+      callbacks: {
+        onRestart: () => this.startMonitoring(),
+        onStop: () => this.stopMonitoring(),
+        generatorLabel: 'unified-alert-generator'
+      }
+    });
 
     // Initialize sport engines
     this.sportEngines = new Map();
