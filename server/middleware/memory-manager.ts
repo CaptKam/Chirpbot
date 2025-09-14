@@ -113,7 +113,7 @@ export class MemoryManager {
       heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
       lastGC: new Date(this.lastGcTime).toISOString(),
       needsCleanup: this.shouldCleanup(),
-      status: memPercent > this.forceGcThreshold ? 'critical' : 
+      status: memPercent > 0.99 ? 'critical' :  // Only critical above 99%
              memPercent > this.gcThreshold ? 'warning' : 'healthy'
     };
   }
