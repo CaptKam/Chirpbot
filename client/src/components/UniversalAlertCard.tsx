@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle } from 'lucide-react';
+import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle, Wind, Cloud, Thermometer, Timer, Hash, Navigation } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 
 interface UniversalAlertProps {
   id: string;
@@ -196,29 +197,126 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
             </p>
           </div>
 
-          {/* Context Information */}
+          {/* Sport-Specific Context Information */}
           {alert.context && (
-            <div className="mb-4 space-y-2">
-              {alert.context.quarter && (
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <Clock className="w-3 h-3" />
-                  <span>Q{alert.context.quarter}</span>
-                  {alert.context.timeRemaining && (
-                    <span>• {alert.context.timeRemaining}</span>
+            <div className="mb-4 space-y-3">
+              {/* MLB Context */}
+              {alert.sport === 'MLB' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Target className="w-3 h-3" />
+                      <span>
+                        {alert.context.isTopInning ? '▲' : '▼'} {alert.context.inning || 'N/A'}
+                        {alert.context.outs !== undefined && (
+                          <span className="ml-2">• {alert.context.outs} out{alert.context.outs !== 1 ? 's' : ''}</span>
+                        )}
+                      </span>
+                      {(alert.context.balls !== undefined && alert.context.strikes !== undefined) && (
+                        <span className="ml-2 text-emerald-400 font-mono">{alert.context.balls}-{alert.context.strikes}</span>
+                      )}
+                    </div>
+                    {/* Baseball Diamond for base runners */}
+                    {(alert.context.hasFirst || alert.context.hasSecond || alert.context.hasThird) && (
+                      <BaseballDiamond 
+                        size="sm" 
+                        showCount={false}
+                        runners={{
+                          first: alert.context.hasFirst,
+                          second: alert.context.hasSecond,
+                          third: alert.context.hasThird
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* NFL/CFL/NCAAF Context */}
+              {(['NFL', 'CFL', 'NCAAF'].includes(alert.sport)) && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <Clock className="w-3 h-3" />
+                    <span>Q{alert.context.quarter || 'N/A'}</span>
+                    {alert.context.timeRemaining && (
+                      <span>• {alert.context.timeRemaining}</span>
+                    )}
+                  </div>
+                  {(alert.context.down && alert.context.yardsToGo) && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Hash className="w-3 h-3 text-orange-400" />
+                      <span className="text-orange-300 font-medium">
+                        {alert.context.down} & {alert.context.yardsToGo}
+                      </span>
+                      {alert.context.yardLine && (
+                        <span className="text-slate-400">at {alert.context.yardLine}</span>
+                      )}
+                    </div>
+                  )}
+                  {alert.context.redZone && (
+                    <div className="flex items-center gap-1 text-xs">
+                      <Target className="w-3 h-3 text-red-400" />
+                      <span className="text-red-300 font-medium">Red Zone</span>
+                    </div>
+                  )}
+                  {alert.context.possession && (
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Navigation className="w-3 h-3" />
+                      <span>{alert.context.possession} possession</span>
+                    </div>
                   )}
                 </div>
               )}
-              {alert.context.inning && (
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <Target className="w-3 h-3" />
-                  <span>
-                    Inning {alert.context.inning} 
-                    {alert.context.isTopInning !== undefined && 
-                      ` (${alert.context.isTopInning ? 'Top' : 'Bottom'})`
-                    }
-                  </span>
-                  {alert.context.outs !== undefined && (
-                    <span>• {alert.context.outs} out{alert.context.outs !== 1 ? 's' : ''}</span>
+
+              {/* NBA/WNBA Context */}
+              {(['NBA', 'WNBA'].includes(alert.sport)) && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <Clock className="w-3 h-3" />
+                    <span>Q{alert.context.quarter || 'N/A'}</span>
+                    {alert.context.timeRemaining && (
+                      <span>• {alert.context.timeRemaining}</span>
+                    )}
+                  </div>
+                  {alert.context.clutchTime && (
+                    <div className="flex items-center gap-1 text-xs">
+                      <Zap className="w-3 h-3 text-yellow-400" />
+                      <span className="text-yellow-300 font-medium">Clutch Time</span>
+                    </div>
+                  )}
+                  {alert.context.run && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <TrendingUp className="w-3 h-3 text-purple-400" />
+                      <span className="text-purple-300">{alert.context.run} run</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* NHL Context */}
+              {alert.sport === 'NHL' && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <Timer className="w-3 h-3" />
+                    <span>Period {alert.context.period || 'N/A'}</span>
+                    {alert.context.timeRemaining && (
+                      <span>• {alert.context.timeRemaining}</span>
+                    )}
+                  </div>
+                  {alert.context.powerPlay && (
+                    <div className="flex items-center gap-1 text-xs">
+                      <Zap className="w-3 h-3 text-blue-400" />
+                      <span className="text-blue-300 font-medium">Power Play</span>
+                      {alert.context.powerPlayTime && (
+                        <span className="text-slate-400">({alert.context.powerPlayTime})</span>
+                      )}
+                    </div>
+                  )}
+                  {alert.context.penalty && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <AlertTriangle className="w-3 h-3 text-red-400" />
+                      <span className="text-red-300">{alert.context.penalty}</span>
+                    </div>
                   )}
                 </div>
               )}
@@ -228,7 +326,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
           {/* Footer Section */}
           <div className="flex items-center justify-between pt-3 border-t border-slate-700/50">
             <div className="flex items-center gap-3">
-              {alert.confidence && (
+              {alert.confidence != null && (
                 <div className="flex items-center gap-1 text-xs">
                   <TrendingUp className={`w-3 h-3 ${isConfidenceHigh ? 'text-green-400' : 'text-yellow-400'}`} />
                   <span className={isConfidenceHigh ? 'text-green-300' : 'text-yellow-300'} data-testid={`confidence-${alert.id}`}>
@@ -236,7 +334,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
                   </span>
                 </div>
               )}
-              {alert.priority && (
+              {alert.priority != null && (
                 <div className="flex items-center gap-1 text-xs">
                   <Zap className={`w-3 h-3 ${isPriorityHigh ? 'text-orange-400' : 'text-slate-400'}`} />
                   <span className={isPriorityHigh ? 'text-orange-300' : 'text-slate-400'} data-testid={`priority-${alert.id}`}>
@@ -252,10 +350,18 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
                   📱 Sent
                 </Badge>
               )}
-              {alert.weather?.temperature && (
-                <div className="flex items-center gap-1 text-xs text-slate-400">
-                  <MapPin className="w-3 h-3" />
-                  <span>{alert.weather.temperature}°</span>
+              {alert.weather && (
+                <div className="flex items-center gap-1">
+                  {(alert.weather.windDescription || alert.weather.windSpeed || alert.weather.temperature) && (
+                    <WeatherDisplay
+                      size="sm"
+                      windSpeed={alert.weather.windSpeed}
+                      windDirection={alert.weather.windDirection}
+                      windGust={alert.weather.windGust}
+                      temperature={alert.weather.temperature}
+                      stadiumWindContext={alert.weather.windDescription || alert.weather.condition}
+                    />
+                  )}
                 </div>
               )}
             </div>
