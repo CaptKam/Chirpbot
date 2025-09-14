@@ -267,40 +267,13 @@ export class CFLEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          // Queue for async AI enhancement (non-blocking) and return base alert immediately
-          // await asyncAIProcessor.queueAlertForEnhancement(alert, aiContext, 'system');
-          // console.log(`🚀 CFL Async AI: Queued ${alert.type} for background enhancement`);
-
-          // Simulate AI response for demonstration
-          const aiResponse = {
-            enhancedMessage: `AI Enhanced: ${alert.message}`,
-            contextualInsights: 'AI Insights for CFL',
-            actionableRecommendation: 'Consider betting on CFL',
-            urgencyLevel: 'High',
-            bettingContext: 'CFL specific betting odds',
-            confidence: 0.9,
-            sportSpecificData: { cflData: 'CFL specific data' },
-            aiProcessingTime: 100, // Simulate processing time
-          };
-
-
-          // Update alert with AI enhancement
-          enhancedAlerts.push({
-            ...alert,
-            message: aiResponse.enhancedMessage,
-            context: {
-              ...alert.context,
-              aiEnhanced: true,
-              aiInsights: aiResponse.contextualInsights,
-              aiRecommendation: aiResponse.actionableRecommendation,
-              urgencyLevel: aiResponse.urgencyLevel,
-              bettingContext: aiResponse.bettingContext,
-              confidence: aiResponse.confidence,
-              sportSpecificData: aiResponse.sportSpecificData,
-              processingTime: aiResponse.aiProcessingTime
-            }
+          // NON-BLOCKING: Queue for AI enhancement in background
+          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+            console.warn(`⚠️ CFL AI Queue failed for ${alert.type}:`, error);
           });
-          this.performanceMetrics.enhancedAlerts++;
+
+          // Return original alert immediately - AI enhancement happens in background
+          enhancedAlerts.push(alert);
         } else {
           // Keep original alert for lower-priority situations
           enhancedAlerts.push(alert);
