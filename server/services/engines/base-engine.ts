@@ -26,6 +26,23 @@ export abstract class BaseAlertModule {
   abstract isTriggered(gameState: GameState): boolean;
   abstract generateAlert(gameState: GameState): AlertResult | null;
   abstract calculateProbability(gameState: GameState): number;
+
+  // Helper method to safely extract team names from both string and object formats
+  protected getTeamName(team: any): string {
+    if (!team) return 'Team';
+    
+    // If it's already a string, return it
+    if (typeof team === 'string') return team;
+    
+    // If it's an object, try to get the name property
+    if (typeof team === 'object') {
+      // Try different common team name properties
+      return team.name || team.abbreviation || team.displayName || team.shortName || 'Team';
+    }
+    
+    // Fallback
+    return 'Team';
+  }
 }
 
 // Alert module manager for each sport

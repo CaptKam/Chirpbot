@@ -112,7 +112,7 @@ export default class GameStartModule extends BaseAlertModule {
       alertKey,
       type: this.alertType,
       priority: 75,
-      message: `🏈 KICKOFF: ${gameState.awayTeam} @ ${gameState.homeTeam} | Prime betting window, weather locked, opening drive props live`,
+      message: `🏈 KICKOFF: ${this.getTeamName(gameState.awayTeam)} @ ${this.getTeamName(gameState.homeTeam)} | Prime betting window, weather locked, opening drive props live`,
       context
     };
   }
