@@ -512,73 +512,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Initialize Async AI Processor for background AI enhancement
   const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
 
-  // AsyncAI WebSocket integration ENABLED
-  unifiedAIProcessor.setOnEnhancedAlert(async (enhancedAlert, userId, sport, wasActuallyEnhanced) => {
-    // AI OR NOTHING: Only broadcast alerts that were actually AI enhanced
-    if (!wasActuallyEnhanced) {
-      console.log(`🚫 AI OR NOTHING: Refusing to broadcast non-AI alert ${sport} ${enhancedAlert.type} - USER SEES NOTHING`);
-      return; // Complete silence for non-AI alerts
-    }
-
-    console.log(`📝 AI Enhanced Alert Broadcasting: ${sport} ${enhancedAlert.type}`);
-
-    // ✅ NORMALIZE AI CONTENT INTO FRONTEND FIELDS
-    // Extract AI-enhanced content from context
-    const aiEnhancedMessage = enhancedAlert.context?.aiEnhancedMessage || enhancedAlert.context?.enhancedMessage;
-    const aiEnhancedTitle = enhancedAlert.context?.aiRecommendation || enhancedAlert.context?.aiTitle;
-    const primaryMessage = aiEnhancedMessage || aiEnhancedTitle || enhancedAlert.message;
-    const titleMessage = aiEnhancedTitle || aiEnhancedMessage || enhancedAlert.title;
-
-    console.log(`🎯 AI Content Mapping: primary="${primaryMessage?.substring(0, 50)}..." title="${titleMessage?.substring(0, 50)}..."`);
-
-    // Normalize alert object - overwrite message fields with AI content
-    const normalizedAlert = {
-      ...enhancedAlert,
-      message: primaryMessage,        // ✅ Frontend reads this
-      title: titleMessage,           // ✅ Frontend reads this  
-      primary: primaryMessage,       // ✅ Backup field
-      sport: sport,
-      wasActuallyEnhanced
-    };
-
-    // Broadcast the enhanced alert to all connected WebSocket clients
-    broadcast({
-      type: 'new_alert',
-      alert: {
-        id: enhancedAlert.alertKey,
-        alertKey: enhancedAlert.alertKey,
-        alertType: enhancedAlert.type,
-        type: enhancedAlert.type,
-        sport: sport,
-        gameId: enhancedAlert.context?.gameId || enhancedAlert.alertKey.split('_')[0],
-        score: enhancedAlert.priority || 85,
-
-        // ✅ NORMALIZED FIELDS - Frontend will read these
-        message: primaryMessage,       // Primary display field
-        title: titleMessage,          // Title/header field
-        primary: primaryMessage,      // Backup compatibility
-
-        payload: normalizedAlert,
-        createdAt: new Date().toISOString(),
-        wasActuallyEnhanced,
-        context: enhancedAlert.context,
-        ai: wasActuallyEnhanced && enhancedAlert.context ? {
-          enhancedTitle: aiEnhancedTitle,
-          enhancedMessage: aiEnhancedMessage,
-          primary: primaryMessage,    // ✅ Primary field for consistency
-          title: titleMessage,        // ✅ Title field for consistency
-          aiInsights: enhancedAlert.context.aiInsights,
-          aiRecommendation: enhancedAlert.context.aiRecommendation,
-          urgencyLevel: enhancedAlert.context.urgencyLevel,
-          bettingContext: enhancedAlert.context.bettingContext,
-          confidence: enhancedAlert.context.confidence
-        } : undefined
-      },
-      timestamp: new Date().toISOString()
-    });
-  });
-
-  console.log('🚀 AsyncAIProcessor integrated with WebSocket broadcast system');
+  // Store broadcast function globally for unified-alert-generator to use AFTER database save  
+  (global as any).broadcastAlertAfterSave = broadcast;
+  console.log('🚀 WebSocket broadcast function stored for post-database-save broadcasting');
 
   // Basic health check
   app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
