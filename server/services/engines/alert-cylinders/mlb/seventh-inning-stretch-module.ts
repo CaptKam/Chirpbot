@@ -73,14 +73,11 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
         'Controlled conditions maintain consistency'
     };
 
-    const urgencyLevel = isCloseGame ? '🔥 CRUNCH TIME' : '📊 LATE-GAME DYNAMICS';
-    const scoreContext = isCloseGame ? 'razor-thin margin' : `${scoreDiff}-run difference`;
-
     return {
       alertKey,
       type: 'MLB_SEVENTH_INNING_STRETCH',
       priority: isCloseGame ? 80 : 60,
-      message: `${urgencyLevel}: ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | Bullpen era begins, ${scoreContext}, final 3 innings crucial`,
+      message: `Seventh inning stretch - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) - Late game transition`,
       context
     };
   }

@@ -497,8 +497,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // AsyncAI WebSocket integration ENABLED
   asyncAIProcessor.setOnEnhancedAlert(async (enhancedAlert, userId, sport, wasActuallyEnhanced) => {
-    const enhancementStatus = wasActuallyEnhanced ? 'AI Enhanced' : 'Gated (No AI)';
-    console.log(`📝 Alert generated (${enhancementStatus}): ${sport} ${enhancedAlert.type}`);
+    // AI OR NOTHING: Only broadcast alerts that were actually AI enhanced
+    if (!wasActuallyEnhanced) {
+      console.log(`🚫 AI OR NOTHING: Refusing to broadcast non-AI alert ${sport} ${enhancedAlert.type} - USER SEES NOTHING`);
+      return; // Complete silence for non-AI alerts
+    }
+
+    console.log(`📝 AI Enhanced Alert Broadcasting: ${sport} ${enhancedAlert.type}`);
 
     // Broadcast the enhanced alert to all connected WebSocket clients
     broadcast({
@@ -520,8 +525,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         wasActuallyEnhanced,
         context: enhancedAlert.context,
         ai: wasActuallyEnhanced && enhancedAlert.context ? {
-          enhancedTitle: enhancedAlert.context.aiRecommendation || enhancedAlert.message || 'Enhanced Alert',
-          enhancedMessage: enhancedAlert.message || enhancedAlert.context.aiRecommendation || 'Alert details',
+          enhancedTitle: enhancedAlert.context.aiRecommendation,
+          enhancedMessage: enhancedAlert.message,
           aiInsights: enhancedAlert.context.aiInsights,
           aiRecommendation: enhancedAlert.context.aiRecommendation,
           urgencyLevel: enhancedAlert.context.urgencyLevel,

@@ -209,50 +209,30 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     gameState: GameState,
     probability: number
   ): string {
-    const isPowerHitter = this.POWER_HITTERS.some(name => 
-      batter.toLowerCase().includes(name.toLowerCase())
-    );
-
     let situationDesc = '';
     const { hasFirst, hasSecond, hasThird } = gameState;
     
     if (hasFirst && hasSecond && hasThird) {
-      situationDesc = 'BASES LOADED';
+      situationDesc = 'bases loaded';
     } else if (hasSecond && hasThird) {
-      situationDesc = 'runners on 2nd & 3rd';
+      situationDesc = 'runners on 2nd and 3rd';
     } else if (hasThird) {
       situationDesc = 'runner on 3rd';
     } else if (hasFirst && hasThird) {
-      situationDesc = 'runners on 1st & 3rd';
+      situationDesc = 'runners on 1st and 3rd';
     } else if (hasSecond) {
       situationDesc = 'runner on 2nd';
     } else if (hasFirst && hasSecond) {
-      situationDesc = 'runners on 1st & 2nd';
+      situationDesc = 'runners on 1st and 2nd';
     } else if (hasFirst) {
       situationDesc = 'runner on 1st';
     } else {
       situationDesc = 'bases empty';
     }
 
-    // Build message components
-    const icon = probability >= 85 ? '🔥' : probability >= 75 ? '⚡' : '🎯';
-    const batterLabel = isPowerHitter ? `${batter} (Power Hitter)` : batter;
     const outsText = gameState.outs === 1 ? '1 out' : `${gameState.outs} outs`;
     
-    // Add wind if significant
-    let windText = '';
-    if (gameState.weatherContext?.windSpeed && gameState.weatherContext.windSpeed >= 8) {
-      const windDir = gameState.weatherContext.windDirection || 'unknown';
-      windText = ` | Wind: ${gameState.weatherContext.windSpeed}mph ${windDir}`;
-    }
-
-    // Construct predictive message
-    if (probability >= 85) {
-      return `${icon} ${gameState.awayTeam} @ ${gameState.homeTeam}: ${batterLabel} ON DECK with ${situationDesc}, ${outsText} - ${Math.round(probability)}% scoring chance${windText}`;
-    } else if (probability >= 75) {
-      return `${icon} ${gameState.awayTeam} @ ${gameState.homeTeam}: ${batterLabel} coming up with ${situationDesc}, ${outsText} - ${Math.round(probability)}% scoring chance${windText}`;
-    } else {
-      return `${icon} ${gameState.awayTeam} @ ${gameState.homeTeam}: ${batterLabel} on deck with ${situationDesc}, ${outsText} - ${Math.round(probability)}% chance${windText}`;
-    }
+    // Simple context message without dramatic language
+    return `On-deck prediction - ${gameState.awayTeam} @ ${gameState.homeTeam} - ${batter} coming up with ${situationDesc}, ${outsText} - ${Math.round(probability)}% scoring probability`;
   }
 }

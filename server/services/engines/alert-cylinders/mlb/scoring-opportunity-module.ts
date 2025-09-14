@@ -53,7 +53,7 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
     const hasRunnerFirst = gameState.runners?.first || false;
     const inningText = gameState.isTopInning ? `Top ${gameState.inning}` : `Bottom ${gameState.inning}`;
     
-    let message = `⚾ SCORING OPPORTUNITY! ${inningText} | `;
+    let message = `Scoring opportunity - ${inningText} - `;
     
     // Describe the situation
     if (hasRunnerThird && hasRunnerSecond && hasRunnerFirst) {
@@ -66,10 +66,10 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
       message += `Runner on 2nd`;
     }
     
-    message += ` with ${gameState.outs} out | ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
+    message += ` with ${gameState.outs} out - ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
     
     if (gameState.currentBatter) {
-      message += ` | ${gameState.currentBatter} at bat`;
+      message += ` - ${gameState.currentBatter} at bat`;
     }
     
     return {

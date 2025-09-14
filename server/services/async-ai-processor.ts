@@ -220,14 +220,12 @@ export class AsyncAIProcessor {
     
     // V3-17: Apply Alert-Type-Level Gating before processing
     if (!this.shouldEnhanceAlert(context.alertType, context.sport, context.probability)) {
-      console.log(`🚪 AI Gating: Skipping enhancement for ${context.sport} ${context.alertType} (not high-value)`);
+      console.log(`🚪 AI Gating: Completely skipping alert for ${context.sport} ${context.alertType} (not high-value) - USER SEES NOTHING`);
       
-      // Still broadcast the original alert immediately (not AI enhanced)
-      if (this.onEnhancedAlert) {
-        await this.onEnhancedAlert(alert, userId, context.sport, false);
-      }
+      // AI OR NOTHING: Do not broadcast low-value alerts at all
+      // Quality over quantity - user sees nothing rather than boring alerts
       
-      return jobId; // Return job ID for tracking but don't process
+      return jobId; // Return job ID for tracking but don't process OR broadcast
     }
     
     // Check if we've already processed this alert recently (cache hit)
@@ -315,10 +313,16 @@ export class AsyncAIProcessor {
                                       job.originalAlert.context?.timing && 
                                       job.originalAlert.context?.action;
       
+      // AI OR NOTHING: Verify AI actually provided enhanced content
+      if (!aiResponse.enhancedMessage || aiResponse.enhancedMessage.trim().length === 0) {
+        console.warn(`🚫 AI Enhancement FAILED: ${job.sport} ${job.context.alertType} - No enhanced message provided - ALERT SKIPPED`);
+        throw new Error('AI_ENHANCEMENT_FAILED_NO_MESSAGE');
+      }
+
       // Build enhanced alert that preserves AlertComposer enhancements
       const enhancedAlert: AlertResult = {
         ...job.originalAlert,
-        message: aiResponse.enhancedMessage || job.originalAlert.message,
+        message: aiResponse.enhancedMessage, // No fallback - AI must provide message
         context: {
           ...job.originalAlert.context,
           aiEnhanced: true,
@@ -375,19 +379,23 @@ export class AsyncAIProcessor {
       const processingTime = Date.now() - startTime;
       
       if (error.message === 'AI_TIMEOUT') {
-        console.warn(`⏱️ AsyncAI Timeout: ${job.sport} ${job.context.alertType} after ${processingTime}ms`);
+        console.warn(`⏱️ AsyncAI Timeout: ${job.sport} ${job.context.alertType} after ${processingTime}ms - ALERT SKIPPED`);
         this.performanceMetrics.timeoutJobs++;
         
+        // Store result for tracking but don't broadcast alert
         this.results.set(jobId, {
           jobId,
           alertId: job.alertId,
-          enhancedAlert: job.originalAlert, // Return original alert on timeout
+          enhancedAlert: job.originalAlert, // Keep for tracking only - not broadcasted
           processingTime,
           processedAt: Date.now(),
           status: 'timeout',
-          error: 'AI processing timeout',
+          error: 'AI processing timeout - alert skipped',
           wasActuallyEnhanced: false
         });
+        
+        console.log(`🚫 Mandatory AI: Skipping ${job.sport} ${job.context.alertType} due to timeout (quality over quantity)`);
+        // No callback - alert is completely skipped
       } else {
         console.error(`❌ AsyncAI Failed: ${job.sport} ${job.context.alertType} after ${processingTime}ms:`, error);
         this.performanceMetrics.failedJobs++;
@@ -407,16 +415,22 @@ export class AsyncAIProcessor {
           return; // Don't clean up yet
         }
         
+        // After all retries failed - skip the alert entirely
+        console.warn(`🚫 Mandatory AI: Skipping ${job.sport} ${job.context.alertType} after ${job.retries + 1} attempts - ALERT SKIPPED`);
+        
         this.results.set(jobId, {
           jobId,
           alertId: job.alertId,
-          enhancedAlert: job.originalAlert, // Return original alert on failure
+          enhancedAlert: job.originalAlert, // Keep for tracking only - not broadcasted
           processingTime,
           processedAt: Date.now(),
           status: 'failed',
-          error: error.message,
+          error: `AI enhancement failed after ${job.retries + 1} attempts - alert skipped`,
           wasActuallyEnhanced: false
         });
+        
+        console.log(`🚫 Mandatory AI: Quality over quantity - failed alert will not be shown to users`);
+        // No callback - alert is completely skipped
       }
     } finally {
       // Clean up job

@@ -47,19 +47,19 @@ export default class LateInningCloseModule extends BaseAlertModule {
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
     const inningText = gameState.isTopInning ? `Top ${gameState.inning}` : `Bottom ${gameState.inning}`;
     
-    let message = `⚾ CLOSE GAME ALERT! ${inningText} | `;
+    let message = `Late inning close game - ${inningText} - `;
     
     if (scoreDiff === 0) {
-      message += `Game TIED ${gameState.homeScore}-${gameState.awayScore}`;
+      message += `Tied ${gameState.homeScore}-${gameState.awayScore}`;
     } else {
       const leadingTeam = gameState.homeScore > gameState.awayScore ? gameState.homeTeam : gameState.awayTeam;
       message += `${leadingTeam} leads by ${scoreDiff}`;
     }
     
-    message += ` | ${gameState.awayTeam} @ ${gameState.homeTeam}`;
+    message += ` - ${gameState.awayTeam} @ ${gameState.homeTeam}`;
     
     if (gameState.inning === 9) {
-      message += ` | FINAL INNING!`;
+      message += ` - Final inning`;
     }
     
     return {
