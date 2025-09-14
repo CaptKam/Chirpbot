@@ -972,77 +972,32 @@ export class NFLEngine extends BaseSportEngine {
     console.log(`🧹 NFL Alert cleanup complete: removed ${removedCount} old alerts`);
   }
 
-  // Send alerts to both WebSocket and Telegram simultaneously
+  // Send alerts to Telegram - WebSocket broadcasting removed to prevent duplicates
+  // Note: WebSocket broadcasting now handled exclusively by AsyncAI processor for enhancement
   private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
     if (!alerts || alerts.length === 0) return;
     
     try {
-      console.log(`🚀 Simultaneously delivering ${alerts.length} NFL alerts to WebSocket and Telegram`);
+      console.log(`🚀 Delivering ${alerts.length} NFL alerts to Telegram (WebSocket handled by AsyncAI processor)`);
       
-      // Create delivery promises for parallel execution
-      const deliveryPromises: Promise<void>[] = [];
+      // Only Telegram delivery - WebSocket broadcasting removed to prevent duplicates
+      await this.deliverAlertsToTelegram(alerts, gameState);
       
-      // 1. WebSocket delivery promise
-      deliveryPromises.push(this.deliverAlertsToWebSocket(alerts, gameState));
-      
-      // 2. Telegram delivery promise
-      deliveryPromises.push(this.deliverAlertsToTelegram(alerts, gameState));
-      
-      // Execute both deliveries simultaneously
-      await Promise.all(deliveryPromises);
-      
-      console.log(`✅ Synchronized delivery complete for ${alerts.length} alerts`);
+      console.log(`✅ Telegram delivery complete for ${alerts.length} alerts`);
       
     } catch (error) {
-      console.error('❌ Synchronized alert delivery system error:', error);
+      console.error('❌ Alert delivery system error:', error);
     }
   }
 
-  private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    try {
-      const wsBroadcast = (global as any).wsBroadcast;
-      if (!wsBroadcast) {
-        console.warn('📡 WebSocket broadcast function not available');
-        return;
-      }
-
-      for (const alert of alerts) {
-        const alertData = {
-          type: 'new_alert',
-          data: {
-            id: alert.alertKey,
-            type: alert.type,
-            sport: 'NFL',
-            priority: alert.priority,
-            message: alert.message,
-            context: alert.context,
-            gameId: gameState.gameId,
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            quarter: gameState.quarter,
-            timeRemaining: gameState.timeRemaining,
-            down: gameState.down,
-            yardsToGo: gameState.yardsToGo,
-            fieldPosition: gameState.fieldPosition,
-            possession: gameState.possession,
-            weather: gameState.weather ? {
-              temperature: gameState.weather.data?.temperature,
-              condition: gameState.weather.data?.condition,
-              windSpeed: gameState.weather.data?.windSpeed
-            } : null,
-            timestamp: new Date().toISOString()
-          }
-        };
-
-        wsBroadcast(alertData);
-        console.log(`📡 ✅ WebSocket: ${alert.type} alert broadcasted`);
-      }
-    } catch (error) {
-      console.error('📡 ❌ WebSocket delivery error:', error);
-    }
-  }
+  // REMOVED: WebSocket delivery method - prevents duplicate alerts
+  // WebSocket broadcasting now handled exclusively by AsyncAI processor in routes.ts
+  // This ensures all alerts go through AI enhancement before being broadcast
+  // 
+  // private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
+  //   // Method removed to prevent duplicate WebSocket broadcasts
+  //   // All WebSocket delivery now handled by AsyncAI processor for proper enhancement
+  // }
 
   private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
     try {
