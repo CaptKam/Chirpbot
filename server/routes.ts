@@ -520,8 +520,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         wasActuallyEnhanced,
         context: enhancedAlert.context,
         ai: wasActuallyEnhanced && enhancedAlert.context ? {
-          enhancedTitle: enhancedAlert.context.aiTitle || enhancedAlert.message,
-          enhancedMessage: enhancedAlert.context.aiCallToAction || enhancedAlert.message
+          enhancedTitle: enhancedAlert.context.aiRecommendation || enhancedAlert.message || 'Enhanced Alert',
+          enhancedMessage: enhancedAlert.message || enhancedAlert.context.aiRecommendation || 'Alert details',
+          aiInsights: enhancedAlert.context.aiInsights,
+          aiRecommendation: enhancedAlert.context.aiRecommendation,
+          urgencyLevel: enhancedAlert.context.urgencyLevel,
+          bettingContext: enhancedAlert.context.bettingContext,
+          confidence: enhancedAlert.context.confidence
         } : undefined
       },
       timestamp: new Date().toISOString()
