@@ -1,4 +1,6 @@
 
+import * as v8 from 'v8';
+
 // Emergency Memory Monitor - Prevents system crashes from memory overload
 export class EmergencyMemoryMonitor {
   private static instance: EmergencyMemoryMonitor;
@@ -18,7 +20,8 @@ export class EmergencyMemoryMonitor {
 
     setInterval(() => {
       const memUsage = process.memoryUsage();
-      const memPercent = memUsage.heapUsed / memUsage.heapTotal;
+      const heapStats = v8.getHeapStatistics();
+      const memPercent = memUsage.heapUsed / heapStats.heap_size_limit;
 
       if (memPercent > 0.9 && Date.now() - this.lastCleanup > 5000) {
         console.log('🚨 EMERGENCY: Memory at', Math.round(memPercent * 100), '% - forcing cleanup');
