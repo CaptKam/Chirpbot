@@ -423,7 +423,7 @@ export class UnifiedHealthMonitor {
     
     const timeSinceLastAlert = this.metrics.lastAlertGeneratedTime
       ? now.getTime() - this.metrics.lastAlertGeneratedTime.getTime()
-      : Number.MAX_SAFE_INTEGER;
+      : 0; // Default to 0 instead of MAX_SAFE_INTEGER for new systems
     
     if (timeSinceLastCheck > this.MAX_TIME_WITHOUT_CHECK) {
       const seconds = Math.floor(timeSinceLastCheck / 1000);
@@ -432,11 +432,18 @@ export class UnifiedHealthMonitor {
     
     if (timeSinceLastAlert > this.MAX_TIME_WITHOUT_ALERT && this.metrics.checksPerformed > 0) {
       const minutes = Math.floor(timeSinceLastAlert / 60000);
-      warnings.push(`No alerts generated for ${minutes} minutes`);
-      
-      // Log periodic warning
-      if (timeSinceLastAlert % 60000 < this.HEALTH_CHECK_INTERVAL) {
-        console.warn(`⚠️ WARNING: No alerts generated in last ${minutes} minutes. System may be working but no alert conditions met.`);
+      // Only warn if time calculation is reasonable (less than 24 hours)
+      if (minutes < 1440) {
+        warnings.push(`No alerts generated for ${minutes} minutes`);
+        
+        // Log periodic warning every 10 minutes instead of every minute
+        if (timeSinceLastAlert % 600000 < this.HEALTH_CHECK_INTERVAL) {
+          console.warn(`⚠️ WARNING: No alerts generated in last ${minutes} minutes. System may be working but no alert conditions met.`);
+        }
+      } else {
+        // Reset the timestamp if it's unreasonably large
+        console.log('🔧 Resetting invalid alert timestamp');
+        this.metrics.lastAlertGeneratedTime = now;
       }
     }
     
