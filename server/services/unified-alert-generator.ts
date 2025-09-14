@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { sql } from "drizzle-orm";
+import { userMonitoredTeams } from "../../shared/schema";
 import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
 import { NFLApiService } from "./nfl-api";
@@ -213,7 +214,90 @@ export class UnifiedAlertGenerator {
     }
 
     console.log('⚡ Starting production alert monitoring...');
-    // Implementation would start adaptive polling managers
+    
+    try {
+      // Start health monitoring
+      if (this.healthMonitor) {
+        this.healthMonitor.startMonitoring();
+      }
+
+      // Initialize and start adaptive polling for each sport
+      if (this.adaptivePollingManagers) {
+        const today = new Date().toISOString().split('T')[0];
+        
+        for (const [sport, pollingManager] of this.adaptivePollingManagers) {
+          try {
+            console.log(`🚀 Starting ${sport} adaptive polling...`);
+            
+            // Get today's games for this sport
+            let games: any[] = [];
+            switch (sport) {
+              case 'MLB':
+                if (this.mlbApi) {
+                  const gamesResponse = await this.mlbApi.getTodaysGames();
+                  games = Array.isArray(gamesResponse) ? gamesResponse : (gamesResponse as any)?.games || [];
+                }
+                break;
+              case 'NFL':
+                if (this.nflApi) {
+                  const gamesResponse = await this.nflApi.getTodaysGames();
+                  games = Array.isArray(gamesResponse) ? gamesResponse : (gamesResponse as any)?.games || [];
+                }
+                break;
+              case 'NCAAF':
+                if (this.ncaafApi) {
+                  const gamesResponse = await this.ncaafApi.getTodaysGames();
+                  games = Array.isArray(gamesResponse) ? gamesResponse : [];
+                }
+                break;
+              case 'WNBA':
+                if (this.wnbaApi) {
+                  const gamesResponse = await this.wnbaApi.getTodaysGames();
+                  games = Array.isArray(gamesResponse) ? gamesResponse : (gamesResponse as any)?.games || [];
+                }
+                break;
+              case 'CFL':
+                if (this.cflApi) {
+                  const gamesResponse = await this.cflApi.getTodaysGames();
+                  games = Array.isArray(gamesResponse) ? gamesResponse : (gamesResponse as any)?.games || [];
+                }
+                break;
+            }
+
+            // Get user monitored games for this sport - simplified approach
+            const allUserMonitoredGames: any[] = [];
+            
+            try {
+              // Get all monitored games from database directly
+              const allMonitoredGamesFromDB = await db.select().from(userMonitoredTeams);
+              allUserMonitoredGames.push(...allMonitoredGamesFromDB);
+            } catch (error) {
+              console.warn(`Failed to get all monitored games:`, error);
+            }
+            
+            const sportUserMonitoredGames = allUserMonitoredGames.filter((game: any) => 
+              game.sport?.toLowerCase() === sport.toLowerCase()
+            );
+            const userMonitoredGameIds = new Set<string>(sportUserMonitoredGames.map((game: any) => String(game.gameId)));
+
+            console.log(`📊 ${sport}: ${games.length} games today, ${userMonitoredGameIds.size} user-monitored`);
+
+            // Initialize adaptive polling for this sport
+            await pollingManager.initializeGamePolling(games, userMonitoredGameIds);
+            
+            console.log(`✅ ${sport} adaptive polling started successfully`);
+          } catch (error) {
+            console.error(`❌ Failed to start ${sport} polling:`, error);
+            // Continue with other sports even if one fails
+          }
+        }
+      }
+
+      console.log('✅ Production alert monitoring started successfully!');
+    } catch (error) {
+      console.error('❌ Failed to start production alert monitoring:', error);
+      throw error;
+    }
   }
 
   async stopMonitoring(): Promise<void> {
