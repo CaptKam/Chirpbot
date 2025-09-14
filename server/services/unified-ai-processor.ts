@@ -298,7 +298,7 @@ export class UnifiedAIProcessor {
     const highValueTypes = this.highValueAlertTypes[normalizedSport] || [];
     
     const isHighValue = highValueTypes.includes(alertType);
-    const meetsThreshold = !probability || probability >= 30;
+    const meetsThreshold = true; // Always allow enhancement - removed probability filter
     
     const shouldEnhance = isHighValue && meetsThreshold;
     

@@ -207,14 +207,13 @@ export class WNBAEngine extends BaseSportEngine {
 
     for (const alert of rawAlerts) {
       try {
-        // Only enhance high-priority alerts (>= 85 probability)
+        // Process all alerts for AI enhancement to ensure maximum coverage
         const probability = await this.calculateProbability(gameState);
 
-        if (probability >= 85) {
-          console.log(`🧠 WNBA AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
+        console.log(`🧠 WNBA AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
 
-          // Build cross-sport context for WNBA
-          const aiContext: CrossSportContext = {
+        // Build cross-sport context for WNBA
+        const aiContext: CrossSportContext = {
             sport: 'WNBA',
             gameId: gameState.gameId,
             alertType: alert.type,
@@ -238,12 +237,11 @@ export class WNBAEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-          // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
-          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
-            console.warn(`⚠️ WNBA AI Queue failed for ${alert.type}:`, error);
-          });
-          console.log(`🚀 WNBA Async AI: Queued ${alert.type} for background enhancement`);
-        }
+        // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
+        unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+          console.warn(`⚠️ WNBA AI Queue failed for ${alert.type}:`, error);
+        });
+        console.log(`🚀 WNBA Async AI: Queued ${alert.type} for background enhancement`);
         
         // Always return base alert immediately (async enhancement happens via WebSocket)
         enhancedAlerts.push(alert);

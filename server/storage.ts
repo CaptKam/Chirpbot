@@ -417,7 +417,6 @@ export const storage = {
           // AI Enhancement alerts (available for MLB)
           'AI_ENHANCED_MESSAGES': true,
           'AI_PREDICTIVE_AT_BAT': true,
-          'AI_SCORING_PROBABILITY': true,
           'AI_SITUATION_ANALYSIS': true,
           'AI_EVENT_SUMMARIES': true,
           'AI_ROI_ALERTS': true,
@@ -637,7 +636,6 @@ export const storage = {
       const aiPrefs = {
         AI_ENHANCED_MESSAGES: true,  // Default enabled
         AI_PREDICTIVE_AT_BAT: true,  // Default enabled
-        AI_SCORING_PROBABILITY: true,  // Default enabled
         AI_SITUATION_ANALYSIS: true,  // Default enabled
         AI_EVENT_SUMMARIES: true,  // Default enabled
         AI_ROI_ALERTS: true  // Default enabled
@@ -669,7 +667,6 @@ export const storage = {
       return {
         AI_ENHANCED_MESSAGES: true,  // Fallback to enabled
         AI_PREDICTIVE_AT_BAT: true,
-        AI_SCORING_PROBABILITY: true,
         AI_SITUATION_ANALYSIS: true,
         AI_EVENT_SUMMARIES: true,
         AI_ROI_ALERTS: true
