@@ -303,7 +303,7 @@ export class UnifiedAlertGenerator {
             if (['MLB', 'NFL'].includes(sport)) {
               console.log(`🚫 No ${sport} alert types enabled globally - skipping ${sport} monitoring`);
             }
-            continue;
+            return 0;
           }
 
           const usersWithActiveMonitoring = await this.getUsersWithActiveMonitoring(sport).catch(error => {
@@ -316,7 +316,7 @@ export class UnifiedAlertGenerator {
             if (['MLB', 'NFL'].includes(sport)) {
               console.log(`🚫 No users actively monitoring ${sport} games - skipping data fetch`);
             }
-            continue;
+            return 0;
           }
 
           if (this.logLevel !== 'quiet') {
@@ -348,7 +348,7 @@ export class UnifiedAlertGenerator {
             }
           } catch (gameError) {
             console.error(`❌ Error fetching ${sport} games:`, gameError);
-            continue;
+            return 0;
           }
 
           if (games.length > 0) {
