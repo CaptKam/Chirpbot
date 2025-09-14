@@ -341,12 +341,22 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   const clients = new Set<WebSocket>();
 
   wss.on('connection', (ws: WebSocket) => {
-    console.log('🔌 New WebSocket connection established');
+    // Limit connections to prevent spam
+    if (clients.size >= 10) {
+      console.log('🔌 WebSocket connection limit reached, closing new connection');
+      ws.close();
+      return;
+    }
+
+    console.log('🔌 New WebSocket connection established (', clients.size + 1, ' total)');
     clients.add(ws);
 
     ws.on('close', () => {
       clients.delete(ws);
-      console.log('🔌 WebSocket connection closed');
+      // Only log if we still have many connections
+      if (clients.size > 3) {
+        console.log('🔌 WebSocket connection closed (', clients.size, ' remaining)');
+      }
     });
 
     ws.on('error', (error) => {
@@ -355,11 +365,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     });
 
     // Send initial connection confirmation
-    ws.send(JSON.stringify({
-      type: 'connection_established',
-      message: 'Real-time alerts enabled',
-      timestamp: new Date().toISOString()
-    }));
+    try {
+      ws.send(JSON.stringify({
+        type: 'connection_established',
+        message: 'Real-time alerts enabled',
+        timestamp: new Date().toISOString()
+      }));
+    } catch (error) {
+      console.error('Error sending initial WebSocket message:', error);
+      clients.delete(ws);
+    }
   });
 
   console.log('✅ WebSocket server enabled - real-time alerts active');
@@ -751,6 +766,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/games/today', async (req, res) => {
     try {
       const { sport = 'MLB' } = req.query;
+      
+      // Validate sport parameter
+      if (typeof sport !== 'string' || sport.includes('[object')) {
+        return res.status(400).json({ error: 'Invalid sport parameter', games: [], date: new Date().toISOString().split('T')[0] });
+      }
+      
       let games = [];
 
       const { getSeasonAwareSports } = await import('../shared/season-manager');
@@ -829,6 +850,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/games/:gameId/live", async (req, res) => {
     try {
       const { gameId } = req.params;
+      
+      // Validate gameId parameter
+      if (!gameId || gameId === '[object Object]' || gameId.includes('[object') || gameId.length > 50) {
+        return res.status(400).json({ error: 'Invalid gameId parameter' });
+      }
+      
       const { MLBApiService } = await import('./services/mlb-api');
       const mlbService = new MLBApiService();
       const liveData = await mlbService.getEnhancedGameData(gameId);

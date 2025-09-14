@@ -13,6 +13,7 @@ import { AlertGenerator } from "./services/alert-generator";
 import { pool } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
+import { EmergencyMemoryMonitor } from "./emergency-memory-monitor";
 
 // 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
 console.log('🔒 Checking for existing ChirpBot instances...');
@@ -359,6 +360,10 @@ async function startServer() {
       console.log(`🔐 Session secret: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);
       console.log(`💾 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
       console.log('💪 Server is now listening - starting background initialization...');
+
+      // Start emergency memory monitor
+      EmergencyMemoryMonitor.getInstance().start();
+      console.log('🚨 Emergency memory monitor started');
 
       // 🔥 DEFER HEAVY OPERATIONS TO BACKGROUND - This prevents startup timeout!
       setImmediate(async () => {

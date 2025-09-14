@@ -92,7 +92,7 @@ interface EngineFailureRecord {
 export class UnifiedAlertGenerator {
   private mode: 'production' | 'demo';
   private demoUserId?: string;
-  private logLevel: 'verbose' | 'quiet' = 'verbose';
+  private logLevel: 'verbose' | 'quiet' = 'quiet';
 
   // Production-only services
   private mlbApi?: MLBApiService;
@@ -252,12 +252,16 @@ export class UnifiedAlertGenerator {
   // === PRODUCTION PIPELINE ===
 
   private async runProductionPipeline(): Promise<number> {
-    // Check memory before processing
+    // Check memory before processing - more aggressive threshold
     const memUsage = process.memoryUsage();
     const memPercent = memUsage.heapUsed / memUsage.heapTotal;
     
-    if (memPercent > 0.9) {
-      console.log('🧹 High memory usage detected, skipping this polling cycle');
+    if (memPercent > 0.8) {
+      console.log('🧹 High memory usage detected (', Math.round(memPercent * 100), '%), skipping polling cycle');
+      // Force cleanup before returning
+      if (global.gc) {
+        global.gc();
+      }
       return 0;
     }
 

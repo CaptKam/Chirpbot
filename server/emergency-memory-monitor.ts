@@ -1,0 +1,35 @@
+
+// Emergency Memory Monitor - Prevents system crashes from memory overload
+export class EmergencyMemoryMonitor {
+  private static instance: EmergencyMemoryMonitor;
+  private monitoring = false;
+  private lastCleanup = 0;
+
+  static getInstance(): EmergencyMemoryMonitor {
+    if (!this.instance) {
+      this.instance = new EmergencyMemoryMonitor();
+    }
+    return this.instance;
+  }
+
+  start() {
+    if (this.monitoring) return;
+    this.monitoring = true;
+
+    setInterval(() => {
+      const memUsage = process.memoryUsage();
+      const memPercent = memUsage.heapUsed / memUsage.heapTotal;
+
+      if (memPercent > 0.9 && Date.now() - this.lastCleanup > 5000) {
+        console.log('🚨 EMERGENCY: Memory at', Math.round(memPercent * 100), '% - forcing cleanup');
+        
+        // Force aggressive cleanup
+        if (global.gc) {
+          global.gc();
+        }
+        
+        this.lastCleanup = Date.now();
+      }
+    }, 5000); // Check every 5 seconds
+  }
+}
