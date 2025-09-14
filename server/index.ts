@@ -129,7 +129,7 @@ process.on('uncaughtException', (error: any) => {
 
   // 🔒 NO MORE EADDRINUSE EXITS - Our singleton lock prevents these entirely!
   // The singleton lock ensures we never try to bind to a port that's already in use
-  
+
   // For database errors, try to reconnect
   if (error.message?.includes('database') || error.message?.includes('pool')) {
     console.log('🔄 Database error detected - continuing with degraded service');
@@ -158,9 +158,9 @@ let PORT = TARGET_PORT;
 // Check if port is actually available and wait if needed
 const checkPortAvailability = async () => {
   console.log(`🔍 Checking port ${PORT} availability...`);
-  
+
   const isAvailable = await SingleInstanceLock.waitForPortAvailable(PORT, 5);
-  
+
   if (!isAvailable) {
     if (ALLOW_DYNAMIC_PORT && process.env.NODE_ENV === 'development') {
       console.log(`🔄 Port ${PORT} still busy, finding alternative...`);
@@ -174,12 +174,12 @@ const checkPortAvailability = async () => {
       process.exit(0);
     }
   }
-  
+
   console.log(`✅ Port ${PORT} confirmed available`);
 };
 
 // CORS configuration for consistent origin handling
-const corsOrigin = process.env.CANONICAL_ORIGIN || 
+const corsOrigin = process.env.CANONICAL_ORIGIN ||
   (process.env.NODE_ENV === 'production' ? false : [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
 
 app.use(cors({
@@ -251,10 +251,10 @@ async function startServer() {
   try {
     // 🔒 PREFLIGHT PORT CHECK - Ensure port is available before binding
     await checkPortAvailability();
-    
+
     // Create HTTP server once in index.ts only - FIX SHADOWING ISSUE
     httpServer = createServer(app);
-    
+
     // Track connections for proper cleanup
     httpServer.on('connection', (socket: any) => {
       serverSockets.add(socket);
@@ -262,17 +262,17 @@ async function startServer() {
         serverSockets.delete(socket);
       });
     });
-    
+
     const server = await registerRoutes(app, httpServer);
 
     // Setup frontend serving IMMEDIATELY - before server.listen
     const staticRoot = path.resolve(process.cwd(), 'dist/public');
     const indexPath = path.join(staticRoot, 'index.html');
-    
+
     if (fs.existsSync(indexPath)) {
       console.log('✅ Built assets detected - serving static files from', staticRoot);
       app.use(express.static(staticRoot));
-      
+
       // SPA catch-all for all non-API routes
       app.get(/^\/(?!api|admin|realtime-alerts).*$/, (_req, res) => {
         res.sendFile(indexPath);
@@ -312,7 +312,7 @@ async function startServer() {
     // PORT already defined above for CORS
     const HOST = "0.0.0.0"; // Always bind to 0.0.0.0 for Replit deployment
 
-    // Store server reference for graceful shutdown  
+    // Store server reference for graceful shutdown
     (globalThis as any).httpServer = httpServer;
 
     // 🔒 BULLETPROOF ERROR HANDLING - Should never get EADDRINUSE due to preflight checks
@@ -335,18 +335,35 @@ async function startServer() {
 
     // 🔒 SECURE SERVER STARTUP - Port conflicts now impossible!
     server.listen(PORT, HOST, () => {
-      console.log(`🚀 Server running on ${HOST}:${PORT}`);
+      console.log(`🚀 Server is running on ${HOST}:${PORT}`);
+
+      // Start alert monitoring after server is ready
+      setTimeout(async () => {
+        try {
+          console.log('🔄 Starting alert monitoring system...');
+          const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
+          const generator = new UnifiedAlertGenerator({ mode: 'production' });
+          await generator.startMonitoring();
+
+          // Run initial check
+          const alertCount = await generator.generateLiveGameAlerts();
+          console.log(`✅ Alert monitoring started. Generated ${alertCount} initial alerts.`);
+        } catch (error) {
+          console.error('❌ Failed to start alert monitoring:', error);
+        }
+      }, 5000); // Wait 5 seconds for server to fully initialize
+
       console.log(`🔒 Singleton lock active - port conflicts prevented`);
       console.log(`📱 Database connected: ${pool ? 'Yes' : 'No'}`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔐 Session secret: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);
       console.log(`💾 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
       console.log('💪 Server is now listening - starting background initialization...');
-      
+
       // 🔥 DEFER HEAVY OPERATIONS TO BACKGROUND - This prevents startup timeout!
       setImmediate(async () => {
         console.log('🔄 Starting background initialization...');
-        
+
         try {
           // Initialize database with required seed data (skip in production by default)
           if (!skipSeed) {
@@ -363,7 +380,7 @@ async function startServer() {
 
           // Initialize alert generator and AI system
           const alertGenerator = new AlertGenerator();
-          
+
           // AI system now unified through AsyncAIProcessor → CrossSportAIEnhancement
           console.log('✅ AI Services: Unified pipeline active (AsyncAI → CrossSport)');
 
@@ -418,7 +435,7 @@ async function startServer() {
             console.error('⚠️ Alert cleanup failed to start:', cleanupError);
             // Non-critical, continue anyway
           }
-          
+
           console.log('✅ Background initialization complete - all systems operational!');
         } catch (error) {
           console.error('⚠️ Background initialization error:', error);

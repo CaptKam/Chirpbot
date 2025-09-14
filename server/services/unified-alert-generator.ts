@@ -417,8 +417,11 @@ export class UnifiedAlertGenerator {
   // === SHARED HELPER METHODS ===
 
   private normalizeGameState(game: any, sport: string): GameState {
+    // Ensure we always have a valid gameId with proper fallbacks
+    const gameId = game.gameId || game.id || game.gamePk?.toString() || `${sport}_${game.homeTeam?.name || 'home'}_${game.awayTeam?.name || 'away'}_${Date.now()}`;
+    
     return {
-      gameId: game.gameId || game.id,
+      gameId: gameId,
       sport: sport,
       homeTeam: typeof game.homeTeam === 'string' ? game.homeTeam : game.homeTeam?.name || game.homeTeam?.displayName,
       awayTeam: typeof game.awayTeam === 'string' ? game.awayTeam : game.awayTeam?.name || game.awayTeam?.displayName,
