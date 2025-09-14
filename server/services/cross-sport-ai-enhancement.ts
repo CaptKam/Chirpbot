@@ -1,5 +1,6 @@
-import { BasicAI } from './basic-ai';
 import { storage } from '../storage';
+
+// Removed: import { BasicAI } from './basic-ai';
 
 export interface CrossSportContext {
   sport: 'MLB' | 'NFL' | 'NCAAF' | 'WNBA' | 'NBA' | 'CFL';
@@ -14,11 +15,11 @@ export interface CrossSportContext {
   homeScore: number;
   awayScore: number;
   isLive: boolean;
-  
+
   // Time/Period context
   period?: number; // Quarter, Inning, etc.
   timeRemaining?: string;
-  
+
   // MLB-specific
   inning?: number;
   outs?: number;
@@ -29,7 +30,7 @@ export interface CrossSportContext {
     second: boolean;
     third: boolean;
   };
-  
+
   // Football-specific (NFL/NCAAF/CFL)
   quarter?: number;
   down?: number;
@@ -38,7 +39,7 @@ export interface CrossSportContext {
   possession?: string;
   redZone?: boolean;
   goalLine?: boolean;
-  
+
   // Basketball-specific (NBA/WNBA)
   timeLeft?: string;
   shotClock?: number;
@@ -46,7 +47,7 @@ export interface CrossSportContext {
     home: number;
     away: number;
   };
-  
+
   // Environmental
   weather?: {
     temperature: number;
@@ -55,15 +56,15 @@ export interface CrossSportContext {
     humidity?: number;
     impact?: string;
   };
-  
+
   // Betting context
   spread?: number;
   total?: number;
-  
+
   // Championship/playoff context
   playoffImplications?: boolean;
   championshipContext?: string;
-  
+
   // Original message
   originalMessage: string;
   originalContext: any;
@@ -99,7 +100,7 @@ interface AICache {
 }
 
 export class CrossSportAIEnhancement {
-  private basicAI: BasicAI;
+  // Removed: private basicAI: BasicAI;
   private cache = new Map<string, AICache>();
   private readonly CACHE_TTL = 30000; // 30 seconds
   private readonly MAX_CACHE_SIZE = 500;
@@ -122,12 +123,14 @@ export class CrossSportAIEnhancement {
   };
 
   constructor() {
-    this.basicAI = new BasicAI();
-    console.log(`🤖 Cross-Sport AI Enhancement: ${this.basicAI.configured ? 'ENABLED' : 'DISABLED'}`);
+    // Removed: this.basicAI = new BasicAI();
+    // TODO: Implement direct OpenAI API call logic here
+    console.log(`🤖 Cross-Sport AI Enhancement: Initialized (OpenAI integration pending)`);
   }
 
   get configured(): boolean {
-    return this.basicAI.configured;
+    // TODO: Check if OpenAI API key is configured
+    return true; // Placeholder
   }
 
   // Main enhancement method for all sports
@@ -143,7 +146,7 @@ export class CrossSportAIEnhancement {
         return this.getFallbackResponse(context, startTime);
       }
 
-      // Only enhance low-priority alerts and above to enable advanced AI features 
+      // Only enhance low-priority alerts and above to enable advanced AI features
       if (context.probability < 25) {
         console.log(`⏭️ Cross-Sport AI: Skipping ${context.sport} alert (${context.probability}% < 25% threshold)`);
         return this.getFallbackResponse(context, startTime);
@@ -159,11 +162,13 @@ export class CrossSportAIEnhancement {
       }
 
       console.log(`🧠 Cross-Sport AI: Processing ${context.sport} ${context.alertType} alert (${context.probability}%)`);
-      
+
       // Generate sport-specific AI enhancement
       const sportPrompt = this.buildSportSpecificPrompt(context);
-      const aiResponse = await this.basicAI.generateResponse(sportPrompt);
-      
+      // Original: const aiResponse = await this.basicAI.generateResponse(sportPrompt);
+      const aiResponse = await this.callOpenAI(sportPrompt);
+
+
       if (!aiResponse) {
         console.log(`⚠️ Cross-Sport AI: No response from AI for ${context.sport}`);
         this.performanceMetrics.failedEnhancements++;
@@ -172,7 +177,7 @@ export class CrossSportAIEnhancement {
 
       // Parse and structure the AI response
       const enhancement = this.parseAIResponse(aiResponse, context, startTime);
-      
+
       // Cache the response
       this.cacheResponse(cacheKey, enhancement);
       this.performanceMetrics.cacheMisses++;
@@ -181,8 +186,9 @@ export class CrossSportAIEnhancement {
 
       const processingTime = Date.now() - startTime;
       this.performanceMetrics.totalProcessingTime.push(processingTime);
-      this.performanceMetrics.sportMetrics[context.sport].avgTime = 
-        (this.performanceMetrics.sportMetrics[context.sport].avgTime + processingTime) / 2;
+      this.performanceMetrics.sportMetrics[context.sport].avgTime =
+        (this.performanceMetrics.sportMetrics[context.sport].avgTime * (this.performanceMetrics.sportMetrics[context.sport].requests - 1) + processingTime) / this.performanceMetrics.sportMetrics[context.sport].requests;
+
 
       console.log(`✅ Cross-Sport AI: Enhanced ${context.sport} alert in ${processingTime}ms`);
       return enhancement;
@@ -195,10 +201,35 @@ export class CrossSportAIEnhancement {
     }
   }
 
+  // Placeholder for direct OpenAI API call
+  private async callOpenAI(prompt: string): Promise<string | null> {
+    console.log("Calling OpenAI with prompt:", prompt);
+    // TODO: Replace with actual OpenAI API call using a library like 'openai'
+    // Example structure:
+    // import OpenAI from 'openai';
+    // const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // const completion = await openai.chat.completions.create({
+    //   model: "gpt-3.5-turbo", // or gpt-4
+    //   messages: [{ role: "user", content: prompt }],
+    // });
+    // return completion.choices[0].message.content;
+
+    // Mock response for now
+    return `This is a mock response for prompt: "${prompt.substring(0, 50)}..."
+Enhanced Title: Mock Enhanced Title
+Enhanced Message: This is a mock enhanced message for the given context.
+Insight 1: Mock insight 1
+Insight 2: Mock insight 2
+Insight 3: Mock insight 3
+Recommendation: Mock Recommendation
+Factors: Mock Factor 1, Mock Factor 2
+Next Moment: Mock Next Moment`;
+  }
+
   // Build sport-specific prompts with deep contextual understanding
   private buildSportSpecificPrompt(context: CrossSportContext): string {
     const basePrompt = this.buildBasePrompt(context);
-    
+
     switch (context.sport) {
       case 'MLB':
         return this.buildMLBPrompt(context, basePrompt);
@@ -232,12 +263,11 @@ ${context.weather ? `- WEATHER: ${context.weather.temperature}°F, ${context.wea
   }
 
   private buildMLBPrompt(context: CrossSportContext, basePrompt: string): string {
-    const runnersDesc = context.baseRunners ? 
+    const runnersDesc = context.baseRunners ?
       `${context.baseRunners.first ? '1st ' : ''}${context.baseRunners.second ? '2nd ' : ''}${context.baseRunners.third ? '3rd' : ''}`.trim() || 'Bases empty' :
       'Unknown base situation';
-    
-    return `${basePrompt}
-BASEBALL SITUATION:
+
+    return `${basePrompt}BASEBALL SITUATION:
 - ${context.inning}${this.getOrdinal(context.inning || 1)} inning, ${context.outs || 0} outs
 - Count: ${context.balls || 0}-${context.strikes || 0}
 - Runners: ${runnersDesc}
@@ -280,7 +310,7 @@ Emphasize sophisticated NFL strategy, advanced analytics, and professional-level
 
   private buildNCAAFPrompt(context: CrossSportContext, basePrompt: string): string {
     return `${basePrompt}
-COLLEGE FOOTBALL SITUATION:  
+COLLEGE FOOTBALL SITUATION:
 - Q${context.quarter || 1}, ${context.timeRemaining || 'Unknown'} remaining
 ${context.down && context.yardsToGo ? `- ${this.getOrdinal(context.down)} & ${context.yardsToGo}` : ''}
 ${context.fieldPosition ? `- Field position: ${context.fieldPosition}-yard line` : ''}
@@ -359,16 +389,16 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
 
   private parseAIResponse(aiResponse: string, context: CrossSportContext, startTime: number): CrossSportAIResponse {
     const lines = aiResponse.split('\n').filter(line => line.trim());
-    
+
     // Extract structured data from AI response
     const enhancedTitle = this.extractTitle(lines, context);
     const enhancedMessage = this.extractMessage(lines, context);
     const insights = this.extractInsights(lines);
     const recommendation = this.extractRecommendation(lines);
-    
+
     // Calculate win probability based on current score and sport
     const winProbability = this.calculateWinProbability(context);
-    
+
     return {
       sport: context.sport,
       enhancedTitle,
@@ -389,51 +419,51 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
   }
 
   private extractTitle(lines: string[], context: CrossSportContext): string {
-    const titleLine = lines.find(line => 
+    const titleLine = lines.find(line =>
       line.toLowerCase().includes('title') ||
       (line.length < 50 && line.includes('🚨'))
     );
-    return titleLine?.replace(/^.*title:?\s*/i, '').trim() || 
+    return titleLine?.replace(/^.*title:?\s*/i, '').trim() ||
            `🚨 ${context.sport} ${context.alertType.replace('_', ' ')}`;
   }
 
   private extractMessage(lines: string[], context: CrossSportContext): string {
-    const messageLine = lines.find(line => 
+    const messageLine = lines.find(line =>
       line.toLowerCase().includes('message') ||
       (line.length > 20 && line.length < 100)
     );
-    return messageLine?.replace(/^.*message:?\s*/i, '').trim() || 
+    return messageLine?.replace(/^.*message:?\s*/i, '').trim() ||
            context.originalMessage;
   }
 
   private extractInsights(lines: string[]): string[] {
-    return lines.filter(line => 
-      line.match(/^\d\./) || 
-      line.includes('•') || 
+    return lines.filter(line =>
+      line.match(/^\d\./) ||
+      line.includes('•') ||
       line.includes('-') ||
       line.toLowerCase().includes('insight')
-    ).slice(0, 3).map(line => 
+    ).slice(0, 3).map(line =>
       line.replace(/^\d+\.?\s*|^[•-]\s*/g, '').trim()
     );
   }
 
   private extractRecommendation(lines: string[]): string {
-    const recLine = lines.find(line => 
+    const recLine = lines.find(line =>
       line.toLowerCase().includes('recommendation') ||
       line.toLowerCase().includes('bet') ||
       line.toLowerCase().includes('action')
     );
-    return recLine?.replace(/^.*recommendation:?\s*/i, '').trim() || 
+    return recLine?.replace(/^.*recommendation:?\s*/i, '').trim() ||
            'Monitor situation closely';
   }
 
   private calculateWinProbability(context: CrossSportContext): { home: number; away: number } {
     const scoreDiff = context.homeScore - context.awayScore;
     let homeWinProb = 50; // Base 50-50
-    
+
     // Adjust based on score differential
     homeWinProb += scoreDiff * 5;
-    
+
     // Sport-specific adjustments
     switch (context.sport) {
       case 'MLB':
@@ -447,17 +477,17 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
         if (context.quarter && context.quarter >= 4) homeWinProb += scoreDiff * 4;
         break;
     }
-    
+
     // Clamp between 10-90
     homeWinProb = Math.max(10, Math.min(90, homeWinProb));
-    
+
     return { home: homeWinProb, away: 100 - homeWinProb };
   }
 
   private generateBettingContext(context: CrossSportContext): { recommendation: string; confidence: number; reasoning: string[]; } {
     const scoreDiff = Math.abs(context.homeScore - context.awayScore);
     const currentTotal = context.homeScore + context.awayScore;
-    
+
     return {
       recommendation: this.getSportSpecificBettingRec(context, scoreDiff, currentTotal),
       confidence: Math.min(context.probability, 88),
@@ -475,15 +505,15 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
         if (context.redZone) return 'Touchdown scorer prop';
         if (context.goalLine) return 'Goal line stand prop';
         return scoreDiff <= 3 ? 'Live spread value' : 'Total points focus';
-      
+
       case 'NBA':
       case 'WNBA':
         return context.quarter && context.quarter >= 4 ? 'Live total adjustment' : 'Spread opportunity';
-      
+
       case 'MLB':
-        return context.baseRunners?.first || context.baseRunners?.second || context.baseRunners?.third ? 
+        return context.baseRunners?.first || context.baseRunners?.second || context.baseRunners?.third ?
           'Next inning runs' : 'Game total adjustment';
-      
+
       default:
         return 'Monitor live lines';
     }
@@ -491,30 +521,30 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
 
   private getKeyFactors(context: CrossSportContext): string[] {
     const factors: string[] = [];
-    
+
     // Universal factors
     const scoreDiff = Math.abs(context.homeScore - context.awayScore);
     if (scoreDiff <= 3) factors.push('Close game dynamics');
-    
+
     // Sport-specific factors
     switch (context.sport) {
       case 'MLB':
         if (context.inning && context.inning >= 7) factors.push('Late inning pressure');
         if (context.baseRunners?.third) factors.push('Runner on third scoring threat');
         break;
-        
+
       case 'NFL':
         if (context.redZone) factors.push('Red zone efficiency');
         if (context.quarter === 4) factors.push('Fourth quarter execution');
         break;
-        
+
       case 'NBA':
       case 'WNBA':
         if (context.quarter === 4) factors.push('Clutch time performance');
         factors.push('Star player impact');
         break;
     }
-    
+
     return factors.slice(0, 3);
   }
 
@@ -523,17 +553,17 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
       case 'MLB':
         if (context.outs === 2) return 'Two-out rally potential';
         return 'Next at-bat opportunity';
-        
+
       case 'NFL':
         if (context.down === 4) return 'Fourth down decision';
         if (context.redZone) return 'Red zone execution';
         return 'Next possession drive';
-        
+
       case 'NBA':
       case 'WNBA':
         if (context.quarter === 4) return 'Final minutes execution';
         return 'Next scoring run';
-        
+
       default:
         return 'Next critical play';
     }
@@ -546,13 +576,13 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
           leverageIndex: this.calculateMLBLeverage(context),
           runExpectancy: this.calculateRunExpectancy(context)
         };
-        
+
       case 'NFL':
         return {
           winProbabilityAdded: this.calculateNFLWPA(context),
           expectedPoints: this.calculateExpectedPoints(context)
         };
-        
+
       default:
         return {};
     }
@@ -560,41 +590,41 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
 
   private calculateMLBLeverage(context: CrossSportContext): number {
     if (!context.inning) return 1.0;
-    
+
     let leverage = 1.0;
     if (context.inning >= 7) leverage += 0.5;
     if (context.outs === 2) leverage += 0.3;
     if (context.baseRunners?.third) leverage += 0.4;
-    
+
     return Math.round(leverage * 10) / 10;
   }
 
   private calculateRunExpectancy(context: CrossSportContext): number {
     let expectancy = 0.5; // Base expectancy
-    
+
     if (context.baseRunners?.first) expectancy += 0.3;
     if (context.baseRunners?.second) expectancy += 0.6;
     if (context.baseRunners?.third) expectancy += 0.9;
-    
+
     expectancy *= (3 - (context.outs || 0)) / 3; // Adjust for outs
-    
+
     return Math.round(expectancy * 10) / 10;
   }
 
   private calculateNFLWPA(context: CrossSportContext): number {
     if (!context.down || !context.yardsToGo) return 0.05;
-    
+
     let wpa = 0.05; // Base WPA
     if (context.redZone) wpa += 0.1;
     if (context.down === 4) wpa += 0.15;
     if (context.quarter === 4) wpa += 0.1;
-    
+
     return Math.round(wpa * 100) / 100;
   }
 
   private calculateExpectedPoints(context: CrossSportContext): number {
     if (!context.fieldPosition) return 2.0;
-    
+
     // Simple expected points model based on field position
     if (context.fieldPosition <= 10) return 6.5; // Goal line
     if (context.fieldPosition <= 20) return 5.5; // Red zone
@@ -633,7 +663,7 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
     if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
       return cached.response;
     }
-    
+
     // Clean up expired cache entry
     if (cached) this.cache.delete(key);
     return null;
@@ -645,7 +675,7 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey) this.cache.delete(oldestKey);
     }
-    
+
     this.cache.set(key, {
       key,
       response,
@@ -665,11 +695,11 @@ Emphasize CFL-specific rules and Grey Cup championship context.`;
   getPerformanceMetrics() {
     const avgProcessingTime = this.performanceMetrics.totalProcessingTime.length > 0 ?
       this.performanceMetrics.totalProcessingTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.totalProcessingTime.length : 0;
-    
+
     return {
       ...this.performanceMetrics,
       avgProcessingTime: Math.round(avgProcessingTime * 10) / 10,
-      cacheHitRate: this.performanceMetrics.totalRequests > 0 ? 
+      cacheHitRate: this.performanceMetrics.totalRequests > 0 ?
         (this.performanceMetrics.cacheHits / this.performanceMetrics.totalRequests * 100) : 0,
       successRate: this.performanceMetrics.totalRequests > 0 ?
         (this.performanceMetrics.successfulEnhancements / this.performanceMetrics.totalRequests * 100) : 0,

@@ -6,9 +6,6 @@ import { storage } from "../storage";
 import { AlertDeduplication } from "./alert-deduplication";
 import { sendTelegramAlert, type TelegramConfig } from "./telegram";
 import { SettingsCache } from "./settings-cache";
-import { BasicAI } from "./basic-ai";
-import { AIEnhancementService, GameContext } from './ai-enhancements';
-import { AIContextController, AlertContext } from './ai-context-controller';
 import { AdaptivePollingManager } from './adaptive-polling-manager';
 import { getHealthMonitor } from './alert-health-monitor';
 
@@ -147,9 +144,6 @@ export class AlertGenerator {
   private cflApi: any; // Will be initialized dynamically
   private deduplication: AlertDeduplication;
   private settingsCache: SettingsCache;
-  private ai: BasicAI;
-  private aiEnhancementService: AIEnhancementService;
-  private aiContextController: AIContextController;
   private logLevel: 'verbose' | 'quiet' = 'verbose'; // Default to verbose logging
   private healthMonitor = getHealthMonitor();
 
@@ -174,9 +168,6 @@ export class AlertGenerator {
     this.ncaafApi = new NCAAFApiService();
     this.deduplication = new AlertDeduplication();
     this.settingsCache = new SettingsCache(storage);
-    this.ai = new BasicAI();
-    this.aiEnhancementService = new AIEnhancementService();
-    this.aiContextController = new AIContextController();
 
     // Initialize sport engines
     this.sportEngines = new Map();
