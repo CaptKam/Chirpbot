@@ -683,6 +683,34 @@ export class UnifiedAlertGenerator {
                     await storage.createAlert(alertData);
                     totalAlerts++;
                     
+                    // ✅ ONLY broadcast via WebSocket AFTER successful database save
+                    try {
+                      const broadcastFunction = (global as any).broadcastAlertAfterSave;
+                      if (broadcastFunction) {
+                        console.log(`📡 Broadcasting alert after successful DB save: ${alertResult.type}`);
+                        broadcastFunction({
+                          type: 'new_alert',
+                          alert: {
+                            id: alertData.alertKey,
+                            alertKey: alertData.alertKey,
+                            alertType: alertData.type,
+                            type: alertData.type,
+                            sport: alertData.sport,
+                            gameId: alertData.gameId,
+                            score: alertData.score,
+                            message: alertResult.message,
+                            payload: alertData.payload,
+                            createdAt: new Date().toISOString()
+                          },
+                          timestamp: new Date().toISOString()
+                        });
+                      } else {
+                        console.warn('⚠️ WebSocket broadcast function not available');
+                      }
+                    } catch (broadcastError) {
+                      console.error(`❌ WebSocket broadcast failed:`, broadcastError);
+                    }
+                    
                     // Send Telegram notification if configured
                     try {
                       const user = await storage.getUserById(userId);
