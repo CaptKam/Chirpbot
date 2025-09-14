@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import AlertFooter from '@/components/AlertFooter';
-import { AdvancedAlertCard } from '@/components/AdvancedAlertCard';
-import { SimpleAlertCard } from '@/components/SimpleAlertCard';
+import { UniversalAlertCard } from '@/components/UniversalAlertCard';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -100,61 +99,6 @@ export default function AlertsPage() {
     ? (alerts as Alert[] || [])
     : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
 
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'CLOSE_GAME':
-        return <AlertTriangle className="h-4 w-4" />;
-      case 'BASES_LOADED':
-        return <Users className="h-4 w-4" />;
-      case 'HOME_RUN':
-        return <TrendingUp className="h-4 w-4" />;
-      default:
-        return <Bell className="h-4 w-4" />;
-    }
-  };
-
-  const getAlertColor = (priority: number) => {
-    if (priority >= 90) return 'bg-emerald-400 ring-2 ring-emerald-300';
-    if (priority >= 80) return 'bg-emerald-500/80 ring-1 ring-emerald-400';
-    if (priority >= 70) return 'bg-emerald-500/60 ring-1 ring-emerald-500/50';
-    return 'bg-emerald-500/40 ring-1 ring-emerald-500/30';
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
-  // Determine which alert types should use the simple card
-  const shouldUseSimpleCard = (alertType: string) => {
-    const simpleAlertTypes = [
-      // Game Start Events (Sport-specific)
-      'NFL_GAME_START',
-      'MLB_GAME_START',
-      'WNBA_GAME_START',
-      // Game Events (Legacy)
-      'TWO_MINUTE_WARNING',
-      'NCAAF_KICKOFF', 
-      'NCAAF_HALFTIME',
-      'GAME_START',
-      'GAME_END',
-      // Final Game Results
-      'HIGH_SCORING',
-      'SHUTOUT',
-      'BLOWOUT',
-      'CLOSE_GAME',
-      // Time-based
-      'OVERTIME',
-      'FINAL_DRIVE',
-      // Simple milestones
-      'TOUCHDOWN',
-      'FIELD_GOAL',
-      'SAFETY'
-    ];
-    return simpleAlertTypes.includes(alertType);
-  };
 
   if (alertsLoading || statsLoading) {
     return (
@@ -228,98 +172,32 @@ export default function AlertsPage() {
           </div>
         ) : (
           filteredAlerts.map((alert: Alert, index: number) => (
-            <motion.div
+            <div
               key={alert.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={index === filteredAlerts.length - 1 ? 'mb-8' : ''}
-              data-testid={`alert-card-${alert.id}`}
+              className={`mb-4 ${index === filteredAlerts.length - 1 ? 'mb-8' : ''}`}
+              data-testid={`alert-container-${alert.id}`}
             >
-              {shouldUseSimpleCard(alert.type) ? (
-                // Use Simple Card for basic alerts
-                <SimpleAlertCard 
-                  alert={{
-                    id: alert.id,
-                    type: alert.type,
-                    message: alert.message,
-                    sport: alert.sport,
-                    homeTeam: alert.homeTeam,
-                    awayTeam: alert.awayTeam,
-                    priority: alert.priority,
-                    confidence: alert.confidence,
-                    createdAt: alert.createdAt,
-                    context: alert.context
-                  }}
-                  className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl shadow-xl shadow-emerald-500/5"
-                  data-testid={`simple-alert-${alert.id}`}
-                />
-              ) : (
-                // Use Advanced Alert Card for professional V3 display
-                <AdvancedAlertCard 
-                  alertId={alert.id}
-                  alertData={{
-                    id: alert.id,
-                    type: alert.type,
-                    sport: alert.sport,
-                    title: alert.title || '',
-                    description: alert.description || '',
-                    homeTeam: alert.homeTeam,
-                    awayTeam: alert.awayTeam,
-                    homeScore: alert.context?.homeScore || alert.homeScore || alert.context?.scores?.home || 0,
-                    awayScore: alert.context?.awayScore || alert.awayScore || alert.context?.scores?.away || 0,
-                    probability: alert.confidence,
-                    priority: alert.priority,
-                    confidence: alert.confidence,
-                    message: alert.message,
-                    createdAt: alert.createdAt,
-                    timestamp: alert.timestamp || alert.createdAt || new Date().toISOString(),
-                    sentToTelegram: alert.sentToTelegram || false,
-                    context: {
-                      ...alert.context,
-                      // AI Enhancement fields
-                      aiEnhanced: alert.context?.aiEnhanced,
-                      aiMessage: alert.context?.aiMessage,
-                      aiTitle: alert.context?.aiTitle,
-                      aiInsights: alert.context?.aiInsights,
-                      recommendation: alert.context?.aiRecommendation || alert.context?.recommendation,
-                      aiRecommendation: alert.context?.aiRecommendation,
-                      aiCallToAction: alert.context?.aiCallToAction,
-                      aiBettingAdvice: alert.context?.aiBettingAdvice,
-                      aiGameProjection: alert.context?.aiGameProjection,
-                      aiUrgency: alert.context?.aiUrgency,
-                      aiConfidenceScore: alert.context?.aiConfidenceScore,
-                      // MLB specific
-                      inning: alert.context?.inning || alert.inning,
-                      isTopInning: alert.context?.isTopInning || alert.isTopInning,
-                      balls: alert.context?.balls || alert.balls,
-                      strikes: alert.context?.strikes || alert.strikes,
-                      outs: alert.context?.outs || alert.outs,
-                      hasFirst: alert.context?.hasFirst || alert.hasFirst,
-                      hasSecond: alert.context?.hasSecond || alert.hasSecond,
-                      hasThird: alert.context?.hasThird || alert.hasThird,
-                      // Football specific (NFL, NCAAF, CFL)
-                      quarter: alert.context?.quarter,
-                      down: alert.context?.down,
-                      yardsToGo: alert.context?.yardsToGo,
-                      timeRemaining: alert.context?.timeRemaining,
-                      fieldPosition: alert.context?.fieldPosition,
-                      // Basketball specific (NBA)
-                      courtPosition: alert.context?.courtPosition,
-                      // Hockey specific (NHL)
-                      period: alert.context?.period,
-                      rinkPosition: alert.context?.rinkPosition,
-                      // Weather (all sports)
-                      weather: alert.context?.weather || alert.weather || alert.weatherData
-                    },
-                    betbookData: alert.context?.betbookData,
-                    gameInfo: alert.context?.gameInfo
-                  }}
-                  className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl shadow-xl shadow-emerald-500/5"
-                  data-testid={`advanced-alert-${alert.id}`}
-                />
-              )}
-            </motion.div>
+              <UniversalAlertCard 
+                alert={{
+                  id: alert.id,
+                  type: alert.type,
+                  message: alert.message,
+                  gameId: alert.gameId,
+                  sport: alert.sport,
+                  homeTeam: alert.homeTeam,
+                  awayTeam: alert.awayTeam,
+                  confidence: alert.confidence,
+                  priority: alert.priority,
+                  createdAt: alert.createdAt,
+                  homeScore: alert.context?.homeScore || alert.homeScore || alert.context?.scores?.home,
+                  awayScore: alert.context?.awayScore || alert.awayScore || alert.context?.scores?.away,
+                  context: alert.context,
+                  sentToTelegram: alert.sentToTelegram,
+                  weather: alert.context?.weather || alert.weather || alert.weatherData,
+                  gameInfo: alert.context?.gameInfo || alert.gameInfo
+                }}
+              />
+            </div>
           ))
         )}
         </div>
