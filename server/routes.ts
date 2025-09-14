@@ -687,7 +687,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       if (diagnostics.database.userCount === 0) {
         diagnostics.analysis.recommendations.push('No users found - likely empty production database');
-        diagn diagnostics.analysis.recommendations.push('Consider data migration from development to production');
+        diagnostics.analysis.recommendations.push('Consider data migration from development to production');
       }
 
       if (!diagnostics.session.authenticated) {

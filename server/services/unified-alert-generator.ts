@@ -11,6 +11,7 @@ import { sendTelegramAlert, type TelegramConfig } from "./telegram";
 import { SettingsCache } from "./settings-cache";
 import { AdaptivePollingManager } from './adaptive-polling-manager';
 import { getHealthMonitor } from './unified-health-monitor';
+import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
 
 // Import sport engines
@@ -252,24 +253,17 @@ export class UnifiedAlertGenerator {
   // === PRODUCTION PIPELINE ===
 
   private async runProductionPipeline(): Promise<number> {
-    // Check memory before processing - more aggressive threshold
-    const memUsage = process.memoryUsage();
-    const memPercent = memUsage.heapUsed / memUsage.heapTotal;
-    
-    if (memPercent > 0.8) {
-      console.log('🧹 High memory usage detected (', Math.round(memPercent * 100), '%), skipping polling cycle');
-      // Force cleanup before returning
-      if (global.gc) {
-        global.gc();
-      }
-      return 0;
+    // CRITICAL: Record health check FIRST to prevent auto-recovery loops
+    this.healthMonitor?.recordCheck();
+
+    // Check memory and clean up if needed, but DON'T skip the cycle
+    if (memoryManager.shouldCleanup()) {
+      memoryManager.cleanupBackground();
     }
 
     if (this.logLevel !== 'quiet') {
       console.log('⚡ Real-time monitoring: Checking for live game alerts...');
     }
-
-    this.healthMonitor?.recordCheck();
 
     try {
       // Use cached settings with intelligent TTL - no need to clear cache every cycle
@@ -711,7 +705,7 @@ export class UnifiedAlertGenerator {
             }
           }
         } catch (gameError) {
-          console.error(`❌ Error processing ${sport} game ${gameId}:`, gameError);
+          console.error(`❌ Error processing ${sport} game ${game.gameId || game.id}:`, gameError);
         }
       }
       

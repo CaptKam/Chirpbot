@@ -3,12 +3,15 @@
  * Implements intelligent garbage collection and resource cleanup
  */
 
+import * as v8 from 'v8';
+
 export class MemoryManager {
   private static instance: MemoryManager;
-  private gcThreshold = 0.75; // Trigger GC at 75% memory - more aggressive
-  private forceGcThreshold = 0.85; // Force GC at 85% memory  
+  private gcThreshold = 0.85; // Trigger GC at 85% of heap limit
+  private forceGcThreshold = 0.92; // Force GC at 92% of heap limit  
   private lastGcTime = Date.now();
   private gcCooldown = 15000; // 15 seconds between GC attempts
+  private lastCriticalLog = 0; // Prevent log spam
 
   private constructor() {}
 
@@ -20,11 +23,12 @@ export class MemoryManager {
   }
 
   /**
-   * Get current memory usage percentage
+   * Get current memory usage percentage against V8 heap limit
    */
   getMemoryUsage(): number {
     const memUsage = process.memoryUsage();
-    return memUsage.heapUsed / memUsage.heapTotal;
+    const heapStats = v8.getHeapStatistics();
+    return memUsage.heapUsed / heapStats.heap_size_limit;
   }
 
   /**
@@ -45,19 +49,21 @@ export class MemoryManager {
    */
   cleanup(): void {
     const memBefore = this.getMemoryUsage();
+    const memUsage = process.memoryUsage();
+    const heapMB = Math.round(memUsage.heapUsed / 1024 / 1024);
 
     if (memBefore > this.forceGcThreshold) {
-      // Force aggressive cleanup - only log once per minute
-      if (memBefore > 0.85 && (Date.now() - this.lastGcTime) > 60000) {
-        console.log('🧹 CRITICAL: Force garbage collection at', Math.round(memBefore * 100) + '%');
+      // Force aggressive cleanup - log max once per 5 minutes
+      const now = Date.now();
+      if (now - this.lastCriticalLog > 300000) {
+        console.log(`🧹 CRITICAL: Force garbage collection at ${Math.round(memBefore * 100)}% (${heapMB}MB)`);
+        this.lastCriticalLog = now;
       }
 
-      // Force aggressive cleanup
       if (global.gc) {
         global.gc();
       }
     } else if (memBefore > this.gcThreshold) {
-      // Standard cleanup - minimal logging
       if (global.gc) {
         global.gc();
       }
@@ -66,10 +72,24 @@ export class MemoryManager {
     this.lastGcTime = Date.now();
 
     const memAfter = this.getMemoryUsage();
-    const freed = (memBefore - memAfter) * 100;
+    const freedPercent = (memBefore - memAfter) * 100;
 
-    if (freed > 0) {
-      console.log(`💾 Memory cleanup: ${Math.round(freed)}% freed (${Math.round(memBefore * 100)}% → ${Math.round(memAfter * 100)}%)`);
+    // Only log meaningful cleanup (>1% freed)
+    if (freedPercent > 1) {
+      const afterMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+      console.log(`💾 Memory cleanup: ${Math.round(freedPercent)}% freed (${heapMB}MB → ${afterMB}MB)`);
+    }
+  }
+
+  /**
+   * Background cleanup for non-Express contexts
+   */
+  cleanupBackground(): void {
+    const memPercent = this.getMemoryUsage();
+    if (memPercent > this.gcThreshold) {
+      if (global.gc) {
+        global.gc();
+      }
     }
   }
 
@@ -100,15 +120,17 @@ export class MemoryManager {
    */
   getStats() {
     const memUsage = process.memoryUsage();
+    const heapStats = v8.getHeapStatistics();
     const memPercent = this.getMemoryUsage();
 
     return {
       percentage: Math.round(memPercent * 100),
       heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
       heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
+      heapLimit: Math.round(heapStats.heap_size_limit / 1024 / 1024), // MB
       lastGC: new Date(this.lastGcTime).toISOString(),
       needsCleanup: this.shouldCleanup(),
-      status: memPercent > 0.99 ? 'critical' :  // Only critical above 99%
+      status: memPercent > this.forceGcThreshold ? 'critical' :
              memPercent > this.gcThreshold ? 'warning' : 'healthy'
     };
   }
