@@ -96,7 +96,7 @@ export default class GameStartModule extends BaseAlertModule {
       alertKey,
       type: 'MLB_GAME_START',
       priority: 75,
-      message: `Game starting - ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+      message: `⚾ FIRST PITCH: ${gameState.awayTeam?.name || gameState.awayTeam} @ ${gameState.homeTeam?.name || gameState.homeTeam} | Fresh betting lines, weather locked, full game props active`,
       context
     };
   }
