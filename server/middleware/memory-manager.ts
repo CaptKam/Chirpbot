@@ -5,20 +5,20 @@
 
 export class MemoryManager {
   private static instance: MemoryManager;
-  private gcThreshold = 0.85; // Trigger GC at 85% memory
-  private forceGcThreshold = 0.98; // Force GC at 98% memory
+  private gcThreshold = 0.92; // Trigger GC at 92% memory - less aggressive
+  private forceGcThreshold = 0.97; // Force GC at 97% memory
   private lastGcTime = Date.now();
   private gcCooldown = 30000; // 30 seconds between GC attempts
-  
+
   private constructor() {}
-  
+
   static getInstance(): MemoryManager {
     if (!MemoryManager.instance) {
       MemoryManager.instance = new MemoryManager();
     }
     return MemoryManager.instance;
   }
-  
+
   /**
    * Get current memory usage percentage
    */
@@ -26,32 +26,32 @@ export class MemoryManager {
     const memUsage = process.memoryUsage();
     return memUsage.heapUsed / memUsage.heapTotal;
   }
-  
+
   /**
    * Check if memory cleanup is needed
    */
   shouldCleanup(): boolean {
     const memPercent = this.getMemoryUsage();
     const timeSinceLastGc = Date.now() - this.lastGcTime;
-    
+
     return (
       (memPercent > this.gcThreshold && timeSinceLastGc > this.gcCooldown) ||
       memPercent > this.forceGcThreshold
     );
   }
-  
+
   /**
    * Perform memory cleanup and garbage collection
    */
   cleanup(): void {
     const memBefore = this.getMemoryUsage();
-    
+
     if (memBefore > this.forceGcThreshold) {
       // Reduce log spam - only log if memory is really critical
       if (memBefore > 0.90) {
         console.log('🧹 CRITICAL: Force garbage collection at', Math.round(memBefore * 100) + '%');
       }
-      
+
       // Force aggressive cleanup
       if (global.gc) {
         global.gc();
@@ -61,23 +61,23 @@ export class MemoryManager {
       if (memBefore > 0.88) {
         console.log('🧹 Memory cleanup triggered at', Math.round(memBefore * 100) + '%');
       }
-      
+
       // Standard cleanup
       if (global.gc) {
         global.gc();
       }
     }
-    
+
     this.lastGcTime = Date.now();
-    
+
     const memAfter = this.getMemoryUsage();
     const freed = (memBefore - memAfter) * 100;
-    
+
     if (freed > 0) {
       console.log(`💾 Memory cleanup: ${Math.round(freed)}% freed (${Math.round(memBefore * 100)}% → ${Math.round(memAfter * 100)}%)`);
     }
   }
-  
+
   /**
    * Auto-cleanup middleware for Express routes
    */
@@ -87,7 +87,7 @@ export class MemoryManager {
       if (this.shouldCleanup()) {
         this.cleanup();
       }
-      
+
       // Cleanup after response
       res.on('finish', () => {
         if (this.shouldCleanup()) {
@@ -95,18 +95,18 @@ export class MemoryManager {
           setImmediate(() => this.cleanup());
         }
       });
-      
+
       next();
     };
   }
-  
+
   /**
    * Get memory stats for health monitoring
    */
   getStats() {
     const memUsage = process.memoryUsage();
     const memPercent = this.getMemoryUsage();
-    
+
     return {
       percentage: Math.round(memPercent * 100),
       heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
