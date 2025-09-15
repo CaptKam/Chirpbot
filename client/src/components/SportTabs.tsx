@@ -22,15 +22,11 @@ export function SportTabs({
     onSportChangeCallback?.();
   };
 
-  // Debug: Log sports array to console
-  console.log('SportTabs: Received sports array:', sports, 'Count:', sports.length);
-
   return (
     <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
       <div className="flex overflow-x-auto scrollbar-thin scrollbar-track-slate-800 scrollbar-thumb-slate-600">
         {sports.map((sport) => {
           const colors = getSportTabColors(sport);
-          console.log(`SportTabs: Rendering sport tab for ${sport}`);
           return (
             <button
               key={sport}
