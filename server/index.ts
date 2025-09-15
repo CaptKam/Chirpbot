@@ -354,6 +354,26 @@ async function startServer() {
         }
       }, 5000); // Wait 5 seconds for server to fully initialize
 
+      // Start Weather-on-Live service after server is ready
+      setTimeout(async () => {
+        try {
+          console.log('🌤️ Starting Weather-on-Live service...');
+          const { weatherOnLiveService } = await import('./services/weather-on-live-service');
+          
+          // Connect WebSocket server for real-time weather alerts  
+          if ((globalThis as any).wss) {
+            weatherOnLiveService.setWebSocketServer((globalThis as any).wss);
+            console.log(`✅ Weather-on-Live service started and connected to WebSocket`);
+          } else {
+            console.log(`⚠️ Weather-on-Live service started but WebSocket not available`);
+          }
+          
+          console.log(`🌤️ Weather monitoring will start automatically when games go LIVE`);
+        } catch (error) {
+          console.error('❌ Failed to start Weather-on-Live service:', error);
+        }
+      }, 6000); // Wait 6 seconds to start after alert monitoring
+
       console.log(`🔒 Singleton lock active - port conflicts prevented`);
       console.log(`📱 Database connected: ${pool ? 'Yes' : 'No'}`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);

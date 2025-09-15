@@ -2328,6 +2328,60 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     });
   });
 
+  // Weather-on-Live monitoring status endpoint
+  app.get('/api/weather-on-live/status', requireAuthentication, async (req, res) => {
+    try {
+      const { weatherOnLiveService } = await import('./services/weather-on-live-service');
+      const status = weatherOnLiveService.getMonitoringStatus();
+      
+      res.json({
+        ...status,
+        healthMetrics: weatherOnLiveService.getHealthMetrics(),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error fetching weather-on-live status:', error);
+      res.status(500).json({ error: 'Failed to fetch weather monitoring status' });
+    }
+  });
+
+  // Weather-on-Live monitoring control endpoint
+  app.post('/api/weather-on-live/control/:gameId/:action', requireAuthentication, async (req, res) => {
+    try {
+      const { weatherOnLiveService } = await import('./services/weather-on-live-service');
+      const { gameId, action } = req.params;
+      
+      let result = false;
+      let message = '';
+      
+      switch (action) {
+        case 'arm':
+          result = await weatherOnLiveService.armWeatherMonitoring(gameId, 'CUSTOM');
+          message = result ? 'Weather monitoring armed' : 'Failed to arm weather monitoring';
+          break;
+        
+        case 'disarm':
+          result = await weatherOnLiveService.disarmWeatherMonitoring(gameId);
+          message = result ? 'Weather monitoring disarmed' : 'Failed to disarm weather monitoring';
+          break;
+        
+        default:
+          return res.status(400).json({ error: 'Invalid action. Use "arm" or "disarm"' });
+      }
+      
+      res.json({
+        success: result,
+        message,
+        gameId,
+        action,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error controlling weather-on-live:', error);
+      res.status(500).json({ error: 'Failed to control weather monitoring' });
+    }
+  });
+
   // V3-16: Performance Metrics Dashboard API
   app.get('/api/v3/performance-metrics', requireAuthentication, async (req, res) => {
     try {

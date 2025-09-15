@@ -286,6 +286,7 @@ export class GameStateManager {
   private calendarSync?: CalendarSyncService;
   private engineManager?: EngineLifecycleManager;
   private weatherService?: WeatherService;
+  private weatherOnLiveService?: any; // WeatherOnLiveService - avoiding circular import
   private wss?: WebSocketServer;
   
   // Performance tracking
@@ -315,6 +316,11 @@ export class GameStateManager {
   setWeatherService(service: WeatherService): void {
     this.weatherService = service;
     console.log('✅ Weather service connected to GameStateManager');
+  }
+
+  setWeatherOnLiveService(service: any): void {
+    this.weatherOnLiveService = service;
+    console.log('✅ Weather-on-Live service connected to GameStateManager');
   }
 
   setWebSocketServer(wss: WebSocketServer): void {
@@ -383,8 +389,10 @@ export class GameStateManager {
       await this.engineManager.terminateEngines(gameInfo);
     }
     
-    // Disarm weather monitoring
-    if (this.weatherService && gameInfo.weatherArmed) {
+    // Stop weather monitoring
+    if (this.weatherOnLiveService && gameInfo.weatherArmed) {
+      await this.weatherOnLiveService.stopWeatherMonitoring(gameId);
+    } else if (this.weatherService && gameInfo.weatherArmed) {
       await this.weatherService.disarmWeatherMonitoring(gameId);
     }
     
@@ -668,11 +676,11 @@ export class GameStateManager {
         await this.engineManager.stopEngines(gameInfo);
       }
       
-      // Handle weather arming for outdoor sports
+      // Handle weather-on-live monitoring for outdoor sports
       if (gameInfo.currentState === RuntimeGameState.LIVE && !gameInfo.weatherArmed) {
-        await this.armWeatherMonitoring(gameInfo);
+        await this.startWeatherOnLiveMonitoring(gameInfo);
       } else if (gameInfo.currentState === RuntimeGameState.FINAL && gameInfo.weatherArmed) {
-        await this.disarmWeatherMonitoring(gameInfo);
+        await this.stopWeatherOnLiveMonitoring(gameInfo);
       }
       
       // Schedule next poll
@@ -745,6 +753,43 @@ export class GameStateManager {
 
   // === WEATHER INTEGRATION ===
 
+  private async startWeatherOnLiveMonitoring(gameInfo: GameStateInfo): Promise<void> {
+    if (!this.weatherOnLiveService || gameInfo.weatherArmed) return;
+    
+    // Only monitor weather for outdoor sports
+    const outdoorSports = ['MLB', 'NFL', 'NCAAF', 'CFL'];
+    if (!outdoorSports.includes(gameInfo.sport)) return;
+    
+    try {
+      const success = await this.weatherOnLiveService.startWeatherMonitoring(gameInfo);
+      if (success) {
+        gameInfo.weatherArmed = true;
+        gameInfo.weatherArmReason = WeatherArmReason.CUSTOM;
+        gameInfo.weatherArmedAt = new Date();
+        console.log(`🌤️ Weather-on-Live monitoring started for game ${gameInfo.gameId} (${gameInfo.sport})`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to start weather-on-live monitoring for game ${gameInfo.gameId}:`, error);
+    }
+  }
+
+  private async stopWeatherOnLiveMonitoring(gameInfo: GameStateInfo): Promise<void> {
+    if (!this.weatherOnLiveService || !gameInfo.weatherArmed) return;
+    
+    try {
+      const success = await this.weatherOnLiveService.stopWeatherMonitoring(gameInfo.gameId);
+      if (success) {
+        gameInfo.weatherArmed = false;
+        gameInfo.weatherArmReason = undefined;
+        gameInfo.weatherArmedAt = undefined;
+        console.log(`🌤️ Weather-on-Live monitoring stopped for game ${gameInfo.gameId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to stop weather-on-live monitoring for game ${gameInfo.gameId}:`, error);
+    }
+  }
+
+  // Legacy weather integration methods (keep for compatibility)
   private async armWeatherMonitoring(gameInfo: GameStateInfo): Promise<void> {
     if (!this.weatherService || gameInfo.weatherArmed) return;
     
