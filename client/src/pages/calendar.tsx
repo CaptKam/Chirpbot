@@ -72,7 +72,7 @@ import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, is
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
-import { useGamesAvailability } from '@/hooks/useGamesAvailability';
+
 import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
 
@@ -172,8 +172,6 @@ export default function Calendar() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
   
-  const { hasGamesWithinTwoDays, hasTomorrowGames } = useGamesAvailability();
-
   // Fetch today's games
   const { data: todayGamesData, isLoading: isLoadingToday } = useQuery<GameDay>({
     queryKey: ["/api/games/today", { sport: activeSport, date: format(selectedDate, 'yyyy-MM-dd') }],
@@ -188,23 +186,7 @@ export default function Calendar() {
     },
   });
 
-  // Fetch tomorrow's games when there are games within two days
-  const { data: tomorrowGamesData, isLoading: isLoadingTomorrow } = useQuery<GameDay>({
-    queryKey: ["/api/games/today", { sport: activeSport, date: format(addDays(selectedDate, 1), 'yyyy-MM-dd') }],
-    queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch games");
-      return response.json();
-    },
-    enabled: hasGamesWithinTwoDays && hasTomorrowGames && isSameDay(selectedDate, new Date()),
-  });
-
   const todayGames = todayGamesData?.games || [];
-  const tomorrowGames = tomorrowGamesData?.games || [];
   
   // Apply team filter if active
   const filteredTodayGames = teamFilter 
@@ -217,7 +199,7 @@ export default function Calendar() {
     : todayGames;
     
   const games = filteredTodayGames;
-  const isLoading = isLoadingToday || (hasGamesWithinTwoDays && hasTomorrowGames && isLoadingTomorrow);
+  const isLoading = isLoadingToday;
 
   // Fetch alerts for badge count
   const { data: alerts } = useQuery({
@@ -581,72 +563,7 @@ export default function Calendar() {
             })}
             </div>
 
-            {/* Tomorrow's Games Section */}
-            {hasGamesWithinTwoDays && hasTomorrowGames && isSameDay(selectedDate, new Date()) && tomorrowGames.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 pt-6 border-t border-white/10">
-                  <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
-                    Tomorrow's Games
-                  </h2>
-                  <div className="px-3 py-1 rounded-xl bg-blue-500/20 ring-1 ring-blue-500/30 backdrop-blur-sm">
-                    <span className="text-sm font-semibold text-blue-300" data-testid="text-tomorrow-date">
-                      {format(addDays(selectedDate, 1), 'MMMM d, yyyy')}
-                    </span>
-                  </div>
-                </div>
-                
-                {tomorrowGames
-                  .sort((a, b) => {
-                    // Sort by start time
-                    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-                  })
-                  .map((game, index) => {
-                  const isSelected = selectedGames.has(game.id);
-                  const startTime = new Date(game.startTime);
-                  const formattedTime = isNaN(startTime.getTime()) 
-                    ? 'TBD'
-                    : startTime.toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit' 
-                      });
-
-                  // Validate game data before rendering
-                  const gameId = game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-tomorrow-game-${index}`;
-                  const awayTeamName = game.awayTeam?.name || 'TBD';
-                  const homeTeamName = game.homeTeam?.name || 'TBD';
-                  const awayTeamAbbr = extractTeamAbbreviation(awayTeamName);
-                  const homeTeamAbbr = extractTeamAbbreviation(homeTeamName);
-
-                  return (
-                    <div key={gameId} className="relative">
-                      <GameCardTemplate
-                        gameId={gameId}
-                        homeTeam={{
-                          name: homeTeamName,
-                          abbreviation: homeTeamAbbr,
-                          score: undefined // Tomorrow's games don't have scores
-                        }}
-                        awayTeam={{
-                          name: awayTeamName,
-                          abbreviation: awayTeamAbbr,
-                          score: undefined
-                        }}
-                        sport={activeSport}
-                        status="scheduled"
-                        startTime={game.startTime}
-                        venue={game.venue}
-                        isSelected={isSelected}
-                        onSelect={() => toggleGameSelection(game.id)}
-                        size="lg"
-                        showWeather={true}
-                        showVenue={true}
-                        showEnhancedMLB={game.status === 'live'} // Don't show baseball diamond for tomorrow's games
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            
           </div>
         )}
       </div>
