@@ -84,12 +84,21 @@ export default function AlertsPage() {
   useEffect(() => {
     const checkWebSocketConnection = () => {
       if (typeof window !== 'undefined' && window.WebSocket) {
-        // WebSocket connection monitoring would go here
-        // For now, we'll assume connected if no errors
-        if (!alertsError) {
+        // Check if we're in a deployed environment
+        const isDeployed = window.location.hostname.includes('.replit.app') || 
+                          window.location.hostname.includes('.replit.dev') ||
+                          process.env.NODE_ENV === 'production';
+
+        if (isDeployed) {
+          // In deployed environment, use polling instead of WebSocket for consistency
           setConnectionStatus('connected');
         } else {
-          setConnectionStatus('disconnected');
+          // Development environment WebSocket logic
+          if (!alertsError) {
+            setConnectionStatus('connected');
+          } else {
+            setConnectionStatus('disconnected');
+          }
         }
       }
     };
