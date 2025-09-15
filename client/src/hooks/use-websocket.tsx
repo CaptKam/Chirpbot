@@ -8,7 +8,8 @@ interface WebSocketMessage {
 }
 
 export function useWebSocket() {
-  const [isConnected, setIsConnected] = useState(false);
+  // Disabled WebSocket - using HTTP polling instead
+  const [isConnected, setIsConnected] = useState(true); // Always show as connected for HTTP polling
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const queryClient = useQueryClient();
@@ -229,27 +230,17 @@ export function useWebSocket() {
   }, [queryClient, getCachedUserSettings]);
 
   useEffect(() => {
-    connect();
+    // WebSocket disabled - using HTTP polling instead
+    console.log('Using HTTP polling for real-time updates');
+    setIsConnected(true);
+    setConnectionError(null);
 
-    // Proper cleanup on unmount
     return () => {
-      // Clear any pending reconnection
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-
-      // Close WebSocket connection properly
-      if (wsRef.current) {
-        wsRef.current.close(1000, 'Component unmounting');
-        wsRef.current = null;
-      }
-
-      // Clear settings cache
+      // Cleanup any remaining refs
       userSettingsCache.current = null;
       settingsCacheTimestamp.current = 0;
     };
-  }, [connect]);
+  }, []);
 
   return {
     isConnected,

@@ -72,12 +72,14 @@ export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF' | 'WNBA' | 'CFL'>('all');
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
 
-  // Fetch alerts using React Query
+  // Fetch alerts using React Query with optimized polling
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts, error: alertsError } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 10000, // Reduced to 10 seconds for near real-time
+    refetchIntervalInBackground: true, // Keep polling when tab is inactive
     retry: 3,
     retryDelay: 1000,
+    staleTime: 5000, // Consider data stale after 5 seconds
   });
 
   // Monitor WebSocket connection
