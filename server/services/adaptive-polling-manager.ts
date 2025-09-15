@@ -113,18 +113,18 @@ export class AdaptivePollingManager {
     this.apiServices = apiServices;
     this.mlbEngine = new MLBEngine(); // Initialize MLB engine for alert generation
     console.log(`🎯 AdaptivePollingManager initialized for ${sport} with intelligent intervals`);
-    
+
     // Initialize MLB engine modules asynchronously after construction
     if (sport === 'MLB') {
       this.initializeMLBEngineModules();
     }
   }
-  
+
   // Initialize MLB engine with all available alert modules
   private async initializeMLBEngineModules(): Promise<void> {
     try {
       console.log(`🔧 Initializing MLB engine alert modules for adaptive polling...`);
-      
+
       // Load all available MLB alert modules
       const allMLBAlerts = [
         'MLB_GAME_START',
@@ -148,10 +148,10 @@ export class AdaptivePollingManager {
         'MLB_SCORING_OPPORTUNITY',
         'MLB_PITCHING_CHANGE'
       ];
-      
+
       // Initialize all modules for the polling engine
       await this.mlbEngine.initializeUserAlertModules(allMLBAlerts);
-      
+
       console.log(`✅ MLB engine initialized with ${allMLBAlerts.length} alert modules for adaptive polling`);
     } catch (error) {
       console.error(`❌ Failed to initialize MLB engine modules:`, error);
@@ -163,15 +163,15 @@ export class AdaptivePollingManager {
    */
   async initializeGamePolling(games: any[], userMonitoredGameIds: Set<string>): Promise<void> {
     console.log(`🔧 Initializing adaptive polling for ${games.length} games`);
-    
+
     for (const game of games) {
       const gameId = game.id || game.gameId;
       const gameState = this.analyzeGameState(game);
       const isUserMonitored = userMonitoredGameIds.has(gameId);
-      
+
       // Calculate initial criticality
       const criticality = this.calculateGameCriticality(game);
-      
+
       const pollingState: GamePollingState = {
         gameId,
         sport: this.sport,
@@ -192,7 +192,7 @@ export class AdaptivePollingManager {
       };
 
       this.gameStates.set(gameId, pollingState);
-      
+
       // Only start individual polling for OFFICIALLY live games (not just critical scheduled games)
       if (gameState === 'live') {
         await this.startIndividualPolling(gameId);
@@ -201,7 +201,7 @@ export class AdaptivePollingManager {
 
     // Start batch polling for non-live games
     this.startBatchPolling();
-    
+
     console.log(`✅ Adaptive polling initialized: ${this.gameStates.size} games tracked`);
     this.logPollingStatistics();
   }
@@ -211,26 +211,26 @@ export class AdaptivePollingManager {
    */
   private analyzeGameState(game: any): 'scheduled' | 'live' | 'final' | 'delayed' | 'suspended' {
     const status = game.status?.toLowerCase() || '';
-    
+
     // Check for final state first
     if (status.includes('final') || status.includes('completed')) {
       return 'final';
     }
-    
+
     if (status.includes('delayed') || status.includes('postponed')) {
       return 'delayed';
     }
-    
+
     if (status.includes('suspended')) {
       return 'suspended';
     }
-    
+
     // For MLB games, check actual game data to determine if live
     if (this.sport === 'MLB') {
       const inning = game.inning || 0;
       const homeScore = game.homeTeam?.score || game.homeScore || 0;
       const awayScore = game.awayTeam?.score || game.awayScore || 0;
-      
+
       // Game is live if:
       // - Inning > 1 (game has progressed beyond first inning)
       // - OR inning === 1 AND there's a score (runs have been scored)
@@ -238,24 +238,24 @@ export class AdaptivePollingManager {
       if (inning > 1 || (inning === 1 && (homeScore > 0 || awayScore > 0))) {
         return 'live';
       }
-      
+
       // Also check if isLive flag is explicitly set
       if (game.isLive === true) {
         return 'live';
       }
     }
-    
+
     // STRICT: Only mark as live if status explicitly indicates it's live AND not in pre-game state
     const isPreGameOrScheduled = status.includes('preview') || status.includes('pre-game') || 
                                 status.includes('scheduled') || status.includes('warmup');
-    
+
     // Must be explicitly marked as live by official status
     const isOfficiallyLive = status.includes('live') || status.includes('progress') || status.includes('inning');
-    
+
     if (isOfficiallyLive && !isPreGameOrScheduled) {
       return 'live';
     }
-    
+
     return 'scheduled';
   }
 
@@ -733,16 +733,16 @@ export class AdaptivePollingManager {
   ): number {
     const sportConfig = this.SPORT_POLLING_CONFIGS[this.sport];
     let baseInterval = sportConfig[gameState].interval;
-    
+
     // Apply criticality multiplier
     const multiplier = this.CRITICALITY_MULTIPLIERS[criticality];
     baseInterval = Math.round(baseInterval * multiplier);
-    
+
     // User-monitored games get priority (25% faster, subject to minimum limits)
     if (isUserMonitored) {
       baseInterval = Math.round(baseInterval * 0.75);
     }
-    
+
     // Enforce sport-specific minimum intervals for safety
     const minimums = this.sport === 'NFL' ? {
       live: 1000,    // 1s minimum for NFL live (V3-2)
@@ -775,7 +775,7 @@ export class AdaptivePollingManager {
       delayed: 3000,
       suspended: 3000
     };
-    
+
     return Math.max(baseInterval, minimums[gameState]);
   }
 
@@ -795,7 +795,7 @@ export class AdaptivePollingManager {
     const poll = async () => {
       try {
         await this.pollIndividualGame(gameId);
-        
+
         // Schedule next poll if still needed
         const updatedState = this.gameStates.get(gameId);
         if (updatedState && (updatedState.currentState === 'live' || updatedState.criticality === 'critical')) {
@@ -813,7 +813,7 @@ export class AdaptivePollingManager {
 
     // Start polling immediately
     await poll();
-    
+
     console.log(`🚀 Individual polling started for game ${gameId} (${state.pollInterval}ms)`);
   }
 
@@ -831,7 +831,7 @@ export class AdaptivePollingManager {
 
     try {
       let enhancedData = null;
-      
+
       // Use sport-specific API service
       if (this.sport === 'MLB' && this.apiServices.MLB) {
         enhancedData = await this.apiServices.MLB.getEnhancedGameData(gameId);
@@ -844,12 +844,12 @@ export class AdaptivePollingManager {
       } else if (this.sport === 'NBA' && this.apiServices.NBA) {
         enhancedData = await this.apiServices.NBA.getEnhancedGameData(gameId);
       }
-      
+
       if (enhancedData && !enhancedData.error) {
         // Update game state and detect transitions
         await this.updateGameState(gameId, enhancedData);
         state.lastPolled = now;
-        
+
         console.log(`🔄 ${this.sport} Individual poll: Game ${gameId} (${state.currentState}/${state.criticality})`);
       }
     } catch (error) {
@@ -869,7 +869,7 @@ export class AdaptivePollingManager {
       } catch (error) {
         console.error('❌ Batch polling error:', error);
       }
-      
+
       // Schedule next batch
       setTimeout(batchPoll, BATCH_INTERVAL);
     };
@@ -884,7 +884,7 @@ export class AdaptivePollingManager {
    */
   private async batchPollGames(): Promise<void> {
     const now = Date.now();
-    
+
     // Find games ready for batch polling
     const gamesToPoll = Array.from(this.gameStates.entries())
       .filter(([gameId, state]) => {
@@ -892,7 +892,7 @@ export class AdaptivePollingManager {
         if (state.currentState === 'live' || state.criticality === 'critical') {
           return false;
         }
-        
+
         // Check if it's time to poll this game
         return (now - state.lastPolled) >= state.pollInterval;
       })
@@ -904,7 +904,7 @@ export class AdaptivePollingManager {
 
     try {
       let allGames = [];
-      
+
       // Use sport-specific API service for batch fetching
       if (this.sport === 'MLB' && this.apiServices.MLB) {
         allGames = await this.apiServices.MLB.getTodaysGames();
@@ -917,11 +917,11 @@ export class AdaptivePollingManager {
       } else if (this.sport === 'NBA' && this.apiServices.NBA) {
         allGames = await this.apiServices.NBA.getTodaysGames();
       }
-      
+
       const gameMap = new Map(allGames.map(game => [game.id, game]));
-      
+
       console.log(`📦 ${this.sport} Batch polling ${gamesToPoll.length} games`);
-      
+
       for (const gameId of gamesToPoll) {
         const gameData = gameMap.get(gameId);
         if (gameData) {
@@ -931,7 +931,7 @@ export class AdaptivePollingManager {
           if (gameState && gameData && gameState.currentState !== 'live' && gameState.isUserMonitored && this.isWithinPreGameWindow(gameData)) {
             try {
               console.log(`🔄 Fetching enhanced data for scheduled ${this.sport} game ${gameId} (user-monitored, pre-game window)`);
-              
+
               let enhancedData = null;
               if (this.sport === 'MLB' && this.apiServices.MLB) {
                 enhancedData = await this.apiServices.MLB.getEnhancedGameData(gameId);
@@ -944,7 +944,7 @@ export class AdaptivePollingManager {
               } else if (this.sport === 'NBA' && this.apiServices.NBA) {
                 enhancedData = await this.apiServices.NBA.getEnhancedGameData(gameId);
               }
-              
+
               if (enhancedData && !enhancedData.error) {
                 // Merge enhanced data with game data
                 Object.assign(gameData, enhancedData);
@@ -954,7 +954,7 @@ export class AdaptivePollingManager {
               console.error(`⚠️ Failed to get enhanced data for ${this.sport} game ${gameId}:`, error);
             }
           }
-          
+
           await this.updateGameState(gameId, gameData);
           const state = this.gameStates.get(gameId);
           if (state) {
@@ -962,7 +962,7 @@ export class AdaptivePollingManager {
           }
         }
       }
-      
+
       // Enhanced data summary logging
       const enhancedDataSummary = {
         total: allGames.length,
@@ -972,9 +972,9 @@ export class AdaptivePollingManager {
         fetchedEnhanced: 0,
         mergedEnhanced: 0
       };
-      
+
       console.log(`📊 ${this.sport} Enhanced Data Summary: ${enhancedDataSummary.fetchedEnhanced}/${enhancedDataSummary.total} fetched, ${enhancedDataSummary.mergedEnhanced} merged (${enhancedDataSummary.userMonitored} monitored, ${enhancedDataSummary.withinWindow} within window, ${enhancedDataSummary.live} live)`);
-      
+
       this.lastBatchPoll = now;
     } catch (error) {
       console.error(`❌ ${this.sport} Batch polling failed:`, error);
@@ -986,12 +986,12 @@ export class AdaptivePollingManager {
    */
   private isWithinPreGameWindow(gameData: any): boolean {
     if (!gameData || !gameData.startTime) return false;
-    
+
     try {
       const startTime = new Date(gameData.startTime).getTime();
       const now = Date.now();
       const timeToStart = startTime - now;
-      
+
       // Within 6 hours before game start (expanded for testing)
       return timeToStart > 0 && timeToStart <= (6 * 60 * 60 * 1000);
     } catch (error) {
@@ -1009,11 +1009,11 @@ export class AdaptivePollingManager {
 
     const newState = this.analyzeGameState(gameData);
     const newCriticality = this.calculateGameCriticality(gameData);
-    
+
     // DO NOT promote scheduled/pre-game games to live status based on enhanced data
     // This was causing runaway live-state loops preventing server startup
     // Games should only be live if explicitly marked as such by official game status
-    
+
     // Persist enhanced game data to database for alert system (all sports)
     try {
       if (gameData) {
@@ -1022,19 +1022,19 @@ export class AdaptivePollingManager {
     } catch (error) {
       console.error(`❌ Failed to persist enhanced game data for ${gameId}:`, error);
     }
-    
+
     // Detect state transitions
     if (newState !== currentState.currentState) {
       console.log(`🔄 Game ${gameId}: ${currentState.currentState} → ${newState}`);
-      
+
       currentState.currentState = newState;
       currentState.stateChangeCount++;
       currentState.lastStateChange = Date.now();
-      
+
       // Recalculate polling interval
       const newInterval = this.calculatePollInterval(newState, newCriticality, currentState.isUserMonitored);
       currentState.pollInterval = newInterval;
-      
+
       // Handle transition logic
       await this.handleStateTransition(gameId, currentState.currentState, newState);
     }
@@ -1043,7 +1043,7 @@ export class AdaptivePollingManager {
     if (newCriticality !== currentState.criticality) {
       console.log(`🎯 Game ${gameId} criticality: ${currentState.criticality} → ${newCriticality}`);
       currentState.criticality = newCriticality;
-      
+
       // Recalculate interval with new criticality
       const newInterval = this.calculatePollInterval(newState, newCriticality, currentState.isUserMonitored);
       currentState.pollInterval = newInterval;
@@ -1055,7 +1055,7 @@ export class AdaptivePollingManager {
    */
   private selectPrimaryPlayerBySport(gameData: any): string {
     let primaryPlayer: string | null = null;
-    
+
     // Sport-aware player selection
     if (this.sport === 'MLB') {
       primaryPlayer = gameData.currentBatter || gameData.currentPitcher || gameData.onDeckBatter;
@@ -1063,7 +1063,7 @@ export class AdaptivePollingManager {
       // For football: prioritize active player, then QB, then possession-based QB
       primaryPlayer = gameData.currentPlayer || gameData.currentQuarterback || 
                      gameData.possessionPlayer || gameData.topPlayer;
-      
+
       // Enhanced fallbacks for NFL/NCAAF pre-game
       if (!primaryPlayer) {
         if (gameData.possessionSide === 'home' && gameData.preGameHomeQB) {
@@ -1084,9 +1084,9 @@ export class AdaptivePollingManager {
       primaryPlayer = gameData.currentPlayer || gameData.currentQuarterback || 
                      gameData.possessionPlayer || gameData.topPlayer;
     }
-    
+
     console.log(`🎯 ${this.sport} Player selection for game ${gameData.id}: ${primaryPlayer || 'N/A'} (available fields: ${Object.keys(gameData).filter(k => k.includes('player') || k.includes('batter') || k.includes('quarterback') || k.includes('QB')).join(', ')})`);
-    
+
     return primaryPlayer || 'N/A';
   }
 
@@ -1097,14 +1097,14 @@ export class AdaptivePollingManager {
     try {
       // Import storage dynamically to avoid circular dependencies
       const { storage } = await import('../storage');
-      
+
       // Extract enhanced data with weather context integration
       const weatherContext = gameData.weatherContext || {};
-      
+
       // Get team names from gameData or game state
       const homeTeam = gameData.homeTeam?.name || gameData.homeTeam || 'Unknown Home';
       const awayTeam = gameData.awayTeam?.name || gameData.awayTeam || 'Unknown Away';
-      
+
       const gameStateData = {
         extGameId: gameId,
         sport: this.sport,
@@ -1135,11 +1135,11 @@ export class AdaptivePollingManager {
           lastUpdated: gameData.lastUpdated || new Date().toISOString()
         }
       };
-      
+
       await storage.saveGameState(gameStateData);
       // Get primary player based on sport with enhanced fallbacks - sport-aware selection
       let primaryPlayer = this.selectPrimaryPlayerBySport(gameData);
-      
+
       // For NFL/NCAAF, use pre-game QB fallbacks if no current player found
       if (!primaryPlayer && (this.sport === 'NFL' || this.sport === 'NCAAF')) {
         // Try pre-game QBs as fallback (prioritize possessing team)
@@ -1154,7 +1154,7 @@ export class AdaptivePollingManager {
           primaryPlayer = gameData.preGameAwayQB;
         }
       }
-      
+
       // Final fallback
       primaryPlayer = primaryPlayer || 'N/A';
       console.log(`💾 Persisted enhanced game data for ${gameId} with player: ${primaryPlayer}`);
@@ -1163,7 +1163,7 @@ export class AdaptivePollingManager {
       if (this.sport === 'MLB' && gameStateData) {
         try {
           console.log(`🚨 Processing alerts for MLB game ${gameId}`);
-          
+
           // Construct proper GameState object from persisted data
           const gameState: GameState = {
             gameId: gameId,
@@ -1185,16 +1185,22 @@ export class AdaptivePollingManager {
             currentPitcher: gameStateData.currentPitcher,
             windSpeed: gameStateData.windSpeed,
             windDirection: gameStateData.windDirection,
-            temperature: gameStateData.temperature
+            status: gameStateData.status
           };
 
-          // Generate alerts using MLB engine
-          const alertResults = await this.mlbEngine.generateLiveAlerts(gameState);
-          if (alertResults && alertResults.length > 0) {
-            console.log(`✅ Generated ${alertResults.length} alerts for MLB game ${gameId}`);
-          }
+          // Generate alerts for this game
+          const { MLBEngine } = await import('./engines/mlb-engine');
+          const mlbEngine = new MLBEngine();
+          await mlbEngine.initializeUserAlertModules([
+            'MLB_LATE_INNING_CLOSE', 'MLB_SCORING_OPPORTUNITY', 'MLB_PITCHING_CHANGE',
+            'MLB_BASES_LOADED_NO_OUTS', 'MLB_RUNNER_ON_THIRD_NO_OUTS'
+          ]);
+
+          const alerts = await mlbEngine.generateLiveAlerts(gameState);
+          console.log(`📊 Generated ${alerts.length} alerts for game ${gameId}`);
+
         } catch (alertError) {
-          console.error(`❌ Alert generation failed for MLB game ${gameId}:`, alertError);
+          console.error(`❌ Alert generation failed for game ${gameId}:`, alertError);
         }
       }
     } catch (error) {
@@ -1213,7 +1219,7 @@ export class AdaptivePollingManager {
       console.log(`🚀 Game ${gameId} went live - starting individual polling`);
       await this.startIndividualPolling(gameId);
     }
-    
+
     // Game finished - stop individual polling
     if (newState === 'final' && oldState === 'live') {
       console.log(`🏁 Game ${gameId} finished - stopping individual polling`);
@@ -1260,7 +1266,7 @@ export class AdaptivePollingManager {
           stats.suspendedGames++;
           break;
       }
-      
+
       if (state.criticality === 'critical') stats.criticalGames++;
       if (state.criticality === 'high' || state.criticality === 'critical') stats.highPriorityGames++;
     }
@@ -1284,11 +1290,11 @@ export class AdaptivePollingManager {
     const state = this.gameStates.get(gameId);
     if (state && state.isUserMonitored !== isMonitored) {
       state.isUserMonitored = isMonitored;
-      
+
       // Recalculate polling interval
       const newInterval = this.calculatePollInterval(state.currentState, state.criticality, isMonitored);
       state.pollInterval = newInterval;
-      
+
       console.log(`👤 Game ${gameId} monitoring updated: ${isMonitored} (${newInterval}ms interval)`);
     }
   }
@@ -1302,13 +1308,13 @@ export class AdaptivePollingManager {
       .filter(([gameId, state]) => {
         // Always process live games
         if (state.currentState === 'live') return true;
-        
+
         // Process critical games regardless of state
         if (state.criticality === 'critical') return true;
-        
+
         // Process user-monitored games more frequently
         if (state.isUserMonitored && (now - state.lastPolled) >= state.pollInterval) return true;
-        
+
         return false;
       })
       .map(([gameId]) => gameId);
@@ -1319,16 +1325,16 @@ export class AdaptivePollingManager {
    */
   shutdown(): void {
     console.log('🛑 Shutting down AdaptivePollingManager');
-    
+
     // Clear all timers
     for (const timer of this.pollingTimers.values()) {
       clearTimeout(timer);
     }
     this.pollingTimers.clear();
-    
+
     // Clear game states
     this.gameStates.clear();
-    
+
     console.log('✅ AdaptivePollingManager shutdown complete');
   }
 }

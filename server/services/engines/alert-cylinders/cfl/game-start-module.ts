@@ -8,6 +8,15 @@ export default class GameStartModule extends BaseAlertModule {
   // Track game states to detect transitions (gameId -> last known state)
   private gameStates: Map<string, { status: string, hasTriggered: boolean }> = new Map();
 
+  private parseTimeToSeconds(timeString?: string): number {
+    if (!timeString) return 0;
+    const parts = timeString.split(':');
+    if (parts.length === 2) {
+      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+    return 0;
+  }
+
   isTriggered(gameState: GameState): boolean {
     if (!gameState.gameId) return false;
     
@@ -36,6 +45,26 @@ export default class GameStartModule extends BaseAlertModule {
     }
     
     return false;
+  }
+
+  generateAlert(gameState: GameState): AlertResult | null {
+    return {
+      alertKey: `${gameState.gameId}_cfl_game_start_${Date.now()}`,
+      type: this.alertType,
+      message: `🏈 CFL Game Starting! ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+      context: {
+        gameId: gameState.gameId,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        quarter: gameState.quarter,
+        timeRemaining: gameState.timeRemaining
+      },
+      priority: 85
+    };
+  }
+
+  calculateProbability(gameState: GameState): number {
+    return this.isTriggered(gameState) ? 100 : 0;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
