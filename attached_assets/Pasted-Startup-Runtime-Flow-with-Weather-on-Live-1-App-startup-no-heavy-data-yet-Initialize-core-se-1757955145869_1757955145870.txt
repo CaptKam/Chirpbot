@@ -1,0 +1,80 @@
+Startup & Runtime Flow (with Weather-on-Live)
+1) App startup (no heavy data yet)
+
+Initialize core services: HTTP server, auth, DB/ORM, cache/queues, logger, config.
+
+Do not call sports or weather APIs here.
+
+Schedule lightweight background jobs (e.g., calendar sync).
+
+2) Calendar sync (lightweight, repeating)
+
+For each sport, fetch today’s games with Scheduled | Live | Final status.
+
+Store only minimal fields for the calendar UI (ids, teams, start time, status).
+
+Refresh every 30–60s.
+
+No weather lookups during calendar sync.
+
+3) Load preferences (once, then cache)
+
+Read global settings and user alert preferences (per sport/per cylinder).
+
+Cache, invalidate on change.
+
+4) Game lifecycle rules (what runs when)
+
+Scheduled
+
+Engines OFF (no sport engine, no weather engine).
+
+Optionally pre-register the game for instant Live flip.
+
+Live
+
+Start the sport engine for that specific game.
+
+Start the weather engine for that game’s venue at this moment.
+
+Begin weather polling/streaming at a sensible cadence (e.g., 60–120s; 15–30s if weather-sensitive alert is armed).
+
+Capture wind speed/direction, temperature, precipitation, humidity, roof/open state, etc.
+
+Evaluate all cylinders, including those that depend on weather (e.g., wind shift, rain onset).
+
+Final
+
+Stop both sport and weather engines.
+
+Persist summary, clear timers, free memory.
+
+5) Cylinder → Alert pipeline
+
+On each engine tick, run cylinder checks.
+
+On trigger:
+
+De-duplicate (game + alert key + cooldown).
+
+Build alert payload (type, context, seq id—including weather context if used).
+
+Hand off to router.
+
+6) Alert routing (who gets what)
+
+Filter by user preferences; honor mutes/quiet hours/rate limits.
+
+Deliver via chosen transport (Telegram, in-app feed via polling/SSE/WS).
+
+Record delivery for retries/analytics.
+
+7) Resilience & hygiene
+
+Backoff on API errors; don’t crash engines.
+
+Clean shutdown: stop sport + weather engines, flush queues.
+
+One-paragraph PRD version
+
+We’re restructuring startup so the app boots fast and only loads what’s needed. At startup we initialize core services but don’t call sports or weather APIs. A lightweight calendar sync then loads today’s games and statuses for the calendar view. We load and cache global settings and user alert preferences. For Scheduled games, no engines run (no sport, no weather). When a game flips to Live, we start that game’s sport engine and weather engine together, begin live data reads, and evaluate cylinder logic—including weather-dependent rules. When a cylinder triggers, we de-dupe, build an alert, route it only to opted-in users (respecting mutes/rate limits), and deliver via the selected channel. When a game turns Final, we stop both engines, persist summaries, and release resources.
