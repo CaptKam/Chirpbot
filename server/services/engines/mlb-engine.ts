@@ -790,6 +790,35 @@ export class MLBEngine extends BaseSportEngine {
     }
   }
 
+  // Override to return all available MLB alert types
+  async getAvailableAlertTypes(): Promise<string[]> {
+    return [
+      'MLB_GAME_START',
+      'MLB_SEVENTH_INNING_STRETCH',
+      'MLB_RUNNER_ON_THIRD_NO_OUTS',
+      'MLB_FIRST_AND_THIRD_NO_OUTS',
+      'MLB_SECOND_AND_THIRD_NO_OUTS',
+      'MLB_FIRST_AND_SECOND',
+      'MLB_BASES_LOADED_NO_OUTS',
+      'MLB_RUNNER_ON_THIRD_ONE_OUT',
+      'MLB_FIRST_AND_THIRD_ONE_OUT',
+      'MLB_SECOND_AND_THIRD_ONE_OUT',
+      'MLB_BASES_LOADED_ONE_OUT',
+      'MLB_RUNNER_ON_THIRD_TWO_OUTS',
+      'MLB_FIRST_AND_THIRD_TWO_OUTS',
+      'MLB_RUNNER_ON_SECOND_NO_OUTS',
+      'MLB_BATTER_DUE',
+      'MLB_STEAL_LIKELIHOOD',
+      'MLB_ON_DECK_PREDICTION',
+      'MLB_WIND_CHANGE',
+      'MLB_LATE_INNING_CLOSE',
+      'MLB_SCORING_OPPORTUNITY',
+      'MLB_PITCHING_CHANGE',
+      'MLB_BASES_LOADED_TWO_OUTS',
+      'MLB_STRIKEOUT'
+    ];
+  }
+
   getPerformanceMetrics() {
     const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
       ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
