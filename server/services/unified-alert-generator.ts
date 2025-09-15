@@ -682,7 +682,7 @@ export class UnifiedAlertGenerator {
         return { games: [], source: 'calendar' };
       }
 
-      const calendarData = await this.calendarSyncService.getGameData(sport);
+      const calendarData = this.calendarSyncService.getCalendarData(sport);
       
       // Check for valid calendar data before processing
       if (!calendarData || !Array.isArray(calendarData)) {
