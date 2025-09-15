@@ -3663,11 +3663,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Get available alert types from cylinders - accessible to all authenticated users
   app.get('/api/available-alerts/:sport', async (req, res) => {
     try {
+      // Enhanced session validation with detailed logging
+      console.log(`🔍 Available-alerts API called for ${req.params.sport}`);
+      console.log(`🔐 Session ID: ${req.session.id}`);
+      console.log(`👤 User ID: ${req.session.userId}`);
+      console.log(`📝 Session data:`, Object.keys(req.session));
+
       if (!req.session.userId) {
+        console.log(`❌ Authentication failed for ${req.params.sport} - no user ID in session`);
         return res.status(401).json({ message: 'Authentication required' });
       }
 
       const { sport } = req.params;
+      console.log(`✅ Authentication successful for ${sport} - User: ${req.session.userId}`);
 
       try {
         let availableAlerts: string[] = [];
