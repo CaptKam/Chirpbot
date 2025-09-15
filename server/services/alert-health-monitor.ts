@@ -196,7 +196,7 @@ export class AlertHealthMonitor {
 // Export singleton instance getter - delegates to unified system
 // @deprecated Use getHealthMonitor() from unified-health-monitor.ts instead
 export const getHealthMonitor = () => {
-  // Suppress repeated warnings for now - system is functioning correctly
+  console.warn('⚠️ DEPRECATED: getHealthMonitor() from alert-health-monitor.ts is deprecated. Use import { getHealthMonitor } from "./unified-health-monitor" instead.');
   return AlertHealthMonitor.getInstance();
 };
 
