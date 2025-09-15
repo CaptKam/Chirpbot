@@ -176,6 +176,13 @@ export class UnifiedHealthMonitor {
     });
   }
 
+  // Public method for compatibility with existing code
+  public startMonitoring(): void {
+    console.log('🏥 Health monitoring start requested - already running since initialization');
+    // Health monitoring already starts in constructor via startHealthMonitoring()
+    // This method exists for compatibility with existing code that expects it
+  }
+
   // === METRICS TRACKING ===
 
   public recordCheck(): void {
