@@ -65,11 +65,16 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Global settings query to check admin-disabled alerts (only for admin users)
-  const { data: globalSettings, isLoading: globalSettingsLoading } = useQuery({
-    queryKey: [`/api/admin/global-alert-settings/${activeSport}`],
-    enabled: !!user?.id && isAuthenticated && user?.role === 'admin',
+  // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
+  const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
+    queryKey: [`/api/global-alert-settings/${activeSport}`],
+    enabled: !!user?.id && isAuthenticated,
+    staleTime: 30 * 1000, // 30 seconds to catch admin changes quickly
+    refetchInterval: 60 * 1000, // Refetch every minute to catch admin toggle changes
   });
+  
+  // Extract settings from response (handles both old admin format and new public format)
+  const globalSettings = globalSettingsResponse?.settings || globalSettingsResponse;
 
   // Available alert types query from cylinders (accessible to all authenticated users)
   const { data: availableAlerts, isLoading: availableAlertsLoading } = useQuery({
@@ -93,10 +98,10 @@ export default function Settings() {
     enabled: !!user?.id && isAuthenticated,
   });
 
-  // Unified loading state - coordinate all loading states
+  // Unified loading state - coordinate all loading states (now includes global settings for all users)
   const isSettingsLoading = preferencesLoading || 
                            availableAlertsLoading || 
-                           (user?.role === 'admin' && globalSettingsLoading);
+                           globalSettingsLoading;
 
   // Create a map of current preferences for easy lookup
   const preferenceMap = new Map();
@@ -110,8 +115,8 @@ export default function Settings() {
   const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
     if (isSettingsLoading) return undefined; // Return undefined while loading to show skeleton UI
 
-    // Check if the alert is globally disabled by admin (only if user is admin and global settings are loaded)
-    if (user?.role === 'admin' && globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
+    // Check if the alert is globally disabled by admin (now checked for ALL users)
+    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
       return false;
     }
 
@@ -478,7 +483,9 @@ export default function Settings() {
                     <div className="space-y-3">
                       {(availableAlerts as any[] || []).map((alertType) => {
                         const isEnabled = getAlertPreference(activeSport, alertType.key);
-                        const isGloballyDisabled = alertType.globallyEnabled === false;
+                        // Check if this alert is globally disabled from the globalSettings we fetched
+                        const isGloballyDisabled = globalSettings && typeof globalSettings === 'object' 
+                          && (globalSettings as Record<string, boolean>)[alertType.key] === false;
                         
                         // Show skeleton if preference is still loading
                         if (isEnabled === undefined) {

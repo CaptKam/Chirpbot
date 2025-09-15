@@ -3581,6 +3581,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Global Alert Management Endpoints
+  
+  // Admin-only endpoint to get global settings (legacy, kept for backward compatibility)
   app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
     try {
       if (!req.session.adminUserId) {
@@ -3593,6 +3595,33 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const settings = await unifiedSettings.getGlobalSettings(sport);
 
       res.json(settings);
+    } catch (error) {
+      console.error('Error fetching global alert settings:', error);
+      res.status(500).json({ message: 'Failed to fetch global alert settings' });
+    }
+  });
+  
+  // NEW: Public endpoint for all authenticated users to see global settings (read-only)
+  app.get('/api/global-alert-settings/:sport', requireAuthentication, async (req, res) => {
+    try {
+      const { sport } = req.params;
+      
+      // Get the global settings from storage (read-only for non-admins)
+      const settings = await unifiedSettings.getGlobalSettings(sport);
+      
+      // Add metadata to indicate read-only status for non-admins
+      const response = {
+        sport: sport.toUpperCase(),
+        settings,
+        readOnly: req.user?.role !== 'admin',
+        message: req.user?.role !== 'admin' ? 
+          'These are global settings managed by administrators. You can see which alerts are disabled globally.' : 
+          'You can manage these global settings as an administrator.'
+      };
+      
+      console.log(`📋 Global settings fetched for ${sport} by user ${req.user?.id} (${req.user?.role || 'user'})`);
+      
+      res.json(response);
     } catch (error) {
       console.error('Error fetching global alert settings:', error);
       res.status(500).json({ message: 'Failed to fetch global alert settings' });
@@ -3615,8 +3644,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Update the global alert setting in database
       await storage.setGlobalAlertSetting(sport, alertType, enabled);
 
-      // Clear cache for this sport
-      unifiedSettings.cache.delete(sport);
+      // Clear cache for this sport using the proper public method
+      await unifiedSettings.invalidateCache(sport);
 
       console.log(`✅ Admin toggled ${sport} ${alertType} to ${enabled ? 'enabled' : 'disabled'}`);
 
