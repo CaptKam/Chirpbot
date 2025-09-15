@@ -3599,6 +3599,39 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Update individual global alert setting
+  app.put('/api/admin/global-alert-setting', async (req, res) => {
+    try {
+      if (!req.session.adminUserId) {
+        return res.status(401).json({ message: 'Admin authentication required' });
+      }
+
+      const { sport, alertType, enabled } = req.body;
+
+      if (!sport || !alertType || typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
+      }
+
+      // Update the global alert setting in database
+      await storage.setGlobalAlertSetting(sport, alertType, enabled);
+
+      // Clear cache for this sport
+      unifiedSettings.cache.delete(sport);
+
+      console.log(`✅ Admin toggled ${sport} ${alertType} to ${enabled ? 'enabled' : 'disabled'}`);
+
+      res.json({ 
+        message: `${alertType} ${enabled ? 'enabled' : 'disabled'} for ${sport}`,
+        sport,
+        alertType,
+        enabled
+      });
+    } catch (error) {
+      console.error('Error updating global alert setting:', error);
+      res.status(500).json({ message: 'Failed to update global alert setting' });
+    }
+  });
+
   // Health check endpoint for monitoring and auto-recovery
   app.get('/api/health', async (req, res) => {
     try {
