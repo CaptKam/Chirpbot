@@ -660,6 +660,55 @@ export class GameStateManager {
         await this.engineManager.stopEngines(gameInfo);
       }
 
+      // CRITICAL FIX: Trigger alert generation for live games
+      console.log(`🔍 Debug: Game ${gameId} state=${gameInfo.currentState}, engineManager=${!!this.engineManager}`);
+      if (gameInfo.currentState === RuntimeGameState.LIVE && this.engineManager) {
+        console.log(`🎯 Force evaluating alerts for live game ${gameId}`);
+        
+        try {
+          // Get the engine instance and trigger alert generation
+          const sport = gameInfo.sport.toUpperCase();
+          const engine = this.engineManager.getEngine(sport);
+          
+          if (engine && engine.generateLiveAlerts) {
+            // Convert game data to GameState format for engine
+            const gameState = {
+              gameId: gameInfo.gameId,
+              sport: gameInfo.sport,
+              isLive: gameInfo.currentState === RuntimeGameState.LIVE,
+              status: 'live',
+              homeTeam: newGameData.homeTeam?.name || gameInfo.homeTeam || 'Home',
+              awayTeam: newGameData.awayTeam?.name || gameInfo.awayTeam || 'Away', 
+              homeScore: gameInfo.homeScore || 0,
+              awayScore: gameInfo.awayScore || 0,
+              inning: newGameData.inning || 1,
+              isTopInning: newGameData.isTopInning || false,
+              outs: newGameData.outs || 0,
+              balls: newGameData.balls || 0,
+              strikes: newGameData.strikes || 0,
+              hasFirst: newGameData.hasFirst || false,
+              hasSecond: newGameData.hasSecond || false, 
+              hasThird: newGameData.hasThird || false,
+              currentBatter: newGameData.currentBatter || null,
+              currentPitcher: newGameData.currentPitcher || null
+            };
+
+            console.log(`🚨 Generating alerts for ${sport} game ${gameId}`);
+            const alerts = await engine.generateLiveAlerts(gameState);
+            
+            if (alerts && alerts.length > 0) {
+              console.log(`✅ Generated ${alerts.length} alerts for game ${gameId}`);
+            } else {
+              console.log(`📝 No alerts generated for game ${gameId} (normal for stable game states)`);
+            }
+          } else {
+            console.log(`⚠️ No engine instance available for ${sport} - skipping alert generation`);
+          }
+        } catch (alertError) {
+          console.error(`❌ Alert generation failed for game ${gameId}:`, alertError);
+        }
+      }
+
       console.log(`✅ GameStateManager: Force evaluation complete for game ${gameId}`);
     } catch (error) {
       console.error(`❌ GameStateManager: Force evaluation failed for game ${gameId}:`, error);
