@@ -332,64 +332,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Request deduplication and memory management are handled by middleware above
 
-  // WebSocket server for real-time alerts
-  const wss = new WebSocketServer({
-    server: httpServer,
-    path: '/realtime-alerts'
-  });
+  // Import new WebSocket setup and health monitor
+  const { createWSS } = await import('./services/ws-setup');
+  const { HealthMonitor } = await import('./services/health-monitor');
 
-  const clients = new Set<WebSocket>();
+  // Create WebSocket server with proper heartbeat
+  const wss = createWSS(httpServer);
+  
+  // Initialize health monitor
+  const healthMonitor = new HealthMonitor(wss);
+  healthMonitor.startMonitoring();
 
-  wss.on('connection', (ws: WebSocket) => {
-    // Limit connections to prevent spam
-    if (clients.size >= 20) {
-      console.log('🔌 WebSocket connection limit reached, closing new connection');
-      ws.close(1013, 'Server overloaded');
-      return;
-    }
-
-    console.log('🔌 New WebSocket connection established (', clients.size + 1, ' total)');
-    clients.add(ws);
-
-    // Set up ping/pong to keep connection alive
-    const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.ping();
-      }
-    }, 30000); // Ping every 30 seconds
-
-    ws.on('close', (code, reason) => {
-      clients.delete(ws);
-      clearInterval(pingInterval);
-      if (clients.size > 3) {
-        console.log('🔌 WebSocket connection closed (', clients.size, ' remaining), code:', code);
-      }
-    });
-
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-      clients.delete(ws);
-      clearInterval(pingInterval);
-    });
-
-    ws.on('pong', () => {
-      // Connection is alive, no action needed
-    });
-
-    // Send initial connection confirmation
-    try {
-      ws.send(JSON.stringify({
-        type: 'connection_established',
-        message: 'Real-time alerts enabled',
-        timestamp: new Date().toISOString()
-      }));
-    } catch (error) {
-      console.error('Error sending initial WebSocket message:', error);
-      clients.delete(ws);
-    }
-  });
-
-  console.log('✅ WebSocket server enabled - real-time alerts active');
+  console.log('✅ WebSocket server enabled with heartbeat and health monitoring');
 
   // Admin panel compatibility route
   app.get('/admin-panel', (req, res) => res.redirect('/admin/login.html'));
@@ -444,17 +398,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // WebSocket heartbeat to keep connections alive
-  const heartbeatInterval = setInterval(() => {
-    clients.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.ping();
-      } else {
-        clients.delete(ws);
-      }
-    });
-  }, 30000); // Heartbeat every 30 seconds
-
   // Server-side deduplication for WebSocket broadcasts
   const recentBroadcasts = new Map<string, number>(); // alertKey -> timestamp
   const BROADCAST_DEDUPE_TTL = 10000; // 10 seconds
@@ -469,9 +412,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   }, 60000); // Clean every minute
 
-  // Broadcast function to send alerts to all connected clients
+  // Broadcast function to send alerts to all connected clients (updated for new WSS)
   function broadcast(data: any) {
-    if (clients.size === 0) {
+    const clientCount = wss.clients.size;
+    if (clientCount === 0) {
       console.log('📡 No WebSocket clients connected for broadcast');
       return;
     }
@@ -498,18 +442,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     let successCount = 0;
     let failureCount = 0;
 
-    clients.forEach((ws) => {
+    wss.clients.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
           ws.send(message);
           successCount++;
         } catch (error) {
           console.error('Error sending WebSocket message:', error);
-          clients.delete(ws);
           failureCount++;
         }
       } else {
-        clients.delete(ws);
         failureCount++;
       }
     });
