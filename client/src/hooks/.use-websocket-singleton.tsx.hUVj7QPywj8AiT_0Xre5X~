@@ -214,8 +214,10 @@ export function useWebSocketSingleton() {
       setConnectionType('sse');
       setConnectionError(null);
       currentConnectionType = 'sse';
-      sseAttempts = 0;
+      sseBackoffDelay = resetBackoffDelay(); // Reset delay on successful connection
       isSSEConnecting = false;
+      lastDisconnectTime = null; // Clear disconnect time
+      stopHttpPolling(); // Stop any HTTP polling
       
       // Fetch missed alerts on successful reconnection
       if (lastReceivedSequenceNumber !== null || lastConnectionTime !== null) {
