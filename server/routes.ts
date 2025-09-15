@@ -14,6 +14,7 @@ import { AlertGenerator } from "./services/alert-generator";
 import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
+import { getServerBootId } from "./services/ws-setup";
 import { unifiedSettings } from "./storage";
 import { pool } from "./db";
 import { alerts as alertsTable, settings } from "../shared/schema";
@@ -421,8 +422,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   const { createWSS } = await import('./services/ws-setup');
   const { HealthMonitor } = await import('./services/health-monitor');
 
-  // Create WebSocket server with session authentication (no server listener - handled by upgrade event)
+  // Create WebSocket server with session authentication and enhanced heartbeat (no server listener - handled by upgrade event)
   const wss = createWSS(httpServer, { noServer: true });
+  
+  // Store WebSocket server globally for health monitoring and heartbeat stats
+  (globalThis as any).wss = wss;
+  
+  console.log(`🔌 WebSocket server created with heartbeat support - Boot ID: ${getServerBootId()}`);
 
   // 🔒 SECURITY FIX: Implement session-gated WebSocket authentication
   httpServer.on('upgrade', function upgrade(request, socket, head) {
@@ -458,7 +464,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   const healthMonitor = new HealthMonitor(wss);
   healthMonitor.startMonitoring();
 
-  console.log('✅ WebSocket server enabled with SESSION-GATED AUTHENTICATION and health monitoring');
+  console.log('✅ WebSocket server enabled with SESSION-GATED AUTHENTICATION, health monitoring, and 30s heartbeat');
+  console.log(`🔌 WebSocket heartbeat stats available at /api/health endpoint`);
 
   // 📡 SSE FALLBACK ENDPOINT - Server-Sent Events for reliable alert delivery
   app.get('/realtime-alerts-sse', async (req, res) => {
@@ -3732,6 +3739,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Get memory management stats
       const memoryStats = memoryManager.getStats();
+      
+      // Get WebSocket heartbeat stats if available
+      let websocketStats = null;
+      try {
+        const globalWss = (globalThis as any).wss;
+        if (globalWss && typeof globalWss.getHeartbeatStats === 'function') {
+          websocketStats = globalWss.getHeartbeatStats();
+          console.log(`🔌 Retrieved WebSocket heartbeat stats for health endpoint`);
+        } else {
+          console.log(`⚠️ WebSocket heartbeat stats not available: ${globalWss ? 'wss exists but no getHeartbeatStats method' : 'wss not found in global'}`);
+        }
+      } catch (error) {
+        // WebSocket stats not available - this is fine during startup
+      }
 
       const healthStatus = {
         status: memPercent > 0.9 ? 'degraded' : 'healthy',
@@ -3748,7 +3769,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           effectiveness: dedupeStats.cacheSize > 0 ?
             `Serving ${dedupeStats.cacheSize} cached responses` : 'No cached responses yet'
         },
-        circuitBreakers: circuitBreakerStatus
+        circuitBreakers: circuitBreakerStatus,
+        serverBootId: getServerBootId(),
+        websocket: websocketStats ? {
+          heartbeat: {
+            pingIntervalMs: websocketStats.pingIntervalMs,
+            totalPingsSent: websocketStats.totalPingsSent,
+            totalPongsReceived: websocketStats.totalPongsReceived,
+            deadConnectionsTerminated: websocketStats.deadConnectionsTerminated,
+            lastHeartbeatAt: websocketStats.lastHeartbeatAt,
+            pongResponseRate: websocketStats.totalPingsSent > 0 ? 
+              Math.round((websocketStats.totalPongsReceived / websocketStats.totalPingsSent) * 100) : 0
+          },
+          connections: {
+            current: websocketStats.currentConnections,
+            active: websocketStats.activeConnections
+          },
+          serverBootId: websocketStats.serverBootId
+        } : {
+          status: 'WebSocket server not initialized yet',
+          serverBootId: getServerBootId()
+        }
       };
 
       res.status(200).json(healthStatus);
