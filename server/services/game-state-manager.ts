@@ -629,6 +629,43 @@ export class GameStateManager {
     }
   }
 
+  // === PUBLIC FORCE EVALUATION ===
+
+  async forceEvaluate(gameId: string, sport?: string): Promise<void> {
+    const gameInfo = this.gameStates.get(gameId);
+    if (!gameInfo) {
+      console.log(`⚠️ GameStateManager: Game ${gameId} not found for force evaluation`);
+      return;
+    }
+
+    try {
+      console.log(`🔄 GameStateManager: Force evaluating game ${gameId}`);
+      
+      // Fetch fresh game data
+      if (!this.calendarSync) {
+        throw new Error('Calendar sync service not configured');
+      }
+      
+      const newGameData = await this.calendarSync.fetchGameData(gameId, gameInfo.sport || sport || 'UNKNOWN');
+      
+      // Process state transition
+      const transition = await this.processStateTransition(gameInfo, newGameData);
+      
+      // Handle engine lifecycle immediately
+      if (transition.shouldStartEngines && this.engineManager) {
+        console.log(`🚀 Starting engines for game ${gameId} (force evaluation)`);
+        await this.engineManager.startEngines(gameInfo);
+      } else if (transition.shouldStopEngines && this.engineManager) {
+        console.log(`🛑 Stopping engines for game ${gameId} (force evaluation)`);
+        await this.engineManager.stopEngines(gameInfo);
+      }
+
+      console.log(`✅ GameStateManager: Force evaluation complete for game ${gameId}`);
+    } catch (error) {
+      console.error(`❌ GameStateManager: Force evaluation failed for game ${gameId}:`, error);
+    }
+  }
+
   // === POLLING LOGIC ===
 
   private async pollGameState(gameId: string): Promise<PollingResult> {

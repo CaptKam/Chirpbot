@@ -484,8 +484,20 @@ export class CalendarSyncService implements ICalendarSyncService {
           };
           
           try {
-            // TODO: Add method to GameStateManager to handle calendar updates
-            console.log(`📅 Calendar Sync: Would notify GameStateManager of ${sport} game ${gameId} state transition: ${existingGame.status} → ${newCalendarGame.status}`);
+            // Add or update the game in GameStateManager
+            console.log(`📅 Calendar Sync: Notifying GameStateManager of ${sport} game ${gameId} state transition: ${existingGame.status} → ${newCalendarGame.status}`);
+            
+            // Check if game exists in GameStateManager
+            const existingGameState = this.gameStateManager.getGameState(gameId);
+            if (existingGameState) {
+              // Game exists - force evaluate to process the state change
+              console.log(`🔄 Force evaluating GameStateManager for game ${gameId}`);
+              await this.gameStateManager.forceEvaluate(gameId);
+            } else {
+              // Add new game to GameStateManager for monitoring
+              console.log(`➕ Adding game ${gameId} to GameStateManager`);
+              await this.gameStateManager.addGame(gameData, []);
+            }
           } catch (error) {
             console.error(`📅 Calendar Sync: Error notifying GameStateManager:`, error);
           }
@@ -503,6 +515,24 @@ export class CalendarSyncService implements ICalendarSyncService {
         });
 
         console.log(`📅 Calendar Sync: ${sport} game ${gameId} status changed: ${existingGame.status} → ${newCalendarGame.status}`);
+      }
+
+      // Handle ALL live games (not just transitions) - architect recommended
+      if (newCalendarGame.status === 'live' && this.gameStateManager) {
+        try {
+          const existingGameState = this.gameStateManager.getGameState(gameId);
+          if (!existingGameState) {
+            // Add live game that wasn't tracked before
+            console.log(`📅 Calendar Sync: Adopting existing live game ${gameId}`);
+            await this.gameStateManager.addGame(gameData, []);
+            await this.gameStateManager.forceEvaluate(gameId);
+          } else {
+            // Force evaluate existing live game to ensure engines are running
+            await this.gameStateManager.forceEvaluate(gameId);
+          }
+        } catch (error) {
+          console.error(`📅 Calendar Sync: Error handling live game ${gameId}:`, error);
+        }
       }
 
       // Update game in memory
