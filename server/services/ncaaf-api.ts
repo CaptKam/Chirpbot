@@ -349,7 +349,7 @@ export class NCAAFApiService extends BaseSportApi {
           },
           startTime: new Date(event.date).toISOString(),
           status: this.mapGameStatus(event.status.type.name),
-          isLive: event.status.type.state === 'in',
+          isLive: this.isGameLive(event, 'espn'),
           venue: game.venue?.fullName || '',
           // NCAAF-specific fields
           isCompleted: event.status.type.state === 'post',

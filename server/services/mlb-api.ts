@@ -42,24 +42,8 @@ export class MLBApiService extends BaseSportApi {
       const homeScore = game.linescore?.teams?.home?.runs ?? game.teams.home.score ?? 0;
       const awayScore = game.linescore?.teams?.away?.runs ?? game.teams.away.score ?? 0;
       
-      // STRICT live detection - ONLY use official status, DO NOT use enhanced data
-      const statusIndicatesLive = game.status.abstractGameState === 'Live' || 
-                                 game.status.detailedState?.toLowerCase().includes('progress') ||
-                                 game.status.detailedState?.toLowerCase().includes('inning');
-      
-      // Check if game is actually finished (respect final status)
-      const isGameFinished = game.status.abstractGameState === 'Final' || 
-                            game.status.detailedState?.toLowerCase().includes('final') ||
-                            game.status.detailedState?.toLowerCase().includes('completed');
-      
-      // Check if game is in pre-game/scheduled state
-      const isPreGameOrScheduled = game.status.abstractGameState === 'Preview' || 
-                                 game.status.detailedState?.toLowerCase().includes('pre-game') ||
-                                 game.status.detailedState?.toLowerCase().includes('scheduled') ||
-                                 game.status.detailedState?.toLowerCase().includes('warmup');
-      
-      // ONLY mark as live if official status explicitly says so AND not in pre-game/final state
-      const isLive = statusIndicatesLive && !isPreGameOrScheduled && !isGameFinished;
+      // Use standardized live detection logic from BaseSportApi
+      const isLive = this.isGameLive(game, 'mlb');
       
       // Use ONLY the mapped status from official API state - DO NOT override with isLive
       const finalStatus = this.mapGameStatus(game.status.detailedState);

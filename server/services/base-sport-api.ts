@@ -192,6 +192,63 @@ export abstract class BaseSportApi {
     return 'scheduled';
   }
 
+  // Standardized live game detection logic across all sports
+  protected isGameLive(game: any, apiType: 'mlb' | 'espn' = 'espn'): boolean {
+    try {
+      if (apiType === 'mlb') {
+        // MLB API format - more strict criteria from mlb-api.ts
+        const status = game.status || {};
+        
+        // Check if status explicitly indicates live state
+        const statusIndicatesLive = status.abstractGameState === 'Live' || 
+                                   status.detailedState?.toLowerCase().includes('progress') ||
+                                   status.detailedState?.toLowerCase().includes('inning');
+        
+        // Check if game is finished (must respect final status)
+        const isGameFinished = status.abstractGameState === 'Final' || 
+                              status.detailedState?.toLowerCase().includes('final') ||
+                              status.detailedState?.toLowerCase().includes('completed');
+        
+        // Check if game is in pre-game/scheduled state
+        const isPreGameOrScheduled = status.abstractGameState === 'Preview' || 
+                                   status.detailedState?.toLowerCase().includes('pre-game') ||
+                                   status.detailedState?.toLowerCase().includes('scheduled') ||
+                                   status.detailedState?.toLowerCase().includes('warmup');
+        
+        // Only mark as live if status explicitly indicates live AND not pre-game AND not finished
+        return statusIndicatesLive && !isPreGameOrScheduled && !isGameFinished;
+        
+      } else {
+        // ESPN API format - used by NFL, NBA, NCAAF, WNBA, CFL
+        const statusState = game.status?.type?.state;
+        
+        // Apply similar strict criteria as MLB to prevent false live detection
+        if (!statusState) return false;
+        
+        // Only 'in' state is considered truly live
+        if (statusState !== 'in') return false;
+        
+        // Additional safety checks to avoid pre-game false positives
+        const statusName = game.status?.type?.name?.toLowerCase() || '';
+        
+        // Explicitly exclude known non-live states
+        if (statusName.includes('pre') || 
+            statusName.includes('scheduled') || 
+            statusName.includes('final') || 
+            statusName.includes('completed') ||
+            statusName.includes('postponed') ||
+            statusName.includes('delayed')) {
+          return false;
+        }
+        
+        return true;
+      }
+    } catch (error) {
+      console.error(`❌ Error in standardized live detection for ${this.config.sportTag}:`, error);
+      return false; // Safe default - don't mark as live if we can't determine
+    }
+  }
+
   // Main getTodaysGames method using template pattern
   async getTodaysGames(date?: string, requestType: 'batch' | 'individual' = 'batch'): Promise<BaseGameData[]> {
     const targetDate = date || getPacificDate();

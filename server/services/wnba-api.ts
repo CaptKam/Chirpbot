@@ -59,7 +59,7 @@ export class WNBAApiService extends BaseSportApi {
         },
         startTime: new Date(event.date).toISOString(),
         status: this.mapGameStatus(event.status.type.name),
-        isLive: event.status.type.state === 'in',
+        isLive: this.isGameLive(event, 'espn'),
         venue: game.venue?.fullName || '',
         // WNBA specific fields preserved
         gameId: event.id,
