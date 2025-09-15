@@ -348,10 +348,15 @@ export default function AlertsPage() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/realtime-alerts`;
     
+    console.log('WebSocket debug info:', {
+      'window.location.host': window.location.host,
+      wsUrl
+    });
+    
     const ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
-      console.log('🔗 WebSocket connected for real-time alerts');
+      console.log('WebSocket connected');
     };
     
     ws.onmessage = (event) => {
@@ -366,8 +371,12 @@ export default function AlertsPage() {
       }
     };
     
-    ws.onclose = () => {
-      console.log('🔌 WebSocket disconnected');
+    ws.onclose = (event) => {
+      console.log('WebSocket disconnected', event.code, event.reason);
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
     };
     
     return () => {
