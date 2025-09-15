@@ -111,7 +111,7 @@ export function useWebSocket() {
             const queryState = queryClient.getQueryState(['/api/alerts']);
 
             // Only update if query is settled (not fetching)
-            if (!queryState?.isFetching && currentData) {
+            if (!queryState?.isLoading && currentData) {
               console.log('✅ Updating alerts cache with new WebSocket alert');
 
               queryClient.setQueryData(['/api/alerts'], (oldData: any) => {

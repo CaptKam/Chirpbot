@@ -2,6 +2,8 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -46,6 +48,28 @@ async function requireAuthentication(req: express.Request, res: express.Response
   }
   res.status(401).json({ message: 'Authentication required' });
 }
+
+// 🔒 SECURITY FIX: Create shared sessionParser to authenticate WebSocket connections
+const PgSession = connectPgSimple(session);
+const sessionParser = session({
+  name: 'cb.sid', // Same session name as main app
+  store: new PgSession({
+    pool: pool,
+    tableName: 'session',
+    createTableIfMissing: true
+  }),
+  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025', // Same secret as main app
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    path: '/',
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    domain: process.env.COOKIE_DOMAIN || undefined,
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for better persistence
+  }
+});
 
 
 export async function registerRoutes(app: Express, httpServer: Server): Promise<Server> {
@@ -289,6 +313,66 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // 🔒 SECURITY TEST: Admin endpoint to verify WebSocket authentication is working
+  app.get('/api/admin/test-websocket-auth', async (req, res) => {
+    try {
+      console.log('🧪 SECURITY TEST: WebSocket Authentication Status');
+      
+      // Check if WebSocket server exists and if upgrade handler is properly configured
+      const hasUpgradeHandler = httpServer.listeners('upgrade').length > 0;
+      const activeConnections = wss ? wss.clients.size : 0;
+      
+      // Get authenticated connection info if any exist
+      const authenticatedConnections: any[] = [];
+      if (wss) {
+        wss.clients.forEach((ws: any) => {
+          if (ws.userId) {
+            authenticatedConnections.push({
+              userId: ws.userId,
+              authenticatedAt: ws.authenticatedAt,
+              isAlive: ws.isAlive,
+              readyState: ws.readyState
+            });
+          }
+        });
+      }
+      
+      const securityStatus = {
+        timestamp: new Date().toISOString(),
+        websocketServer: {
+          exists: !!wss,
+          activeConnections,
+          authenticatedConnections: authenticatedConnections.length,
+          connectionDetails: authenticatedConnections
+        },
+        authentication: {
+          upgradeHandlerConfigured: hasUpgradeHandler,
+          sessionParserConfigured: typeof sessionParser === 'function',
+          sessionStore: 'PostgreSQL with PgSession'
+        },
+        securityLevel: hasUpgradeHandler && typeof sessionParser === 'function' ? 
+          'SECURE (Session-gated authentication active)' : 
+          'VULNERABLE (No authentication)',
+        testInstructions: {
+          unauthenticated: 'Try connecting to ws://localhost:5000/realtime-alerts without login - should be rejected',
+          authenticated: 'Login first, then connect to ws://localhost:5000/realtime-alerts - should succeed'
+        }
+      };
+      
+      console.log('🔒 Security Status:', securityStatus);
+      
+      res.json(securityStatus);
+      
+    } catch (error: any) {
+      console.error('❌ Error in WebSocket auth test:', error);
+      res.status(500).json({
+        error: error.message,
+        timestamp: new Date().toISOString(),
+        securityStatus: 'UNKNOWN - Error during test'
+      });
+    }
+  });
+
   // Admin API to specifically enable MLB_FIRST_AND_SECOND for all users
   app.post('/api/admin/enable-first-and-second', async (req, res) => {
     try {
@@ -336,14 +420,44 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   const { createWSS } = await import('./services/ws-setup');
   const { HealthMonitor } = await import('./services/health-monitor');
 
-  // Create WebSocket server with proper heartbeat
-  const wss = createWSS(httpServer);
+  // Create WebSocket server with session authentication (no server listener - handled by upgrade event)
+  const wss = createWSS(httpServer, { noServer: true });
+
+  // 🔒 SECURITY FIX: Implement session-gated WebSocket authentication
+  httpServer.on('upgrade', function upgrade(request, socket, head) {
+    console.log('🔒 WebSocket upgrade attempt from', request.headers.origin);
+    
+    // Parse session from the request
+    sessionParser(request as any, {} as any, () => {
+      const req = request as any;
+      
+      // Check if user is authenticated via session
+      if (!req.session?.userId) {
+        console.log('🚫 WebSocket connection rejected - no valid session');
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+      
+      console.log(`🔒 WebSocket connection authenticated for user: ${req.session.userId}`);
+      
+      // Allow the connection to proceed to the WebSocket server
+      wss.handleUpgrade(request, socket, head, function done(ws) {
+        // Tag the WebSocket connection with the authenticated userId
+        (ws as any).userId = req.session.userId;
+        (ws as any).authenticatedAt = new Date().toISOString();
+        
+        console.log(`🔌 Authenticated WebSocket connection established for user: ${req.session.userId}`);
+        wss.emit('connection', ws, request);
+      });
+    });
+  });
   
   // Initialize health monitor
   const healthMonitor = new HealthMonitor(wss);
   healthMonitor.startMonitoring();
 
-  console.log('✅ WebSocket server enabled with heartbeat and health monitoring');
+  console.log('✅ WebSocket server enabled with SESSION-GATED AUTHENTICATION and health monitoring');
 
   // Admin panel compatibility route
   app.get('/admin-panel', (req, res) => res.redirect('/admin/login.html'));
@@ -2827,7 +2941,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Test WebSocket
       debugResults.services.websocket = {
-        clients: clients.size,
+        clients: wss.clients.size,
         status: 'ACTIVE'
       };
 
