@@ -156,6 +156,7 @@ export default class WindChangeModule extends BaseAlertModule {
   }
 
   private getDirectionImpact(direction: string): number {
+    if (!direction || typeof direction !== 'string') return 0;
     const dir = direction.toLowerCase();
     
     if (dir.includes('out') || dir.includes('center')) return 3;

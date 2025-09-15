@@ -661,7 +661,6 @@ export class GameStateManager {
       }
 
       // CRITICAL FIX: Trigger alert generation for live games
-      console.log(`🔍 Debug: Game ${gameId} state=${gameInfo.currentState}, engineManager=${!!this.engineManager}`);
       if (gameInfo.currentState === RuntimeGameState.LIVE && this.engineManager) {
         console.log(`🎯 Force evaluating alerts for live game ${gameId}`);
         
