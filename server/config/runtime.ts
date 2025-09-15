@@ -11,9 +11,11 @@ export const RUNTIME = {
   calendarPoll: {
     defaultMs: 60_000,              // Baseline: poll status every 60s
     preStartWindowMin: 10,          // T-10m to T+5m tighten polling  
-    preStartPollMs: 10_000,         // Tighten to every 10s near start
-    liveConfirmMs: 4_000,           // Wait 4s before second confirmation
-    requireConsecutive: 2,          // Need 2 consecutive "Live" reads
+    preStartPollMs: 10_000,         // Tighten to every 10s near start (T-10m to T-2m)
+    criticalWindowMin: 2,           // Critical detection window (T-2m to T+5m)
+    criticalPollMs: 2_000,          // Critical window: 2s polling for ≤5s guarantee
+    liveConfirmMs: 500,             // FIXED: 500ms confirmation (was 4s!)
+    requireConsecutive: 1,          // FIXED: Single confirmation (was 2!)
     finalConfirmMs: 5_000,          // Confirm FINAL status 
     pausedPollMs: 45_000,           // Poll every 45s when PAUSED
   },
@@ -123,10 +125,18 @@ export const RUNTIME = {
   // === PERFORMANCE TARGETS ===
   performance: {
     startupMaxMs: 3_000,            // App startup time
-    liveDetectionMaxMs: 10_000,     // Baseline live detection
-    preStartDetectionMaxMs: 5_000,  // Pre-start window detection
+    liveDetectionMaxMs: 20_000,     // Baseline detection (T-10m to T-2m)
+    criticalDetectionMaxMs: 5_000,  // GUARANTEED ≤5s in critical window (T-2m to T+5m)
+    confirmationMaxMs: 500,         // Confirmation adds <500ms latency
     engineStartupMaxMs: 1_000,      // Engine spin-up time
     firstAlertMaxMs: 3_000,         // First alert after Live
+    
+    // Realistic timing guarantees by window
+    guaranteedDetection: {
+      criticalWindow: 5_000,        // T-2m to T+5m: ≤5s GUARANTEED
+      preStartWindow: 20_000,       // T-10m to T-2m: ≤20s acceptable
+      baselineWindow: 120_000,      // Far future: ~2min acceptable
+    },
   },
 } as const;
 

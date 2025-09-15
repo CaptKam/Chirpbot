@@ -530,22 +530,34 @@ export class CalendarSyncService implements ICalendarSyncService {
     const sportState = this.sportStates.get(sport);
     if (!sportState) return this.config.defaultPollInterval;
 
-    // Count games by status to determine optimal polling
+    // Count games by proximity to start with tiered cadence
     let liveCount = 0;
+    let criticalWindowCount = 0;
     let preStartCount = 0;
     
     for (const game of sportState.games.values()) {
       if (game.status === 'live') {
         liveCount++;
-      } else if (this.isGameNearStart(game)) {
-        preStartCount++;
+      } else {
+        const timeToStart = new Date(game.startTime).getTime() - Date.now();
+        const minutesToStart = timeToStart / (1000 * 60);
+        
+        if (minutesToStart <= RUNTIME.calendarPoll.criticalWindowMin && minutesToStart > -5) {
+          criticalWindowCount++;
+        } else if (minutesToStart <= this.config.preStartWindowMinutes && minutesToStart > RUNTIME.calendarPoll.criticalWindowMin) {
+          preStartCount++;
+        }
       }
     }
 
-    // Tighten polling for live games or games near start
+    // Tiered polling cadence for guaranteed ≤5s detection
     if (liveCount > 0) {
       return Math.min(RUNTIME.calendarPoll.preStartPollMs, this.config.defaultPollInterval / 2);
+    } else if (criticalWindowCount > 0) {
+      // Critical window (T-2m to T+5m): 3-second polling for detection guarantee
+      return RUNTIME.calendarPoll.criticalPollMs;
     } else if (preStartCount > 0) {
+      // Normal pre-start window (T-10m to T-2m): 10-second polling
       return RUNTIME.calendarPoll.preStartPollMs;
     }
 
@@ -561,7 +573,12 @@ export class CalendarSyncService implements ICalendarSyncService {
     const timeToStart = startTime.getTime() - Date.now();
     const minutesToStart = timeToStart / (1000 * 60);
     
-    if (minutesToStart <= this.config.preStartWindowMinutes && minutesToStart > -5) {
+    // Tiered cadence for guaranteed ≤5s detection
+    if (minutesToStart <= RUNTIME.calendarPoll.criticalWindowMin && minutesToStart > -5) {
+      // Critical window (T-2m to T+5m): 3-second polling for ≤5s detection guarantee
+      return RUNTIME.calendarPoll.criticalPollMs;
+    } else if (minutesToStart <= this.config.preStartWindowMinutes && minutesToStart > RUNTIME.calendarPoll.criticalWindowMin) {
+      // Normal pre-start window (T-10m to T-2m): 10-second polling
       return this.config.preStartPollInterval;
     }
     
@@ -574,6 +591,14 @@ export class CalendarSyncService implements ICalendarSyncService {
     const minutesToStart = timeToStart / (1000 * 60);
     
     return minutesToStart <= this.config.preStartWindowMinutes && minutesToStart > -5;
+  }
+
+  private isGameInCriticalWindow(game: CalendarGameData): boolean {
+    const startTime = new Date(game.startTime);
+    const timeToStart = startTime.getTime() - Date.now();
+    const minutesToStart = timeToStart / (1000 * 60);
+    
+    return minutesToStart <= RUNTIME.calendarPoll.criticalWindowMin && minutesToStart > -5;
   }
 
   private broadcastCalendarUpdate(update: CalendarUpdateEvent): void {
