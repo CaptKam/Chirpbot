@@ -8,6 +8,7 @@ interface WebSocketMessage {
   sequenceNumber?: number;
   seq?: number;
   connectionType?: string;
+  serverBootId?: string;
 }
 
 // Singleton WebSocket connection
@@ -31,6 +32,8 @@ let lastDisconnectTime: number | null = null;
 let serverBootId: string | null = null;
 let isHttpPolling = false;
 let httpPollingInterval: NodeJS.Timeout | null = null;
+let lastServerRestartTime: number | null = null;
+let errorSuppressionUntil: number | null = null;
 
 // Constants for backoff behavior
 const MIN_BACKOFF_DELAY = 1000; // 1 second
@@ -39,6 +42,7 @@ const BACKOFF_MULTIPLIER = 1.5; // More gradual than 2x
 const JITTER_RANGE = 0.3; // ±30% jitter
 const HTTP_POLLING_THRESHOLD = 30000; // Start HTTP polling after 30s disconnection
 const TRANSIENT_ERROR_CODES = [1006, 1001]; // Treat as temporary during development
+const ERROR_SUPPRESSION_DURATION = 5000; // Suppress errors for 5s after server restart
 
 // Utility functions for connection resilience
 function calculateBackoffDelay(currentDelay: number): number {
@@ -91,6 +95,16 @@ function stopHttpPolling() {
 
 function isDevelopmentTransientError(code: number): boolean {
   return TRANSIENT_ERROR_CODES.includes(code);
+}
+
+function shouldSuppressErrors(): boolean {
+  if (!errorSuppressionUntil) return false;
+  return Date.now() < errorSuppressionUntil;
+}
+
+function enableErrorSuppression() {
+  errorSuppressionUntil = Date.now() + ERROR_SUPPRESSION_DURATION;
+  console.log(`🔇 Error suppression enabled for ${ERROR_SUPPRESSION_DURATION}ms due to server restart`);
 }
 
 export function useWebSocketSingleton() {
@@ -178,6 +192,19 @@ export function useWebSocketSingleton() {
     try {
       const message: WebSocketMessage = JSON.parse(data);
       
+      // Track server boot ID to detect server restarts
+      if (message.serverBootId) {
+        const newBootId = message.serverBootId;
+        if (serverBootId && serverBootId !== newBootId) {
+          console.log(`🔄 Server restart detected: ${serverBootId} → ${newBootId}`);
+          lastServerRestartTime = Date.now();
+          enableErrorSuppression();
+          // Clear error state on server restart - it's expected behavior
+          setConnectionError(null);
+        }
+        serverBootId = newBootId;
+      }
+      
       // Call all registered callbacks
       callbacksRef.current.forEach(callback => {
         try {
@@ -214,8 +241,10 @@ export function useWebSocketSingleton() {
       setConnectionType('sse');
       setConnectionError(null);
       currentConnectionType = 'sse';
-      sseAttempts = 0;
+      sseBackoffDelay = resetBackoffDelay(); // Reset delay on successful connection
       isSSEConnecting = false;
+      lastDisconnectTime = null; // Clear disconnect time
+      stopHttpPolling(); // Stop any HTTP polling
       
       // Fetch missed alerts on successful reconnection
       if (lastReceivedSequenceNumber !== null || lastConnectionTime !== null) {
@@ -237,19 +266,25 @@ export function useWebSocketSingleton() {
       currentConnectionType = 'none';
       isSSEConnecting = false;
       
+      // Track disconnect time for HTTP polling
+      if (!lastDisconnectTime) {
+        lastDisconnectTime = Date.now();
+      }
+      
       if (explicitlyClosed) return;
       
-      // Retry SSE connection with exponential backoff
-      const delay = Math.min(10_000, 1000 * 2 ** sseAttempts) + Math.random() * 500;
-      sseAttempts++;
+      // Calculate delay with exponential backoff and jitter
+      const delay = calculateBackoffDelay(sseBackoffDelay);
+      sseBackoffDelay = delay;
       
-      if (sseAttempts <= MAX_SSE_RETRIES) {
-        console.log(`📡 Retrying SSE connection in ${Math.round(delay)}ms (attempt ${sseAttempts}/${MAX_SSE_RETRIES})`);
-        setTimeout(() => connectSSE(), delay);
-      } else {
-        setConnectionError('Both WebSocket and SSE connections failed after multiple attempts');
-        console.error('📡 All connection methods exhausted - no real-time alerts available');
+      console.log(`📡 Retrying SSE connection in ${Math.round(delay)}ms (unlimited retries with exponential backoff)`);
+      
+      // Start HTTP polling if disconnected too long
+      if (shouldStartHttpPolling()) {
+        startHttpPolling(queryClient);
       }
+      
+      setTimeout(() => connectSSE(), delay);
     });
 
     return eventSource;
@@ -291,9 +326,11 @@ export function useWebSocketSingleton() {
       setConnectionType('websocket');
       setConnectionError(null);
       currentConnectionType = 'websocket';
-      attempts = 0;
-      sseAttempts = 0; // Reset SSE attempts when WebSocket succeeds
+      wsBackoffDelay = resetBackoffDelay(); // Reset delay on successful connection
+      sseBackoffDelay = resetBackoffDelay(); // Reset SSE delay too
       isConnecting = false;
+      lastDisconnectTime = null; // Clear disconnect time
+      stopHttpPolling(); // Stop any HTTP polling
       
       // Fetch missed alerts on successful reconnection
       if (lastReceivedSequenceNumber !== null || lastConnectionTime !== null) {
@@ -315,21 +352,46 @@ export function useWebSocketSingleton() {
       currentConnectionType = 'none';
       isConnecting = false;
       
+      // Track disconnect time for HTTP polling
+      if (!lastDisconnectTime) {
+        lastDisconnectTime = Date.now();
+      }
+      
       if (explicitlyClosed) return;
       
-      // Exponential backoff with jitter
-      const delay = Math.min(10_000, 500 * 2 ** attempts) + Math.random() * 500;
-      attempts++;
-      
-      if (attempts <= MAX_WS_RETRIES) {
-        console.log(`Attempting to reconnect in ${Math.round(delay)}ms (attempt ${attempts}/${MAX_WS_RETRIES})`);
+      // Handle development-friendly errors
+      const isTransientError = isDevelopmentTransientError(event.code);
+      if (isTransientError) {
+        console.log(`🔄 Transient error (${event.code}) - likely dev server restart, will retry with minimal delay`);
+        // Use shorter delay for likely development restarts
+        const delay = Math.min(2000, wsBackoffDelay);
         setTimeout(() => connect(), delay);
-      } else {
-        console.log('📡 WebSocket retries exhausted, falling back to SSE...');
-        setConnectionError('WebSocket failed, trying SSE fallback...');
-        // Fall back to SSE after WebSocket retries are exhausted
-        setTimeout(() => connectSSE(), 1000);
+        return;
       }
+      
+      // Calculate delay with exponential backoff and jitter
+      const delay = calculateBackoffDelay(wsBackoffDelay);
+      wsBackoffDelay = delay;
+      
+      console.log(`🔄 Attempting to reconnect in ${Math.round(delay)}ms (unlimited retries with exponential backoff)`);
+      
+      // Start HTTP polling if disconnected too long  
+      if (shouldStartHttpPolling()) {
+        startHttpPolling(queryClient);
+      }
+      
+      // Set error message only if not suppressed
+      if (!shouldSuppressErrors()) {
+        if (delay > 10000) {
+          setConnectionError('Connection lost - retrying with extended delay...');
+        } else {
+          setConnectionError('Connection lost - reconnecting...');
+        }
+      } else {
+        console.log('🔇 Error message suppressed due to recent server restart');
+      }
+      
+      setTimeout(() => connect(), delay);
     });
 
     socket.addEventListener("error", (error) => {
@@ -356,13 +418,19 @@ export function useWebSocketSingleton() {
       eventSource = null;
     }
     
+    // Clean up HTTP polling
+    stopHttpPolling();
+    
     setIsConnected(false);
     setConnectionType('none');
     currentConnectionType = 'none';
     isConnecting = false;
     isSSEConnecting = false;
-    attempts = 0;
-    sseAttempts = 0;
+    
+    // Reset backoff delays
+    wsBackoffDelay = resetBackoffDelay();
+    sseBackoffDelay = resetBackoffDelay();
+    lastDisconnectTime = null;
   }, []);
 
   // Register message callback for this hook instance
