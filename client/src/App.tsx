@@ -13,7 +13,7 @@ import Login from "./pages/login";
 import Alerts from "./pages/alerts";
 import AlertHistory from "./pages/alert-history";
 import { BottomNavigation } from "@/components/bottom-navigation";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useWebSocketSingleton } from "@/hooks/use-websocket-singleton";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -51,7 +51,7 @@ function RegularAppContent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
-  const { lastMessage } = useWebSocket();
+  const { isConnected, connectionError } = useWebSocketSingleton();
 
   // Get settings to check if push notifications are enabled
   const { data: settings } = useQuery({
@@ -59,18 +59,6 @@ function RegularAppContent() {
     enabled: isAuthenticated,
   });
 
-  useEffect(() => {
-    if (lastMessage && isAuthenticated) {
-      switch (lastMessage.type) {
-        case 'team_monitoring_changed':
-          // Handle team monitoring changes
-          break;
-        case 'settings_changed':
-          // Handle settings changes if needed
-          break;
-      }
-    }
-  }, [lastMessage, toast, isAuthenticated, settings, setLocation]);
 
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>

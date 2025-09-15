@@ -125,7 +125,7 @@ export function useWebSocketSingleton() {
         });
 
         // Only update if query is settled (not fetching)
-        if (!queryState?.isLoading && currentData) {
+        if (queryState?.status !== 'pending' && currentData) {
           console.log('✅ Updating alerts cache with new WebSocket alert');
 
           queryClient.setQueryData(['/api/alerts'], (oldData: any) => {
