@@ -18,6 +18,7 @@ import { unifiedSettings } from "./storage";
 import { pool } from "./db";
 import { alerts as alertsTable, settings } from "../shared/schema";
 import { eq, desc } from "drizzle-orm";
+import { getCalendarSyncService } from "./services/calendar-sync-service";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -4252,6 +4253,155 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         error: 'Failed to fetch V3 performance metrics',
         details: error.message
       });
+    }
+  });
+
+  // === CALENDAR SYNC API ROUTES ===
+  // Initialize calendar sync service
+  const calendarService = getCalendarSyncService();
+
+  // Get all calendar data
+  app.get('/api/calendar', async (req, res) => {
+    try {
+      const { sport } = req.query;
+      const games = calendarService.getCalendarData(sport as string);
+      
+      res.json({
+        success: true,
+        games,
+        count: games.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Calendar API: Error fetching calendar data:', error);
+      res.status(500).json({ error: 'Failed to fetch calendar data', details: error.message });
+    }
+  });
+
+  // Get calendar data for specific sport
+  app.get('/api/calendar/:sport', async (req, res) => {
+    try {
+      const { sport } = req.params;
+      const games = calendarService.getCalendarData(sport.toUpperCase());
+      
+      res.json({
+        success: true,
+        sport: sport.toUpperCase(),
+        games,
+        count: games.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error(`❌ Calendar API: Error fetching ${req.params.sport} calendar data:`, error);
+      res.status(500).json({ error: `Failed to fetch ${req.params.sport} calendar data`, details: error.message });
+    }
+  });
+
+  // Get specific game data
+  app.get('/api/calendar/game/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const game = calendarService.getGameData(gameId);
+      
+      if (!game) {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+      
+      res.json({
+        success: true,
+        game,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error(`❌ Calendar API: Error fetching game ${req.params.gameId}:`, error);
+      res.status(500).json({ error: 'Failed to fetch game data', details: error.message });
+    }
+  });
+
+  // Get calendar sync metrics
+  app.get('/api/calendar/metrics', async (req, res) => {
+    try {
+      const metrics = calendarService.getMetrics();
+      
+      res.json({
+        success: true,
+        metrics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Calendar API: Error fetching metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch calendar metrics', details: error.message });
+    }
+  });
+
+  // Force refresh specific sport
+  app.post('/api/calendar/force-refresh/:sport', requireAuthentication, async (req, res) => {
+    try {
+      const { sport } = req.params;
+      
+      // Only admins can force refresh
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required for force refresh' });
+      }
+      
+      await calendarService.forceRefresh(sport.toUpperCase());
+      
+      console.log(`📅 Calendar API: Admin ${req.user.id} force refreshed ${sport.toUpperCase()} calendar data`);
+      
+      res.json({
+        success: true,
+        message: `${sport.toUpperCase()} calendar data refresh initiated`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error(`❌ Calendar API: Error force refreshing ${req.params.sport}:`, error);
+      res.status(500).json({ error: `Failed to force refresh ${req.params.sport}`, details: error.message });
+    }
+  });
+
+  // Start calendar sync service
+  app.post('/api/calendar/start', requireAuthentication, async (req, res) => {
+    try {
+      // Only admins can start/stop the service
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      await calendarService.start();
+      
+      console.log(`📅 Calendar API: Admin ${req.user.id} started calendar sync service`);
+      
+      res.json({
+        success: true,
+        message: 'Calendar sync service started',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Calendar API: Error starting service:', error);
+      res.status(500).json({ error: 'Failed to start calendar sync service', details: error.message });
+    }
+  });
+
+  // Stop calendar sync service
+  app.post('/api/calendar/stop', requireAuthentication, async (req, res) => {
+    try {
+      // Only admins can start/stop the service
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      await calendarService.stop();
+      
+      console.log(`📅 Calendar API: Admin ${req.user.id} stopped calendar sync service`);
+      
+      res.json({
+        success: true,
+        message: 'Calendar sync service stopped',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Calendar API: Error stopping service:', error);
+      res.status(500).json({ error: 'Failed to stop calendar sync service', details: error.message });
     }
   });
 
