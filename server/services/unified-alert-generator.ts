@@ -216,10 +216,8 @@ export class UnifiedAlertGenerator {
     console.log('⚡ Starting production alert monitoring...');
     
     try {
-      // Start health monitoring
-      if (this.healthMonitor) {
-        this.healthMonitor.startMonitoring();
-      }
+      // Health monitor is already initialized and running from initializeProductionServices()
+      console.log('✅ Health monitor already active and monitoring system health');
 
       // Initialize and start adaptive polling for each sport
       if (this.adaptivePollingManagers) {
