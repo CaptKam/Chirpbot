@@ -149,6 +149,7 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_SCORING_OPPORTUNITY',
         'MLB_PITCHING_CHANGE',
         'MLB_BASES_LOADED_TWO_OUTS',
+        'MLB_STRIKEOUT',
         'TEST_ALERT'
       ];
 
@@ -483,6 +484,7 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_FIRST_AND_THIRD_TWO_OUTS',
         'MLB_RUNNER_ON_THIRD_TWO_OUTS',
         'MLB_BASES_LOADED_TWO_OUTS',
+        'MLB_STRIKEOUT',
         'TEST_ALERT'
       ];
 
@@ -536,6 +538,7 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_SCORING_OPPORTUNITY': './alert-cylinders/mlb/scoring-opportunity-module.ts',
         'MLB_PITCHING_CHANGE': './alert-cylinders/mlb/pitching-change-module.ts',
         'MLB_BASES_LOADED_TWO_OUTS': './alert-cylinders/mlb/bases-loaded-two-outs-module.ts',
+        'MLB_STRIKEOUT': './alert-cylinders/mlb/strikeout-module.ts',
         'TEST_ALERT': './alert-cylinders/test-alert-module.ts'
       };
 

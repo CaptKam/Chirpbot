@@ -3642,7 +3642,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Update the global alert setting in database
-      await storage.setGlobalAlertSetting(sport, alertType, enabled);
+      await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId!);
 
       // Clear cache for this sport using the proper public method
       await unifiedSettings.invalidateCache(sport);
