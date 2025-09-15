@@ -15,6 +15,7 @@ import { EngineLifecycleManager as EngineLifecycleManagerClass, EngineState, typ
 import { CalendarSyncService, type CalendarGameData } from './calendar-sync-service';
 import { WeatherOnLiveService, type WeatherChangeEvent } from './weather-on-live-service';
 import type { GameStateManager, GameStateInfo, EngineLifecycleManager } from './game-state-manager';
+import { gameStateManager } from './game-state-manager';
 import type { BaseGameData } from './base-sport-api';
 import { BaseSportEngine, GameState, AlertResult } from './engines/base-engine';
 
@@ -180,6 +181,17 @@ export class UnifiedAlertGenerator {
         enableMetrics: true
       });
       this.weatherOnLiveService = new WeatherOnLiveService();
+
+      // CRITICAL FIX: Connect GameStateManager to EngineLifecycleManager
+      this.gameStateManager = gameStateManager;
+      this.gameStateManager.setEngineLifecycleManager(this.engineLifecycleManager);
+      this.gameStateManager.setCalendarSyncService(this.calendarSyncService);
+      this.gameStateManager.setWeatherOnLiveService(this.weatherOnLiveService);
+      
+      // Connect CalendarSyncService to GameStateManager for state transitions
+      this.calendarSyncService.setGameStateManager(this.gameStateManager);
+      
+      console.log('🔗 GameStateManager connected to EngineLifecycleManager - engines will start when games go LIVE');
 
       // Initialize backward compatibility API services (used for fallback only)
       this.mlbApi = new MLBApiService();
