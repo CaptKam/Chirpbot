@@ -7,7 +7,7 @@
  */
 
 import { RUNTIME, GameState as RuntimeGameState, WeatherArmReason } from '../config/runtime';
-import { WebSocketServer } from 'ws';
+// WebSocket import removed - using HTTP polling architecture
 import type { BaseGameData } from './base-sport-api';
 
 // === CORE INTERFACES ===
@@ -289,7 +289,7 @@ export class GameStateManager {
   private engineManager?: EngineLifecycleManager;
   private weatherService?: WeatherService;
   private weatherOnLiveService?: any; // WeatherOnLiveService - avoiding circular import
-  private wss?: WebSocketServer;
+  // WebSocket server removed - using HTTP polling architecture
   
   // Performance tracking
   private stats = {
@@ -325,10 +325,8 @@ export class GameStateManager {
     console.log('✅ Weather-on-Live service connected to GameStateManager');
   }
 
-  setWebSocketServer(wss: WebSocketServer): void {
-    this.wss = wss;
-    console.log('✅ WebSocket server connected to GameStateManager');
-  }
+  // WebSocket server setup removed - using HTTP polling architecture
+  // No longer needed with HTTP polling architecture
 
   // === GAME MANAGEMENT ===
 

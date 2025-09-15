@@ -360,13 +360,9 @@ async function startServer() {
           console.log('🌤️ Starting Weather-on-Live service...');
           const { weatherOnLiveService } = await import('./services/weather-on-live-service');
           
-          // Connect WebSocket server for real-time weather alerts  
-          if ((globalThis as any).wss) {
-            weatherOnLiveService.setWebSocketServer((globalThis as any).wss);
-            console.log(`✅ Weather-on-Live service started and connected to WebSocket`);
-          } else {
-            console.log(`⚠️ Weather-on-Live service started but WebSocket not available`);
-          }
+          // WebSocket functionality removed - using HTTP polling architecture
+          console.log(`✅ Weather-on-Live service started`);
+          console.log(`📡 Using HTTP polling architecture for real-time updates`);
           
           console.log(`🌤️ Weather monitoring will start automatically when games go LIVE`);
         } catch (error) {

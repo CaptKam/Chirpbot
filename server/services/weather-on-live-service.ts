@@ -7,7 +7,7 @@
  * - Sport-specific weather triggers from RUNTIME configuration
  * - Dynamic polling cadence with arming/disarming logic
  * - Weather change detection and alert generation
- * - Integration with GameStateManager and WebSocket broadcasting
+ * - Integration with GameStateManager and SSE broadcasting
  */
 
 import { RUNTIME, GameState as RuntimeGameState, WeatherArmReason } from '../config/runtime';
@@ -15,7 +15,7 @@ import { WeatherService, type WeatherData } from './weather-service';
 import { weatherAlertIntegration } from './weather-alert-integration';
 import { unifiedDeduplicator } from './unified-deduplicator';
 import { storage } from '../storage';
-import { WebSocketServer } from 'ws';
+// WebSocket import removed - using HTTP polling architecture
 import type { GameStateInfo } from './game-state-manager';
 import type { InsertAlert } from '../../shared/schema';
 
@@ -397,7 +397,7 @@ export class WeatherOnLiveService {
   private pollingTimers: Map<string, NodeJS.Timeout> = new Map();
   private weatherEvaluators: Map<string, WeatherEvaluator> = new Map();
   private alertCooldowns: Map<string, Date> = new Map();
-  private wss?: WebSocketServer;
+  // WebSocket server removed - using HTTP polling architecture
   
   // Circuit breaker state
   private consecutiveApiFailures: number = 0;
@@ -598,11 +598,9 @@ export class WeatherOnLiveService {
   }
   
   /**
-   * Set WebSocket server for broadcasting weather alerts
+   * WebSocket server setup removed - using HTTP polling architecture
    */
-  setWebSocketServer(wss: WebSocketServer): void {
-    this.wss = wss;
-  }
+  // No longer needed with HTTP polling architecture
   
   // === PRIVATE WEATHER MONITORING METHODS ===
   
@@ -770,23 +768,20 @@ export class WeatherOnLiveService {
       
       console.log(`🌤️ Weather Alert Generated: ${weatherAlert.message} (Game: ${change.gameId})`);
       
-      // Broadcast via WebSocket if available
-      if (this.wss) {
-        const alertMessage = {
-          type: 'weather_alert',
-          alert: savedAlert,
-          timestamp: new Date().toISOString()
-        };
-        
-        this.wss.clients.forEach(client => {
-          if (client.readyState === 1) { // WebSocket.OPEN
-            try {
-              client.send(JSON.stringify(alertMessage));
-            } catch (error) {
-              console.error('Failed to send weather alert via WebSocket:', error);
-            }
-          }
-        });
+      // Broadcast via SSE using global broadcast function
+      try {
+        const broadcastFunction = (global as any).broadcastAlertAfterSave;
+        if (broadcastFunction) {
+          broadcastFunction({
+            type: 'weather_alert',
+            alert: savedAlert,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          console.log('📡 SSE broadcast function not available for weather alert');
+        }
+      } catch (error) {
+        console.error('Failed to send weather alert via SSE:', error);
       }
       
     } catch (error) {

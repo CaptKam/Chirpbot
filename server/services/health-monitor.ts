@@ -1,11 +1,10 @@
-import { WebSocketServer } from "ws";
+// WebSocket imports removed - using HTTP polling architecture
 
 export class HealthMonitor {
   private interval?: NodeJS.Timeout;
-  private wss: WebSocketServer;
 
-  constructor(wss: WebSocketServer) {
-    this.wss = wss;
+  constructor() {
+    // No WebSocket dependency - using HTTP polling architecture
   }
 
   startMonitoring() {
@@ -14,34 +13,32 @@ export class HealthMonitor {
       return; // idempotent
     }
 
-    console.log('🏥 Starting WebSocket health monitoring');
+    console.log('🏥 Starting HTTP polling health monitoring');
     this.interval = setInterval(() => {
       const metrics = {
         timestamp: Date.now(),
-        clients: this.wss.clients.size,
-        activeConnections: Array.from(this.wss.clients).filter(ws => ws.readyState === 1).length
+        architecture: 'HTTP polling',
+        status: 'active'
       };
       
       // Log metrics for debugging
-      if (metrics.clients > 0) {
-        console.log('🏥 WebSocket Health:', metrics);
-      }
+      console.log('🏥 Health Monitor:', metrics);
     }, 30_000); // Check every 30 seconds
   }
 
   stopMonitoring() {
     if (this.interval) {
-      console.log('🏥 Stopping WebSocket health monitoring');
+      console.log('🏥 Stopping health monitoring');
       clearInterval(this.interval);
       this.interval = undefined;
     }
   }
 
   getConnectionCount(): number {
-    return this.wss.clients.size;
+    return 0; // No WebSocket connections in HTTP polling architecture
   }
 
   getActiveConnections(): number {
-    return Array.from(this.wss.clients).filter(ws => ws.readyState === 1).length;
+    return 0; // No WebSocket connections in HTTP polling architecture
   }
 }

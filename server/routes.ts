@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+// WebSocket imports removed - using HTTP polling architecture
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcryptjs";
@@ -14,7 +14,7 @@ import { AlertGenerator } from "./services/alert-generator";
 import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
-import { getServerBootId } from "./services/ws-setup";
+// WebSocket setup import removed - using HTTP polling architecture
 import { unifiedSettings } from "./storage";
 import { pool } from "./db";
 import { alerts as alertsTable, settings } from "../shared/schema";
@@ -51,7 +51,7 @@ async function requireAuthentication(req: express.Request, res: express.Response
   res.status(401).json({ message: 'Authentication required' });
 }
 
-// 🔒 SECURITY FIX: Create shared sessionParser to authenticate WebSocket connections
+// Session parser for HTTP authentication
 const PgSession = connectPgSimple(session);
 const sessionParser = session({
   name: 'cb.sid', // Same session name as main app
@@ -315,65 +315,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // 🔒 SECURITY TEST: Admin endpoint to verify WebSocket authentication is working
-  app.get('/api/admin/test-websocket-auth', async (req, res) => {
-    try {
-      console.log('🧪 SECURITY TEST: WebSocket Authentication Status');
-      
-      // Check if WebSocket server exists and if upgrade handler is properly configured
-      const hasUpgradeHandler = httpServer.listeners('upgrade').length > 0;
-      const activeConnections = wss ? wss.clients.size : 0;
-      
-      // Get authenticated connection info if any exist
-      const authenticatedConnections: any[] = [];
-      if (wss) {
-        wss.clients.forEach((ws: any) => {
-          if (ws.userId) {
-            authenticatedConnections.push({
-              userId: ws.userId,
-              authenticatedAt: ws.authenticatedAt,
-              isAlive: ws.isAlive,
-              readyState: ws.readyState
-            });
-          }
-        });
-      }
-      
-      const securityStatus = {
-        timestamp: new Date().toISOString(),
-        websocketServer: {
-          exists: !!wss,
-          activeConnections,
-          authenticatedConnections: authenticatedConnections.length,
-          connectionDetails: authenticatedConnections
-        },
-        authentication: {
-          upgradeHandlerConfigured: hasUpgradeHandler,
-          sessionParserConfigured: typeof sessionParser === 'function',
-          sessionStore: 'PostgreSQL with PgSession'
-        },
-        securityLevel: hasUpgradeHandler && typeof sessionParser === 'function' ? 
-          'SECURE (Session-gated authentication active)' : 
-          'VULNERABLE (No authentication)',
-        testInstructions: {
-          unauthenticated: 'Try connecting to ws://localhost:5000/realtime-alerts without login - should be rejected',
-          authenticated: 'Login first, then connect to ws://localhost:5000/realtime-alerts - should succeed'
-        }
-      };
-      
-      console.log('🔒 Security Status:', securityStatus);
-      
-      res.json(securityStatus);
-      
-    } catch (error: any) {
-      console.error('❌ Error in WebSocket auth test:', error);
-      res.status(500).json({
-        error: error.message,
-        timestamp: new Date().toISOString(),
-        securityStatus: 'UNKNOWN - Error during test'
-      });
-    }
-  });
+  // WebSocket test endpoint removed - using HTTP polling architecture
 
   // Admin API to specifically enable MLB_FIRST_AND_SECOND for all users
   app.post('/api/admin/enable-first-and-second', async (req, res) => {
@@ -418,54 +360,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Request deduplication and memory management are handled by middleware above
 
-  // Import new WebSocket setup and health monitor
-  const { createWSS } = await import('./services/ws-setup');
+  // WebSocket imports removed - using HTTP polling architecture
   const { HealthMonitor } = await import('./services/health-monitor');
 
-  // Create WebSocket server with session authentication and enhanced heartbeat (no server listener - handled by upgrade event)
-  const wss = createWSS(httpServer, { noServer: true });
-  
-  // Store WebSocket server globally for health monitoring and heartbeat stats
-  (globalThis as any).wss = wss;
-  
-  console.log(`🔌 WebSocket server created with heartbeat support - Boot ID: ${getServerBootId()}`);
+  // WebSocket server creation removed - using HTTP polling architecture
+  console.log(`📡 HTTP polling architecture enabled for real-time updates`);
 
-  // 🔒 SECURITY FIX: Implement session-gated WebSocket authentication
-  httpServer.on('upgrade', function upgrade(request, socket, head) {
-    console.log('🔒 WebSocket upgrade attempt from', request.headers.origin);
-    
-    // Parse session from the request
-    sessionParser(request as any, {} as any, () => {
-      const req = request as any;
-      
-      // Check if user is authenticated via session
-      if (!req.session?.userId) {
-        console.log('🚫 WebSocket connection rejected - no valid session');
-        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-        socket.destroy();
-        return;
-      }
-      
-      console.log(`🔒 WebSocket connection authenticated for user: ${req.session.userId}`);
-      
-      // Allow the connection to proceed to the WebSocket server
-      wss.handleUpgrade(request, socket, head, function done(ws) {
-        // Tag the WebSocket connection with the authenticated userId
-        (ws as any).userId = req.session.userId;
-        (ws as any).authenticatedAt = new Date().toISOString();
-        
-        console.log(`🔌 Authenticated WebSocket connection established for user: ${req.session.userId}`);
-        wss.emit('connection', ws, request);
-      });
-    });
-  });
+  // WebSocket upgrade handler removed - using HTTP polling architecture
   
-  // Initialize health monitor
-  const healthMonitor = new HealthMonitor(wss);
+  // Initialize health monitor without WebSocket dependency
+  const healthMonitor = new HealthMonitor();
   healthMonitor.startMonitoring();
 
-  console.log('✅ WebSocket server enabled with SESSION-GATED AUTHENTICATION, health monitoring, and 30s heartbeat');
-  console.log(`🔌 WebSocket heartbeat stats available at /api/health endpoint`);
+  console.log('✅ HTTP polling architecture enabled for real-time updates');
+  console.log('📡 Alert delivery via SSE and HTTP endpoints');
 
   // 📡 SSE FALLBACK ENDPOINT - Server-Sent Events for reliable alert delivery
   app.get('/realtime-alerts-sse', async (req, res) => {
@@ -580,7 +488,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Server-side deduplication for WebSocket broadcasts
+  // Server-side deduplication for SSE broadcasts
   const recentBroadcasts = new Map<string, number>(); // alertKey -> timestamp
   const BROADCAST_DEDUPE_TTL = 10000; // 10 seconds
 
@@ -597,14 +505,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   }, 60000); // Clean every minute
 
-  // Broadcast function to send alerts to all connected clients (WebSocket + SSE)
+  // Broadcast function to send alerts to all connected SSE clients
   function broadcast(data: any) {
-    const wsClientCount = wss.clients.size;
     const sseClientCount = sseClients.size;
-    const totalClients = wsClientCount + sseClientCount;
     
-    if (totalClients === 0) {
-      console.log('📡 No WebSocket or SSE clients connected for broadcast');
+    if (sseClientCount === 0) {
+      console.log('📡 No SSE clients connected for broadcast');
       return;
     }
 
@@ -635,25 +541,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     };
 
     const message = JSON.stringify(enhancedData);
-    let wsSuccessCount = 0;
-    let wsFailureCount = 0;
     let sseSuccessCount = 0;
     let sseFailureCount = 0;
-
-    // Send to WebSocket clients
-    wss.clients.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        try {
-          ws.send(message);
-          wsSuccessCount++;
-        } catch (error) {
-          console.error('Error sending WebSocket message:', error);
-          wsFailureCount++;
-        }
-      } else {
-        wsFailureCount++;
-      }
-    });
 
     // Send to SSE clients
     const sseMessage = `data: ${message}\n\n`;
@@ -678,19 +567,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     clientsToRemove.forEach(res => sseClients.delete(res));
 
     const logSeq = sequenceNumber ? `, seq: ${sequenceNumber}` : '';
-    console.log(`📡 Broadcast complete: WS(${wsSuccessCount}✅/${wsFailureCount}❌) SSE(${sseSuccessCount}✅/${sseFailureCount}❌) type: ${data.type}, alertKey: ${alertKey || 'unknown'}${logSeq}`);
+    console.log(`📡 SSE Broadcast complete: (${sseSuccessCount}✅/${sseFailureCount}❌) type: ${data.type}, alertKey: ${alertKey || 'unknown'}${logSeq}`);
   }
 
   // Export broadcast function with multiple names for compatibility
-  (global as any).wsBroadcast = broadcast;
-  (global as any).broadcastWebSocketMessage = broadcast;
+  (global as any).sseBroadcast = broadcast;
+  (global as any).broadcastMessage = broadcast;
 
   // Initialize Async AI Processor for background AI enhancement
   const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
 
   // Store broadcast function globally for unified-alert-generator to use AFTER database save  
   (global as any).broadcastAlertAfterSave = broadcast;
-  console.log('🚀 WebSocket broadcast function stored for post-database-save broadcasting');
+  console.log('🚀 SSE broadcast function stored for post-database-save broadcasting');
 
   // Basic health check
   app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -3208,9 +3097,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
-      // Test WebSocket
-      debugResults.services.websocket = {
-        clients: wss.clients.size,
+      // WebSocket functionality removed - using HTTP polling architecture
+      debugResults.services.sse = {
+        clients: sseClients.size,
         status: 'ACTIVE'
       };
 
@@ -3740,19 +3629,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Get memory management stats
       const memoryStats = memoryManager.getStats();
       
-      // Get WebSocket heartbeat stats if available
-      let websocketStats = null;
-      try {
-        const globalWss = (globalThis as any).wss;
-        if (globalWss && typeof globalWss.getHeartbeatStats === 'function') {
-          websocketStats = globalWss.getHeartbeatStats();
-          console.log(`🔌 Retrieved WebSocket heartbeat stats for health endpoint`);
-        } else {
-          console.log(`⚠️ WebSocket heartbeat stats not available: ${globalWss ? 'wss exists but no getHeartbeatStats method' : 'wss not found in global'}`);
-        }
-      } catch (error) {
-        // WebSocket stats not available - this is fine during startup
-      }
+      // WebSocket stats removed - using HTTP polling architecture
+      console.log('📡 HTTP polling architecture active - no WebSocket stats needed');
 
       const healthStatus = {
         status: memPercent > 0.9 ? 'degraded' : 'healthy',
@@ -3770,25 +3648,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             `Serving ${dedupeStats.cacheSize} cached responses` : 'No cached responses yet'
         },
         circuitBreakers: circuitBreakerStatus,
-        serverBootId: getServerBootId(),
-        websocket: websocketStats ? {
-          heartbeat: {
-            pingIntervalMs: websocketStats.pingIntervalMs,
-            totalPingsSent: websocketStats.totalPingsSent,
-            totalPongsReceived: websocketStats.totalPongsReceived,
-            deadConnectionsTerminated: websocketStats.deadConnectionsTerminated,
-            lastHeartbeatAt: websocketStats.lastHeartbeatAt,
-            pongResponseRate: websocketStats.totalPingsSent > 0 ? 
-              Math.round((websocketStats.totalPongsReceived / websocketStats.totalPingsSent) * 100) : 0
-          },
-          connections: {
-            current: websocketStats.currentConnections,
-            active: websocketStats.activeConnections
-          },
-          serverBootId: websocketStats.serverBootId
-        } : {
-          status: 'WebSocket server not initialized yet',
-          serverBootId: getServerBootId()
+        serverBootId: Date.now().toString(), // Simplified boot ID since WebSocket removed
+        sse: {
+          status: 'HTTP polling architecture active',
+          clients: sseClients.size,
+          supportedFeatures: ['server-sent-events', 'http-polling']
         }
       };
 

@@ -21,7 +21,7 @@ import { NCAAFApiService } from './ncaaf-api';
 import { WNBAApiService } from './wnba-api';
 import { CFLApiService } from './cfl-api';
 import { NBAApiService } from './nba-api';
-import { WebSocketServer } from 'ws';
+// WebSocket import removed - using HTTP polling architecture
 
 // === CORE INTERFACES ===
 
@@ -106,7 +106,7 @@ export class CalendarSyncService implements ICalendarSyncService {
   private readonly metrics: CalendarSyncMetrics;
   
   private gameStateManager?: GameStateManager;
-  private websocketServer?: WebSocketServer;
+  // WebSocket server removed - using HTTP polling architecture
   private pollTimer?: NodeJS.Timeout;
   private cleanupTimer?: NodeJS.Timeout;
   private isRunning = false;
@@ -221,10 +221,8 @@ export class CalendarSyncService implements ICalendarSyncService {
     console.log('📅 Calendar Sync: GameStateManager integration enabled');
   }
 
-  setWebSocketServer(websocketServer: WebSocketServer): void {
-    this.websocketServer = websocketServer;
-    console.log('📅 Calendar Sync: WebSocket broadcasting enabled');
-  }
+  // WebSocket server setup removed - using HTTP polling architecture
+  // No longer needed with HTTP polling architecture
 
   // Get calendar data for UI
   getCalendarData(sport?: string): CalendarGameData[] {

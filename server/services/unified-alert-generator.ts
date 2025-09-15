@@ -1147,7 +1147,7 @@ export class UnifiedAlertGenerator {
                       }
                     }
 
-                    // ✅ ONLY broadcast via WebSocket AFTER successful database save
+                    // ✅ Broadcast via SSE AFTER successful database save
                     try {
                       const broadcastFunction = (global as any).broadcastAlertAfterSave;
                       if (broadcastFunction) {
@@ -1169,10 +1169,10 @@ export class UnifiedAlertGenerator {
                           timestamp: new Date().toISOString()
                         });
                       } else {
-                        console.warn('⚠️ WebSocket broadcast function not available');
+                        console.warn('⚠️ SSE broadcast function not available');
                       }
                     } catch (broadcastError) {
-                      console.error(`❌ WebSocket broadcast failed:`, broadcastError);
+                      console.error(`❌ SSE broadcast failed:`, broadcastError);
                     }
 
                     // Send Telegram notification if configured
