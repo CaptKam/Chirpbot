@@ -844,4 +844,18 @@ export class NFLEngine extends BaseSportEngine {
       }
     };
   }
+
+  // Override to return all available NFL alert types
+  async getAvailableAlertTypes(): Promise<string[]> {
+    return [
+      'NFL_GAME_START',
+      'NFL_SECOND_HALF_KICKOFF',
+      'NFL_TWO_MINUTE_WARNING',
+      'NFL_RED_ZONE',
+      'NFL_FOURTH_DOWN',
+      'NFL_RED_ZONE_OPPORTUNITY',
+      'NFL_TURNOVER_LIKELIHOOD',
+      'NFL_MASSIVE_WEATHER'
+    ];
+  }
 }
