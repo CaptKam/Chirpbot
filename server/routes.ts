@@ -2138,17 +2138,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // For real users, get monitored games and filter alerts
-      const monitoredGames = await storage.getMonitoredGames(currentUserId);
+      const monitoredGames = await storage.getAllMonitoredGames();
       if (monitoredGames.length === 0) {
         res.json([]);
         return;
       }
 
-      const monitoredGameIds = monitoredGames.map(game => game.gameId);
+      const monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
       
       // Build WHERE clause for sequence number or timestamp filtering
       let whereClause = `
-        game_id IN (${monitoredGameIds.map(id => `'${id}'`).join(',')})
+        game_id IN (${monitoredGameIds.map((id: any) => `'${id}'`).join(',')})
         AND (is_demo IS NULL OR is_demo = false)
       `;
 
@@ -3789,6 +3789,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           const tempEngine = new NFLEngine();
           availableAlerts = await tempEngine.getAvailableAlertTypes();
           console.log(`🔍 NFL Engine returned ${availableAlerts.length} alert types:`, availableAlerts);
+        } else if (sport.toUpperCase() === 'NBA') {
+          const { NBAEngine } = await import('./services/engines/nba-engine');
+          const tempEngine = new NBAEngine();
+          availableAlerts = await tempEngine.getAvailableAlertTypes();
+          console.log(`🔍 NBA Engine returned ${availableAlerts.length} alert types:`, availableAlerts);
         } else if (sport.toUpperCase() === 'WNBA') {
           const { WNBAEngine } = await import('./services/engines/wnba-engine');
           const tempEngine = new WNBAEngine();
