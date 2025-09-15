@@ -600,25 +600,9 @@ export class CalendarSyncService implements ICalendarSyncService {
   }
 
   private broadcastCalendarUpdate(update: CalendarUpdateEvent): void {
-    if (!this.websocketServer) return;
-
-    const message = JSON.stringify(update);
-    let broadcastCount = 0;
-
-    for (const client of this.websocketServer.clients) {
-      if (client.readyState === 1) { // WebSocket.OPEN
-        try {
-          client.send(message);
-          broadcastCount++;
-        } catch (error) {
-          console.error('📅 Calendar Sync: Error broadcasting to client:', error);
-        }
-      }
-    }
-
-    if (broadcastCount > 0) {
-      console.log(`📅 Calendar Sync: Broadcasted ${update.type} to ${broadcastCount} clients`);
-    }
+    // WebSocket broadcasting removed - using HTTP polling architecture
+    // This method is kept as no-op to maintain API compatibility
+    return;
   }
 
   private cleanupOldGames(): void {

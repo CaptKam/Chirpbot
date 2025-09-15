@@ -239,7 +239,7 @@ function ValueProps() {
     {
       icon: <Zap className="w-6 h-6" />,
       title: "Fast Processing Pipeline",
-      description: "Sub-250ms internal processing with 2-5 second end-to-end delivery via WebSocket. Get alerts before they hit TV broadcasts."
+      description: "Sub-250ms internal processing with 2-5 second end-to-end delivery via HTTP polling. Get alerts before they hit TV broadcasts."
     },
     {
       icon: <Target className="w-6 h-6" />,
@@ -407,7 +407,7 @@ function HowItWorks() {
     {
       number: "03",
       title: "Receive Instant Alerts",
-      description: "Get real-time notifications via WebSocket and Telegram with AI-powered context."
+      description: "Get real-time notifications via HTTP polling and Telegram with AI-powered context."
     }
   ];
 
@@ -507,7 +507,7 @@ function Pricing() {
               {[
                 "Real-time alerts for all sports",
                 "AI-powered context analysis", 
-                "WebSocket live updates",
+                "HTTP polling live updates",
                 "Team monitoring dashboard",
                 "Telegram integration"
               ].map((feature, index) => (
@@ -535,7 +535,7 @@ function FAQ() {
   const faqs = [
     {
       question: "How fast are the alerts?",
-      answer: "Our system polls ESPN and MLB APIs every 2 seconds and delivers alerts via WebSocket instantly. You'll typically receive alerts within 2-5 seconds of events happening."
+      answer: "Our system polls ESPN and MLB APIs every 2 seconds and delivers alerts via HTTP polling instantly. You'll typically receive alerts within 2-5 seconds of events happening."
     },
     {
       question: "Which sports are supported?",

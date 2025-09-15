@@ -9,7 +9,7 @@
  * Layer 3 - Adapters (CLI, Express router, library functions)
  */
 
-import { pool, db } from './db.ts';
+import { db } from './db.ts';
 import { sql } from 'drizzle-orm';
 import express from 'express';
 import { writeFileSync } from 'fs';

@@ -174,7 +174,3 @@ export interface Settings {
   pushNotificationsEnabled: boolean;
 }
 
-export interface WebSocketMessage {
-  type: 'new_alert' | 'team_monitoring_changed' | 'settings_changed';
-  data: Alert | Team | Settings;
-}

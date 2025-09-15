@@ -13,8 +13,6 @@ import Login from "./pages/login";
 import Alerts from "./pages/alerts";
 import AlertHistory from "./pages/alert-history";
 import { BottomNavigation } from "@/components/bottom-navigation";
-import { useWebSocketSingleton } from "@/hooks/use-websocket-singleton";
-import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { AuthLoading } from "@/components/sports-loading";
@@ -51,7 +49,6 @@ function RegularAppContent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
-  const { isConnected, connectionError } = useWebSocketSingleton();
 
   // Get settings to check if push notifications are enabled
   const { data: settings } = useQuery({

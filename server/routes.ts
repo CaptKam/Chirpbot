@@ -3,7 +3,6 @@ import express from "express";
 import { createServer, type Server } from "http";
 // WebSocket imports removed - using HTTP polling architecture
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -16,7 +15,7 @@ import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
 // WebSocket setup import removed - using HTTP polling architecture
 import { unifiedSettings } from "./storage";
-import { pool } from "./db";
+import { db } from "./db";
 import { alerts as alertsTable, settings } from "../shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { getCalendarSyncService } from "./services/calendar-sync-service";
@@ -51,15 +50,9 @@ async function requireAuthentication(req: express.Request, res: express.Response
   res.status(401).json({ message: 'Authentication required' });
 }
 
-// Session parser for HTTP authentication
-const PgSession = connectPgSimple(session);
+// In-memory session parser - no database/WebSocket dependencies!
 const sessionParser = session({
   name: 'cb.sid', // Same session name as main app
-  store: new PgSession({
-    pool: pool,
-    tableName: 'session',
-    createTableIfMissing: true
-  }),
   secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025', // Same secret as main app
   resave: false,
   saveUninitialized: false,

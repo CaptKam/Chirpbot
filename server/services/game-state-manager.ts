@@ -829,41 +829,9 @@ export class GameStateManager {
   // === WEBSOCKET BROADCASTING ===
 
   private broadcastGameStateChange(gameInfo: GameStateInfo, eventType: string, transition?: StateTransitionResult): void {
-    if (!this.wss) return;
-    
-    const message = {
-      type: 'game_state_change',
-      eventType,
-      gameId: gameInfo.gameId,
-      gameInfo: {
-        gameId: gameInfo.gameId,
-        sport: gameInfo.sport,
-        homeTeam: gameInfo.homeTeam,
-        awayTeam: gameInfo.awayTeam,
-        homeScore: gameInfo.homeScore,
-        awayScore: gameInfo.awayScore,
-        currentState: gameInfo.currentState,
-        previousState: gameInfo.previousState,
-        stateChangedAt: gameInfo.stateChangedAt,
-        isUserMonitored: gameInfo.isUserMonitored,
-        weatherArmed: gameInfo.weatherArmed,
-        pendingLiveConfirmation: gameInfo.pendingLiveConfirmation,
-        liveConfirmationAttempts: gameInfo.liveConfirmationAttempts
-      },
-      transition,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Broadcast to all connected clients
-    for (const client of this.wss.clients) {
-      if (client.readyState === 1) { // WebSocket.OPEN
-        try {
-          client.send(JSON.stringify(message));
-        } catch (error) {
-          console.error('❌ WebSocket broadcast error:', error);
-        }
-      }
-    }
+    // WebSocket broadcasting removed - using HTTP polling architecture
+    // This method is kept as no-op to maintain API compatibility
+    return;
   }
 
   // === LIFECYCLE MANAGEMENT ===

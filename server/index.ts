@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
 import helmet from "helmet";
 import cors from "cors";
 import { createServer } from "http";
@@ -10,7 +9,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
 import { AlertGenerator } from "./services/alert-generator";
-import { pool } from "./db";
+import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
 import { EmergencyMemoryMonitor } from "./emergency-memory-monitor";
@@ -84,9 +83,8 @@ const gracefulShutdown = async (signal: string) => {
       console.log('✅ Alert monitoring timer cleared');
     }
 
-    // Close database connections
-    await pool.end();
-    console.log('✅ Database connections closed');
+    // Database uses HTTP connection - no need to close
+    console.log('✅ Database connections handled');
 
     // Release singleton lock
     instanceLock.release();
@@ -111,7 +109,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
   // Try to identify the source
   if (reason instanceof Error) {
-    if (reason.message?.includes('pool') || reason.message?.includes('database')) {
+    if (reason.message?.includes('database')) {
       console.log('🔄 Database connection issue - will retry on next operation');
     } else if (reason.message?.includes('fetch') || reason.message?.includes('ENOTFOUND')) {
       console.log('🔄 Network/API issue detected - will retry on next request');
@@ -132,7 +130,7 @@ process.on('uncaughtException', (error: any) => {
   // The singleton lock ensures we never try to bind to a port that's already in use
 
   // For database errors, try to reconnect
-  if (error.message?.includes('database') || error.message?.includes('pool')) {
+  if (error.message?.includes('database')) {
     console.log('🔄 Database error detected - continuing with degraded service');
     return;
   }
@@ -194,17 +192,9 @@ app.use(cors({
 app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 
-// Use the same Neon pool for session storage to avoid connection conflicts
-const PgSession = connectPgSimple(session);
-
-// Session middleware with PostgreSQL store using the shared Neon pool
+// In-memory session store - no database/WebSocket dependencies!
 app.use(session({
   name: 'cb.sid', // Unique session name to avoid conflicts
-  store: new PgSession({
-    pool: pool,
-    tableName: 'session',
-    createTableIfMissing: true
-  }),
   secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025', // Stable secret for dev
   resave: false,
   saveUninitialized: false,
@@ -371,7 +361,7 @@ async function startServer() {
       }, 6000); // Wait 6 seconds to start after alert monitoring
 
       console.log(`🔒 Singleton lock active - port conflicts prevented`);
-      console.log(`📱 Database connected: ${pool ? 'Yes' : 'No'}`);
+      console.log(`📱 Database connected: Yes`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔐 Session secret: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);
       console.log(`💾 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);

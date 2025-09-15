@@ -70,36 +70,17 @@ const AlertSkeleton = () => (
 
 export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | 'MLB' | 'NFL' | 'NBA' | 'NHL' | 'NCAAF' | 'WNBA' | 'CFL'>('all');
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
 
-  // Fetch alerts using React Query with optimized polling
+  // Fetch alerts using React Query with HTTP polling every 5 seconds
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts, error: alertsError } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
-    refetchInterval: 10000, // Reduced to 10 seconds for near real-time
+    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
     refetchIntervalInBackground: true, // Keep polling when tab is inactive
     retry: 3,
     retryDelay: 1000,
-    staleTime: 5000, // Consider data stale after 5 seconds
+    staleTime: 3000, // Consider data stale after 3 seconds
   });
 
-  // Monitor WebSocket connection
-  useEffect(() => {
-    const checkWebSocketConnection = () => {
-      if (typeof window !== 'undefined' && window.WebSocket) {
-        // For Replit environment, always show as connected if no API errors
-        // The WebSocket hook will handle the actual connection management
-        if (!alertsError) {
-          setConnectionStatus('connected');
-        } else {
-          setConnectionStatus('disconnected');
-        }
-      }
-    };
-
-    checkWebSocketConnection();
-    const interval = setInterval(checkWebSocketConnection, 5000);
-    return () => clearInterval(interval);
-  }, [alertsError]);
 
   // Fetch alert stats
   const { data: stats, isLoading: statsLoading } = useQuery<AlertStats>({
@@ -155,16 +136,7 @@ export default function AlertsPage() {
     <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen" data-testid="alerts-page">
       <PageHeader 
         title="ChirpBot" 
-        subtitle={
-          <div className="flex items-center gap-2">
-            <span>Real-Time Alert Dashboard</span>
-            <div className={`h-2 w-2 rounded-full ${
-              connectionStatus === 'connected' ? 'bg-green-500' : 
-              connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 
-              'bg-red-500'
-            }`} title={`Connection: ${connectionStatus}`}></div>
-          </div>
-        }
+        subtitle="Real-Time Alert Dashboard"
       />
 
       {/* Filter Tabs - moved outside constraining div for full width */}
@@ -211,10 +183,7 @@ export default function AlertsPage() {
                 No Alerts Available
               </h3>
               <p className="text-slate-300 text-base mb-6">
-                {connectionStatus === 'disconnected' ? 
-                  'Connection lost. Attempting to reconnect...' :
-                  `No alerts for ${filter === 'all' ? 'any sport' : filter} at the moment`
-                }
+                {`No alerts for ${filter === 'all' ? 'any sport' : filter} at the moment`}
               </p>
               <Button 
                 onClick={() => refetchAlerts()} 
