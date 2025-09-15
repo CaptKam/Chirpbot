@@ -13,8 +13,8 @@ export function createWSS(server: Server, options: WSSOptions = {}) {
     clientTracking: true 
   });
 
-  // Keep connections alive (<= 30s beats most proxy idle drops)
-  const PING_INTERVAL = 25_000;
+  // Keep connections alive (reduced interval for better Error 1006 resilience)
+  const PING_INTERVAL = 18_000;
 
   wss.on("connection", (ws: WebSocket, req?: any) => {
     // 🔒 SECURITY: Connection is now authenticated - userId is attached by upgrade handler

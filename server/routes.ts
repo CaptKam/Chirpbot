@@ -459,6 +459,66 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   console.log('✅ WebSocket server enabled with SESSION-GATED AUTHENTICATION and health monitoring');
 
+  // 📡 SSE FALLBACK ENDPOINT - Server-Sent Events for reliable alert delivery
+  app.get('/realtime-alerts-sse', async (req, res) => {
+    // 🔒 Session authentication check
+    if (!req.session?.userId) {
+      console.log('🚫 SSE connection rejected - no valid session');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const userId = req.session.userId;
+    console.log(`📡 SSE connection establishing for user: ${userId}`);
+
+    // Set SSE headers for proper event streaming
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control',
+      'X-Accel-Buffering': 'no' // Disable nginx buffering for real-time
+    });
+
+    // Send initial connection event
+    res.write(`data: ${JSON.stringify({
+      type: 'connection',
+      status: 'connected',
+      userId: userId,
+      connectionType: 'SSE',
+      timestamp: new Date().toISOString(),
+      message: 'SSE fallback connection established'
+    })}\n\n`);
+
+    // Add this client to SSE tracking
+    sseClients.add(res);
+    console.log(`📡 SSE client added. Total SSE clients: ${sseClients.size}`);
+
+    // Keep-alive ping every 30 seconds to prevent timeout
+    const keepAliveInterval = setInterval(() => {
+      if (!res.destroyed && !res.finished) {
+        res.write(`: keepalive-ping ${Date.now()}\n\n`);
+      } else {
+        clearInterval(keepAliveInterval);
+        sseClients.delete(res);
+        console.log(`📡 SSE client disconnected. Remaining SSE clients: ${sseClients.size}`);
+      }
+    }, 30000);
+
+    // Handle client disconnect
+    req.on('close', () => {
+      clearInterval(keepAliveInterval);
+      sseClients.delete(res);
+      console.log(`📡 SSE client disconnected (client close). Remaining SSE clients: ${sseClients.size}`);
+    });
+
+    req.on('error', (error) => {
+      console.error('📡 SSE client error:', error);
+      clearInterval(keepAliveInterval);
+      sseClients.delete(res);
+    });
+  });
+
   // Admin panel compatibility route
   app.get('/admin-panel', (req, res) => res.redirect('/admin/login.html'));
 
@@ -516,6 +576,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   const recentBroadcasts = new Map<string, number>(); // alertKey -> timestamp
   const BROADCAST_DEDUPE_TTL = 10000; // 10 seconds
 
+  // SSE client tracking for fallback support
+  const sseClients = new Set<express.Response>();
+
   // Clean up old entries periodically
   setInterval(() => {
     const now = Date.now();
@@ -526,16 +589,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   }, 60000); // Clean every minute
 
-  // Broadcast function to send alerts to all connected clients (updated for new WSS)
+  // Broadcast function to send alerts to all connected clients (WebSocket + SSE)
   function broadcast(data: any) {
-    const clientCount = wss.clients.size;
-    if (clientCount === 0) {
-      console.log('📡 No WebSocket clients connected for broadcast');
+    const wsClientCount = wss.clients.size;
+    const sseClientCount = sseClients.size;
+    const totalClients = wsClientCount + sseClientCount;
+    
+    if (totalClients === 0) {
+      console.log('📡 No WebSocket or SSE clients connected for broadcast');
       return;
     }
 
-    // Extract alertKey for deduplication
+    // Extract alertKey and sequence number for deduplication and ordering
     const alertKey = data.alert?.alertKey || data.alert?.id;
+    const sequenceNumber = data.alert?.sequenceNumber;
 
     if (alertKey) {
       const now = Date.now();
@@ -549,28 +616,61 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Record this broadcast
       recentBroadcasts.set(alertKey, now);
-      console.log(`✅ Broadcasting new alert: ${alertKey}`);
+      console.log(`✅ Broadcasting new alert: ${alertKey}${sequenceNumber ? ` (seq: ${sequenceNumber})` : ''}`);
     }
 
-    const message = JSON.stringify(data);
-    let successCount = 0;
-    let failureCount = 0;
+    // Enhance data with sequence number for client reconnection logic
+    const enhancedData = {
+      ...data,
+      sequenceNumber: sequenceNumber || data.sequenceNumber,
+      timestamp: data.timestamp || new Date().toISOString()
+    };
 
+    const message = JSON.stringify(enhancedData);
+    let wsSuccessCount = 0;
+    let wsFailureCount = 0;
+    let sseSuccessCount = 0;
+    let sseFailureCount = 0;
+
+    // Send to WebSocket clients
     wss.clients.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
           ws.send(message);
-          successCount++;
+          wsSuccessCount++;
         } catch (error) {
           console.error('Error sending WebSocket message:', error);
-          failureCount++;
+          wsFailureCount++;
         }
       } else {
-        failureCount++;
+        wsFailureCount++;
       }
     });
 
-    console.log(`📡 WebSocket broadcast: ${successCount} sent, ${failureCount} failed, type: ${data.type}, alertKey: ${alertKey || 'unknown'}`);
+    // Send to SSE clients
+    const sseMessage = `data: ${message}\n\n`;
+    const clientsToRemove: express.Response[] = [];
+    
+    sseClients.forEach((res) => {
+      try {
+        if (!res.destroyed && !res.finished) {
+          res.write(sseMessage);
+          sseSuccessCount++;
+        } else {
+          clientsToRemove.push(res);
+        }
+      } catch (error) {
+        console.error('Error sending SSE message:', error);
+        sseFailureCount++;
+        clientsToRemove.push(res);
+      }
+    });
+
+    // Clean up disconnected SSE clients
+    clientsToRemove.forEach(res => sseClients.delete(res));
+
+    const logSeq = sequenceNumber ? `, seq: ${sequenceNumber}` : '';
+    console.log(`📡 Broadcast complete: WS(${wsSuccessCount}✅/${wsFailureCount}❌) SSE(${sseSuccessCount}✅/${sseFailureCount}❌) type: ${data.type}, alertKey: ${alertKey || 'unknown'}${logSeq}`);
   }
 
   // Export broadcast function with multiple names for compatibility
@@ -1991,6 +2091,113 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error fetching alerts:", error);
       res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  // Snapshot endpoint for delta synchronization - fetches alerts since sequence number or timestamp
+  app.get('/api/alerts/snapshot', async (req, res) => {
+    try {
+      const currentUserId = req.session?.userId;
+      if (!currentUserId) {
+        res.json([]);
+        return;
+      }
+
+      const user = await storage.getUserById(currentUserId);
+      if (!user) {
+        res.json([]);
+        return;
+      }
+
+      const isDemoUser = user.username === 'demo';
+      const since = req.query.since as string;
+      const sinceSeq = req.query.seq ? parseInt(req.query.seq as string) : null;
+      
+      console.log(`📸 Snapshot request: userId=${currentUserId}, since=${since}, seq=${sinceSeq}, demo=${isDemoUser}`);
+
+      if (isDemoUser) {
+        // For demo users, just return demo alerts (no sequence filtering for now)
+        const demoAlerts = await storage.getDemoAlerts();
+        const transformedAlerts = (demoAlerts || []).map((alert: any) => ({
+          id: alert.id,
+          alertKey: alert.alertKey,
+          sequenceNumber: alert.sequenceNumber,
+          type: alert.type,
+          message: alert.payload?.message || `${alert.type} alert`,
+          gameId: alert.gameId,
+          sport: alert.sport,
+          homeTeam: alert.payload?.context?.homeTeam || 'Demo Home',
+          awayTeam: alert.payload?.context?.awayTeam || 'Demo Away',
+          createdAt: alert.createdAt,
+          timestamp: alert.createdAt,
+          payload: alert.payload
+        }));
+        res.json(transformedAlerts);
+        return;
+      }
+
+      // For real users, get monitored games and filter alerts
+      const monitoredGames = await storage.getMonitoredGames(currentUserId);
+      if (monitoredGames.length === 0) {
+        res.json([]);
+        return;
+      }
+
+      const monitoredGameIds = monitoredGames.map(game => game.gameId);
+      
+      // Build WHERE clause for sequence number or timestamp filtering
+      let whereClause = `
+        game_id IN (${monitoredGameIds.map(id => `'${id}'`).join(',')})
+        AND (is_demo IS NULL OR is_demo = false)
+      `;
+
+      if (sinceSeq) {
+        whereClause += ` AND sequence_number > ${sinceSeq}`;
+      } else if (since) {
+        whereClause += ` AND created_at > '${since}'`;
+      }
+
+      const result = await db.execute(sql.raw(`
+        SELECT id, sequence_number, type, game_id, sport, score, payload, created_at
+        FROM alerts
+        WHERE ${whereClause}
+        ORDER BY sequence_number ASC
+        LIMIT 200
+      `));
+
+      const alerts = result.rows.map((row: any) => {
+        let payload: any = {};
+        try {
+          payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
+        } catch (e) {
+          payload = {};
+        }
+
+        return {
+          id: row.id,
+          alertKey: `${row.game_id}_${row.type}`,
+          sequenceNumber: row.sequence_number,
+          type: row.type,
+          message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
+          gameId: row.game_id,
+          sport: row.sport || 'MLB',
+          homeTeam: payload.context?.homeTeam || 'Home Team',
+          awayTeam: payload.context?.awayTeam || 'Away Team',
+          homeScore: payload.context?.homeScore,
+          awayScore: payload.context?.awayScore,
+          confidence: row.score || 85,
+          priority: row.score || 80,
+          createdAt: row.created_at,
+          timestamp: row.created_at,
+          payload: payload
+        };
+      });
+
+      console.log(`📸 Snapshot response: ${alerts.length} alerts since ${since || sinceSeq}`);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching alert snapshot:", error);
+      res.status(500).json({ message: "Failed to fetch alert snapshot" });
     }
   });
 

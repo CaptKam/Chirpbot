@@ -74,6 +74,8 @@ export const globalAlertSettings = pgTable("global_alert_settings", {
 export const alerts = pgTable("alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   alertKey: varchar("alert_key").notNull(),
+  // Sequence number for preventing data loss on reconnects
+  sequenceNumber: integer("sequence_number").notNull().generatedAlwaysAsIdentity(),
   sport: text("sport").notNull(),
   gameId: text("game_id").notNull(),
   type: text("type").notNull(),

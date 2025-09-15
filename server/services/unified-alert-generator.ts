@@ -374,13 +374,13 @@ export class UnifiedAlertGenerator {
         let sportAlerts = 0;
         try {
           // Use cached settings to avoid sequential blocking
-          const enabledAlerts = await Promise.race([
+          const enabledAlerts: string[] = await Promise.race([
             this.settingsCache!.getEnabledAlertTypes(sport),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Settings timeout')), 5000))
+            new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('Settings timeout')), 5000))
           ]).catch(error => {
             console.error(`❌ Error getting ${sport} settings:`, error);
             this.healthMonitor?.recordError(error);
-            return [];
+            return [] as string[];
           });
 
           if (enabledAlerts.length === 0) {
