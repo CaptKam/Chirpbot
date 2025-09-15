@@ -1,27 +1,29 @@
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { userMonitoredTeams } from "../../shared/schema";
+import { storage } from "../storage";
+import { unifiedDeduplicator } from "./unified-deduplicator";
+import { sendTelegramAlert, type TelegramConfig } from "./telegram";
+import { SettingsCache } from "./settings-cache";
+import { getHealthMonitor } from './unified-health-monitor';
+import { memoryManager } from '../middleware/memory-manager';
+import type { InsertAlert } from "../../shared/schema";
+
+// ChirpBot V3 Weather-on-Live Architecture
+import { RUNTIME } from '../config/runtime';
+import { EngineLifecycleManager as EngineLifecycleManagerClass, EngineState, type EngineStateInfo } from './engine-lifecycle-manager';
+import { CalendarSyncService, type CalendarGameData } from './calendar-sync-service';
+import { WeatherOnLiveService, type WeatherChangeEvent } from './weather-on-live-service';
+import type { GameStateManager, GameStateInfo, EngineLifecycleManager } from './game-state-manager';
+import type { BaseGameData } from './base-sport-api';
+import { BaseSportEngine, GameState, AlertResult } from './engines/base-engine';
+
+// Backward compatibility imports (only used when engines are ACTIVE)
 import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
 import { NFLApiService } from "./nfl-api";
 import { WNBAApiService } from "./wnba-api";
 import { CFLApiService } from "./cfl-api";
-import { storage } from "../storage";
-import { unifiedDeduplicator } from "./unified-deduplicator";
-import { sendTelegramAlert, type TelegramConfig } from "./telegram";
-import { SettingsCache } from "./settings-cache";
-import { AdaptivePollingManager } from './adaptive-polling-manager';
-import { getHealthMonitor } from './unified-health-monitor';
-import { memoryManager } from '../middleware/memory-manager';
-import type { InsertAlert } from "../../shared/schema";
-
-// Import sport engines
-import { MLBEngine } from './engines/mlb-engine';
-import { NCAAFEngine } from './engines/ncaaf-engine';
-import { WNBAEngine } from './engines/wnba-engine';
-import { NFLEngine } from './engines/nfl-engine';
-import { CFLEngine } from './engines/cfl-engine';
-import { BaseSportEngine, GameState, AlertResult } from './engines/base-engine';
 
 // === UNIFIED INTERFACES ===
 
@@ -81,12 +83,20 @@ interface RetryConfig {
   backoffMultiplier: number;
 }
 
-interface EngineFailureRecord {
+// V3 Weather-Enhanced Alert Interface
+interface WeatherEnhancedAlert extends AlertResult {
+  weatherContext?: WeatherChangeEvent;
+  isWeatherTriggered?: boolean;
+  weatherSeverity?: 'low' | 'moderate' | 'high' | 'extreme';
+}
+
+// Sport Engine Status for dynamic access
+interface SportEngineStatus {
   sport: string;
-  failureCount: number;
-  lastFailureTime: Date;
-  isInRecovery: boolean;
-  nextRetryTime: Date;
+  state: EngineState;
+  isActive: boolean;
+  engine?: BaseSportEngine;
+  lastStateChange: Date;
 }
 
 // === UNIFIED ALERT GENERATOR ===
@@ -96,18 +106,25 @@ export class UnifiedAlertGenerator {
   private demoUserId?: string;
   private logLevel: 'verbose' | 'quiet' = 'quiet';
 
-  // Production-only services
+  // V3 Weather-on-Live Architecture Services (production only)
+  private engineLifecycleManager?: EngineLifecycleManager;
+  private calendarSyncService?: CalendarSyncService;
+  private weatherOnLiveService?: WeatherOnLiveService;
+  private gameStateManager?: GameStateManager;
+  
+  // Core services
+  private deduplication = unifiedDeduplicator;
+  private settingsCache?: SettingsCache;
+  private healthMonitor?: any;
+
+  // Backward compatibility API services (used only for fallback when needed)
   private mlbApi?: MLBApiService;
   private ncaafApi?: NCAAFApiService;
   private wnbaApi?: WNBAApiService;
   private nflApi?: NFLApiService;
   private cflApi?: CFLApiService;
-  private deduplication = unifiedDeduplicator;
-  private settingsCache?: SettingsCache;
-  private healthMonitor?: any;
 
-  // Error recovery tracking (production only)
-  private engineFailures: Map<string, EngineFailureRecord> = new Map();
+  // Error recovery tracking (production only) 
   private readonly retryConfig: RetryConfig = {
     maxRetries: 3,
     initialDelay: 1000,
@@ -116,9 +133,10 @@ export class UnifiedAlertGenerator {
   };
   private fallbackPollingActive: Map<string, NodeJS.Timeout> = new Map();
 
-  // Sport engines (production only)
-  private sportEngines?: Map<string, BaseSportEngine>;
-  private adaptivePollingManagers?: Map<string, AdaptivePollingManager>;
+  // Engine status cache for performance
+  private engineStatusCache: Map<string, SportEngineStatus> = new Map();
+  private lastEngineStatusCheck = 0;
+  private readonly engineStatusCacheTTL = 5000; // 5 seconds
 
   constructor(options: UnifiedAlertGeneratorOptions) {
     this.mode = options.mode;
@@ -135,39 +153,47 @@ export class UnifiedAlertGenerator {
   }
 
   private initializeProductionServices(): void {
-    this.mlbApi = new MLBApiService();
-    this.ncaafApi = new NCAAFApiService();
-    this.nflApi = new NFLApiService();
-    this.wnbaApi = new WNBAApiService();
-    this.cflApi = new CFLApiService();
-    this.settingsCache = new SettingsCache(storage);
-    this.healthMonitor = getHealthMonitor();
+    console.log('🔧 Initializing UnifiedAlertGenerator with V3 Weather-on-Live architecture...');
+    
+    try {
+      // Initialize core services first
+      this.settingsCache = new SettingsCache(storage);
+      this.healthMonitor = getHealthMonitor();
 
-    // Initialize health monitor with callback integration
-    this.healthMonitor.initialize({
-      pollingIntervalMs: 30000,
-      callbacks: {
-        onRestart: () => this.startMonitoring(),
-        onStop: () => this.stopMonitoring(),
-        generatorLabel: 'unified-alert-generator'
-      }
-    });
+      // Initialize health monitor with callback integration
+      this.healthMonitor.initialize({
+        pollingIntervalMs: 30000,
+        callbacks: {
+          onRestart: () => this.startMonitoring(),
+          onStop: () => this.stopMonitoring(),
+          generatorLabel: 'unified-alert-generator-v3'
+        }
+      });
 
-    // Initialize sport engines
-    this.sportEngines = new Map();
-    this.sportEngines.set('MLB', new MLBEngine());
-    this.sportEngines.set('NCAAF', new NCAAFEngine());
-    this.sportEngines.set('WNBA', new WNBAEngine());
-    this.sportEngines.set('NFL', new NFLEngine());
-    this.sportEngines.set('CFL', new CFLEngine());
+      // V3 Architecture: Initialize new services
+      this.engineLifecycleManager = new EngineLifecycleManagerClass();
+      this.calendarSyncService = new CalendarSyncService({
+        sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
+        defaultPollInterval: RUNTIME.calendarPoll.defaultMs,
+        preStartWindowMinutes: RUNTIME.calendarPoll.preStartWindowMin,
+        preStartPollInterval: RUNTIME.calendarPoll.preStartPollMs,
+        enableMetrics: true
+      });
+      this.weatherOnLiveService = new WeatherOnLiveService();
 
-    // Initialize adaptive polling managers
-    this.adaptivePollingManagers = new Map();
-    this.adaptivePollingManagers.set('MLB', new AdaptivePollingManager('MLB', { MLB: this.mlbApi }));
-    this.adaptivePollingManagers.set('NCAAF', new AdaptivePollingManager('NCAAF', { NCAAF: this.ncaafApi }));
+      // Initialize backward compatibility API services (used for fallback only)
+      this.mlbApi = new MLBApiService();
+      this.ncaafApi = new NCAAFApiService();
+      this.nflApi = new NFLApiService();
+      this.wnbaApi = new WNBAApiService();
+      this.cflApi = new CFLApiService();
 
-    // Initialize other polling managers
-    this.initializeNFLPollingManager();
+      console.log('✅ V3 Weather-on-Live architecture initialized successfully');
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize V3 architecture:', error);
+      throw error;
+    }
   }
 
   // === PUBLIC API METHODS ===
@@ -213,7 +239,7 @@ export class UnifiedAlertGenerator {
       return;
     }
 
-    console.log('⚡ Starting production alert monitoring...');
+    console.log('⚡ Starting V3 Weather-on-Live alert monitoring...');
     
     try {
       // Start health monitoring
@@ -221,81 +247,23 @@ export class UnifiedAlertGenerator {
         this.healthMonitor.startMonitoring();
       }
 
-      // Initialize and start adaptive polling for each sport
-      if (this.adaptivePollingManagers) {
-        const today = new Date().toISOString().split('T')[0];
-        
-        for (const [sport, pollingManager] of this.adaptivePollingManagers) {
-          try {
-            console.log(`🚀 Starting ${sport} adaptive polling...`);
-            
-            // Get today's games for this sport
-            let games: any[] = [];
-            switch (sport) {
-              case 'MLB':
-                if (this.mlbApi) {
-                  const gamesResponse = await this.mlbApi.getTodaysGames();
-                  games = Array.isArray(gamesResponse) ? gamesResponse : (gamesResponse as any)?.games || [];
-                }
-                break;
-              case 'NFL':
-                if (this.nflApi) {
-                  const gamesResponse = await this.nflApi.getTodaysGames();
-                  games = Array.isArray(gamesResponse) ? gamesResponse : (gamesResponse as any)?.games || [];
-                }
-                break;
-              case 'NCAAF':
-                if (this.ncaafApi) {
-                  const gamesResponse = await this.ncaafApi.getTodaysGames();
-                  games = Array.isArray(gamesResponse) ? gamesResponse : [];
-                }
-                break;
-              case 'WNBA':
-                if (this.wnbaApi) {
-                  const gamesResponse = await this.wnbaApi.getTodaysGames();
-                  games = Array.isArray(gamesResponse) ? gamesResponse : (gamesResponse as any)?.games || [];
-                }
-                break;
-              case 'CFL':
-                if (this.cflApi) {
-                  const gamesResponse = await this.cflApi.getTodaysGames();
-                  games = Array.isArray(gamesResponse) ? gamesResponse : (gamesResponse as any)?.games || [];
-                }
-                break;
-            }
-
-            // Get user monitored games for this sport - simplified approach
-            const allUserMonitoredGames: any[] = [];
-            
-            try {
-              // Get all monitored games from database directly
-              const allMonitoredGamesFromDB = await db.select().from(userMonitoredTeams);
-              allUserMonitoredGames.push(...allMonitoredGamesFromDB);
-            } catch (error) {
-              console.warn(`Failed to get all monitored games:`, error);
-            }
-            
-            const sportUserMonitoredGames = allUserMonitoredGames.filter((game: any) => 
-              game.sport?.toLowerCase() === sport.toLowerCase()
-            );
-            const userMonitoredGameIds = new Set<string>(sportUserMonitoredGames.map((game: any) => String(game.gameId)));
-
-            console.log(`📊 ${sport}: ${games.length} games today, ${userMonitoredGameIds.size} user-monitored`);
-
-            // Initialize adaptive polling for this sport
-            await pollingManager.initializeGamePolling(games, userMonitoredGameIds);
-            
-            console.log(`✅ ${sport} adaptive polling started successfully`);
-          } catch (error) {
-            console.error(`❌ Failed to start ${sport} polling:`, error);
-            // Continue with other sports even if one fails
-          }
-        }
+      // V3 Architecture: Start calendar sync service for lightweight game data
+      if (this.calendarSyncService) {
+        await this.calendarSyncService.start();
+        console.log('✅ Calendar sync service started');
       }
 
-      console.log('✅ Production alert monitoring started successfully!');
+      // V3 Architecture: Weather service starts automatically when games go LIVE
+      // (No manual initialization needed - weather-on-live architecture handles this)
+      
+      // V3 Architecture: Engine Lifecycle Manager handles engine state transitions
+      // (Engines are started/stopped based on game states automatically)
+      
+      console.log('✅ V3 Weather-on-Live monitoring started successfully!');
+      console.log('🎯 Alert generation will be dynamically activated when games transition to LIVE state');
+      
     } catch (error) {
-      console.error('❌ Failed to start production alert monitoring:', error);
+      console.error('❌ Failed to start V3 monitoring:', error);
       throw error;
     }
   }
@@ -305,12 +273,30 @@ export class UnifiedAlertGenerator {
       return;
     }
 
-    console.log('🛑 Stopping production alert monitoring...');
-    // Clear all fallback polling intervals
-    for (const [sport, interval] of this.fallbackPollingActive) {
-      clearInterval(interval);
+    console.log('🛑 Stopping V3 Weather-on-Live monitoring...');
+    
+    try {
+      // Stop calendar sync service
+      if (this.calendarSyncService) {
+        await this.calendarSyncService.stop();
+        console.log('✅ Calendar sync service stopped');
+      }
+
+      // Clear engine status cache
+      this.engineStatusCache.clear();
+      this.lastEngineStatusCheck = 0;
+
+      // Clear any remaining fallback polling
+      for (const [sport, interval] of this.fallbackPollingActive) {
+        clearInterval(interval);
+      }
+      this.fallbackPollingActive.clear();
+      
+      console.log('✅ V3 Weather-on-Live monitoring stopped successfully');
+      
+    } catch (error) {
+      console.error('❌ Error stopping V3 monitoring:', error);
     }
-    this.fallbackPollingActive.clear();
   }
 
   getStats(): any {
@@ -318,11 +304,21 @@ export class UnifiedAlertGenerator {
       return { mode: 'demo', demoUserId: this.demoUserId };
     }
 
+    // V3: Enhanced stats with architecture status
     return {
       mode: 'production',
-      engineFailures: this.engineFailures.size,
+      architecture: 'weather-on-live-v3',
+      engineFailures: 0, // Legacy - no longer applicable in V3
       fallbackPollingActive: this.fallbackPollingActive.size,
-      healthMonitor: this.healthMonitor?.getHealthStatus() || null
+      healthMonitor: this.healthMonitor?.getHealthStatus() || null,
+      // V3 specific stats
+      engineStatusCacheSize: this.engineStatusCache.size,
+      lastEngineStatusCheck: new Date(this.lastEngineStatusCheck).toISOString(),
+      servicesStatus: {
+        engineLifecycleManager: !!this.engineLifecycleManager,
+        calendarSyncService: !!this.calendarSyncService,
+        weatherOnLiveService: !!this.weatherOnLiveService
+      }
     };
   }
 
@@ -407,28 +403,16 @@ export class UnifiedAlertGenerator {
             console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled, ${usersWithActiveMonitoring.length} active users`);
           }
 
+          // V3: Dynamic game data sourcing based on engine state
           let games: any[] = [];
+          let dataSource = 'unknown';
           try {
-            switch (sport) {
-              case 'MLB':
-                games = await this.mlbApi!.getTodaysGames();
-                break;
-              case 'NFL':
-                games = await this.getNFLGames();
-                break;
-              case 'NCAAF':
-                games = await this.ncaafApi!.getTodaysGames();
-                break;
-              case 'WNBA':
-                games = await this.getWNBAGames();
-                break;
-              case 'CFL':
-                games = await this.getCFLGames();
-                break;
-            }
+            const gameData = await this.getGameDataForSport(sport);
+            games = gameData.games;
+            dataSource = gameData.source;
 
             if (this.logLevel !== 'quiet') {
-              console.log(`📊 Fetched ${games.length} ${sport} games from API`);
+              console.log(`📊 V3: Fetched ${games.length} ${sport} games from ${dataSource} source`);
             }
           } catch (gameError) {
             console.error(`❌ Error fetching ${sport} games:`, gameError);
@@ -613,6 +597,281 @@ export class UnifiedAlertGenerator {
     };
   }
 
+  // === V3 ENGINE STATE MANAGEMENT METHODS ===
+
+  /**
+   * Get current engine status with caching for performance
+   */
+  private async getEngineStatus(sport: string): Promise<SportEngineStatus | null> {
+    const now = Date.now();
+    
+    // Check cache first (TTL: 5 seconds)
+    if (now - this.lastEngineStatusCheck < this.engineStatusCacheTTL) {
+      const cached = this.engineStatusCache.get(sport);
+      if (cached) return cached;
+    }
+
+    if (!this.engineLifecycleManager) {
+      console.warn(`⚠️ EngineLifecycleManager not available for ${sport}`);
+      return null;
+    }
+
+    try {
+      const stateInfo = await this.engineLifecycleManager.getEngineStatus(sport);
+      if (!stateInfo) return null;
+
+      const engine = stateInfo.state === 'ACTIVE' 
+        ? this.engineLifecycleManager.getEngine(sport) 
+        : undefined;
+
+      const status: SportEngineStatus = {
+        sport,
+        state: stateInfo.state,
+        isActive: stateInfo.state === 'ACTIVE',
+        engine,
+        lastStateChange: stateInfo.lastStateChange || new Date()
+      };
+
+      // Update cache
+      this.engineStatusCache.set(sport, status);
+      if (this.engineStatusCache.size === 1) {
+        this.lastEngineStatusCheck = now;
+      }
+
+      return status;
+      
+    } catch (error) {
+      console.error(`❌ Error getting engine status for ${sport}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if engine is available and ready for alert processing
+   */
+  private async isEngineReadyForProcessing(sport: string): Promise<boolean> {
+    const status = await this.getEngineStatus(sport);
+    return status?.isActive && status.engine !== undefined;
+  }
+
+  /**
+   * Get game data from appropriate source based on engine availability
+   */
+  private async getGameDataForSport(sport: string): Promise<{ games: any[], source: 'engine' | 'calendar' | 'fallback' }> {
+    if (this.mode === 'demo') return { games: [], source: 'fallback' };
+
+    // Check engine availability first
+    const isEngineReady = await this.isEngineReadyForProcessing(sport);
+    
+    if (isEngineReady) {
+      // Use traditional API when engine is ACTIVE
+      return await this.getGameDataFromApi(sport);
+    } else {
+      // Use CalendarSyncService for lightweight data when engines aren't active
+      return await this.getGameDataFromCalendar(sport);
+    }
+  }
+
+  /**
+   * Get game data from CalendarSyncService (lightweight, no engine required)
+   */
+  private async getGameDataFromCalendar(sport: string): Promise<{ games: any[], source: 'calendar' }> {
+    try {
+      if (!this.calendarSyncService) {
+        console.warn(`⚠️ CalendarSyncService not available for ${sport}`);
+        return { games: [], source: 'calendar' };
+      }
+
+      const calendarData = await this.calendarSyncService.getGameData(sport);
+      
+      // Check for valid calendar data before processing
+      if (!calendarData || !Array.isArray(calendarData)) {
+        if (this.logLevel !== 'quiet') {
+          console.log(`⚠️ No calendar data available for ${sport}`);
+        }
+        return { games: [], source: 'calendar' };
+      }
+      
+      // Convert calendar data to unified format
+      const games = calendarData.map((game: CalendarGameData) => ({
+        gameId: game.gameId,
+        id: game.gameId,
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        status: game.status,
+        isLive: game.isLive,
+        startTime: game.startTime,
+        // Calendar data is lightweight, no detailed game state
+        homeScore: 0,
+        awayScore: 0,
+        inning: 1,
+        isTopInning: true
+      }));
+
+      if (this.logLevel !== 'quiet') {
+        console.log(`📅 Calendar: Retrieved ${games.length} ${sport} games (engines not active)`);
+      }
+
+      return { games, source: 'calendar' };
+      
+    } catch (error) {
+      console.error(`❌ Error getting calendar data for ${sport}:`, error);
+      return { games: [], source: 'calendar' };
+    }
+  }
+
+  /**
+   * Get game data from traditional APIs (requires engine to be ACTIVE)
+   */
+  private async getGameDataFromApi(sport: string): Promise<{ games: any[], source: 'engine' | 'fallback' }> {
+    try {
+      let games: any[] = [];
+      
+      switch (sport) {
+        case 'MLB':
+          if (this.mlbApi) {
+            games = await this.mlbApi.getTodaysGames();
+          }
+          break;
+        case 'NFL':
+          games = await this.getNFLGames();
+          break;
+        case 'NCAAF':
+          if (this.ncaafApi) {
+            games = await this.ncaafApi.getTodaysGames();
+          }
+          break;
+        case 'WNBA':
+          games = await this.getWNBAGames();
+          break;
+        case 'CFL':
+          games = await this.getCFLGames();
+          break;
+      }
+
+      if (this.logLevel !== 'quiet') {
+        console.log(`🏟️ Engine: Retrieved ${games.length} ${sport} games (engine ACTIVE)`);
+      }
+
+      return { games: Array.isArray(games) ? games : [], source: 'engine' };
+      
+    } catch (error) {
+      console.error(`❌ Error getting API data for ${sport}:`, error);
+      return { games: [], source: 'fallback' };
+    }
+  }
+
+  /**
+   * V3 Weather Enhancement - Enhance alerts with weather context for live games
+   */
+  private async enhanceAlertsWithWeatherContext(
+    alerts: AlertResult[], 
+    gameState: GameState, 
+    sport: string
+  ): Promise<WeatherEnhancedAlert[]> {
+    if (!alerts || alerts.length === 0) return [];
+    
+    // V3: Only enhance with weather for live games
+    if (!gameState.isLive) {
+      // Return alerts without weather enhancement for non-live games
+      return alerts.map(alert => ({ ...alert }));
+    }
+
+    try {
+      if (!this.weatherOnLiveService) {
+        if (this.logLevel !== 'quiet') {
+          console.log(`⚠️ WeatherOnLiveService not available for ${sport} game ${gameState.gameId}`);
+        }
+        return alerts.map(alert => ({ ...alert }));
+      }
+
+      // Get weather context for this game/location
+      const weatherContext = await this.weatherOnLiveService.getGameWeatherContext({
+        gameId: gameState.gameId,
+        sport,
+        homeTeam: gameState.homeTeam,
+        location: gameState.homeTeam // Use home team as location identifier
+      });
+
+      if (!weatherContext) {
+        return alerts.map(alert => ({ ...alert }));
+      }
+
+      // Enhance alerts with weather context
+      const enhancedAlerts: WeatherEnhancedAlert[] = alerts.map(alert => {
+        // Check if this alert type benefits from weather enhancement
+        const isWeatherRelevant = this.isAlertWeatherRelevant(alert.type, sport);
+        
+        if (isWeatherRelevant) {
+          const severity = this.calculateWeatherSeverity(weatherContext);
+          
+          return {
+            ...alert,
+            weatherContext,
+            isWeatherTriggered: severity === 'high' || severity === 'extreme',
+            weatherSeverity: severity,
+            // Boost priority for weather-enhanced alerts
+            priority: alert.priority + (severity === 'high' ? 10 : severity === 'extreme' ? 20 : 0)
+          };
+        }
+        
+        return { ...alert };
+      });
+
+      if (this.logLevel !== 'quiet') {
+        const weatherEnhanced = enhancedAlerts.filter(a => a.weatherContext).length;
+        console.log(`🌤️ V3 Weather: Enhanced ${weatherEnhanced}/${alerts.length} alerts for ${sport} game ${gameState.gameId}`);
+      }
+
+      return enhancedAlerts;
+      
+    } catch (error) {
+      console.error(`❌ Error enhancing alerts with weather context:`, error);
+      // Return original alerts on error
+      return alerts.map(alert => ({ ...alert }));
+    }
+  }
+
+  /**
+   * Check if alert type benefits from weather enhancement
+   */
+  private isAlertWeatherRelevant(alertType: string, sport: string): boolean {
+    // V3: Use RUNTIME config to determine weather relevance
+    const sportConfig = RUNTIME.cylinders[sport];
+    if (!sportConfig?.weatherTriggers) return false;
+    
+    return sportConfig.weatherTriggers.some(trigger => 
+      alertType.includes(trigger.toUpperCase())
+    );
+  }
+
+  /**
+   * Calculate weather severity from weather context
+   */
+  private calculateWeatherSeverity(weatherContext: WeatherChangeEvent): 'low' | 'moderate' | 'high' | 'extreme' {
+    const { windSpeed, temperature, precipitation } = weatherContext;
+    
+    let severityScore = 0;
+    
+    // Wind impact
+    if (windSpeed > 25) severityScore += 3;
+    else if (windSpeed > 15) severityScore += 2;
+    else if (windSpeed > 10) severityScore += 1;
+    
+    // Temperature impact
+    if (temperature > 95 || temperature < 40) severityScore += 2;
+    else if (temperature > 90 || temperature < 50) severityScore += 1;
+    
+    // Precipitation impact
+    if (precipitation && precipitation > 0.5) severityScore += 2;
+    else if (precipitation && precipitation > 0.1) severityScore += 1;
+    
+    if (severityScore >= 5) return 'extreme';
+    if (severityScore >= 3) return 'high';
+    if (severityScore >= 1) return 'moderate';
+    return 'low';
+  }
+
   // === PRODUCTION-ONLY HELPER METHODS ===
 
   private async hasAnyGloballyEnabledAlerts(): Promise<boolean> {
@@ -689,15 +948,36 @@ export class UnifiedAlertGenerator {
     }
   }
 
+  /**
+   * V3 State-Aware Alert Processing
+   * Only generates alerts when engines are in ACTIVE state
+   */
   private async processGamesWithEngine(sport: string, games: any[]): Promise<number> {
     if (this.mode === 'demo') return 0;
 
     let totalAlerts = 0;
-    const engine = this.sportEngines?.get(sport);
-
-    if (!engine) {
-      console.error(`❌ No engine found for sport ${sport}`);
+    
+    // V3: Check engine state before processing
+    const engineStatus = await this.getEngineStatus(sport);
+    if (!engineStatus) {
+      if (this.logLevel !== 'quiet') {
+        console.log(`⚠️ ${sport}: Engine status unavailable - skipping alert processing`);
+      }
       return 0;
+    }
+
+    // V3: Only process alerts when engine is ACTIVE
+    if (!engineStatus.isActive || !engineStatus.engine) {
+      if (this.logLevel !== 'quiet') {
+        console.log(`🔄 ${sport}: Engine state=${engineStatus.state} - skipping alert processing (games: ${games.length})`);
+      }
+      return 0;
+    }
+
+    const engine = engineStatus.engine;
+    
+    if (this.logLevel !== 'quiet') {
+      console.log(`🎯 ${sport}: Engine ACTIVE - processing ${games.length} games for alerts`);
     }
 
     try {
@@ -730,13 +1010,16 @@ export class UnifiedAlertGenerator {
           // Generate alerts using the sport engine
           const alertResults = await engine.generateLiveAlerts(gameState);
 
-          if (alertResults && alertResults.length > 0) {
+          // V3: Enhance alerts with weather context for live games
+          const enhancedAlerts = await this.enhanceAlertsWithWeatherContext(alertResults, gameState, sport);
+
+          if (enhancedAlerts && enhancedAlerts.length > 0) {
             if (this.logLevel !== 'quiet') {
               console.log(`✅ Generated ${alertResults.length} alerts for ${sport} game ${gameId} (${gameMonitoringUsers.length} monitoring users)`);
             }
 
-            // Process and persist each alert
-            for (const alertResult of alertResults) {
+            // Process and persist each weather-enhanced alert
+            for (const alertResult of enhancedAlerts) {
               // Create sport-specific stable deduplication key (without Date.now())
               let situationKey: string;
               let alertKeyObj: any;
@@ -807,6 +1090,8 @@ export class UnifiedAlertGenerator {
                       continue; // Skip this alert and move to next user
                     }
 
+                    // V3: Enhanced alert data with weather context
+                    const weatherAlert = alertResult as WeatherEnhancedAlert;
                     const alertData = {
                       alertKey: `${situationKey}_${userId}`,
                       sport: sport,
@@ -825,7 +1110,11 @@ export class UnifiedAlertGenerator {
                         priority: alertResult.priority,
                         betting: betbookData.odds,
                         aiAdvice: betbookData.aiAdvice,
-                        sportsbookLinks: betbookData.sportsbookLinks
+                        sportsbookLinks: betbookData.sportsbookLinks,
+                        // V3: Weather enhancement data
+                        weatherContext: weatherAlert.weatherContext,
+                        isWeatherTriggered: weatherAlert.isWeatherTriggered || false,
+                        weatherSeverity: weatherAlert.weatherSeverity
                       }
                     };
 
@@ -915,7 +1204,20 @@ export class UnifiedAlertGenerator {
 
       return totalAlerts;
     } catch (error) {
-      console.error(`❌ Critical error in processGamesWithEngine for ${sport}:`, error);
+      console.error(`❌ Critical error in V3 processGamesWithEngine for ${sport}:`, error);
+      
+      // V3: Enhanced error handling - invalidate cache and check service availability
+      this.engineStatusCache.delete(sport);
+      this.lastEngineStatusCheck = 0;
+      
+      // Check if this is a service availability error (non-critical)
+      if (error.message?.includes('not available') || error.message?.includes('unavailable')) {
+        if (this.logLevel !== 'quiet') {
+          console.log(`⚠️ ${sport}: Service temporarily unavailable - this is expected in V3 architecture`);
+        }
+        return 0; // Return 0 alerts instead of throwing
+      }
+      
       throw error;
     }
   }

@@ -89,6 +89,8 @@ export interface EngineLifecycleManager {
   warmupEngines(gameInfo: GameStateInfo): Promise<boolean>;
   pauseEngines(gameInfo: GameStateInfo): Promise<boolean>;
   terminateEngines(gameInfo: GameStateInfo): Promise<boolean>;
+  getEngineStatus(sport: string): Promise<any>;
+  getEngine(sport: string): any;
 }
 
 export interface WeatherService {

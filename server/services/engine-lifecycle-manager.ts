@@ -755,24 +755,29 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   
   // === PUBLIC API ===
   
-  public getEngineStatus(sport?: string): Record<string, any> {
-    if (sport) {
-      const engine = this.engines.get(sport.toUpperCase());
-      if (!engine) return {};
-      
-      return {
-        sport: engine.sport,
-        state: engine.state,
-        activeGames: engine.activeGames.size,
-        preWarmGames: engine.preWarmGames.size,
-        stateChangedAt: engine.stateChangedAt,
-        resourceUsage: engine.resourceUsage,
-        totalActiveTime: engine.totalActiveTime,
-        alertsGenerated: engine.alertsGenerated,
-        consecutiveErrors: engine.consecutiveErrors,
-      };
-    }
+  public async getEngineStatus(sport: string): Promise<any> {
+    const engine = this.engines.get(sport.toUpperCase());
+    if (!engine) return null;
     
+    return {
+      sport: engine.sport,
+      state: engine.state,
+      lastStateChange: engine.stateChangedAt,
+      activeGames: engine.activeGames.size,
+      preWarmGames: engine.preWarmGames.size,
+      resourceUsage: engine.resourceUsage,
+      totalActiveTime: engine.totalActiveTime,
+      alertsGenerated: engine.alertsGenerated,
+      consecutiveErrors: engine.consecutiveErrors,
+    };
+  }
+  
+  public getEngine(sport: string): any {
+    const engine = this.engines.get(sport.toUpperCase());
+    return engine?.instance || null;
+  }
+  
+  public getAllEnginesStatus(): Record<string, any> {
     // Return status for all engines
     const status: Record<string, any> = {
       totalEngines: this.engines.size,
