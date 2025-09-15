@@ -57,19 +57,22 @@ export function useWebSocket() {
       wsRef.current = null;
     }
 
-    try {
-      // Get the protocol and host from the current window location
-      const isSecure = window.location.protocol === 'https:';
-      const protocol = isSecure ? 'wss:' : 'ws:';
+    // Add connection delay to prevent rapid reconnection issues
+    const connectDelay = reconnectAttempts.current > 0 ? 1000 : 0;
+    
+    setTimeout(() => {
+      try {
+        // Get the protocol and host from the current window location
+        const isSecure = window.location.protocol === 'https:';
+        const protocol = isSecure ? 'wss:' : 'ws:';
 
-      // For Replit development environment, use the current host
-      // This works for both development and production
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/realtime-alerts`;
+        // For Replit environment, always use the current host
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/realtime-alerts`;
 
-      console.log('WebSocket connecting to:', wsUrl);
+        console.log('WebSocket debug info:', { 'window.location.host': host, wsUrl });
 
-      wsRef.current = new WebSocket(wsUrl);
+        wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
         console.log('WebSocket connected');
@@ -181,9 +184,14 @@ export function useWebSocket() {
         console.log('WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
 
-        // Only attempt reconnection if it wasn't a normal closure
-        if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+        // Handle different close codes
+        const shouldReconnect = event.code !== 1000 && // Not normal closure
+                               event.code !== 1001 && // Not going away
+                               reconnectAttempts.current < maxReconnectAttempts;
+
+        if (shouldReconnect) {
+          const baseDelay = 1000;
+          const delay = Math.min(baseDelay * Math.pow(1.5, reconnectAttempts.current), 10000);
           console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
 
           reconnectTimeoutRef.current = setTimeout(() => {
@@ -200,10 +208,24 @@ export function useWebSocket() {
         setConnectionError('WebSocket connection error');
       };
 
+      // Add connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
+          console.log('WebSocket connection timeout - closing');
+          wsRef.current.close();
+        }
+      }, 10000); // 10 second timeout
+
+      // Clear timeout when connection opens
+      wsRef.current.addEventListener('open', () => {
+        clearTimeout(connectionTimeout);
+      }, { once: true });
+
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
       setConnectionError('Failed to create WebSocket connection');
     }
+    }, connectDelay);
   }, [queryClient, getCachedUserSettings]);
 
   useEffect(() => {

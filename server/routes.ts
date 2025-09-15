@@ -342,26 +342,38 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   wss.on('connection', (ws: WebSocket) => {
     // Limit connections to prevent spam
-    if (clients.size >= 10) {
+    if (clients.size >= 20) {
       console.log('🔌 WebSocket connection limit reached, closing new connection');
-      ws.close();
+      ws.close(1013, 'Server overloaded');
       return;
     }
 
     console.log('🔌 New WebSocket connection established (', clients.size + 1, ' total)');
     clients.add(ws);
 
-    ws.on('close', () => {
+    // Set up ping/pong to keep connection alive
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      }
+    }, 30000); // Ping every 30 seconds
+
+    ws.on('close', (code, reason) => {
       clients.delete(ws);
-      // Only log if we still have many connections
+      clearInterval(pingInterval);
       if (clients.size > 3) {
-        console.log('🔌 WebSocket connection closed (', clients.size, ' remaining)');
+        console.log('🔌 WebSocket connection closed (', clients.size, ' remaining), code:', code);
       }
     });
 
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
       clients.delete(ws);
+      clearInterval(pingInterval);
+    });
+
+    ws.on('pong', () => {
+      // Connection is alive, no action needed
     });
 
     // Send initial connection confirmation
