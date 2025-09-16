@@ -405,8 +405,13 @@ export const storage = {
           'MLB_SECOND_AND_THIRD_NO_OUTS': true,
           'MLB_BASES_LOADED_NO_OUTS': true,
           'MLB_RUNNER_ON_THIRD_ONE_OUT': true,
+          'MLB_FIRST_AND_THIRD_ONE_OUT': true,
           'MLB_SECOND_AND_THIRD_ONE_OUT': true,
           'MLB_BASES_LOADED_ONE_OUT': true,
+          'MLB_RUNNER_ON_THIRD_TWO_OUTS': true,
+          'MLB_FIRST_AND_THIRD_TWO_OUTS': true,
+          'MLB_BASES_LOADED_TWO_OUTS': true,
+          'MLB_RUNNER_ON_SECOND_NO_OUTS': true,
           // On-deck batter predictions
           'MLB_ON_DECK_PREDICTION': true,
           // Additional MLB alerts
@@ -415,6 +420,9 @@ export const storage = {
           'MLB_STEAL_LIKELIHOOD': true,
           'MLB_WIND_CHANGE': true,
           'MLB_STRIKEOUT': true,
+          'MLB_LATE_INNING_CLOSE': true,
+          'MLB_SCORING_OPPORTUNITY': true,
+          'MLB_PITCHING_CHANGE': true,
           // AI Enhancement alerts (available for MLB)
           'AI_ENHANCED_MESSAGES': true,
           'AI_PREDICTIVE_AT_BAT': true,
