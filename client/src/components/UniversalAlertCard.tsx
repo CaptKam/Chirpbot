@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle, Wind, Cloud, Thermometer, Timer, Hash, Navigation } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
+import { getSportTabColors } from '@shared/season-manager';
 
 interface UniversalAlertProps {
   id: string;
@@ -41,46 +42,50 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
 
   // Get sport-specific icon and color
   const getSportConfig = (sport: string) => {
+    const tabColors = getSportTabColors(sport);
+    // Convert tab color classes to the full set needed for alerts
+    const colorClass = `${tabColors.text} ${tabColors.border.replace('border-', 'border-')}/30 ${tabColors.bg}`;
+    
     switch (sport) {
       case 'MLB':
         return { 
-          color: 'text-green-400 border-green-500/30 bg-green-500/10',
+          color: colorClass,
           icon: '⚾',
           label: 'Baseball'
         };
       case 'NFL':
         return { 
-          color: 'text-orange-400 border-orange-500/30 bg-orange-500/10',
+          color: colorClass,
           icon: '🏈',
           label: 'Football'
         };
       case 'NBA':
         return { 
-          color: 'text-purple-400 border-purple-500/30 bg-purple-500/10',
+          color: colorClass,
           icon: '🏀',
           label: 'Basketball'
         };
       case 'NHL':
         return { 
-          color: 'text-blue-400 border-blue-500/30 bg-blue-500/10',
+          color: colorClass,
           icon: '🏒',
           label: 'Hockey'
         };
       case 'NCAAF':
         return { 
-          color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
+          color: colorClass,
           icon: '🏈',
           label: 'College Football'
         };
       case 'WNBA':
         return { 
-          color: 'text-pink-400 border-pink-500/30 bg-pink-500/10',
+          color: colorClass,
           icon: '🏀',
           label: 'Women\'s Basketball'
         };
       case 'CFL':
         return { 
-          color: 'text-red-400 border-red-500/30 bg-red-500/10',
+          color: colorClass,
           icon: '🏈',
           label: 'Canadian Football'
         };
