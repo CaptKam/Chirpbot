@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { BaseballDiamond } from './baseball-diamond';
 import { getPrimaryMessage, cleanMessage, hasAIContent } from '@/utils/alert-message';
+import { getSportTabColors } from '@shared/season-manager';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -370,9 +371,9 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
           getAlertStatus(alert.type, alert.createdAt, 
             (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
           ).status === 'ACTIVE' 
-            ? 'border-emerald-500 shadow-emerald-500/20' 
-            : 'border-gray-500/50 shadow-gray-500/10'
-        } shadow-lg rounded-xl`}>
+            ? `${getSportTabColors(alert.sport).border} ${getSportTabColors(alert.sport).bg} shadow-lg` 
+            : `${getSportTabColors(alert.sport).border}/50 ${getSportTabColors(alert.sport).bg}/30 shadow-md`
+        } rounded-xl`}>
 
           <GameCardTemplate
             gameId={alert.id}
@@ -403,7 +404,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
 
             {/* Alert Message - AI Enhanced */}
             <div className="bg-slate-900/30 rounded-lg p-3 mb-3">
-              {hasAIContent(alert) && (
+              {hasAIContent(alert as any) && (
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="w-4 h-4 text-blue-400" />
                   <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/40 text-xs">
@@ -412,7 +413,7 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
                 </div>
               )}
               <p className="text-slate-100 text-base font-medium leading-relaxed">
-                {cleanMessage(getPrimaryMessage(alert))}
+                {cleanMessage(getPrimaryMessage(alert as any))}
               </p>
             </div>
 
