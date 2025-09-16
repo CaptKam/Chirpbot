@@ -593,13 +593,27 @@ async function showSportSettings(sport) {
     `;
     
     try {
-        const response = await fetch(`/api/admin/global-alert-settings/${sport}`, {
-            credentials: 'include'
-        });
+        // Use the same pattern as user settings: fetch cylinders + toggle states separately
+        const [cylindersResponse, settingsResponse] = await Promise.all([
+            fetch(`/api/available-alerts/${sport.toLowerCase()}`, {
+                credentials: 'include'
+            }),
+            fetch(`/api/admin/global-alert-settings/${sport.toLowerCase()}`, {
+                credentials: 'include'
+            })
+        ]);
         
-        if (response.ok) {
-            const settings = await response.json();
-            renderSportSettings(sport, settings);
+        if (cylindersResponse.ok && settingsResponse.ok) {
+            const cylinders = await cylindersResponse.json();
+            const settings = await settingsResponse.json();
+            
+            // Merge cylinders with toggle states - cylinders is array, settings is object
+            const mergedData = {};
+            cylinders.forEach(cylinder => {
+                mergedData[cylinder.key] = settings[cylinder.key] || false;
+            });
+            
+            renderSportSettings(sport, mergedData);
         } else {
             contentElement.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: #ef4444;">
