@@ -3203,8 +3203,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Test NCAAF two-minute warning logic
   app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
     try {
-      const { AlertGenerator } = await import('./services/alert-generator');
-      const generator = new AlertGenerator();
+      // ✅ V3: Using UnifiedAlertGenerator instead of legacy V2 AlertGenerator
+      const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
+      const generator = new UnifiedAlertGenerator();
 
       const testTime = req.params.time;
 

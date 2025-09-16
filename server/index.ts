@@ -8,7 +8,7 @@ import fs from "fs";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
-import { AlertGenerator } from "./services/alert-generator";
+// ✅ V3: Using UnifiedAlertGenerator instead of legacy V2 AlertGenerator
 import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
