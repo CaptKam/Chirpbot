@@ -575,16 +575,38 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       console.log(`💾 Saving enhanced alert to database: ${alert.alertKey}`);
       
-      // Extract gameId from alertKey (e.g., "776312_pitching_change_..." -> "776312")
+      // Extract gameId from alertKey for all sports
       let gameId = 'unknown';
       if (alert.alertKey) {
-        // For MLB alerts, the gameId is the first part before underscore
         const parts = alert.alertKey.split('_');
+        
+        // Pattern 1: Direct gameId at start (e.g., "776312_pitching_change_...")
         if (parts[0] && /^\d+$/.test(parts[0])) {
           gameId = parts[0];
-        } else if (alert.alertKey.startsWith('mlb_game_start_')) {
-          // Special case for mlb_game_start_776319_1 format
-          gameId = parts[3] || 'unknown';
+        } 
+        // Pattern 2: Sport prefix with gameId (e.g., "mlb_game_start_776319_1")
+        else if (parts.length >= 4) {
+          // Check for pattern: sport_alert_type_gameId_...
+          const sportPrefixes = ['mlb', 'nfl', 'ncaaf', 'nba', 'wnba', 'cfl'];
+          if (sportPrefixes.includes(parts[0].toLowerCase())) {
+            // Find the first numeric part after the sport prefix
+            for (let i = 2; i < parts.length; i++) {
+              if (/^\d+$/.test(parts[i])) {
+                gameId = parts[i];
+                break;
+              }
+            }
+          }
+        }
+        // Pattern 3: Check for any numeric segment that looks like a gameId
+        if (gameId === 'unknown') {
+          for (const part of parts) {
+            // Game IDs are typically 6-10 digits
+            if (/^\d{6,10}$/.test(part)) {
+              gameId = part;
+              break;
+            }
+          }
         }
       }
       
