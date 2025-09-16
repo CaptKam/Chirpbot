@@ -10,7 +10,7 @@ import {
   type HealthStatus,
   type HealthMetrics as UnifiedHealthMetrics
 } from './unified-health-monitor';
-import { AlertGenerator } from './alert-generator';
+// ✅ V3: Legacy V2 AlertGenerator import removed - using unified health monitor
 
 // Legacy interface for backward compatibility
 interface HealthMetrics {
@@ -56,7 +56,7 @@ export class AlertHealthMonitor {
    * Initialize monitoring with an alert generator instance
    * @deprecated Delegates to unified health monitor
    */
-  public initialize(alertGenerator: AlertGenerator, monitoringInterval?: NodeJS.Timeout): void {
+  public initialize(alertGenerator: any = null, monitoringInterval?: NodeJS.Timeout): void {
     // Legacy compatibility - just initialize the unified monitor
     this.unifiedMonitor.initialize({ 
       pollingIntervalMs: 30000,
