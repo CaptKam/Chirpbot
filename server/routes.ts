@@ -570,6 +570,47 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Initialize Async AI Processor for background AI enhancement
   const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
 
+  // Set up callback to save enhanced alerts to database
+  unifiedAIProcessor.setOnEnhancedAlert(async (alert, userId, sport, wasActuallyEnhanced) => {
+    try {
+      console.log(`💾 Saving enhanced alert to database: ${alert.alertKey}`);
+      
+      // Save alert to database
+      await storage.createAlert({
+        alertKey: alert.alertKey,
+        sport: sport as any,
+        gameId: alert.gameId || 'unknown',
+        type: alert.type,
+        state: 'active',
+        score: alert.confidence || 80,
+        payload: JSON.stringify({
+          message: alert.message,
+          confidence: alert.confidence,
+          priority: alert.priority,
+          context: alert.context,
+          aiAdvice: alert.aiAdvice,
+          betting: alert.betting,
+          homeTeam: alert.homeTeam,
+          awayTeam: alert.awayTeam,
+          homeScore: alert.homeScore,
+          awayScore: alert.awayScore
+        }),
+        isDemoAlert: false
+      });
+      
+      console.log(`✅ Alert saved to database: ${alert.alertKey}`);
+      
+      // Broadcast to frontend via SSE
+      broadcast({
+        type: 'alert',
+        data: alert
+      }, alert.alertKey);
+      
+    } catch (error) {
+      console.error(`❌ Failed to save enhanced alert to database:`, error);
+    }
+  });
+
   // Store broadcast function globally for unified-alert-generator to use AFTER database save  
   (global as any).broadcastAlertAfterSave = broadcast;
   console.log('🚀 SSE broadcast function stored for post-database-save broadcasting');

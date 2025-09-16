@@ -247,7 +247,7 @@ export class UnifiedAIProcessor {
       const cacheKey = this.generateCacheKey(context);
       const cached = this.getCachedResponse(cacheKey);
       if (cached) {
-        console.log(`💨 Unified AI Cache Hit: ${context.sport} ${context.alertType} - sending enhanced version via WebSocket`);
+        console.log(`💨 Unified AI Cache Hit: ${context.sport} ${context.alertType} - sending enhanced version to database`);
         this.performanceMetrics.cacheHits++;
         
         const startTime = Date.now();

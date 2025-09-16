@@ -2,6 +2,17 @@
 
 ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time notifications and AI-enhanced insights across 6 major sports leagues: MLB, NFL, NCAAF, NBA, WNBA, and CFL. It has evolved into a comprehensive system featuring sub-250ms response times, cross-sport AI enhancement with 0ms intelligent caching for repeated scenarios, and predictive alert capabilities. The platform monitors teams using authentic API data sources to generate intelligent alerts for high-impact game situations and anticipates high-value betting opportunities.
 
+# Recent Changes
+
+## September 16, 2025 - CRITICAL ALERT PIPELINE FIXED ✅
+- **MAJOR FIX:** Implemented missing `setOnEnhancedAlert` callback in UnifiedAIProcessor that was preventing alerts from saving to database
+- **VERIFIED WORKING:** Live alerts from real MLB games now successfully generate → AI enhance → save to database → serve via API
+- **Database Confirmation:** Multiple live alerts confirmed saved (mlb_game_start_776319_1, 776312_on_deck_Noelvi_Marte_010_1_3_1, etc.)
+- **Complete Pipeline:** Alert Generation → AI Enhancement → Database Save → API Serving → Frontend Display now fully operational
+- Fixed misleading WebSocket log messages, system now uses direct database saves with SSE broadcasting
+- Eliminated WebSocket dependencies that were causing confusion in alert persistence flow
+- Resolved authentication requirements for alerts API endpoint (requires logged-in users to return alerts)
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
