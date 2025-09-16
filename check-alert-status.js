@@ -1,5 +1,5 @@
 import { storage } from './server/storage.js';
-import { AlertGenerator } from './server/services/alert-generator.js';
+// ✅ V3: No longer using legacy V2 AlertGenerator - script uses storage directly
 
 async function checkAlertSystemStatus() {
   try {
