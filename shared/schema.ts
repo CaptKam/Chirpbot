@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, timestamp, jsonb, integer, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -68,7 +68,10 @@ export const globalAlertSettings = pgTable("global_alert_settings", {
   enabled: boolean("enabled").notNull().default(true),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   updatedBy: varchar("updated_by").references(() => users.id), // Admin who made the change
-});
+}, (table) => ({
+  // Unique constraint to prevent duplicate (sport, alertType) combinations
+  uniqueSportAlertType: unique("unique_sport_alert_type").on(table.sport, table.alertType)
+}));
 
 // Alerts table for storing all alerts with demo support
 export const alerts = pgTable("alerts", {

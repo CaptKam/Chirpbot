@@ -4144,8 +4144,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
       }
 
-      // Update the global alert setting in database
-      await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId!);
+      // Update the global alert setting in database using atomic upsert
+      await storage.upsertGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId!);
 
       // Clear cache for this sport using the proper public method
       await unifiedSettings.invalidateCache(sport);

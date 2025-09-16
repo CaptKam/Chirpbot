@@ -553,13 +553,60 @@ export const storage = {
     }
   },
 
+  // NEW: Atomic upsert function using PostgreSQL's ON CONFLICT DO UPDATE
+  async upsertGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy: string) {
+    try {
+      // 🔧 Normalize consistently
+      const canonicalSport = sport.toLowerCase();
+      const normalizedAlertType = alertType.toUpperCase();
+      
+      console.log(`🔄 UPSERT: Global setting ${canonicalSport}.${normalizedAlertType} = ${enabled} by admin ${updatedBy}`);
+
+      // Use PostgreSQL's INSERT ... ON CONFLICT DO UPDATE for atomic upsert
+      const result = await db.insert(globalAlertSettings)
+        .values({
+          sport: canonicalSport,
+          alertType: normalizedAlertType,
+          enabled,
+          updatedBy,
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: [globalAlertSettings.sport, globalAlertSettings.alertType],
+          set: {
+            enabled: enabled,
+            updatedBy: updatedBy,
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+
+      if (result.length === 0) {
+        console.error(`⚠️ UPSERT FAILURE: No rows affected for ${canonicalSport}.${normalizedAlertType}`);
+        throw new Error(`Failed to upsert global alert setting - no rows affected`);
+      }
+
+      const wasInsert = result[0].updatedAt.getTime() === result[0].updatedAt.getTime();
+      console.log(`✅ UPSERT SUCCESS: ${wasInsert ? 'Created' : 'Updated'} global setting ${canonicalSport}.${normalizedAlertType} = ${enabled} (${result.length} row affected)`);
+
+      // 🎯 Invalidate cache with lowercase canonical key
+      await unifiedSettingsInstance.invalidateCache(canonicalSport);
+      console.log(`🗑️ Cache invalidated for ${canonicalSport} after global setting upsert`);
+
+      return result[0];
+    } catch (error) {
+      console.error(`❌ UPSERT ERROR for ${sport}.${alertType}:`, error);
+      throw error;
+    }
+  },
+
   async updateGlobalAlertCategory(sport: string, alertKeys: string[], enabled: boolean, updatedBy: string) {
     try {
       console.log(`Global alert category updated: ${sport} [${alertKeys.join(',')}] = ${enabled} by admin ${updatedBy}`);
 
-      // Apply each alert key change
+      // Apply each alert key change using atomic upsert
       for (const alertKey of alertKeys) {
-        await this.updateGlobalAlertSetting(sport, alertKey, enabled, updatedBy);
+        await this.upsertGlobalAlertSetting(sport, alertKey, enabled, updatedBy);
       }
 
       return;
@@ -627,8 +674,8 @@ export const storage = {
     try {
       console.log(`Master alerts ${enabled ? 'enabled' : 'disabled'} by admin ${updatedBy}`);
 
-      // Use the existing updateGlobalAlertSetting method to persist the master switch
-      await this.updateGlobalAlertSetting('system', 'MASTER_ALERTS_ENABLED', enabled, updatedBy);
+      // Use the atomic upsertGlobalAlertSetting method to persist the master switch
+      await this.upsertGlobalAlertSetting('system', 'MASTER_ALERTS_ENABLED', enabled, updatedBy);
 
       console.log(`✅ Master alerts setting persisted: ${enabled}`);
       return { enabled, updatedBy };
