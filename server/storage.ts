@@ -414,6 +414,7 @@ export const storage = {
           'MLB_BATTER_DUE': true,
           'MLB_STEAL_LIKELIHOOD': true,
           'MLB_WIND_CHANGE': true,
+          'MLB_STRIKEOUT': true,
           // AI Enhancement alerts (available for MLB)
           'AI_ENHANCED_MESSAGES': true,
           'AI_PREDICTIVE_AT_BAT': true,
