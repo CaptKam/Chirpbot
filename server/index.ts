@@ -390,7 +390,7 @@ async function startServer() {
           }
 
           // Initialize alert generator and AI system
-          const alertGenerator = new AlertGenerator();
+          // ✅ V3: No longer using legacy V2 AlertGenerator - UnifiedAlertGenerator handles this
 
           // AI system now unified through AsyncAIProcessor → CrossSportAIEnhancement
           console.log('✅ AI Services: Unified pipeline active (AsyncAI → CrossSport)');
