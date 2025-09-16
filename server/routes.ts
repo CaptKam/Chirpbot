@@ -588,7 +588,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Request deduplication and memory management are handled by middleware above
 
   // WebSocket imports removed - using HTTP polling architecture
-  const { HealthMonitor } = await import('./services/health-monitor');
+  const { getHealthMonitor } = await import('./services/unified-health-monitor');
 
   // WebSocket server creation removed - using HTTP polling architecture
   console.log(`📡 HTTP polling architecture enabled for real-time updates`);
@@ -3848,7 +3848,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Health check endpoint for alert generation system
   app.get('/api/health/alerts', async (req, res) => {
     try {
-      const { getHealthMonitor } = await import('./services/alert-health-monitor');
+      const { getHealthMonitor } = await import('./services/unified-health-monitor');
       const healthMonitor = getHealthMonitor();
       const healthStatus = healthMonitor.getHealthStatus();
 
@@ -3894,7 +3894,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(401).json({ message: 'Admin authentication required' });
       }
 
-      const { getHealthMonitor } = await import('./services/alert-health-monitor');
+      const { getHealthMonitor } = await import('./services/unified-health-monitor');
       const healthMonitor = getHealthMonitor();
 
       console.log('🔧 Admin requested manual alert system recovery');
