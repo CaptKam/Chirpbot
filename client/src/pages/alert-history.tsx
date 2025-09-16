@@ -13,25 +13,8 @@ import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
 import { getSeasonAwareSports } from '@shared/season-manager';
 import { format, parseISO, isAfter, isBefore, subDays } from 'date-fns';
+import { Alert } from '@/types';
 
-interface Alert {
-  id: string;
-  type: string;
-  message: string;
-  gameId: string;
-  sport: string;
-  homeTeam: string;
-  awayTeam: string;
-  confidence: number;
-  priority: number;
-  createdAt: string;
-  context?: any;
-  title?: string;
-  description?: string;
-  homeScore?: number;
-  awayScore?: number;
-  sentToTelegram?: boolean;
-}
 
 interface AlertStats {
   totalAlerts: number;
@@ -76,30 +59,39 @@ export default function AlertHistoryPage() {
         ? subDays(now, 7)
         : subDays(now, 30);
       
-      filtered = filtered.filter(alert => 
-        isAfter(parseISO(alert.createdAt), cutoffDate)
-      );
+      filtered = filtered.filter(alert => {
+        const alertDate = alert.createdAt || alert.timestamp;
+        return alertDate && isAfter(parseISO(alertDate), cutoffDate);
+      });
     }
 
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(alert => 
-        alert.message.toLowerCase().includes(term) ||
-        alert.type.toLowerCase().includes(term) ||
-        alert.homeTeam?.toLowerCase().includes(term) ||
-        alert.awayTeam?.toLowerCase().includes(term) ||
-        alert.sport.toLowerCase().includes(term)
-      );
+      filtered = filtered.filter(alert => {
+        const message = alert.message || '';
+        const homeTeam = typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || '';
+        const awayTeam = typeof alert.awayTeam === 'string' ? alert.awayTeam : alert.awayTeam?.name || '';
+        
+        return message.toLowerCase().includes(term) ||
+               alert.type.toLowerCase().includes(term) ||
+               homeTeam.toLowerCase().includes(term) ||
+               awayTeam.toLowerCase().includes(term) ||
+               alert.sport.toLowerCase().includes(term);
+      });
     }
 
     // Sort alerts
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          const bDate = b.createdAt || b.timestamp || '';
+          const aDate = a.createdAt || a.timestamp || '';
+          return new Date(bDate).getTime() - new Date(aDate).getTime();
         case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          const aDateOld = a.createdAt || a.timestamp || '';
+          const bDateOld = b.createdAt || b.timestamp || '';
+          return new Date(aDateOld).getTime() - new Date(bDateOld).getTime();
         case 'priority':
           return (b.priority || 0) - (a.priority || 0);
         case 'sport':
@@ -117,7 +109,7 @@ export default function AlertHistoryPage() {
     const groups: { [key: string]: Alert[] } = {};
     
     filteredAlerts.forEach(alert => {
-      const date = format(parseISO(alert.createdAt), 'yyyy-MM-dd');
+      const date = format(parseISO(alert.createdAt || alert.timestamp || new Date().toISOString()), 'yyyy-MM-dd');
       if (!groups[date]) {
         groups[date] = [];
       }
@@ -128,7 +120,7 @@ export default function AlertHistoryPage() {
   }, [filteredAlerts]);
 
   const AlertHistoryCard = ({ alert }: { alert: Alert }) => {
-    const formattedTime = format(parseISO(alert.createdAt), 'HH:mm');
+    const formattedTime = format(parseISO(alert.createdAt || alert.timestamp || new Date().toISOString()), 'HH:mm');
     const isPriorityHigh = (alert.priority || 0) >= 80;
 
     return (
@@ -172,7 +164,7 @@ export default function AlertHistoryPage() {
               <div className="flex items-center gap-4 text-slate-400">
                 {alert.homeTeam && alert.awayTeam && (
                   <span data-testid={`matchup-${alert.id}`}>
-                    {alert.awayTeam} @ {alert.homeTeam}
+                    {typeof alert.awayTeam === 'string' ? alert.awayTeam : alert.awayTeam?.name || 'Away'} @ {typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || 'Home'}
                   </span>
                 )}
                 {(alert.homeScore !== undefined && alert.awayScore !== undefined) && (
@@ -279,7 +271,7 @@ export default function AlertHistoryPage() {
 
             {/* Filters Row */}
             <div className="grid grid-cols-2 gap-3">
-              <Select value={dateRange} onValueChange={setDateRange} data-testid="date-range-select">
+              <Select value={dateRange} onValueChange={(value) => setDateRange(value as 'all' | 'today' | '7days' | '30days')} data-testid="date-range-select">
                 <SelectTrigger className="bg-slate-900/50 border-slate-700 text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
@@ -291,7 +283,7 @@ export default function AlertHistoryPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={sortBy} onValueChange={setSortBy} data-testid="sort-by-select">
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'newest' | 'oldest' | 'priority' | 'sport')} data-testid="sort-by-select">
                 <SelectTrigger className="bg-slate-900/50 border-slate-700 text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
@@ -308,9 +300,9 @@ export default function AlertHistoryPage() {
 
         {/* Sport Tabs */}
         <SportTabs 
-          activeTab={filter} 
-          onTabChange={(tab) => setFilter(tab as typeof filter)}
-          sports={seasonAwareSports}
+          activeSport={filter} 
+          onSportChange={(tab: any) => setFilter(tab)}
+          sports={getSeasonAwareSports()}
         />
 
         {/* Results Summary */}

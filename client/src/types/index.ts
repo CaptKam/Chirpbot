@@ -15,6 +15,7 @@ export interface Alert {
   title: string;
   description: string;
   message?: string;
+  gameId?: string;
   aiContext?: string | null;
   aiConfidence?: number | null;
   confidence?: number;

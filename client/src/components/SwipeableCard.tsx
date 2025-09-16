@@ -13,6 +13,7 @@ import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { Alert } from '@/types';
 import { BaseballDiamond } from '@/components/baseball-diamond';
 import { getPrimaryMessage, cleanMessage, hasAIContent } from '@/utils/alert-message';
+import { formatTimeAgo } from '@/lib/utils';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -21,16 +22,6 @@ import fanaticsLogo from '@assets/fanatics.png';
 import fanduelLogo from '@assets/fanduel.png';
 
 // Utility functions
-function formatTime(date: string | Date): string {
-  const alertTime = new Date(date);
-  const now = new Date();
-  const diffMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
-
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
-  return alertTime.toLocaleDateString();
-}
 
 // Sport-specific color mapping
 function getSportColors(sport: string): { 

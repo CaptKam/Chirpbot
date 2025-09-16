@@ -11,40 +11,8 @@ import { AlertLoading } from '@/components/sports-loading';
 import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
 import { getSeasonAwareSports } from '@shared/season-manager';
+import { Alert } from '@/types';
 
-interface Alert {
-  id: string;
-  type: string;
-  message: string;
-  gameId: string;
-  sport: string;
-  homeTeam: string;
-  awayTeam: string;
-  confidence: number;
-  priority: number;
-  createdAt: string;
-  // Footer data
-  inning?: number;
-  isTopInning?: boolean;
-  outs?: number;
-  balls?: number;
-  strikes?: number;
-  hasFirst?: boolean;
-  hasSecond?: boolean;
-  hasThird?: boolean;
-  context?: any;
-  // Additional fields that might come from API
-  title?: string;
-  description?: string;
-  homeScore?: number;
-  awayScore?: number;
-  timestamp?: string;
-  sentToTelegram?: boolean;
-  weather?: any;
-  weatherData?: any;
-  betbookData?: any;
-  gameInfo?: any;
-}
 
 interface AlertStats {
   totalAlerts: number;
@@ -208,18 +176,18 @@ export default function AlertsPage() {
                 alert={{
                   id: alert.id,
                   type: alert.type,
-                  message: alert.message,
-                  gameId: alert.gameId,
+                  message: alert.message || '',
+                  gameId: alert.gameId || '',
                   sport: alert.sport,
-                  homeTeam: alert.homeTeam,
-                  awayTeam: alert.awayTeam,
-                  confidence: alert.confidence,
-                  priority: alert.priority,
-                  createdAt: alert.createdAt,
-                  homeScore: alert.context?.homeScore || alert.homeScore || alert.context?.scores?.home,
-                  awayScore: alert.context?.awayScore || alert.awayScore || alert.context?.scores?.away,
+                  homeTeam: typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || '',
+                  awayTeam: typeof alert.awayTeam === 'string' ? alert.awayTeam : alert.awayTeam?.name || '',
+                  confidence: alert.confidence || 0,
+                  priority: alert.priority || 0,
+                  createdAt: alert.createdAt || alert.timestamp,
+                  homeScore: alert.context?.homeScore || alert.homeScore,
+                  awayScore: alert.context?.awayScore || alert.awayScore,
                   context: alert.context,
-                  sentToTelegram: alert.sentToTelegram,
+                  sentToTelegram: alert.sentToTelegram || false,
                   weather: alert.context?.weather || alert.weather || alert.weatherData,
                   gameInfo: alert.context?.gameInfo || alert.gameInfo
                 }}
