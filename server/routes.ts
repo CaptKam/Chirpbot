@@ -2656,7 +2656,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       switch (action) {
         case 'arm':
-          result = await weatherOnLiveService.armWeatherMonitoring(gameId, 'ADMIN');
+          const { WeatherArmReason } = await import('../config/runtime');
+          result = await weatherOnLiveService.armWeatherMonitoring(gameId, WeatherArmReason.CUSTOM);
           message = result ? 'Weather monitoring armed' : 'Failed to arm weather monitoring';
           break;
         
