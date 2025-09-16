@@ -861,6 +861,19 @@ export const storage = {
       console.error('Error getting recent alerts:', error);
       return [];
     }
+  },
+  
+  // Get all users monitoring a specific game
+  async getUsersMonitoringGame(gameId: string) {
+    try {
+      const result = await db.select()
+        .from(userMonitoredTeams)
+        .where(eq(userMonitoredTeams.gameId, gameId));
+      return result;
+    } catch (error) {
+      console.error(`Error getting users monitoring game ${gameId}:`, error);
+      return [];
+    }
   }
 };
 

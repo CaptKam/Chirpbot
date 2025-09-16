@@ -580,7 +580,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (alert.alertKey) {
         const parts = alert.alertKey.split('_');
         
-        // Pattern 1: Direct gameId at start (e.g., "776312_pitching_change_...")
+        // Pattern 1: Direct gameId at start (e.g., "776312_pitching_change_..." or "401772715_turnover_risk_...")
         if (parts[0] && /^\d+$/.test(parts[0])) {
           gameId = parts[0];
         } 
@@ -598,11 +598,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             }
           }
         }
-        // Pattern 3: Check for any numeric segment that looks like a gameId
+        // Pattern 3: Check for any numeric segment that looks like a gameId (6-12 digits for NFL)
         if (gameId === 'unknown') {
           for (const part of parts) {
-            // Game IDs are typically 6-10 digits
-            if (/^\d{6,10}$/.test(part)) {
+            // Game IDs are typically 6-12 digits (NFL can be longer like 401772715)
+            if (/^\d{6,12}$/.test(part)) {
               gameId = part;
               break;
             }
@@ -612,39 +612,74 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       console.log(`📌 Extracted gameId: ${gameId} from alertKey: ${alert.alertKey}`);
       
-      // Save alert to database
-      await storage.createAlert({
-        alertKey: alert.alertKey,
-        sport: sport as any,
-        gameId: gameId,
-        type: alert.type,
-        state: 'active',
-        score: alert.confidence || 80,
-        payload: JSON.stringify({
-          message: alert.message,
-          confidence: alert.confidence,
-          priority: alert.priority,
-          context: alert.context,
-          aiAdvice: alert.aiAdvice,
-          betting: alert.betting,
-          homeTeam: alert.homeTeam,
-          awayTeam: alert.awayTeam,
-          homeScore: alert.homeScore,
-          awayScore: alert.awayScore
-        }),
-        isDemoAlert: false
-      });
+      // Get all users monitoring this game
+      const usersMonitoring = await storage.getUsersMonitoringGame(gameId);
+      console.log(`👥 Found ${usersMonitoring.length} users monitoring game ${gameId}`);
       
-      console.log(`✅ Alert saved to database: ${alert.alertKey}`);
+      // If no users are monitoring this game, skip saving the alert
+      if (usersMonitoring.length === 0) {
+        console.log(`⚠️ No users monitoring game ${gameId}, skipping alert save`);
+        return;
+      }
       
-      // Broadcast to frontend via SSE
-      broadcast({
-        type: 'alert',
-        data: alert
-      }, alert.alertKey);
+      // Create an alert for each user monitoring the game
+      let savedCount = 0;
+      let skippedCount = 0;
+      
+      for (const userGame of usersMonitoring) {
+        try {
+          // Check if this specific alert already exists for this user (avoid duplicates)
+          const alertKeyWithUser = `${alert.alertKey}_${userGame.userId}`;
+          
+          await storage.createAlert({
+            alertKey: alert.alertKey,  // Keep original alert key for deduplication
+            userId: userGame.userId,    // CRITICAL: Associate alert with the user!
+            sport: sport as any,
+            gameId: gameId,
+            type: alert.type,
+            state: 'active',
+            score: alert.confidence || 80,
+            payload: JSON.stringify({
+              message: alert.message,
+              confidence: alert.confidence,
+              priority: alert.priority,
+              context: alert.context,
+              aiAdvice: alert.aiAdvice,
+              betting: alert.betting,
+              homeTeam: alert.homeTeam,
+              awayTeam: alert.awayTeam,
+              homeScore: alert.homeScore,
+              awayScore: alert.awayScore
+            }),
+            isDemoAlert: false
+          });
+          
+          savedCount++;
+          console.log(`✅ Alert saved for user ${userGame.userId}: ${alert.alertKey}`);
+          
+        } catch (error: any) {
+          // Handle duplicate key errors gracefully (alert already exists for this user)
+          if (error?.code === '23505' && error?.constraint === 'ux_alerts_key') {
+            skippedCount++;
+            console.log(`⏭️ Alert already exists for user ${userGame.userId}, skipping`);
+          } else {
+            console.error(`❌ Failed to save alert for user ${userGame.userId}:`, error);
+          }
+        }
+      }
+      
+      console.log(`📊 Alert save summary: ${savedCount} saved, ${skippedCount} skipped (already existed)`);
+      
+      // Broadcast to frontend via SSE (once for all users)
+      if (savedCount > 0) {
+        broadcast({
+          type: 'alert',
+          data: alert
+        }, alert.alertKey);
+      }
       
     } catch (error) {
-      console.error(`❌ Failed to save enhanced alert to database:`, error);
+      console.error(`❌ Failed to process enhanced alert:`, error);
     }
   });
 
