@@ -13,7 +13,7 @@ import { UnifiedAlertGenerator } from "./services/unified-alert-generator";
 import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
-import { getUnifiedSettings } from "./services/unified-settings";
+import { unifiedSettings } from "./storage";
 import { alerts as alertsTable, settings } from "../shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { getCalendarSyncService } from "./services/calendar-sync-service";
@@ -1341,7 +1341,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Validate each preference against global settings
-      const globalSettings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
+      const globalSettings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
       const filteredPreferences = [];
 
       for (const pref of preferences) {
@@ -1795,8 +1795,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       });
 
       // Get global settings for comparison
-      const globalMLB = await getUnifiedSettings().getGlobalSettings('MLB');
-      const globalNFL = await getUnifiedSettings().getGlobalSettings('NFL');
+      const globalMLB = await unifiedSettings.getGlobalSettings('MLB');
+      const globalNFL = await unifiedSettings.getGlobalSettings('NFL');
 
       res.json({
         user: {
@@ -3578,7 +3578,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Check global alert settings
       try {
-        const globalSettings = await getUnifiedSettings().getGlobalSettings('MLB');
+        const globalSettings = await unifiedSettings.getGlobalSettings('MLB');
         const enabledAlerts = Object.entries(globalSettings).filter(([_, enabled]) => enabled).length;
         alertsDebug.configuration = {
           status: 'OK',
@@ -3715,13 +3715,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.log(`🔍 Global Settings Diagnostics for ${sport} (canonical: ${canonicalSport})`);
 
       // Get settings through the unified settings system (this uses cache)
-      const cachedSettings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
+      const cachedSettings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
       
       // Get settings directly from storage (bypasses cache to show DB state)
       const dbSettings = await storage.getGlobalAlertSettings(sport);
       
       // Get cache metrics
-      const cacheMetrics = getUnifiedSettings().getCacheMetrics();
+      const cacheMetrics = unifiedSettings.getCacheMetrics();
       
       // Count differences
       const cacheKeys = Object.keys(cachedSettings);
@@ -3795,7 +3795,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           ] : ['Settings cache is synchronized with database']
         },
         troubleshooting: {
-          cacheInvalidationTest: `await getUnifiedSettings().invalidateCache('${canonicalSport}')`,
+          cacheInvalidationTest: `await unifiedSettings.invalidateCache('${canonicalSport}')`,
           clearCacheCommand: 'Clear cache through admin interface',
           recheckQuery: `GET /api/debug/global-settings/${sport}`
         }
@@ -4095,7 +4095,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { sport } = req.params;
 
       // Get the global settings from storage
-      const settings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
+      const settings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
 
       res.json(settings);
     } catch (error) {
@@ -4110,7 +4110,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { sport } = req.params;
       
       // Get the global settings from storage (read-only for non-admins)
-      const settings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
+      const settings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
       
       // Add metadata to indicate read-only status for non-admins
       const response = {
@@ -4148,7 +4148,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId!);
 
       // Clear cache for this sport using the proper public method
-      await getUnifiedSettings().invalidateCache(sport);
+      await unifiedSettings.invalidateCache(sport);
 
       console.log(`✅ Admin toggled ${sport} ${alertType} to ${enabled ? 'enabled' : 'disabled'}`);
 
@@ -4275,7 +4275,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
 
         // Get global settings but show all alerts (don't filter out disabled ones)
-        const globalSettings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
+        const globalSettings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
 
         // Convert to the format expected by the frontend, including globally disabled alerts
         const alertConfig = availableAlerts.map(alertType => {
@@ -4394,7 +4394,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       // This endpoint should return the same data as the sport-specific endpoint
       // but for all sports. For now, return MLB settings since that's what's being used
-      const mlbSettings = await getUnifiedSettings().getGlobalSettings('MLB');
+      const mlbSettings = await unifiedSettings.getGlobalSettings('MLB');
       res.json(mlbSettings);
     } catch (error) {
       console.error('Error fetching global settings:', error);
@@ -4569,7 +4569,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       await storage.clearGlobalAlertSettings(sport.toLowerCase());
 
       // Get defaults will now return the default values since no database overrides exist
-      const defaults = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
+      const defaults = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
       const enabledCount = Object.values(defaults).filter(enabled => enabled).length;
 
       res.json({
