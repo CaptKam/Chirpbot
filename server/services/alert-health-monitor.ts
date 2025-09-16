@@ -10,7 +10,7 @@ import {
   type HealthStatus,
   type HealthMetrics as UnifiedHealthMetrics
 } from './unified-health-monitor';
-// Legacy V2 AlertGenerator import removed - using unified health monitor
+// ✅ V3: Legacy V2 AlertGenerator import removed - using unified health monitor
 
 // Legacy interface for backward compatibility
 interface HealthMetrics {

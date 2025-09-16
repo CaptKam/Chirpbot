@@ -8,7 +8,7 @@ import fs from "fs";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
-// Using UnifiedAlertGenerator for alert processing
+// ✅ V3: Using UnifiedAlertGenerator instead of legacy V2 AlertGenerator
 import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
@@ -390,7 +390,7 @@ async function startServer() {
           }
 
           // Initialize alert generator and AI system
-          // Using UnifiedAlertGenerator for alert processing
+          // ✅ V3: No longer using legacy V2 AlertGenerator - UnifiedAlertGenerator handles this
 
           // AI system now unified through AsyncAIProcessor → CrossSportAIEnhancement
           console.log('✅ AI Services: Unified pipeline active (AsyncAI → CrossSport)');
@@ -409,9 +409,9 @@ async function startServer() {
                   res.status(200).send(`
                     <!DOCTYPE html>
                     <html>
-                      <head><title>ChirpBot</title></head>
+                      <head><title>ChirpBot V3</title></head>
                       <body>
-                        <h1>ChirpBot Server Running</h1>
+                        <h1>ChirpBot V3 Server Running</h1>
                         <p>Frontend temporarily unavailable - API endpoints are still accessible</p>
                       </body>
                     </html>
@@ -423,26 +423,17 @@ async function startServer() {
             }
           }
 
-          // Alert generation is now handled by the unified monitoring system
-          console.log('🚨 STARTING ALERT MONITORING SYSTEM...');
+          // START ALERT GENERATION IMMEDIATELY - MISSION CRITICAL
+          console.log('🚨 STARTING ALERT GENERATION IMMEDIATELY...');
           try {
-            // Import and start the unified alert generator
-            const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-            const alertGenerator = new UnifiedAlertGenerator({});
-            await alertGenerator.startMonitoring();
-            console.log('✅ Alert monitoring started. System will generate alerts when games go live.');
+            alertGenerator.generateLiveGameAlerts();
+            console.log('✅ ALERT GENERATION ACTIVE - MONITORING ALL GAMES');
           } catch (alertError) {
             console.error('⚠️ CRITICAL: Alert generation failed to start:', alertError);
             // AUTO-RECOVERY: Retry after 2 seconds
-            setTimeout(async () => {
+            setTimeout(() => {
               console.log('🔄 AUTO-RECOVERY: Retrying alert generation...');
-              try {
-                const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-                const alertGenerator = new UnifiedAlertGenerator({});
-                await alertGenerator.startMonitoring();
-              } catch (retryError) {
-                console.error('🔄 Continuing despite error - service may be degraded');
-              }
+              alertGenerator.generateLiveGameAlerts();
             }, 2000);
           }
 

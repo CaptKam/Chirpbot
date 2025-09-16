@@ -1,5 +1,5 @@
 /**
- * Calendar Sync Service
+ * ChirpBot V3 Calendar Sync Service
  * Lightweight calendar data synchronization for weather-on-live architecture
  * 
  * Features:

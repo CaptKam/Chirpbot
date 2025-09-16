@@ -1,5 +1,5 @@
 /**
- * Engine Lifecycle Manager
+ * ChirpBot V3 Engine Lifecycle Manager
  * Implements the weather-on-live architecture where sport engines only run when games are live
  * 
  * Features:

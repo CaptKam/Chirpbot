@@ -1,5 +1,5 @@
 /**
- * Weather-on-Live Service
+ * ChirpBot V3 Weather-on-Live Service
  * Dynamic weather monitoring system that only activates when games are LIVE
  * 
  * Key Features:

@@ -29,12 +29,12 @@ export class CFLEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Complete CFL alert types with Canadian football specifics
+      // V3-15: Complete CFL alert types with Canadian football specifics
       const validCFLAlerts = [
         'CFL_GAME_START', 'CFL_TWO_MINUTE_WARNING',
-        // Core CFL professional Canadian football alert types
+        // V3-15: Core CFL professional Canadian football alert types
         'CFL_FOURTH_QUARTER', 'CFL_FINAL_MINUTES', 'CFL_GREY_CUP_IMPLICATIONS',
-        // Advanced CFL Canadian-specific alert types  
+        // V3-15: Advanced CFL Canadian-specific alert types  
         'CFL_THIRD_DOWN_SITUATION', 'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME',
         'CFL_MASSIVE_WEATHER'
       ];
@@ -292,7 +292,7 @@ export class CFLEngine extends BaseSportEngine {
     return enhancedAlerts;
   }
 
-  // Initialize alert modules based on user's enabled preferences
+  // V3-15: Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
       // Get user's enabled alert types - use uppercase 'CFL' to match database
@@ -374,7 +374,7 @@ export class CFLEngine extends BaseSportEngine {
     }
   }
 
-  // Performance monitoring and diagnostics
+  // V3-15: Performance monitoring and diagnostics
   getPerformanceMetrics() {
     return {
       ...this.performanceMetrics,
@@ -430,7 +430,7 @@ export class CFLEngine extends BaseSportEngine {
   }
 
 
-  // CFL-specific utility methods with performance optimization
+  // V3-15: CFL-specific utility methods with performance optimization
   parseTimeToSeconds(timeString: string): number {
     if (!timeString) return 0;
     const cleanTime = timeString.trim().split(' ')[0];
