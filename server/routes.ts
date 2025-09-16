@@ -4376,6 +4376,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Update the global setting which will apply to all users
       await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
+      
+      // Invalidate cache so changes show immediately in user settings
+      await unifiedSettings.invalidateCache(sport);
 
       res.json({
         message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
@@ -4419,6 +4422,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
         results.push({ alertType, enabled: true });
       }
+      
+      // Invalidate cache so changes show immediately in user settings
+      await unifiedSettings.invalidateCache('MLB');
 
       res.json({
         message: 'Critical MLB alerts enabled successfully',
@@ -4447,6 +4453,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
         results.push({ alertType, enabled: true });
       }
+      
+      // Invalidate cache so changes show immediately in user settings
+      await unifiedSettings.invalidateCache('MLB');
 
       res.json({
         message: 'All MLB alerts enabled for testing',
@@ -4515,6 +4524,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             results.push({ sport, alertType, disabled: false, error: (error as Error).message });
           }
         }
+        
+        // Invalidate cache for this sport so changes show immediately in user settings
+        await unifiedSettings.invalidateCache(sport);
       }
 
       // Disable Telegram for all users
