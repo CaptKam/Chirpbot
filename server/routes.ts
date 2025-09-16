@@ -575,11 +575,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       console.log(`💾 Saving enhanced alert to database: ${alert.alertKey}`);
       
+      // Extract gameId from alertKey (e.g., "776312_pitching_change_..." -> "776312")
+      let gameId = 'unknown';
+      if (alert.alertKey) {
+        // For MLB alerts, the gameId is the first part before underscore
+        const parts = alert.alertKey.split('_');
+        if (parts[0] && /^\d+$/.test(parts[0])) {
+          gameId = parts[0];
+        } else if (alert.alertKey.startsWith('mlb_game_start_')) {
+          // Special case for mlb_game_start_776319_1 format
+          gameId = parts[3] || 'unknown';
+        }
+      }
+      
+      console.log(`📌 Extracted gameId: ${gameId} from alertKey: ${alert.alertKey}`);
+      
       // Save alert to database
       await storage.createAlert({
         alertKey: alert.alertKey,
         sport: sport as any,
-        gameId: alert.gameId || 'unknown',
+        gameId: gameId,
         type: alert.type,
         state: 'active',
         score: alert.confidence || 80,
