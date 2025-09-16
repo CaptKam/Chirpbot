@@ -1168,6 +1168,7 @@ export class AdaptivePollingManager {
           const gameState: GameState = {
             gameId: gameId,
             sport: this.sport,
+            status: gameStateData.status || 'unknown',
             isLive: gameStateData.status === 'live' || gameStateData.status === 'progress', 
             homeTeam: gameStateData.homeTeam,
             awayTeam: gameStateData.awayTeam,
