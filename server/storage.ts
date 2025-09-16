@@ -714,7 +714,7 @@ export const storage = {
           .set({
             ...gameStateData,
             updatedAt: new Date()
-          })
+          } as any)
           .where(and(
             eq(gameStates.extGameId, gameStateData.extGameId),
             eq(gameStates.sport, gameStateData.sport)
@@ -724,7 +724,7 @@ export const storage = {
       } else {
         // Insert new record
         const result = await db.insert(gameStates)
-          .values([gameStateData])
+          .values([gameStateData as any])
           .returning();
         return result[0];
       }
@@ -841,7 +841,7 @@ export const storage = {
         FROM global_alert_settings 
         WHERE enabled = true
       `);
-      const enabledCount = parseInt(result.rows[0]?.enabled_count || '0');
+      const enabledCount = parseInt(result.rows[0]?.enabled_count?.toString() || '0');
       return enabledCount > 0;
     } catch (error) {
       console.error('Error checking master alerts status:', error);

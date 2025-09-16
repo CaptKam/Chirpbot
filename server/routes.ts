@@ -9,13 +9,11 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
-import { AlertGenerator } from "./services/alert-generator";
+import { UnifiedAlertGenerator } from "./services/unified-alert-generator";
 import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
-// WebSocket setup import removed - using HTTP polling architecture
-import { unifiedSettings } from "./storage";
-import { db } from "./db";
+import { unifiedSettings } from "./services/unified-settings";
 import { alerts as alertsTable, settings } from "../shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { getCalendarSyncService } from "./services/calendar-sync-service";
@@ -476,7 +474,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
         try {
           // Generate alerts for this game state
-          const alerts = await nflEngine.processGame(scenario.gameState);
+          const alerts = await nflEngine.generateAlerts(scenario.gameState);
 
           results.push({
             scenario: scenario.name,
@@ -874,20 +872,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             gameId: gameId,
             type: alert.type,
             state: 'active',
-            score: alert.confidence || 80,
+            score: (alert as any).confidence || alert.priority || 80,
             payload: JSON.stringify({
               message: alert.message,
-              confidence: alert.confidence,
               priority: alert.priority,
-              context: alert.context,
-              aiAdvice: alert.aiAdvice,
-              betting: alert.betting,
-              homeTeam: alert.homeTeam,
-              awayTeam: alert.awayTeam,
-              homeScore: alert.homeScore,
-              awayScore: alert.awayScore
-            }),
-            isDemoAlert: false
+              type: alert.type,
+              gameId: gameId,
+              context: (alert as any).context || {},
+              timestamp: new Date().toISOString()
+            })
           });
           
           savedCount++;
@@ -967,7 +960,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Test database connection and get counts
       try {
-        const client = await pool.connect();
+        const client = await db;
         diagnostics.database.connected = true;
 
         // Get user count
