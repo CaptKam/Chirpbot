@@ -428,8 +428,8 @@ async function startServer() {
           try {
             // Import and start the unified alert generator
             const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-            const alertGenerator = new UnifiedAlertGenerator();
-            await alertGenerator.start();
+            const alertGenerator = new UnifiedAlertGenerator({});
+            await alertGenerator.startMonitoring();
             console.log('✅ Alert monitoring started. System will generate alerts when games go live.');
           } catch (alertError) {
             console.error('⚠️ CRITICAL: Alert generation failed to start:', alertError);
@@ -438,8 +438,8 @@ async function startServer() {
               console.log('🔄 AUTO-RECOVERY: Retrying alert generation...');
               try {
                 const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-                const alertGenerator = new UnifiedAlertGenerator();
-                await alertGenerator.start();
+                const alertGenerator = new UnifiedAlertGenerator({});
+                await alertGenerator.startMonitoring();
               } catch (retryError) {
                 console.error('🔄 Continuing despite error - service may be degraded');
               }

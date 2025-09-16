@@ -680,7 +680,7 @@ export class MLBEngine extends BaseSportEngine {
     return null;
   }
 
-  // Get performance metrics for V3 dashboard
+  // Get performance metrics for dashboard
   // Send alerts to Telegram for users with notifications enabled
   // Note: WebSocket broadcasting removed - alerts now only go through AsyncAI processor for enhancement
   private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {

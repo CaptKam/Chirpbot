@@ -128,10 +128,10 @@ export class NBAEngine extends BaseSportEngine {
       const validNBAAlerts = [
         'NBA_GAME_START', 'NBA_FOURTH_QUARTER', 'NBA_FINAL_MINUTES',
         'NBA_TWO_MINUTE_WARNING', 'NBA_OVERTIME',
-        // V3-11: Core NBA professional basketball alert types
+        // Core NBA professional basketball alert types
         'NBA_CLUTCH_TIME_OPPORTUNITY', 'NBA_STAR_PLAYER_PERFORMANCE',
         'NBA_CLOSE_GAME_ALERT', 'NBA_PLAYOFF_IMPLICATIONS',
-        // V3-12: Advanced NBA predictive analytics alert types
+        // Advanced NBA predictive analytics alert types
         'NBA_CLUTCH_PERFORMANCE', 'NBA_CHAMPIONSHIP_IMPLICATIONS',
         'NBA_SUPERSTAR_ANALYTICS', 'NBA_PLAYOFF_INTENSITY'
       ];
@@ -533,7 +533,7 @@ export class NBAEngine extends BaseSportEngine {
       const validNBAAlerts = [
         'NBA_GAME_START', 'NBA_FOURTH_QUARTER', 'NBA_FINAL_MINUTES',
         'NBA_TWO_MINUTE_WARNING', 'NBA_OVERTIME',
-        // V3-12: Advanced NBA predictive analytics alert types
+        // Advanced NBA predictive analytics alert types
         'NBA_CLUTCH_PERFORMANCE', 'NBA_CHAMPIONSHIP_IMPLICATIONS',
         'NBA_SUPERSTAR_ANALYTICS', 'NBA_PLAYOFF_INTENSITY'
       ];
@@ -573,7 +573,7 @@ export class NBAEngine extends BaseSportEngine {
         'NBA_FINAL_MINUTES': './alert-cylinders/nba/final-minutes-module.ts',
         'NBA_TWO_MINUTE_WARNING': './alert-cylinders/nba/two-minute-warning-module.ts',
         'NBA_OVERTIME': './alert-cylinders/nba/overtime-module.ts',
-        // V3-12: Advanced NBA predictive analytics modules
+        // Advanced NBA predictive analytics modules
         'NBA_CLUTCH_PERFORMANCE': './alert-cylinders/nba/clutch-performance-module.ts',
         'NBA_CHAMPIONSHIP_IMPLICATIONS': './alert-cylinders/nba/championship-implications-module.ts',
         'NBA_SUPERSTAR_ANALYTICS': './alert-cylinders/nba/superstar-analytics-module.ts',
@@ -880,7 +880,7 @@ export class NBAEngine extends BaseSportEngine {
     return stats;
   }
 
-  // Get performance metrics for V3 dashboard (consistent with other engines)
+  // Get performance metrics for dashboard (consistent with other engines)
   getPerformanceMetrics() {
     const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
       ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length

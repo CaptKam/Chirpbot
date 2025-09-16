@@ -1,5 +1,5 @@
 /**
- * ChirpBot V3 Game State Manager
+ * Game State Manager
  * Core game state machine system for weather-on-live architecture
  * 
  * Handles SCHEDULED → PREWARM → LIVE → PAUSED → FINAL → TERMINATED transitions

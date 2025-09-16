@@ -9,7 +9,7 @@ import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
 
-// ChirpBot V3 Weather-on-Live Architecture
+// Weather-on-Live Architecture
 import { RUNTIME } from '../config/runtime';
 import { EngineLifecycleManager as EngineLifecycleManagerClass, EngineState, type EngineStateInfo } from './engine-lifecycle-manager';
 import { CalendarSyncService, type CalendarGameData } from './calendar-sync-service';
@@ -84,7 +84,7 @@ interface RetryConfig {
   backoffMultiplier: number;
 }
 
-// V3 Weather-Enhanced Alert Interface
+// Weather-Enhanced Alert Interface
 interface WeatherEnhancedAlert extends AlertResult {
   weatherContext?: WeatherChangeEvent;
   isWeatherTriggered?: boolean;
@@ -107,7 +107,7 @@ export class UnifiedAlertGenerator {
   private demoUserId?: string;
   private logLevel: 'verbose' | 'quiet' = 'quiet';
 
-  // V3 Weather-on-Live Architecture Services (production only)
+  // Weather-on-Live Architecture Services (production only)
   private engineLifecycleManager?: EngineLifecycleManager;
   private calendarSyncService?: CalendarSyncService;
   private weatherOnLiveService?: WeatherOnLiveService;
@@ -154,7 +154,7 @@ export class UnifiedAlertGenerator {
   }
 
   private initializeProductionServices(): void {
-    console.log('🔧 Initializing UnifiedAlertGenerator with V3 Weather-on-Live architecture...');
+    console.log('🔧 Initializing UnifiedAlertGenerator with Weather-on-Live architecture...');
     
     try {
       // Initialize core services first
@@ -167,11 +167,11 @@ export class UnifiedAlertGenerator {
         callbacks: {
           onRestart: () => this.startMonitoring(),
           onStop: () => this.stopMonitoring(),
-          generatorLabel: 'unified-alert-generator-v3'
+          generatorLabel: 'unified-alert-generator'
         }
       });
 
-      // V3 Architecture: Initialize new services
+      // Initialize new services
       this.engineLifecycleManager = new EngineLifecycleManagerClass();
       this.calendarSyncService = new CalendarSyncService({
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
@@ -200,10 +200,10 @@ export class UnifiedAlertGenerator {
       this.wnbaApi = new WNBAApiService();
       this.cflApi = new CFLApiService();
 
-      console.log('✅ V3 Weather-on-Live architecture initialized successfully');
+      console.log('✅ Weather-on-Live architecture initialized successfully');
       
     } catch (error) {
-      console.error('❌ Failed to initialize V3 architecture:', error);
+      console.error('❌ Failed to initialize architecture:', error);
       throw error;
     }
   }
@@ -251,7 +251,7 @@ export class UnifiedAlertGenerator {
       return;
     }
 
-    console.log('⚡ Starting V3 Weather-on-Live alert monitoring...');
+    console.log('⚡ Starting Weather-on-Live alert monitoring...');
     
     try {
       // Start health monitoring
@@ -259,23 +259,23 @@ export class UnifiedAlertGenerator {
         this.healthMonitor.startMonitoring();
       }
 
-      // V3 Architecture: Start calendar sync service for lightweight game data
+      // Start calendar sync service for lightweight game data
       if (this.calendarSyncService) {
         await this.calendarSyncService.start();
         console.log('✅ Calendar sync service started');
       }
 
-      // V3 Architecture: Weather service starts automatically when games go LIVE
+      // Weather service starts automatically when games go LIVE
       // (No manual initialization needed - weather-on-live architecture handles this)
       
-      // V3 Architecture: Engine Lifecycle Manager handles engine state transitions
+      // Engine Lifecycle Manager handles engine state transitions
       // (Engines are started/stopped based on game states automatically)
       
-      console.log('✅ V3 Weather-on-Live monitoring started successfully!');
+      console.log('✅ Weather-on-Live monitoring started successfully!');
       console.log('🎯 Alert generation will be dynamically activated when games transition to LIVE state');
       
     } catch (error) {
-      console.error('❌ Failed to start V3 monitoring:', error);
+      console.error('❌ Failed to start monitoring:', error);
       throw error;
     }
   }
@@ -285,7 +285,7 @@ export class UnifiedAlertGenerator {
       return;
     }
 
-    console.log('🛑 Stopping V3 Weather-on-Live monitoring...');
+    console.log('🛑 Stopping Weather-on-Live monitoring...');
     
     try {
       // Stop calendar sync service
@@ -304,10 +304,10 @@ export class UnifiedAlertGenerator {
       }
       this.fallbackPollingActive.clear();
       
-      console.log('✅ V3 Weather-on-Live monitoring stopped successfully');
+      console.log('✅ Weather-on-Live monitoring stopped successfully');
       
     } catch (error) {
-      console.error('❌ Error stopping V3 monitoring:', error);
+      console.error('❌ Error stopping monitoring:', error);
     }
   }
 
@@ -316,14 +316,14 @@ export class UnifiedAlertGenerator {
       return { mode: 'demo', demoUserId: this.demoUserId };
     }
 
-    // V3: Enhanced stats with architecture status
+    // Enhanced stats with architecture status
     return {
       mode: 'production',
-      architecture: 'weather-on-live-v3',
-      engineFailures: 0, // Legacy - no longer applicable in V3
+      architecture: 'weather-on-live',
+      engineFailures: 0, // Legacy - no longer applicable
       fallbackPollingActive: this.fallbackPollingActive.size,
       healthMonitor: this.healthMonitor?.getHealthStatus() || null,
-      // V3 specific stats
+      // Architecture-specific stats
       engineStatusCacheSize: this.engineStatusCache.size,
       lastEngineStatusCheck: new Date(this.lastEngineStatusCheck).toISOString(),
       servicesStatus: {
@@ -415,7 +415,7 @@ export class UnifiedAlertGenerator {
             console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled, ${usersWithActiveMonitoring.length} active users`);
           }
 
-          // V3: Dynamic game data sourcing based on engine state
+          // Dynamic game data sourcing based on engine state
           let games: any[] = [];
           let dataSource = 'unknown';
           try {
@@ -424,7 +424,7 @@ export class UnifiedAlertGenerator {
             dataSource = gameData.source;
 
             if (this.logLevel !== 'quiet') {
-              console.log(`📊 V3: Fetched ${games.length} ${sport} games from ${dataSource} source`);
+              console.log(`📊 Fetched ${games.length} ${sport} games from ${dataSource} source`);
             }
           } catch (gameError) {
             console.error(`❌ Error fetching ${sport} games:`, gameError);
@@ -978,7 +978,7 @@ export class UnifiedAlertGenerator {
       return 0;
     }
 
-    // V3: Only process alerts when engine is ACTIVE
+    // Only process alerts when engine is ACTIVE
     if (!engineStatus.isActive || !engineStatus.engine) {
       if (this.logLevel !== 'quiet') {
         console.log(`🔄 ${sport}: Engine state=${engineStatus.state} - skipping alert processing (games: ${games.length})`);
@@ -1022,7 +1022,7 @@ export class UnifiedAlertGenerator {
           // Generate alerts using the sport engine
           const alertResults = await engine.generateLiveAlerts(gameState);
 
-          // V3: Enhance alerts with weather context for live games
+          // Enhance alerts with weather context for live games
           const enhancedAlerts = await this.enhanceAlertsWithWeatherContext(alertResults, gameState, sport);
 
           if (enhancedAlerts && enhancedAlerts.length > 0) {
@@ -1102,7 +1102,7 @@ export class UnifiedAlertGenerator {
                       continue; // Skip this alert and move to next user
                     }
 
-                    // V3: Enhanced alert data with weather context
+                    // Enhanced alert data with weather context
                     const weatherAlert = alertResult as WeatherEnhancedAlert;
                     const alertData = {
                       alertKey: `${situationKey}_${userId}`,
@@ -1123,7 +1123,7 @@ export class UnifiedAlertGenerator {
                         betting: betbookData.odds,
                         aiAdvice: betbookData.aiAdvice,
                         sportsbookLinks: betbookData.sportsbookLinks,
-                        // V3: Weather enhancement data
+                        // Weather enhancement data
                         weatherContext: weatherAlert.weatherContext,
                         isWeatherTriggered: weatherAlert.isWeatherTriggered || false,
                         weatherSeverity: weatherAlert.weatherSeverity
@@ -1216,16 +1216,16 @@ export class UnifiedAlertGenerator {
 
       return totalAlerts;
     } catch (error) {
-      console.error(`❌ Critical error in V3 processGamesWithEngine for ${sport}:`, error);
+      console.error(`❌ Critical error in processGamesWithEngine for ${sport}:`, error);
       
-      // V3: Enhanced error handling - invalidate cache and check service availability
+      // Enhanced error handling - invalidate cache and check service availability
       this.engineStatusCache.delete(sport);
       this.lastEngineStatusCheck = 0;
       
       // Check if this is a service availability error (non-critical)
       if (error.message?.includes('not available') || error.message?.includes('unavailable')) {
         if (this.logLevel !== 'quiet') {
-          console.log(`⚠️ ${sport}: Service temporarily unavailable - this is expected in V3 architecture`);
+          console.log(`⚠️ ${sport}: Service temporarily unavailable - this is expected in current architecture`);
         }
         return 0; // Return 0 alerts instead of throwing
       }
