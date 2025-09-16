@@ -74,7 +74,7 @@ export default function Settings() {
   });
   
   // Extract settings from response (handles both old admin format and new public format)
-  const globalSettings = globalSettingsResponse?.settings || globalSettingsResponse;
+  const globalSettings = (globalSettingsResponse as any)?.settings || globalSettingsResponse;
 
   // Available alert types query from cylinders (accessible to all authenticated users)
   const { data: availableAlerts, isLoading: availableAlertsLoading } = useQuery({
