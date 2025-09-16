@@ -4366,31 +4366,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/global-alert-setting', async (req, res) => {
-    try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
-      const { sport, alertType, enabled } = req.body;
-
-      // Update the global setting which will apply to all users
-      await storage.updateGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId);
-      
-      // Invalidate cache so changes show immediately in user settings
-      await unifiedSettings.invalidateCache(sport);
-
-      res.json({
-        message: `Alert ${enabled ? 'enabled' : 'disabled'} globally`,
-        sport,
-        alertType,
-        enabled
-      });
-    } catch (error) {
-      console.error('Error updating alert setting:', error);
-      res.status(500).json({ message: 'Failed to update alert setting' });
-    }
-  });
 
   // Global settings endpoint for user settings page
   app.get('/api/admin/global-settings', async (req, res) => {
