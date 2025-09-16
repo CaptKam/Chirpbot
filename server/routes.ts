@@ -3715,7 +3715,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.log(`🔍 Global Settings Diagnostics for ${sport} (canonical: ${canonicalSport})`);
 
       // Get settings through the unified settings system (this uses cache)
-      const cachedSettings = await getUnifiedSettings().getGlobalSettings(sport);
+      const cachedSettings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
       
       // Get settings directly from storage (bypasses cache to show DB state)
       const dbSettings = await storage.getGlobalAlertSettings(sport);
@@ -4095,7 +4095,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { sport } = req.params;
 
       // Get the global settings from storage
-      const settings = await getUnifiedSettings().getGlobalSettings(sport);
+      const settings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
 
       res.json(settings);
     } catch (error) {
@@ -4110,7 +4110,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { sport } = req.params;
       
       // Get the global settings from storage (read-only for non-admins)
-      const settings = await getUnifiedSettings().getGlobalSettings(sport);
+      const settings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
       
       // Add metadata to indicate read-only status for non-admins
       const response = {
@@ -4804,7 +4804,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/calendar/:sport', async (req, res) => {
     try {
       const { sport } = req.params;
-      const games = calendarService.getCalendarData(sport.toUpperCase());
+      const games = calendarService.getCalendarData(sport.toLowerCase());
       
       res.json({
         success: true,
@@ -4866,7 +4866,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(403).json({ error: 'Admin access required for force refresh' });
       }
       
-      await calendarService.forceRefresh(sport.toUpperCase());
+      await calendarService.forceRefresh(sport.toLowerCase());
       
       console.log(`📅 Calendar API: Admin ${req.user.id} force refreshed ${sport.toUpperCase()} calendar data`);
       
