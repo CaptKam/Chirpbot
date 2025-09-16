@@ -209,9 +209,19 @@ export class UnifiedAIProcessor {
   private onEnhancedAlert?: (alert: AlertResult, userId: string, sport: string, wasActuallyEnhanced: boolean) => Promise<void>;
 
   constructor() {
+    // Clear ALL cache entries on startup to ensure clean state
+    this.clearAllCache();
+    
     // Start background cleanup
     setInterval(() => this.cleanup(), this.CLEANUP_INTERVAL);
-    console.log(`🤖 Unified AI Processor: Initialized with consistent "AI OR ORIGINAL" policy`);
+    console.log(`🤖 Unified AI Processor: Initialized with clean cache and consistent "AI OR ORIGINAL" policy`);
+  }
+
+  private clearAllCache(): void {
+    const cacheSize = this.cache.size;
+    this.cache.clear();
+    this.results.clear();
+    console.log(`🧹 Unified AI: Cleared ALL ${cacheSize} cache entries on startup to ensure clean state`);
   }
 
   get configured(): boolean {
@@ -247,20 +257,29 @@ export class UnifiedAIProcessor {
       const cacheKey = this.generateCacheKey(context);
       const cached = this.getCachedResponse(cacheKey);
       if (cached) {
-        console.log(`💨 Unified AI Cache Hit: ${context.sport} ${context.alertType} - sending enhanced version to database`);
-        this.performanceMetrics.cacheHits++;
-        
-        const startTime = Date.now();
-        const enhancedAlert = this.buildEnhancedAlert(alert, cached, startTime);
-        
-        // Send enhanced version via WebSocket (non-blocking)
-        if (this.onEnhancedAlert) {
-          this.onEnhancedAlert(enhancedAlert, userId, context.sport, true).catch(error => {
-            console.error(`❌ Failed to send cached enhanced alert via WebSocket:`, error);
-          });
+        // Double-check cached response is valid before using it
+        if (cached.enhancedMessage && 
+            !cached.enhancedMessage.includes('This alert has been enhanced by the unified AI system') &&
+            cached.enhancedMessage !== context.originalMessage) {
+          console.log(`💨 Unified AI Cache Hit: ${context.sport} ${context.alertType} - valid cached content found`);
+          this.performanceMetrics.cacheHits++;
+          
+          const startTime = Date.now();
+          const enhancedAlert = this.buildEnhancedAlert(alert, cached, startTime);
+          
+          // Send enhanced version via WebSocket (non-blocking)
+          if (this.onEnhancedAlert) {
+            this.onEnhancedAlert(enhancedAlert, userId, context.sport, true).catch(error => {
+              console.error(`❌ Failed to send cached enhanced alert via WebSocket:`, error);
+            });
+          }
+          
+          return Promise.resolve(jobId);
+        } else {
+          console.log(`⚠️ Unified AI: Cache hit but response was invalid/mock, deleting and proceeding with fresh enhancement`);
+          this.cache.delete(cacheKey);
+          this.performanceMetrics.cacheMisses++;
         }
-        
-        return Promise.resolve(jobId);
       }
 
       // Queue for async AI processing (completely non-blocking)
@@ -555,12 +574,34 @@ export class UnifiedAIProcessor {
   private getCachedResponse(key: string): UnifiedAIResponse | null {
     const cached = this.cache.get(key);
     if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
-      return cached.response;
+      // Validate cached response has actual content
+      // Prevent returning cached mock responses or empty messages
+      if (cached.response.enhancedMessage && 
+          cached.response.enhancedMessage.trim().length > 0 &&
+          !cached.response.enhancedMessage.includes('This alert has been enhanced by the unified AI system') &&
+          cached.response.contextualInsights.length > 0 &&
+          !cached.response.contextualInsights[0].includes('Game situation developing')) {
+        return cached.response;
+      } else {
+        // Remove invalid cached entry
+        console.log(`🗑️ Unified AI: Removing invalid cached response for key ${key}`);
+        this.cache.delete(key);
+      }
     }
     return null;
   }
 
   private cacheResponse(key: string, response: UnifiedAIResponse): void {
+    // Validate response before caching - prevent caching mock or empty responses
+    if (!response.enhancedMessage || 
+        response.enhancedMessage.trim().length === 0 ||
+        response.enhancedMessage.includes('This alert has been enhanced by the unified AI system') ||
+        response.contextualInsights.length === 0 ||
+        response.contextualInsights[0].includes('Game situation developing')) {
+      console.log(`🚫 Unified AI: Refusing to cache invalid/mock response for key ${key}`);
+      return;
+    }
+
     // LRU-style cache management
     if (this.cache.size >= this.MAX_CACHE_SIZE) {
       const oldestKey = Array.from(this.cache.keys())[0];
@@ -573,6 +614,8 @@ export class UnifiedAIProcessor {
       timestamp: Date.now(),
       sport: response.sport
     });
+    
+    console.log(`💾 Unified AI: Cached valid response for ${response.sport} alert (${key})`);
   }
 
   private buildEnhancedAlert(originalAlert: AlertResult, aiResponse: UnifiedAIResponse, startTime: number): AlertResult {
@@ -611,18 +654,56 @@ export class UnifiedAIProcessor {
   // === PLACEHOLDER METHODS (to be implemented) ===
   
   private async callOpenAI(prompt: string): Promise<string | null> {
-    // TODO: Implement actual OpenAI API call
-    console.log("Unified AI: Calling OpenAI with prompt:", prompt.substring(0, 100));
-    
-    // Mock response for now
-    return `Enhanced Title: Unified AI Enhanced Alert
-Enhanced Message: This alert has been enhanced by the unified AI system.
-Insight 1: Game situation analysis
-Insight 2: Strategic implications
-Insight 3: Betting considerations
-Recommendation: Monitor closely
-Factors: Team performance, game state
-Next Moment: Critical play coming up`;
+    try {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        console.warn('⚠️ Unified AI: OPENAI_API_KEY not configured');
+        return null;
+      }
+
+      console.log("🤖 Unified AI: Making OpenAI API call");
+      
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: prompt },
+            { 
+              role: 'user', 
+              content: 'Provide a concise, contextual analysis (2-3 sentences max) with betting insights and key factors to watch. Focus on actionable information.' 
+            }
+          ],
+          max_tokens: 150,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('❌ Unified AI: OpenAI API error:', error);
+        return null;
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices?.[0]?.message?.content;
+      
+      if (aiResponse && aiResponse.trim().length > 0) {
+        console.log('✅ Unified AI: Successfully got AI response');
+        return aiResponse;
+      }
+      
+      console.warn('⚠️ Unified AI: Empty response from OpenAI');
+      return null;
+      
+    } catch (error: any) {
+      console.error('❌ Unified AI: Error calling OpenAI:', error.message);
+      return null;
+    }
   }
 
   private buildSportSpecificPrompt(context: CrossSportContext): string {
@@ -783,10 +864,13 @@ Focus on: Time management, shooting efficiency, foul situation.`;
     return this.highValueAlertTypes[sport.toUpperCase()] || [];
   }
 
-  // Clear caches (for testing)
+  // Clear caches (for testing or manual cleanup)
   clearCache(): void {
+    const cacheSize = this.cache.size;
+    const resultsSize = this.results.size;
     this.cache.clear();
     this.results.clear();
+    console.log(`🧹 Unified AI: Manually cleared ${cacheSize} cache entries and ${resultsSize} result entries`);
   }
 
   // Cleanup on shutdown

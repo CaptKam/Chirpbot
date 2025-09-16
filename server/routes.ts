@@ -308,6 +308,242 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Test OpenAI API connection
+  app.get('/api/admin/test-ai-connection', async (req, res) => {
+    try {
+      console.log('🧪 Testing OpenAI API connection...');
+      
+      // Check if API key exists
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({
+          success: false,
+          error: 'OPENAI_API_KEY not configured',
+          message: 'Please set your OpenAI API key in environment variables'
+        });
+      }
+
+      // Make a simple test call to OpenAI
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You are a test assistant.' },
+            { role: 'user', content: 'Reply with exactly: "Connection successful"' }
+          ],
+          max_tokens: 50,
+          temperature: 0
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Unknown error';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error?.message || errorText;
+        } catch {
+          errorMessage = errorText;
+        }
+
+        return res.status(500).json({
+          success: false,
+          error: errorMessage,
+          status: response.status,
+          message: 'OpenAI API call failed - check your API key and credits'
+        });
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices?.[0]?.message?.content || 'No response';
+
+      res.json({
+        success: true,
+        message: 'OpenAI API connection successful',
+        response: aiResponse,
+        model: data.model,
+        usage: data.usage
+      });
+
+    } catch (error: any) {
+      console.error('❌ OpenAI connection test error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: 'Failed to test OpenAI connection'
+      });
+    }
+  });
+
+  // Test NFL alert generation with AI enhancement
+  app.get('/api/admin/test-nfl-alerts', async (req, res) => {
+    try {
+      console.log('🧪 TEST ENDPOINT CALLED - Starting NFL alert system test');
+
+      // Import NFLEngine for testing
+      const { NFLEngine } = await import('./services/engines/nfl-engine');
+
+      // Create test scenarios with realistic NFL situations
+      const testScenarios = [
+        {
+          name: "Red Zone Opportunity - High Scoring Potential",
+          gameState: {
+            gameId: "test_nfl_redzone_888001",
+            sport: "NFL",
+            homeTeam: "Kansas City Chiefs",
+            awayTeam: "Buffalo Bills",
+            homeScore: 21,
+            awayScore: 24,
+            status: "live",
+            isLive: true,
+            quarter: 3,
+            timeRemaining: "8:45",
+            possession: "home",
+            down: 1,
+            yardsToGo: 10,
+            fieldPosition: 15,
+            isRedZone: true,
+            lastPlay: "Pass complete to Travis Kelce for 12 yards"
+          }
+        },
+        {
+          name: "Two Minute Warning - Critical Game Moment",
+          gameState: {
+            gameId: "test_nfl_twominute_888002",
+            sport: "NFL",
+            homeTeam: "Dallas Cowboys",
+            awayTeam: "Philadelphia Eagles",
+            homeScore: 17,
+            awayScore: 20,
+            status: "live",
+            isLive: true,
+            quarter: 4,
+            timeRemaining: "2:00",
+            possession: "home",
+            down: 1,
+            yardsToGo: 10,
+            fieldPosition: 65,
+            isTwoMinuteWarning: true,
+            timeouts: { home: 2, away: 1 }
+          }
+        },
+        {
+          name: "Turnover Risk - 3rd and Long",
+          gameState: {
+            gameId: "test_nfl_turnover_888003",
+            sport: "NFL",
+            homeTeam: "Green Bay Packers",
+            awayTeam: "Chicago Bears",
+            homeScore: 14,
+            awayScore: 10,
+            status: "live",
+            isLive: true,
+            quarter: 2,
+            timeRemaining: "5:30",
+            possession: "away",
+            down: 3,
+            yardsToGo: 15,
+            fieldPosition: 45,
+            turnoverRisk: "high",
+            qbPressure: true
+          }
+        }
+      ];
+
+      // Initialize NFL Engine and load alert modules
+      const nflEngine = new NFLEngine();
+
+      // Load key NFL alert modules
+      const testAlertTypes = [
+        'NFL_RED_ZONE',
+        'NFL_TWO_MINUTE_WARNING',
+        'NFL_TURNOVER_LIKELIHOOD'
+      ];
+
+      console.log(`🧪 Initializing NFL engine with alert modules: ${testAlertTypes.join(', ')}`);
+      await nflEngine.initializeUserAlertModules(testAlertTypes);
+
+      // Test each scenario and collect results
+      const results = [];
+
+      for (const scenario of testScenarios) {
+        console.log(`🧪 Testing scenario: ${scenario.name}`);
+
+        try {
+          // Generate alerts for this game state
+          const alerts = await nflEngine.processGame(scenario.gameState);
+
+          results.push({
+            scenario: scenario.name,
+            gameState: {
+              teams: `${scenario.gameState.awayTeam} @ ${scenario.gameState.homeTeam}`,
+              score: `${scenario.gameState.awayScore} - ${scenario.gameState.homeScore}`,
+              situation: `Q${scenario.gameState.quarter} ${scenario.gameState.timeRemaining}`,
+              down: scenario.gameState.down,
+              yardsToGo: scenario.gameState.yardsToGo,
+              fieldPosition: scenario.gameState.fieldPosition
+            },
+            alertsGenerated: alerts.length,
+            alerts: alerts.map((alert: any) => ({
+              type: alert.type,
+              message: alert.message,
+              priority: alert.priority || 80
+            })),
+            success: alerts.length > 0
+          });
+
+        } catch (error: any) {
+          console.error(`❌ Error testing scenario ${scenario.name}:`, error);
+          results.push({
+            scenario: scenario.name,
+            error: error.message,
+            success: false
+          });
+        }
+      }
+
+      // Generate summary
+      const successCount = results.filter(r => r.success).length;
+      const totalAlerts = results.reduce((sum, r) => sum + (r.alertsGenerated || 0), 0);
+
+      res.json({
+        summary: {
+          timestamp: new Date().toISOString(),
+          purpose: "Test NFL alert system with realistic game situations",
+          totalScenarios: testScenarios.length,
+          successfulScenarios: successCount,
+          totalAlertsGenerated: totalAlerts,
+          alertModulesLoaded: testAlertTypes.length,
+          systemStatus: successCount === testScenarios.length ? "WORKING" : "PARTIAL"
+        },
+        explanation: {
+          why: "Testing NFL alert generation with AI enhancement",
+          expectation: "Each scenario should generate at least 1 alert when conditions are met",
+          testValidation: successCount === testScenarios.length ? 
+            "✅ NFL alert system is fully functional" : 
+            "⚠️ Some NFL scenarios failed - check individual results"
+        },
+        testResults: results,
+        alertTypesAvailable: testAlertTypes
+      });
+
+    } catch (error: any) {
+      console.error('❌ Error in test-nfl-alerts:', error);
+      res.status(500).json({
+        error: error.message,
+        summary: {
+          systemStatus: "ERROR",
+          message: "Failed to test NFL alert system"
+        }
+      });
+    }
+  });
+
   // WebSocket test endpoint removed - using HTTP polling architecture
 
   // Admin API to specifically enable MLB_FIRST_AND_SECOND for all users
@@ -1487,6 +1723,53 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error('Error sending test alerts:', error);
       res.status(500).json({ error: 'Failed to send test alerts' });
+    }
+  });
+
+  // AI Cache management endpoint - Admin only
+  app.post('/api/ai/cache/clear', requireAdmin, async (req, res) => {
+    try {
+      console.log('🧹 Admin requested AI cache clear');
+      
+      // Import the unified AI processor
+      const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
+      
+      // Clear the cache
+      unifiedAIProcessor.clearCache();
+      
+      // Get current stats after clearing
+      const stats = unifiedAIProcessor.getStats();
+      
+      res.json({
+        message: 'AI cache cleared successfully',
+        stats: {
+          cacheSize: stats.cache.size,
+          queueSize: stats.queue.current,
+          performance: stats.performance
+        }
+      });
+    } catch (error) {
+      console.error('Error clearing AI cache:', error);
+      res.status(500).json({ error: 'Failed to clear AI cache' });
+    }
+  });
+
+  // AI Cache statistics endpoint - Admin only  
+  app.get('/api/ai/cache/stats', requireAdmin, async (req, res) => {
+    try {
+      const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
+      const stats = unifiedAIProcessor.getStats();
+      
+      res.json({
+        cache: stats.cache,
+        queue: stats.queue,
+        performance: stats.performance,
+        gating: stats.gating,
+        sportMetrics: stats.sportMetrics
+      });
+    } catch (error) {
+      console.error('Error fetching AI cache stats:', error);
+      res.status(500).json({ error: 'Failed to fetch AI cache stats' });
     }
   });
 
