@@ -4164,6 +4164,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+
   // Health check endpoint for monitoring and auto-recovery
   app.get('/api/health', async (req, res) => {
     try {

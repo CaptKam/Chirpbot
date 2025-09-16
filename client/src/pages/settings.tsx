@@ -69,8 +69,8 @@ export default function Settings() {
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
     queryKey: [`/api/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 30 * 1000, // 30 seconds to catch admin changes quickly
-    refetchInterval: 60 * 1000, // Refetch every minute to catch admin toggle changes
+    staleTime: 0, // Immediate invalidation to see admin changes instantly
+    refetchInterval: 5 * 1000, // Refetch every 5 seconds to catch admin toggle changes
   });
   
   // Extract settings from response (handles both old admin format and new public format)
@@ -80,16 +80,16 @@ export default function Settings() {
   const { data: availableAlerts, isLoading: availableAlertsLoading } = useQuery({
     queryKey: [`/api/available-alerts/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 30 * 1000, // 30 seconds to catch admin changes quickly
-    refetchInterval: 60 * 1000, // Refetch every minute to catch admin toggle changes
+    staleTime: 0, // Immediate invalidation to see admin changes instantly
+    refetchInterval: 5 * 1000, // Refetch every 5 seconds to catch admin toggle changes
   });
 
   // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 30 * 1000, // 30 seconds for alert preferences to show admin changes quickly
-    refetchInterval: 60 * 1000, // Refetch every minute to catch admin changes
+    staleTime: 0, // Immediate invalidation to see admin changes instantly
+    refetchInterval: 5 * 1000, // Refetch every 5 seconds to catch admin changes
   });
 
   // Telegram settings query
