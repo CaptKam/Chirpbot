@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { GameCardTemplate } from '@/components/GameCardTemplate';
 import { BaseballDiamond } from './baseball-diamond';
 import { getPrimaryMessage, cleanMessage, hasAIContent } from '@/utils/alert-message';
-import { getSportTabColors } from '@shared/season-manager';
+import { getAlertCardColors } from '@shared/season-manager';
 
 // Import sportsbook logos
 import bet365Logo from '@assets/bet365.jpg';
@@ -368,11 +368,16 @@ export function SimpleAlertCard({ alert, className }: SimpleAlertCardProps) {
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
         <div className={`${className} transition-all duration-200 relative border-2 ${
-          getAlertStatus(alert.type, alert.createdAt, 
-            (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
-          ).status === 'ACTIVE' 
-            ? `${getSportTabColors(alert.sport).border} ${getSportTabColors(alert.sport).bg} shadow-lg` 
-            : `${getSportTabColors(alert.sport).border}/50 ${getSportTabColors(alert.sport).bg}/30 shadow-md`
+          (() => {
+            const colors = getAlertCardColors(alert.sport);
+            const isActive = getAlertStatus(alert.type, alert.createdAt, 
+              (alert.context?.homeScore !== undefined && alert.context?.awayScore !== undefined ? 'live' : 'scheduled')
+            ).status === 'ACTIVE';
+            
+            return isActive 
+              ? `${colors.borderActive} ${colors.bgActive} shadow-lg` 
+              : `${colors.borderInactive} ${colors.bgInactive} shadow-md`;
+          })()
         } rounded-xl`}>
 
           <GameCardTemplate
