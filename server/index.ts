@@ -423,19 +423,9 @@ async function startServer() {
             }
           }
 
-          // START ALERT GENERATION IMMEDIATELY - MISSION CRITICAL
-          console.log('🚨 STARTING ALERT GENERATION IMMEDIATELY...');
-          try {
-            alertGenerator.generateLiveGameAlerts();
-            console.log('✅ ALERT GENERATION ACTIVE - MONITORING ALL GAMES');
-          } catch (alertError) {
-            console.error('⚠️ CRITICAL: Alert generation failed to start:', alertError);
-            // AUTO-RECOVERY: Retry after 2 seconds
-            setTimeout(() => {
-              console.log('🔄 AUTO-RECOVERY: Retrying alert generation...');
-              alertGenerator.generateLiveGameAlerts();
-            }, 2000);
-          }
+          // Alert generation is already handled by the earlier UnifiedAlertGenerator setup
+          // (lines 332-345) - no need for duplicate initialization
+          console.log('✅ ALERT GENERATION ALREADY ACTIVE - MONITORING ALL GAMES');
 
           // Start cleanup service immediately
           console.log('🧹 Starting alert cleanup service...');

@@ -596,7 +596,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // WebSocket upgrade handler removed - using HTTP polling architecture
   
   // Initialize health monitor without WebSocket dependency
-  const healthMonitor = new HealthMonitor();
+  const healthMonitor = getHealthMonitor();
+  healthMonitor.initialize({
+    pollingIntervalMs: 30000,
+    callbacks: {
+      onRestart: async () => console.log('🔄 Health monitor restarting'),
+      onStop: async () => console.log('⏹️ Health monitor stopping'),
+      generatorLabel: 'routes-health-monitor'
+    }
+  });
   healthMonitor.startMonitoring();
 
   console.log('✅ HTTP polling architecture enabled for real-time updates');
@@ -903,8 +911,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (savedCount > 0) {
         broadcast({
           type: 'alert',
-          data: alert
-        }, alert.alertKey);
+          data: alert,
+          alertKey: alert.alertKey
+        });
       }
       
     } catch (error) {
@@ -964,42 +973,51 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         await db.execute(sql`SELECT 1`);
         diagnostics.database.connected = true;
 
+        // Use Drizzle ORM for database queries
+        const { users, userAlertPreferences, userMonitoredTeams } = await import('../shared/schema');
+        const { count } = await import('drizzle-orm');
+
         // Get user count
-        const userCount = await client.query('SELECT COUNT(*) FROM users');
-        diagnostics.database.userCount = parseInt(userCount.rows[0].count);
+        const userCountResult = await db.select({ count: count() }).from(users);
+        diagnostics.database.userCount = userCountResult[0].count;
 
-        // Get table count
-        const tableCount = await client.query(
-          "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
+        // Get table count using raw SQL
+        const tableCountResult = await db.execute(
+          sql`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = 'public'`
         );
-        diagnostics.database.tableCount = parseInt(tableCount.rows[0].count);
+        diagnostics.database.tableCount = parseInt((tableCountResult.rows[0] as any).count);
 
-        // Get alert preferences
-        const alertPrefs = await client.query('SELECT COUNT(*) FROM user_alert_preferences');
-        diagnostics.database.alertPreferences = parseInt(alertPrefs.rows[0].count);
+        // Get alert preferences count
+        const alertPrefsResult = await db.select({ count: count() }).from(userAlertPreferences);
+        diagnostics.database.alertPreferences = alertPrefsResult[0].count;
 
-        // Get monitored teams
-        const monitoredTeams = await client.query('SELECT COUNT(*) FROM user_monitored_teams');
-        diagnostics.database.monitoredTeams = parseInt(monitoredTeams.rows[0].count);
+        // Get monitored teams count
+        const monitoredTeamsResult = await db.select({ count: count() }).from(userMonitoredTeams);
+        diagnostics.database.monitoredTeams = monitoredTeamsResult[0].count;
 
-        // Get database info
-        const dbInfo = await client.query('SELECT current_database(), version()');
-        diagnostics.database.name = dbInfo.rows[0].current_database;
-        diagnostics.database.version = dbInfo.rows[0].version.split(' ')[0] + ' ' + dbInfo.rows[0].version.split(' ')[1];
+        // Get database info using raw SQL
+        const dbInfoResult = await db.execute(sql`SELECT current_database(), version()`);
+        const dbInfoRow = dbInfoResult.rows[0] as any;
+        diagnostics.database.name = dbInfoRow.current_database;
+        diagnostics.database.version = dbInfoRow.version.split(' ')[0] + ' ' + dbInfoRow.version.split(' ')[1];
 
-        // Get a sample user to check if data exists
-        const sampleUser = await client.query('SELECT id, username, email, role FROM users LIMIT 1');
-        diagnostics.database.sampleUserExists = sampleUser.rows.length > 0;
-        if (sampleUser.rows.length > 0) {
+        // Get a sample user
+        const sampleUserResult = await db.select({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          role: users.role
+        }).from(users).limit(1);
+        
+        diagnostics.database.sampleUserExists = sampleUserResult.length > 0;
+        if (sampleUserResult.length > 0) {
           diagnostics.database.sampleUser = {
-            id: sampleUser.rows[0].id,
-            username: sampleUser.rows[0].username,
-            email: sampleUser.rows[0].email,
-            role: sampleUser.rows[0].role
+            id: sampleUserResult[0].id,
+            username: sampleUserResult[0].username,
+            email: sampleUserResult[0].email,
+            role: sampleUserResult[0].role
           };
         }
-
-        client.release();
       } catch (error) {
         diagnostics.database.error = error instanceof Error ? error.message : String(error);
       }
@@ -1592,7 +1610,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       console.log('🧪 Testing alert generation system...');
 
-      const alertGenerator = new AlertGenerator();
+      const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
+      const alertGenerator = new UnifiedAlertGenerator({ mode: 'production' });
 
       // Force generate alerts for live games
       await alertGenerator.generateLiveGameAlerts();
@@ -1613,7 +1632,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.log('🧪 ADMIN FORCING RULE-COMPLIANT TEST LIVE ALERTS');
       console.log('🛡️ NOTE: All generated alerts will respect global admin settings and user preferences');
 
-      const alertGenerator = new AlertGenerator();
+      const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
+      const alertGenerator = new UnifiedAlertGenerator({ mode: 'production' });
       const alertCount = await alertGenerator.generateLiveGameAlerts();
 
       res.json({
@@ -1645,8 +1665,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         console.log(`📱 Testing Telegram for user: ${user.username}`);
 
         // 🛡️ RULE COMPLIANCE: Check if TEST_STRIKEOUT is globally enabled
-        const alertGenerator = new AlertGenerator();
-        const isGloballyEnabled = await (alertGenerator as any).isAlertGloballyEnabled('MLB', 'TEST_STRIKEOUT');
+        const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
+        const alertGenerator = new UnifiedAlertGenerator({ mode: 'production' });
+        const isGloballyEnabled = await alertGenerator.isAlertGloballyEnabled('MLB', 'TEST_STRIKEOUT');
 
         if (!isGloballyEnabled) {
           console.log(`🚫 RULE COMPLIANT: TEST_STRIKEOUT globally disabled - skipping user ${user.username}`);
@@ -2668,7 +2689,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       // ✅ V3: Using UnifiedAlertGenerator instead of legacy V2 AlertGenerator
       const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-      const generator = new UnifiedAlertGenerator();
+      const generator = new UnifiedAlertGenerator({ mode: 'production' });
 
       const testTime = req.params.time;
 
@@ -2906,10 +2927,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Test Alert Generator
       try {
-        const alertGenerator = new AlertGenerator();
+        const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
+        const alertGenerator = new UnifiedAlertGenerator({ mode: 'production' });
         debugResults.services.alertGenerator = {
           status: 'INITIALIZED',
-          class: 'AlertGenerator'
+          class: 'UnifiedAlertGenerator'
         };
       } catch (error: any) {
         debugResults.services.alertGenerator = { status: 'FAIL', error: error.message };
@@ -3863,19 +3885,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         summary: healthStatus.summary,
         recommendations: healthStatus.recommendations,
         metrics: {
-          checksPerformed: healthStatus.checksPerformed,
-          alertsGenerated: healthStatus.alertsGenerated,
-          lastCheckTime: healthStatus.lastCheckTime,
-          lastAlertTime: healthStatus.lastAlertGeneratedTime,
+          summary: healthStatus.summary,
+          recommendations: healthStatus.recommendations,
           timeSinceLastCheck: healthStatus.timeSinceLastCheck,
           timeSinceLastAlert: healthStatus.timeSinceLastAlert,
-          consecutiveFailures: healthStatus.consecutiveFailures,
-          uptimeSeconds: healthStatus.uptimeSeconds,
-          memoryUsageMB: healthStatus.memoryUsageMB,
-          isAutoRecovering: healthStatus.isAutoRecovering,
-          recoveryAttempts: healthStatus.recoveryAttempts
+          warnings: healthStatus.warnings
         },
-        lastError: healthStatus.lastError
+        lastError: null
       });
     } catch (error: any) {
       console.error('Error fetching health status:', error);
