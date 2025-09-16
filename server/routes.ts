@@ -1286,7 +1286,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { userId, sport } = req.params;
       console.log(`🔍 Fetching alert preferences for user ${userId}, sport ${sport}`);
-      const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toUpperCase());
+      const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toLowerCase());
       console.log(`📋 Found ${preferences.length} preferences for user ${userId} in ${sport}:`, preferences.map(p => `${p.alertType}=${p.enabled}`));
       res.json(preferences);
     } catch (error) {
@@ -1310,7 +1310,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Check if alert type is globally enabled first
-      const isGloballyEnabled = await storage.isAlertGloballyEnabled(sport.toUpperCase(), alertType);
+      const isGloballyEnabled = await storage.isAlertGloballyEnabled(sport.toLowerCase(), alertType);
       if (!isGloballyEnabled && enabled) {
         return res.status(400).json({
           message: `Alert type ${alertType} is globally disabled by admin`,
@@ -1318,7 +1318,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         });
       }
 
-      const preference = await storage.setUserAlertPreference(userId, sport.toUpperCase(), alertType, enabled);
+      const preference = await storage.setUserAlertPreference(userId, sport.toLowerCase(), alertType, enabled);
       res.json(preference);
     } catch (error) {
       console.error('Error setting alert preference:', error);
@@ -1341,7 +1341,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Validate each preference against global settings
-      const globalSettings = await getUnifiedSettings().getGlobalSettings(sport.toUpperCase());
+      const globalSettings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
       const filteredPreferences = [];
 
       for (const pref of preferences) {
@@ -1352,7 +1352,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         filteredPreferences.push(pref);
       }
 
-      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), filteredPreferences);
+      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toLowerCase(), filteredPreferences);
       res.json({
         message: 'Alert preferences updated successfully',
         count: result.length,
@@ -2133,7 +2133,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
       }
 
-      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toUpperCase(), preferences);
+      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toLowerCase(), preferences);
       res.json({ message: 'User alert preferences updated successfully', count: result.length });
     } catch (error) {
       console.error('Error updating user alert preferences:', error);
@@ -4275,7 +4275,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
 
         // Get global settings but show all alerts (don't filter out disabled ones)
-        const globalSettings = await getUnifiedSettings().getGlobalSettings(sport.toUpperCase());
+        const globalSettings = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
 
         // Convert to the format expected by the frontend, including globally disabled alerts
         const alertConfig = availableAlerts.map(alertType => {
@@ -4566,10 +4566,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.log(`🔄 Admin resetting global alerts to defaults for ${sport}`);
 
       // Clear all existing global settings for this sport to use defaults
-      await storage.clearGlobalAlertSettings(sport.toUpperCase());
+      await storage.clearGlobalAlertSettings(sport.toLowerCase());
 
       // Get defaults will now return the default values since no database overrides exist
-      const defaults = await getUnifiedSettings().getGlobalSettings(sport.toUpperCase());
+      const defaults = await getUnifiedSettings().getGlobalSettings(sport.toLowerCase());
       const enabledCount = Object.values(defaults).filter(enabled => enabled).length;
 
       res.json({
