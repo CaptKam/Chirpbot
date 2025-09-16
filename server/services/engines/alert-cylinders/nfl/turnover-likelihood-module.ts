@@ -53,8 +53,13 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
     const possessionTeam = this.getPossessionTeam(gameState);
     const primaryRiskFactor = riskFactors[0] || 'Unknown';
 
+    // Add timestamp to make each alert unique (allows for multiple alerts per game state)
+    const timestamp = Date.now();
+    const alertKey = `${gameState.gameId}_turnover_risk_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}_${timestamp}`;
+    console.log(`🔑 NFL Turnover Alert Key Generated: ${alertKey}`);
+    
     return {
-      alertKey: `${gameState.gameId}_turnover_risk_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}`,
+      alertKey,
       type: this.alertType,
       message: `⚠️ ${possessionTeam} Turnover Risk - ${situationDescription} - Risk Level: ${Math.round(turnoverRisk)}%`,
       context: {

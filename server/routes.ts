@@ -659,7 +659,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           
         } catch (error: any) {
           // Handle duplicate key errors gracefully (alert already exists for this user)
-          if (error?.code === '23505' && error?.constraint === 'ux_alerts_key') {
+          if (error?.code === '23505' && (error?.constraint === 'ux_user_alert_key' || error?.constraint === 'ux_alerts_key')) {
             skippedCount++;
             console.log(`⏭️ Alert already exists for user ${userGame.userId}, skipping`);
           } else {
