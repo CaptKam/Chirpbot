@@ -13,6 +13,156 @@ import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
 import { EmergencyMemoryMonitor } from "./emergency-memory-monitor";
+import { storage } from './storage';
+import { memoryManager } from './middleware/memory-manager';
+import { gameStateManager } from './services/game-state-manager';
+import { unifiedAlertGenerator } from './services/unified-alert-generator';
+import { getHealthMonitor } from './services/unified-health-monitor';
+import { sql } from 'drizzle-orm';
+
+// Startup phases
+enum StartupPhase {
+  LOADING_CONFIG = 'LOADING_CONFIG',
+  CHECKING_MIGRATIONS = 'CHECKING_MIGRATIONS',
+  OPENING_POOLS = 'OPENING_POOLS',
+  WARMING_CACHES = 'WARMING_CACHES',
+  STARTING_CALENDAR = 'STARTING_CALENDAR',
+  STARTING_HEALTH = 'STARTING_HEALTH',
+  READY = 'READY'
+}
+
+let currentPhase = StartupPhase.LOADING_CONFIG;
+let startupError: string | null = null;
+
+async function startupWithGates() {
+  console.log('🚀 ChirpBot V3 Startup - Tightened Flow');
+
+  try {
+    // PHASE 1: CONFIG VALIDATION
+    currentPhase = StartupPhase.LOADING_CONFIG;
+    console.log('📋 Phase 1: Validating configuration...');
+
+    const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
+    const missingVars = requiredEnvVars.filter(key => !process.env[key]);
+    if (missingVars.length > 0) {
+      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    }
+
+    // PHASE 2: DATABASE MIGRATIONS & CONNECTIVITY
+    currentPhase = StartupPhase.CHECKING_MIGRATIONS;
+    console.log('🗄️ Phase 2: Checking database connectivity and migrations...');
+
+    // Test database connection
+    await db.execute(sql`SELECT 1`);
+    console.log('✅ Database connection verified');
+
+    // PHASE 3: OPEN CONNECTION POOLS
+    currentPhase = StartupPhase.OPENING_POOLS;
+    console.log('🔗 Phase 3: Opening connection pools...');
+
+    // Initialize storage layer
+    await storage.initialize();
+    console.log('✅ Storage layer initialized');
+
+    // PHASE 4: WARM CACHES
+    currentPhase = StartupPhase.WARMING_CACHES;
+    console.log('🔥 Phase 4: Warming caches...');
+
+    // Pre-warm settings cache
+    await storage.getSettings('MLB');
+    await storage.getSettings('NFL');
+    await storage.getSettings('NCAAF');
+    await storage.getSettings('NBA');
+    await storage.getSettings('WNBA');
+    await storage.getSettings('CFL');
+    console.log('✅ Settings cache warmed');
+
+    // PHASE 5: START CALENDAR SYNC
+    currentPhase = StartupPhase.STARTING_CALENDAR;
+    console.log('📅 Phase 5: Starting calendar sync...');
+
+    await gameStateManager.initialize();
+    console.log('✅ Game state manager initialized');
+
+    // PHASE 6: START HEALTH MONITORING
+    currentPhase = StartupPhase.STARTING_HEALTH;
+    console.log('🏥 Phase 6: Starting health monitoring...');
+
+    const healthMonitor = getHealthMonitor();
+    healthMonitor.initialize({
+      pollingIntervalMs: 30000,
+      callbacks: {
+        generatorLabel: 'ChirpBot V3 Unified System'
+      }
+    });
+    console.log('✅ Health monitoring active');
+
+    // PHASE 7: READY
+    currentPhase = StartupPhase.READY;
+    console.log('🎉 ChirpBot V3 Ready - All systems operational');
+
+    return true;
+
+  } catch (error) {
+    startupError = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Startup failed in phase ${currentPhase}:`, startupError);
+    throw error;
+  }
+}
+
+// Health endpoints
+export function setupHealthEndpoints(app: express.Application) {
+  // Liveness probe - basic app health
+  app.get('/healthz', (req, res) => {
+    if (startupError) {
+      return res.status(503).json({
+        status: 'unhealthy',
+        phase: currentPhase,
+        error: startupError
+      });
+    }
+
+    res.json({
+      status: 'healthy',
+      phase: currentPhase,
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
+    });
+  });
+
+  // Readiness probe - full system readiness
+  app.get('/readyz', async (req, res) => {
+    if (currentPhase !== StartupPhase.READY) {
+      return res.status(503).json({
+        status: 'not_ready',
+        phase: currentPhase,
+        message: 'System still starting up'
+      });
+    }
+
+    try {
+      // Test database connectivity
+      await db.execute(sql`SELECT 1`);
+
+      // Test health monitor
+      const healthMonitor = getHealthMonitor();
+      const healthStatus = healthMonitor.getPublicMetrics();
+
+      res.json({
+        status: 'ready',
+        phase: currentPhase,
+        health: healthStatus.status,
+        uptime: process.uptime()
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: 'not_ready',
+        phase: currentPhase,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+}
 
 // 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
 console.log('🔒 Checking for existing ChirpBot instances...');
@@ -144,13 +294,6 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // For nodemon restart
 
-const app = express();
-
-// Security and CORS
-app.set('trust proxy', 1);
-app.use(helmet({
-  contentSecurityPolicy: false, // Disabled for Vite dev mode
-}));
 // 🔒 PORT PREFLIGHT CHECK WITH BACKOFF - Ensure port is truly available
 let PORT = TARGET_PORT;
 
@@ -181,289 +324,279 @@ const checkPortAvailability = async () => {
 const corsOrigin = process.env.CANONICAL_ORIGIN ||
   (process.env.NODE_ENV === 'production' ? false : [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
 
-app.use(cors({
-  origin: corsOrigin,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
-}));
+// Main startup function
+async function startServer() {
+  const app = express();
 
-// Body parsing with size limits
-app.use(express.json({ limit: '200kb' }));
-app.use(express.urlencoded({ extended: false, limit: '200kb' }));
+  // Setup health endpoints immediately
+  setupHealthEndpoints(app);
 
-// In-memory session store - no database/WebSocket dependencies!
-app.use(session({
-  name: 'cb.sid', // Unique session name to avoid conflicts
-  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025', // Stable secret for dev
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    path: '/',
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: 'lax',
-    domain: process.env.COOKIE_DOMAIN || undefined, // Leave undefined for localhost
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for better persistence
+  // Run startup gates
+  await startupWithGates();
+
+  // Apply middleware and setup routes AFTER health endpoints are registered
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disabled for Vite dev mode
+  }));
+  app.set('trust proxy', 1); // Trust first proxy
+
+  app.use(cors({
+    origin: corsOrigin,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+  }));
+
+  // Body parsing with size limits
+  app.use(express.json({ limit: '200kb' }));
+  app.use(express.urlencoded({ extended: false, limit: '200kb' }));
+
+  // In-memory session store - no database/WebSocket dependencies!
+  app.use(session({
+    name: 'cb.sid', // Unique session name to avoid conflicts
+    secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025', // Stable secret for dev
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'lax',
+      domain: process.env.COOKIE_DOMAIN || undefined, // Leave undefined for localhost
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for better persistence
+    }
+  }));
+
+  // Request logging middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const path = req.path;
+    let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+    const originalResJson = res.json;
+    res.json = function (bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      if (path.startsWith("/api")) {
+        let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+        if (capturedJsonResponse) {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        }
+
+        if (logLine.length > 80) {
+          logLine = logLine.slice(0, 79) + "…";
+        }
+
+        log(logLine);
+      }
+    });
+
+    next();
+  });
+
+  // PREFLIGHT PORT CHECK - Ensure port is available before binding
+  await checkPortAvailability();
+
+  // Create HTTP server once in index.ts only - FIX SHADOWING ISSUE
+  httpServer = createServer(app);
+
+  // Track connections for proper cleanup
+  httpServer.on('connection', (socket: any) => {
+    serverSockets.add(socket);
+    socket.on('close', () => {
+      serverSockets.delete(socket);
+    });
+  });
+
+  // Register all application routes
+  await registerRoutes(app, httpServer);
+
+  // Setup frontend serving IMMEDIATELY - before server.listen
+  const staticRoot = path.resolve(process.cwd(), 'dist/public');
+  const indexPath = path.join(staticRoot, 'index.html');
+
+  if (fs.existsSync(indexPath)) {
+    console.log('✅ Built assets detected - serving static files from', staticRoot);
+    app.use(express.static(staticRoot));
+
+    // SPA catch-all for all non-API routes
+    app.get(/^\/(?!api|admin|realtime-alerts).*$/, (_req, res) => {
+      res.sendFile(indexPath);
+    });
+    console.log('✅ Static SPA serving configured - frontend ready');
+  } else {
+    console.log('🔧 No built assets found - will use Vite dev middleware');
+    // Fallback: setup Vite dev middleware if static assets weren't detected
+    if (app.get("env") === "development") {
+      try {
+        const vite = await createViteServer();
+        app.use(vite.ssrFixStacktrace);
+        console.log('✅ Vite development server setup complete');
+      } catch (viteError) {
+        console.error('⚠️ Vite setup failed, serving minimal fallback');
+        // Minimal fallback - just serve a basic response
+        app.use('*', (req, res) => {
+          res.status(200).send(`
+            <!DOCTYPE html>
+            <html>
+              <head><title>ChirpBot V3</title></head>
+              <body>
+                <h1>ChirpBot V3 Server Running</h1>
+                <p>Frontend temporarily unavailable - API endpoints are still accessible</p>
+              </body>
+            </html>
+          `);
+        });
+      }
+    } else {
+      // Production fallback if no build assets
+      console.log('🔧 Serving static files from default public directory');
+      serveStatic(app);
+    }
   }
-}));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+  // ALWAYS serve the app on the port specified in the environment variable PORT
+  // Other ports are firewalled. Default to 3000 to avoid Vite conflicts.
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const HOST = "0.0.0.0"; // Always bind to 0.0.0.0 for Replit deployment
 
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
+  // Store server reference for graceful shutdown
+  (globalThis as any).httpServer = httpServer;
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+  // BULLETPROOF ERROR HANDLING - Should never get EADDRINUSE due to preflight checks
+  httpServer.on('error', (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`🚨 UNEXPECTED: Port ${PORT} conflict despite preflight checks!`);
+      console.log('🔄 This should not happen with our singleton lock - investigating...');
+      instanceLock.release();
+      process.exit(1);
+    } else if (error.code === 'EACCES') {
+      console.error(`❌ Port ${PORT} requires elevated privileges`);
+      instanceLock.release();
+      process.exit(1);
+    } else {
+      console.error('❌ Server error:', error);
+      instanceLock.release();
+      process.exit(1);
     }
   });
 
-  next();
-});
+  // SECURE SERVER STARTUP - Port conflicts now impossible!
+  httpServer.listen(PORT, HOST, () => {
+    console.log(`🚀 Server is running on ${HOST}:${PORT}`);
 
-async function startServer() {
-  try {
-    // 🔒 PREFLIGHT PORT CHECK - Ensure port is available before binding
-    await checkPortAvailability();
+    // Start alert monitoring after server is ready
+    setTimeout(async () => {
+      try {
+        console.log('🔄 Starting alert monitoring system...');
+        const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
+        const generator = new UnifiedAlertGenerator({ mode: 'production' });
+        await generator.startMonitoring();
 
-    // Create HTTP server once in index.ts only - FIX SHADOWING ISSUE
-    httpServer = createServer(app);
-
-    // Track connections for proper cleanup
-    httpServer.on('connection', (socket: any) => {
-      serverSockets.add(socket);
-      socket.on('close', () => {
-        serverSockets.delete(socket);
-      });
-    });
-
-    const server = await registerRoutes(app, httpServer);
-
-    // Setup frontend serving IMMEDIATELY - before server.listen
-    const staticRoot = path.resolve(process.cwd(), 'dist/public');
-    const indexPath = path.join(staticRoot, 'index.html');
-
-    if (fs.existsSync(indexPath)) {
-      console.log('✅ Built assets detected - serving static files from', staticRoot);
-      app.use(express.static(staticRoot));
-
-      // SPA catch-all for all non-API routes
-      app.get(/^\/(?!api|admin|realtime-alerts).*$/, (_req, res) => {
-        res.sendFile(indexPath);
-      });
-      console.log('✅ Static SPA serving configured - frontend ready');
-    } else {
-      console.log('🔧 No built assets found - will use Vite dev middleware');
-    }
-
-    // Production optimization: Skip database seeding in production
-    const isProduction = process.env.NODE_ENV === 'production';
-    const skipSeed = isProduction && process.env.SKIP_SEED_IN_PROD !== 'false';
-
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-
-      console.error('Express error handler:', {
-        error: err.message,
-        stack: err.stack,
-        url: _req.url,
-        method: _req.method,
-        status
-      });
-
-      // Ensure response is sent if not already sent
-      if (!res.headersSent) {
-        res.status(status).json({ message });
+        // Run initial check
+        const alertCount = await generator.generateLiveGameAlerts();
+        console.log(`✅ Alert monitoring started. Generated ${alertCount} initial alerts.`);
+      } catch (error) {
+        console.error('❌ Failed to start alert monitoring:', error);
       }
-      // Don't throw err - this was causing unhandled rejections!
-    });
+    }, 5000); // Wait 5 seconds for server to fully initialize
 
-    // ALWAYS serve the app on the port specified in the environment variable PORT
-    // Other ports are firewalled. Default to 3000 to avoid Vite conflicts.
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    // PORT already defined above for CORS
-    const HOST = "0.0.0.0"; // Always bind to 0.0.0.0 for Replit deployment
+    // Start Weather-on-Live service after server is ready
+    setTimeout(async () => {
+      try {
+        console.log('🌤️ Starting Weather-on-Live service...');
+        const { weatherOnLiveService } = await import('./services/weather-on-live-service');
 
-    // Store server reference for graceful shutdown
-    (globalThis as any).httpServer = httpServer;
+        // WebSocket functionality removed - using HTTP polling architecture
+        console.log(`✅ Weather-on-Live service started`);
+        console.log(`📡 Using HTTP polling architecture for real-time updates`);
 
-    // 🔒 BULLETPROOF ERROR HANDLING - Should never get EADDRINUSE due to preflight checks
-    server.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`🚨 UNEXPECTED: Port ${PORT} conflict despite preflight checks!`);
-        console.log('🔄 This should not happen with our singleton lock - investigating...');
-        instanceLock.release();
-        process.exit(1);
-      } else if (error.code === 'EACCES') {
-        console.error(`❌ Port ${PORT} requires elevated privileges`);
-        instanceLock.release();
-        process.exit(1);
-      } else {
-        console.error('❌ Server error:', error);
-        instanceLock.release();
-        process.exit(1);
+        console.log(`🌤️ Weather monitoring will start automatically when games go LIVE`);
+      } catch (error) {
+        console.error('❌ Failed to start Weather-on-Live service:', error);
       }
-    });
+    }, 6000); // Wait 6 seconds to start after alert monitoring
 
-    // 🔒 SECURE SERVER STARTUP - Port conflicts now impossible!
-    server.listen(PORT, HOST, () => {
-      console.log(`🚀 Server is running on ${HOST}:${PORT}`);
+    console.log(`🔒 Singleton lock active - port conflicts prevented`);
+    console.log(`📱 Database connected: Yes`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔐 Session secret: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);
+    console.log(`💾 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
+    console.log('💪 Server is now listening - starting background initialization...');
 
-      // Start alert monitoring after server is ready
-      setTimeout(async () => {
-        try {
-          console.log('🔄 Starting alert monitoring system...');
-          const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-          const generator = new UnifiedAlertGenerator({ mode: 'production' });
-          await generator.startMonitoring();
+    // Start emergency memory monitor
+    EmergencyMemoryMonitor.getInstance().start();
+    console.log('🚨 Emergency memory monitor started');
 
-          // Run initial check
-          const alertCount = await generator.generateLiveGameAlerts();
-          console.log(`✅ Alert monitoring started. Generated ${alertCount} initial alerts.`);
-        } catch (error) {
-          console.error('❌ Failed to start alert monitoring:', error);
-        }
-      }, 5000); // Wait 5 seconds for server to fully initialize
+    // 🔥 DEFER HEAVY OPERATIONS TO BACKGROUND - This prevents startup timeout!
+    setImmediate(async () => {
+      console.log('🔄 Starting background initialization...');
 
-      // Start Weather-on-Live service after server is ready
-      setTimeout(async () => {
-        try {
-          console.log('🌤️ Starting Weather-on-Live service...');
-          const { weatherOnLiveService } = await import('./services/weather-on-live-service');
-          
-          // WebSocket functionality removed - using HTTP polling architecture
-          console.log(`✅ Weather-on-Live service started`);
-          console.log(`📡 Using HTTP polling architecture for real-time updates`);
-          
-          console.log(`🌤️ Weather monitoring will start automatically when games go LIVE`);
-        } catch (error) {
-          console.error('❌ Failed to start Weather-on-Live service:', error);
-        }
-      }, 6000); // Wait 6 seconds to start after alert monitoring
+      try {
+        // Initialize database with required seed data (skip in production by default)
+        const isProduction = process.env.NODE_ENV === 'production';
+        const skipSeed = isProduction && process.env.SKIP_SEED_IN_PROD !== 'false';
 
-      console.log(`🔒 Singleton lock active - port conflicts prevented`);
-      console.log(`📱 Database connected: Yes`);
-      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔐 Session secret: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);
-      console.log(`💾 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
-      console.log('💪 Server is now listening - starting background initialization...');
-
-      // Start emergency memory monitor
-      EmergencyMemoryMonitor.getInstance().start();
-      console.log('🚨 Emergency memory monitor started');
-
-      // 🔥 DEFER HEAVY OPERATIONS TO BACKGROUND - This prevents startup timeout!
-      setImmediate(async () => {
-        console.log('🔄 Starting background initialization...');
-
-        try {
-          // Initialize database with required seed data (skip in production by default)
-          if (!skipSeed) {
-            try {
-              await seedDatabase();
-              console.log('✅ Database initialization complete');
-            } catch (err) {
-              console.error('⚠️ Database seeding failed (may already be seeded):', err);
-              // Continue anyway - the database might already be seeded
-            }
-          } else {
-            console.log('⏭️ Skipping database seeding in production');
-          }
-
-          // Initialize alert generator and AI system
-          const alertGenerator = new AlertGenerator();
-
-          // AI system now unified through AsyncAIProcessor → CrossSportAIEnhancement
-          console.log('✅ AI Services: Unified pipeline active (AsyncAI → CrossSport)');
-
-          // Frontend serving is now handled before server.listen (moved earlier for immediate mounting)
-          // Fallback: setup Vite dev middleware if static assets weren't detected
-          if (!fs.existsSync(path.resolve(process.cwd(), 'dist/public/index.html'))) {
-            if (app.get("env") === "development") {
-              try {
-                await setupVite(app, server);
-                console.log('✅ Vite development server setup complete');
-              } catch (viteError) {
-                console.error('⚠️ Vite setup failed, serving minimal fallback');
-                // Minimal fallback - just serve a basic response
-                app.use('*', (req, res) => {
-                  res.status(200).send(`
-                    <!DOCTYPE html>
-                    <html>
-                      <head><title>ChirpBot V3</title></head>
-                      <body>
-                        <h1>ChirpBot V3 Server Running</h1>
-                        <p>Frontend temporarily unavailable - API endpoints are still accessible</p>
-                      </body>
-                    </html>
-                  `);
-                });
-              }
-            } else {
-              serveStatic(app);
-            }
-          }
-
-          // START ALERT GENERATION IMMEDIATELY - MISSION CRITICAL
-          console.log('🚨 STARTING ALERT GENERATION IMMEDIATELY...');
+        if (!skipSeed) {
           try {
+            await seedDatabase();
+            console.log('✅ Database initialization complete');
+          } catch (err) {
+            console.error('⚠️ Database seeding failed (may already be seeded):', err);
+            // Continue anyway - the database might already be seeded
+          }
+        } else {
+          console.log('⏭️ Skipping database seeding in production');
+        }
+
+        // Initialize alert generator and AI system
+        const alertGenerator = new AlertGenerator();
+
+        // AI system now unified through AsyncAIProcessor → CrossSportAIEnhancement
+        console.log('✅ AI Services: Unified pipeline active (AsyncAI → CrossSport)');
+
+        // START ALERT GENERATION IMMEDIATELY - MISSION CRITICAL
+        console.log('🚨 STARTING ALERT GENERATION IMMEDIATELY...');
+        try {
+          alertGenerator.generateLiveGameAlerts();
+          console.log('✅ ALERT GENERATION ACTIVE - MONITORING ALL GAMES');
+        } catch (alertError) {
+          console.error('⚠️ CRITICAL: Alert generation failed to start:', alertError);
+          // AUTO-RECOVERY: Retry after 2 seconds
+          setTimeout(() => {
+            console.log('🔄 AUTO-RECOVERY: Retrying alert generation...');
             alertGenerator.generateLiveGameAlerts();
-            console.log('✅ ALERT GENERATION ACTIVE - MONITORING ALL GAMES');
-          } catch (alertError) {
-            console.error('⚠️ CRITICAL: Alert generation failed to start:', alertError);
-            // AUTO-RECOVERY: Retry after 2 seconds
-            setTimeout(() => {
-              console.log('🔄 AUTO-RECOVERY: Retrying alert generation...');
-              alertGenerator.generateLiveGameAlerts();
-            }, 2000);
-          }
-
-          // Start cleanup service immediately
-          console.log('🧹 Starting alert cleanup service...');
-          try {
-            alertCleanupService.startCleanup();
-            console.log('✅ Alert cleanup service active');
-          } catch (cleanupError) {
-            console.error('⚠️ Alert cleanup failed to start:', cleanupError);
-            // Non-critical, continue anyway
-          }
-
-          console.log('✅ Background initialization complete - all systems operational!');
-        } catch (error) {
-          console.error('⚠️ Background initialization error:', error);
-          console.log('🔄 Server will continue running - some features may be limited');
+          }, 2000);
         }
-      });
+
+        // Start cleanup service immediately
+        console.log('🧹 Starting alert cleanup service...');
+        try {
+          alertCleanupService.startCleanup();
+          console.log('✅ Alert cleanup service active');
+        } catch (cleanupError) {
+          console.error('⚠️ Alert cleanup failed to start:', cleanupError);
+          // Non-critical, continue anyway
+        }
+
+        console.log('✅ Background initialization complete - all systems operational!');
+      } catch (error) {
+        console.error('⚠️ Background initialization error:', error);
+        console.log('🔄 Server will continue running - some features may be limited');
+      }
     });
-  } catch (error: any) {
-    console.error('⚠️ Server initialization warning:', error);
-    console.log('🔄 Server will continue running with auto-recovery enabled');
-    // DON'T EXIT - Keep the process alive
-  }
+  });
+
 }
 
 // Only start server if this file is the main entry point
 startServer().catch((error) => {
-  console.error('⚠️ Non-critical error:', error);
-  console.log('🔄 Server continuing with auto-recovery...');
-  // DON'T EXIT - Keep running
+  console.error('💥 Fatal startup error:', error);
+  process.exit(1);
 });

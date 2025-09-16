@@ -8,7 +8,6 @@ import { SettingsCache } from "./settings-cache";
 import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
-
 // ChirpBot V3 Weather-on-Live Architecture
 import { RUNTIME } from '../config/runtime';
 import { EngineLifecycleManager as EngineLifecycleManagerClass, EngineState, type EngineStateInfo } from './engine-lifecycle-manager';
@@ -18,7 +17,6 @@ import type { GameStateManager, GameStateInfo, EngineLifecycleManager } from './
 import { gameStateManager } from './game-state-manager';
 import type { BaseGameData } from './base-sport-api';
 import { BaseSportEngine, GameState, AlertResult } from './engines/base-engine';
-
 // Backward compatibility imports (only used when engines are ACTIVE)
 import { MLBApiService } from "./mlb-api";
 import { NCAAFApiService } from "./ncaaf-api";
@@ -100,6 +98,22 @@ interface SportEngineStatus {
   lastStateChange: Date;
 }
 
+// === ALERT PIPELINE INTERFACES ===
+interface AlertPipelineMetrics {
+  ingestToEvaluateMs: number;
+  evaluateToPersistMs: number;
+  totalPipelineMs: number;
+  usedAI: boolean;
+  bypassed: boolean;
+}
+
+interface AlertPipelineResult {
+  success: boolean;
+  alertId?: string;
+  metrics: AlertPipelineMetrics;
+  error?: string;
+}
+
 // === UNIFIED ALERT GENERATOR ===
 
 export class UnifiedAlertGenerator {
@@ -118,7 +132,7 @@ export class UnifiedAlertGenerator {
   private settingsCache?: SettingsCache;
   private healthMonitor?: any;
 
-  // Backward compatibility API services (used only for fallback when needed)
+  // Backward compatibility API services (used for fallback only)
   private mlbApi?: MLBApiService;
   private ncaafApi?: NCAAFApiService;
   private wnbaApi?: WNBAApiService;
@@ -138,6 +152,9 @@ export class UnifiedAlertGenerator {
   private engineStatusCache: Map<string, SportEngineStatus> = new Map();
   private lastEngineStatusCheck = 0;
   private readonly engineStatusCacheTTL = 5000; // 5 seconds
+
+  // V3 Alert Pipeline Service
+  private alertPipeline?: DeterministicAlertPipeline;
 
   constructor(options: UnifiedAlertGeneratorOptions) {
     this.mode = options.mode;
@@ -199,6 +216,10 @@ export class UnifiedAlertGenerator {
       this.nflApi = new NFLApiService();
       this.wnbaApi = new WNBAApiService();
       this.cflApi = new CFLApiService();
+
+      // Initialize V3 Alert Pipeline
+      this.alertPipeline = new DeterministicAlertPipeline();
+      console.log('⚙️ DeterministicAlertPipeline initialized');
 
       console.log('✅ V3 Weather-on-Live architecture initialized successfully');
       
@@ -330,6 +351,9 @@ export class UnifiedAlertGenerator {
         engineLifecycleManager: !!this.engineLifecycleManager,
         calendarSyncService: !!this.calendarSyncService,
         weatherOnLiveService: !!this.weatherOnLiveService
+      },
+      alertPipelineStatus: {
+        initialized: !!this.alertPipeline
       }
     };
   }
@@ -601,7 +625,7 @@ export class UnifiedAlertGenerator {
       },
       aiAdvice,
       sportsbookLinks: [
-        { name: 'FanDuel', url: 'https://sportsbook.fanduel.com' },
+        { name: 'FanDuel', url: 'https://sportsbook. FanDuel.com' },
         { name: 'DraftKings', url: 'https://sportsbook.draftkings.com' },
         { name: 'Bet365', url: 'https://www.bet365.com' },
         { name: 'BetMGM', url: 'https://sports.betmgm.com' }
@@ -1470,7 +1494,7 @@ export class UnifiedAlertGenerator {
           confidence: 88,
           message: 'CLUTCH TIME! LeBron James 30 pts, 2 min remaining.',
           context: 'Lakers down 2, LeBron shooting 60% in clutch this season',
-          aiAdvice: 'LAL ML +130 trending. LeBron props all showing value.',
+          aiAdvice: 'LAL ML +130 trending. LeBron props showing value.',
           betting: { home: +130, away: -150, total: 218.5 }
         }
       }
@@ -1550,5 +1574,147 @@ export class UnifiedAlertGenerator {
         }
       }
     ];
+  }
+}
+
+// Add the new class below the UnifiedAlertGenerator class
+class DeterministicAlertPipeline {
+  private readonly SLA_INGEST_TO_EVALUATE_MS = 150;
+  private readonly SLA_EVALUATE_TO_PERSIST_MS = 300;
+  private readonly SLA_AI_FALLBACK_MS = 400;
+
+  async processAlert(
+    gameData: BaseGameData, 
+    rawAlert: AlertResult, 
+    userIds: string[]
+  ): Promise<AlertPipelineResult> {
+    const startTime = Date.now();
+    let evaluateStartTime = 0;
+    let persistStartTime = 0;
+
+    try {
+      // PHASE 1: Ingest → Evaluate
+      evaluateStartTime = Date.now();
+
+      // Score the alert (0-100)
+      const score = this.calculateAlertScore(rawAlert, gameData);
+
+      // Filter by global and user settings
+      const filteredUserIds = await this.filterUsers(rawAlert, userIds);
+
+      const ingestToEvaluateMs = Date.now() - startTime;
+
+      // SLA Check: Ingest→Evaluate ≤150ms
+      if (ingestToEvaluateMs > this.SLA_INGEST_TO_EVALUATE_MS) {
+        console.warn(`⚠️ SLA VIOLATION: Ingest→Evaluate took ${ingestToEvaluateMs}ms (limit: ${this.SLA_INGEST_TO_EVALUATE_MS}ms)`);
+      }
+
+      // PHASE 2: Evaluate → Persist
+      persistStartTime = Date.now();
+
+      // Dedup check BEFORE AI
+      const isDuplicate = await this.checkDuplication(rawAlert);
+      if (isDuplicate) {
+        return {
+          success: false,
+          metrics: {
+            ingestToEvaluateMs,
+            evaluateToPersistMs: 0,
+            totalPipelineMs: Date.now() - startTime,
+            usedAI: false,
+            bypassed: true
+          },
+          error: 'Duplicate alert'
+        };
+      }
+
+      // AI Enhancement (with fallback)
+      let enhancedAlert = rawAlert;
+      let usedAI = false;
+
+      if (this.shouldUseAI(rawAlert, score)) {
+        const aiStartTime = Date.now();
+        try {
+          const aiResult = await this.enhanceWithAI(rawAlert, this.SLA_AI_FALLBACK_MS);
+          if (aiResult) {
+            enhancedAlert = aiResult;
+            usedAI = true;
+          }
+        } catch (error) {
+          console.warn(`⚠️ AI fallback triggered for ${rawAlert.alertKey}:`, error);
+          // Continue with original alert
+        }
+      }
+
+      // Persist to database
+      const alertId = await this.persistAlert(enhancedAlert, filteredUserIds, score);
+
+      const evaluateToPersistMs = Date.now() - persistStartTime;
+      const totalPipelineMs = Date.now() - startTime;
+
+      // SLA Check: Evaluate→Persist ≤300ms (no-AI path)
+      if (!usedAI && evaluateToPersistMs > this.SLA_EVALUATE_TO_PERSIST_MS) {
+        console.warn(`⚠️ SLA VIOLATION: Evaluate→Persist took ${evaluateToPersistMs}ms (limit: ${this.SLA_EVALUATE_TO_PERSIST_MS}ms)`);
+      }
+
+      return {
+        success: true,
+        alertId,
+        metrics: {
+          ingestToEvaluateMs,
+          evaluateToPersistMs,
+          totalPipelineMs,
+          usedAI,
+          bypassed: false
+        }
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        metrics: {
+          ingestToEvaluateMs: evaluateStartTime ? Date.now() - startTime : 0,
+          evaluateToPersistMs: persistStartTime ? Date.now() - persistStartTime : 0,
+          totalPipelineMs: Date.now() - startTime,
+          usedAI: false,
+          bypassed: false
+        },
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  private calculateAlertScore(alert: AlertResult, gameData: BaseGameData): number {
+    // Sport-specific calibrated scoring (0-100)
+    const basePriority = alert.priority || 50;
+    const probabilityBonus = alert.probability ? (alert.probability - 50) * 0.5 : 0;
+    const latenessBonus = gameData.isLive ? 20 : 0;
+
+    return Math.min(100, Math.max(0, basePriority + probabilityBonus + latenessBonus));
+  }
+
+  private async filterUsers(alert: AlertResult, userIds: string[]): Promise<string[]> {
+    // TODO: Implement O(1) bitmap filtering
+    return userIds; // Simplified for now
+  }
+
+  private async checkDuplication(alert: AlertResult): Promise<boolean> {
+    // Use existing deduplicator
+    return unifiedDeduplicator.isDuplicate(alert.alertKey, alert);
+  }
+
+  private shouldUseAI(alert: AlertResult, score: number): boolean {
+    // Only use AI for high-value alerts to stay within SLA
+    return score >= 70;
+  }
+
+  private async enhanceWithAI(alert: AlertResult, timeoutMs: number): Promise<AlertResult | null> {
+    // TODO: Implement AI enhancement with timeout
+    return null; // Simplified for now
+  }
+
+  private async persistAlert(alert: AlertResult, userIds: string[], score: number): Promise<string> {
+    // TODO: Implement idempotent persistence
+    return alert.alertKey;
   }
 }

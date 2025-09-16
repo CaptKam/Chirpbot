@@ -146,8 +146,12 @@ export enum GameState {
   PREWARM = 'PREWARM',           // T-5min: pre-warming
   LIVE = 'LIVE',                 // Active game with engines running
   PAUSED = 'PAUSED',             // Delayed/Suspended (engines idle)
+  DELAYED = 'DELAYED',           // Weather/technical delay
+  RESUMED = 'RESUMED',           // Coming back from delay
+  OVERTIME = 'OVERTIME',         // Extra innings/OT
   FINAL = 'FINAL',               // Game finished
-  TERMINATED = 'TERMINATED',      // Cleanup complete
+  COOLDOWN = 'COOLDOWN',         // 90s post-game buffer
+  TERMINATED = 'TERMINATED',     // Cleanup complete
 }
 
 // === WEATHER ARMING REASONS ===
