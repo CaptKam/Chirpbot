@@ -510,34 +510,43 @@ export const storage = {
 
   async updateGlobalAlertSetting(sport: string, alertType: string, enabled: boolean, updatedBy: string) {
     try {
-      console.log(`🔧 FIXED ARCHITECTURE: Global setting updated: ${sport}.${alertType} = ${enabled} by admin ${updatedBy}`);
+      // 🔧 CACHE FIX: Normalize consistently to lowercase for cache invalidation
+      const canonicalSport = sport.toLowerCase();
+      const normalizedAlertType = alertType.toUpperCase();
+      
+      console.log(`🔧 FIXED ARCHITECTURE: Global setting updated: ${canonicalSport}.${normalizedAlertType} = ${enabled} by admin ${updatedBy}`);
 
       // Use upsert pattern - check if global setting exists
       const existing = await db.select().from(globalAlertSettings)
         .where(and(
-          eq(globalAlertSettings.sport, sport.toLowerCase()),
-          eq(globalAlertSettings.alertType, alertType)
+          eq(globalAlertSettings.sport, canonicalSport),
+          eq(globalAlertSettings.alertType, normalizedAlertType)
         ));
 
+      let result;
       if (existing.length > 0) {
         // Update existing global setting
-        const result = await db.update(globalAlertSettings)
+        result = await db.update(globalAlertSettings)
           .set({ enabled, updatedAt: new Date(), updatedBy })
           .where(and(
-            eq(globalAlertSettings.sport, sport.toLowerCase()),
-            eq(globalAlertSettings.alertType, alertType)
+            eq(globalAlertSettings.sport, canonicalSport),
+            eq(globalAlertSettings.alertType, normalizedAlertType)
           ))
           .returning();
-        console.log(`✅ ARCHITECTURE FIX: Updated global setting ${sport}.${alertType} = ${enabled}`);
-        return result[0];
+        console.log(`✅ ARCHITECTURE FIX: Updated global setting ${canonicalSport}.${normalizedAlertType} = ${enabled}`);
       } else {
         // Create new global setting
-        const result = await db.insert(globalAlertSettings)
-          .values({ sport: sport.toLowerCase(), alertType, enabled, updatedBy })
+        result = await db.insert(globalAlertSettings)
+          .values({ sport: canonicalSport, alertType: normalizedAlertType, enabled, updatedBy })
           .returning();
-        console.log(`✅ ARCHITECTURE FIX: Created global setting ${sport}.${alertType} = ${enabled}`);
-        return result[0];
+        console.log(`✅ ARCHITECTURE FIX: Created global setting ${canonicalSport}.${normalizedAlertType} = ${enabled}`);
       }
+
+      // 🎯 CACHE FIX: Invalidate cache with lowercase canonical key
+      await unifiedSettingsInstance.invalidateCache(canonicalSport);
+      console.log(`🗑️ Cache invalidated for ${canonicalSport} after global setting update`);
+
+      return result[0];
     } catch (error) {
       console.error('Error updating global alert setting:', error);
       throw error;
@@ -688,9 +697,15 @@ export const storage = {
   // Clear all global alert settings for a sport (resets to defaults)
   async clearGlobalAlertSettings(sport: string): Promise<void> {
     try {
+      // 🔧 CACHE FIX: Normalize consistently to lowercase
+      const canonicalSport = sport.toLowerCase();
+      
       await db.delete(globalAlertSettings)
-        .where(eq(globalAlertSettings.sport, sport.toLowerCase()));
-      console.log(`🔄 Cleared all global alert settings for ${sport}, will use defaults`);
+        .where(eq(globalAlertSettings.sport, canonicalSport));
+      
+      // 🎯 CACHE FIX: Invalidate cache with lowercase canonical key
+      await unifiedSettingsInstance.invalidateCache(canonicalSport);
+      console.log(`🔄 Cleared all global alert settings for ${canonicalSport}, will use defaults, cache invalidated`);
     } catch (error) {
       console.error(`Error clearing global alert settings for ${sport}:`, error);
       throw error;

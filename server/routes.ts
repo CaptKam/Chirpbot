@@ -3705,6 +3705,118 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // 🔧 CACHE FIX: Global Settings Diagnostics Endpoint
+  app.get('/api/debug/global-settings/:sport', async (req, res) => {
+    try {
+      const { sport } = req.params;
+      const timestamp = new Date().toISOString();
+      const canonicalSport = sport.toLowerCase();
+
+      console.log(`🔍 Global Settings Diagnostics for ${sport} (canonical: ${canonicalSport})`);
+
+      // Get settings through the unified settings system (this uses cache)
+      const cachedSettings = await getUnifiedSettings().getGlobalSettings(sport);
+      
+      // Get settings directly from storage (bypasses cache to show DB state)
+      const dbSettings = await storage.getGlobalAlertSettings(sport);
+      
+      // Get cache metrics
+      const cacheMetrics = getUnifiedSettings().getCacheMetrics();
+      
+      // Count differences
+      const cacheKeys = Object.keys(cachedSettings);
+      const dbKeys = Object.keys(dbSettings);
+      const allKeys = [...new Set([...cacheKeys, ...dbKeys])];
+      
+      const differences = [];
+      const mismatches = [];
+      
+      for (const key of allKeys) {
+        const cacheValue = cachedSettings[key];
+        const dbValue = dbSettings[key];
+        
+        if (cacheValue !== dbValue) {
+          mismatches.push({
+            alertType: key,
+            cacheValue: cacheValue ?? 'undefined',
+            dbValue: dbValue ?? 'undefined',
+            issue: 'CACHE_DB_MISMATCH'
+          });
+        }
+        
+        differences.push({
+          alertType: key,
+          cache: cacheValue ?? 'undefined',
+          database: dbValue ?? 'undefined',
+          matched: cacheValue === dbValue
+        });
+      }
+
+      // Get database statistics
+      const globalAlertSettingsCount = await db.execute(sql`
+        SELECT COUNT(*) as count FROM global_alert_settings WHERE sport = ${canonicalSport}
+      `);
+      
+      const enabledCount = await db.execute(sql`
+        SELECT COUNT(*) as count FROM global_alert_settings 
+        WHERE sport = ${canonicalSport} AND enabled = true
+      `);
+
+      const diagnostics = {
+        timestamp,
+        sport: sport,
+        canonicalSport: canonicalSport,
+        cacheKeyUsed: canonicalSport,
+        requestInfo: {
+          originalSport: sport,
+          normalizedForCache: canonicalSport,
+          normalizedForDb: canonicalSport
+        },
+        database: {
+          totalSettings: parseInt(String(globalAlertSettingsCount.rows[0]?.count || '0')),
+          enabledSettings: parseInt(String(enabledCount.rows[0]?.count || '0')),
+          disabledSettings: parseInt(String(globalAlertSettingsCount.rows[0]?.count || '0')) - parseInt(String(enabledCount.rows[0]?.count || '0')),
+          settings: dbSettings
+        },
+        cache: {
+          settings: cachedSettings,
+          metrics: cacheMetrics
+        },
+        analysis: {
+          totalKeys: allKeys.length,
+          cacheDbMatches: differences.filter(d => d.matched).length,
+          cacheDbMismatches: mismatches.length,
+          criticalMismatches: mismatches,
+          healthStatus: mismatches.length === 0 ? 'HEALTHY' : 'CACHE_DESYNC',
+          recommendations: mismatches.length > 0 ? [
+            'Cache invalidation may be failing',
+            'Check cache key normalization',
+            'Consider clearing cache for this sport'
+          ] : ['Settings cache is synchronized with database']
+        },
+        troubleshooting: {
+          cacheInvalidationTest: `await getUnifiedSettings().invalidateCache('${canonicalSport}')`,
+          clearCacheCommand: 'Clear cache through admin interface',
+          recheckQuery: `GET /api/debug/global-settings/${sport}`
+        }
+      };
+
+      res.json(diagnostics);
+    } catch (error: any) {
+      console.error(`❌ Global Settings Diagnostics error for ${req.params.sport}:`, error);
+      res.status(500).json({ 
+        error: error.message || 'Unknown error occurred',
+        sport: req.params.sport,
+        timestamp: new Date().toISOString(),
+        troubleshooting: {
+          checkDatabase: 'Verify database connection',
+          checkCache: 'Verify unified settings system',
+          recheckQuery: `GET /api/debug/global-settings/${req.params.sport}`
+        }
+      });
+    }
+  });
+
   // V3 Performance Dashboard endpoint
   app.get('/api/v3/performance', async (req, res) => {
     try {

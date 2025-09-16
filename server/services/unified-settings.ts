@@ -80,10 +80,13 @@ export class UnifiedSettings {
 
   /**
    * Get settings with smart caching - Enhanced from original SettingsCache
+   * 🔧 CACHE FIX: Normalize sport keys to lowercase for consistency
    */
   async getGlobalSettings(sport: string): Promise<Record<string, boolean>> {
+    // 🔧 CACHE FIX: Normalize sport to lowercase for consistent cache keys
+    const canonicalSport = sport.toLowerCase();
     const now = Date.now();
-    const cached = this.cache.get(sport);
+    const cached = this.cache.get(canonicalSport);
     
     this.metrics.settingsRequests++;
 
@@ -98,10 +101,10 @@ export class UnifiedSettings {
 
     // Fetch fresh data
     try {
-      const freshData = await this.storage.getGlobalAlertSettings(sport);
+      const freshData = await this.storage.getGlobalAlertSettings(canonicalSport);
       
-      // Cache the result
-      this.cache.set(sport, {
+      // 🔧 CACHE FIX: Cache with normalized key
+      this.cache.set(canonicalSport, {
         data: freshData,
         timestamp: now,
         lastRefresh: now
@@ -114,21 +117,22 @@ export class UnifiedSettings {
 
       return freshData;
     } catch (error) {
-      console.error(`Unified Settings cache error for ${sport}:`, error);
+      console.error(`Unified Settings cache error for ${canonicalSport}:`, error);
       
       // Return stale cache if available, otherwise emergency defaults
       if (cached) {
-        console.log(`⚠️ Using stale cache for ${sport} due to error`);
+        console.log(`⚠️ Using stale cache for ${canonicalSport} due to error`);
         return cached.data;
       }
       
       // CRITICAL FIX: Return fallback defaults for key alert types instead of empty {}
-      return this.getDefaultAlertSettings(sport);
+      return this.getDefaultAlertSettings(canonicalSport);
     }
   }
 
   /**
    * Check if specific alert type is enabled (with caching)
+   * 🔧 CACHE FIX: Sport normalization handled in getGlobalSettings
    */
   async isAlertEnabled(sport: string, alertType: string): Promise<boolean> {
     // FORCE ENABLE OVERRIDE - bypass all caching for emergency recovery
@@ -142,7 +146,7 @@ export class UnifiedSettings {
     
     // Debug logging for suppressed alerts
     if (!isEnabled) {
-      console.log(`❌ Alert suppressed by settings: ${alertType} (${sport})`);
+      console.log(`❌ Alert suppressed by settings: ${alertType} (${sport.toLowerCase()})`);
     }
     
     return isEnabled;
@@ -321,21 +325,25 @@ export class UnifiedSettings {
 
   /**
    * Bulk enable multiple alert types for a sport
+   * 🔧 CACHE FIX: Use consistent lowercase normalization
    */
   async bulkEnableAlerts(sport: string, alertTypes: string[]): Promise<void> {
     try {
+      // 🔧 CACHE FIX: Normalize sport consistently
+      const canonicalSport = sport.toLowerCase();
+      
       for (const alertType of alertTypes) {
         await db.execute(sql`
           INSERT INTO global_alert_settings (sport, alert_type, enabled) 
-          VALUES (${sport.toLowerCase()}, ${alertType}, true)
+          VALUES (${canonicalSport}, ${alertType}, true)
           ON CONFLICT (sport, alert_type) 
           DO UPDATE SET enabled = true, updated_at = NOW()
         `);
       }
 
-      // Invalidate cache for this sport
-      this.cache.delete(sport);
-      console.log(`✅ Bulk enabled ${alertTypes.length} alerts for ${sport}`);
+      // 🔧 CACHE FIX: Invalidate cache using proper method
+      await this.invalidateCache(canonicalSport);
+      console.log(`✅ Bulk enabled ${alertTypes.length} alerts for ${canonicalSport}`);
     } catch (error) {
       console.error(`Error bulk enabling alerts for ${sport}:`, error);
       throw error;
@@ -344,49 +352,57 @@ export class UnifiedSettings {
 
   /**
    * Bulk disable multiple alert types for a sport
+   * 🔧 CACHE FIX: Use consistent lowercase normalization
    */
   async bulkDisableAlerts(sport: string, alertTypes: string[]): Promise<void> {
     try {
+      // 🔧 CACHE FIX: Normalize sport consistently
+      const canonicalSport = sport.toLowerCase();
+      
       for (const alertType of alertTypes) {
         await db.execute(sql`
           INSERT INTO global_alert_settings (sport, alert_type, enabled) 
-          VALUES (${sport.toLowerCase()}, ${alertType}, false)
+          VALUES (${canonicalSport}, ${alertType}, false)
           ON CONFLICT (sport, alert_type) 
           DO UPDATE SET enabled = false, updated_at = NOW()
         `);
       }
 
-      // Invalidate cache for this sport
-      this.cache.delete(sport);
-      console.log(`❌ Bulk disabled ${alertTypes.length} alerts for ${sport}`);
+      // 🔧 CACHE FIX: Invalidate cache using proper method
+      await this.invalidateCache(canonicalSport);
+      console.log(`❌ Bulk disabled ${alertTypes.length} alerts for ${canonicalSport}`);
     } catch (error) {
-      console.error(`Error bulk disabling alerts for ${sport}:`, error);
+      console.error(`Error bulk disabling alerts for ${canonicalSport}:`, error);
       throw error;
     }
   }
 
   /**
    * Reset sport settings to defaults
+   * 🔧 CACHE FIX: Use consistent lowercase normalization
    */
   async resetToDefaults(sport: string): Promise<void> {
     try {
+      // 🔧 CACHE FIX: Normalize sport consistently
+      const canonicalSport = sport.toLowerCase();
+      
       // Clear existing settings for sport
-      await db.execute(sql`DELETE FROM global_alert_settings WHERE sport = ${sport.toLowerCase()}`);
+      await db.execute(sql`DELETE FROM global_alert_settings WHERE sport = ${canonicalSport}`);
 
       // Get default settings and insert them
-      const defaults = this.getDefaultAlertSettings(sport);
+      const defaults = this.getDefaultAlertSettings(canonicalSport);
       for (const [alertType, enabled] of Object.entries(defaults)) {
         await db.execute(sql`
           INSERT INTO global_alert_settings (sport, alert_type, enabled) 
-          VALUES (${sport.toLowerCase()}, ${alertType}, ${enabled})
+          VALUES (${canonicalSport}, ${alertType}, ${enabled})
         `);
       }
 
-      // Invalidate cache
-      this.cache.delete(sport);
-      console.log(`🔄 Reset ${sport} settings to defaults`);
+      // 🔧 CACHE FIX: Invalidate cache using proper method
+      await this.invalidateCache(canonicalSport);
+      console.log(`🔄 Reset ${canonicalSport} settings to defaults`);
     } catch (error) {
-      console.error(`Error resetting ${sport} to defaults:`, error);
+      console.error(`Error resetting ${canonicalSport} to defaults:`, error);
       throw error;
     }
   }
@@ -397,11 +413,26 @@ export class UnifiedSettings {
 
   /**
    * Invalidate cache for specific sport or all sports
+   * 🔧 CACHE FIX: Normalize sport and clear both canonical and legacy variants
    */
   async invalidateCache(sport?: string): Promise<void> {
     if (sport) {
-      this.cache.delete(sport);
-      console.log(`🗑️ Cache invalidated for ${sport}`);
+      // 🔧 CACHE FIX: Normalize to lowercase and clear both variants
+      const canonicalSport = sport.toLowerCase();
+      const legacySport = sport.toUpperCase();
+      
+      // Clear canonical (lowercase) key
+      const canonicalDeleted = this.cache.delete(canonicalSport);
+      
+      // Clear legacy (uppercase) key if it exists
+      const legacyDeleted = this.cache.delete(legacySport);
+      
+      // Clear original key if different from both
+      const originalDeleted = (sport !== canonicalSport && sport !== legacySport) 
+        ? this.cache.delete(sport) 
+        : false;
+      
+      console.log(`🗑️ Cache invalidated for ${canonicalSport} (canonical: ${canonicalDeleted}, legacy: ${legacyDeleted}, original: ${originalDeleted})`);
     } else {
       this.cache.clear();
       console.log(`🗑️ All settings cache cleared`);
@@ -439,9 +470,12 @@ export class UnifiedSettings {
 
   /**
    * EMERGENCY DEFAULTS - Critical alert modules that should ALWAYS be enabled
+   * 🔧 CACHE FIX: Normalize sport input to lowercase
    */
   private getDefaultAlertSettings(sport: string): Record<string, boolean> {
-    if (sport === 'MLB') {
+    const canonicalSport = sport.toLowerCase();
+    
+    if (canonicalSport === 'mlb') {
       return {
         'MLB_GAME_START': true,
         'MLB_SEVENTH_INNING_STRETCH': true,
@@ -458,7 +492,7 @@ export class UnifiedSettings {
         'MLB_ON_DECK_PREDICTION': true,
         'MLB_WIND_CHANGE': true
       };
-    } else if (sport === 'NFL') {
+    } else if (canonicalSport === 'nfl') {
       return {
         'NFL_GAME_START': true,
         'NFL_RED_ZONE': true,
@@ -469,7 +503,7 @@ export class UnifiedSettings {
         'NFL_RED_ZONE_OPPORTUNITY': true,
         'NFL_SECOND_HALF_KICKOFF': true
       };
-    } else if (sport === 'NBA') {
+    } else if (canonicalSport === 'nba') {
       return {
         'NBA_GAME_START': true,
         'NBA_FOURTH_QUARTER': true,
@@ -481,7 +515,7 @@ export class UnifiedSettings {
         'NBA_PLAYOFF_INTENSITY': true,
         'NBA_SUPERSTAR_ANALYTICS': true
       };
-    } else if (sport === 'NCAAF') {
+    } else if (canonicalSport === 'ncaaf') {
       return {
         'NCAAF_GAME_START': true,
         'NCAAF_TWO_MINUTE_WARNING': true,
@@ -493,7 +527,7 @@ export class UnifiedSettings {
         'NCAAF_SECOND_HALF_KICKOFF': true,
         'NCAAF_MASSIVE_WEATHER': true
       };
-    } else if (sport === 'WNBA') {
+    } else if (canonicalSport === 'wnba') {
       return {
         'WNBA_GAME_START': true,
         'WNBA_FOURTH_QUARTER': true,
@@ -506,7 +540,7 @@ export class UnifiedSettings {
         'WNBA_LOW_SCORING_QUARTER': true,
         'WNBA_CRUNCH_TIME_DEFENSE': true
       };
-    } else if (sport === 'CFL') {
+    } else if (canonicalSport === 'cfl') {
       return {
         'CFL_GAME_START': true,
         'CFL_FOURTH_QUARTER': true,
