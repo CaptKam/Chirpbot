@@ -2359,7 +2359,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             // Include AI data
             betbookData: payload.betbookData || null,
             gameInfo: payload.gameInfo || null,
-            // Include full payload for V3 message access
+            // Include full payload for message access
             payload: payload
           });
         } catch (error) {
@@ -2666,7 +2666,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Test NCAAF two-minute warning logic
   app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
     try {
-      // ✅ V3: Using UnifiedAlertGenerator instead of legacy V2 AlertGenerator
+      // Using UnifiedAlertGenerator for alert generation
       const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
       const generator = new UnifiedAlertGenerator();
 
@@ -3844,7 +3844,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
 
 
-  // V3 Performance Metrics API (admin-only)
+  // Alert system health monitoring API
   // Health check endpoint for alert generation system
   app.get('/api/health/alerts', async (req, res) => {
     try {
