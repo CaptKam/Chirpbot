@@ -13,7 +13,7 @@ import { UnifiedAlertGenerator } from "./services/unified-alert-generator";
 import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
-import { unifiedSettings } from "./services/unified-settings";
+import { UnifiedSettings } from "./services/unified-settings";
 import { alerts as alertsTable, settings } from "../shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { getCalendarSyncService } from "./services/calendar-sync-service";
@@ -474,7 +474,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
         try {
           // Generate alerts for this game state
-          const alerts = await nflEngine.generateAlerts(scenario.gameState);
+          const alerts = await nflEngine.generateLiveAlerts(scenario.gameState);
 
           results.push({
             scenario: scenario.name,
@@ -960,7 +960,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Test database connection and get counts
       try {
-        const client = await db;
+        // Test database connection using drizzle
+        await db.execute(sql`SELECT 1`);
         diagnostics.database.connected = true;
 
         // Get user count
