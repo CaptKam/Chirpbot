@@ -31,7 +31,7 @@ export class CFLEngine extends BaseSportEngine {
     try {
       // V3-15: Complete CFL alert types with Canadian football specifics
       const validCFLAlerts = [
-        'CFL_GAME_START', 'CFL_TWO_MINUTE_WARNING',
+        'CFL_GAME_START', 'CFL_SECOND_HALF_KICKOFF', 'CFL_TWO_MINUTE_WARNING',
         // V3-15: Core CFL professional Canadian football alert types
         'CFL_FOURTH_QUARTER', 'CFL_FINAL_MINUTES', 'CFL_GREY_CUP_IMPLICATIONS',
         // V3-15: Advanced CFL Canadian-specific alert types  
