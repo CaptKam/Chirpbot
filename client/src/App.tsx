@@ -11,7 +11,6 @@ import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
-import AlertHistory from "./pages/alert-history";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -66,7 +65,6 @@ function RegularAppContent() {
         <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/calendar" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
-        <Route path="/alert-history" component={() => <ProtectedRoute component={AlertHistory} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         <Route component={NotFound} />
       </Switch>
