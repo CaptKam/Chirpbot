@@ -2357,13 +2357,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Get alerts from database - filter by monitored game IDs using parameterized query
       const gameIdsPlaceholder = monitoredGameIds.map((_, i) => `$${i + 1}`).join(',');
+      const limitParam = monitoredGameIds.length + 1;
+      const offsetParam = monitoredGameIds.length + 2;
+      
       const result = await db.execute(sql.raw(`
         SELECT id, type, game_id, sport, score, payload, created_at
         FROM alerts
         WHERE game_id IN (${gameIdsPlaceholder})
         ORDER BY created_at DESC
-        LIMIT $${monitoredGameIds.length + 1}
-      `, [...monitoredGameIds, limit]));
+        LIMIT $${limitParam}
+        OFFSET $${offsetParam}
+      `, [...monitoredGameIds, limit, offset]));
 
       const alerts = [];
 
