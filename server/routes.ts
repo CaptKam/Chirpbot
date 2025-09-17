@@ -15,7 +15,7 @@ import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
 import { unifiedSettings } from "./storage";
 import { alerts as alertsTable, alerts, settings } from "../shared/schema";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { eq, desc, and, gte, inArray } from "drizzle-orm";
 import { getCalendarSyncService } from "./services/calendar-sync-service";
 
 // Extend session data interface
@@ -2355,23 +2355,25 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return;
       }
 
-      // Get alerts from database - filter by monitored game IDs using parameterized query
-      const gameIdsPlaceholder = monitoredGameIds.map((_, i) => `$${i + 1}`).join(',');
-      const limitParam = monitoredGameIds.length + 1;
-      const offsetParam = monitoredGameIds.length + 2;
-      
-      const result = await db.execute(sql.raw(`
-        SELECT id, type, game_id, sport, score, payload, created_at
-        FROM alerts
-        WHERE game_id IN (${gameIdsPlaceholder})
-        ORDER BY created_at DESC
-        LIMIT $${limitParam}
-        OFFSET $${offsetParam}
-      `, [...monitoredGameIds, limit, offset]));
+      // Get alerts from database - filter by monitored game IDs using Drizzle syntax
+      const result = await db.select({
+        id: alerts.id,
+        type: alerts.type,
+        game_id: alerts.gameId,
+        sport: alerts.sport,
+        score: alerts.score,
+        payload: alerts.payload,
+        created_at: alerts.createdAt
+      })
+      .from(alerts)
+      .where(inArray(alerts.gameId, monitoredGameIds))
+      .orderBy(desc(alerts.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-      const alerts = [];
+      const alertsData = [];
 
-      for (const row of result.rows) {
+      for (const row of result) {
         const sport = String(row.sport || 'MLB');
         const alertType = String(row.type || '');
 
@@ -2384,7 +2386,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             console.error('Error parsing payload:', e);
             payload = {};
           }
-          alerts.push({
+          alertsData.push({
             id: row.id,
             alertKey: `${row.game_id}_${row.type}`,
             type: row.type,
@@ -2422,7 +2424,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
-      res.json(alerts);
+      res.json(alertsData);
     } catch (error) {
       console.error("Error fetching alerts:", error);
       res.status(500).json({ message: "Failed to fetch alerts" });
