@@ -219,6 +219,8 @@ export class MLBPerformanceTracker {
       pitchCount: number;
       rbis?: number;
       runnersOn?: boolean;
+      runnersInScoringPosition?: boolean;
+      outs?: number;
     }
   ): void {
     // Initialize if needed
@@ -267,13 +269,14 @@ export class MLBPerformanceTracker {
     // Update RBIs
     if (outcome.rbis) {
       batter.rbis += outcome.rbis;
-      if (batter.lastFiveAtBats.length > 0) {
+      // Track two-out RBIs based on actual out count
+      if (outcome.outs === 2) {
         batter.twoOutRBI += outcome.rbis;
       }
     }
 
-    // Update situational stats
-    if (outcome.runnersOn) {
+    // Update situational stats - only count runners on 2nd or 3rd as RISP
+    if (outcome.runnersInScoringPosition) {
       batter.runnersInScoringPosition.atBats++;
       if (['hit', 'double', 'triple', 'homerun'].includes(outcome.type)) {
         batter.runnersInScoringPosition.hits++;
@@ -315,6 +318,11 @@ export class MLBPerformanceTracker {
       velocity?: number;
       batter: string;
       inning: number;
+      balls?: number;
+      strikes?: number;
+      isFullCount?: boolean;
+      isThreeBalls?: boolean;
+      isFirstPitch?: boolean;
     }
   ): void {
     if (!this.pitcherPerformance.has(gameId)) {
@@ -340,11 +348,22 @@ export class MLBPerformanceTracker {
         pitcher.strikes++;
         pitcher.consecutiveStrikes++;
         pitcher.consecutiveBalls = 0;
+        // Track first pitch strikes
+        if (pitchOutcome.isFirstPitch) {
+          pitcher.firstPitchStrikes++;
+        }
         break;
       case 'ball':
         pitcher.balls++;
         pitcher.consecutiveBalls++;
         pitcher.consecutiveStrikes = 0;
+        // Track full counts and three-ball counts
+        if (pitchOutcome.isFullCount) {
+          pitcher.fullCounts++;
+        }
+        if (pitchOutcome.isThreeBalls) {
+          pitcher.threeBallCounts++;
+        }
         break;
       case 'hit':
         pitcher.hits++;
@@ -400,6 +419,7 @@ export class MLBPerformanceTracker {
     event: {
       type: 'run' | 'hit' | 'strikeout' | 'error' | 'double_play' | 'inning_end';
       runs?: number;
+      outs?: number;
     }
   ): void {
     if (!this.teamMomentum.has(gameId)) {
@@ -462,7 +482,8 @@ export class MLBPerformanceTracker {
         break;
 
       case 'strikeout':
-        // Track for momentum shifts
+        // Track for momentum shifts - this is tracked in the team momentum
+        // Store the out count when it happens
         break;
 
       case 'error':
