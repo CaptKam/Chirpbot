@@ -117,8 +117,15 @@ export class MLBApiService extends BaseSportApi {
     // Enhanced player data extraction with multiple fallback strategies
     const playerData = this.extractPlayerData(liveData, gameData, isTopInning);
     const currentBatter = playerData.currentBatter;
+    const currentBatterId = playerData.currentBatterId;
     const currentPitcher = playerData.currentPitcher;
+    const currentPitcherId = playerData.currentPitcherId;
     const onDeckBatter = playerData.onDeckBatter;
+    
+    // Extract play-by-play data
+    const lastPlay = this.extractLastPlay(liveData);
+    const lastPitch = this.extractLastPitch(liveData);
+    const pitchCount = currentPlay?.matchup?.pitchData?.pitches?.length || 0;
 
     console.log(`🔍 Live data for game ${gameId}:`, {
       runners, balls, strikes, outs, inning, isTopInning, homeScore, awayScore, currentBatter, currentPitcher
@@ -136,8 +143,13 @@ export class MLBApiService extends BaseSportApi {
       gameState: liveData.gameState,
       lineupData,
       currentBatter,
+      currentBatterId,
       currentPitcher,
+      currentPitcherId,
       onDeckBatter,
+      lastPlay,
+      lastPitch,
+      pitchCount,
       lastUpdated: new Date().toISOString()
     };
   }
@@ -217,19 +229,25 @@ export class MLBApiService extends BaseSportApi {
       const teams = gameData.teams;
       
       let currentBatter = null;
+      let currentBatterId = null;
       let currentPitcher = null;
+      let currentPitcherId = null;
       let onDeckBatter = null;
       
       // Strategy 1: Extract from current play data
       if (currentPlay) {
         currentBatter = currentPlay.batter?.fullName || currentPlay.matchup?.batter?.fullName;
+        currentBatterId = currentPlay.batter?.id || currentPlay.matchup?.batter?.id;
         currentPitcher = currentPlay.pitcher?.fullName || currentPlay.matchup?.pitcher?.fullName;
+        currentPitcherId = currentPlay.pitcher?.id || currentPlay.matchup?.pitcher?.id;
       }
       
       // Strategy 2: Extract from offense data (linescore)
       if (!currentBatter && offense) {
         currentBatter = offense.batter?.fullName;
+        currentBatterId = offense.batter?.id;
         currentPitcher = offense.pitcher?.fullName;
+        currentPitcherId = offense.pitcher?.id;
         onDeckBatter = offense.onDeck?.fullName;
       }
       
@@ -289,7 +307,9 @@ export class MLBApiService extends BaseSportApi {
       
       return {
         currentBatter,
+        currentBatterId: null,
         currentPitcher,
+        currentPitcherId: null,
         onDeckBatter
       };
     } catch (error) {
@@ -314,7 +334,9 @@ export class MLBApiService extends BaseSportApi {
       
       return {
         currentBatter,
+        currentBatterId: null,
         currentPitcher,
+        currentPitcherId: null,
         onDeckBatter
       };
     } catch (error) {

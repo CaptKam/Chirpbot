@@ -4,6 +4,7 @@ import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
+import { mlbPerformanceTracker } from './mlb-performance-tracker';
 
 export class MLBEngine extends BaseSportEngine {
   private lineMovementCache: Map<string, any> = new Map(); // Track line movements
@@ -37,6 +38,219 @@ export class MLBEngine extends BaseSportEngine {
     super('MLB');
   }
 
+  /**
+   * Update performance tracking based on game state changes
+   */
+  private updatePerformanceTracking(gameState: GameState): void {
+    try {
+      const gameId = gameState.gameId;
+      const inning = gameState.inning || 1;
+      const outs = gameState.outs || 0;
+      
+      // Track batter performance if we have current batter info
+      if (gameState.currentBatter && gameState.lastPlay) {
+        const outcome = this.parsePlayOutcome(gameState.lastPlay);
+        if (outcome) {
+          // Check for RISP (runners on 2nd or 3rd, NOT 1st)
+          const runnersInScoringPosition = gameState.hasSecond || gameState.hasThird;
+          
+          mlbPerformanceTracker.updateBatterPerformance(
+            gameId,
+            gameState.currentBatterId || `batter_${gameState.currentBatter.replace(/\s+/g, '_')}`,
+            gameState.currentBatter,
+            gameState.isTopInning ? gameState.awayTeam : gameState.homeTeam,
+            {
+              type: outcome.type,
+              inning: inning,
+              pitcher: gameState.currentPitcher || 'Unknown',
+              pitchCount: gameState.pitchCount || 0,
+              rbis: outcome.rbis,
+              runnersOn: gameState.hasFirst || gameState.hasSecond || gameState.hasThird,
+              runnersInScoringPosition: runnersInScoringPosition,
+              outs: outs
+            }
+          );
+        }
+      }
+      
+      // Track pitcher performance with proper stats
+      if (gameState.currentPitcher && gameState.lastPitch) {
+        const pitchOutcome = this.parsePitchOutcome(gameState.lastPitch);
+        if (pitchOutcome) {
+          mlbPerformanceTracker.updatePitcherPerformance(
+            gameId,
+            gameState.currentPitcherId || `pitcher_${gameState.currentPitcher.replace(/\s+/g, '_')}`,
+            gameState.currentPitcher,
+            gameState.isTopInning ? gameState.homeTeam : gameState.awayTeam,
+            {
+              type: pitchOutcome.type,
+              velocity: pitchOutcome.velocity,
+              batter: gameState.currentBatter || 'Unknown',
+              inning: inning,
+              balls: gameState.balls || 0,
+              strikes: gameState.strikes || 0,
+              isFullCount: (gameState.balls === 3 && gameState.strikes === 2),
+              isThreeBalls: (gameState.balls === 3)
+            }
+          );
+        }
+      }
+      
+      // Track team momentum for various events
+      const scoringTeam = gameState.isTopInning ? gameState.awayTeam : gameState.homeTeam;
+      const teamId = gameState.isTopInning ? 'away' : 'home';
+      
+      // Parse last play for various team events
+      if (gameState.lastPlay) {
+        const play = gameState.lastPlay.toLowerCase();
+        
+        // Check for different event types
+        if (play.includes('scores') || play.includes('run')) {
+          const runs = this.extractRBIs(play) || 1;
+          mlbPerformanceTracker.updateTeamMomentum(
+            gameId,
+            teamId,
+            scoringTeam,
+            inning,
+            {
+              type: 'run',
+              runs: runs,
+              outs: outs
+            }
+          );
+        } else if (play.includes('single') || play.includes('double') || play.includes('triple') || play.includes('hit')) {
+          mlbPerformanceTracker.updateTeamMomentum(
+            gameId,
+            teamId,
+            scoringTeam,
+            inning,
+            {
+              type: 'hit',
+              outs: outs
+            }
+          );
+        } else if (play.includes('strikes out') || play.includes('struck out')) {
+          mlbPerformanceTracker.updateTeamMomentum(
+            gameId,
+            teamId,
+            scoringTeam,
+            inning,
+            {
+              type: 'strikeout',
+              outs: outs
+            }
+          );
+        } else if (play.includes('error')) {
+          mlbPerformanceTracker.updateTeamMomentum(
+            gameId,
+            teamId,
+            scoringTeam,
+            inning,
+            {
+              type: 'error',
+              outs: outs
+            }
+          );
+        } else if (play.includes('double play')) {
+          mlbPerformanceTracker.updateTeamMomentum(
+            gameId,
+            teamId,
+            scoringTeam,
+            inning,
+            {
+              type: 'double_play',
+              outs: outs
+            }
+          );
+        }
+      }
+      
+      // Check for inning end (3 outs)
+      if (outs === 3 || gameState.inningJustEnded) {
+        mlbPerformanceTracker.updateTeamMomentum(
+          gameId,
+          teamId,
+          scoringTeam,
+          inning,
+          {
+            type: 'inning_end',
+            outs: 3
+          }
+        );
+      }
+      
+      // Clean up old games periodically
+      mlbPerformanceTracker.cleanupOldGames();
+      
+    } catch (error) {
+      console.error('❌ MLB Performance tracking error:', error);
+      // Don't let tracking errors stop alert generation
+    }
+  }
+  
+  /**
+   * Parse play outcome from play description
+   */
+  private parsePlayOutcome(playDescription: string): { type: 'hit' | 'walk' | 'strikeout' | 'out' | 'homerun' | 'double' | 'triple'; rbis?: number } | null {
+    if (!playDescription) return null;
+    
+    const play = playDescription.toLowerCase();
+    
+    if (play.includes('home run') || play.includes('homer')) {
+      const rbis = this.extractRBIs(play);
+      return { type: 'homerun', rbis };
+    }
+    if (play.includes('triple')) return { type: 'triple', rbis: this.extractRBIs(play) };
+    if (play.includes('double')) return { type: 'double', rbis: this.extractRBIs(play) };
+    if (play.includes('single') || play.includes('hit')) return { type: 'hit', rbis: this.extractRBIs(play) };
+    if (play.includes('walk') || play.includes('bb')) return { type: 'walk' };
+    if (play.includes('strikes out') || play.includes('struck out')) return { type: 'strikeout' };
+    if (play.includes('grounds out') || play.includes('flies out') || play.includes('lines out')) return { type: 'out' };
+    
+    return null;
+  }
+  
+  /**
+   * Parse pitch outcome from pitch description
+   */
+  private parsePitchOutcome(pitchDescription: string): { type: 'strike' | 'ball' | 'foul' | 'hit' | 'homerun'; velocity?: number } | null {
+    if (!pitchDescription) return null;
+    
+    const pitch = pitchDescription.toLowerCase();
+    
+    // Extract velocity if present
+    const velocityMatch = pitch.match(/(\d+)\s*mph/);
+    const velocity = velocityMatch ? parseInt(velocityMatch[1]) : undefined;
+    
+    if (pitch.includes('strike')) return { type: 'strike', velocity };
+    if (pitch.includes('ball')) return { type: 'ball', velocity };
+    if (pitch.includes('foul')) return { type: 'foul', velocity };
+    if (pitch.includes('home run') || pitch.includes('homer')) return { type: 'homerun', velocity };
+    if (pitch.includes('hit') || pitch.includes('single') || pitch.includes('double') || pitch.includes('triple')) {
+      return { type: 'hit', velocity };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Extract RBI count from play description
+   */
+  private extractRBIs(playDescription: string): number {
+    const rbiMatch = playDescription.match(/(\d+)\s*rbi/i);
+    if (rbiMatch) return parseInt(rbiMatch[1]);
+    
+    // Check for specific RBI indicators
+    if (playDescription.includes('grand slam')) return 4;
+    if (playDescription.includes('scores') || playDescription.includes('driven in')) {
+      // Count number of players mentioned as scoring
+      const scoreMatches = playDescription.match(/scores/gi);
+      return scoreMatches ? scoreMatches.length : 1;
+    }
+    
+    return 0;
+  }
+  
   /**
    * Check if an alert has already been sent recently
    */
@@ -240,8 +454,62 @@ export class MLBEngine extends BaseSportEngine {
       // Enhance game state with MLB-specific data if needed
       const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
 
+      // Update performance tracking before generating alerts
+      this.updatePerformanceTracking(enhancedGameState);
+      
+      // Get performance context for enriching alerts
+      const performanceSummary = mlbPerformanceTracker.getGamePerformanceSummary(enhancedGameState.gameId);
+      const unusualPatterns = performanceSummary ? performanceSummary.unusualPatterns : [];
+      
+      if (unusualPatterns.length > 0) {
+        console.log(`🎯 MLB Unusual patterns detected for game ${enhancedGameState.gameId}:`, unusualPatterns);
+      }
+
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
+
+      // Enrich alerts with performance context
+      if (rawAlerts.length > 0 && performanceSummary) {
+        for (const alert of rawAlerts) {
+          // Add batter performance if relevant
+          if (enhancedGameState.currentBatter && performanceSummary.batters.size > 0) {
+            const batterSummary = mlbPerformanceTracker.getBatterSummary(
+              enhancedGameState.gameId,
+              enhancedGameState.currentBatterId || 'unknown'
+            );
+            if (batterSummary) {
+              alert.context.batterPerformance = batterSummary;
+            }
+          }
+          
+          // Add pitcher performance if relevant
+          if (enhancedGameState.currentPitcher && performanceSummary.pitchers.size > 0) {
+            const pitcherSummary = mlbPerformanceTracker.getPitcherSummary(
+              enhancedGameState.gameId,
+              enhancedGameState.currentPitcherId || 'unknown'
+            );
+            if (pitcherSummary) {
+              alert.context.pitcherPerformance = pitcherSummary;
+            }
+          }
+          
+          // Add team momentum if significant
+          const teamId = enhancedGameState.isTopInning ? 'away' : 'home';
+          const momentumSummary = mlbPerformanceTracker.getTeamMomentumSummary(
+            enhancedGameState.gameId,
+            teamId
+          );
+          if (momentumSummary) {
+            alert.context.teamMomentum = momentumSummary;
+          }
+          
+          // Add unusual patterns if any
+          if (unusualPatterns.length > 0) {
+            alert.context.unusualPatterns = unusualPatterns;
+            console.log(`🎯 MLB: Alert enriched with patterns: ${unusualPatterns.join(', ')}`);
+          }
+        }
+      }
 
       // ✅ SEND RAW ALERTS TO ASYNCAI PROCESSOR FOR ENHANCEMENT FIRST
       // Process ALL generated alerts through AI enhancement before deduplication
@@ -359,8 +627,13 @@ export class MLBEngine extends BaseSportEngine {
             homeScore: enhancedData.homeScore || gameState.homeScore,
             awayScore: enhancedData.awayScore || gameState.awayScore,
             currentBatter: enhancedData.currentBatter || gameState.currentBatter,
+            currentBatterId: enhancedData.currentBatterId || gameState.currentBatterId,
             currentPitcher: enhancedData.currentPitcher || gameState.currentPitcher,
+            currentPitcherId: enhancedData.currentPitcherId || gameState.currentPitcherId,
             onDeckBatter: enhancedData.onDeckBatter || gameState.onDeckBatter,
+            lastPlay: enhancedData.lastPlay || gameState.lastPlay,
+            lastPitch: enhancedData.lastPitch || gameState.lastPitch,
+            pitchCount: enhancedData.pitchCount || gameState.pitchCount || 0,
             weatherContext,
             // Respect original game status - only force false for finished games, preserve original live state
             isLive: gameState.status === 'final' ? false : gameState.isLive
