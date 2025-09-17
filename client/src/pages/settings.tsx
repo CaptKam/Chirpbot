@@ -230,10 +230,7 @@ export default function Settings() {
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
       });
       
-      toast({
-        title: "Alert preference updated",
-        description: "Your alert settings have been saved.",
-      });
+      // Toast notification disabled to prevent popup spam during setting adjustments
     },
     onError: (error: any, variables, context) => {
       // Rollback cache to previous state
@@ -255,52 +252,15 @@ export default function Settings() {
       // Extract meaningful error message
       const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
       
-      // Check for specific error types
+      // Only show toast for critical authentication errors
       if (errorMessage.includes('401') || errorMessage.includes('not authenticated') || errorMessage.includes('ID missing')) {
         toast({
           title: "Authentication Required",
           description: "Please log in to save your alert preferences.",
           variant: "destructive",
         });
-      } else if (errorMessage.includes('globally disabled')) {
-        // Handle globally disabled alerts
-        toast({
-          title: "Alert Disabled",
-          description: "This alert type has been globally disabled by the administrator and cannot be enabled.",
-          variant: "destructive",
-        });
-      } else if (errorMessage.includes('400')) {
-        // Extract the actual error message from the 400 response
-        try {
-          const match = errorMessage.match(/400: ({.*})/);
-          if (match && match[1]) {
-            const parsed = JSON.parse(match[1]);
-            toast({
-              title: "Cannot Update",
-              description: parsed.message || "This preference cannot be updated at this time.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Error",
-              description: "Failed to update alert preference. Please try again.",
-              variant: "destructive",
-            });
-          }
-        } catch {
-          toast({
-            title: "Error",
-            description: "Failed to update alert preference. Please try again.",
-            variant: "destructive",
-          });
-        }
-      } else {
-        toast({
-          title: "Error", 
-          description: "Failed to update alert preference. Please try again.",
-          variant: "destructive",
-        });
       }
+      // Other errors are handled silently - the toggle will revert automatically due to optimistic updates
     },
   });
 
