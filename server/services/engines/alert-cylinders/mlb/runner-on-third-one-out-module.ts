@@ -35,7 +35,7 @@ export default class RunnerOnThirdOneOutModule extends BaseAlertModule {
         scenarioName: 'Runner on 3rd',
         scoringProbability: 66
       },
-      priority: 75
+      priority: 45
     };
   }
 

@@ -89,7 +89,7 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
     const alertResult: AlertResult = {
       alertKey,
       type: 'MLB_SEVENTH_INNING_STRETCH',
-      priority: isCloseGame ? 80 : 60,
+      priority: isCloseGame ? 45 : 35,
       message: `Seventh inning stretch - ${awayTeam} @ ${homeTeam} (${awayScore}-${homeScore}) - Late game transition`,
       context
     };

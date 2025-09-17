@@ -68,7 +68,7 @@ export default class RunnerOnThirdTwoOutsModule extends BaseAlertModule {
         scoringProbability: totalProbability,
         pressureLevel: 'HIGH'
       },
-      priority: Math.min(85, 70 + Math.floor(totalProbability / 8))
+      priority: 45
     };
   }
 

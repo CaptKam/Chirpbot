@@ -66,7 +66,7 @@ export default class StrikeoutModule extends BaseAlertModule {
 
     // Determine strikeout context
     let alertContext = 'Standard strikeout';
-    let priority = 70;
+    let priority = 40;
 
     const hasRunnersInScoringPosition = 
       gameState.hasSecond || gameState.hasThird;
@@ -75,10 +75,10 @@ export default class StrikeoutModule extends BaseAlertModule {
 
     if (hasRunnersInScoringPosition) {
       alertContext = 'Clutch strikeout with runners in scoring position';
-      priority = 85;
+      priority = 55;
     } else if (isHighLeverageInning && isCloseGame) {
       alertContext = 'High-leverage late inning strikeout';
-      priority = 80;
+      priority = 50;
     }
 
     const context = {

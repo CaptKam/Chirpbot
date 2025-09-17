@@ -65,7 +65,7 @@ export default class PitchingChangeModule extends BaseAlertModule {
         newPitcher: gameState.currentPitcher,
         currentBatter: gameState.currentBatter
       },
-      priority: 82
+      priority: 50
     };
   }
 

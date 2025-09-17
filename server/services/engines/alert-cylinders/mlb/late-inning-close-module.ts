@@ -137,7 +137,7 @@ export default class LateInningCloseModule extends BaseAlertModule {
         scoreDifference: scoreDiff,
         outs: gameState.outs
       },
-      priority: gameState.inning === 9 ? 95 : 90
+      priority: gameState.inning === 9 ? 55 : 50
     };
   }
 
