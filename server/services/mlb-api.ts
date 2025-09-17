@@ -125,7 +125,7 @@ export class MLBApiService extends BaseSportApi {
     // Extract play-by-play data
     const lastPlay = this.extractLastPlay(liveData);
     const lastPitch = this.extractLastPitch(liveData);
-    const pitchCount = currentPlay?.matchup?.pitchData?.pitches?.length || 0;
+    const pitchCount = (currentPlay?.playEvents || []).filter(e => e?.isPitch || e?.details?.isPitch).length;
 
     console.log(`🔍 Live data for game ${gameId}:`, {
       runners, balls, strikes, outs, inning, isTopInning, homeScore, awayScore, currentBatter, currentPitcher
@@ -316,6 +316,32 @@ export class MLBApiService extends BaseSportApi {
       console.error('Error extracting player data:', error);
       return this.generateFallbackPlayerData(gameData, isTopInning);
     }
+  }
+
+  private extractLastPlay(liveData: any): any {
+    const cp = liveData?.plays?.currentPlay;
+    if (!cp) return null;
+    return {
+      description: cp.result?.description ?? null,
+      event: cp.result?.event ?? null,
+      rbi: cp.result?.rbi ?? 0,
+      homeScore: cp.result?.homeScore ?? null,
+      awayScore: cp.result?.awayScore ?? null
+    };
+  }
+
+  private extractLastPitch(liveData: any): any {
+    const events = liveData?.plays?.currentPlay?.playEvents ?? [];
+    const pitch = [...events].reverse().find(e => e?.isPitch || e?.details?.isPitch);
+    if (!pitch) return null;
+    return {
+      pitchType: pitch.details?.type?.description ?? pitch.details?.type?.code ?? null,
+      startSpeed: pitch.pitchData?.startSpeed ?? null,
+      endSpeed: pitch.pitchData?.endSpeed ?? null,
+      call: pitch.details?.call?.description ?? null,
+      isStrike: pitch.details?.call?.code === 'S',
+      isBall: pitch.details?.call?.code === 'B'
+    };
   }
 
   private generateFallbackPlayerData(gameData: any, isTopInning: boolean): any {
