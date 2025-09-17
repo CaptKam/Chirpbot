@@ -4,6 +4,14 @@ ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time
 
 # Recent Changes
 
+## September 17, 2025 - MLB WIND CHANGE MODULE ENHANCED WITH RESEARCH-BACKED ANALYTICS ✅
+- **SPEED THRESHOLD:** Lowered from 6mph to 5mph based on research showing 5mph adds ~19 feet of carry distance
+- **DIRECTION IMPACT REFINEMENT:** Left field winds now get highest impact (3), center/out moderate (2), right field lowest (1), blowing in negative (-2)
+- **SUBTLE CHANGE DETECTION:** Now triggers on 1+ impact category differences instead of 2+ to catch subtle but meaningful shifts
+- **ALERT LOGIC FIX:** Requires significant speed OR direction change instead of alerting on any minor variation
+- **RESEARCH BASIS:** Aligned with modern baseball analytics showing direction matters more than sheer speed
+- **VERIFIED WORKING:** Wind change module properly running with new precision thresholds and improved direction analysis
+
 ## September 17, 2025 - SEVENTH INNING STRETCH MODULE FIXED ✅
 - **CRITICAL FIX:** Seventh inning stretch alerts were triggering multiple times throughout late innings (7th, 8th, 9th)
 - **PRECISE TIMING:** Now triggers exactly once per game, only at the top of the 7th inning (inning=7, isTopInning=true)

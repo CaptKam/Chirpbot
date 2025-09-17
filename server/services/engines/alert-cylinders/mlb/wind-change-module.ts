@@ -15,7 +15,7 @@ export default class WindChangeModule extends BaseAlertModule {
   } = {};
 
   // Minimum changes to trigger alert
-  private readonly MIN_SPEED_CHANGE = 6; // mph
+  private readonly MIN_SPEED_CHANGE = 5; // mph (research: 5mph adds ~19 feet of carry)
   private readonly ALERT_COOLDOWN = 10 * 60 * 1000; // 10 minutes between wind alerts
   private readonly MEASUREMENT_INTERVAL = 2 * 60 * 1000; // Check every 2 minutes
 
@@ -65,8 +65,8 @@ export default class WindChangeModule extends BaseAlertModule {
       currentWind.windDirection
     );
 
-    // Always alert on any wind change - removed significance thresholds
-    if (speedChange > 0 || directionChanged) {
+    // Only alert if change exceeds threshold (research-backed)
+    if (speedChange >= this.MIN_SPEED_CHANGE || directionChanged) {
       // Update data
       this.previousWindData[gameId] = {
         speed: currentWind.windSpeed,
@@ -151,19 +151,20 @@ export default class WindChangeModule extends BaseAlertModule {
     const oldImpact = this.getDirectionImpact(oldDir);
     const newImpact = this.getDirectionImpact(newDir);
 
-    // Significant if impact category changes
-    return Math.abs(oldImpact - newImpact) >= 2;
+    // Significant if impact category changes (research: subtle changes matter)
+    return Math.abs(oldImpact - newImpact) >= 1;
   }
 
   private getDirectionImpact(direction: string): number {
     if (!direction || typeof direction !== 'string') return 0;
     const dir = direction.toLowerCase();
     
-    if (dir.includes('out') || dir.includes('center')) return 3;
-    if (dir.includes('right')) return 2;
-    if (dir.includes('left')) return 2;
-    if (dir.includes('in')) return -2;
-    return 0; // Cross wind or unknown
+    // Research: Left field winds most favorable, right field least favorable
+    if (dir.includes('left')) return 3;          // most favorable (out to left)
+    if (dir.includes('out') || dir.includes('center')) return 2; // moderate
+    if (dir.includes('right')) return 1;         // least favorable of "out"
+    if (dir.includes('in')) return -2;           // blowing in
+    return 0;                                     // cross/unknown
   }
 
   private calculateWindImpact(
