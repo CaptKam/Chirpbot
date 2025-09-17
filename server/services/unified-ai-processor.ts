@@ -133,7 +133,7 @@ export class UnifiedAIProcessor {
   // Configuration constants
   private readonly CACHE_TTL = 30000; // 30 seconds
   private readonly MAX_CACHE_SIZE = 500;
-  private readonly AI_TIMEOUT_MS = 8000; // 8 second timeout
+  private readonly AI_TIMEOUT_MS = 3000; // 3 second timeout for faster fallback
   private readonly MAX_RETRIES = 1;
   private readonly MAX_QUEUE_SIZE = 1000;
   private readonly RESULT_TTL = 300000; // 5 minutes

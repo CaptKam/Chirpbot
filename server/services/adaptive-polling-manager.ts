@@ -57,11 +57,11 @@ export class AdaptivePollingManager {
   // Sport-specific intelligent polling intervals
   private readonly SPORT_POLLING_CONFIGS: Record<Sport, PollingConfig> = {
     MLB: {
-      scheduled: { interval: 10000, cacheTTL: 30000 },    // 10s for pre-game
-      live: { interval: 750, cacheTTL: 1500 },            // 750ms for live games (reduced from 250ms)
+      scheduled: { interval: 5000, cacheTTL: 15000 },     // 5s for pre-game (faster)
+      live: { interval: 500, cacheTTL: 750 },             // 500ms for live games (ULTRA-FAST)
       final: { interval: 60000, cacheTTL: 300000 },       // 1min for completed games  
-      delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
-      suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+      delayed: { interval: 3000, cacheTTL: 10000 },       // 3s for delayed games (faster)
+      suspended: { interval: 3000, cacheTTL: 10000 }      // 3s for suspended games (faster)
     },
     NFL: {
       scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-2)
@@ -78,18 +78,18 @@ export class AdaptivePollingManager {
       suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
     },
     WNBA: {
-      scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-10)
-      live: { interval: 500, cacheTTL: 1000 },            // 500ms for live games (V3-10)
-      final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games (V3-10)
-      delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
-      suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+      scheduled: { interval: 10000, cacheTTL: 30000 },    // 10s for pre-game (faster)
+      live: { interval: 300, cacheTTL: 600 },             // 300ms for live games (ULTRA-FAST)
+      final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games
+      delayed: { interval: 3000, cacheTTL: 10000 },       // 3s for delayed games (faster)
+      suspended: { interval: 3000, cacheTTL: 10000 }      // 3s for suspended games (faster)
     },
     NBA: {
-      scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-12)
-      live: { interval: 500, cacheTTL: 1000 },            // 500ms for live games (V3-12)
-      final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games (V3-12)
-      delayed: { interval: 5000, cacheTTL: 15000 },       // 5s for delayed games
-      suspended: { interval: 5000, cacheTTL: 15000 }      // 5s for suspended games
+      scheduled: { interval: 10000, cacheTTL: 30000 },    // 10s for pre-game (faster)
+      live: { interval: 300, cacheTTL: 600 },             // 300ms for live games (ULTRA-FAST)
+      final: { interval: 300000, cacheTTL: 600000 },      // 5min for completed games
+      delayed: { interval: 3000, cacheTTL: 10000 },       // 3s for delayed games (faster)
+      suspended: { interval: 3000, cacheTTL: 10000 }      // 3s for suspended games (faster)
     },
     CFL: {
       scheduled: { interval: 30000, cacheTTL: 60000 },    // 30s for pre-game (V3-15)

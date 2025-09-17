@@ -9,15 +9,15 @@
 export const RUNTIME = {
   // === GAME STATE POLLING ===
   calendarPoll: {
-    defaultMs: 60_000,              // Baseline: poll status every 60s
+    defaultMs: 30_000,              // Faster baseline: poll status every 30s (was 60s)
     preStartWindowMin: 10,          // T-10m to T+5m tighten polling  
-    preStartPollMs: 10_000,         // Tighten to every 10s near start (T-10m to T-2m)
+    preStartPollMs: 5_000,          // Faster pre-start: every 5s (was 10s)
     criticalWindowMin: 2,           // Critical detection window (T-2m to T+5m)
-    criticalPollMs: 2_000,          // Critical window: 2s polling for ≤5s guarantee
-    liveConfirmMs: 500,             // FIXED: 500ms confirmation (was 4s!)
-    requireConsecutive: 1,          // FIXED: Single confirmation (was 2!)
-    finalConfirmMs: 5_000,          // Confirm FINAL status 
-    pausedPollMs: 45_000,           // Poll every 45s when PAUSED
+    criticalPollMs: 1_000,          // ULTRA-FAST: 1s polling for live games (was 2s)
+    liveConfirmMs: 250,             // ULTRA-FAST: 250ms confirmation (was 500ms)
+    requireConsecutive: 1,          // Single confirmation
+    finalConfirmMs: 2_000,          // Faster final confirmation (was 5s)
+    pausedPollMs: 30_000,           // Faster paused polling (was 45s)
   },
 
   // === WEATHER SYSTEM ===
