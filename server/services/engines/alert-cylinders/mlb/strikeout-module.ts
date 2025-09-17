@@ -4,54 +4,61 @@ export default class StrikeoutModule extends BaseAlertModule {
   alertType = 'MLB_STRIKEOUT';
   sport = 'MLB';
 
-  // Track strikeout counts per game to detect significant patterns
+  // Track game states to detect actual strikeouts
+  private previousGameStates: Map<string, { outs: number, strikes: number, inning: number }> = new Map();
   private gameStrikeouts: Map<string, { totalStrikeouts: number, lastStrikeoutInning: number, consecutiveStrikeouts: number }> = new Map();
 
   isTriggered(gameState: GameState): boolean {
     if (!gameState.gameId || !gameState.isLive) return false;
 
-    // Trigger on high-impact strikeout situations:
-    // 1. 3+ consecutive strikeouts by same pitcher
-    // 2. Strikeout with runners in scoring position (2nd/3rd base)
-    // 3. Strikeout to end a high-leverage inning (7th inning or later)
-    // 4. 10+ strikeouts in game by starting pitcher
+    const gameId = gameState.gameId;
+    const currentOuts = gameState.outs || 0;
+    const currentStrikes = gameState.strikes || 0;
+    const currentInning = gameState.inning || 1;
 
-    const hasRunnersInScoringPosition = 
-      gameState.secondBase?.occupied || gameState.thirdBase?.occupied;
+    // Get previous state
+    const prevState = this.previousGameStates.get(gameId);
     
-    const isHighLeverageInning = (gameState.inning || 0) >= 7;
-    const isCloseGame = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0)) <= 2;
+    // Update previous state for next check
+    this.previousGameStates.set(gameId, {
+      outs: currentOuts,
+      strikes: currentStrikes,
+      inning: currentInning
+    });
 
-    // Track strikeouts for this game
-    const currentGameData = this.gameStrikeouts.get(gameState.gameId) || {
+    // If no previous state, don't trigger (need comparison)
+    if (!prevState) return false;
+
+    // Detect actual strikeout: strikes went to 3 OR outs increased from strikes = 2
+    const isStrikeout = (
+      currentStrikes === 3 || // Direct strikeout detection
+      (prevState.strikes === 2 && currentOuts > prevState.outs && currentStrikes === 0) // Strikeout that caused out
+    );
+
+    // Only trigger if this is an actual strikeout
+    if (!isStrikeout) return false;
+
+    // Update strikeout tracking
+    const currentGameData = this.gameStrikeouts.get(gameId) || {
       totalStrikeouts: 0,
       lastStrikeoutInning: 0,
       consecutiveStrikeouts: 0
     };
 
-    // Check if this is a new strikeout (simplified detection)
-    const isPotentialStrikeout = 
-      gameState.outs === 1 || gameState.outs === 2 || gameState.outs === 0; // Could be a strikeout
+    currentGameData.totalStrikeouts++;
+    currentGameData.lastStrikeoutInning = currentInning;
+    this.gameStrikeouts.set(gameId, currentGameData);
 
-    // High-value strikeout scenarios
-    if (isPotentialStrikeout) {
-      // Scenario 1: Strikeout with runners in scoring position
-      if (hasRunnersInScoringPosition) {
-        return true;
-      }
+    // Context for high-value strikeouts
+    const hasRunnersInScoringPosition = 
+      gameState.secondBase?.occupied || gameState.thirdBase?.occupied;
+    const isHighLeverageInning = currentInning >= 7;
+    const isCloseGame = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0)) <= 3;
 
-      // Scenario 2: Strikeout in high-leverage late inning
-      if (isHighLeverageInning && isCloseGame) {
-        return true;
-      }
-
-      // Scenario 3: High strikeout count game (10+ Ks)
-      if (currentGameData.totalStrikeouts >= 10) {
-        return true;
-      }
-    }
-
-    return false;
+    // Trigger for any strikeout in high-value situations, or every 3rd strikeout
+    return hasRunnersInScoringPosition || 
+           (isHighLeverageInning && isCloseGame) || 
+           currentGameData.totalStrikeouts % 3 === 0;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
