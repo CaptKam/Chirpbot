@@ -96,8 +96,8 @@ export default class GameStartModule extends BaseAlertModule {
     const pitcherContext = gameState.currentPitcher ? 
       mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null;
     
-    // Build enhanced message with performance context
-    let message = `⚾ FIRST PITCH: ${gameState.awayTeam} @ ${gameState.homeTeam}`;
+    // Build enhanced message with performance context (team names removed - already in header)
+    let message = `⚾ FIRST PITCH`;
     
     // Add performance context if available
     const contexts: string[] = [];

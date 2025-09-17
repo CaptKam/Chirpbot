@@ -220,8 +220,8 @@ export default class WindChangeModule extends BaseAlertModule {
         impactText = 'Neutral impact';
     }
 
-    // Build comprehensive message
-    let message = `${icon} ${gameState.awayTeam} @ ${gameState.homeTeam}: Wind shift ${oldSpeed}mph ${oldDir} → ${newSpeed}mph ${newDir} (${speedChangeText})`;
+    // Build comprehensive message (team names removed - already in header)
+    let message = `${icon} Wind shift ${oldSpeed}mph ${oldDir} → ${newSpeed}mph ${newDir} (${speedChangeText})`;
     message += ` - ${impactText}`;
 
     // Add batting context if available

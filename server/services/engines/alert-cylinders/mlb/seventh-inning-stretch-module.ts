@@ -130,8 +130,8 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
       mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null;
     const teamContext = mlbPerformanceTracker.generateTeamMomentumContext(gameState.gameId, awayTeam);
     
-    // Build enhanced message
-    let message = `Seventh inning stretch - ${awayTeam} @ ${homeTeam} (${awayScore}-${homeScore})`;
+    // Build enhanced message (team names and scores removed - already in header)
+    let message = `Seventh inning stretch`;
     
     // Add performance insights
     const contexts: string[] = [];
