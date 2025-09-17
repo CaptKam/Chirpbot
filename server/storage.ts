@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc, count, sql } from "drizzle-orm";
+import { eq, and, desc, count, sql, gte } from "drizzle-orm";
 import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, gameStates, alerts, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertGameState, type InsertAlert, type Alert } from "../shared/schema";
 import { UnifiedSettings } from "./services/unified-settings";
 
@@ -285,27 +285,49 @@ export const storage = {
 
   // Alerts operations using Drizzle schema
   async getAllAlerts() {
-    return await db.select().from(alerts).orderBy(desc(alerts.createdAt));
+    // Only return non-expired alerts to respect minimum display TTL
+    return await db.select().from(alerts)
+      .where(gte(alerts.expiresAt, new Date()))
+      .orderBy(desc(alerts.createdAt));
   },
 
   async getAlertsByUser(userId: string) {
+    // Only return non-expired alerts to respect minimum display TTL
     return await db.select().from(alerts)
-      .where(eq(alerts.userId, userId))
+      .where(and(
+        eq(alerts.userId, userId),
+        gte(alerts.expiresAt, new Date())
+      ))
       .orderBy(desc(alerts.createdAt));
   },
 
   async getDemoAlerts() {
+    // Only return non-expired demo alerts to respect minimum display TTL
     return await db.select().from(alerts)
-      .where(eq(alerts.isDemo, true))
+      .where(and(
+        eq(alerts.isDemo, true),
+        gte(alerts.expiresAt, new Date())
+      ))
       .orderBy(desc(alerts.createdAt));
   },
 
   async createAlert(alertData: InsertAlert) {
-    const result = await db.insert(alerts).values(alertData).returning();
+    // Set custom expiry time for alert persistence (5 minutes minimum display time)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5 minute minimum display TTL
+    
+    const alertWithExpiry = { 
+      ...alertData, 
+      expiresAt 
+    };
+    
+    const result = await db.insert(alerts).values(alertWithExpiry).returning();
+    console.log(`💾 Alert saved with 5min TTL: ${result[0].alertKey} (expires at ${expiresAt.toISOString()})`);
     return result[0];
   },
 
   async createDemoAlert(alertData: Omit<InsertAlert, 'isDemo'>) {
+    // Demo alerts also get 5 minute minimum display time
     const demoAlertData = { ...alertData, isDemo: true };
     return await this.createAlert(demoAlertData);
   },

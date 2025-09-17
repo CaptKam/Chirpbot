@@ -89,6 +89,8 @@ export const alerts = pgTable("alerts", {
   isDemo: boolean("is_demo").notNull().default(false),
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  // Alert persistence: minimum display time to prevent immediate disappearing
+  expiresAt: timestamp("expires_at").notNull().default(sql`NOW() + INTERVAL '5 minutes'`),
 });
 
 // Insert schemas
