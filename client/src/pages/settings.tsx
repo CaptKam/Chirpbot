@@ -68,8 +68,9 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Toggle management state
+  // Toggle management state with optimistic updates
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
+  const [optimisticPreferences, setOptimisticPreferences] = useState<Record<string, boolean>>({});
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
@@ -99,6 +100,14 @@ export default function Settings() {
     refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
+  // Clear optimistic preferences when fresh data arrives from server
+  useEffect(() => {
+    if (!preferencesLoading && alertPreferences) {
+      // Clear optimistic state as we now have fresh server data
+      setOptimisticPreferences({});
+    }
+  }, [alertPreferences, preferencesLoading]);
+
   // Telegram settings query
   const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/telegram`],
@@ -118,21 +127,30 @@ export default function Settings() {
     });
   }
 
-  // Helper to get alert preference, returning undefined during loading to prevent false UI states
+  // Helper to get alert preference with optimistic state layering
   const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
-    if (isSettingsLoading) return undefined; // Return undefined while loading to show skeleton UI
+    // Return undefined while loading to show skeleton UI
+    if (isSettingsLoading) return undefined;
 
-    // Check if the alert is globally disabled by admin (now checked for ALL users)
+    // Check if the alert is globally disabled by admin (highest priority)
     if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
       return false;
     }
 
-    // CRITICAL FIX: Don't default to true - only return true if explicitly set to true
-    // This prevents toggles from flipping back on during refetch windows
-    const preference = preferenceMap.get(alertType);
-    
-    // If preference exists, use it; otherwise default to false for stable behavior
-    return preference !== undefined ? preference : false;
+    // Priority order: optimistic state > server state > default
+    // Check optimistic state first (user's intended state during mutations)
+    if (alertType in optimisticPreferences) {
+      return optimisticPreferences[alertType];
+    }
+
+    // Then check server state from preference map
+    const serverPreference = preferenceMap.get(alertType);
+    if (serverPreference !== undefined) {
+      return serverPreference;
+    }
+
+    // Default to false for new preferences
+    return false;
   };
 
   const logoutMutation = useMutation({
@@ -146,7 +164,7 @@ export default function Settings() {
     },
   });
 
-  // Alert preferences mutation
+  // Alert preferences mutation with optimistic updates
   const updateAlertPreferenceMutation = useMutation({
     mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
       // Check if user is authenticated and has an ID
@@ -161,7 +179,46 @@ export default function Settings() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onMutate: async ({ alertType, enabled }) => {
+      // Cancel any outgoing refetches to prevent overwriting optimistic update
+      const queryKey = [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`];
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot the previous value for potential rollback
+      const previousData = queryClient.getQueryData(queryKey);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData(queryKey, (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) {
+          // If no data exists, create initial array with the new preference
+          return [{ alertType, enabled, sport: activeSport }];
+        }
+        
+        // Find existing preference for this alert type
+        const existingIndex = oldData.findIndex((pref: any) => pref.alertType === alertType);
+        
+        if (existingIndex >= 0) {
+          // Update existing preference
+          const newData = [...oldData];
+          newData[existingIndex] = { ...newData[existingIndex], enabled };
+          return newData;
+        } else {
+          // Add new preference
+          return [...oldData, { alertType, enabled, sport: activeSport }];
+        }
+      });
+      
+      // Return context for potential rollback
+      return { previousData, alertType };
+    },
+    onSuccess: (data, variables, context) => {
+      // Clear optimistic state for this alert type as server confirmed
+      setOptimisticPreferences(prev => {
+        const newState = { ...prev };
+        delete newState[variables.alertType];
+        return newState;
+      });
+      
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
       });
@@ -170,7 +227,22 @@ export default function Settings() {
         description: "Your alert settings have been saved.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback cache to previous state
+      if (context?.previousData) {
+        const queryKey = [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`];
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+      
+      // Clear optimistic state for this alert type
+      if (context?.alertType) {
+        setOptimisticPreferences(prev => {
+          const newState = { ...prev };
+          delete newState[context.alertType];
+          return newState;
+        });
+      }
+      
       // Extract meaningful error message
       const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
       
@@ -313,7 +385,7 @@ export default function Settings() {
       return;
     }
 
-    // Prevent rapid toggles of the same alert type
+    // Prevent rapid toggles of the same alert type while mutation is pending
     if (pendingToggles.has(alertType)) {
       return;
     }
@@ -324,59 +396,40 @@ export default function Settings() {
       clearTimeout(existingTimer);
     }
 
+    // Immediately update optimistic state for instant UI feedback
+    setOptimisticPreferences(prev => ({
+      ...prev,
+      [alertType]: enabled
+    }));
+
     // Add to pending toggles
     setPendingToggles(prev => new Set([...prev, alertType]));
     
-    // Optimistic update - update cache immediately for smooth UX
-    const queryKey = [`/api/user/${user.id}/alert-preferences/${activeSport.toLowerCase()}`];
-    const previousData = queryClient.getQueryData(queryKey);
-    
-    // Update cache optimistically
-    queryClient.setQueryData(queryKey, (oldData: any) => {
-      if (!oldData || !Array.isArray(oldData)) return oldData;
-      
-      // Find existing preference for this alert type
-      const existingIndex = oldData.findIndex((pref: any) => pref.alertType === alertType);
-      
-      if (existingIndex >= 0) {
-        // Update existing preference
-        const newData = [...oldData];
-        newData[existingIndex] = { ...newData[existingIndex], enabled };
-        return newData;
-      } else {
-        // Add new preference
-        return [...oldData, { alertType, enabled, sport: activeSport }];
-      }
-    });
-    
-    // Debounced mutation with enhanced error handling
+    // Debounced mutation - the actual mutation handles cache updates via onMutate
     const debounceTimer = setTimeout(() => {
-      updateAlertPreferenceMutation.mutate({ alertType, enabled }, {
-        onSuccess: () => {
-          // Remove from pending toggles on success
-          setPendingToggles(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(alertType);
-            return newSet;
-          });
-          debounceTimers.current.delete(alertType);
-        },
-        onError: () => {
-          // Rollback optimistic update on error
-          queryClient.setQueryData(queryKey, previousData);
-          // Remove from pending toggles on error
-          setPendingToggles(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(alertType);
-            return newSet;
-          });
-          debounceTimers.current.delete(alertType);
+      updateAlertPreferenceMutation.mutate(
+        { alertType, enabled },
+        {
+          onSettled: () => {
+            // Remove from pending toggles when mutation completes (success or error)
+            setPendingToggles(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(alertType);
+              return newSet;
+            });
+            debounceTimers.current.delete(alertType);
+          }
         }
-      });
+      );
     }, 300); // 300ms debounce
 
     debounceTimers.current.set(alertType, debounceTimer);
   };
+
+  // Clear optimistic preferences when switching sports
+  useEffect(() => {
+    setOptimisticPreferences({});
+  }, [activeSport]);
 
   // Populate Telegram settings from query data
   useEffect(() => {
