@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
@@ -65,12 +65,16 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
+  // Toggle management state
+  const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
+  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
     queryKey: [`/api/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 0, // Immediate invalidation to see admin changes instantly
-    refetchInterval: 5 * 1000, // Refetch every 5 seconds to catch admin toggle changes
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds (less aggressive)
   });
   
   // Extract settings from response (handles both old admin format and new public format)
@@ -80,16 +84,16 @@ export default function Settings() {
   const { data: availableAlerts, isLoading: availableAlertsLoading } = useQuery({
     queryKey: [`/api/available-alerts/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 0, // Immediate invalidation to see admin changes instantly
-    refetchInterval: 5 * 1000, // Refetch every 5 seconds to catch admin toggle changes
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes (rarely changes)
+    refetchInterval: 60 * 1000, // Refetch every 60 seconds
   });
 
   // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 0, // Immediate invalidation to see admin changes instantly
-    refetchInterval: 5 * 1000, // Refetch every 5 seconds to catch admin changes
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+    refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
   // Telegram settings query
@@ -305,6 +309,20 @@ export default function Settings() {
       });
       return;
     }
+
+    // Prevent rapid toggles of the same alert type
+    if (pendingToggles.has(alertType)) {
+      return;
+    }
+
+    // Clear any existing debounce timer for this alert type
+    const existingTimer = debounceTimers.current.get(alertType);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Add to pending toggles
+    setPendingToggles(prev => new Set([...prev, alertType]));
     
     // Optimistic update - update cache immediately for smooth UX
     const queryKey = [`/api/user/${user.id}/alert-preferences/${activeSport.toLowerCase()}`];
@@ -328,13 +346,33 @@ export default function Settings() {
       }
     });
     
-    // Perform mutation with rollback on error
-    updateAlertPreferenceMutation.mutate({ alertType, enabled }, {
-      onError: () => {
-        // Rollback optimistic update on error
-        queryClient.setQueryData(queryKey, previousData);
-      }
-    });
+    // Debounced mutation with enhanced error handling
+    const debounceTimer = setTimeout(() => {
+      updateAlertPreferenceMutation.mutate({ alertType, enabled }, {
+        onSuccess: () => {
+          // Remove from pending toggles on success
+          setPendingToggles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(alertType);
+            return newSet;
+          });
+          debounceTimers.current.delete(alertType);
+        },
+        onError: () => {
+          // Rollback optimistic update on error
+          queryClient.setQueryData(queryKey, previousData);
+          // Remove from pending toggles on error
+          setPendingToggles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(alertType);
+            return newSet;
+          });
+          debounceTimers.current.delete(alertType);
+        }
+      });
+    }, 300); // 300ms debounce
+
+    debounceTimers.current.set(alertType, debounceTimer);
   };
 
   // Populate Telegram settings from query data
@@ -416,9 +454,9 @@ export default function Settings() {
       <SportTabs
         sports={SPORTS}
         activeSport={activeSport}
-        onSportChange={setActiveSport}
-        onSportChangeCallback={() => {
-          localStorage.setItem('settings-active-sport', activeSport);
+        onSportChange={(newSport) => {
+          setActiveSport(newSport);
+          localStorage.setItem('settings-active-sport', newSport);
         }}
       />
 
@@ -526,7 +564,7 @@ export default function Settings() {
                                     </span>
                                   )}
                                 </h4>
-                                {updateAlertPreferenceMutation.isPending && (
+                                {(updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key)) && (
                                   <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
                                 )}
                               </div>
@@ -540,9 +578,9 @@ export default function Settings() {
                             <Switch
                               checked={isEnabled && !isGloballyDisabled}
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={updateAlertPreferenceMutation.isPending || isGloballyDisabled}
+                              disabled={updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key) || isGloballyDisabled}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                              className="data-[state=checked]:bg-[#10B981]"
+                              className="data-[state=checked]:bg-[#10B981] transition-all duration-200"
                             />
                           </div>
                         );
