@@ -635,7 +635,7 @@ export class UnifiedAIProcessor {
         confidenceScore: aiResponse.confidence,
         aiProcessingTime: aiResponse.aiProcessingTime
       },
-      priority: Math.max(originalAlert.priority, 90) // Boost priority for AI-enhanced alerts
+      priority: originalAlert.priority // Keep original priority - AI enhancement shouldn't artificially inflate urgency
     };
   }
 
