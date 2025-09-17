@@ -184,7 +184,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
               className="bg-slate-700/50 text-slate-200 border-slate-600/50 text-xs"
               data-testid={`alert-type-${alert.id}`}
             >
-              {alert.type.replace(/_/g, ' ')}
+              {alert.type.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '').replace(/_/g, ' ')}
             </Badge>
             <Badge 
               variant="outline"
