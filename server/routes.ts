@@ -1798,6 +1798,46 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // AI Performance Dashboard - Admin only  
+  app.get('/api/ai/performance/dashboard', requireAdmin, async (req, res) => {
+    try {
+      const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
+      const stats = unifiedAIProcessor.getStats();
+      
+      // Calculate AI utilization metrics
+      const totalRequests = stats.performance.totalRequests;
+      const aiUtilization = totalRequests > 0 ? 
+        (stats.performance.successRate / 100) : 0;
+      
+      const recommendations = [];
+      if (stats.cache.hitRate < 30) {
+        recommendations.push("Cache hit rate low - consider longer TTL or better key generation");
+      }
+      if (stats.performance.fallbackRate > 40) {
+        recommendations.push("High fallback rate - review AI gating rules or increase timeout");
+      }
+      if (aiUtilization < 0.5) {
+        recommendations.push("Low AI utilization - expand enhancement to more alert types");
+      }
+      
+      res.json({
+        utilization: {
+          aiEnhancementRate: aiUtilization,
+          cacheEfficiency: stats.cache.hitRate,
+          processingSuccessRate: stats.performance.successRate
+        },
+        performance: stats.performance,
+        cache: stats.cache,
+        queue: stats.queue,
+        sportBreakdown: stats.sportMetrics,
+        recommendations
+      });
+    } catch (error) {
+      console.error('Error getting AI performance dashboard:', error);
+      res.status(500).json({ error: 'Failed to get AI performance data' });
+    }
+  });
+
   // AI Cache statistics endpoint - Admin only  
   app.get('/api/ai/cache/stats', requireAdmin, async (req, res) => {
     try {

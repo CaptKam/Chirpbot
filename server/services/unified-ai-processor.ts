@@ -318,13 +318,17 @@ export class UnifiedAIProcessor {
     const normalizedSport = sport.toUpperCase();
     const highValueTypes = this.highValueAlertTypes[normalizedSport] || [];
     
+    // Enhanced gating: Include high-value types + probability-based inclusion
     const isHighValue = highValueTypes.includes(alertType);
-    const meetsThreshold = true; // Always allow enhancement - removed probability filter
+    const hasGoodProbability = (probability || 0) >= 60; // 60%+ probability threshold
+    const isGameStart = alertType.includes('GAME_START'); // Always enhance game starts
     
-    const shouldEnhance = isHighValue && meetsThreshold;
+    const shouldEnhance = isHighValue || hasGoodProbability || isGameStart;
     
     if (shouldEnhance) {
-      this.performanceMetrics.highValueAlerts++;
+      if (isHighValue) this.performanceMetrics.highValueAlerts++;
+    } else {
+      this.performanceMetrics.gatedAlerts++;
     }
     
     return shouldEnhance;
@@ -575,16 +579,13 @@ export class UnifiedAIProcessor {
   private getCachedResponse(key: string): UnifiedAIResponse | null {
     const cached = this.cache.get(key);
     if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
-      // Validate cached response has actual content
-      // Prevent returning cached mock responses or empty messages
+      // Relaxed validation - accept any non-empty enhanced message
       if (cached.response.enhancedMessage && 
-          cached.response.enhancedMessage.trim().length > 0 &&
-          !cached.response.enhancedMessage.includes('This alert has been enhanced by the unified AI system') &&
-          cached.response.contextualInsights.length > 0 &&
-          !cached.response.contextualInsights[0].includes('Game situation developing')) {
+          cached.response.enhancedMessage.trim().length > 10 &&
+          cached.response.enhancedMessage !== cached.response.sport) {
         return cached.response;
       } else {
-        // Remove invalid cached entry
+        // Remove truly invalid cached entry
         console.log(`🗑️ Unified AI: Removing invalid cached response for key ${key}`);
         this.cache.delete(key);
       }
