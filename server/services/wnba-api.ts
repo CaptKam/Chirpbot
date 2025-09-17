@@ -11,7 +11,7 @@ export class WNBAApiService extends BaseSportApi {
       sportTag: 'WNBA',
       rateLimits: {
         live: 1000,       // 1s for live games
-        scheduled: 30000, // 30s for scheduled games
+        scheduled: 10000, // 10s for scheduled games (reduced from 30s)
         final: 300000,    // 300s for final games
         delayed: 5000,    // 5s for delayed games
         default: 1000     // Default fallback
