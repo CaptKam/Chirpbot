@@ -5,6 +5,14 @@ import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { sendTelegramAlert, TelegramConfig } from '../telegram';
 
 export class CFLEngine extends BaseSportEngine {
+  // Deduplication tracking - tracks sent alerts to prevent duplicates (standardized from MLB)
+  private sentAlerts: Map<string, Set<string>> = new Map(); // gameId -> Set of alertKeys
+  private alertTimestamps: Map<string, number> = new Map(); // alertKey -> timestamp
+  private lastCleanup: number = Date.now();
+  private readonly ALERT_COOLDOWN_MS = 300000; // 5 minutes cooldown per alert
+  private readonly CLEANUP_INTERVAL_MS = 600000; // Clean up old entries every 10 minutes
+  private readonly MAX_ALERTS_PER_GAME = 50; // Prevent memory overload per game
+
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
@@ -20,11 +28,99 @@ export class CFLEngine extends BaseSportEngine {
     thirdDownSituations: 0,
     rougeOpportunities: 0,
     greyHupImplications: 0,
-    overtimeAlerts: 0
+    overtimeAlerts: 0,
+    duplicatesBlocked: 0,
+    alertsSent: 0
   };
 
   constructor() {
     super('CFL');
+  }
+
+  /**
+   * Check if an alert has already been sent recently (standardized from MLB)
+   */
+  private hasAlertBeenSent(gameId: string, alertKey: string): boolean {
+    // Check if this exact alert was sent recently
+    const lastSent = this.alertTimestamps.get(alertKey);
+    if (lastSent && (Date.now() - lastSent) < this.ALERT_COOLDOWN_MS) {
+      this.performanceMetrics.duplicatesBlocked++;
+      console.log(`🚫 CFL Duplicate blocked: ${alertKey} (sent ${Math.round((Date.now() - lastSent) / 1000)}s ago)`);
+      return true;
+    }
+
+    // Check if we've sent too many alerts for this game
+    const gameAlerts = this.sentAlerts.get(gameId);
+    if (gameAlerts && gameAlerts.size >= this.MAX_ALERTS_PER_GAME) {
+      console.log(`⚠️ CFL Alert limit reached for game ${gameId} (${gameAlerts.size} alerts)`);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Mark an alert as sent (standardized from MLB)
+   */
+  private markAlertSent(gameId: string, alertKey: string): void {
+    // Track by game
+    if (!this.sentAlerts.has(gameId)) {
+      this.sentAlerts.set(gameId, new Set());
+    }
+    this.sentAlerts.get(gameId)!.add(alertKey);
+
+    // Track timestamp
+    this.alertTimestamps.set(alertKey, Date.now());
+    this.performanceMetrics.alertsSent++;
+
+    console.log(`✅ CFL Alert tracked: ${alertKey} for game ${gameId}`);
+
+    // Periodic cleanup to prevent memory leaks
+    this.cleanupOldAlerts();
+  }
+
+  /**
+   * Clean up old alert tracking data to prevent memory leaks (standardized from MLB)
+   */
+  private cleanupOldAlerts(): void {
+    const now = Date.now();
+
+    // Only run cleanup periodically
+    if (now - this.lastCleanup < this.CLEANUP_INTERVAL_MS) {
+      return;
+    }
+
+    console.log(`🧹 CFL Alert cleanup: Removing alerts older than ${this.ALERT_COOLDOWN_MS}ms`);
+
+    // Clean up old timestamps
+    let removedCount = 0;
+    for (const [alertKey, timestamp] of this.alertTimestamps.entries()) {
+      if (now - timestamp > this.ALERT_COOLDOWN_MS) {
+        this.alertTimestamps.delete(alertKey);
+        removedCount++;
+      }
+    }
+
+    // Clean up game tracking for finished games (no alerts in last hour)
+    const oneHourAgo = now - 3600000;
+    for (const [gameId, alerts] of this.sentAlerts.entries()) {
+      let hasRecentAlert = false;
+      for (const alertKey of alerts) {
+        const timestamp = this.alertTimestamps.get(alertKey);
+        if (timestamp && timestamp > oneHourAgo) {
+          hasRecentAlert = true;
+          break;
+        }
+      }
+
+      if (!hasRecentAlert) {
+        this.sentAlerts.delete(gameId);
+        console.log(`🧹 CFL Removed tracking for game ${gameId}`);
+      }
+    }
+
+    this.lastCleanup = now;
+    console.log(`🧹 CFL Alert cleanup complete: removed ${removedCount} old alerts`);
   }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
@@ -170,42 +266,96 @@ export class CFLEngine extends BaseSportEngine {
     }
   }
 
-  // Override to add CFL-specific game state enhancement and performance monitoring
+  // Override to add CFL-specific game state enhancement and follow unified architecture
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const startTime = Date.now();
-    this.performanceMetrics.totalRequests++;
 
     try {
-      // Enhance game state with CFL-specific live data if needed
-      const enhanceStartTime = Date.now();
-      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
-      const enhanceTime = Date.now() - enhanceStartTime;
-      this.performanceMetrics.enhanceDataTime.push(enhanceTime);
-
-      // Use the parent class method which properly calls all loaded modules
-      const alertStartTime = Date.now();
-      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
-      const alertTime = Date.now() - alertStartTime;
-
-      // Process alerts with cross-sport AI enhancement for high-priority CFL situations
-      const alerts = await this.processEnhancedCFLAlerts(rawAlerts, enhancedGameState);
-      this.performanceMetrics.alertGenerationTime.push(alertTime);
-
-      this.performanceMetrics.totalAlerts += alerts.length;
-
-      const totalTime = Date.now() - startTime;
-      if (totalTime > 150) {
-        console.log(`⚠️ CFL Slow alert generation: ${totalTime}ms for game ${gameState.gameId} (${alerts.length} alerts)`);
+      // Early exit if game is not valid
+      if (!gameState.gameId) {
+        console.log('⚠️ CFL: No gameId provided, skipping alert generation');
+        console.log('⚠️ CFL: GameState received:', JSON.stringify({
+          id: gameState.id,
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          isLive: gameState.isLive,
+          status: gameState.status
+        }, null, 2));
+        return [];
       }
 
-      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
-      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
+      console.log(`🎯 CFL: Processing game ${gameState.gameId} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+      console.log(`🎯 CFL: Status=${gameState.status}, isLive=${gameState.isLive}, quarter=${gameState.quarter}`);
 
-      return alerts;
-    } catch (error) {
-      const totalTime = Date.now() - startTime;
-      console.error(`❌ CFL Alert generation failed after ${totalTime}ms:`, error);
-      return [];
+      // Enhance game state with CFL-specific data if needed
+      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+
+      // Use the parent class method which properly calls all loaded modules
+      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
+
+      // ✅ SEND RAW ALERTS TO ASYNCAI PROCESSOR FOR ENHANCEMENT FIRST
+      // Process ALL generated alerts through AI enhancement before deduplication
+      if (rawAlerts.length > 0) {
+        console.log(`🔄 CFL: Sending ${rawAlerts.length} raw alerts to AsyncAI processor for enhancement`);
+        const { unifiedAIProcessor } = await import('../unified-ai-processor');
+
+        // Send each raw alert to AsyncAI processor with proper context
+        for (const alert of rawAlerts) {
+          const context: CrossSportContext = {
+            sport: 'CFL' as const,
+            alertType: alert.type,
+            gameId: enhancedGameState.gameId,
+            priority: alert.priority || 75,
+            probability: alert.priority || 75,
+            homeTeam: enhancedGameState.homeTeam || 'Home',
+            awayTeam: enhancedGameState.awayTeam || 'Away',
+            homeScore: enhancedGameState.homeScore || 0,
+            awayScore: enhancedGameState.awayScore || 0,
+            isLive: enhancedGameState.isLive || false,
+            quarter: enhancedGameState.quarter || 1,
+            timeRemaining: enhancedGameState.timeRemaining,
+            down: enhancedGameState.down || 1,
+            yardsToGo: enhancedGameState.yardsToGo,
+            fieldPosition: enhancedGameState.fieldPosition,
+            possession: enhancedGameState.possession,
+            originalMessage: alert.message,
+            originalContext: alert.context
+          };
+
+          console.log(`🎯 CFL AsyncAI: Queuing ${alert.type} alert for enhancement`);
+          // NON-BLOCKING: Queue for AI enhancement in background
+          unifiedAIProcessor.queueAlert(alert, context, enhancedGameState.gameId).catch(error => {
+            console.warn(`⚠️ CFL AI Queue failed for ${alert.type}:`, error);
+          });
+        }
+      } else {
+        console.log(`🔄 CFL: No alerts generated for game ${enhancedGameState.gameId}`);
+      }
+
+      // Track CFL-specific metrics
+      if (enhancedGameState.quarter >= 4) {
+        this.performanceMetrics.overtimeAlerts++;
+      }
+      if (enhancedGameState.down === 3) {
+        this.performanceMetrics.thirdDownSituations++;
+      }
+      if (enhancedGameState.fieldPosition && enhancedGameState.fieldPosition <= 45 && enhancedGameState.down === 3) {
+        this.performanceMetrics.rougeOpportunities++;
+      }
+
+      this.performanceMetrics.totalAlerts += rawAlerts.length;
+
+      // Return raw alerts for tracking (AsyncAI will handle the actual broadcasting)
+      return rawAlerts;
+    } finally {
+      const alertTime = Date.now() - startTime;
+      this.performanceMetrics.alertGenerationTime.push(alertTime);
+
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.alertGenerationTime.length > 100) {
+        this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-100);
+      }
     }
   }
 
@@ -213,84 +363,53 @@ export class CFLEngine extends BaseSportEngine {
     const startTime = Date.now();
 
     try {
-      // Get live data from CFL API if game is live
-      if (gameState.isLive && gameState.gameId) {
+      console.log(`🔧 CFL Enhancement: Game ${gameState.gameId} - status=${gameState.status}, isLive=${gameState.isLive}`);
+
+      // Get live data from CFL API for any non-final game (fixes catch-22 gating loop)
+      if (gameState.gameId && gameState.status !== 'final') {
+        console.log(`✅ CFL Enhancement: Fetching enhanced data for non-final game ${gameState.gameId}`);
         const { CFLApiService } = await import('../cfl-api');
         const cflApi = new CFLApiService();
-        // Note: CFL API doesn't provide enhanced data like MLB
-        // Return game state as-is for now
+        const enhancedData = await cflApi.getEnhancedGameData(gameState.gameId);
+
+        if (enhancedData && !enhancedData.error) {
+          this.performanceMetrics.cacheHits++;
+          
+          const enhancedGameState = {
+            ...gameState,
+            quarter: enhancedData.quarter || gameState.quarter || 1,
+            timeRemaining: enhancedData.timeRemaining || gameState.timeRemaining,
+            down: enhancedData.down || gameState.down,
+            yardsToGo: enhancedData.yardsToGo || gameState.yardsToGo,
+            fieldPosition: enhancedData.fieldPosition || gameState.fieldPosition,
+            homeScore: enhancedData.homeScore || gameState.homeScore,
+            awayScore: enhancedData.awayScore || gameState.awayScore,
+            possession: enhancedData.possession || gameState.possession,
+            // Respect original game status - only force false for finished games, preserve original live state
+            isLive: gameState.status === 'final' ? false : gameState.isLive
+          };
+          console.log(`🚀 CFL Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, quarter=${enhancedGameState.quarter}, down=${enhancedGameState.down}`);
+          return enhancedGameState;
+        } else {
+          this.performanceMetrics.cacheMisses++;
+        }
       }
     } catch (error) {
       console.error('Error enhancing CFL game state with live data:', error);
+      this.performanceMetrics.cacheMisses++;
     } finally {
       const enhanceTime = Date.now() - startTime;
       this.performanceMetrics.gameStateEnhancementTime.push(enhanceTime);
+
+      // Keep only last 100 measurements for performance
+      if (this.performanceMetrics.gameStateEnhancementTime.length > 100) {
+        this.performanceMetrics.gameStateEnhancementTime = this.performanceMetrics.gameStateEnhancementTime.slice(-100);
+      }
     }
 
     return gameState;
   }
 
-  // Process alerts with cross-sport AI enhancement for high-priority CFL situations
-  private async processEnhancedCFLAlerts(rawAlerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
-    const enhancedAlerts: AlertResult[] = [];
-    const aiStartTime = Date.now();
-
-    for (const alert of rawAlerts) {
-      try {
-        // Only enhance high-priority alerts (>= 85 probability)
-        const probability = await this.calculateProbability(gameState);
-
-        if (probability >= 85) {
-          console.log(`🧠 CFL AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
-
-          // Build cross-sport context for CFL
-          const aiContext: CrossSportContext = {
-            sport: 'CFL',
-            gameId: gameState.gameId,
-            alertType: alert.type,
-            priority: alert.priority,
-            probability: probability,
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            isLive: gameState.isLive,
-            quarter: gameState.quarter,
-            timeRemaining: gameState.timeRemaining,
-            down: gameState.down,
-            yardsToGo: gameState.yardsToGo,
-            fieldPosition: gameState.fieldPosition,
-            possession: gameState.possession,
-            originalMessage: alert.message,
-            originalContext: alert.context
-          };
-
-          // NON-BLOCKING: Queue for AI enhancement in background
-          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
-            console.warn(`⚠️ CFL AI Queue failed for ${alert.type}:`, error);
-          });
-
-          // Return original alert immediately - AI enhancement happens in background
-          enhancedAlerts.push(alert);
-        } else {
-          // Keep original alert for lower-priority situations
-          enhancedAlerts.push(alert);
-        }
-      } catch (error) {
-        console.error(`❌ CFL AI Enhancement failed for ${alert.type}:`, error);
-        // Fallback to original alert on error
-        enhancedAlerts.push(alert);
-      }
-    }
-
-    const aiTime = Date.now() - aiStartTime;
-    this.performanceMetrics.aiEnhancementTime.push(aiTime);
-    if (aiTime > 50) {
-      console.log(`⚠️ CFL AI Enhancement slow: ${aiTime}ms (target: <50ms)`);
-    }
-
-    return enhancedAlerts;
-  }
 
   // V3-15: Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
@@ -394,40 +513,6 @@ export class CFLEngine extends BaseSportEngine {
     };
   }
 
-  // New method to deliver alerts to Telegram
-  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    if (!alerts || alerts.length === 0) {
-      return;
-    }
-
-    try {
-      const telegramConfig: TelegramConfig = await this.settingsCache.getTelegramConfig();
-      if (!telegramConfig || !telegramConfig.enabled) {
-        // console.log('Telegram alerts are disabled.');
-        return;
-      }
-
-      for (const alert of alerts) {
-        // Format message for Telegram
-        let message = `*${alert.type}*:\n${alert.message}\n\n`;
-        message += `*Game*: ${gameState.homeTeam} vs ${gameState.awayTeam}\n`;
-        message += `*Score*: ${gameState.homeScore} - ${gameState.awayScore}\n`;
-        message += `*Quarter*: ${gameState.quarter}, *Time Remaining*: ${gameState.timeRemaining}`;
-
-        // Send to Telegram
-        await sendTelegramAlert(message, telegramConfig);
-        // console.log(`Sent alert to Telegram: ${alert.type}`);
-      }
-    } catch (error) {
-      console.error('Error delivering alerts to Telegram:', error);
-    }
-  }
-
-  // Override deliverAlertsToAllChannels to include Telegram
-  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    await super.deliverAlertsToAllChannels(alerts, gameState); // Deliver to existing channels (e.g., WebSocket)
-    await this.deliverAlertsToTelegram(alerts, gameState); // Deliver to Telegram
-  }
 
 
   // V3-15: CFL-specific utility methods with performance optimization
