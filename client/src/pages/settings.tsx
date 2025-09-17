@@ -108,12 +108,22 @@ export default function Settings() {
   });
 
   // Clear optimistic preferences when fresh data arrives from server
+  // Only clear preferences that are not currently being mutated
   useEffect(() => {
     if (!preferencesLoading && alertPreferences) {
-      // Clear optimistic state as we now have fresh server data
-      setOptimisticPreferences({});
+      // Only clear optimistic state for preferences that aren't currently pending
+      setOptimisticPreferences(prev => {
+        const newOptimistic = { ...prev };
+        Object.keys(newOptimistic).forEach(alertType => {
+          // Don't clear optimistic state for preferences that are still pending
+          if (!pendingToggles.has(alertType)) {
+            delete newOptimistic[alertType];
+          }
+        });
+        return newOptimistic;
+      });
     }
-  }, [alertPreferences, preferencesLoading]);
+  }, [alertPreferences, preferencesLoading, pendingToggles]);
 
   // Telegram settings query
   const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
@@ -219,12 +229,8 @@ export default function Settings() {
       return { previousData, alertType };
     },
     onSuccess: (data, variables, context) => {
-      // Clear optimistic state for this alert type as server confirmed
-      setOptimisticPreferences(prev => {
-        const newState = { ...prev };
-        delete newState[variables.alertType];
-        return newState;
-      });
+      // Don't immediately clear optimistic state - let the useEffect handle it
+      // after fresh server data arrives to prevent race conditions
       
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
