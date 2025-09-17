@@ -101,12 +101,22 @@ export default function Settings() {
   });
 
   // Clear optimistic preferences when fresh data arrives from server
+  // BUT only for items that aren't currently being mutated
   useEffect(() => {
     if (!preferencesLoading && alertPreferences) {
-      // Clear optimistic state as we now have fresh server data
-      setOptimisticPreferences({});
+      // Only clear optimistic state for items that aren't being mutated
+      setOptimisticPreferences(prev => {
+        const newState = { ...prev };
+        // Keep optimistic state for items that are still pending
+        Object.keys(newState).forEach(key => {
+          if (!pendingToggles.has(key)) {
+            delete newState[key];
+          }
+        });
+        return newState;
+      });
     }
-  }, [alertPreferences, preferencesLoading]);
+  }, [alertPreferences, preferencesLoading, pendingToggles]);
 
   // Telegram settings query
   const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
@@ -212,16 +222,14 @@ export default function Settings() {
       return { previousData, alertType };
     },
     onSuccess: (data, variables, context) => {
-      // Clear optimistic state for this alert type as server confirmed
-      setOptimisticPreferences(prev => {
-        const newState = { ...prev };
-        delete newState[variables.alertType];
-        return newState;
-      });
+      // Don't clear optimistic state immediately - let it persist until fresh data arrives
+      // This prevents flicker during the invalidation/refetch cycle
       
+      // Invalidate to trigger refetch with fresh data
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
       });
+      
       toast({
         title: "Alert preference updated",
         description: "Your alert settings have been saved.",
@@ -234,11 +242,12 @@ export default function Settings() {
         queryClient.setQueryData(queryKey, context.previousData);
       }
       
-      // Clear optimistic state for this alert type
-      if (context?.alertType) {
+      // Clear optimistic state for this alert type on error
+      // This reverts the toggle back to its previous state
+      if (variables?.alertType) {
         setOptimisticPreferences(prev => {
           const newState = { ...prev };
-          delete newState[context.alertType];
+          delete newState[variables.alertType];
           return newState;
         });
       }
@@ -417,6 +426,17 @@ export default function Settings() {
               newSet.delete(alertType);
               return newSet;
             });
+            
+            // Clear optimistic state for this item after a slight delay
+            // This ensures fresh data has time to arrive and prevents flicker
+            setTimeout(() => {
+              setOptimisticPreferences(prev => {
+                const newState = { ...prev };
+                delete newState[alertType];
+                return newState;
+              });
+            }, 150);
+            
             debounceTimers.current.delete(alertType);
           }
         }
@@ -427,8 +447,15 @@ export default function Settings() {
   };
 
   // Clear optimistic preferences when switching sports
+  // Also clear any pending toggles since we're changing context
   useEffect(() => {
+    // Cancel any pending debounce timers when switching sports
+    debounceTimers.current.forEach(timer => clearTimeout(timer));
+    debounceTimers.current.clear();
+    
+    // Clear both optimistic state and pending toggles
     setOptimisticPreferences({});
+    setPendingToggles(new Set());
   }, [activeSport]);
 
   // Populate Telegram settings from query data
