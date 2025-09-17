@@ -49,7 +49,7 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
     const pressureContext = this.analyzePressureSituation(gameState);
 
     return {
-      alertKey: `${gameState.gameId}_bases_loaded_two_outs_${gameState.inning}_${Date.now()}`,
+      alertKey: `${gameState.gameId}_bases_loaded_two_outs_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${gameState.outs}`,
       type: this.alertType,
       message: this.buildEnhancedMessage(gameState, batterPerformance, pitcherPerformance, teamMomentum, patterns),
       context: {
@@ -137,12 +137,12 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
   }
   
   private analyzePressureSituation(gameState: GameState): any {
-    const pitchCount = gameState.currentPitcher?.pitchCount || gameState.pitchCount || 0;
+    const pitchCount = gameState.pitchCount || 0;  // Direct access to available field
     
     return {
       pitcherStress: pitchCount > 25 ? 'extreme' : 'high',
       cannotWalk: 'Must throw strikes - walk forces in run',
-      previousTwoOutSuccess: gameState.currentPitcher?.twoOutERA || 3.50,
+      previousTwoOutSuccess: 3.50,  // Default value, would need separate tracking
       pressureRating: 'maximum',
       likelyPitch: gameState.strikes >= 2 ? 'Waste pitch possible' : 'Strike zone attack'
     };
@@ -176,12 +176,24 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
       }
     }
     
-    // Add pitcher fatigue or control issues
+    // Add pitcher fatigue with proper parsing
     if (pitcherPerformance) {
+      // Parse pitch count correctly - look for "X pitches" pattern
+      const pitchMatch = pitcherPerformance.match(/(\d+)\s*pitches/i);
+      const pitchCount = pitchMatch ? parseInt(pitchMatch[1]) : gameState.pitchCount || 0;
+      
+      // Parse velocity changes
+      const velocityMatch = pitcherPerformance.match(/velocity\s*(down|up)\s*(\d+)\s*mph/i);
+      
       if (pitcherPerformance.includes('consecutive balls') || pitcherPerformance.includes('walked')) {
         message += ` | Pitcher control issues: ${pitcherPerformance}`;
-      } else if (pitcherPerformance.includes('pitches') && parseInt(pitcherPerformance.match(/\d+/)?.[0] || '0') > 90) {
-        message += ` | Pitcher fatigue risk: ${pitcherPerformance}`;
+      } else if (pitchCount > 90) {
+        message += ` | Pitcher fatigue risk: ${pitchCount} pitches`;
+        if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
+          message += `, velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
+        }
+      } else if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
+        message += ` | Velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
       }
     }
     

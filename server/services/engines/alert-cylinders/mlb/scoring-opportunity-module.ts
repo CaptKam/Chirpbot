@@ -124,7 +124,7 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
     }
     
     return {
-      alertKey: `${gameState.gameId}_scoring_opp_${gameState.inning}_${Date.now()}`,
+      alertKey: `${gameState.gameId}_scoring_opp_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${hasRunnerSecond ? '2' : ''}${hasRunnerThird ? '3' : ''}_${gameState.outs}out`,
       type: this.alertType,
       message,
       context: {

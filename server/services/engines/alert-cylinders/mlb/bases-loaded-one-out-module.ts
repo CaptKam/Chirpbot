@@ -63,12 +63,24 @@ export default class BasesLoadedOneOutModule extends BaseAlertModule {
   ): string {
     let message = `⚡ HIGH LEVERAGE | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | BASES LOADED, 1 OUT | 66% scoring edge`;
     
-    // Add pitcher performance context
+    // Add pitcher performance with proper parsing
     if (pitcherPerformance) {
+      // Parse pitch count correctly - look for "X pitches" pattern
+      const pitchMatch = pitcherPerformance.match(/(\d+)\s*pitches/i);
+      const pitchCount = pitchMatch ? parseInt(pitchMatch[1]) : gameState.pitchCount || 0;
+      
+      // Parse velocity changes  
+      const velocityMatch = pitcherPerformance.match(/velocity\s*(down|up)\s*(\d+)\s*mph/i);
+      
       if (pitcherPerformance.includes('consecutive balls')) {
         message += ` | Pitcher control breaking down: ${pitcherPerformance}`;
-      } else if (pitcherPerformance.includes('pitches') && parseInt(pitcherPerformance.match(/\d+/)?.[0] || '0') > 70) {
-        message += ` | Pitcher workload: ${pitcherPerformance}`;
+      } else if (pitchCount > 70) {
+        message += ` | Pitcher workload: ${pitchCount} pitches`;
+        if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
+          message += `, velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
+        }
+      } else if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
+        message += ` | Velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
       }
     }
     

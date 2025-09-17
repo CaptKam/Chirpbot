@@ -49,7 +49,7 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
     const batterContext = this.analyzeBatterSituation(gameState);
 
     return {
-      alertKey: `${gameState.gameId}_bases_loaded_no_outs_${gameState.inning}_${Date.now()}`,
+      alertKey: `${gameState.gameId}_bases_loaded_no_outs_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${gameState.outs}`,
       type: this.alertType,
       message: this.buildEnhancedMessage(gameState, batterPerformance, pitcherPerformance, teamMomentum),
       context: {
@@ -111,15 +111,16 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
   }
   
   private analyzePitcherSituation(gameState: GameState): any {
-    // Enhanced pitcher analysis
-    const pitchCount = gameState.currentPitcher?.pitchCount || gameState.pitchCount || 0;
-    const inningsPitched = gameState.currentPitcher?.inningsPitched || 0;
+    // Use structured data from gameState directly
+    const pitchCount = gameState.pitchCount || 0;  // Direct access to available field
+    const balls = gameState.balls || 0;
+    const strikes = gameState.strikes || 0;
     
     return {
       pitchCount,
       fatigue: pitchCount > 80 ? 'extreme' : pitchCount > 60 ? 'high' : pitchCount > 40 ? 'moderate' : 'low',
-      control: gameState.balls > gameState.strikes ? 'struggling' : 'maintaining',
-      recentWalks: gameState.currentPitcher?.recentWalks || 0,
+      control: balls > strikes ? 'struggling' : 'maintaining',
+      recentWalks: 0,  // Would need to be tracked separately
       stressLevel: 'maximum' // Bases loaded is always maximum stress
     };
   }
@@ -149,12 +150,24 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
   ): string {
     let message = `Bases loaded, no outs - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) - 86% scoring probability`;
     
-    // Add pitcher performance if struggling
+    // Add pitcher performance with proper parsing
     if (pitcherPerformance) {
+      // Parse pitch count correctly - look for "X pitches" pattern
+      const pitchMatch = pitcherPerformance.match(/(\d+)\s*pitches/i);
+      const pitchCount = pitchMatch ? parseInt(pitchMatch[1]) : gameState.pitchCount || 0;
+      
+      // Parse velocity changes
+      const velocityMatch = pitcherPerformance.match(/velocity\s*(down|up)\s*(\d+)\s*mph/i);
+      
       if (pitcherPerformance.includes('consecutive balls') || pitcherPerformance.includes('struggling')) {
         message += ` | Pitcher control issues: ${pitcherPerformance}`;
-      } else if (pitcherPerformance.includes('pitches') && parseInt(pitcherPerformance.match(/\d+/)?.[0] || '0') > 80) {
-        message += ` | Pitcher fatigue: ${pitcherPerformance}`;
+      } else if (pitchCount > 80) {
+        message += ` | Pitcher fatigue: ${pitchCount} pitches`;
+        if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
+          message += `, velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
+        }
+      } else if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
+        message += ` | Velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
       }
     }
     

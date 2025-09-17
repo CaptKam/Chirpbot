@@ -70,14 +70,26 @@ export default class LateInningCloseModule extends BaseAlertModule {
       message += ` - Final inning`;
     }
     
-    // Add bullpen/closer context
+    // Add bullpen/closer context with proper parsing
     if (pitcherPerformance) {
+      // Parse pitch count correctly - look for "X pitches" pattern
+      const pitchMatch = pitcherPerformance.match(/(\d+)\s*pitches/i);
+      const pitchCount = pitchMatch ? parseInt(pitchMatch[1]) : gameState.pitchCount || 0;
+      
+      // Parse velocity changes
+      const velocityMatch = pitcherPerformance.match(/velocity\s*(down|up)\s*(\d+)\s*mph/i);
+      
       if (pitcherPerformance.includes('Closer in') || pitcherPerformance.includes('Setup man')) {
         message += ` | ${pitcherPerformance}`;
-      } else if (pitcherPerformance.includes('pitches') && parseInt(pitcherPerformance.match(/\d+/)?.[0] || '0') > 100) {
-        message += ` | Starter fatigued: ${pitcherPerformance}`;
+      } else if (pitchCount > 100) {
+        message += ` | Starter fatigued: ${pitchCount} pitches`;
+        if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
+          message += `, velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
+        }
       } else if (pitcherPerformance.includes('consecutive balls') || pitcherPerformance.includes('walked')) {
         message += ` | Pitcher struggling: ${pitcherPerformance}`;
+      } else if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
+        message += ` | Velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
       }
     }
     
@@ -111,7 +123,7 @@ export default class LateInningCloseModule extends BaseAlertModule {
     }
     
     return {
-      alertKey: `${gameState.gameId}_late_close_${gameState.inning}_${Date.now()}`,
+      alertKey: `${gameState.gameId}_late_close_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${scoreDiff}`,
       type: this.alertType,
       message,
       context: {
