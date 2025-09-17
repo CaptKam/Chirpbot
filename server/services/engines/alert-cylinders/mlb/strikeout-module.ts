@@ -51,7 +51,7 @@ export default class StrikeoutModule extends BaseAlertModule {
 
     // Context for high-value strikeouts
     const hasRunnersInScoringPosition = 
-      gameState.secondBase?.occupied || gameState.thirdBase?.occupied;
+      gameState.hasSecond || gameState.hasThird;
     const isHighLeverageInning = currentInning >= 7;
     const isCloseGame = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0)) <= 3;
 
@@ -69,7 +69,7 @@ export default class StrikeoutModule extends BaseAlertModule {
     let priority = 70;
 
     const hasRunnersInScoringPosition = 
-      gameState.secondBase?.occupied || gameState.thirdBase?.occupied;
+      gameState.hasSecond || gameState.hasThird;
     const isHighLeverageInning = (gameState.inning || 0) >= 7;
     const isCloseGame = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0)) <= 2;
 
@@ -148,7 +148,7 @@ export default class StrikeoutModule extends BaseAlertModule {
 
     // Increase probability based on situation
     const hasRunnersInScoringPosition = 
-      gameState.secondBase?.occupied || gameState.thirdBase?.occupied;
+      gameState.hasSecond || gameState.hasThird;
     const isHighLeverageInning = (gameState.inning || 0) >= 7;
     const isCloseGame = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0)) <= 2;
 
