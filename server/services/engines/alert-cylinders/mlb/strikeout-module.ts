@@ -132,11 +132,35 @@ export default class StrikeoutModule extends BaseAlertModule {
       ]
     };
 
+    // Build streamlined message focusing on betting-critical context
+    let message = `⚾ K! ${gameState.currentPitcher || 'Pitcher'} strikes out batter | ${alertContext}`;
+    
+    // Add betting-critical leverage indicators
+    const leverageIndicators: string[] = [];
+    
+    if (hasRunnersInScoringPosition) {
+      leverageIndicators.push('Stranded runners');
+    }
+    
+    if (isHighLeverageInning && isCloseGame) {
+      leverageIndicators.push('High pressure');
+    }
+    
+    // Add pitcher dominance context for betting
+    const gameData = this.gameStrikeouts.get(gameState.gameId!);
+    if (gameData && gameData.totalStrikeouts >= 6) {
+      leverageIndicators.push('Pitcher dominance');
+    }
+    
+    if (leverageIndicators.length > 0) {
+      message += ` | ${leverageIndicators.join(', ')}`;
+    }
+    
     return {
       alertKey,
       type: 'MLB_STRIKEOUT',
       priority,
-      message: `⚾ K! ${gameState.currentPitcher || 'Pitcher'} strikes out batter | ${alertContext} | Inning ${gameState.inning}, ${gameState.outs} outs`,
+      message,
       context
     };
   }

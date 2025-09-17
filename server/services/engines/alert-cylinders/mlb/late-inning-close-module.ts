@@ -56,19 +56,33 @@ export default class LateInningCloseModule extends BaseAlertModule {
     const batterContext = gameState.currentBatter ? 
       mlbPerformanceTracker.generateBatterContext(gameState.gameId, gameState.currentBatter) : null;
     
-    let message = `Late inning close game - ${inningText} - `;
+    // Build leverage-focused message without duplicate team/score info
+    let message = `${inningText}`;
     
     if (scoreDiff === 0) {
-      message += `Tied ${gameState.homeScore}-${gameState.awayScore}`;
+      message += `, tied game`;
     } else {
-      const leadingTeam = gameState.homeScore > gameState.awayScore ? gameState.homeTeam : gameState.awayTeam;
-      message += `${leadingTeam} leads by ${scoreDiff}`;
+      message += `, ${scoreDiff}-run lead`;
     }
     
-    message += ` - ${gameState.awayTeam} @ ${gameState.homeTeam}`;
-    
     if (gameState.inning === 9) {
-      message += ` - Final inning`;
+      message += `, final inning`;
+    }
+    
+    // Add betting-critical leverage indicators
+    const leverageIndicators: string[] = [];
+    
+    // High pressure situation indicator
+    if (gameState.inning >= 8) {
+      leverageIndicators.push('High leverage');
+    }
+    
+    if (scoreDiff <= 1) {
+      leverageIndicators.push('Clutch moment');
+    }
+    
+    if (leverageIndicators.length > 0) {
+      message += ` | ${leverageIndicators.join(', ')}`;
     }
     
     // Add enhanced performance context
@@ -91,14 +105,14 @@ export default class LateInningCloseModule extends BaseAlertModule {
     if (trailingTeam && scoreDiff > 0) {
       const trailingMomentum = trailingTeam === gameState.homeTeam ? homeTeamMomentum : awayTeamMomentum;
       if (trailingMomentum) {
-        contexts.push(`${trailingTeam}: ${trailingMomentum}`);
+        contexts.push(`Trailing team: ${trailingMomentum}`);
       }
     } else if (scoreDiff === 0) {
-      // Tied game - show most relevant momentum
+      // Tied game - show most relevant momentum without team names
       if (homeTeamMomentum) {
-        contexts.push(`${gameState.homeTeam}: ${homeTeamMomentum}`);
+        contexts.push(`Home momentum: ${homeTeamMomentum}`);
       } else if (awayTeamMomentum) {
-        contexts.push(`${gameState.awayTeam}: ${awayTeamMomentum}`);
+        contexts.push(`Away momentum: ${awayTeamMomentum}`);
       }
     }
     

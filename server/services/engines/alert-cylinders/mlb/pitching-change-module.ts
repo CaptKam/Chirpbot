@@ -48,7 +48,40 @@ export default class PitchingChangeModule extends BaseAlertModule {
   generateAlert(gameState: GameState): AlertResult | null {
     const inningText = gameState.isTopInning ? `Top ${gameState.inning}` : `Bottom ${gameState.inning}`;
     
-    const message = `⚾ PITCHING CHANGE! ${inningText} | New pitcher: ${gameState.currentPitcher} | ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
+    // Build message focusing on betting-critical leverage without duplicate team/score info
+    let message = `⚾ PITCHING CHANGE! ${inningText} | New pitcher: ${gameState.currentPitcher}`;
+    
+    // Add leverage indicators for betting context
+    const leverageIndicators: string[] = [];
+    
+    // Determine if this is a high-leverage situation
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    const isCloseGame = scoreDiff <= 3;
+    const isLateInning = gameState.inning >= 7;
+    
+    if (isLateInning && isCloseGame) {
+      leverageIndicators.push('High leverage');
+    }
+    
+    if (gameState.inning >= 9) {
+      leverageIndicators.push('Critical moment');
+    }
+    
+    // Check for runners in scoring position
+    if (gameState.hasSecond || gameState.hasThird) {
+      leverageIndicators.push('Runners in scoring position');
+    }
+    
+    // Add reliever role context if late inning
+    if (gameState.inning >= 8) {
+      leverageIndicators.push('Setup/closer role');
+    }
+    
+    if (leverageIndicators.length > 0) {
+      message += ` | ${leverageIndicators.join(', ')}`;
+    } else {
+      message += ` | Standard substitution`;
+    }
     
     return {
       alertKey: `${gameState.gameId}_pitching_change_${gameState.currentPitcher}_${Date.now()}`,
