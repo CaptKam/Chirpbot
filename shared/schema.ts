@@ -73,7 +73,7 @@ export const globalAlertSettings = pgTable("global_alert_settings", {
   uniqueSportAlertType: unique("unique_sport_alert_type").on(table.sport, table.alertType)
 }));
 
-// Alerts table for storing all alerts with demo support
+// Alerts table for storing all alerts
 export const alerts = pgTable("alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   alertKey: varchar("alert_key").notNull(),
@@ -85,8 +85,6 @@ export const alerts = pgTable("alerts", {
   state: text("state").notNull(),
   score: integer("score").notNull().default(0),
   payload: jsonb("payload").notNull(),
-  // Demo support columns
-  isDemo: boolean("is_demo").notNull().default(false),
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   // Alert persistence: minimum display time to prevent immediate disappearing

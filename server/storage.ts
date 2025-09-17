@@ -301,15 +301,6 @@ export const storage = {
       .orderBy(desc(alerts.createdAt));
   },
 
-  async getDemoAlerts() {
-    // Only return non-expired demo alerts to respect minimum display TTL
-    return await db.select().from(alerts)
-      .where(and(
-        eq(alerts.isDemo, true),
-        gte(alerts.expiresAt, new Date())
-      ))
-      .orderBy(desc(alerts.createdAt));
-  },
 
   async createAlert(alertData: InsertAlert) {
     // Set custom expiry time for alert persistence (5 minutes minimum display time)
@@ -326,15 +317,7 @@ export const storage = {
     return result[0];
   },
 
-  async createDemoAlert(alertData: Omit<InsertAlert, 'isDemo'>) {
-    // Demo alerts also get 5 minute minimum display time
-    const demoAlertData = { ...alertData, isDemo: true };
-    return await this.createAlert(demoAlertData);
-  },
 
-  async clearDemoAlerts() {
-    await db.delete(alerts).where(eq(alerts.isDemo, true));
-  },
 
   // User monitored teams
   async getUserMonitoredTeams(userId: string) {

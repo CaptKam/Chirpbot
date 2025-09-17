@@ -2333,7 +2333,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return;
       }
 
-      // Get user details to check if this is a demo user
+      // Get user details
       const user = await storage.getUserById(currentUserId);
       if (!user) {
         console.log(`⚠️ ALERTS API: User not found for ID: ${currentUserId}`);
@@ -2341,45 +2341,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return;
       }
 
-      const isDemoUser = user.username === 'demo';
-      console.log(`🔍 ALERTS API: User ${user.username} is ${isDemoUser ? 'DEMO' : 'REAL'} user`);
-
-      // Demo users get demo alerts only, skip monitored games filtering
-      if (isDemoUser) {
-        console.log(`🎯 DEMO USER: Fetching demo alerts only`);
-        const demoAlerts = await storage.getDemoAlerts();
-
-        if (!demoAlerts || demoAlerts.length === 0) {
-          console.log(`📝 No demo alerts found`);
-          res.json([]);
-          return;
-        }
-
-        // Transform demo alerts to match expected format
-        const transformedAlerts = demoAlerts.map((alert: any) => ({
-          id: alert.id,
-          alertKey: alert.alertKey,
-          type: alert.type,
-          message: alert.payload?.message || `${alert.type} alert`,
-          gameId: alert.gameId,
-          sport: alert.sport,
-          homeTeam: alert.payload?.homeTeam || 'Home Team',
-          awayTeam: alert.payload?.awayTeam || 'Away Team',
-          homeScore: alert.payload?.homeScore,
-          awayScore: alert.payload?.awayScore,
-          confidence: alert.payload?.confidence || alert.score || 85,
-          priority: alert.payload?.priority || 80,
-          context: alert.payload?.context || '',
-          aiAdvice: alert.payload?.aiAdvice || '',
-          betting: alert.payload?.betting || {},
-          timestamp: alert.createdAt,
-          created_at: alert.createdAt
-        }));
-
-        console.log(`📊 Returning ${transformedAlerts.length} demo alerts`);
-        res.json(transformedAlerts);
-        return;
-      }
+      console.log(`🔍 ALERTS API: User ${user.username} requesting alerts`);
 
       // Get user's monitored games
       const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
@@ -2393,16 +2355,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return;
       }
 
-      // Get alerts from database - filter by monitored game IDs and exclude demo alerts for real users
+      // Get alerts from database - filter by monitored game IDs using parameterized query
       const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
-      const result = await db.execute(sql`
+      const result = await db.execute(sql.raw(`
         SELECT id, type, game_id, sport, score, payload, created_at
         FROM alerts
-        WHERE game_id IN (${sql.raw(monitoredGameIds.map(id => `'${id}'`).join(','))})
-        AND (is_demo IS NULL OR is_demo = false)
+        WHERE game_id IN (${gameIdsPlaceholder})
         ORDER BY created_at DESC
-        LIMIT ${limit}
-      `);
+        LIMIT ?
+      `, [...monitoredGameIds, limit]));
 
       const alerts = [];
 
@@ -2479,34 +2440,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return;
       }
 
-      const isDemoUser = user.username === 'demo';
       const since = req.query.since as string;
       const sinceSeq = req.query.seq ? parseInt(req.query.seq as string) : null;
       
-      console.log(`📸 Snapshot request: userId=${currentUserId}, since=${since}, seq=${sinceSeq}, demo=${isDemoUser}`);
+      console.log(`📸 Snapshot request: userId=${currentUserId}, since=${since}, seq=${sinceSeq}`);
 
-      if (isDemoUser) {
-        // For demo users, just return demo alerts (no sequence filtering for now)
-        const demoAlerts = await storage.getDemoAlerts();
-        const transformedAlerts = (demoAlerts || []).map((alert: any) => ({
-          id: alert.id,
-          alertKey: alert.alertKey,
-          sequenceNumber: alert.sequenceNumber,
-          type: alert.type,
-          message: alert.payload?.message || `${alert.type} alert`,
-          gameId: alert.gameId,
-          sport: alert.sport,
-          homeTeam: alert.payload?.context?.homeTeam || 'Demo Home',
-          awayTeam: alert.payload?.context?.awayTeam || 'Demo Away',
-          createdAt: alert.createdAt,
-          timestamp: alert.createdAt,
-          payload: alert.payload
-        }));
-        res.json(transformedAlerts);
-        return;
-      }
-
-      // For real users, get monitored games and filter alerts
+      // Get monitored games and filter alerts
       const monitoredGames = await storage.getAllMonitoredGames();
       if (monitoredGames.length === 0) {
         res.json([]);
@@ -2515,16 +2454,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
       
-      // Build WHERE clause for sequence number or timestamp filtering
-      let whereClause = `
-        game_id IN (${monitoredGameIds.map((id: any) => `'${id}'`).join(',')})
-        AND (is_demo IS NULL OR is_demo = false)
-      `;
+      // Build parameterized query to prevent SQL injection
+      const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
+      const params = [...monitoredGameIds];
+      let whereClause = `game_id IN (${gameIdsPlaceholder})`;
 
       if (sinceSeq) {
-        whereClause += ` AND sequence_number > ${sinceSeq}`;
+        whereClause += ` AND sequence_number > ?`;
+        params.push(sinceSeq);
       } else if (since) {
-        whereClause += ` AND created_at > '${since}'`;
+        whereClause += ` AND created_at > ?`;
+        params.push(since);
       }
 
       const result = await db.execute(sql.raw(`
@@ -2533,7 +2473,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         WHERE ${whereClause}
         ORDER BY sequence_number ASC
         LIMIT 200
-      `));
+      `, params));
 
       const alerts = result.rows.map((row: any) => {
         let payload: any = {};

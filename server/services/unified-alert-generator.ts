@@ -51,29 +51,8 @@ interface AlertData {
   state: string;
 }
 
-interface DemoAlertPayload {
-  homeTeam?: string;
-  awayTeam?: string;
-  homeScore?: number;
-  awayScore?: number;
-  inning?: number;
-  isTopInning?: boolean;
-  priority?: number;
-  confidence?: number;
-  message?: string;
-  context?: string;
-  aiAdvice?: string;
-  betting?: {
-    home?: number;
-    away?: number;
-    total?: number;
-  };
-  [key: string]: any;
-}
 
 interface UnifiedAlertGeneratorOptions {
-  mode: 'production' | 'demo';
-  demoUserId?: string;
   logLevel?: 'verbose' | 'quiet';
 }
 
@@ -103,8 +82,6 @@ interface SportEngineStatus {
 // === UNIFIED ALERT GENERATOR ===
 
 export class UnifiedAlertGenerator {
-  private mode: 'production' | 'demo';
-  private demoUserId?: string;
   private logLevel: 'verbose' | 'quiet' = 'quiet';
 
   // V3 Weather-on-Live Architecture Services (production only)
@@ -140,17 +117,8 @@ export class UnifiedAlertGenerator {
   private readonly engineStatusCacheTTL = 5000; // 5 seconds
 
   constructor(options: UnifiedAlertGeneratorOptions) {
-    this.mode = options.mode;
-    this.demoUserId = options.demoUserId;
     this.logLevel = options.logLevel || 'verbose';
-
-    if (this.mode === 'production') {
-      this.initializeProductionServices();
-    } else if (this.mode === 'demo') {
-      if (!this.demoUserId) {
-        throw new Error('Demo mode requires demoUserId');
-      }
-    }
+    this.initializeProductionServices();
   }
 
   private initializeProductionServices(): void {
@@ -210,35 +178,13 @@ export class UnifiedAlertGenerator {
 
   // === PUBLIC API METHODS ===
 
-  getMode(): 'production' | 'demo' {
-    return this.mode;
-  }
-
   async generateLiveGameAlerts(): Promise<number> {
-    if (this.mode === 'demo') {
-      console.log('🚫 Demo mode: generateLiveGameAlerts disabled. Use generateAllDemoAlerts() instead.');
-      return 0;
-    }
-
     return this.runProductionPipeline();
   }
 
-  async generateAllDemoAlerts(): Promise<void> {
-    if (this.mode === 'production') {
-      console.log('🚫 Production mode: generateAllDemoAlerts disabled. Use generateLiveGameAlerts() instead.');
-      return;
-    }
-
-    return this.runDemoSeed();
-  }
-
   async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
-    if (this.mode === 'demo') {
-      return true; // Demo mode allows all alerts
-    }
-
     if (!this.settingsCache) {
-      console.error('Settings cache not initialized in production mode');
+      console.error('Settings cache not initialized');
       return false;
     }
 
@@ -246,11 +192,6 @@ export class UnifiedAlertGenerator {
   }
 
   async startMonitoring(): Promise<void> {
-    if (this.mode === 'demo') {
-      console.log('🚫 Demo mode: No monitoring needed. Use generateAllDemoAlerts() to populate demo data.');
-      return;
-    }
-
     console.log('⚡ Starting V3 Weather-on-Live alert monitoring...');
     
     try {
@@ -281,10 +222,6 @@ export class UnifiedAlertGenerator {
   }
 
   async stopMonitoring(): Promise<void> {
-    if (this.mode === 'demo') {
-      return;
-    }
-
     console.log('🛑 Stopping V3 Weather-on-Live monitoring...');
     
     try {
@@ -312,10 +249,6 @@ export class UnifiedAlertGenerator {
   }
 
   getStats(): any {
-    if (this.mode === 'demo') {
-      return { mode: 'demo', demoUserId: this.demoUserId };
-    }
-
     // V3: Enhanced stats with architecture status
     return {
       mode: 'production',
@@ -335,10 +268,6 @@ export class UnifiedAlertGenerator {
   }
 
   getPerformanceMetrics(): any {
-    if (this.mode === 'demo') {
-      return { mode: 'demo', metrics: 'disabled' };
-    }
-
     return this.healthMonitor?.getPerformanceMetrics() || {};
   }
 
@@ -478,39 +407,6 @@ export class UnifiedAlertGenerator {
     }
   }
 
-  // === DEMO PIPELINE ===
-
-  private async runDemoSeed(): Promise<void> {
-    console.log('🎯 Starting demo alert generation for user:', this.demoUserId);
-
-    // Clear existing demo alerts first
-    await storage.clearDemoAlerts();
-
-    const alerts: Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> = [
-      ...this.getMLBDemoAlerts(),
-      ...this.getNFLDemoAlerts(), 
-      ...this.getNBADemoAlerts(),
-      ...this.getNCAAFDemoAlerts(),
-      ...this.getWNBADemoAlerts(),
-      ...this.getCFLDemoAlerts()
-    ];
-
-    // Create alerts with staggered timestamps
-    for (let i = 0; i < alerts.length; i++) {
-      const alertData = {
-        ...alerts[i],
-        userId: this.demoUserId!
-      };
-
-      await storage.createDemoAlert(alertData);
-
-      if (i % 10 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    }
-
-    console.log(`✅ Generated ${alerts.length} demo alerts successfully`);
-  }
 
   // === SHARED HELPER METHODS ===
 
@@ -1235,8 +1131,6 @@ export class UnifiedAlertGenerator {
   }
 
   private async getNFLGames(): Promise<any[]> {
-    if (this.mode === 'demo') return [];
-
     try {
       if (!this.nflApi) {
         console.error('❌ NFL API service not initialized');
@@ -1250,8 +1144,6 @@ export class UnifiedAlertGenerator {
   }
 
   private async getWNBAGames(): Promise<any[]> {
-    if (this.mode === 'demo') return [];
-
     try {
       if (!this.wnbaApi) {
         console.error('❌ WNBA API service not initialized');
@@ -1265,8 +1157,6 @@ export class UnifiedAlertGenerator {
   }
 
   private async getCFLGames(): Promise<any[]> {
-    if (this.mode === 'demo') return [];
-
     try {
       if (!this.cflApi) {
         console.error('❌ CFL API service not initialized');
@@ -1280,8 +1170,6 @@ export class UnifiedAlertGenerator {
   }
 
   private async initializeNFLPollingManager(): Promise<void> {
-    if (this.mode === 'demo') return;
-
     try {
       if (this.nflApi && this.adaptivePollingManagers) {
         this.adaptivePollingManagers.set('NFL', new AdaptivePollingManager('NFL', { NFL: this.nflApi }));
@@ -1295,8 +1183,6 @@ export class UnifiedAlertGenerator {
   }
 
   private async activateFallbackPolling(sport: string): Promise<void> {
-    if (this.mode === 'demo') return;
-
     try {
       // Clear any existing fallback polling for this sport
       const existingInterval = this.fallbackPollingActive.get(sport);
@@ -1376,179 +1262,9 @@ export class UnifiedAlertGenerator {
     }
   }
 
-  // === DEMO ALERT GENERATORS ===
 
-  private getMLBDemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
-    return [
-      {
-        alertKey: 'demo_mlb_bases_loaded_001',
-        sport: 'MLB',
-        gameId: 'demo_game_mlb_001',
-        type: 'BASES_LOADED_NO_OUTS',
-        state: 'active',
-        score: 94,
-        payload: {
-          homeTeam: 'New York Yankees',
-          awayTeam: 'Boston Red Sox',
-          homeScore: 4,
-          awayScore: 3,
-          inning: 8,
-          isTopInning: false,
-          priority: 94,
-          confidence: 87,
-          message: 'BASES LOADED, 0 OUTS! Yankees threatening in bottom 8th.',
-          context: '2-1 count, Aaron Judge at bat, 85% historical scoring rate',
-          aiAdvice: 'Strong OVER 8.5 value. Yankees excel in clutch situations. Live momentum shift opportunity.',
-          betting: { home: -140, away: +120, total: 8.5 }
-        }
-      },
-      {
-        alertKey: 'demo_mlb_walk_off_setup',
-        sport: 'MLB',
-        gameId: 'demo_game_mlb_003',
-        type: 'WALK_OFF_OPPORTUNITY',
-        state: 'active',
-        score: 96,
-        payload: {
-          homeTeam: 'Chicago Cubs',
-          awayTeam: 'Milwaukee Brewers',
-          homeScore: 5,
-          awayScore: 6,
-          inning: 9,
-          isTopInning: false,
-          priority: 96,
-          confidence: 89,
-          message: 'WALK-OFF SETUP! Runner on 3rd, 1 out. Cubs down by 1.',
-          context: 'Seiya Suzuki batting .340 in clutch situations',
-          aiAdvice: 'CHC ML +180 offers massive value. Historical walk-off rate: 32%',
-          betting: { home: +180, away: -220, total: 9.5 }
-        }
-      }
-    ];
-  }
 
-  private getNFLDemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
-    return [
-      {
-        alertKey: 'demo_nfl_red_zone_001',
-        sport: 'NFL',
-        gameId: 'demo_game_nfl_001',
-        type: 'RED_ZONE_OPPORTUNITY',
-        state: 'active',
-        score: 88,
-        payload: {
-          homeTeam: 'Kansas City Chiefs',
-          awayTeam: 'Buffalo Bills',
-          homeScore: 14,
-          awayScore: 10,
-          priority: 88,
-          confidence: 82,
-          message: 'RED ZONE! Chiefs 1st & Goal at the 5-yard line.',
-          context: 'Patrick Mahomes 85% TD rate inside the 10',
-          aiAdvice: 'KC anytime TD prop +110 shows strong value.',
-          betting: { home: -140, away: +120, total: 47.5 }
-        }
-      }
-    ];
-  }
 
-  private getNBADemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
-    return [
-      {
-        alertKey: 'demo_nba_clutch_001',
-        sport: 'NBA',
-        gameId: 'demo_game_nba_001',
-        type: 'CLUTCH_PERFORMANCE',
-        state: 'active',
-        score: 92,
-        payload: {
-          homeTeam: 'Los Angeles Lakers',
-          awayTeam: 'Boston Celtics',
-          homeScore: 108,
-          awayScore: 106,
-          priority: 92,
-          confidence: 88,
-          message: 'CLUTCH TIME! LeBron James 30 pts, 2 min remaining.',
-          context: 'Lakers down 2, LeBron shooting 60% in clutch this season',
-          aiAdvice: 'LAL ML +130 trending. LeBron props all showing value.',
-          betting: { home: +130, away: -150, total: 218.5 }
-        }
-      }
-    ];
-  }
 
-  private getNCAAFDemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
-    return [
-      {
-        alertKey: 'demo_ncaaf_upset_001',
-        sport: 'NCAAF',
-        gameId: 'demo_game_ncaaf_001',
-        type: 'UPSET_OPPORTUNITY',
-        state: 'active',
-        score: 85,
-        payload: {
-          homeTeam: 'App State',
-          awayTeam: 'North Carolina',
-          homeScore: 21,
-          awayScore: 14,
-          priority: 85,
-          confidence: 79,
-          message: 'UPSET ALERT! App State leads ranked UNC 21-14.',
-          context: '4th quarter, App State driving in red zone',
-          aiAdvice: 'APP ST ML +280 was the bet. Now +140 live.',
-          betting: { home: +140, away: -160, total: 56.5 }
-        }
-      }
-    ];
-  }
 
-  private getWNBADemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
-    return [
-      {
-        alertKey: 'demo_wnba_clutch_001',
-        sport: 'WNBA',
-        gameId: 'demo_game_wnba_001',
-        type: 'CLUTCH_TIME_OPPORTUNITY',
-        state: 'active',
-        score: 87,
-        payload: {
-          homeTeam: 'Las Vegas Aces',
-          awayTeam: 'New York Liberty',
-          homeScore: 78,
-          awayScore: 76,
-          priority: 87,
-          confidence: 83,
-          message: 'CLUTCH TIME! A\'ja Wilson 28 pts, 3 min left.',
-          context: 'Aces down 2, Wilson perfect from FT line tonight',
-          aiAdvice: 'LV ML +110 trending up. Wilson props showing value.',
-          betting: { home: +110, away: -130, total: 162.5 }
-        }
-      }
-    ];
-  }
-
-  private getCFLDemoAlerts(): Array<Omit<InsertAlert, 'isDemo'> & { payload: DemoAlertPayload }> {
-    return [
-      {
-        alertKey: 'demo_cfl_rouge_001',
-        sport: 'CFL',
-        gameId: 'demo_game_cfl_001',
-        type: 'ROUGE_OPPORTUNITY',
-        state: 'active',
-        score: 75,
-        payload: {
-          homeTeam: 'Toronto Argonauts',
-          awayTeam: 'Montreal Alouettes',
-          homeScore: 24,
-          awayScore: 23,
-          priority: 75,
-          confidence: 70,
-          message: 'ROUGE SETUP! 55-yard FG attempt for the win.',
-          context: 'Wind at kicker\'s back, 82% accuracy from 50+',
-          aiAdvice: 'TOR ML -110 solid value. Unique CFL scoring opportunity.',
-          betting: { home: -110, away: -110, total: 48.5 }
-        }
-      }
-    ];
-  }
 }
