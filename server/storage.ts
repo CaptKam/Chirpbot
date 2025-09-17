@@ -417,6 +417,7 @@ export const storage = {
           'MLB_FIRST_AND_THIRD_TWO_OUTS': true,
           'MLB_BASES_LOADED_TWO_OUTS': true,
           'MLB_RUNNER_ON_SECOND_NO_OUTS': true,
+          'MLB_HIGH_SCORING_SITUATION': true,
           // On-deck batter predictions
           'MLB_ON_DECK_PREDICTION': true,
           // Additional MLB alerts
