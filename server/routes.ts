@@ -14,8 +14,8 @@ import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
 import { unifiedSettings } from "./storage";
-import { alerts as alertsTable, settings } from "../shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { alerts as alertsTable, alerts, settings } from "../shared/schema";
+import { eq, desc, and, gte } from "drizzle-orm";
 import { getCalendarSyncService } from "./services/calendar-sync-service";
 
 // Extend session data interface
@@ -870,8 +870,21 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       for (const userGame of usersMonitoring) {
         try {
-          // Check if this specific alert already exists for this user (avoid duplicates)
-          const alertKeyWithUser = `${alert.alertKey}_${userGame.userId}`;
+          // FIXED DEDUPLICATION BUG: Check if this specific alert already exists AND is still active (non-expired)
+          const existingAlerts = await db.select()
+            .from(alerts)
+            .where(and(
+              eq(alerts.alertKey, alert.alertKey),
+              eq(alerts.userId, userGame.userId),
+              gte(alerts.expiresAt, new Date()) // Only check non-expired alerts
+            ))
+            .limit(1);
+          
+          if (existingAlerts.length > 0) {
+            skippedCount++;
+            console.log(`⏭️ Active alert already exists for user ${userGame.userId}, skipping`);
+            continue;
+          }
           
           await storage.createAlert({
             alertKey: alert.alertKey,  // Keep original alert key for deduplication
@@ -895,13 +908,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           console.log(`✅ Alert saved for user ${userGame.userId}: ${alert.alertKey}`);
           
         } catch (error: any) {
-          // Handle duplicate key errors gracefully (alert already exists for this user)
-          if (error?.code === '23505' && (error?.constraint === 'ux_user_alert_key' || error?.constraint === 'ux_alerts_key')) {
-            skippedCount++;
-            console.log(`⏭️ Alert already exists for user ${userGame.userId}, skipping`);
-          } else {
-            console.error(`❌ Failed to save alert for user ${userGame.userId}:`, error);
-          }
+          // Handle any other database errors
+          console.error(`❌ Failed to save alert for user ${userGame.userId}:`, error);
         }
       }
       
