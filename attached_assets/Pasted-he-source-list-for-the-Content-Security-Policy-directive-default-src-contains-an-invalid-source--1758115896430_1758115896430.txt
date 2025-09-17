@@ -1,0 +1,160 @@
+he source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.Understand this error
+10The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?Understand this error
+10The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.Understand this error
+Chirpbot:1 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.Understand this error
+Chirpbot:1 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?Understand this error
+Chirpbot:1 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.Understand this error
+_app-f09b7c2bf98565f3.js:38 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+_app-f09b7c2bf98565f3.js:38 [LaunchDarkly] LaunchDarkly client initialized
+Chirpbot:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A080D70354160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0B0D70354160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+framework-9293bb0ee887bfd4.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this error
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'battery'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+framework-9293bb0ee887bfd4.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-9293bb0ee887bfd4.js:1Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'battery'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'layout-animations'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'navigation-override'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'oversized-images'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Unrecognized feature: 'unsized-media'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar5s%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+_app-f09b7c2bf98565f3.js:38 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 commitComplete listeners added. Use emitter.setMaxListeners() to increase limit
+    at h (2372-917b8a8cc5064450.js:1:48665)
+    at s.addListener (2372-917b8a8cc5064450.js:1:51199)
+    at h (7276-452c0d684b0d50f0.js:1:41756)
+    at Object.watchTextFile (7276-452c0d684b0d50f0.js:1:47534)
+    at 897-b69c535eea5a776b.js:1:2218423
+    at Array.map (<anonymous>)
+    at 897-b69c535eea5a776b.js:1:2218398
+    at oO (framework-9293bb0ee887bfd4.js:1:125387)
+    at uB (framework-9293bb0ee887bfd4.js:1:154382)
+    at framework-9293bb0ee887bfd4.js:1:152768
+    at uO (framework-9293bb0ee887bfd4.js:1:152834)
+    at u_ (framework-9293bb0ee887bfd4.js:1:137498)
+    at r6 (framework-9293bb0ee887bfd4.js:1:86196)
+    at framework-9293bb0ee887bfd4.js:1:134876
+(anonymous) @ _app-f09b7c2bf98565f3.js:38Understand this warning
+_app-f09b7c2bf98565f3.js:38 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 fileDirty listeners added. Use emitter.setMaxListeners() to increase limit
+    at h (2372-917b8a8cc5064450.js:1:48665)
+    at s.addListener (2372-917b8a8cc5064450.js:1:51199)
+    at h (7276-452c0d684b0d50f0.js:1:41876)
+    at Object.watchTextFile (7276-452c0d684b0d50f0.js:1:47534)
+    at 897-b69c535eea5a776b.js:1:2218423
+    at Array.map (<anonymous>)
+    at 897-b69c535eea5a776b.js:1:2218398
+    at oO (framework-9293bb0ee887bfd4.js:1:125387)
+    at uB (framework-9293bb0ee887bfd4.js:1:154382)
+    at framework-9293bb0ee887bfd4.js:1:152768
+    at uO (framework-9293bb0ee887bfd4.js:1:152834)
+    at u_ (framework-9293bb0ee887bfd4.js:1:137498)
+    at r6 (framework-9293bb0ee887bfd4.js:1:86196)
+    at framework-9293bb0ee887bfd4.js:1:134876
+(anonymous) @ _app-f09b7c2bf98565f3.js:38Understand this warning
+_app-f09b7c2bf98565f3.js:38 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 fileClean listeners added. Use emitter.setMaxListeners() to increase limit
+    at h (2372-917b8a8cc5064450.js:1:48665)
+    at s.addListener (2372-917b8a8cc5064450.js:1:51199)
+    at h (7276-452c0d684b0d50f0.js:1:41991)
+    at Object.watchTextFile (7276-452c0d684b0d50f0.js:1:47534)
+    at 897-b69c535eea5a776b.js:1:2218423
+    at Array.map (<anonymous>)
+    at 897-b69c535eea5a776b.js:1:2218398
+    at oO (framework-9293bb0ee887bfd4.js:1:125387)
+    at uB (framework-9293bb0ee887bfd4.js:1:154382)
+    at framework-9293bb0ee887bfd4.js:1:152768
+    at uO (framework-9293bb0ee887bfd4.js:1:152834)
+    at u_ (framework-9293bb0ee887bfd4.js:1:137498)
+    at r6 (framework-9293bb0ee887bfd4.js:1:86196)
+    at framework-9293bb0ee887bfd4.js:1:134876
+(anonymous) @ _app-f09b7c2bf98565f3.js:38Understand this warning
+_app-f09b7c2bf98565f3.js:38 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 commitStart listeners added. Use emitter.setMaxListeners() to increase limit
+    at h (2372-917b8a8cc5064450.js:1:48665)
+    at s.addListener (2372-917b8a8cc5064450.js:1:51199)
+    at h (7276-452c0d684b0d50f0.js:1:42108)
+    at Object.watchTextFile (7276-452c0d684b0d50f0.js:1:47534)
+    at 897-b69c535eea5a776b.js:1:2218423
+    at Array.map (<anonymous>)
+    at 897-b69c535eea5a776b.js:1:2218398
+    at oO (framework-9293bb0ee887bfd4.js:1:125387)
+    at uB (framework-9293bb0ee887bfd4.js:1:154382)
+    at framework-9293bb0ee887bfd4.js:1:152768
+    at uO (framework-9293bb0ee887bfd4.js:1:152834)
+    at u_ (framework-9293bb0ee887bfd4.js:1:137498)
+    at r6 (framework-9293bb0ee887bfd4.js:1:86196)
+    at framework-9293bb0ee887bfd4.js:1:134876
+(anonymous) @ _app-f09b7c2bf98565f3.js:38Understand this warning
+_app-f09b7c2bf98565f3.js:38 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 promptUserReconnect listeners added. Use emitter.setMaxListeners() to increase limit
+    at h (2372-917b8a8cc5064450.js:1:48665)
+    at s.addListener (2372-917b8a8cc5064450.js:1:51199)
+    at h (7276-452c0d684b0d50f0.js:1:43382)
+    at Object.watchTextFile (7276-452c0d684b0d50f0.js:1:47534)
+    at 897-b69c535eea5a776b.js:1:2218423
+    at Array.map (<anonymous>)
+    at 897-b69c535eea5a776b.js:1:2218398
+    at oO (framework-9293bb0ee887bfd4.js:1:125387)
+    at uB (framework-9293bb0ee887bfd4.js:1:154382)
+    at framework-9293bb0ee887bfd4.js:1:152768
+    at uO (framework-9293bb0ee887bfd4.js:1:152834)
+    at u_ (framework-9293bb0ee887bfd4.js:1:137498)
+    at r6 (framework-9293bb0ee887bfd4.js:1:86196)
+    at framework-9293bb0ee887bfd4.js:1:134876
+(anonymous) @ _app-f09b7c2bf98565f3.js:38Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0E0240054160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A080530454160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0E0D70354160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A010D80354160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0E0530454160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A010540454160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A010250054160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A080270054160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
