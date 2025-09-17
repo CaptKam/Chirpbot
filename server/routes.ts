@@ -15,7 +15,7 @@ import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
 import { unifiedSettings } from "./storage";
 import { alerts as alertsTable, alerts, settings } from "../shared/schema";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { eq, desc, and, gte, inArray } from "drizzle-orm";
 import { getCalendarSyncService } from "./services/calendar-sync-service";
 
 // Extend session data interface
@@ -2355,19 +2355,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return;
       }
 
-      // Get alerts from database - filter by monitored game IDs using parameterized query
-      const gameIdsPlaceholder = monitoredGameIds.map((_, i) => `$${i + 1}`).join(',');
-      const result = await db.execute(sql.raw(`
-        SELECT id, type, game_id, sport, score, payload, created_at
-        FROM alerts
-        WHERE game_id IN (${gameIdsPlaceholder})
-        ORDER BY created_at DESC
-        LIMIT $${monitoredGameIds.length + 1}
-      `, [...monitoredGameIds, limit]));
+      // Get alerts from database - filter by monitored game IDs using Drizzle query builder
+      const result = await db
+        .select()
+        .from(alertsTable)
+        .where(inArray(alertsTable.gameId, monitoredGameIds))
+        .orderBy(desc(alertsTable.createdAt))
+        .limit(limit);
 
       const alerts = [];
 
-      for (const row of result.rows) {
+      for (const row of result) {
         const sport = String(row.sport || 'MLB');
         const alertType = String(row.type || '');
 
@@ -2382,10 +2380,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           }
           alerts.push({
             id: row.id,
-            alertKey: `${row.game_id}_${row.type}`,
+            alertKey: `${row.gameId}_${row.type}`,
             type: row.type,
-            message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
-            gameId: row.game_id,
+            message: payload.message || payload.situation || `${row.type} alert for game ${row.gameId}`,
+            gameId: row.gameId,
             sport: row.sport || 'MLB',
             homeTeam: payload.context?.homeTeam || 'Home Team',
             awayTeam: payload.context?.awayTeam || 'Away Team',
