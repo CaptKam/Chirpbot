@@ -15,9 +15,10 @@ import { SportTabs } from '@/components/SportTabs';
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { getSeasonAwareSports, getSportTabColors } from '@shared/season-manager';
+import { getSportTabColors } from '@shared/season-manager';
 
-const SPORTS = getSeasonAwareSports();
+// Use a stable sports list to prevent re-ordering during the session
+const STABLE_SPORTS = ["MLB", "NFL", "NBA", "NCAAF", "CFL", "WNBA"];
 
 // Alert type configurations - now populated from cylinder modules via API
 const ALERT_TYPE_CONFIG: Record<string, any[]> = {
@@ -53,11 +54,11 @@ export default function Settings() {
     // Persist active sport selection in localStorage
     const storedSport = localStorage.getItem('settings-active-sport');
     // Validate that the stored sport is still in the available sports list
-    if (storedSport && SPORTS.includes(storedSport)) {
+    if (storedSport && STABLE_SPORTS.includes(storedSport)) {
       return storedSport;
     }
-    // Default to first sport in the season-aware sorted list
-    return SPORTS[0] || "MLB";
+    // Default to MLB
+    return "MLB";
   });
   const { toast } = useToast();
 
@@ -623,7 +624,7 @@ export default function Settings() {
 
       {/* Sport Tabs */}
       <SportTabs
-        sports={SPORTS}
+        sports={STABLE_SPORTS}
         activeSport={activeSport}
         onSportChange={(newSport) => {
           setActiveSport(newSport);
