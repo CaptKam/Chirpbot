@@ -3,10 +3,16 @@ import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 export default class SeventhInningStretchModule extends BaseAlertModule {
   alertType = 'MLB_SEVENTH_INNING_STRETCH';
   sport = 'MLB';
+  private triggeredGames = new Set<string>();
 
   isTriggered(gameState: GameState): boolean {
-    // Trigger for any late inning (7+) - removed exact timing restrictions
-    return gameState.inning >= 7 && gameState.isLive;
+    // Only trigger once per game, specifically at top of 7th inning
+    if (this.triggeredGames.has(gameState.gameId)) {
+      return false; // Already triggered for this game
+    }
+    
+    // Trigger only for inning 7, top half
+    return gameState.inning === 7 && gameState.isTopInning === true && gameState.isLive;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
@@ -27,7 +33,7 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
       return null;
     }
 
-    const alertKey = `mlb_seventh_inning_${gameState.gameId}_${gameState.inning}`;
+    const alertKey = `mlb_seventh_inning_stretch_${gameState.gameId}`;
 
     const scoreDiff = Math.abs(homeScore - awayScore);
     const isCloseGame = scoreDiff <= 2;
@@ -99,6 +105,9 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
       console.error('❌ SeventhInningStretchModule: Invalid AlertResult object generated', alertResult);
       return null;
     }
+
+    // Mark this game as triggered to prevent duplicates
+    this.triggeredGames.add(gameState.gameId);
 
     return alertResult;
   }

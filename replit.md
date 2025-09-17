@@ -4,6 +4,14 @@ ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time
 
 # Recent Changes
 
+## September 17, 2025 - SEVENTH INNING STRETCH MODULE FIXED ✅
+- **CRITICAL FIX:** Seventh inning stretch alerts were triggering multiple times throughout late innings (7th, 8th, 9th)
+- **PRECISE TIMING:** Now triggers exactly once per game, only at the top of the 7th inning (inning=7, isTopInning=true)
+- **DUPLICATE PREVENTION:** Added game tracking with private `triggeredGames` Set to prevent multiple alerts per game
+- **STABLE ALERT KEYS:** Updated to stable format `mlb_seventh_inning_stretch_{gameId}` (no more timestamps)
+- **VERIFIED WORKING:** Live testing confirmed games in innings 1, 6, and 9 properly do NOT trigger seventh inning stretch
+- **CODE QUALITY:** Clean, efficient implementation with proper TypeScript typing and error handling
+
 ## September 17, 2025 - MLB PERFORMANCE CONTEXT ENHANCEMENT ✅
 - **NEW SYSTEM:** Built comprehensive MLB performance tracker for real-time batter/pitcher/team stats
 - **CONTEXT GENERATION:** Alerts now include "Batter 3-for-4 tonight", "95+ pitches", "Team rally: scored in last 3 innings"
