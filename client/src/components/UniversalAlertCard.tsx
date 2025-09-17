@@ -40,78 +40,104 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
 
   const urgencyLevel = getUrgencyLevel();
 
-  // Get sport-specific icon and color
+  // Get sport-specific icon and color with static class mappings
   const getSportConfig = (sport: string) => {
-    const tabColors = getSportTabColors(sport);
-    // Convert tab color classes to the full set needed for alerts
-    const colorClass = `${tabColors.text} ${tabColors.border.replace('border-', 'border-')}/30 ${tabColors.bg}`;
+    const sportConfigs = {
+      'MLB': {
+        iconColor: 'text-green-500 border-green-500/30 bg-green-500/10',
+        icon: '⚾',
+        label: 'Baseball'
+      },
+      'NFL': {
+        iconColor: 'text-orange-500 border-orange-500/30 bg-orange-500/10',
+        icon: '🏈',
+        label: 'Football'
+      },
+      'NBA': {
+        iconColor: 'text-purple-500 border-purple-500/30 bg-purple-500/10',
+        icon: '🏀',
+        label: 'Basketball'
+      },
+      'NHL': {
+        iconColor: 'text-cyan-500 border-cyan-500/30 bg-cyan-500/10',
+        icon: '🏒',
+        label: 'Hockey'
+      },
+      'NCAAF': {
+        iconColor: 'text-blue-500 border-blue-500/30 bg-blue-500/10',
+        icon: '🏈',
+        label: 'College Football'
+      },
+      'WNBA': {
+        iconColor: 'text-pink-500 border-pink-500/30 bg-pink-500/10',
+        icon: '🏀',
+        label: 'Women\'s Basketball'
+      },
+      'CFL': {
+        iconColor: 'text-red-500 border-red-500/30 bg-red-500/10',
+        icon: '🏈',
+        label: 'Canadian Football'
+      }
+    };
     
-    switch (sport) {
-      case 'MLB':
-        return { 
-          color: colorClass,
-          icon: '⚾',
-          label: 'Baseball'
-        };
-      case 'NFL':
-        return { 
-          color: colorClass,
-          icon: '🏈',
-          label: 'Football'
-        };
-      case 'NBA':
-        return { 
-          color: colorClass,
-          icon: '🏀',
-          label: 'Basketball'
-        };
-      case 'NHL':
-        return { 
-          color: colorClass,
-          icon: '🏒',
-          label: 'Hockey'
-        };
-      case 'NCAAF':
-        return { 
-          color: colorClass,
-          icon: '🏈',
-          label: 'College Football'
-        };
-      case 'WNBA':
-        return { 
-          color: colorClass,
-          icon: '🏀',
-          label: 'Women\'s Basketball'
-        };
-      case 'CFL':
-        return { 
-          color: colorClass,
-          icon: '🏈',
-          label: 'Canadian Football'
-        };
-      default:
-        return { 
-          color: 'text-slate-400 border-slate-500/30 bg-slate-500/10',
-          icon: '🎯',
-          label: sport
-        };
-    }
+    return sportConfigs[sport as keyof typeof sportConfigs] || {
+      iconColor: 'text-slate-400 border-slate-500/30 bg-slate-500/10',
+      icon: '🎯',
+      label: sport
+    };
   };
 
   const sportConfig = getSportConfig(alert.sport);
 
-  // Get urgency styling
-  const getUrgencyStyle = () => {
-    switch (urgencyLevel) {
-      case 'CRITICAL':
-        return 'ring-2 ring-red-500/50 bg-red-500/5 border-red-500/20';
-      case 'HIGH':
-        return 'ring-1 ring-orange-500/40 bg-orange-500/5 border-orange-500/20';
-      case 'MEDIUM':
-        return 'ring-1 ring-yellow-500/40 bg-yellow-500/5 border-yellow-500/20';
-      default:
-        return 'ring-1 ring-slate-500/20 bg-slate-500/5 border-slate-500/20';
-    }
+  // Get sport-specific styling - use sport colors as main theme with subtle urgency indicators
+  const getSportStyle = () => {
+    // Static class mappings to ensure Tailwind includes all classes
+    const styleMap: Record<string, { base: string; critical: string; normal: string }> = {
+      'MLB': {
+        base: 'bg-green-500/5 border-green-500/20',
+        critical: 'ring-2 ring-green-500/60',
+        normal: 'ring-1 ring-green-500/40'
+      },
+      'NFL': {
+        base: 'bg-orange-500/5 border-orange-500/20',
+        critical: 'ring-2 ring-orange-500/60',
+        normal: 'ring-1 ring-orange-500/40'
+      },
+      'NBA': {
+        base: 'bg-purple-500/5 border-purple-500/20',
+        critical: 'ring-2 ring-purple-500/60',
+        normal: 'ring-1 ring-purple-500/40'
+      },
+      'NHL': {
+        base: 'bg-cyan-500/5 border-cyan-500/20',
+        critical: 'ring-2 ring-cyan-500/60',
+        normal: 'ring-1 ring-cyan-500/40'
+      },
+      'NCAAF': {
+        base: 'bg-blue-500/5 border-blue-500/20',
+        critical: 'ring-2 ring-blue-500/60',
+        normal: 'ring-1 ring-blue-500/40'
+      },
+      'CFL': {
+        base: 'bg-red-500/5 border-red-500/20',
+        critical: 'ring-2 ring-red-500/60',
+        normal: 'ring-1 ring-red-500/40'
+      },
+      'WNBA': {
+        base: 'bg-pink-500/5 border-pink-500/20',
+        critical: 'ring-2 ring-pink-500/60',
+        normal: 'ring-1 ring-pink-500/40'
+      }
+    };
+    
+    const sportStyle = styleMap[alert.sport] || {
+      base: 'bg-slate-500/5 border-slate-500/20',
+      critical: 'ring-2 ring-slate-500/60',
+      normal: 'ring-1 ring-slate-500/40'
+    };
+    
+    const urgencyRing = urgencyLevel === 'CRITICAL' ? sportStyle.critical : sportStyle.normal;
+    return `${sportStyle.base} ${urgencyRing}`;
   };
 
   return (
@@ -125,20 +151,20 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
       }}
     >
       <Card 
-        className={`backdrop-blur-sm rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border-0 ${getUrgencyStyle()}`}
+        className={`backdrop-blur-sm rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border-0 ${getSportStyle()}`}
         data-testid={`universal-alert-card-${alert.id}`}
       >
         <CardContent className="p-5">
           {/* Header Section */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${sportConfig.color}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${sportConfig.iconColor}`}>
                 {sportConfig.icon}
               </div>
               <div>
                 <Badge 
                   variant="outline" 
-                  className={`${sportConfig.color} font-semibold text-xs`}
+                  className={`${sportConfig.iconColor} font-semibold text-xs`}
                   data-testid={`sport-badge-${alert.sport.toLowerCase()}`}
                 >
                   {alert.sport}
