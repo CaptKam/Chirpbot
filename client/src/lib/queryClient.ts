@@ -14,16 +14,9 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: {
-      ...(data ? { "Content-Type": "application/json" } : {}),
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'If-None-Match': ''
-    },
+    headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
-    cache: 'no-store'
   });
 
   await throwIfResNotOk(res);
@@ -48,29 +41,9 @@ export const getQueryFn: <T>(options: {
       }
     });
     
-    // Add timestamp to prevent 304 responses
-    url.searchParams.set('_ts', Date.now().toString());
-    
     const res = await fetch(url.toString(), {
       credentials: "include",
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'If-None-Match': ''
-      }
     });
-    
-    // Force refetch by invalidating cache if 304 received - should not happen with our cache headers
-    if (res.status === 304) {
-      // 304 should not happen with our cache-busting headers - force refetch
-      console.warn('304 response received despite cache-busting headers, forcing refetch');
-      queryClient.invalidateQueries({ queryKey: [baseUrl] });
-      // Return stale data to avoid error state
-      const cachedData = queryClient.getQueryData(queryKey);
-      return cachedData;
-    }
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;

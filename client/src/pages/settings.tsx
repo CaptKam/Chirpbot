@@ -68,8 +68,9 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Toggle management state - FIXED: Use synchronous ref instead of async state
-  const inFlightRef = useRef(new Set<string>());
+  // Toggle management state
+  const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
+  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
@@ -132,11 +133,6 @@ export default function Settings() {
     
     // If preference exists, use it; otherwise default to false for stable behavior
     return preference !== undefined ? preference : false;
-  };
-
-  // FIXED: Helper to check if alert toggle is disabled (in-flight)
-  const isAlertToggleDisabled = (alertType: string): boolean => {
-    return inFlightRef.current.has(alertType);
   };
 
   const logoutMutation = useMutation({
@@ -317,13 +313,19 @@ export default function Settings() {
       return;
     }
 
-    // FIXED: Synchronous ref guard prevents race conditions
-    if (inFlightRef.current.has(alertType)) {
+    // Prevent rapid toggles of the same alert type
+    if (pendingToggles.has(alertType)) {
       return;
     }
 
-    // Add to in-flight immediately (synchronous)
-    inFlightRef.current.add(alertType);
+    // Clear any existing debounce timer for this alert type
+    const existingTimer = debounceTimers.current.get(alertType);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Add to pending toggles
+    setPendingToggles(prev => new Set([...prev, alertType]));
     
     // Optimistic update - update cache immediately for smooth UX
     const queryKey = [`/api/user/${user.id}/alert-preferences/${activeSport.toLowerCase()}`];
@@ -331,40 +333,49 @@ export default function Settings() {
     
     // Update cache optimistically
     queryClient.setQueryData(queryKey, (oldData: any) => {
-      // Handle empty cache gracefully - always create/update the list
-      const list = Array.isArray(oldData) ? oldData : [];
+      if (!oldData || !Array.isArray(oldData)) return oldData;
       
       // Find existing preference for this alert type
-      const existingIndex = list.findIndex((pref: any) => pref.alertType === alertType);
+      const existingIndex = oldData.findIndex((pref: any) => pref.alertType === alertType);
       
       if (existingIndex >= 0) {
         // Update existing preference
-        const newData = [...list];
+        const newData = [...oldData];
         newData[existingIndex] = { ...newData[existingIndex], enabled };
         return newData;
       } else {
         // Add new preference
-        return [...list, { alertType, enabled, sport: activeSport }];
+        return [...oldData, { alertType, enabled, sport: activeSport }];
       }
     });
     
-    // Call mutation directly for immediate execution
-    updateAlertPreferenceMutation.mutate({ alertType, enabled }, {
-      onSuccess: () => {
-        // Force immediate cache invalidation to prevent stale data
-        queryClient.invalidateQueries({
-          queryKey: [`/api/user/${user.id}/alert-preferences/${activeSport.toLowerCase()}`]
-        });
-      },
-      onError: () => {
-        // Rollback optimistic update on error
-        queryClient.setQueryData(queryKey, previousData);
-      },
-      onSettled: () => {
-        // Always cleanup in-flight tracking
-        inFlightRef.current.delete(alertType);
-      }
-    });
+    // Debounced mutation with enhanced error handling
+    const debounceTimer = setTimeout(() => {
+      updateAlertPreferenceMutation.mutate({ alertType, enabled }, {
+        onSuccess: () => {
+          // Remove from pending toggles on success
+          setPendingToggles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(alertType);
+            return newSet;
+          });
+          debounceTimers.current.delete(alertType);
+        },
+        onError: () => {
+          // Rollback optimistic update on error
+          queryClient.setQueryData(queryKey, previousData);
+          // Remove from pending toggles on error
+          setPendingToggles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(alertType);
+            return newSet;
+          });
+          debounceTimers.current.delete(alertType);
+        }
+      });
+    }, 300); // 300ms debounce
+
+    debounceTimers.current.set(alertType, debounceTimer);
   };
 
   // Populate Telegram settings from query data
@@ -640,7 +651,7 @@ export default function Settings() {
                                     </span>
                                   )}
                                 </h4>
-                                {(updateAlertPreferenceMutation.isPending || inFlightRef.current.has(alertType.key)) && (
+                                {(updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key)) && (
                                   <div className={`w-4 h-4 border-2 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
                                 )}
                               </div>
@@ -654,7 +665,7 @@ export default function Settings() {
                             <Switch
                               checked={isEnabled && !isGloballyDisabled}
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={updateAlertPreferenceMutation.isPending || isAlertToggleDisabled(alertType.key) || isGloballyDisabled}
+                              disabled={updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key) || isGloballyDisabled}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
                               className={`${getCheckedBgClass()} transition-all duration-200`}
                             />

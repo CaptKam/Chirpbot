@@ -159,10 +159,7 @@ export const userAlertPreferences = pgTable("user_alert_preferences", {
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-}, (table) => ({
-  // Unique constraint to prevent duplicate (userId, sport, alertType) combinations
-  ux_user_alert_key: unique("ux_user_alert_key").on(table.userId, table.sport, table.alertType)
-}));
+});
 
 export const insertUserAlertPreferencesSchema = createInsertSchema(userAlertPreferences).omit({
   id: true,
