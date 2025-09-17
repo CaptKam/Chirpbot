@@ -78,7 +78,6 @@ export default function Settings() {
   // Toggle management state with optimistic updates
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
   const [optimisticPreferences, setOptimisticPreferences] = useState<Record<string, boolean>>({});
-  const [completedUpdates, setCompletedUpdates] = useState<Set<string>>(new Set());
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
@@ -109,44 +108,12 @@ export default function Settings() {
   });
 
   // Clear optimistic preferences when fresh data arrives from server
-  // Only clear preferences that are not currently being mutated
   useEffect(() => {
     if (!preferencesLoading && alertPreferences) {
-      const clearedUpdates: string[] = [];
-      
-      // Only clear optimistic state for preferences that aren't currently pending
-      setOptimisticPreferences(prev => {
-        const newOptimistic = { ...prev };
-        Object.keys(newOptimistic).forEach(alertType => {
-          // Don't clear optimistic state for preferences that are still pending
-          if (!pendingToggles.has(alertType)) {
-            delete newOptimistic[alertType];
-            
-            // Track which completed updates are being cleared
-            if (completedUpdates.has(alertType)) {
-              clearedUpdates.push(alertType);
-            }
-          }
-        });
-        return newOptimistic;
-      });
-      
-      // Show success toast for completed updates that were just cleared
-      if (clearedUpdates.length > 0) {
-        toast({
-          title: "Alert preference updated",
-          description: "Your alert settings have been saved.",
-        });
-        
-        // Remove these from completed updates
-        setCompletedUpdates(prev => {
-          const newSet = new Set(prev);
-          clearedUpdates.forEach(alertType => newSet.delete(alertType));
-          return newSet;
-        });
-      }
+      // Clear optimistic state as we now have fresh server data
+      setOptimisticPreferences({});
     }
-  }, [alertPreferences, preferencesLoading, pendingToggles, completedUpdates, toast]);
+  }, [alertPreferences, preferencesLoading]);
 
   // Telegram settings query
   const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
@@ -252,11 +219,19 @@ export default function Settings() {
       return { previousData, alertType };
     },
     onSuccess: (data, variables, context) => {
-      // Track this update as completed so we can show toast after cache updates
-      setCompletedUpdates(prev => new Set([...prev, variables.alertType]));
+      // Clear optimistic state for this alert type as server confirmed
+      setOptimisticPreferences(prev => {
+        const newState = { ...prev };
+        delete newState[variables.alertType];
+        return newState;
+      });
       
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
+      });
+      toast({
+        title: "Alert preference updated",
+        description: "Your alert settings have been saved.",
       });
     },
     onError: (error: any, variables, context) => {
@@ -736,7 +711,7 @@ export default function Settings() {
                                     </span>
                                   )}
                                 </h4>
-                                {pendingToggles.has(alertType.key) && (
+                                {(updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key)) && (
                                   <div className={`w-4 h-4 border-2 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
                                 )}
                               </div>
@@ -750,7 +725,7 @@ export default function Settings() {
                             <Switch
                               checked={isEnabled && !isGloballyDisabled}
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={pendingToggles.has(alertType.key) || isGloballyDisabled}
+                              disabled={updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key) || isGloballyDisabled}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
                               className={`${getCheckedBgClass()} transition-all duration-200`}
                             />
