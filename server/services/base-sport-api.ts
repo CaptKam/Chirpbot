@@ -221,24 +221,29 @@ export abstract class BaseSportApi {
       } else {
         // ESPN API format - used by NFL, NBA, NCAAF, WNBA, CFL
         const statusState = game.status?.type?.state;
+        const statusName = game.status?.type?.name?.toLowerCase() || '';
         
         // Apply similar strict criteria as MLB to prevent false live detection
         if (!statusState) return false;
         
-        // Only 'in' state is considered truly live
-        if (statusState !== 'in') return false;
+        // Consider both 'in' state and halftime as live
+        const isInProgress = statusState === 'in';
+        const isHalftime = statusName.includes('halftime') || statusName.includes('status_halftime');
+        
+        if (!isInProgress && !isHalftime) return false;
         
         // Additional safety checks to avoid pre-game false positives
-        const statusName = game.status?.type?.name?.toLowerCase() || '';
-        
-        // Explicitly exclude known non-live states
-        if (statusName.includes('pre') || 
-            statusName.includes('scheduled') || 
-            statusName.includes('final') || 
-            statusName.includes('completed') ||
-            statusName.includes('postponed') ||
-            statusName.includes('delayed')) {
-          return false;
+        // But allow halftime to pass through
+        if (!isHalftime) {
+          // Explicitly exclude known non-live states only if not halftime
+          if (statusName.includes('pre') || 
+              statusName.includes('scheduled') || 
+              statusName.includes('final') || 
+              statusName.includes('completed') ||
+              statusName.includes('postponed') ||
+              statusName.includes('delayed')) {
+            return false;
+          }
         }
         
         return true;

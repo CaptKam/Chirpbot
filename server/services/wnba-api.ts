@@ -102,7 +102,7 @@ export class WNBAApiService extends BaseSportApi {
   protected mapGameStatus(statusName: string): string {
     const lowerStatus = statusName.toLowerCase();
     
-    if (lowerStatus.includes('in_progress') || lowerStatus.includes('live') || lowerStatus.includes('status_in_progress')) {
+    if (lowerStatus.includes('in_progress') || lowerStatus.includes('live') || lowerStatus.includes('status_in_progress') || lowerStatus.includes('halftime')) {
       return 'live';
     }
     if (lowerStatus.includes('final') || lowerStatus.includes('status_final')) {
