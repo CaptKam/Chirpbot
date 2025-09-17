@@ -65,12 +65,6 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
-      onSuccess: () => {
-        // Invalidate all queries on any mutation success
-        queryClient.invalidateQueries().catch(error => {
-          console.error('Error invalidating queries:', error);
-        });
-      },
       onError: (error) => {
         console.error('Mutation error:', error);
       }

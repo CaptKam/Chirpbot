@@ -127,12 +127,12 @@ export default function Settings() {
       return false;
     }
 
-    // For AI Enhancement alerts, look up in MLB preferences (since they're MLB-specific)
-    if (alertType.startsWith('AI_')) {
-      return preferenceMap.get(alertType) ?? true;
-    }
-
-    return preferenceMap.get(alertType) ?? true;
+    // CRITICAL FIX: Don't default to true - only return true if explicitly set to true
+    // This prevents toggles from flipping back on during refetch windows
+    const preference = preferenceMap.get(alertType);
+    
+    // If preference exists, use it; otherwise default to false for stable behavior
+    return preference !== undefined ? preference : false;
   };
 
   const logoutMutation = useMutation({
