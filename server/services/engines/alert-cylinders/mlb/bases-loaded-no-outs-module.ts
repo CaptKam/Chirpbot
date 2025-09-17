@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 
 export default class BasesLoadedNoOutsModule extends BaseAlertModule {
   alertType = 'MLB_BASES_LOADED_NO_OUTS';
@@ -30,6 +31,17 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
     const isLateInning = gameState.inning >= 7;
     const criticalityFactor = isCloseGame && isLateInning ? 'extreme' : isCloseGame ? 'high' : 'moderate';
     
+    // Get real performance data from tracker
+    const batterId = gameState.currentBatterId || `batter_${(gameState.currentBatter || 'Unknown').replace(/\s+/g, '_')}`;
+    const batterPerformance = mlbPerformanceTracker.getBatterSummary(gameState.gameId, batterId);
+    const pitcherId = gameState.currentPitcherId || `pitcher_${(gameState.currentPitcher || 'Unknown').replace(/\s+/g, '_')}`;
+    const pitcherPerformance = mlbPerformanceTracker.getPitcherSummary(gameState.gameId, pitcherId);
+    const teamMomentum = mlbPerformanceTracker.getTeamMomentumSummary(
+      gameState.gameId,
+      gameState.isTopInning ? 'away' : 'home'
+    );
+    const patterns = mlbPerformanceTracker.detectUnusualPatterns(gameState.gameId);
+    
     // Pitcher fatigue analysis
     const pitcherContext = this.analyzePitcherSituation(gameState);
     
@@ -39,7 +51,7 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_bases_loaded_no_outs_${gameState.inning}_${Date.now()}`,
       type: this.alertType,
-      message: `Bases loaded, no outs - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) - 86% scoring probability`,
+      message: this.buildEnhancedMessage(gameState, batterPerformance, pitcherPerformance, teamMomentum),
       context: {
         // Core game state
         gameId: gameState.gameId,
@@ -127,5 +139,43 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
 
   calculateProbability(): number {
     return 86;
+  }
+
+  private buildEnhancedMessage(
+    gameState: GameState,
+    batterPerformance?: string | null,
+    pitcherPerformance?: string | null,
+    teamMomentum?: string | null
+  ): string {
+    let message = `Bases loaded, no outs - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) - 86% scoring probability`;
+    
+    // Add pitcher performance if struggling
+    if (pitcherPerformance) {
+      if (pitcherPerformance.includes('consecutive balls') || pitcherPerformance.includes('struggling')) {
+        message += ` | Pitcher control issues: ${pitcherPerformance}`;
+      } else if (pitcherPerformance.includes('pitches') && parseInt(pitcherPerformance.match(/\d+/)?.[0] || '0') > 80) {
+        message += ` | Pitcher fatigue: ${pitcherPerformance}`;
+      }
+    }
+    
+    // Add batter performance if hot
+    if (batterPerformance) {
+      const match = batterPerformance.match(/(\d+)-for-(\d+)/);
+      if (match) {
+        const hits = parseInt(match[1]);
+        const atBats = parseInt(match[2]);
+        const avg = atBats > 0 ? hits / atBats : 0;
+        if (avg >= 0.400 || batterPerformance.includes('HR')) {
+          message += ` | Hot batter: ${batterPerformance}`;
+        }
+      }
+    }
+    
+    // Add team momentum
+    if (teamMomentum && (teamMomentum.includes('rally') || teamMomentum.includes('runs in last'))) {
+      message += ` | ${teamMomentum}`;
+    }
+    
+    return message;
   }
 }

@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 
 export default class ScoringOpportunityModule extends BaseAlertModule {
   alertType = 'MLB_SCORING_OPPORTUNITY';
@@ -53,6 +54,17 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
     const hasRunnerFirst = gameState.hasFirst || false;
     const inningText = gameState.isTopInning ? `Top ${gameState.inning}` : `Bottom ${gameState.inning}`;
     
+    // Get real performance data from tracker
+    const batterId = gameState.currentBatterId || `batter_${(gameState.currentBatter || 'Unknown').replace(/\s+/g, '_')}`;
+    const batterPerformance = mlbPerformanceTracker.getBatterSummary(gameState.gameId, batterId);
+    const pitcherId = gameState.currentPitcherId || `pitcher_${(gameState.currentPitcher || 'Unknown').replace(/\s+/g, '_')}`;
+    const pitcherPerformance = mlbPerformanceTracker.getPitcherSummary(gameState.gameId, pitcherId);
+    const teamMomentum = mlbPerformanceTracker.getTeamMomentumSummary(
+      gameState.gameId,
+      gameState.isTopInning ? 'away' : 'home'
+    );
+    const patterns = mlbPerformanceTracker.detectUnusualPatterns(gameState.gameId);
+    
     let message = `Scoring opportunity - ${inningText} - `;
     
     // Describe the situation
@@ -70,6 +82,45 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
     
     if (gameState.currentBatter) {
       message += ` - ${gameState.currentBatter} at bat`;
+    }
+    
+    // Add batter performance if hot
+    if (batterPerformance) {
+      const match = batterPerformance.match(/(\d+)-for-(\d+)/);
+      if (match) {
+        const hits = parseInt(match[1]);
+        const atBats = parseInt(match[2]);
+        const avg = atBats > 0 ? hits / atBats : 0;
+        if (avg >= 0.400 || (hits >= 2 && atBats <= 4)) {
+          message += ` | Hot batter: ${batterPerformance}`;
+        } else if (batterPerformance.includes('HR') || batterPerformance.includes('RBI')) {
+          message += ` | ${batterPerformance}`;
+        }
+      }
+    }
+    
+    // Add pitcher struggles  
+    if (pitcherPerformance && (pitcherPerformance.includes('consecutive balls') || pitcherPerformance.includes('walked'))) {
+      message += ` | Pitcher struggling: ${pitcherPerformance}`;
+    }
+    
+    // Add team momentum for rally context
+    if (teamMomentum) {
+      if (teamMomentum.includes('rally') || teamMomentum.includes('scored in')) {
+        message += ` | ${teamMomentum}`;
+      } else if (teamMomentum.includes('stranded') && gameState.outs <= 1) {
+        message += ` | Must capitalize: ${teamMomentum}`;
+      }
+    }
+    
+    // Add patterns if relevant
+    if (patterns && patterns.length > 0) {
+      const scoringPattern = patterns.find(p => 
+        p.includes('RISP') || p.includes('scoring') || p.includes('clutch')
+      );
+      if (scoringPattern) {
+        message += ` | ${scoringPattern}`;
+      }
     }
     
     return {

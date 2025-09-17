@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 
 export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
   alertType = 'MLB_BASES_LOADED_TWO_OUTS';
@@ -30,6 +31,17 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
     const isLateInning = gameState.inning >= 7;
     const criticalityFactor = isCloseGame && isLateInning ? 'extreme' : isCloseGame ? 'high' : 'moderate';
     
+    // Get real performance data from tracker
+    const batterId = gameState.currentBatterId || `batter_${(gameState.currentBatter || 'Unknown').replace(/\s+/g, '_')}`;
+    const batterPerformance = mlbPerformanceTracker.getBatterSummary(gameState.gameId, batterId);
+    const pitcherId = gameState.currentPitcherId || `pitcher_${(gameState.currentPitcher || 'Unknown').replace(/\s+/g, '_')}`;
+    const pitcherPerformance = mlbPerformanceTracker.getPitcherSummary(gameState.gameId, pitcherId);
+    const teamMomentum = mlbPerformanceTracker.getTeamMomentumSummary(
+      gameState.gameId,
+      gameState.isTopInning ? 'away' : 'home'
+    );
+    const patterns = mlbPerformanceTracker.detectUnusualPatterns(gameState.gameId);
+    
     // Analyze two-out clutch situation
     const clutchContext = this.analyzeClutchSituation(gameState);
     
@@ -39,7 +51,7 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_bases_loaded_two_outs_${gameState.inning}_${Date.now()}`,
       type: this.alertType,
-      message: `⚡ HIGH PRESSURE | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | BASES LOADED, 2 OUTS | 43% scoring probability | Clutch at-bat with runners stranded risk | LIVE TENSION PEAK`,
+      message: this.buildEnhancedMessage(gameState, batterPerformance, pitcherPerformance, teamMomentum, patterns),
       context: {
         // Core game state
         gameId: gameState.gameId,
@@ -138,5 +150,59 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
 
   calculateProbability(): number {
     return 43;
+  }
+
+  private buildEnhancedMessage(
+    gameState: GameState,
+    batterPerformance?: string | null,
+    pitcherPerformance?: string | null,
+    teamMomentum?: string | null,
+    patterns?: string[] | null
+  ): string {
+    let message = `⚡ HIGH PRESSURE | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | BASES LOADED, 2 OUTS | 43% scoring probability`;
+    
+    // Add batter clutch performance
+    if (batterPerformance) {
+      const match = batterPerformance.match(/(\d+)-for-(\d+)/);
+      if (match) {
+        const hits = parseInt(match[1]);
+        const atBats = parseInt(match[2]);
+        const avg = atBats > 0 ? hits / atBats : 0;
+        if (avg >= 0.333) {
+          message += ` | Clutch batter hot: ${batterPerformance}`;
+        } else if (avg <= 0.100 && atBats >= 3) {
+          message += ` | Batter struggling: ${batterPerformance}`;
+        }
+      }
+    }
+    
+    // Add pitcher fatigue or control issues
+    if (pitcherPerformance) {
+      if (pitcherPerformance.includes('consecutive balls') || pitcherPerformance.includes('walked')) {
+        message += ` | Pitcher control issues: ${pitcherPerformance}`;
+      } else if (pitcherPerformance.includes('pitches') && parseInt(pitcherPerformance.match(/\d+/)?.[0] || '0') > 90) {
+        message += ` | Pitcher fatigue risk: ${pitcherPerformance}`;
+      }
+    }
+    
+    // Add unusual patterns that suggest pressure
+    if (patterns && patterns.length > 0) {
+      const relevantPattern = patterns.find(p => 
+        p.includes('strikeout') || p.includes('walk') || p.includes('stranded')
+      );
+      if (relevantPattern) {
+        message += ` | ${relevantPattern}`;
+      }
+    }
+    
+    // Team momentum in clutch
+    if (teamMomentum && teamMomentum.includes('rally')) {
+      message += ` | ${teamMomentum}`;
+    }
+    
+    // Always include the pressure element
+    message += ` | LIVE TENSION PEAK`;
+    
+    return message;
   }
 }
