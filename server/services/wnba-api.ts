@@ -42,6 +42,9 @@ export class WNBAApiService extends BaseSportApi {
       const homeTeam = game.competitors.find((c: any) => c.homeAway === 'home');
       const awayTeam = game.competitors.find((c: any) => c.homeAway === 'away');
       
+      const parsedQuarter = event.status?.period || game.status?.period || 0;
+      const parsedClock = event.status?.displayClock || game.status?.displayClock || '';
+      
       return {
         id: event.id,
         sport: 'WNBA',
@@ -66,10 +69,10 @@ export class WNBAApiService extends BaseSportApi {
         homeScore: parseInt(homeTeam.score) || 0,
         awayScore: parseInt(awayTeam.score) || 0,
         isCompleted: event.status.type.state === 'post',
-        quarter: game.status?.period || 0,
-        timeRemaining: game.status?.displayClock || '',
-        period: game.status?.period || 0,
-        clock: game.status?.displayClock || '',
+        quarter: parsedQuarter,
+        timeRemaining: parsedClock,
+        period: parsedQuarter,
+        clock: parsedClock,
         possession: game.situation?.possession || null
       };
     });
