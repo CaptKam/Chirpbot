@@ -657,6 +657,7 @@ export default function V3Dashboard() {
           </div>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }
