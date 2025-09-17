@@ -15,7 +15,7 @@ import { SportTabs } from '@/components/SportTabs';
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { getSeasonAwareSports } from '@shared/season-manager';
+import { getSeasonAwareSports, getSportTabColors } from '@shared/season-manager';
 
 const SPORTS = getSeasonAwareSports();
 
@@ -54,6 +54,9 @@ export default function Settings() {
     return localStorage.getItem('settings-active-sport') || "MLB";
   });
   const { toast } = useToast();
+
+  // Get dynamic colors based on active sport
+  const sportColors = getSportTabColors(activeSport);
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -403,18 +406,127 @@ export default function Settings() {
 
 
 
-  // Helper function to get category icon
+  // Helper function to get category icon with dynamic sport colors
   const getCategoryIcon = (category: string) => {
+    const iconColorClass = activeSport === 'MLB' ? 'text-green-400' :
+                           activeSport === 'NFL' ? 'text-orange-400' :
+                           activeSport === 'NBA' ? 'text-purple-400' :
+                           activeSport === 'NCAAF' ? 'text-blue-400' :
+                           activeSport === 'CFL' ? 'text-red-400' :
+                           activeSport === 'WNBA' ? 'text-pink-400' :
+                           'text-emerald-400';
+    
     switch (category) {
       case "Game Situations":
-        return <Target className="w-4 h-4 text-emerald-400" />;
+        return <Target className={`w-4 h-4 ${iconColorClass}`} />;
       case "Scoring Events":
-        return <Trophy className="w-4 h-4 text-yellow-400" />;
+        return <Trophy className={`w-4 h-4 ${iconColorClass}`} />;
       case "At-Bat Situations":
-        return <Clock className="w-4 h-4 text-blue-400" />;
+        return <Clock className={`w-4 h-4 ${iconColorClass}`} />;
       default:
-        return <Bell className="w-4 h-4 text-slate-400" />;
+        return <Bell className={`w-4 h-4 ${iconColorClass}`} />;
     }
+  };
+
+  // Helper functions for sport-specific dynamic classes
+  const getHoverBgClass = () => {
+    return activeSport === 'MLB' ? 'hover:bg-green-500/20' :
+           activeSport === 'NFL' ? 'hover:bg-orange-500/20' :
+           activeSport === 'NBA' ? 'hover:bg-purple-500/20' :
+           activeSport === 'NCAAF' ? 'hover:bg-blue-500/20' :
+           activeSport === 'CFL' ? 'hover:bg-red-500/20' :
+           activeSport === 'WNBA' ? 'hover:bg-pink-500/20' :
+           'hover:bg-emerald-500/20';
+  };
+
+  const getHoverBorderClass = () => {
+    return activeSport === 'MLB' ? 'hover:border-green-500' :
+           activeSport === 'NFL' ? 'hover:border-orange-500' :
+           activeSport === 'NBA' ? 'hover:border-purple-500' :
+           activeSport === 'NCAAF' ? 'hover:border-blue-500' :
+           activeSport === 'CFL' ? 'hover:border-red-500' :
+           activeSport === 'WNBA' ? 'hover:border-pink-500' :
+           'hover:border-emerald-500';
+  };
+
+  const getHoverRingClass = () => {
+    return activeSport === 'MLB' ? 'hover:ring-green-500/30' :
+           activeSport === 'NFL' ? 'hover:ring-orange-500/30' :
+           activeSport === 'NBA' ? 'hover:ring-purple-500/30' :
+           activeSport === 'NCAAF' ? 'hover:ring-blue-500/30' :
+           activeSport === 'CFL' ? 'hover:ring-red-500/30' :
+           activeSport === 'WNBA' ? 'hover:ring-pink-500/30' :
+           'hover:ring-emerald-500/30';
+  };
+
+  const getGroupHoverTextClass = () => {
+    return activeSport === 'MLB' ? 'group-hover:text-green-400' :
+           activeSport === 'NFL' ? 'group-hover:text-orange-400' :
+           activeSport === 'NBA' ? 'group-hover:text-purple-400' :
+           activeSport === 'NCAAF' ? 'group-hover:text-blue-400' :
+           activeSport === 'CFL' ? 'group-hover:text-red-400' :
+           activeSport === 'WNBA' ? 'group-hover:text-pink-400' :
+           'group-hover:text-emerald-400';
+  };
+
+  const getCheckedBgClass = () => {
+    return activeSport === 'MLB' ? 'data-[state=checked]:bg-green-500' :
+           activeSport === 'NFL' ? 'data-[state=checked]:bg-orange-500' :
+           activeSport === 'NBA' ? 'data-[state=checked]:bg-purple-500' :
+           activeSport === 'NCAAF' ? 'data-[state=checked]:bg-blue-500' :
+           activeSport === 'CFL' ? 'data-[state=checked]:bg-red-500' :
+           activeSport === 'WNBA' ? 'data-[state=checked]:bg-pink-500' :
+           'data-[state=checked]:bg-emerald-500';
+  };
+
+  const getRingClass = () => {
+    return activeSport === 'MLB' ? 'ring-green-500/30' :
+           activeSport === 'NFL' ? 'ring-orange-500/30' :
+           activeSport === 'NBA' ? 'ring-purple-500/30' :
+           activeSport === 'NCAAF' ? 'ring-blue-500/30' :
+           activeSport === 'CFL' ? 'ring-red-500/30' :
+           activeSport === 'WNBA' ? 'ring-pink-500/30' :
+           'ring-emerald-500/30';
+  };
+
+  const getBorderClass = () => {
+    return activeSport === 'MLB' ? 'border-green-500' :
+           activeSport === 'NFL' ? 'border-orange-500' :
+           activeSport === 'NBA' ? 'border-purple-500' :
+           activeSport === 'NCAAF' ? 'border-blue-500' :
+           activeSport === 'CFL' ? 'border-red-500' :
+           activeSport === 'WNBA' ? 'border-pink-500' :
+           'border-emerald-500';
+  };
+
+  const getCardBgClass = () => {
+    return activeSport === 'MLB' ? 'bg-green-500/5' :
+           activeSport === 'NFL' ? 'bg-orange-500/5' :
+           activeSport === 'NBA' ? 'bg-purple-500/5' :
+           activeSport === 'NCAAF' ? 'bg-blue-500/5' :
+           activeSport === 'CFL' ? 'bg-red-500/5' :
+           activeSport === 'WNBA' ? 'bg-pink-500/5' :
+           'bg-emerald-500/5';
+  };
+
+  const getCardBorderClass = () => {
+    return activeSport === 'MLB' ? 'border-green-500/20' :
+           activeSport === 'NFL' ? 'border-orange-500/20' :
+           activeSport === 'NBA' ? 'border-purple-500/20' :
+           activeSport === 'NCAAF' ? 'border-blue-500/20' :
+           activeSport === 'CFL' ? 'border-red-500/20' :
+           activeSport === 'WNBA' ? 'border-pink-500/20' :
+           'border-emerald-500/20';
+  };
+
+  const getCardHoverBgClass = () => {
+    return activeSport === 'MLB' ? 'hover:bg-green-500/10' :
+           activeSport === 'NFL' ? 'hover:bg-orange-500/10' :
+           activeSport === 'NBA' ? 'hover:bg-purple-500/10' :
+           activeSport === 'NCAAF' ? 'hover:bg-blue-500/10' :
+           activeSport === 'CFL' ? 'hover:bg-red-500/10' :
+           activeSport === 'WNBA' ? 'hover:bg-pink-500/10' :
+           'hover:bg-emerald-500/10';
   };
 
   if (isAuthLoading) {
@@ -427,12 +539,12 @@ export default function Settings() {
       <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0B1220]/70 border-b border-white/10 text-slate-100 px-4 py-6">
         <div className="mx-auto max-w-7xl flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-[#10B981]" />
+            <div className={`h-10 w-10 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>
+              <Zap className={`w-5 h-5 ${sportColors.text}`} />
             </div>
             <div>
               <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
-              <p className="text-[#10B981]/80 text-xs font-medium">Settings Dashboard</p>
+              <p className={`${sportColors.text} opacity-80 text-xs font-medium`}>Settings Dashboard</p>
             </div>
           </div>
           {isAuthenticated && (
@@ -440,7 +552,7 @@ export default function Settings() {
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="border-emerald-500/30 text-[#10B981] hover:bg-emerald-500/10 hover:border-[#10B981] transition-all duration-300"
+              className={`${getBorderClass()} ${sportColors.text} ${getHoverBgClass()} transition-all duration-300`}
               data-testid="logout-button"
             >
               <LogOut className="w-4 h-4 mr-2" />
@@ -463,10 +575,10 @@ export default function Settings() {
       {/* Settings Content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
         {/* Selected Sport Display */}
-        <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+        <div className={`bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl ${sportColors.bg}`}>
           <div className="flex items-center space-x-4 mb-4">
-            <div className="h-12 w-12 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
-              <Target className="w-6 h-6 text-[#10B981]" />
+            <div className={`h-12 w-12 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>
+              <Target className={`w-6 h-6 ${sportColors.text}`} />
             </div>
             <div>
               <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
@@ -478,7 +590,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <div className="px-4 py-2 bg-[#10B981]/20 text-[#10B981] rounded-lg font-bold uppercase tracking-wide ring-1 ring-[#10B981]/30 shadow-lg shadow-emerald-500/25">
+            <div className={`px-4 py-2 ${sportColors.bg} ${sportColors.text} rounded-lg font-bold uppercase tracking-wide ring-1 ${getRingClass()} shadow-lg`}>
               {activeSport}
             </div>
             <ArrowRight className="w-5 h-5 text-slate-400" />
@@ -490,10 +602,10 @@ export default function Settings() {
 
         {/* Alert Preferences */}
         {isAuthenticated && (
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+          <div className={`bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl ${sportColors.bg}`}>
             <div className="flex items-center space-x-4 mb-6">
-              <div className="h-12 w-12 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
-                <Bell className="w-6 h-6 text-[#10B981]" />
+              <div className={`h-12 w-12 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>
+                <Bell className={`w-6 h-6 ${sportColors.text}`} />
               </div>
               <div>
                 <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
@@ -507,7 +619,7 @@ export default function Settings() {
 
             {isSettingsLoading || !availableAlerts ? (
               <div className="flex items-center justify-center py-12">
-                <div className="w-8 h-8 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
+                <div className={`w-8 h-8 border-4 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
               </div>
             ) : (
               <div className="w-full">
@@ -515,7 +627,7 @@ export default function Settings() {
                 <div className="space-y-6">
                   {/* Core Game Alerts */}
                   <div className="space-y-3">
-                    <h3 className="text-lg font-black text-[#10B981] uppercase tracking-wide">
+                    <h3 className={`text-lg font-black ${sportColors.text} uppercase tracking-wide`}>
                       {activeSport === 'MLB' ? '⚾' : activeSport === 'NFL' ? '🏈' : activeSport === 'NCAAF' ? '🏈' : activeSport === 'WNBA' ? '🏀' : activeSport === 'CFL' ? '🏈' : '🏀'} {activeSport} Game Alerts
                     </h3>
                     <div className="space-y-3">
@@ -528,7 +640,7 @@ export default function Settings() {
                         // Show skeleton if preference is still loading
                         if (isEnabled === undefined) {
                           return (
-                            <div key={alertType.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 opacity-60">
+                            <div key={alertType.key} className={`flex items-center justify-between p-3 rounded-lg border opacity-60 ${getCardBgClass()} ${getCardBorderClass()}`}>
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2">
                                   <h4 className="text-sm font-semibold text-slate-100">
@@ -548,14 +660,14 @@ export default function Settings() {
                           <div key={alertType.key} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${
                             isGloballyDisabled 
                               ? 'bg-red-500/5 border-red-500/20 opacity-60' 
-                              : 'bg-white/5 border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-[#10B981]/30'
+                              : `${getCardBgClass()} ${getCardBorderClass()} ${getCardHoverBgClass()} hover:ring-1 ${getHoverRingClass()}`
                           }`}>
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
                                 <h4 className={`text-sm font-semibold transition-colors ${
                                   isGloballyDisabled 
                                     ? 'text-red-400' 
-                                    : 'text-slate-100 group-hover:text-[#10B981]'
+                                    : `text-slate-100 ${getGroupHoverTextClass()}`
                                 }`}>
                                   {alertType.label}
                                   {isGloballyDisabled && (
@@ -565,7 +677,7 @@ export default function Settings() {
                                   )}
                                 </h4>
                                 {(updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key)) && (
-                                  <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
+                                  <div className={`w-4 h-4 border-2 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
                                 )}
                               </div>
                               <p className={`text-xs mt-1 ${isGloballyDisabled ? 'text-red-400/70' : 'text-slate-400'}`}>
@@ -580,7 +692,7 @@ export default function Settings() {
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
                               disabled={updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key) || isGloballyDisabled}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                              className="data-[state=checked]:bg-[#10B981] transition-all duration-200"
+                              className={`${getCheckedBgClass()} transition-all duration-200`}
                             />
                           </div>
                         );
@@ -613,15 +725,15 @@ export default function Settings() {
 
         {/* User Info Section */}
         {isAuthenticated && user && (
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+          <div className={`bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl ${sportColors.bg}`}>
             <div className="flex items-center space-x-4">
-              <div className="h-12 w-12 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
-                <SettingsIcon className="w-6 h-6 text-[#10B981]" />
+              <div className={`h-12 w-12 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>
+                <SettingsIcon className={`w-6 h-6 ${sportColors.text}`} />
               </div>
               <div>
                 <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">Account Settings</h2>
                 <p className="text-sm text-slate-300">
-                  Logged in as <span className="text-[#10B981] font-semibold">{user.username}</span>
+                  Logged in as <span className={`${sportColors.text} font-semibold`}>{user.username}</span>
                 </p>
                 {user.email && (
                   <p className="text-xs text-slate-400">{user.email}</p>
