@@ -148,7 +148,7 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
     pitcherPerformance?: string | null,
     teamMomentum?: string | null
   ): string {
-    let message = `Bases loaded, no outs - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) - 86% scoring probability`;
+    let message = `Bases loaded, no outs | 86% scoring probability`;
     
     // Add pitcher performance with proper parsing
     if (pitcherPerformance) {

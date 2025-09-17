@@ -41,7 +41,7 @@ export default class FirstAndThirdOneOutModule extends BaseAlertModule {
     const totalProbability = Math.min(85, baseProbability + windBonus + clutchBonus);
     
     // Build simple context message
-    let message = `Runners on 1st and 3rd, 1 out - ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore || 0}-${gameState.homeScore || 0}) - ${totalProbability}% scoring probability - ${currentBatter} at bat`;
+    let message = `Runners on 1st and 3rd, 1 out | ${currentBatter} at bat | ${totalProbability}% scoring probability${windText}`;
 
     // Create unique alert key including batter and out count
     const alertKey = `${gameState.gameId}_first_third_one_out_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bottom'}_${currentBatter.replace(/\s+/g, '_')}`;

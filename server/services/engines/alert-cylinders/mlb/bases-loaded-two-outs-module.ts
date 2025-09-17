@@ -159,7 +159,7 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
     teamMomentum?: string | null,
     patterns?: string[] | null
   ): string {
-    let message = `⚡ HIGH PRESSURE | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | BASES LOADED, 2 OUTS | 43% scoring probability`;
+    let message = `Bases loaded, 2 outs | 43% scoring probability`;
     
     // Add batter clutch performance
     if (batterPerformance) {

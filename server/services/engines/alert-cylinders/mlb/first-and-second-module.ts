@@ -34,7 +34,7 @@ export default class FirstAndSecondModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_first_second_${gameState.outs}_out`,
       type: this.alertType,
-      message: `🚨 SCORING POSITION | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | Runners on 1st & 2nd, ${gameState.outs} OUT${gameState.outs !== 1 ? 'S' : ''} | ${scoringProb}% scoring edge | Double scores 2 | Single scores 1`,
+      message: `Runners on 1st & 2nd, ${gameState.outs} out${gameState.outs !== 1 ? 's' : ''} | ${scoringProb}% scoring chance | Double scores 2 | Single scores 1`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

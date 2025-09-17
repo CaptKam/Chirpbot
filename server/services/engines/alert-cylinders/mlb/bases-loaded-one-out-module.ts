@@ -61,7 +61,7 @@ export default class BasesLoadedOneOutModule extends BaseAlertModule {
     pitcherPerformance?: string | null,
     teamMomentum?: string | null
   ): string {
-    let message = `⚡ HIGH LEVERAGE | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | BASES LOADED, 1 OUT | 66% scoring edge`;
+    let message = `Bases loaded, 1 out | 66% scoring chance`;
     
     // Add pitcher performance with proper parsing
     if (pitcherPerformance) {

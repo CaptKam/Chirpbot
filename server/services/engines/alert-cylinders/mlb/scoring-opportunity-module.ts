@@ -65,23 +65,24 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
     );
     const patterns = mlbPerformanceTracker.detectUnusualPatterns(gameState.gameId);
     
-    let message = `Scoring opportunity - ${inningText} - `;
+    // Streamlined message focused on betting-critical data
+    let message = '';
     
-    // Describe the situation
+    // Base runner situation (core betting data)
     if (hasRunnerThird && hasRunnerSecond && hasRunnerFirst) {
       message += `Bases loaded`;
     } else if (hasRunnerThird && hasRunnerSecond) {
-      message += `Runners on 2nd and 3rd`;
+      message += `Runners on 2nd & 3rd`;
     } else if (hasRunnerThird) {
       message += `Runner on 3rd`;
     } else if (hasRunnerSecond) {
       message += `Runner on 2nd`;
     }
     
-    message += ` with ${gameState.outs} out - ${gameState.awayTeam} ${gameState.awayScore} - ${gameState.homeScore} ${gameState.homeTeam}`;
+    message += `, ${gameState.outs} out${gameState.outs !== 1 ? 's' : ''}`;
     
     if (gameState.currentBatter) {
-      message += ` - ${gameState.currentBatter} at bat`;
+      message += ` | ${gameState.currentBatter} at bat`;
     }
     
     // Add batter performance if hot

@@ -15,11 +15,18 @@ export default class RunnerOnThirdOneOutModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    // isTriggered() already called by engine - removed duplicate check
+    // Get current batter information
+    const currentBatter = gameState.currentBatter || 'Current Batter';
+    const currentPitcher = gameState.currentPitcher || '';
+    const onDeckBatter = gameState.onDeckBatter || '';
+    
+    // Create unique alert key including batter and inning details
+    const alertKey = `${gameState.gameId}_runner_third_one_out_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bottom'}_${currentBatter.replace(/\s+/g, '_')}`;
+
     return {
-      alertKey: `${gameState.gameId}_runner_third_one_out`,
+      alertKey,
       type: this.alertType,
-      message: `🎯 CLUTCH MOMENT | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | Runner 90ft from scoring, 1 out | 66% probability | Wild pitch, sac fly, or clutch hit incoming | LIVE BETTING EDGE`,
+      message: `Runner on 3rd, 1 out | ${currentBatter} at bat | 66% scoring chance`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -32,6 +39,11 @@ export default class RunnerOnThirdOneOutModule extends BaseAlertModule {
         hasSecond: false,
         hasThird: true,
         outs: 1,
+        balls: gameState.balls,
+        strikes: gameState.strikes,
+        currentBatter,
+        currentPitcher,
+        onDeckBatter,
         scenarioName: 'Runner on 3rd',
         scoringProbability: 66
       },

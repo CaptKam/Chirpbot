@@ -19,7 +19,7 @@ export default class SecondAndThirdOneOutModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_second_third_one_out`,
       type: this.alertType,
-      message: `⚡ CRITICAL SITUATION | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | Runners on 2nd & 3rd, 1 OUT | 68% scoring edge | Sac fly scores | Wild pitch scores 2 | CLUTCH AB`,
+      message: `Runners on 2nd & 3rd, 1 out | 68% scoring chance | Sac fly scores | Wild pitch scores 2`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

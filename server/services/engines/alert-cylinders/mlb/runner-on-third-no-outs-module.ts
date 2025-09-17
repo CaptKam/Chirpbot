@@ -31,7 +31,7 @@ export default class RunnerOnThirdNoOutsModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_runner_on_third_no_outs`,
       type: this.alertType,
-      message: `🚨 RUNNER ON 3RD, NO OUTS! | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | 84% scoring probability | Prime RBI opportunity`,
+      message: `Runner on 3rd, no outs | 84% scoring probability | Prime RBI opportunity`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

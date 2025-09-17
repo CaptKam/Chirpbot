@@ -43,7 +43,7 @@ export default class FirstAndThirdTwoOutsModule extends BaseAlertModule {
       intensityLevel = 'CLUTCH SITUATION';
     }
 
-    const message = `⚡ ${intensityLevel} | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore || 0}-${gameState.homeScore || 0}) | 1st & 3rd, 2 OUTS | ${totalProbability}% scoring edge | Multiple runners in motion | ${currentBatter} in THE SPOT | LIVE ACTION REQUIRED`;
+    const message = `Runners on 1st & 3rd, 2 outs | ${currentBatter} at bat | ${totalProbability}% scoring chance | ${intensityLevel.toLowerCase()}`;
 
     const alertKey = `${gameState.gameId}_first_third_two_outs_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bottom'}_${currentBatter.replace(/\s+/g, '_')}`;
 

@@ -40,7 +40,7 @@ export default class RunnerOnThirdTwoOutsModule extends BaseAlertModule {
       situationText = 'PRESSURE MOMENT | ';
     }
 
-    const message = `🎯 ${situationText}${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore || 0}-${gameState.homeScore || 0}) | Runner 90ft away, 2 OUTS | ${totalProbability}% scoring chance | ${currentBatter} needs clutch hit | ALL OR NOTHING | LIVE BET SPIKE`;
+    const message = `Runner on 3rd, 2 outs | ${currentBatter} needs clutch hit | ${totalProbability}% scoring chance | ${situationText.replace(' | ', '').toLowerCase()}`;
 
     const alertKey = `${gameState.gameId}_runner_third_two_outs_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bottom'}_${currentBatter.replace(/\s+/g, '_')}`;
 

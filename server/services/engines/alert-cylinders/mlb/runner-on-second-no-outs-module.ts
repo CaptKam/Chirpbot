@@ -19,7 +19,7 @@ export default class RunnerOnSecondNoOutsModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_runner_second_no_outs`,
       type: this.alertType,
-      message: `🏃 SCORING POSITION | ${gameState.awayTeam} @ ${gameState.homeTeam} (${gameState.awayScore}-${gameState.homeScore}) | Runner on 2nd, NO OUTS | 60% scoring edge | Single scores | Wild pitch advances | RISP opportunity`,
+      message: `Runner on 2nd, no outs | 60% scoring chance | Single scores | Wild pitch advances`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
