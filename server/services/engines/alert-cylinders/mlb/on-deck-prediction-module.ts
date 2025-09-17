@@ -137,7 +137,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
       situation = 'runner_1st';
     }
 
-    let probability = this.SITUATION_PROBABILITIES[situation] || 30;
+    let probability = this.SITUATION_PROBABILITIES[situation as keyof typeof this.SITUATION_PROBABILITIES] || 30;
 
     // Adjust for outs
     if (outs === 0) {

@@ -9,7 +9,7 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
   private readonly COOLDOWN_MS = 120000; // 2 minutes between alerts
 
   isTriggered(gameState: GameState): boolean {
-    console.log(`🔍 MLB Scoring Opportunity check for ${gameState.gameId}: runners=${JSON.stringify(gameState.runners)}, outs=${gameState.outs}`);
+    console.log(`🔍 MLB Scoring Opportunity check for ${gameState.gameId}: hasSecond=${gameState.hasSecond}, hasThird=${gameState.hasThird}, outs=${gameState.outs}`);
     
     // Must be a live game
     if (!gameState.isLive) {
@@ -18,8 +18,8 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
     }
     
     // Check for runners in scoring position (2nd or 3rd base)
-    const hasRunnerSecond = gameState.runners?.second || false;
-    const hasRunnerThird = gameState.runners?.third || false;
+    const hasRunnerSecond = gameState.hasSecond || false;
+    const hasRunnerThird = gameState.hasThird || false;
     
     if (!hasRunnerSecond && !hasRunnerThird) {
       console.log(`❌ Scoring Opportunity: No runners in scoring position`);
@@ -48,9 +48,9 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    const hasRunnerSecond = gameState.runners?.second || false;
-    const hasRunnerThird = gameState.runners?.third || false;
-    const hasRunnerFirst = gameState.runners?.first || false;
+    const hasRunnerSecond = gameState.hasSecond || false;
+    const hasRunnerThird = gameState.hasThird || false;
+    const hasRunnerFirst = gameState.hasFirst || false;
     const inningText = gameState.isTopInning ? `Top ${gameState.inning}` : `Bottom ${gameState.inning}`;
     
     let message = `Scoring opportunity - ${inningText} - `;
@@ -85,7 +85,9 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
         inning: gameState.inning,
         isTopInning: gameState.isTopInning,
         outs: gameState.outs,
-        runners: gameState.runners,
+        hasFirst: gameState.hasFirst,
+        hasSecond: gameState.hasSecond,
+        hasThird: gameState.hasThird,
         currentBatter: gameState.currentBatter,
         currentPitcher: gameState.currentPitcher
       },
@@ -96,8 +98,8 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
   calculateProbability(gameState: GameState): number {
     if (!this.isTriggered(gameState)) return 0;
     
-    const hasRunnerThird = gameState.runners?.third || false;
-    const hasRunnerSecond = gameState.runners?.second || false;
+    const hasRunnerThird = gameState.hasThird || false;
+    const hasRunnerSecond = gameState.hasSecond || false;
     
     // Higher probability with runner on third
     if (hasRunnerThird && hasRunnerSecond) return 90;

@@ -153,24 +153,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     return this.calculateStealProbabilitySync(gameState);
   }
 
-  private createGameStateKey(gameState: GameState): string {
-    // Create a unique key that represents the exact game state
-    return [
-      gameState.gameId,
-      gameState.inning,
-      gameState.isTopInning ? 'top' : 'bottom',
-      gameState.hasFirst ? '1' : '0',
-      gameState.hasSecond ? '1' : '0', 
-      gameState.hasThird ? '1' : '0',
-      gameState.outs,
-      gameState.balls,
-      gameState.strikes,
-      gameState.homeScore,
-      gameState.awayScore
-    ].join('_');
-  }
-
-  private calculateDeterministicStealProbability(gameState: GameState): number {
+  private calculateDeterministicStealProbabilitySync(gameState: GameState): number {
     // Base steal attempt rate based on situation
     let baseProbability = 0;
     const hasFirst = gameState.hasFirst || false;
@@ -188,11 +171,11 @@ export default class StealLikelihoodModule extends BaseAlertModule {
 
     // Apply count leverage
     const countKey = `${gameState.balls || 0}-${gameState.strikes || 0}`;
-    const countLeverage = this.COUNT_LEVERAGE[countKey] || 1.0;
+    const countLeverage = this.COUNT_LEVERAGE[countKey as keyof typeof this.COUNT_LEVERAGE] || 1.0;
     baseProbability *= countLeverage;
 
     // Apply inning leverage
-    const inningLeverage = this.INNING_LEVERAGE[gameState.inning || 5] || 1.0;
+    const inningLeverage = this.INNING_LEVERAGE[(gameState.inning || 5) as keyof typeof this.INNING_LEVERAGE] || 1.0;
     baseProbability *= inningLeverage;
 
     // Apply game situation modifiers
@@ -223,6 +206,10 @@ export default class StealLikelihoodModule extends BaseAlertModule {
            (hasFirst && hasThird);      // First and third (double steal)
   }
 
+  private createGameStateKey(gameState: GameState): string {
+    return `${gameState.gameId}_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${gameState.hasFirst ? '1' : '0'}${gameState.hasSecond ? '2' : '0'}${gameState.hasThird ? '3' : '0'}_${gameState.outs}_${gameState.balls}_${gameState.strikes}`;
+  }
+
   private calculateStealProbabilitySync(gameState: GameState): number {
     const cacheKey = this.createGameStateKey(gameState);
     
@@ -232,7 +219,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     }
 
     // Calculate the steal probability synchronously
-    const probability = this.calculateDeterministicStealProbability(gameState);
+    const probability = this.calculateDeterministicStealProbabilitySync(gameState);
     
     // Cache the result
     this.probabilityCache[cacheKey] = probability;
@@ -247,28 +234,13 @@ export default class StealLikelihoodModule extends BaseAlertModule {
       return this.probabilityCache[cacheKey];
     }
 
-    const probability = await this.calculateDeterministicStealProbability(gameState);
+    const probability = await this.calculateDeterministicStealProbabilityAsync(gameState);
     this.probabilityCache[cacheKey] = probability;
     return probability;
   }
 
-  private createGameStateKey(gameState: GameState): string {
-    return [
-      gameState.gameId,
-      gameState.inning,
-      gameState.isTopInning ? 'top' : 'bottom',
-      gameState.hasFirst ? '1' : '0',
-      gameState.hasSecond ? '1' : '0', 
-      gameState.hasThird ? '1' : '0',
-      gameState.outs,
-      gameState.balls,
-      gameState.strikes,
-      gameState.homeScore,
-      gameState.awayScore
-    ].join('_');
-  }
 
-  private async calculateDeterministicStealProbability(gameState: GameState): Promise<number> {
+  private async calculateDeterministicStealProbabilityAsync(gameState: GameState): Promise<number> {
     // Start with base steal ATTEMPT rate for the scenario
     const baseScenario = this.getStealScenario(gameState);
     let probability = this.STEAL_ATTEMPT_RATES[baseScenario].base;
@@ -458,7 +430,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     const scenario = analysis.scenario;
     const countSit = analysis.countSituation;
 
-    let message = `🏃 ${gameState.awayTeam} @ ${gameState.homeTeam}: ${roundedProb}% steal chance`;
+    let message = `🏃 ${gameState?.awayTeam || 'Away'} @ ${gameState?.homeTeam || 'Home'}: ${roundedProb}% steal chance`;
 
     // Add scenario-specific context
     if (scenario === '1B_to_2B') {
