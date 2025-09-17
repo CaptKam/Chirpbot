@@ -138,16 +138,6 @@ export default class WindChangeModule extends BaseAlertModule {
   }
 
   private hasSignificantDirectionChange(oldDir: string, newDir: string): boolean {
-    // Map directions to impact on hitting
-    const directionImpact = {
-      'out': 3,      // Blowing out to center
-      'center': 3,   // To center field
-      'right': 2,    // To right field
-      'left': 2,     // To left field
-      'in': -2,      // Blowing in
-      'cross': 0     // Cross wind
-    };
-
     const oldImpact = this.getDirectionImpact(oldDir);
     const newImpact = this.getDirectionImpact(newDir);
 
