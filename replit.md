@@ -4,6 +4,15 @@ ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time
 
 # Recent Changes
 
+## September 17, 2025 - MLB ALERT SYSTEM FULLY FIXED ✅
+- **CRITICAL FIX:** MLB_STRIKEOUT module was not loading - added it and 2 other missing modules to engine lifecycle
+- **MAJOR BUG FIX:** Scoring opportunity module was using wrong GameState fields (runners.second instead of hasSecond)
+- **MODULE COUNT:** System now loads 23 MLB modules (up from 16) - all cylinders operational
+- **NEW MODULE:** Created MLB_BASES_LOADED_TWO_OUTS module for high-pressure situations
+- **TYPESCRIPT:** Fixed 9 TypeScript errors across steal-likelihood and on-deck-prediction modules
+- **VERIFIED WORKING:** Live alerts confirmed firing - bases loaded alert successfully generated and saved to database
+- **FIELD NORMALIZATION:** All modules now consistently use hasFirst/hasSecond/hasThird for base runner detection
+
 ## September 16, 2025 - CRITICAL ALERT PIPELINE FIXED ✅
 - **MAJOR FIX:** Implemented missing `setOnEnhancedAlert` callback in UnifiedAIProcessor that was preventing alerts from saving to database
 - **VERIFIED WORKING:** Live alerts from real MLB games now successfully generate → AI enhance → save to database → serve via API
