@@ -736,7 +736,7 @@ export default function Settings() {
                                     </span>
                                   )}
                                 </h4>
-                                {(updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key)) && (
+                                {pendingToggles.has(alertType.key) && (
                                   <div className={`w-4 h-4 border-2 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
                                 )}
                               </div>
@@ -750,7 +750,7 @@ export default function Settings() {
                             <Switch
                               checked={isEnabled && !isGloballyDisabled}
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key) || isGloballyDisabled}
+                              disabled={pendingToggles.has(alertType.key) || isGloballyDisabled}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
                               className={`${getCheckedBgClass()} transition-all duration-200`}
                             />
