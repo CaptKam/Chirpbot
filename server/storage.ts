@@ -370,32 +370,27 @@ export const storage = {
   },
 
   async setUserAlertPreference(userId: string, sport: string, alertType: string, enabled: boolean) {
-    // Use upsert pattern - try to update first, insert if not exists
-    const existing = await db.select().from(userAlertPreferences)
-      .where(and(
-        eq(userAlertPreferences.userId, userId),
-        eq(userAlertPreferences.sport, sport),
-        eq(userAlertPreferences.alertType, alertType)
-      ));
-
-    if (existing.length > 0) {
-      const result = await db.update(userAlertPreferences)
-        .set({ enabled, updatedAt: new Date() })
-        .where(and(
-          eq(userAlertPreferences.userId, userId),
-          eq(userAlertPreferences.sport, sport),
-          eq(userAlertPreferences.alertType, alertType)
-        ))
-        .returning();
-      console.log(`🔧 RULE 1: Updated user preference ${userId} ${sport}.${alertType} = ${enabled}`);
-      return result[0];
-    } else {
-      const result = await db.insert(userAlertPreferences)
-        .values({ userId, sport, alertType, enabled })
-        .returning();
-      console.log(`🔧 RULE 1: Created user preference ${userId} ${sport}.${alertType} = ${enabled}`);
-      return result[0];
-    }
+    // Use true UPSERT with ON CONFLICT clause to prevent race conditions
+    const result = await db.insert(userAlertPreferences)
+      .values({ 
+        userId, 
+        sport, 
+        alertType, 
+        enabled,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .onConflictDoUpdate({
+        target: [userAlertPreferences.userId, userAlertPreferences.sport, userAlertPreferences.alertType],
+        set: {
+          enabled,
+          updatedAt: new Date()
+        }
+      })
+      .returning();
+    
+    console.log(`🔧 UPSERT: Set user preference ${userId} ${sport}.${alertType} = ${enabled}`);
+    return result[0];
   },
 
   async bulkSetUserAlertPreferences(userId: string, sport: string, preferences: Array<{alertType: string, enabled: boolean}>) {
@@ -896,26 +891,8 @@ export const storage = {
     try {
       console.log(`🔧 Enabling user alert: ${userId} ${sport} ${alertType}`);
 
-      // Check if user preference already exists
-      const existing = await db.execute(sql`
-        SELECT * FROM user_alert_preferences 
-        WHERE user_id = ${userId} AND sport = ${sport} AND alert_type = ${alertType}
-      `);
-
-      if (existing.rows.length > 0) {
-        // Update existing preference to enabled
-        await db.execute(sql`
-          UPDATE user_alert_preferences 
-          SET enabled = true, updated_at = ${new Date()}
-          WHERE user_id = ${userId} AND sport = ${sport} AND alert_type = ${alertType}
-        `);
-      } else {
-        // Create new user preference
-        await db.execute(sql`
-          INSERT INTO user_alert_preferences (user_id, sport, alert_type, enabled, created_at, updated_at)
-          VALUES (${userId}, ${sport}, ${alertType}, true, ${new Date()}, ${new Date()})
-        `);
-      }
+      // Use the fixed setUserAlertPreference method which implements proper UPSERT
+      await this.setUserAlertPreference(userId, sport, alertType, true);
 
       console.log(`✅ User alert enabled: ${userId} ${sport} ${alertType}`);
       return true;
