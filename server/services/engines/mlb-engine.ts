@@ -48,8 +48,8 @@ export class MLBEngine extends BaseSportEngine {
       const outs = gameState.outs || 0;
       
       // Track batter performance if we have current batter info
-      if (gameState.currentBatter && gameState.lastPlay) {
-        const outcome = this.parsePlayOutcome(gameState.lastPlay);
+      if (gameState.currentBatter && gameState.lastPlay?.description) {
+        const outcome = this.parsePlayOutcome(gameState.lastPlay.description);
         if (outcome) {
           // Check for RISP (runners on 2nd or 3rd, NOT 1st)
           const runnersInScoringPosition = gameState.hasSecond || gameState.hasThird;
@@ -74,8 +74,8 @@ export class MLBEngine extends BaseSportEngine {
       }
       
       // Track pitcher performance with proper stats
-      if (gameState.currentPitcher && gameState.lastPitch) {
-        const pitchOutcome = this.parsePitchOutcome(gameState.lastPitch);
+      if (gameState.currentPitcher && gameState.lastPitch?.call) {
+        const pitchOutcome = this.parsePitchOutcome(gameState.lastPitch.call);
         if (pitchOutcome) {
           mlbPerformanceTracker.updatePitcherPerformance(
             gameId,
@@ -101,8 +101,8 @@ export class MLBEngine extends BaseSportEngine {
       const teamId = gameState.isTopInning ? 'away' : 'home';
       
       // Parse last play for various team events
-      if (gameState.lastPlay) {
-        const play = gameState.lastPlay.toLowerCase();
+      if (gameState.lastPlay?.description) {
+        const play = gameState.lastPlay.description.toLowerCase();
         
         // Check for different event types
         if (play.includes('scores') || play.includes('run')) {

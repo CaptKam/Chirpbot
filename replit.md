@@ -4,6 +4,13 @@ ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time
 
 # Recent Changes
 
+## September 17, 2025 - MLB GAME START MODULE PERFECTED ✅
+- **CRITICAL FIX:** extractLastPlay and extractLastPitch methods added to MLBApiService to resolve TypeError crashes
+- **GAME START TIMING:** Now triggers exactly once at top of inning 1 with proper duplicate prevention
+- **PERFORMANCE TRACKING:** Fixed all references to lastPlay/lastPitch objects to use correct properties
+- **VERIFIED WORKING:** Live games successfully generating MLB_GAME_START, MLB_SEVENTH_INNING_STRETCH, and MLB_LATE_INNING_CLOSE alerts
+- **DATABASE SAVES:** Alerts properly persisting with 5-minute TTL and deduplication working correctly
+
 ## September 17, 2025 - MLB WIND CHANGE MODULE ENHANCED WITH RESEARCH-BACKED ANALYTICS ✅
 - **SPEED THRESHOLD:** Lowered from 6mph to 5mph based on research showing 5mph adds ~19 feet of carry distance
 - **DIRECTION IMPACT REFINEMENT:** Left field winds now get highest impact (3), center/out moderate (2), right field lowest (1), blowing in negative (-2)
