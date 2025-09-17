@@ -4,6 +4,15 @@ ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time
 
 # Recent Changes
 
+## September 17, 2025 - MLB PERFORMANCE CONTEXT ENHANCEMENT ✅
+- **NEW SYSTEM:** Built comprehensive MLB performance tracker for real-time batter/pitcher/team stats
+- **CONTEXT GENERATION:** Alerts now include "Batter 3-for-4 tonight", "95+ pitches", "Team rally: scored in last 3 innings"
+- **MOMENTUM DETECTION:** Tracks scoring runs, dry spells, and unusual patterns (5 strikeouts in 6 batters)
+- **FIXED CRITICAL BUG:** Pitcher fatigue was reading wrong number (3 instead of 95 pitches) - now correctly parsed
+- **5 MODULES ENHANCED:** Bases loaded, scoring opportunity, and late-inning modules now use performance data
+- **STABLE ALERT KEYS:** Removed timestamps that were breaking deduplication
+- **VELOCITY TRACKING:** Now detects and reports when pitcher velocity drops 3+ mph
+
 ## September 17, 2025 - MLB ALERT SYSTEM FULLY FIXED ✅
 - **CRITICAL FIX:** MLB_STRIKEOUT module was not loading - added it and 2 other missing modules to engine lifecycle
 - **MAJOR BUG FIX:** Scoring opportunity module was using wrong GameState fields (runners.second instead of hasSecond)
