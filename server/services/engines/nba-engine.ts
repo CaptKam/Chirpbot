@@ -2,13 +2,10 @@ import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
-import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class NBAEngine extends BaseSportEngine {
-  private lineMovementCache: Map<string, any> = new Map(); // Track line movements
-  
-  // Deduplication tracking - tracks sent alerts to prevent duplicates
+  // Deduplication tracking - tracks sent alerts to prevent duplicates (standardized from MLB)
   private sentAlerts: Map<string, Set<string>> = new Map(); // gameId -> Set of alertKeys
   private alertTimestamps: Map<string, number> = new Map(); // alertKey -> timestamp
   private lastCleanup: number = Date.now();
@@ -238,7 +235,7 @@ export class NBAEngine extends BaseSportEngine {
     }
   }
 
-  // Override to add NBA-specific game state enhancement and performance monitoring
+  // Override to add NBA-specific game state normalization (standardized from WNBA)
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
     const startTime = Date.now();
     
@@ -249,36 +246,56 @@ export class NBAEngine extends BaseSportEngine {
         return [];
       }
       
-      // Enhance game state with NBA-specific live data if needed
+      console.log(`🎯 NBA: Processing game ${gameState.gameId} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
+      console.log(`🎯 NBA: Status=${gameState.status}, isLive=${gameState.isLive}, quarter=${gameState.quarter}`);
+      
+      // Enhance game state with NBA-specific data if needed
       const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
 
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
       
-      // Filter out duplicate alerts before processing
-      const dedupedAlerts: AlertResult[] = [];
-      for (const alert of rawAlerts) {
-        // Check if this alert has already been sent
-        if (!this.hasAlertBeenSent(enhancedGameState.gameId, alert.alertKey)) {
-          dedupedAlerts.push(alert);
-          // Mark as sent immediately to prevent duplicates in same processing cycle
-          this.markAlertSent(enhancedGameState.gameId, alert.alertKey);
+      // ✅ SEND RAW ALERTS TO UNIFIED AI PROCESSOR FOR ENHANCEMENT (standardized from WNBA)
+      // Process ALL generated alerts through AI enhancement before deduplication
+      if (rawAlerts.length > 0) {
+        console.log(`🔄 NBA: Sending ${rawAlerts.length} raw alerts to AsyncAI processor for enhancement`);
+        const { unifiedAIProcessor } = await import('../unified-ai-processor');
+        
+        // Send each raw alert to AsyncAI processor with proper context
+        for (const alert of rawAlerts) {
+          const context: CrossSportContext = {
+            sport: 'NBA' as const,
+            alertType: alert.type,
+            gameId: enhancedGameState.gameId,
+            priority: alert.priority || 75,
+            probability: alert.priority || 75,
+            homeTeam: enhancedGameState.homeTeam || 'Home',
+            awayTeam: enhancedGameState.awayTeam || 'Away',
+            homeScore: enhancedGameState.homeScore || 0,
+            awayScore: enhancedGameState.awayScore || 0,
+            isLive: enhancedGameState.isLive || false,
+            quarter: enhancedGameState.quarter || 1,
+            timeRemaining: enhancedGameState.timeRemaining || '',
+            timeLeft: enhancedGameState.timeRemaining || '',
+            shotClock: (enhancedGameState as any).shotClock || 24,
+            fouls: {
+              home: (enhancedGameState as any).homeFouls || 0,
+              away: (enhancedGameState as any).awayFouls || 0
+            },
+            possession: enhancedGameState.possession,
+            originalMessage: alert.message,
+            originalContext: alert.context
+          };
+          
+          console.log(`🎯 NBA AsyncAI: Queuing ${alert.type} alert for enhancement`);
+          // NON-BLOCKING: Queue for AI enhancement in background
+          unifiedAIProcessor.queueAlert(alert, context, enhancedGameState.gameId).catch(error => {
+            console.warn(`⚠️ NBA AI Queue failed for ${alert.type}:`, error);
+          });
         }
+      } else {
+        console.log(`🔄 NBA: No alerts generated for game ${enhancedGameState.gameId}`);
       }
-      
-      // If all alerts were duplicates, return early
-      if (dedupedAlerts.length === 0) {
-        console.log(`🔄 NBA: All ${rawAlerts.length} alerts were duplicates for game ${enhancedGameState.gameId}`);
-        return [];
-      }
-      
-      console.log(`✅ NBA: Processing ${dedupedAlerts.length} new alerts (blocked ${rawAlerts.length - dedupedAlerts.length} duplicates)`);
-      
-      // Enhance alerts with time-sensitive intelligence via AlertComposer
-      const composedAlerts = await this.composeTimeBasedAlerts(dedupedAlerts, enhancedGameState);
-      
-      // Process alerts with cross-sport AI enhancement for high-priority situations
-      const alerts = await this.processEnhancedNBAAlerts(composedAlerts, enhancedGameState);
       
       // Track NBA-specific metrics
       if (enhancedGameState.quarter >= 4) {
@@ -287,13 +304,17 @@ export class NBAEngine extends BaseSportEngine {
       if (enhancedGameState.quarter >= 5) {
         this.performanceMetrics.overtimeAlerts++;
       }
+      if (enhancedGameState.homeScore !== undefined && enhancedGameState.awayScore !== undefined) {
+        const scoreDiff = Math.abs(enhancedGameState.homeScore - enhancedGameState.awayScore);
+        if (scoreDiff <= 3 && enhancedGameState.quarter >= 4) {
+          // Track close game situations in NBA (within 3 points in 4th quarter)
+        }
+      }
       
-      this.performanceMetrics.totalAlerts += alerts.length;
+      this.performanceMetrics.totalAlerts += rawAlerts.length;
       
-      // Send alerts to both WebSocket and Telegram simultaneously (already deduplicated)
-      await this.deliverAlertsToAllChannels(alerts, enhancedGameState);
-      
-      return alerts;
+      // Return raw alerts for tracking (AsyncAI will handle the actual broadcasting)
+      return rawAlerts;
     } finally {
       const alertTime = Date.now() - startTime;
       this.performanceMetrics.alertGenerationTime.push(alertTime);
@@ -456,67 +477,6 @@ export class NBAEngine extends BaseSportEngine {
     return Math.min(clutchFactor, 100);
   }
 
-  // Process alerts with cross-sport AI enhancement for high-priority NBA situations
-  private async processEnhancedNBAAlerts(rawAlerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
-    const enhancedAlerts: AlertResult[] = [];
-    const aiStartTime = Date.now();
-
-    for (const alert of rawAlerts) {
-      try {
-        // Only enhance high-priority alerts (>= 85 probability)
-        const probability = await this.calculateProbability(gameState);
-        
-        if (probability >= 85) {
-          console.log(`🧠 NBA AI Enhancement: Queuing ${alert.type} alert (${probability}%)`);
-          
-          // Build cross-sport context for NBA
-          const aiContext: CrossSportContext = {
-            sport: 'NBA',
-            gameId: gameState.gameId,
-            alertType: alert.type,
-            priority: alert.priority,
-            probability: probability,
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            isLive: gameState.isLive,
-            quarter: gameState.quarter,
-            timeRemaining: gameState.timeRemaining,
-            timeLeft: gameState.timeRemaining,
-            shotClock: (gameState as any).shotClock || 24,
-            fouls: {
-              home: (gameState as any).homeFouls || 0,
-              away: (gameState as any).awayFouls || 0
-            },
-            possession: gameState.possession,
-            originalMessage: alert.message,
-            originalContext: alert.context
-          };
-
-          // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
-          unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
-            console.warn(`⚠️ NBA AI Queue failed for ${alert.type}:`, error);
-          });
-          console.log(`🚀 NBA Async AI: Queued ${alert.type} for background enhancement`);
-        }
-        
-        // Always return base alert immediately (async enhancement happens via WebSocket)
-        enhancedAlerts.push(alert);
-      } catch (error) {
-        console.error(`❌ NBA AI Enhancement failed for ${alert.type}:`, error);
-        // Fallback to original alert on error
-        enhancedAlerts.push(alert);
-      }
-    }
-
-    const aiTime = Date.now() - aiStartTime;
-    if (aiTime > 50) {
-      console.log(`⚠️ NBA AI Enhancement slow: ${aiTime}ms (target: <50ms)`);
-    }
-
-    return enhancedAlerts;
-  }
 
   // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
@@ -649,200 +609,11 @@ export class NBAEngine extends BaseSportEngine {
     }
   }
 
-  /**
-   * Compose time-based, actionable alerts using AlertComposer
-   */
-  private async composeTimeBasedAlerts(alerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
-    const composedAlerts: AlertResult[] = [];
-    
-    for (const alert of alerts) {
-      try {
-        // Generate enhanced payload with time-sensitive intelligence
-        const enhancedPayload = await alertComposer.composeEnhancedAlert(alert, gameState, {
-          // Add any NBA-specific context
-          recentLineMovement: this.getRecentLineMovement(gameState),
-          sharpMoney: this.getSharpMoneyIndicator(gameState)
-        });
-        
-        // Create enhanced alert with rich messaging
-        const enhancedAlert: AlertResult = {
-          ...alert,
-          message: enhancedPayload.headline,
-          context: {
-            ...alert.context,
-            enhanced: enhancedPayload,
-            displayText: alertComposer.formatForDisplay(enhancedPayload),
-            mobileText: alertComposer.formatForMobileNotification(enhancedPayload),
-            timing: enhancedPayload.timing,
-            action: enhancedPayload.action,
-            insight: enhancedPayload.insight,
-            riskReward: enhancedPayload.riskReward
-          }
-        };
-        
-        composedAlerts.push(enhancedAlert);
-        console.log(`⚡ NBA Alert Composed: ${alert.type} - ${enhancedPayload.timing.urgencyLevel} priority`);
-      } catch (error) {
-        console.error(`Failed to compose NBA alert:`, error);
-        composedAlerts.push(alert); // Fallback to original
-      }
-    }
-    
-    return composedAlerts;
-  }
   
-  /**
-   * Get recent line movement for NBA context
-   */
-  private getRecentLineMovement(gameState: GameState): any {
-    // In production, this would connect to real-time odds feeds
-    // For now, simulate based on game state
-    const key = `${gameState.gameId}_line`;
-    const previous = this.lineMovementCache.get(key);
-    const current = {
-      total: (gameState.homeScore || 0) + (gameState.awayScore || 0),
-      spread: (gameState.homeScore || 0) - (gameState.awayScore || 0),
-      timestamp: Date.now()
-    };
-    
-    if (previous && (current.timestamp - previous.timestamp) < 60000) {
-      const totalMove = current.total - previous.total;
-      const spreadMove = current.spread - previous.spread;
-      
-      if (Math.abs(totalMove) >= 0.5 || Math.abs(spreadMove) >= 0.5) {
-        this.lineMovementCache.set(key, current);
-        return {
-          totalMove,
-          spreadMove,
-          timeAgo: Math.floor((current.timestamp - previous.timestamp) / 1000)
-        };
-      }
-    }
-    
-    this.lineMovementCache.set(key, current);
-    return null;
-  }
   
-  /**
-   * Get sharp money indicators for NBA
-   */
-  private getSharpMoneyIndicator(gameState: GameState): any {
-    // In production, this would use real betting data
-    // Simulate based on NBA game flow
-    const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
-    const quarter = gameState.quarter || 1;
-    
-    // NBA-specific sharp money patterns
-    if (scoreDiff <= 3 && quarter >= 4) {
-      return { indicator: 'heavy', direction: 'over', confidence: 85 };
-    }
-    if (quarter >= 4 && scoreDiff <= 1) {
-      return { indicator: 'sharp', direction: 'total', confidence: 90 };
-    }
-    
-    return null;
-  }
 
-  // Send alerts to Telegram - WebSocket broadcasting removed to prevent duplicates
-  // Note: WebSocket broadcasting now handled exclusively by AsyncAI processor for enhancement
-  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    if (!alerts || alerts.length === 0) return;
-    
-    try {
-      console.log(`🚀 Delivering ${alerts.length} NBA alerts to Telegram (WebSocket handled by AsyncAI processor)`);
-      
-      // Only Telegram delivery - WebSocket broadcasting removed to prevent duplicates
-      await this.deliverAlertsToTelegram(alerts, gameState);
-      
-      console.log(`✅ Telegram delivery complete for ${alerts.length} alerts`);
-      
-    } catch (error) {
-      console.error('❌ Alert delivery system error:', error);
-    }
-  }
 
-  // REMOVED: WebSocket delivery method - prevents duplicate alerts
-  // WebSocket broadcasting now handled exclusively by AsyncAI processor in routes.ts
-  // This ensures all alerts go through AI enhancement before being broadcast
-  // 
-  // private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
-  //   // Method removed to prevent duplicate WebSocket broadcasts
-  //   // All WebSocket delivery now handled by AsyncAI processor for proper enhancement
-  // }
 
-  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    try {
-      // Get all users with Telegram enabled
-      const allUsers = await storage.getAllUsers();
-      const telegramUsers = allUsers.filter(user => 
-        user.telegramEnabled && 
-        user.telegramBotToken && 
-        user.telegramChatId &&
-        user.telegramBotToken !== 'default_key' &&
-        user.telegramChatId !== 'test-chat-id'
-      );
-      
-      if (telegramUsers.length === 0) {
-        console.log('📱 ℹ️ No users with valid Telegram configurations found');
-        return;
-      }
-      
-      console.log(`📱 🚀 Delivering ${alerts.length} NBA alerts to ${telegramUsers.length} Telegram users`);
-      
-      // Send alerts to each user
-      for (const alert of alerts) {
-        // Double-check alert hasn't been sent (extra safety)
-        const telegramKey = `telegram_${alert.alertKey}`;
-        if (this.hasAlertBeenSent(gameState.gameId, telegramKey)) {
-          console.log(`📱 🚫 Telegram alert already sent: ${telegramKey}`);
-          continue;
-        }
-        
-        for (const user of telegramUsers) {
-          try {
-            const telegramConfig: TelegramConfig = {
-              botToken: user.telegramBotToken!,
-              chatId: user.telegramChatId!
-            };
-            
-            const telegramAlert = {
-              id: alert.alertKey,
-              type: alert.type,
-              title: alert.message.split('|')[0].trim(), // Extract title from message
-              description: alert.message,
-              gameInfo: {
-                awayTeam: gameState.awayTeam,
-                homeTeam: gameState.homeTeam,
-                score: {
-                  away: gameState.awayScore,
-                  home: gameState.homeScore
-                },
-                quarter: gameState.quarter,
-                timeRemaining: gameState.timeRemaining,
-                period: (gameState as any).period || gameState.quarter,
-                shotClock: (gameState as any).shotClock || 24,
-                possession: gameState.possession
-              }
-            };
-            
-            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
-            
-            if (sent) {
-              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
-              // Mark this specific telegram alert as sent after successful delivery
-              this.markAlertSent(gameState.gameId, telegramKey);
-            } else {
-              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
-            }
-          } catch (error) {
-            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('📱 ❌ Telegram delivery system error:', error);
-    }
-  }
 
   // Performance metrics cleanup to prevent memory growth
   private cleanupPerformanceMetrics(): void {
