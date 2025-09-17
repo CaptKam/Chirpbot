@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 
 export default class SeventhInningStretchModule extends BaseAlertModule {
   alertType = 'MLB_SEVENTH_INNING_STRETCH';
@@ -96,7 +97,7 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
       alertKey,
       type: 'MLB_SEVENTH_INNING_STRETCH',
       priority: isCloseGame ? 45 : 35,
-      message: `Seventh inning stretch - ${awayTeam} @ ${homeTeam} (${awayScore}-${homeScore}) - Late game transition`,
+      message: this.generateEnhancedSeventhInningMessage(gameState),
       context
     };
 
@@ -114,5 +115,48 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
 
   calculateProbability(gameState: GameState): number {
     return this.isTriggered(gameState) ? 100 : 0;
+  }
+
+  private generateEnhancedSeventhInningMessage(gameState: GameState): string {
+    const awayTeam = gameState.awayTeam;
+    const homeTeam = gameState.homeTeam;
+    const awayScore = gameState.awayScore;
+    const homeScore = gameState.homeScore;
+    
+    // Get performance context
+    const batterContext = gameState.currentBatter ? 
+      mlbPerformanceTracker.generateBatterContext(gameState.gameId, gameState.currentBatter) : null;
+    const pitcherContext = gameState.currentPitcher ? 
+      mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null;
+    const teamContext = mlbPerformanceTracker.generateTeamMomentumContext(gameState.gameId, awayTeam);
+    
+    // Build enhanced message
+    let message = `Seventh inning stretch - ${awayTeam} @ ${homeTeam} (${awayScore}-${homeScore})`;
+    
+    // Add performance insights
+    const contexts: string[] = [];
+    if (pitcherContext) {
+      contexts.push(`P: ${pitcherContext}`);
+    }
+    if (batterContext) {
+      contexts.push(`Batter: ${batterContext}`);
+    }
+    if (teamContext) {
+      contexts.push(`Momentum: ${teamContext}`);
+    }
+    
+    // Add standard late game context
+    const scoreDiff = Math.abs(homeScore - awayScore);
+    if (scoreDiff <= 2) {
+      contexts.push('Close game - clutch time');
+    } else {
+      contexts.push('Lead to protect/overcome');
+    }
+    
+    if (contexts.length > 0) {
+      message += ` | ${contexts.join(' | ')}`;
+    }
+    
+    return message;
   }
 }

@@ -49,11 +49,12 @@ export default class LateInningCloseModule extends BaseAlertModule {
     const inningText = gameState.isTopInning ? `Top ${gameState.inning}` : `Bottom ${gameState.inning}`;
     
     // Get performance context for late-game situations
-    const pitcherId = gameState.currentPitcherId || `pitcher_${(gameState.currentPitcher || 'Unknown').replace(/\s+/g, '_')}`;
-    const pitcherPerformance = mlbPerformanceTracker.getPitcherSummary(gameState.gameId, pitcherId);
-    const homeTeamMomentum = mlbPerformanceTracker.getTeamMomentumSummary(gameState.gameId, 'home');
-    const awayTeamMomentum = mlbPerformanceTracker.getTeamMomentumSummary(gameState.gameId, 'away');
-    const patterns = mlbPerformanceTracker.detectUnusualPatterns(gameState.gameId);
+    const pitcherPerformance = gameState.currentPitcher ? 
+      mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null;
+    const homeTeamMomentum = mlbPerformanceTracker.generateTeamMomentumContext(gameState.gameId, gameState.homeTeam);
+    const awayTeamMomentum = mlbPerformanceTracker.generateTeamMomentumContext(gameState.gameId, gameState.awayTeam);
+    const batterContext = gameState.currentBatter ? 
+      mlbPerformanceTracker.generateBatterContext(gameState.gameId, gameState.currentBatter) : null;
     
     let message = `Late inning close game - ${inningText} - `;
     
@@ -70,56 +71,40 @@ export default class LateInningCloseModule extends BaseAlertModule {
       message += ` - Final inning`;
     }
     
-    // Add bullpen/closer context with proper parsing
+    // Add enhanced performance context
+    const contexts: string[] = [];
+    
     if (pitcherPerformance) {
-      // Parse pitch count correctly - look for "X pitches" pattern
-      const pitchMatch = pitcherPerformance.match(/(\d+)\s*pitches/i);
-      const pitchCount = pitchMatch ? parseInt(pitchMatch[1]) : gameState.pitchCount || 0;
-      
-      // Parse velocity changes
-      const velocityMatch = pitcherPerformance.match(/velocity\s*(down|up)\s*(\d+)\s*mph/i);
-      
-      if (pitcherPerformance.includes('Closer in') || pitcherPerformance.includes('Setup man')) {
-        message += ` | ${pitcherPerformance}`;
-      } else if (pitchCount > 100) {
-        message += ` | Starter fatigued: ${pitchCount} pitches`;
-        if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
-          message += `, velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
-        }
-      } else if (pitcherPerformance.includes('consecutive balls') || pitcherPerformance.includes('walked')) {
-        message += ` | Pitcher struggling: ${pitcherPerformance}`;
-      } else if (velocityMatch && parseInt(velocityMatch[2]) > 2) {
-        message += ` | Velocity ${velocityMatch[1]} ${velocityMatch[2]}mph`;
-      }
+      contexts.push(`P: ${pitcherPerformance}`);
     }
     
-    // Add momentum context for the relevant team
-    const leadingTeam = gameState.homeScore > gameState.awayScore ? 'home' : 
-                        gameState.awayScore > gameState.homeScore ? 'away' : null;
-    const trailingTeam = leadingTeam === 'home' ? 'away' : leadingTeam === 'away' ? 'home' : null;
+    if (batterContext) {
+      contexts.push(`Batter: ${batterContext}`);
+    }
     
-    if (trailingTeam) {
-      const trailingMomentum = trailingTeam === 'home' ? homeTeamMomentum : awayTeamMomentum;
-      if (trailingMomentum && (trailingMomentum.includes('rally') || trailingMomentum.includes('scored in'))) {
-        message += ` | Comeback brewing: ${trailingMomentum}`;
+    // Add team momentum context
+    const leadingTeam = gameState.homeScore > gameState.awayScore ? gameState.homeTeam : 
+                        gameState.awayScore > gameState.homeScore ? gameState.awayTeam : null;
+    const trailingTeam = gameState.homeScore > gameState.awayScore ? gameState.awayTeam : 
+                         gameState.awayScore > gameState.homeScore ? gameState.homeTeam : null;
+    
+    if (trailingTeam && scoreDiff > 0) {
+      const trailingMomentum = trailingTeam === gameState.homeTeam ? homeTeamMomentum : awayTeamMomentum;
+      if (trailingMomentum) {
+        contexts.push(`${trailingTeam}: ${trailingMomentum}`);
       }
     } else if (scoreDiff === 0) {
-      // Tied game - show both teams' momentum if relevant
-      if (homeTeamMomentum && homeTeamMomentum.includes('rally')) {
-        message += ` | Home: ${homeTeamMomentum}`;
-      } else if (awayTeamMomentum && awayTeamMomentum.includes('rally')) {
-        message += ` | Away: ${awayTeamMomentum}`;
+      // Tied game - show most relevant momentum
+      if (homeTeamMomentum) {
+        contexts.push(`${gameState.homeTeam}: ${homeTeamMomentum}`);
+      } else if (awayTeamMomentum) {
+        contexts.push(`${gameState.awayTeam}: ${awayTeamMomentum}`);
       }
     }
     
-    // Add critical patterns for late innings
-    if (patterns && patterns.length > 0) {
-      const criticalPattern = patterns.find(p => 
-        p.includes('stranded') || p.includes('clutch') || p.includes('blown save')
-      );
-      if (criticalPattern) {
-        message += ` | ${criticalPattern}`;
-      }
+    // Add contexts to message
+    if (contexts.length > 0) {
+      message += ` | ${contexts.join(' | ')}`;
     }
     
     return {

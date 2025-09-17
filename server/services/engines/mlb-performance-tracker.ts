@@ -1043,6 +1043,258 @@ export class MLBPerformanceTracker {
   }
 
   /**
+   * Generate enhanced context for batter performance
+   */
+  generateBatterContext(gameId: string, batterName: string): string | null {
+    const gameData = this.batterPerformance.get(gameId);
+    if (!gameData) return null;
+
+    // Find batter by name since we may not have exact player ID
+    let batter: BatterPerformance | null = null;
+    for (const [playerId, performance] of gameData) {
+      if (performance.playerName === batterName) {
+        batter = performance;
+        break;
+      }
+    }
+    
+    if (!batter) return null;
+
+    const contexts: string[] = [];
+    
+    // Current game performance
+    if (batter.atBats > 0) {
+      const avg = (batter.hits / batter.atBats * 1000).toFixed(0);
+      contexts.push(`${batter.hits}-for-${batter.atBats} (.${avg})`);
+    }
+    
+    // RBIs if any
+    if (batter.rbis > 0) {
+      contexts.push(`${batter.rbis} RBI${batter.rbis > 1 ? 's' : ''}`);
+    }
+    
+    // Current streak
+    if (batter.currentStreak.type && batter.currentStreak.count > 1) {
+      const streakText = batter.currentStreak.type === 'hitting' ? 'hit streak' :
+                        batter.currentStreak.type === 'on-base' ? 'on-base streak' :
+                        batter.currentStreak.type === 'strikeout' ? 'strikeout streak' : 'hitless streak';
+      contexts.push(`${batter.currentStreak.count}-game ${streakText}`);
+    }
+    
+    // RISP performance
+    if (batter.runnersInScoringPosition.atBats > 0) {
+      const rispAvg = (batter.runnersInScoringPosition.hits / batter.runnersInScoringPosition.atBats * 1000).toFixed(0);
+      contexts.push(`RISP: ${batter.runnersInScoringPosition.hits}/${batter.runnersInScoringPosition.atBats} (.${rispAvg})`);
+    }
+    
+    // Two-out RBIs
+    if (batter.twoOutRBI > 0) {
+      contexts.push(`${batter.twoOutRBI} clutch 2-out RBI${batter.twoOutRBI > 1 ? 's' : ''}`);
+    }
+    
+    // Recent at-bats pattern
+    if (batter.lastFiveAtBats.length >= 3) {
+      const lastThree = batter.lastFiveAtBats.slice(-3);
+      const hitTypes = lastThree.filter(ab => ['hit', 'double', 'triple', 'homerun'].includes(ab.outcome));
+      if (hitTypes.length === 3) {
+        contexts.push('3 straight hits');
+      } else if (lastThree.every(ab => ab.outcome === 'strikeout')) {
+        contexts.push('3 straight strikeouts');
+      }
+    }
+    
+    return contexts.length > 0 ? contexts.join(', ') : null;
+  }
+
+  /**
+   * Generate enhanced context for pitcher performance  
+   */
+  generatePitcherContext(gameId: string, pitcherName: string): string | null {
+    const gameData = this.pitcherPerformance.get(gameId);
+    if (!gameData) return null;
+
+    // Find pitcher by name
+    let pitcher: PitcherPerformance | null = null;
+    for (const [playerId, performance] of gameData) {
+      if (performance.playerName === pitcherName) {
+        pitcher = performance;
+        break;
+      }
+    }
+    
+    if (!pitcher) return null;
+
+    const contexts: string[] = [];
+    
+    // Pitch count and fatigue indicators
+    if (pitcher.totalPitches > 0) {
+      contexts.push(`${pitcher.totalPitches} pitches`);
+      
+      if (pitcher.totalPitches > 100) {
+        contexts.push('fatigue concern');
+      } else if (pitcher.totalPitches > 85) {
+        contexts.push('high pitch count');
+      }
+    }
+    
+    // Velocity trend
+    if (pitcher.pitchVelocityTrend.length >= 3) {
+      const recent = pitcher.pitchVelocityTrend.slice(-3);
+      const early = pitcher.pitchVelocityTrend.slice(0, 3);
+      if (recent.length > 0 && early.length > 0) {
+        const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+        const earlyAvg = early.reduce((a, b) => a + b, 0) / early.length;
+        const diff = earlyAvg - recentAvg;
+        if (diff >= 3) {
+          contexts.push(`velocity down ${diff.toFixed(1)}mph`);
+        }
+      }
+    }
+    
+    // Strikeout dominance
+    if (pitcher.strikeouts >= 5) {
+      contexts.push(`${pitcher.strikeouts} strikeouts`);
+    }
+    
+    // Control issues
+    if (pitcher.walks >= 3) {
+      contexts.push(`${pitcher.walks} walks`);
+    }
+    
+    // Efficiency
+    if (pitcher.battersFaced > 0) {
+      const strikePercentage = (pitcher.strikes / pitcher.totalPitches * 100).toFixed(0);
+      if (parseInt(strikePercentage) >= 70) {
+        contexts.push(`${strikePercentage}% strikes`);
+      } else if (parseInt(strikePercentage) < 60) {
+        contexts.push(`${strikePercentage}% strikes (struggling)`);
+      }
+    }
+    
+    // Current trend
+    if (pitcher.currentTrend === 'declining') {
+      contexts.push('losing effectiveness');
+    } else if (pitcher.currentTrend === 'improving') {
+      contexts.push('gaining momentum');
+    }
+    
+    // Recent pitch sequence patterns
+    if (pitcher.consecutiveBalls >= 4) {
+      contexts.push(`${pitcher.consecutiveBalls} straight balls`);
+    } else if (pitcher.consecutiveStrikes >= 5) {
+      contexts.push(`${pitcher.consecutiveStrikes} straight strikes`);
+    }
+    
+    return contexts.length > 0 ? contexts.join(', ') : null;
+  }
+
+  /**
+   * Generate enhanced context for team momentum
+   */
+  generateTeamMomentumContext(gameId: string, teamName: string): string | null {
+    const gameData = this.teamMomentum.get(gameId);
+    if (!gameData) return null;
+
+    // Find team by name (assuming team ID matches name or similar)
+    let team: TeamMomentum | null = null;
+    for (const [teamId, momentum] of gameData) {
+      if (momentum.teamName === teamName || teamId === teamName) {
+        team = momentum;
+        break;
+      }
+    }
+    
+    if (!team) return null;
+
+    const contexts: string[] = [];
+    
+    // Scoring streak
+    if (team.scoringStreak.innings >= 2) {
+      contexts.push(`scored in ${team.scoringStreak.innings} straight innings`);
+    }
+    
+    // Scoreless streak  
+    if (team.scorelessStreak.innings >= 3) {
+      contexts.push(`${team.scorelessStreak.innings} innings without scoring`);
+    }
+    
+    // Current rally
+    if (team.currentRally.active && team.currentRally.runsScored > 0) {
+      contexts.push(`rally: ${team.currentRally.runsScored} runs this inning`);
+    }
+    
+    // Recent momentum (last 3 innings)
+    if (team.lastThreeInnings.runs > 0) {
+      contexts.push(`${team.lastThreeInnings.runs} runs in last 3 innings`);
+    }
+    
+    // Two-out production
+    if (team.twoOutRuns >= 2) {
+      contexts.push(`${team.twoOutRuns} clutch 2-out runs`);
+    }
+    
+    // Big inning potential
+    if (team.biggestInning.runs >= 4) {
+      contexts.push(`${team.biggestInning.runs}-run ${this.getInningString(team.biggestInning.inning)}`);
+    }
+    
+    return contexts.length > 0 ? contexts.join(', ') : null;
+  }
+
+  /**
+   * Generate situational game context combining multiple performance aspects
+   */
+  generateGameSituationContext(gameId: string, currentBatter?: string, currentPitcher?: string): string | null {
+    const patterns = this.patterns.get(gameId);
+    const contexts: string[] = [];
+    
+    // Pattern-based context
+    if (patterns) {
+      // Consecutive strikeouts
+      if (patterns.consecutiveStrikeouts.current >= 3) {
+        contexts.push(`${patterns.consecutiveStrikeouts.current} straight Ks`);
+      }
+      
+      // Consecutive hits
+      if (patterns.consecutiveHits.current >= 3) {
+        contexts.push(`${patterns.consecutiveHits.current} straight hits`);
+      }
+      
+      // Pitcher dominance
+      if (patterns.pitcherDominance.active) {
+        contexts.push(`pitcher dominating: ${patterns.pitcherDominance.strikeoutsLast3Innings}K in 3 innings`);
+      }
+      
+      // Pitcher struggles
+      if (patterns.pitcherStruggles.active) {
+        contexts.push(`pitcher struggling: ${patterns.pitcherStruggles.walksLast2Innings} walks, ${patterns.pitcherStruggles.pitchesLast2Innings} pitches`);
+      }
+      
+      // Rally mode
+      if (patterns.rallyMode.active) {
+        contexts.push(`rally mode: ${patterns.rallyMode.runsScored} runs, ${patterns.rallyMode.consecutiveBaserunners} straight baserunners`);
+      }
+    }
+    
+    // Add specific player context if provided
+    if (currentBatter) {
+      const batterContext = this.generateBatterContext(gameId, currentBatter);
+      if (batterContext) {
+        contexts.push(`Batter: ${batterContext}`);
+      }
+    }
+    
+    if (currentPitcher) {
+      const pitcherContext = this.generatePitcherContext(gameId, currentPitcher);
+      if (pitcherContext) {
+        contexts.push(`Pitcher: ${pitcherContext}`);
+      }
+    }
+    
+    return contexts.length > 0 ? contexts.join(' | ') : null;
+  }
+
+  /**
    * Get comprehensive game performance summary
    */
   getGamePerformanceSummary(gameId: string): {

@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 
 export default class GameStartModule extends BaseAlertModule {
   alertType = 'MLB_GAME_START';
@@ -79,12 +80,41 @@ export default class GameStartModule extends BaseAlertModule {
       alertKey,
       type: 'MLB_GAME_START',
       priority: 40,
-      message: `⚾ FIRST PITCH: ${gameState.awayTeam} @ ${gameState.homeTeam} | Fresh betting lines, weather locked, full game props active`,
+      message: this.generateEnhancedGameStartMessage(gameState),
       context
     };
   }
 
   calculateProbability(gameState: GameState): number {
     return this.isTriggered(gameState) ? 100 : 0;
+  }
+
+  private generateEnhancedGameStartMessage(gameState: GameState): string {
+    // Get performance context for current players
+    const batterContext = gameState.currentBatter ? 
+      mlbPerformanceTracker.generateBatterContext(gameState.gameId, gameState.currentBatter) : null;
+    const pitcherContext = gameState.currentPitcher ? 
+      mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null;
+    
+    // Build enhanced message with performance context
+    let message = `⚾ FIRST PITCH: ${gameState.awayTeam} @ ${gameState.homeTeam}`;
+    
+    // Add performance context if available
+    const contexts: string[] = [];
+    if (pitcherContext) {
+      contexts.push(`Starting P: ${pitcherContext}`);
+    }
+    if (batterContext) {
+      contexts.push(`Lead-off: ${batterContext}`);
+    }
+    
+    // Add standard game start context
+    contexts.push('Fresh lines active', 'Full game props available');
+    
+    if (contexts.length > 0) {
+      message += ` | ${contexts.join(' | ')}`;
+    }
+    
+    return message;
   }
 }
