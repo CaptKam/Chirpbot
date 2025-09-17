@@ -872,11 +872,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         try {
           // FIXED DEDUPLICATION BUG: Check if this specific alert already exists AND is still active (non-expired)
           const existingAlerts = await db.select()
-            .from(alerts)
+            .from(alertsTable)
             .where(and(
-              eq(alerts.alertKey, alert.alertKey),
-              eq(alerts.userId, userGame.userId),
-              gte(alerts.expiresAt, new Date()) // Only check non-expired alerts
+              eq(alertsTable.alertKey, alert.alertKey),
+              eq(alertsTable.userId, userGame.userId),
+              gte(alertsTable.expiresAt, new Date()) // Only check non-expired alerts
             ))
             .limit(1);
           
