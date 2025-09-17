@@ -870,6 +870,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       for (const userGame of usersMonitoring) {
         try {
+          // 🔎 CRITICAL FIX: Check user preferences FIRST before ANY other checks (including deduplication)
+          const sportKey = (alert.sport || sport || '').toString().toLowerCase();
+          console.log(`🔎 PrefCheck start for user ${userGame.userId} type=${alert.type} sport=${sportKey}`);
+          
+          if (!sportKey) {
+            console.log(`⚠️ No sport key found for alert ${alert.type}, skipping user ${userGame.userId}`);
+            continue;
+          }
+          
+          const userPrefs = await storage.getUserAlertPreferencesBySport(userGame.userId, sportKey);
+          const alertPref = userPrefs.find(p => p.alertType === alert.type);
+          const isEnabled = alertPref ? !!alertPref.enabled : true;
+          
+          if (!isEnabled) {
+            skippedCount++;
+            console.log(`🚫 Alert ${alert.type} disabled for user ${userGame.userId}, skipping`);
+            continue;
+          }
+          
+          console.log(`✅ Alert ${alert.type} enabled for user ${userGame.userId}, proceeding to duplicate check`);
+          
           // FIXED DEDUPLICATION BUG: Check if this specific alert already exists AND is still active (non-expired)
           const existingAlerts = await db.select()
             .from(alertsTable)
