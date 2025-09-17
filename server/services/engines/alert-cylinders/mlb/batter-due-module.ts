@@ -515,8 +515,8 @@ export default class BatterDueModule extends BaseAlertModule {
     const roundedProb = Math.round(probability);
     const currentBatter = lineupContext.currentBatterName;
     
-    // Simple context message without dramatic language
-    return `Batter prediction - ${gameState?.awayTeam} @ ${gameState?.homeTeam} - ${roundedProb}% scoring probability - ${currentBatter} at bat`;
+    // Streamlined message focusing on betting-critical data only
+    return `${currentBatter} at bat | ${roundedProb}% scoring probability`;
   }
 
   /**

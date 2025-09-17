@@ -232,7 +232,7 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
 
     const outsText = gameState.outs === 1 ? '1 out' : `${gameState.outs} outs`;
     
-    // Simple context message without dramatic language
-    return `On-deck prediction - ${gameState.awayTeam} @ ${gameState.homeTeam} - ${batter} coming up with ${situationDesc}, ${outsText} - ${Math.round(probability)}% scoring probability`;
+    // Streamlined message focusing on betting-critical data only
+    return `${batter} coming up with ${situationDesc}, ${outsText} | ${Math.round(probability)}% scoring probability`;
   }
 }

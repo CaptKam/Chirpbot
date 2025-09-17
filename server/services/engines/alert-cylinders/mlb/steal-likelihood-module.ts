@@ -430,7 +430,8 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     const scenario = analysis.scenario;
     const countSit = analysis.countSituation;
 
-    let message = `🏃 ${gameState?.awayTeam || 'Away'} @ ${gameState?.homeTeam || 'Home'}: ${roundedProb}% steal chance`;
+    // Start with streamlined probability focus
+    let message = `${roundedProb}% steal chance`;
 
     // Add scenario-specific context
     if (scenario === '1B_to_2B') {
