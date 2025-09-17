@@ -51,7 +51,13 @@ const ALERT_TYPE_CONFIG: Record<string, any[]> = {
 export default function Settings() {
   const [activeSport, setActiveSport] = useState(() => {
     // Persist active sport selection in localStorage
-    return localStorage.getItem('settings-active-sport') || "MLB";
+    const storedSport = localStorage.getItem('settings-active-sport');
+    // Validate that the stored sport is still in the available sports list
+    if (storedSport && SPORTS.includes(storedSport)) {
+      return storedSport;
+    }
+    // Default to first sport in the season-aware sorted list
+    return SPORTS[0] || "MLB";
   });
   const { toast } = useToast();
 
