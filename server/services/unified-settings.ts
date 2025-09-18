@@ -372,6 +372,7 @@ export class UnifiedSettings {
       await this.invalidateCache(canonicalSport);
       console.log(`❌ Bulk disabled ${alertTypes.length} alerts for ${canonicalSport}`);
     } catch (error) {
+      const canonicalSport = sport.toLowerCase();
       console.error(`Error bulk disabling alerts for ${canonicalSport}:`, error);
       throw error;
     }
@@ -402,6 +403,7 @@ export class UnifiedSettings {
       await this.invalidateCache(canonicalSport);
       console.log(`🔄 Reset ${canonicalSport} settings to defaults`);
     } catch (error) {
+      const canonicalSport = sport.toLowerCase();
       console.error(`Error resetting ${canonicalSport} to defaults:`, error);
       throw error;
     }

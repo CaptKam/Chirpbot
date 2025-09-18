@@ -9,8 +9,8 @@ import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
 
-// Extended interface for calendar game data
-interface CalendarGameData {
+// Extended interface for local calendar game data (renamed to avoid import conflict)
+interface LocalCalendarGameData {
   gameId: string;
   homeTeam: string;
   awayTeam: string;
@@ -22,7 +22,7 @@ interface CalendarGameData {
 // ChirpBot V3 Weather-on-Live Architecture
 import { RUNTIME } from '../config/runtime';
 import { EngineLifecycleManager as EngineLifecycleManagerClass, EngineState, type EngineStateInfo } from './engine-lifecycle-manager';
-import { CalendarSyncService, type CalendarGameData } from './calendar-sync-service';
+import { CalendarSyncService, type CalendarGameData as ImportedCalendarGameData } from './calendar-sync-service';
 import { WeatherOnLiveService, type WeatherChangeEvent } from './weather-on-live-service';
 import type { GameStateManager, GameStateInfo, EngineLifecycleManager } from './game-state-manager';
 import { gameStateManager } from './game-state-manager';
@@ -35,6 +35,7 @@ import { NCAAFApiService } from "./ncaaf-api";
 import { NFLApiService } from "./nfl-api";
 import { WNBAApiService } from "./wnba-api";
 import { CFLApiService } from "./cfl-api";
+import { AdaptivePollingManager } from "./adaptive-polling-manager";
 
 // === UNIFIED INTERFACES ===
 
@@ -89,6 +90,15 @@ interface SportEngineStatus {
   lastStateChange: Date;
 }
 
+// Engine failure tracking interface
+interface EngineFailureRecord {
+  sport: string;
+  failureCount: number;
+  lastFailureTime: Date;
+  isInRecovery: boolean;
+  nextRetryTime: Date;
+}
+
 // === UNIFIED ALERT GENERATOR ===
 
 export class UnifiedAlertGenerator {
@@ -108,7 +118,7 @@ export class UnifiedAlertGenerator {
 
   // Additional monitoring properties
   private adaptivePollingManagers: Map<string, any> = new Map();
-  private engineFailures: Map<string, number> = new Map();
+  private engineFailures: Map<string, EngineFailureRecord> = new Map();
 
   // Backward compatibility API services (used only for fallback when needed)
   private mlbApi?: MLBApiService;
@@ -616,17 +626,17 @@ export class UnifiedAlertGenerator {
       }
       
       // Convert calendar data to unified format
-      const games = calendarData.map((game: CalendarGameData) => ({
+      const games = calendarData.map((game: ImportedCalendarGameData) => ({
         gameId: game.gameId,
         id: game.gameId,
-        homeTeam: game.homeTeam,
-        awayTeam: game.awayTeam,
+        homeTeam: typeof game.homeTeam === 'string' ? game.homeTeam : game.homeTeam.name,
+        awayTeam: typeof game.awayTeam === 'string' ? game.awayTeam : game.awayTeam.name,
         status: game.status,
-        isLive: game.isLive,
+        isLive: game.status === 'live',
         startTime: game.startTime,
         // Calendar data is lightweight, no detailed game state
-        homeScore: 0,
-        awayScore: 0,
+        homeScore: typeof game.homeTeam === 'string' ? 0 : game.homeTeam.score || 0,
+        awayScore: typeof game.awayTeam === 'string' ? 0 : game.awayTeam.score || 0,
         inning: 1,
         isTopInning: true
       }));
@@ -757,9 +767,11 @@ export class UnifiedAlertGenerator {
   private isAlertWeatherRelevant(alertType: string, sport: string): boolean {
     // V3: Use RUNTIME config to determine weather relevance
     const sportConfig = RUNTIME.cylinders[sport];
-    if (!sportConfig?.weatherTriggers) return false;
+    if (!sportConfig) return false;
     
-    return sportConfig.weatherTriggers.some(trigger => 
+    // Check if alert type relates to weather-sensitive situations
+    const weatherKeywords = ['WIND', 'WEATHER', 'RAIN', 'TEMP'];
+    return weatherKeywords.some((trigger: string) => 
       alertType.includes(trigger.toUpperCase())
     );
   }
@@ -768,7 +780,11 @@ export class UnifiedAlertGenerator {
    * Calculate weather severity from weather context
    */
   private calculateWeatherSeverity(weatherContext: WeatherChangeEvent): 'low' | 'moderate' | 'high' | 'extreme' {
-    const { windSpeed, temperature, precipitation } = weatherContext;
+    // Extract weather data from current weather since WeatherChangeEvent doesn't have direct properties
+    const currentWeather = weatherContext.currentWeather;
+    const windSpeed = currentWeather?.windSpeed || 0;
+    const temperature = currentWeather?.temperature || 70;
+    const precipitation = currentWeather?.precipitation || 0;
     
     let severityScore = 0;
     
@@ -1279,7 +1295,8 @@ export class UnifiedAlertGenerator {
         } catch (error) {
           console.error(`❌ Fallback polling failed for ${sport}:`, error);
           // Update failure record
-          const record = this.engineFailures.get(sport) || {
+          const existingRecord = this.engineFailures.get(sport);
+          const record: EngineFailureRecord = existingRecord || {
             sport,
             failureCount: 0,
             lastFailureTime: new Date(),

@@ -138,7 +138,11 @@ export const RUNTIME = {
       baselineWindow: 120_000,      // Far future: ~2min acceptable
     },
   },
-} as const;
+} as const & {
+  cylinders: {
+    [sport: string]: any;
+  } & typeof RUNTIME.cylinders;
+};
 
 // === GAME STATES ENUM ===
 export enum GameState {
