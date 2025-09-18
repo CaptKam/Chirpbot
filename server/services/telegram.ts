@@ -125,9 +125,18 @@ function buildSituationLine(sport: string, gameInfo: any): string {
 function buildMLBSituation(gameInfo: any): string {
   const parts = [];
 
-  // Inning and half (null-safe)
-  if (gameInfo?.inning && gameInfo?.inningState) {
-    const inningDisplay = gameInfo.inningState === 'top' ? `Top ${gameInfo.inning}` : `Bot ${gameInfo.inning}`;
+  // Inning and half (null-safe) - handle both isTopInning boolean and inningState string
+  if (gameInfo?.inning) {
+    let inningDisplay = '';
+    if (gameInfo?.inningState) {
+      // Legacy string format
+      inningDisplay = gameInfo.inningState === 'top' ? `Top ${gameInfo.inning}` : `Bot ${gameInfo.inning}`;
+    } else if (gameInfo?.isTopInning !== undefined) {
+      // Current boolean format
+      inningDisplay = gameInfo.isTopInning ? `Top ${gameInfo.inning}` : `Bot ${gameInfo.inning}`;
+    } else {
+      inningDisplay = `Inning ${gameInfo.inning}`;
+    }
     parts.push(inningDisplay);
   }
 
@@ -141,8 +150,19 @@ function buildMLBSituation(gameInfo: any): string {
     parts.push(`${gameInfo.balls}-${gameInfo.strikes} count`);
   }
 
-  // Runners (null-safe)
-  const runnersDisplay = formatMLBRunners(gameInfo?.runners);
+  // Runners (null-safe) - handle both runners object and individual hasFirst/hasSecond/hasThird
+  let runnersDisplay = '';
+  if (gameInfo?.runners) {
+    runnersDisplay = formatMLBRunners(gameInfo.runners);
+  } else if (gameInfo?.hasFirst || gameInfo?.hasSecond || gameInfo?.hasThird) {
+    // Convert hasFirst/hasSecond/hasThird to runners format
+    const runners = {
+      first: gameInfo.hasFirst || false,
+      second: gameInfo.hasSecond || false,
+      third: gameInfo.hasThird || false
+    };
+    runnersDisplay = formatMLBRunners(runners);
+  }
   if (runnersDisplay) {
     parts.push(runnersDisplay);
   }
