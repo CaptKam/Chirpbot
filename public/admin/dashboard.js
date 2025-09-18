@@ -571,8 +571,12 @@ async function showSportSettings(sport) {
     document.querySelectorAll('.sport-tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    event?.target?.classList?.add('active') || 
-    var sportsButton = document.querySelector("[onclick=\"showSportSettings('" + sport + "')\"]"); if (sportsButton) sportsButton.classList.add('active');
+    if (event && event.target && event.target.classList) {
+        event.target.classList.add('active');
+    } else {
+        var sportsButton = document.querySelector("[onclick=\"showSportSettings('" + sport + "')\"]");
+        if (sportsButton) sportsButton.classList.add('active');
+    }
     
     const contentElement = document.getElementById('sportSettingsContent');
     if (!contentElement) return;
@@ -730,7 +734,21 @@ function getAlertDescription(alertKey) {
         'RED_ZONE': 'Alert when team enters red zone',
         'FOURTH_DOWN': 'Alert on fourth down situations',
         'OVERTIME': 'Alert when game goes to overtime',
-        'FINAL_MINUTES': 'Alert in final minutes of game',\n        'HIGH_SCORING_QUARTER': 'Alert for high-scoring quarters',\n        'LOW_SCORING_QUARTER': 'Alert for low-scoring quarters',\n        'CLUTCH_TIME_OPPORTUNITY': 'Alert for clutch time opportunities',\n        'COMEBACK_POTENTIAL': 'Alert for comeback scenarios',\n        'CRUNCH_TIME_DEFENSE': 'Alert for defensive stands',\n        'CHAMPIONSHIP_IMPLICATIONS': 'Alert for games with championship impact',\n        // WNBA-specific prefixed versions\n        'WNBA_FINAL_MINUTES': 'Alert in final minutes of WNBA game',\n        'WNBA_HIGH_SCORING_QUARTER': 'Alert for high-scoring WNBA quarters',\n        'WNBA_LOW_SCORING_QUARTER': 'Alert for low-scoring WNBA quarters',\n        'WNBA_CLUTCH_TIME_OPPORTUNITY': 'Alert for WNBA clutch time opportunities',\n        'WNBA_COMEBACK_POTENTIAL': 'Alert for WNBA comeback scenarios',\n        'WNBA_CRUNCH_TIME_DEFENSE': 'Alert for WNBA defensive stands',\n        'WNBA_CHAMPIONSHIP_IMPLICATIONS': 'Alert for WNBA games with championship impact',
+        'FINAL_MINUTES': 'Alert in final minutes of game',
+        'HIGH_SCORING_QUARTER': 'Alert for high-scoring quarters',
+        'LOW_SCORING_QUARTER': 'Alert for low-scoring quarters',
+        'CLUTCH_TIME_OPPORTUNITY': 'Alert for clutch time opportunities',
+        'COMEBACK_POTENTIAL': 'Alert for comeback scenarios',
+        'CRUNCH_TIME_DEFENSE': 'Alert for defensive stands',
+        'CHAMPIONSHIP_IMPLICATIONS': 'Alert for games with championship impact',
+        // WNBA-specific prefixed versions
+        'WNBA_FINAL_MINUTES': 'Alert in final minutes of WNBA game',
+        'WNBA_HIGH_SCORING_QUARTER': 'Alert for high-scoring WNBA quarters',
+        'WNBA_LOW_SCORING_QUARTER': 'Alert for low-scoring WNBA quarters',
+        'WNBA_CLUTCH_TIME_OPPORTUNITY': 'Alert for WNBA clutch time opportunities',
+        'WNBA_COMEBACK_POTENTIAL': 'Alert for WNBA comeback scenarios',
+        'WNBA_CRUNCH_TIME_DEFENSE': 'Alert for WNBA defensive stands',
+        'WNBA_CHAMPIONSHIP_IMPLICATIONS': 'Alert for WNBA games with championship impact',
         'BASES_LOADED_NO_OUTS': 'Alert when bases loaded with no outs',
         'BASES_LOADED_ONE_OUT': 'Alert when bases loaded with one out',
         'RUNNER_ON_THIRD_NO_OUTS': 'Alert with runner on third, no outs',
