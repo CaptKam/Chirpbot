@@ -202,8 +202,8 @@ app.use(session({
     path: '/',
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax',
-    domain: process.env.COOKIE_DOMAIN || undefined, // Leave undefined for localhost
+    sameSite: 'lax', // Restored for same-origin admin authentication
+    domain: undefined, // Force undefined for proper localhost cookie handling
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for better persistence
   }
 }));
