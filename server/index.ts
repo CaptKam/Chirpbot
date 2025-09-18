@@ -327,6 +327,8 @@ async function startServer() {
     // 🔒 SECURE SERVER STARTUP - Port conflicts now impossible!
     server.listen(PORT, HOST, () => {
       console.log(`🚀 Server is running on ${HOST}:${PORT}`);
+      console.log(`📋 DATAINGESTIONSERVICE: BOOTSTRAP HIT - Version 3.1.2`);
+      console.log(`📋 DATAINGESTIONSERVICE: Starting immediate initialization in guaranteed execution path`);
 
       // Start alert monitoring after server is ready
       setTimeout(async () => {
@@ -392,6 +394,58 @@ async function startServer() {
           console.error('❌ Failed to start Weather-on-Live service:', error);
         }
       }, 6000); // Wait 6 seconds to start after alert monitoring
+
+      // 🚀 IMMEDIATE DataIngestionService initialization in guaranteed execution path
+      setImmediate(async () => {
+        try {
+          console.log('='.repeat(60));
+          console.log('🚀 DATAINGESTIONSERVICE: STARTING IMMEDIATE INITIALIZATION');
+          console.log('='.repeat(60));
+          console.log('🌊 DataIngestionService: Starting in shadow mode alongside calendar sync');
+          console.log('📡 DataIngestionService: Importing DataIngestionIntegration class...');
+          
+          const startTime = Date.now();
+          const { DataIngestionIntegration } = await import('./services/data-ingestion-integration');
+          console.log(`✅ DataIngestionService: Import successful in ${Date.now() - startTime}ms`);
+          
+          console.log('🔧 DataIngestionService: Creating instance with shadow mode config...');
+          const di = new DataIngestionIntegration({ 
+            shadowMode: true, 
+            enableMetrics: true, 
+            healthCheckIntervalMs: 30_000, 
+            logLevel: 'detailed' 
+          });
+          
+          console.log('🔧 DataIngestionService: Calling initialize()...');
+          const initStartTime = Date.now();
+          await di.initialize();
+          console.log(`✅ DataIngestionService: Initialization completed in ${Date.now() - initStartTime}ms`);
+          
+          // Store reference globally for monitoring and shutdown
+          (global as any).dataIngestionIntegration = di;
+          
+          console.log('='.repeat(60));
+          console.log('✅ DATAINGESTIONSERVICE: SUCCESSFULLY STARTED');
+          console.log('='.repeat(60));
+          console.log('🌊 DataIngestionService: Running in shadow mode alongside existing systems');
+          console.log('📊 DataIngestionService: Monitoring and comparing with legacy calendar sync performance');
+          console.log('🏥 DataIngestionService: Health check interval: 30 seconds');
+          console.log('📈 DataIngestionService: Metrics collection: ENABLED');
+          console.log('🔄 DataIngestionService: Sports monitored: MLB, NFL, NBA, WNBA, NCAAF, CFL');
+          console.log('💾 DataIngestionService: Global reference stored for monitoring and shutdown');
+          console.log('🌟 DataIngestionService: Now operational and logging will appear every 30s');
+          
+        } catch (error) {
+          console.error('='.repeat(60));
+          console.error('❌ DATAINGESTIONSERVICE: FAILED TO START');
+          console.error('='.repeat(60));
+          console.error('❌ DataIngestionService: Failed to start:', error);
+          console.error('📋 DataIngestionService: Error details:', error?.message);
+          if (error?.stack) console.error('📊 DataIngestionService: Stack trace:', error.stack);
+          console.error('🔄 DataIngestionService: Continuing with legacy polling systems only');
+          console.error('='.repeat(60));
+        }
+      });
 
       console.log(`🔒 Singleton lock active - port conflicts prevented`);
       console.log(`📱 Database connected: Yes`);

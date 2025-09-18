@@ -65,6 +65,7 @@ interface AlertData {
 
 interface UnifiedAlertGeneratorOptions {
   logLevel?: 'verbose' | 'quiet';
+  mode?: 'production' | 'demo';
 }
 
 interface RetryConfig {

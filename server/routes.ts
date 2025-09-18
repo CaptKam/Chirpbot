@@ -78,6 +78,53 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     next();
   });
 
+  // DataIngestionService diagnostic endpoint for runtime verification
+  app.get('/api/diagnostics/ingestion-status', async (req, res) => {
+    try {
+      const di = (global as any).dataIngestionIntegration;
+      
+      if (!di) {
+        return res.json({
+          initialized: false,
+          status: 'NOT_INITIALIZED',
+          message: 'DataIngestionService has not been initialized',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Check if the service is operational
+      const isOperational = typeof di.getStatus === 'function';
+      
+      const response = {
+        initialized: true,
+        status: isOperational ? 'OPERATIONAL' : 'PARTIALLY_INITIALIZED',
+        uptimeMs: Date.now() - (di.startTime || Date.now()),
+        metrics: {
+          healthCheckIntervalMs: di.config?.healthCheckIntervalMs || 30000,
+          shadowMode: di.config?.shadowMode || false,
+          enableMetrics: di.config?.enableMetrics || false,
+          logLevel: di.config?.logLevel || 'unknown'
+        },
+        timestamp: new Date().toISOString(),
+        serviceReference: !!di,
+        hasGetStatusMethod: typeof di.getStatus === 'function',
+        hasConfigObject: !!di.config
+      };
+
+      console.log('📊 DataIngestionService diagnostic check:', response);
+      res.json(response);
+      
+    } catch (error) {
+      console.error('❌ Error in ingestion-status diagnostic:', error);
+      res.status(500).json({
+        initialized: false,
+        status: 'ERROR',
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Test endpoint to verify alert system works with scoring opportunities - MUST BE FIRST!
   app.get('/api/admin/test-scoring-alerts', async (req, res) => {
     try {
@@ -871,7 +918,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       for (const userGame of usersMonitoring) {
         try {
           // 🔎 CRITICAL FIX: Check user preferences FIRST before ANY other checks (including deduplication)
-          const sportKey = (alert.sport || sport || '').toString().toLowerCase();
+          const sportKey = (sport || '').toString().toLowerCase();
           console.log(`🔎 PrefCheck start for user ${userGame.userId} type=${alert.type} sport=${sportKey}`);
           
           if (!sportKey) {
@@ -2519,7 +2566,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         WHERE ${whereClause}
         ORDER BY sequence_number ASC
         LIMIT 200
-      `, params));
+      `));
 
       const alerts = result.rows.map((row: any) => {
         let payload: any = {};
@@ -2711,7 +2758,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       switch (action) {
         case 'arm':
-          const { WeatherArmReason } = await import('../config/runtime');
+          const { WeatherArmReason } = await import('./config/runtime');
           result = await weatherOnLiveService.armWeatherMonitoring(gameId, WeatherArmReason.CUSTOM);
           message = result ? 'Weather monitoring armed' : 'Failed to arm weather monitoring';
           break;
