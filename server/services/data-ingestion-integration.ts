@@ -97,13 +97,13 @@ export class DataIngestionIntegration {
     
     for (const sport of sports) {
       const breakerName = `data-ingestion-${sport.toLowerCase()}`;
-      circuitBreakerManager.createBreaker(breakerName, {
+      circuitBreakerManager.getCircuitBreaker(breakerName, sport, {
         failureThreshold: 5,
         recoveryTimeoutMs: 30_000,
         monitoringWindowMs: 60_000,
         minimumRequests: 10,
         errorRateThreshold: 0.5
-      }, sport);
+      });
     }
 
     console.log(`🔧 DataIngestion Integration: Circuit breakers initialized for ${sports.length} sports`);

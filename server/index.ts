@@ -33,6 +33,32 @@ if (!lockAcquired) {
 
 console.log(`🔒 Single instance lock acquired for PID ${process.pid}`);
 
+// 🚀 DATAINGESTIONSERVICE: TOP-LEVEL BOOTSTRAP (Architect's Fix)
+console.log("🔍 DEBUG: About to check __di_bootstrapped__ flag");
+if (!(globalThis as any).__di_bootstrapped__) {
+  console.log("🔍 DEBUG: __di_bootstrapped__ is false, starting bootstrap");
+  (globalThis as any).__di_bootstrapped__ = true;
+  console.log("📋 DATAINGESTIONSERVICE: BOOTSTRAP FIRING (top‑level)");
+  void (async () => {
+    try {
+      console.log("🔍 DEBUG: About to import DataIngestionIntegration");
+      const { DataIngestionIntegration } = await import('./services/data-ingestion-integration');
+      console.log("🔍 DEBUG: Import successful, creating instance");
+      const di = new DataIngestionIntegration({ shadowMode: true, enableMetrics: true, healthCheckIntervalMs: 30_000, logLevel: 'detailed' });
+      console.log("🔍 DEBUG: Instance created, calling initialize()");
+      await di.initialize();
+      console.log("🔍 DEBUG: Initialize completed, storing global reference");
+      (global as any).dataIngestionIntegration = di;
+      console.log("✅ DATAINGESTIONSERVICE: STARTED");
+    } catch (e) { 
+      console.error("❌ DATAINGESTIONSERVICE: FAILED", e); 
+      console.error("❌ DATAINGESTIONSERVICE: ERROR STACK:", e?.stack);
+    }
+  })();
+} else {
+  console.log("🔍 DEBUG: __di_bootstrapped__ is true, skipping bootstrap");
+}
+
 // Startup guard to prevent double initialization within same process
 if ((globalThis as any).__SERVER_STARTED__) {
   console.log('🔄 Server already started, skipping duplicate initialization');
@@ -81,6 +107,17 @@ const gracefulShutdown = async (signal: string) => {
       clearInterval(monitoringInterval);
       monitoringInterval = null;
       console.log('✅ Alert monitoring timer cleared');
+    }
+
+    // 🚀 GRACEFUL SHUTDOWN: DataIngestionService cleanup
+    const di = (global as any).dataIngestionIntegration;
+    if (di && typeof di.shutdown === 'function') {
+      try {
+        await di.shutdown();
+        console.log('✅ DataIngestionService gracefully shut down');
+      } catch (err) {
+        console.error('⚠️ Error shutting down DataIngestionService:', err);
+      }
     }
 
     // Database uses HTTP connection - no need to close
@@ -324,6 +361,19 @@ async function startServer() {
       }
     });
 
+    // 🔒 FALLBACK: Add 'listening' event handler for reliability
+    server.on('listening', () => {
+      console.log('📡 HTTP Server listening event triggered - DataIngestionService should be operational');
+      
+      // Verify DataIngestionService is running
+      const di = (global as any).dataIngestionIntegration;
+      if (di) {
+        console.log('✅ DataIngestionService confirmed operational via listening event');
+      } else {
+        console.log('⚠️ DataIngestionService not yet available - may still be initializing');
+      }
+    });
+
     // 🔒 SECURE SERVER STARTUP - Port conflicts now impossible!
     server.listen(PORT, HOST, () => {
       console.log(`🚀 Server is running on ${HOST}:${PORT}`);
@@ -395,57 +445,8 @@ async function startServer() {
         }
       }, 6000); // Wait 6 seconds to start after alert monitoring
 
-      // 🚀 IMMEDIATE DataIngestionService initialization in guaranteed execution path
-      setImmediate(async () => {
-        try {
-          console.log('='.repeat(60));
-          console.log('🚀 DATAINGESTIONSERVICE: STARTING IMMEDIATE INITIALIZATION');
-          console.log('='.repeat(60));
-          console.log('🌊 DataIngestionService: Starting in shadow mode alongside calendar sync');
-          console.log('📡 DataIngestionService: Importing DataIngestionIntegration class...');
-          
-          const startTime = Date.now();
-          const { DataIngestionIntegration } = await import('./services/data-ingestion-integration');
-          console.log(`✅ DataIngestionService: Import successful in ${Date.now() - startTime}ms`);
-          
-          console.log('🔧 DataIngestionService: Creating instance with shadow mode config...');
-          const di = new DataIngestionIntegration({ 
-            shadowMode: true, 
-            enableMetrics: true, 
-            healthCheckIntervalMs: 30_000, 
-            logLevel: 'detailed' 
-          });
-          
-          console.log('🔧 DataIngestionService: Calling initialize()...');
-          const initStartTime = Date.now();
-          await di.initialize();
-          console.log(`✅ DataIngestionService: Initialization completed in ${Date.now() - initStartTime}ms`);
-          
-          // Store reference globally for monitoring and shutdown
-          (global as any).dataIngestionIntegration = di;
-          
-          console.log('='.repeat(60));
-          console.log('✅ DATAINGESTIONSERVICE: SUCCESSFULLY STARTED');
-          console.log('='.repeat(60));
-          console.log('🌊 DataIngestionService: Running in shadow mode alongside existing systems');
-          console.log('📊 DataIngestionService: Monitoring and comparing with legacy calendar sync performance');
-          console.log('🏥 DataIngestionService: Health check interval: 30 seconds');
-          console.log('📈 DataIngestionService: Metrics collection: ENABLED');
-          console.log('🔄 DataIngestionService: Sports monitored: MLB, NFL, NBA, WNBA, NCAAF, CFL');
-          console.log('💾 DataIngestionService: Global reference stored for monitoring and shutdown');
-          console.log('🌟 DataIngestionService: Now operational and logging will appear every 30s');
-          
-        } catch (error) {
-          console.error('='.repeat(60));
-          console.error('❌ DATAINGESTIONSERVICE: FAILED TO START');
-          console.error('='.repeat(60));
-          console.error('❌ DataIngestionService: Failed to start:', error);
-          console.error('📋 DataIngestionService: Error details:', error?.message);
-          if (error?.stack) console.error('📊 DataIngestionService: Stack trace:', error.stack);
-          console.error('🔄 DataIngestionService: Continuing with legacy polling systems only');
-          console.error('='.repeat(60));
-        }
-      });
+      // 🚀 DataIngestionService now initialized at top-level (Architect's Fix)
+      console.log('📋 DataIngestionService: Initialization moved to top-level for proper execution');
 
       console.log(`🔒 Singleton lock active - port conflicts prevented`);
       console.log(`📱 Database connected: Yes`);
