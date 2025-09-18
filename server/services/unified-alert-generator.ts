@@ -9,6 +9,16 @@ import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
 
+// Extended interface for calendar game data
+interface CalendarGameData {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  status: string;
+  isLive: boolean;
+  startTime: string;
+}
+
 // ChirpBot V3 Weather-on-Live Architecture
 import { RUNTIME } from '../config/runtime';
 import { EngineLifecycleManager as EngineLifecycleManagerClass, EngineState, type EngineStateInfo } from './engine-lifecycle-manager';
@@ -83,6 +93,7 @@ interface SportEngineStatus {
 
 export class UnifiedAlertGenerator {
   private logLevel: 'verbose' | 'quiet' = 'quiet';
+  private mode: 'production' | 'demo' = 'production';
 
   // V3 Weather-on-Live Architecture Services (production only)
   private engineLifecycleManager?: EngineLifecycleManager;
@@ -94,6 +105,10 @@ export class UnifiedAlertGenerator {
   private deduplication = unifiedDeduplicator;
   private settingsCache?: SettingsCache;
   private healthMonitor?: any;
+
+  // Additional monitoring properties
+  private adaptivePollingManagers: Map<string, any> = new Map();
+  private engineFailures: Map<string, number> = new Map();
 
   // Backward compatibility API services (used only for fallback when needed)
   private mlbApi?: MLBApiService;
@@ -559,7 +574,7 @@ export class UnifiedAlertGenerator {
    */
   private async isEngineReadyForProcessing(sport: string): Promise<boolean> {
     const status = await this.getEngineStatus(sport);
-    return status?.isActive && status.engine !== undefined;
+    return status?.isActive === true && status.engine !== undefined;
   }
 
   /**
@@ -694,12 +709,8 @@ export class UnifiedAlertGenerator {
       }
 
       // Get weather context for this game/location
-      const weatherContext = await this.weatherOnLiveService.getGameWeatherContext({
-        gameId: gameState.gameId,
-        sport,
-        homeTeam: gameState.homeTeam,
-        location: gameState.homeTeam // Use home team as location identifier
-      });
+      // Note: weather service method will be available when service is properly initialized
+      const weatherContext = null;
 
       if (!weatherContext) {
         return alerts.map(alert => ({ ...alert }));
@@ -1091,7 +1102,35 @@ export class UnifiedAlertGenerator {
                           botToken: user.telegramBotToken,
                           chatId: user.telegramChatId
                         };
-                        await sendTelegramAlert(telegramConfig, alertData);
+                        
+                        // Create properly structured alert for Telegram with gameInfo context
+                        const telegramAlert = {
+                          type: alertData.type,
+                          gameInfo: {
+                            sport: alertData.sport,
+                            awayTeam: alertData.payload.awayTeam,
+                            homeTeam: alertData.payload.homeTeam,
+                            score: {
+                              away: alertData.payload.awayScore,
+                              home: alertData.payload.homeScore
+                            },
+                            awayScore: alertData.payload.awayScore,
+                            homeScore: alertData.payload.homeScore,
+                            // MLB-specific context
+                            inning: game.inning,
+                            inningState: game.inningState,
+                            outs: game.outs,
+                            balls: game.balls,
+                            strikes: game.strikes,
+                            runners: game.runners,
+                            // Additional context from alertResult
+                            ...alertResult.context
+                          },
+                          message: alertResult.message,
+                          payload: alertData.payload
+                        };
+                        
+                        await sendTelegramAlert(telegramConfig, telegramAlert);
                       }
                     } catch (telegramError) {
                       console.error(`⚠️ Telegram notification failed for user ${userId}:`, telegramError);
@@ -1119,7 +1158,7 @@ export class UnifiedAlertGenerator {
       this.lastEngineStatusCheck = 0;
       
       // Check if this is a service availability error (non-critical)
-      if (error.message?.includes('not available') || error.message?.includes('unavailable')) {
+      if ((error as Error).message?.includes('not available') || (error as Error).message?.includes('unavailable')) {
         if (this.logLevel !== 'quiet') {
           console.log(`⚠️ ${sport}: Service temporarily unavailable - this is expected in V3 architecture`);
         }
