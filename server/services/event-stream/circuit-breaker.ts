@@ -428,6 +428,13 @@ export class CircuitBreakerManager {
   }
 
   /**
+   * Alias for getCircuitBreaker() for backward compatibility
+   */
+  getBreaker(processorId: string, sport: string, config?: Partial<CircuitBreakerConfig>): CircuitBreaker {
+    return this.getCircuitBreaker(processorId, sport, config);
+  }
+
+  /**
    * Get all circuit breaker statistics
    */
   getAllStats(): Record<string, CircuitBreakerStats> {
