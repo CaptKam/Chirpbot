@@ -1107,22 +1107,26 @@ export class UnifiedAlertGenerator {
                         const telegramAlert = {
                           type: alertData.type,
                           gameInfo: {
-                            sport: alertData.sport,
-                            awayTeam: alertData.payload.awayTeam,
-                            homeTeam: alertData.payload.homeTeam,
+                            sport: sport, // Use the sport variable directly
+                            awayTeam: game.awayTeam,
+                            homeTeam: game.homeTeam,
                             score: {
-                              away: alertData.payload.awayScore,
-                              home: alertData.payload.homeScore
+                              away: game.awayScore,
+                              home: game.homeScore
                             },
-                            awayScore: alertData.payload.awayScore,
-                            homeScore: alertData.payload.homeScore,
-                            // MLB-specific context
+                            awayScore: game.awayScore,
+                            homeScore: game.homeScore,
+                            // MLB-specific context - use actual game data
                             inning: game.inning,
-                            inningState: game.inningState,
+                            isTopInning: game.isTopInning, // Use boolean instead of inningState
                             outs: game.outs,
                             balls: game.balls,
                             strikes: game.strikes,
                             runners: game.runners,
+                            // Runner flags for compatibility
+                            hasFirst: game.runners?.first,
+                            hasSecond: game.runners?.second,
+                            hasThird: game.runners?.third,
                             // Additional context from alertResult
                             ...alertResult.context
                           },
