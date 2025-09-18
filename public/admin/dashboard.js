@@ -220,7 +220,7 @@ function renderUsers() {
 
 async function updateUserRole(userId, newRole) {
     try {
-        const response = await fetch(`/api/admin/users/${userId}/role`, {
+        const response = await fetch('/api/admin/users/' + userId + '/role', {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -252,7 +252,7 @@ async function deleteUser(userId) {
     }
     
     try {
-        const response = await fetch(`/api/admin/users/${userId}`, {
+        const response = await fetch('/api/admin/users/' + userId, {
             method: 'DELETE',
             credentials: 'include'
         });
@@ -290,37 +290,36 @@ function updateSystemInfo(data) {
     const systemInfoElement = document.getElementById('systemInfo');
     if (!systemInfoElement) return;
     
-    systemInfoElement.innerHTML = `
-        <div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-            <h3 style="color: #f8fafc; margin-bottom: 15px;">Environment Status</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                <div>
-                    <strong style="color: #94a3b8;">Environment:</strong>
-                    <span style="color: #f8fafc;">${data.analysis?.likelyEnvironment || 'Unknown'}</span>
-                </div>
-                <div>
-                    <strong style="color: #94a3b8;">Database:</strong>
-                    <span style="color: ${data.database?.connected ? '#22c55e' : '#ef4444'};">
-                        ${data.database?.connected ? 'Connected' : 'Disconnected'}
-                    </span>
-                </div>
-                <div>
-                    <strong style="color: #94a3b8;">Users in DB:</strong>
-                    <span style="color: #f8fafc;">${data.database?.userCount || 0}</span>
-                </div>
-                <div>
-                    <strong style="color: #94a3b8;">Session Working:</strong>
-                    <span style="color: ${data.session?.authenticated ? '#22c55e' : '#ef4444'};">
-                        ${data.session?.authenticated ? 'Yes' : 'No'}
-                    </span>
-                </div>
-            </div>
-        </div>
-        <div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px;">
-            <h3 style="color: #f8fafc; margin-bottom: 15px;">System Timestamp</h3>
-            <p style="color: #94a3b8; margin: 0;">${data.timestamp || new Date().toISOString()}</p>
-        </div>
-    `;
+    systemInfoElement.innerHTML = 
+        '<div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; margin-bottom: 20px;">' +
+            '<h3 style="color: #f8fafc; margin-bottom: 15px;">Environment Status</h3>' +
+            '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">' +
+                '<div>' +
+                    '<strong style="color: #94a3b8;">Environment:</strong>' +
+                    '<span style="color: #f8fafc;">' + (data.analysis && data.analysis.likelyEnvironment ? data.analysis.likelyEnvironment : 'Unknown') + '</span>' +
+                '</div>' +
+                '<div>' +
+                    '<strong style="color: #94a3b8;">Database:</strong>' +
+                    '<span style="color: ' + (data.database && data.database.connected ? '#22c55e' : '#ef4444') + ';">' +
+                        (data.database && data.database.connected ? 'Connected' : 'Disconnected') +
+                    '</span>' +
+                '</div>' +
+                '<div>' +
+                    '<strong style="color: #94a3b8;">Users in DB:</strong>' +
+                    '<span style="color: #f8fafc;">' + (data.database && data.database.userCount ? data.database.userCount : 0) + '</span>' +
+                '</div>' +
+                '<div>' +
+                    '<strong style="color: #94a3b8;">Session Working:</strong>' +
+                    '<span style="color: ' + (data.session && data.session.authenticated ? '#22c55e' : '#ef4444') + ';">' +
+                        (data.session && data.session.authenticated ? 'Yes' : 'No') +
+                    '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+        '<div style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px;">' +
+            '<h3 style="color: #f8fafc; margin-bottom: 15px;">System Timestamp</h3>' +
+            '<p style="color: #94a3b8; margin: 0;">' + (data.timestamp ? data.timestamp : new Date().toISOString()) + '</p>' +
+        '</div>';
 }
 
 function showTab(tabName) {
@@ -336,7 +335,7 @@ function showTab(tabName) {
     });
     
     // Show selected tab
-    const selectedTab = document.getElementById(`${tabName}-tab`);
+    const selectedTab = document.getElementById(tabName + '-tab');
     if (selectedTab) {
         selectedTab.style.display = 'block';
         selectedTab.classList.add('active');
@@ -376,7 +375,7 @@ function showNotification(message, type = 'info') {
     
     // Create new notification
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = 'notification ' + type;
     notification.textContent = message;
     
     document.body.appendChild(notification);
@@ -486,7 +485,7 @@ async function enableAllAlerts() {
         
         if (response.ok) {
             const data = await response.json();
-            showNotification(`Enabled ${data.results?.length || 0} alert types`, 'success');
+            showNotification('Enabled ' + (data.results && data.results.length ? data.results.length : 0) + ' alert types', 'success');
             // Reload current sport settings and statistics
             await Promise.all([
                 showSportSettings(currentSport),
@@ -519,7 +518,7 @@ async function disableAllAlerts() {
         
         if (response.ok) {
             const data = await response.json();
-            showNotification(`Disabled ${data.disabledCount || 0} alert types`, 'success');
+            showNotification('Disabled ' + (data.disabledCount ? data.disabledCount : 0) + ' alert types', 'success');
             // Reload current sport settings and statistics
             await Promise.all([
                 showSportSettings(currentSport),
@@ -548,7 +547,7 @@ async function quickEnableMLB() {
         
         if (response.ok) {
             const data = await response.json();
-            showNotification(`Enabled ${data.results?.length || 0} critical MLB alerts`, 'success');
+            showNotification('Enabled ' + (data.results && data.results.length ? data.results.length : 0) + ' critical MLB alerts', 'success');
             // Reload MLB settings if currently viewing
             if (currentSport === 'MLB') {
                 await showSportSettings('MLB');
@@ -573,7 +572,7 @@ async function showSportSettings(sport) {
         tab.classList.remove('active');
     });
     event?.target?.classList?.add('active') || 
-    document.querySelector(`[onclick="showSportSettings('${sport}')"]`)?.classList?.add('active');
+    var sportsButton = document.querySelector("[onclick=\"showSportSettings('" + sport + "')\"]"); if (sportsButton) sportsButton.classList.add('active');
     
     const contentElement = document.getElementById('sportSettingsContent');
     if (!contentElement) return;
