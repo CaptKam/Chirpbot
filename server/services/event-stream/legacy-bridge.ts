@@ -26,6 +26,11 @@ import { gameStateToEvent, alertResultToEvent } from './types';
 import { getUnifiedEventStream } from './unified-event-stream';
 import { ProcessorFactory, processorManager } from './base-processor';
 import { MLBProcessor } from './mlb-processor';
+import { NFLProcessor } from './nfl-processor';
+import { NBAProcessor } from './nba-processor';
+import { WNBAProcessor } from './wnba-processor';
+import { NCAAFProcessor } from './ncaaf-processor';
+import { CFLProcessor } from './cfl-processor';
 
 // Import existing system components
 import { UnifiedAlertGenerator } from '../unified-alert-generator';
@@ -62,6 +67,11 @@ export class LegacyBridge extends EventEmitter {
   // Event stream integration
   private eventStream: any; // UnifiedEventStream instance
   private mlbProcessor?: MLBProcessor;
+  private nflProcessor?: NFLProcessor;
+  private nbaProcessor?: NBAProcessor;
+  private wnbaProcessor?: WNBAProcessor;
+  private ncaafProcessor?: NCAAFProcessor;
+  private cflProcessor?: CFLProcessor;
   
   // Legacy system integration
   private legacyGenerator?: UnifiedAlertGenerator;
@@ -118,34 +128,8 @@ export class LegacyBridge extends EventEmitter {
         }
       });
       
-      // Initialize MLB processor
-      this.mlbProcessor = new MLBProcessor();
-      await this.mlbProcessor.configure({
-        id: 'mlb_legacy_bridge_processor',
-        sport: 'MLB',
-        enabled: true,
-        shadowMode: true,
-        maxConcurrency: 3,
-        timeout: 10000,
-        retryConfig: {
-          maxRetries: 2,
-          baseDelayMs: 1000,
-          maxDelayMs: 10000,
-          backoffMultiplier: 2,
-          jitter: true
-        },
-        circuitBreakerConfig: {
-          failureThreshold: 5,
-          recoveryTimeoutMs: 30000,
-          monitoringWindowMs: 300000,
-          minimumRequests: 10,
-          errorRateThreshold: 0.3
-        }
-      });
-      
-      // Register MLB processor
-      ProcessorFactory.registerProcessor('MLB', MLBProcessor);
-      processorManager.addProcessor(this.mlbProcessor);
+      // Initialize all sports processors
+      await this.initializeAllProcessors();
       
       // Set up event stream subscriptions
       this.setupEventStreamSubscriptions();
@@ -163,6 +147,101 @@ export class LegacyBridge extends EventEmitter {
       console.error('💥 Legacy Bridge initialization failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Initialize all sports processors
+   */
+  private async initializeAllProcessors(): Promise<void> {
+    const processorConfig = {
+      enabled: true,
+      shadowMode: true,
+      maxConcurrency: 3,
+      timeout: 10000,
+      retryConfig: {
+        maxRetries: 2,
+        baseDelayMs: 1000,
+        maxDelayMs: 10000,
+        backoffMultiplier: 2,
+        jitter: true
+      },
+      circuitBreakerConfig: {
+        failureThreshold: 5,
+        recoveryTimeoutMs: 30000,
+        monitoringWindowMs: 300000,
+        minimumRequests: 10,
+        errorRateThreshold: 0.3
+      }
+    };
+
+    const processors = [
+      { 
+        name: 'MLB', 
+        processorClass: MLBProcessor, 
+        instance: () => this.mlbProcessor = new MLBProcessor(),
+        id: 'mlb_legacy_bridge_processor'
+      },
+      { 
+        name: 'NFL', 
+        processorClass: NFLProcessor, 
+        instance: () => this.nflProcessor = new NFLProcessor(),
+        id: 'nfl_legacy_bridge_processor'
+      },
+      { 
+        name: 'NBA', 
+        processorClass: NBAProcessor, 
+        instance: () => this.nbaProcessor = new NBAProcessor(),
+        id: 'nba_legacy_bridge_processor'
+      },
+      { 
+        name: 'WNBA', 
+        processorClass: WNBAProcessor, 
+        instance: () => this.wnbaProcessor = new WNBAProcessor(),
+        id: 'wnba_legacy_bridge_processor'
+      },
+      { 
+        name: 'NCAAF', 
+        processorClass: NCAAFProcessor, 
+        instance: () => this.ncaafProcessor = new NCAAFProcessor(),
+        id: 'ncaaf_legacy_bridge_processor'
+      },
+      { 
+        name: 'CFL', 
+        processorClass: CFLProcessor, 
+        instance: () => this.cflProcessor = new CFLProcessor(),
+        id: 'cfl_legacy_bridge_processor'
+      }
+    ];
+
+    console.log(`🏟️ Initializing ${processors.length} sports processors...`);
+
+    for (const { name, processorClass, instance, id } of processors) {
+      try {
+        // Create processor instance
+        const processor = instance();
+        
+        // Configure processor
+        await processor.configure({
+          id,
+          sport: name,
+          ...processorConfig
+        });
+        
+        // Register with ProcessorFactory
+        ProcessorFactory.registerProcessor(name, processorClass);
+        
+        // Add to processor manager
+        processorManager.addProcessor(processor);
+        
+        console.log(`✅ ${name} processor initialized and registered`);
+        
+      } catch (error) {
+        console.error(`❌ Failed to initialize ${name} processor:`, error);
+        throw error;
+      }
+    }
+
+    console.log(`🚀 All ${processors.length} sports processors initialized successfully!`);
   }
 
   /**
