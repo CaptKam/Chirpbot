@@ -737,7 +737,7 @@ function getAlertDescription(alertKey) {
         'RED_ZONE': 'Alert when team enters red zone',
         'FOURTH_DOWN': 'Alert on fourth down situations',
         'OVERTIME': 'Alert when game goes to overtime',
-        'FINAL_MINUTES': 'Alert in final minutes of game',
+        'FINAL_MINUTES': 'Alert in final minutes of game',\n        'HIGH_SCORING_QUARTER': 'Alert for high-scoring quarters',\n        'LOW_SCORING_QUARTER': 'Alert for low-scoring quarters',\n        'CLUTCH_TIME_OPPORTUNITY': 'Alert for clutch time opportunities',\n        'COMEBACK_POTENTIAL': 'Alert for comeback scenarios',\n        'CRUNCH_TIME_DEFENSE': 'Alert for defensive stands',\n        'CHAMPIONSHIP_IMPLICATIONS': 'Alert for games with championship impact',\n        // WNBA-specific prefixed versions\n        'WNBA_FINAL_MINUTES': 'Alert in final minutes of WNBA game',\n        'WNBA_HIGH_SCORING_QUARTER': 'Alert for high-scoring WNBA quarters',\n        'WNBA_LOW_SCORING_QUARTER': 'Alert for low-scoring WNBA quarters',\n        'WNBA_CLUTCH_TIME_OPPORTUNITY': 'Alert for WNBA clutch time opportunities',\n        'WNBA_COMEBACK_POTENTIAL': 'Alert for WNBA comeback scenarios',\n        'WNBA_CRUNCH_TIME_DEFENSE': 'Alert for WNBA defensive stands',\n        'WNBA_CHAMPIONSHIP_IMPLICATIONS': 'Alert for WNBA games with championship impact',
         'BASES_LOADED_NO_OUTS': 'Alert when bases loaded with no outs',
         'BASES_LOADED_ONE_OUT': 'Alert when bases loaded with one out',
         'RUNNER_ON_THIRD_NO_OUTS': 'Alert with runner on third, no outs',

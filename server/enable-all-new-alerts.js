@@ -15,6 +15,12 @@ const NEW_ALERT_TYPES = {
     'MLB_SCORING_OPPORTUNITY',
     'MLB_PITCHING_CHANGE'
   ],
+  WNBA: [
+    'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'WNBA_FINAL_MINUTES',
+    'WNBA_FOURTH_QUARTER', 'WNBA_HIGH_SCORING_QUARTER', 'WNBA_LOW_SCORING_QUARTER',
+    'WNBA_CLUTCH_TIME_OPPORTUNITY', 'WNBA_COMEBACK_POTENTIAL', 
+    'WNBA_CRUNCH_TIME_DEFENSE', 'WNBA_CHAMPIONSHIP_IMPLICATIONS'
+  ],
   TEST: [
     'TEST_ALERT'
   ]
@@ -70,8 +76,8 @@ async function enableNewAlerts() {
     if (kameronSettings.length > 0) {
       console.log('🚀 Enabling alerts for kameronfrisby too...');
       
-      // Enable NCAAF and MLB alerts for kameron
-      for (const sport of ['NCAAF', 'MLB']) {
+      // Enable NCAAF, MLB, and WNBA alerts for kameron
+      for (const sport of ['NCAAF', 'MLB', 'WNBA']) {
         if (NEW_ALERT_TYPES[sport]) {
           for (const alertType of NEW_ALERT_TYPES[sport]) {
             const existingSetting = await db.select()

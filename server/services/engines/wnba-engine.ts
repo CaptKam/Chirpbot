@@ -126,8 +126,8 @@ export class WNBAEngine extends BaseSportEngine {
     try {
       // Only check settings for actual WNBA alert types
       const validWNBAAlerts = [
-        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'FINAL_MINUTES',
-        'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER',
+        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'WNBA_FINAL_MINUTES',
+        'WNBA_HIGH_SCORING_QUARTER', 'WNBA_LOW_SCORING_QUARTER', 'WNBA_FOURTH_QUARTER',
         // V3-10: New WNBA predictive alert types
         'WNBA_CLUTCH_TIME_OPPORTUNITY', 'WNBA_COMEBACK_POTENTIAL',
         'WNBA_CRUNCH_TIME_DEFENSE', 'WNBA_CHAMPIONSHIP_IMPLICATIONS'
@@ -519,8 +519,8 @@ export class WNBAEngine extends BaseSportEngine {
 
       // Filter to only valid WNBA alerts that have corresponding module files
       const validWNBAAlerts = [
-        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'FINAL_MINUTES',
-        'HIGH_SCORING_QUARTER', 'LOW_SCORING_QUARTER', 'FOURTH_QUARTER',
+        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'WNBA_FINAL_MINUTES',
+        'WNBA_HIGH_SCORING_QUARTER', 'WNBA_LOW_SCORING_QUARTER', 'WNBA_FOURTH_QUARTER',
         // V3-10: New WNBA predictive alert types
         'WNBA_CLUTCH_TIME_OPPORTUNITY', 'WNBA_COMEBACK_POTENTIAL',
         'WNBA_CRUNCH_TIME_DEFENSE', 'WNBA_CHAMPIONSHIP_IMPLICATIONS'
@@ -558,10 +558,10 @@ export class WNBAEngine extends BaseSportEngine {
       const moduleMap: Record<string, string> = {
         'WNBA_GAME_START': './alert-cylinders/wnba/game-start-module.ts',
         'WNBA_TWO_MINUTE_WARNING': './alert-cylinders/wnba/two-minute-warning-module.ts',
-        'FINAL_MINUTES': './alert-cylinders/wnba/final-minutes-module.ts',
-        'HIGH_SCORING_QUARTER': './alert-cylinders/wnba/high-scoring-quarter-module.ts',
-        'LOW_SCORING_QUARTER': './alert-cylinders/wnba/low-scoring-quarter-module.ts',
-        'FOURTH_QUARTER': './alert-cylinders/wnba/fourth-quarter-module.ts',
+        'WNBA_FINAL_MINUTES': './alert-cylinders/wnba/final-minutes-module.ts',
+        'WNBA_HIGH_SCORING_QUARTER': './alert-cylinders/wnba/high-scoring-quarter-module.ts',
+        'WNBA_LOW_SCORING_QUARTER': './alert-cylinders/wnba/low-scoring-quarter-module.ts',
+        'WNBA_FOURTH_QUARTER': './alert-cylinders/wnba/fourth-quarter-module.ts',
         // V3-10: New WNBA predictive alert modules
         'WNBA_CLUTCH_TIME_OPPORTUNITY': './alert-cylinders/wnba/clutch-time-opportunity-module.ts',
         'WNBA_COMEBACK_POTENTIAL': './alert-cylinders/wnba/comeback-potential-module.ts',

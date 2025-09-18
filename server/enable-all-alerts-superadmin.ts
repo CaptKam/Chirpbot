@@ -1,48 +1,43 @@
 import { storage } from './storage';
 
 async function enableAllAlertsForSuperadmin() {
-  console.log('🚀 Enabling ALL alerts for superadmin user...');
+  console.log('🚀 Enabling ALL global alert settings...');
   
-  // All alert types to enable
-  const allAlertTypes = [
-    // MLB alerts
-    'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH', 'MLB_RUNNER_ON_THIRD_NO_OUTS',
-    'MLB_FIRST_AND_THIRD_NO_OUTS', 'MLB_SECOND_AND_THIRD_NO_OUTS', 'MLB_FIRST_AND_SECOND',
-    'MLB_BASES_LOADED_NO_OUTS', 'MLB_RUNNER_ON_THIRD_ONE_OUT', 'MLB_SECOND_AND_THIRD_ONE_OUT',
-    'MLB_BASES_LOADED_ONE_OUT', 'MLB_BATTER_DUE', 'MLB_STEAL_LIKELIHOOD', 'MLB_ON_DECK_PREDICTION',
-    'MLB_WIND_CHANGE', 'MLB_LATE_INNING_CLOSE', 'MLB_SCORING_OPPORTUNITY', 'MLB_PITCHING_CHANGE',
-    // NCAAF alerts  
-    'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE', 'NCAAF_FOURTH_DOWN_DECISION',
-    'NCAAF_UPSET_OPPORTUNITY', 'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL',
-    'NCAAF_MASSIVE_WEATHER', 'NCAAF_SECOND_HALF_KICKOFF', 'NCAAF_CLOSE_GAME', 'NCAAF_SCORING_PLAY',
-    'NCAAF_FOURTH_QUARTER', 'NCAAF_HALFTIME',
-    // Test alert
-    'TEST_ALERT'
+  // All alert types to enable - focus on WNBA alerts
+  const wnbaAlertTypes = [
+    'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'WNBA_FINAL_MINUTES',
+    'WNBA_FOURTH_QUARTER', 'WNBA_HIGH_SCORING_QUARTER', 'WNBA_LOW_SCORING_QUARTER',
+    'WNBA_CLUTCH_TIME_OPPORTUNITY', 'WNBA_COMEBACK_POTENTIAL', 
+    'WNBA_CRUNCH_TIME_DEFENSE', 'WNBA_CHAMPIONSHIP_IMPLICATIONS'
   ];
   
   try {
-    // Enable alerts for superadmin
-    const result = await storage.updateUserAlertSettings('superadmin', {
-      enabled: true,
-      telegramEnabled: false,
-      soundEnabled: true,
-      alertTypes: allAlertTypes
-    });
+    // Enable global alerts for WNBA (this is what controls module loading)
+    console.log('🔧 Enabling global WNBA alert settings...');
     
-    console.log('✅ Enabled', allAlertTypes.length, 'alert types for superadmin:');
-    console.log('  MLB:', allAlertTypes.filter(a => a.startsWith('MLB_')).join(', '));
-    console.log('  NCAAF:', allAlertTypes.filter(a => a.startsWith('NCAAF_')).join(', '));
-    console.log('  TEST:', allAlertTypes.filter(a => a === 'TEST_ALERT').join(', '));
+    for (const alertType of wnbaAlertTypes) {
+      await storage.updateGlobalAlertSetting('WNBA', alertType, true, '9126c8a9-54df-4c31-9565-9f908f44a6f3');
+      console.log(`✅ Enabled global setting: ${alertType}`);
+    }
     
-    // Also ensure global alerts are enabled
-    await storage.updateGlobalAlertSettings({ alertsEnabled: true });
-    console.log('✅ Global alerts enabled');
+    console.log('✅ Enabled', wnbaAlertTypes.length, 'WNBA alert types globally:');
+    console.log('  WNBA:', wnbaAlertTypes.join(', '));
+    
+    // Also enable user preferences for the superadmin user
+    console.log('🔧 Enabling user preferences for superadmin...');
+    const preferences = wnbaAlertTypes.map(alertType => ({
+      alertType,
+      enabled: true
+    }));
+    
+    await storage.bulkSetUserAlertPreferences('9126c8a9-54df-4c31-9565-9f908f44a6f3', 'WNBA', preferences);
+    console.log('✅ User preferences enabled for superadmin');
     
     // Check the result
-    const settings = await storage.getUserAlertSettings('superadmin');
-    console.log('🔍 Verification - Superadmin settings:');
-    console.log('  Enabled:', settings.enabled);
-    console.log('  Alert types count:', settings.alertTypes?.length || 0);
+    const settings = await storage.getUserAlertPreferencesBySport('9126c8a9-54df-4c31-9565-9f908f44a6f3', 'WNBA');
+    console.log('🔍 Verification - Superadmin WNBA settings:');
+    console.log('  Total preferences:', settings.length);
+    console.log('  Enabled alerts:', settings.filter(s => s.enabled).length);
     
   } catch (error) {
     console.error('❌ Error enabling alerts:', error);

@@ -2,7 +2,7 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 
 export default class FinalMinutesModule extends BaseAlertModule {
-  alertType = 'FINAL_MINUTES';
+  alertType = 'WNBA_FINAL_MINUTES';
   sport = 'WNBA';
 
   isTriggered(gameState: GameState): boolean {

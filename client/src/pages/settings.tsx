@@ -33,13 +33,13 @@ const ALERT_TYPE_CONFIG: Record<string, any[]> = {
     { key: 'MLB_BASES_LOADED_ONE_OUT', label: 'Bases Loaded, 1 Out', description: '66% scoring probability situation' }
   ],
   WNBA: [
-    // Existing WNBA alert types
+    // Core WNBA game situation alerts
     { key: 'WNBA_GAME_START', label: 'Game Start', description: 'Alert when WNBA game begins' },
     { key: 'WNBA_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Official two-minute warning in WNBA games' },
-    { key: 'FINAL_MINUTES', label: 'Final Minutes', description: 'Alert during final minutes of close games' },
-    { key: 'HIGH_SCORING_QUARTER', label: 'High Scoring Quarter', description: 'Alert for exceptionally high-scoring quarters' },
-    { key: 'LOW_SCORING_QUARTER', label: 'Low Scoring Quarter', description: 'Alert for defensive battles and low-scoring quarters' },
-    { key: 'FOURTH_QUARTER', label: 'Fourth Quarter', description: 'Alert when fourth quarter begins' },
+    { key: 'WNBA_FINAL_MINUTES', label: 'Final Minutes', description: 'Alert during final minutes of close games' },
+    { key: 'WNBA_FOURTH_QUARTER', label: 'Fourth Quarter', description: 'Alert when fourth quarter begins' },
+    { key: 'WNBA_HIGH_SCORING_QUARTER', label: 'High Scoring Quarter', description: 'Alert for exceptionally high-scoring quarters' },
+    { key: 'WNBA_LOW_SCORING_QUARTER', label: 'Low Scoring Quarter', description: 'Alert for defensive battles and low-scoring quarters' },
     // V3-10: New WNBA predictive alert types
     { key: 'WNBA_CLUTCH_TIME_OPPORTUNITY', label: 'Clutch Time Opportunity', description: 'High-leverage moments in final minutes and overtime' },
     { key: 'WNBA_COMEBACK_POTENTIAL', label: 'Comeback Potential', description: 'Identifies potential comeback scenarios and momentum shifts' },

@@ -43,8 +43,8 @@ async function testWNBAAlerts() {
     const probability = await wnbaEngine.calculateProbability(gameState);
     console.log(`📊 Calculated Probability: ${probability}%`);
     
-    // Initialize with sample alert types
-    await wnbaEngine.initializeUserAlertModules(['WNBA_GAME_START', 'FINAL_MINUTES']);
+    // Initialize with sample alert types using proper WNBA_ prefixes
+    await wnbaEngine.initializeUserAlertModules(['WNBA_GAME_START', 'WNBA_FINAL_MINUTES']);
     
     // Generate alerts
     const alerts = await wnbaEngine.generateLiveAlerts(gameState);

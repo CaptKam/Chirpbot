@@ -2,7 +2,7 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 
 export default class HighScoringQuarterModule extends BaseAlertModule {
-  alertType = 'HIGH_SCORING_QUARTER';
+  alertType = 'WNBA_HIGH_SCORING_QUARTER';
   sport = 'WNBA';
 
   isTriggered(gameState: GameState): boolean {
