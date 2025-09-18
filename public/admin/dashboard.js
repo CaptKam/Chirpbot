@@ -179,49 +179,43 @@ function renderUsers() {
     if (!tableBody) return;
     
     if (filteredUsers.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
-                    No users found
-                </td>
-            </tr>
-        `;
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">No users found</td></tr>';
         return;
     }
     
-    tableBody.innerHTML = filteredUsers.map(user => `
-        <tr class="table-row" data-testid="row-user-${user.id}">
-            <td>
-                <div class="user-info">
-                    <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                    <div class="user-details">
-                        <h4>${user.username}</h4>
-                        <p>Joined ${new Date(user.createdAt || Date.now()).toLocaleDateString()}</p>
-                    </div>
-                </div>
-            </td>
-            <td class="user-email">${user.email || 'N/A'}</td>
-            <td>
-                <select class="role-select" onchange="updateUserRole('${user.id}', this.value)" data-testid="select-role-${user.id}">
-                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
-                    <option value="analyst" ${user.role === 'analyst' ? 'selected' : ''}>Analyst</option>
-                    <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager</option>
-                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                </select>
-            </td>
-            <td class="user-auth">${user.authProvider || 'local'}</td>
-            <td>
-                <span class="telegram-badge ${user.telegramEnabled ? 'enabled' : 'disabled'}" data-testid="telegram-${user.id}">
-                    ${user.telegramEnabled ? 'Enabled' : 'Disabled'}
-                </span>
-            </td>
-            <td>
-                <button class="role-select" onclick="deleteUser('${user.id}')" data-testid="button-delete-${user.id}" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3);">
-                    Delete
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    tableBody.innerHTML = filteredUsers.map(function(user) {
+        return '<tr class="table-row" data-testid="row-user-' + user.id + '">' +
+            '<td>' +
+                '<div class="user-info">' +
+                    '<div class="user-avatar">' + user.username.charAt(0).toUpperCase() + '</div>' +
+                    '<div class="user-details">' +
+                        '<h4>' + user.username + '</h4>' +
+                        '<p>Joined ' + new Date(user.createdAt || Date.now()).toLocaleDateString() + '</p>' +
+                    '</div>' +
+                '</div>' +
+            '</td>' +
+            '<td class="user-email">' + (user.email || 'N/A') + '</td>' +
+            '<td>' +
+                '<select class="role-select" onchange="updateUserRole(\'' + user.id + '\', this.value)" data-testid="select-role-' + user.id + '">' +
+                    '<option value="user"' + (user.role === 'user' ? ' selected' : '') + '>User</option>' +
+                    '<option value="analyst"' + (user.role === 'analyst' ? ' selected' : '') + '>Analyst</option>' +
+                    '<option value="manager"' + (user.role === 'manager' ? ' selected' : '') + '>Manager</option>' +
+                    '<option value="admin"' + (user.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+                '</select>' +
+            '</td>' +
+            '<td class="user-auth">' + (user.authProvider || 'local') + '</td>' +
+            '<td>' +
+                '<span class="telegram-badge ' + (user.telegramEnabled ? 'enabled' : 'disabled') + '" data-testid="telegram-' + user.id + '">' +
+                    (user.telegramEnabled ? 'Enabled' : 'Disabled') +
+                '</span>' +
+            '</td>' +
+            '<td>' +
+                '<button class="role-select" onclick="deleteUser(\'' + user.id + '\')" data-testid="button-delete-' + user.id + '" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3);">' +
+                    'Delete' +
+                '</button>' +
+            '</td>' +
+        '</tr>';
+    }).join('');
 }
 
 async function updateUserRole(userId, newRole) {
