@@ -927,6 +927,28 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           
           savedCount++;
           console.log(`✅ Alert saved for user ${userGame.userId}: ${alert.alertKey}`);
+
+          // 📱 FIXED: Add Telegram delivery (was missing in UnifiedAIProcessor pipeline)
+          try {
+            const user = await storage.getUserById(userGame.userId);
+            if (user?.telegramEnabled && user?.telegramBotToken && user?.telegramChatId) {
+              const telegramConfig = {
+                botToken: user.telegramBotToken,
+                chatId: user.telegramChatId
+              };
+              console.log(`📱 Sending Telegram alert to ${user.username || user.id}`);
+              const sent = await sendTelegramAlert(telegramConfig, alert);
+              if (sent) {
+                console.log(`📱 ✅ Telegram alert delivered to ${user.username || user.id}`);
+              } else {
+                console.log(`📱 ❌ Telegram delivery failed to ${user.username || user.id}`);
+              }
+            } else {
+              console.log(`📱 ⏭️ Telegram not configured for user ${user?.username || userGame.userId}`);
+            }
+          } catch (telegramError) {
+            console.error(`⚠️ Telegram notification failed for user ${userGame.userId}:`, telegramError);
+          }
           
         } catch (error: any) {
           // Handle any other database errors
