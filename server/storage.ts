@@ -312,9 +312,37 @@ export const storage = {
       expiresAt 
     };
     
-    const result = await db.insert(alerts).values(alertWithExpiry).returning();
-    console.log(`💾 Alert saved with 5min TTL: ${result[0].alertKey} (expires at ${expiresAt.toISOString()})`);
-    return result[0];
+    try {
+      const result = await db.insert(alerts).values(alertWithExpiry).returning();
+      console.log(`💾 Alert saved with 5min TTL: ${result[0].alertKey} (expires at ${expiresAt.toISOString()})`);
+      return result[0];
+    } catch (error: any) {
+      // Handle duplicate key constraint violation
+      if (error.code === '23505' && error.constraint === 'ux_user_alert_key') {
+        console.log(`⚠️ Duplicate alert detected for user ${alertData.userId} with key ${alertData.alertKey}, updating existing alert`);
+        
+        // Update the existing alert instead of creating a new one
+        const result = await db
+          .update(alerts)
+          .set({
+            ...alertWithExpiry,
+            createdAt: new Date(), // Update timestamp for freshness
+          })
+          .where(and(
+            eq(alerts.userId, alertData.userId!),
+            eq(alerts.alertKey, alertData.alertKey)
+          ))
+          .returning();
+        
+        if (result.length > 0) {
+          console.log(`✅ Updated existing alert: ${result[0].alertKey} (expires at ${expiresAt.toISOString()})`);
+          return result[0];
+        }
+      }
+      
+      // Re-throw other errors
+      throw error;
+    }
   },
 
 
