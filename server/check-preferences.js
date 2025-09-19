@@ -1,5 +1,5 @@
-import { db } from './db.js';
-import { userAlertPreferences } from '../shared/schema.js';
+import { db } from './db';
+import { userAlertPreferences } from '../shared/schema';
 
 async function checkPreferences() {
   console.log('🔍 Checking User Alert Preferences...\n');
