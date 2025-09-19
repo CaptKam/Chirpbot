@@ -51,8 +51,11 @@ async function requireAuthentication(req: express.Request, res: express.Response
 
 // Middleware to ensure user is authenticated AND has admin role
 async function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
-  if (req.session?.userId) {
-    const user = await storage.getUserById(req.session.userId);
+  // Check for admin session (adminUserId) first, then fall back to regular session (userId)
+  const userId = req.session?.adminUserId || req.session?.userId;
+  
+  if (userId) {
+    const user = await storage.getUserById(userId);
     if (user) {
       req.user = user; // Attach user to request for convenience
       
@@ -171,7 +174,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // REMOVED: Broken /api/admin/statistics route - replaced with working /api/admin/stats endpoint
 
   // Admin API to enable master alerts globally
-  app.post('/api/admin/enable-master-alerts', async (req, res) => {
+  app.post('/api/admin/enable-master-alerts', requireAdminAuth, async (req, res) => {
     try {
       console.log('🔧 Admin: Enabling master alerts globally...');
 
@@ -228,7 +231,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // WebSocket test endpoint removed - using HTTP polling architecture
 
   // Admin API to specifically enable MLB_FIRST_AND_SECOND for all users
-  app.post('/api/admin/enable-first-and-second', async (req, res) => {
+  app.post('/api/admin/enable-first-and-second', requireAdminAuth, async (req, res) => {
     try {
       console.log('🔧 Admin: Enabling MLB_FIRST_AND_SECOND for all users...');
 
@@ -3074,11 +3077,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Global Alert Management Endpoints
   
   // Admin-only endpoint to get global settings (legacy, kept for backward compatibility)
-  app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
+  app.get('/api/admin/global-alert-settings/:sport', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport } = req.params;
 
@@ -3120,11 +3120,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Update individual global alert setting
-  app.put('/api/admin/global-alert-setting', async (req, res) => {
+  app.put('/api/admin/global-alert-setting', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport, alertType, enabled } = req.body;
 
@@ -3133,7 +3130,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Update the global alert setting in database using atomic upsert
-      await storage.upsertGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId!);
+      const userId = req.session?.adminUserId || req.session?.userId;
+      await storage.upsertGlobalAlertSetting(sport, alertType, enabled, userId!);
 
       // Clear cache for this sport using the proper public method
       await unifiedSettings.invalidateCache(sport);
@@ -3296,12 +3294,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get('/api/admin/master-alerts', async (req, res) => {
+  app.get('/api/admin/master-alerts', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
       const enabled = await storage.getMasterAlertEnabled();
       res.json({ enabled });
     } catch (error) {
@@ -3310,16 +3304,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/master-alerts', async (req, res) => {
+  app.put('/api/admin/master-alerts', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { enabled } = req.body;
 
       // Actually persist the master alerts setting to the database
-      await storage.setMasterAlertEnabled(enabled, req.session.adminUserId);
+      const userId = req.session?.adminUserId || req.session?.userId;
+      await storage.setMasterAlertEnabled(enabled, userId);
 
       res.json({
         message: `Master alerts ${enabled ? 'enabled' : 'disabled'} successfully`,
@@ -3331,16 +3323,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/global-alert-category', async (req, res) => {
+  app.put('/api/admin/global-alert-category', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport, category, alertKeys, enabled } = req.body;
 
       // Update the category settings which will apply to all users
-      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
+      const userId = req.session?.adminUserId || req.session?.userId;
+      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, userId);
 
       res.json({
         message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
@@ -3370,11 +3360,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Quick fix endpoint to enable critical MLB alerts
-  app.post('/api/admin/quick-enable-mlb', async (req, res) => {
+  app.post('/api/admin/quick-enable-mlb', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const criticalAlerts = [
         'MLB_GAME_START',
@@ -3382,8 +3369,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       ];
 
       const results = [];
+      const userId = req.session?.adminUserId || req.session?.userId;
       for (const alertType of criticalAlerts) {
-        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, userId);
         results.push({ alertType, enabled: true });
       }
       
@@ -3402,19 +3390,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Enable all alerts for testing
-  app.post('/api/admin/enable-all-alerts', async (req, res) => {
+  app.post('/api/admin/enable-all-alerts', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const allAlerts = [
         'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'
       ];
 
       const results = [];
+      const userId = req.session?.adminUserId || req.session?.userId;
       for (const alertType of allAlerts) {
-        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, userId);
         results.push({ alertType, enabled: true });
       }
       
@@ -3433,11 +3419,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Disable ALL alerts across entire system
-  app.post('/api/admin/disable-all-alerts', async (req, res) => {
+  app.post('/api/admin/disable-all-alerts', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       console.log('🚫 ADMIN REQUEST: Disabling all alerts globally');
 
@@ -3480,7 +3463,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       for (const [sport, alertTypes] of Object.entries(allAlertTypes)) {
         for (const alertType of alertTypes) {
           try {
-            await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
+            const userId = req.session?.adminUserId || req.session?.userId;
+            await storage.updateGlobalAlertSetting(sport, alertType, false, userId);
             results.push({ sport, alertType, disabled: true });
             totalDisabled++;
           } catch (error) {
@@ -3528,11 +3512,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Reset global alert settings to defaults (clears all database overrides)
-  app.post('/api/admin/reset-global-alerts', async (req, res) => {
+  app.post('/api/admin/reset-global-alerts', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport } = req.body;
       if (!sport) {
@@ -3560,16 +3541,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/apply-global-settings', async (req, res) => {
+  app.put('/api/admin/apply-global-settings', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport, settings } = req.body;
 
       // Use the storage method to apply settings to all users
-      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
+      const userId = req.session?.adminUserId || req.session?.userId;
+      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, userId);
 
       res.json({
         message: `Global settings applied to ${result.usersUpdated} users successfully`,
@@ -3623,11 +3602,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Force recovery endpoint (admin only)
-  app.post('/api/health/alerts/recover', async (req, res) => {
+  app.post('/api/health/alerts/recover', requireAdminAuth, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { getHealthMonitor } = await import('./services/unified-health-monitor');
       const healthMonitor = getHealthMonitor();
