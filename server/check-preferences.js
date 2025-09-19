@@ -1,9 +1,5 @@
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { Pool } from '@neondatabase/serverless';
+import { db } from './db.js';
 import { userAlertPreferences } from '../shared/schema.js';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle(pool);
 
 async function checkPreferences() {
   console.log('🔍 Checking User Alert Preferences...\n');
@@ -86,8 +82,6 @@ async function checkPreferences() {
     
   } catch (error) {
     console.error('❌ Error checking preferences:', error);
-  } finally {
-    await pool.end();
   }
 }
 

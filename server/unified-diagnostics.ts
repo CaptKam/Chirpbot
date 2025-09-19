@@ -9,7 +9,7 @@
  * Layer 3 - Adapters (CLI, Express router, library functions)
  */
 
-import { db } from './db.ts';
+import { db } from './db';
 import { sql } from 'drizzle-orm';
 import express from 'express';
 import { writeFileSync } from 'fs';
@@ -171,37 +171,35 @@ export async function testDbConnection(): Promise<DiagnosticsDb> {
   };
 
   try {
-    const client = await pool.connect();
+    // Test connection with a simple query
+    const dbInfo = await db.execute(sql`SELECT current_database() as db_name, version() as db_version`);
     result.connected = true;
-
-    try {
-      // Get database name and version
-      const dbInfo = await client.query('SELECT current_database(), version()');
-      result.name = dbInfo.rows[0].current_database;
-      result.version = `${dbInfo.rows[0].version.split(' ')[0]} ${dbInfo.rows[0].version.split(' ')[1]}`;
-
-      // Get basic counts
-      const userCount = await client.query('SELECT COUNT(*) FROM users');
-      result.userCount = parseInt(userCount.rows[0].count);
-
-      const tableCount = await client.query(
-        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
-      );
-      result.tableCount = parseInt(tableCount.rows[0].count);
-
-      const alertPrefs = await client.query('SELECT COUNT(*) FROM user_alert_preferences');
-      result.alertPreferences = parseInt(alertPrefs.rows[0].count);
-
-      const monitoredTeams = await client.query('SELECT COUNT(*) FROM user_monitored_teams');
-      result.monitoredTeams = parseInt(monitoredTeams.rows[0].count);
-
-    } catch (queryError: any) {
-      result.error = queryError.message;
-    } finally {
-      client.release();
+    
+    if (dbInfo.rows[0]) {
+      result.name = dbInfo.rows[0].db_name;
+      const versionParts = dbInfo.rows[0].db_version.split(' ');
+      result.version = `${versionParts[0]} ${versionParts[1]}`;
     }
-  } catch (connError: any) {
-    result.error = connError.message;
+
+    // Get basic counts using Drizzle
+    const userCount = await db.execute(sql`SELECT COUNT(*) as count FROM users`);
+    result.userCount = parseInt(userCount.rows[0]?.count || '0');
+
+    const tableCount = await db.execute(sql`
+      SELECT COUNT(*) as count 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `);
+    result.tableCount = parseInt(tableCount.rows[0]?.count || '0');
+
+    const alertPrefs = await db.execute(sql`SELECT COUNT(*) as count FROM user_alert_preferences`);
+    result.alertPreferences = parseInt(alertPrefs.rows[0]?.count || '0');
+
+    const monitoredTeams = await db.execute(sql`SELECT COUNT(*) as count FROM user_monitored_teams`);
+    result.monitoredTeams = parseInt(monitoredTeams.rows[0]?.count || '0');
+
+  } catch (error: any) {
+    result.error = error.message;
   }
 
   return result;
@@ -224,51 +222,47 @@ export async function getBasicDbStats(): Promise<BasicStats> {
   }
 
   try {
-    const client = await pool.connect();
+    // Get all tables with counts using Drizzle
+    const tablesQuery = await db.execute(sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      ORDER BY table_name
+    `);
 
-    try {
-      // Get all tables with counts
-      const tablesQuery = `
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        ORDER BY table_name
-      `;
-      const tables = await client.query(tablesQuery);
-
-      for (const table of tables.rows) {
-        const tableName = table.table_name;
-        try {
-          const count = await client.query(`SELECT COUNT(*) FROM ${tableName}`);
-          result.tables.push({
-            name: tableName,
-            count: parseInt(count.rows[0].count),
-          });
-        } catch (err: any) {
-          result.tables.push({
-            name: tableName,
-            count: 0,
-            error: err.message,
-          });
-        }
+    for (const table of tablesQuery.rows) {
+      const tableName = table.table_name;
+      try {
+        const count = await db.execute(sql.raw(`SELECT COUNT(*) as count FROM ${tableName}`));
+        result.tables.push({
+          name: tableName,
+          count: parseInt(count.rows[0]?.count || '0'),
+        });
+      } catch (err: any) {
+        result.tables.push({
+          name: tableName,
+          count: 0,
+          error: err.message,
+        });
       }
-
-      // Get user details
-      const users = await client.query(
-        'SELECT id, username, email, role, "authMethod", "createdAt" FROM users ORDER BY "createdAt"'
-      );
-      result.users = users.rows.map((user: any) => ({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        authMethod: user.authMethod,
-        createdAt: user.createdAt,
-      }));
-
-    } finally {
-      client.release();
     }
+
+    // Get user details using Drizzle
+    const users = await db.execute(sql`
+      SELECT id, username, email, role, "authMethod", "createdAt" 
+      FROM users 
+      ORDER BY "createdAt"
+    `);
+    
+    result.users = users.rows.map((user: any) => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      authMethod: user.authMethod,
+      createdAt: user.createdAt,
+    }));
+
   } catch (error: any) {
     throw new DiagnosticError(
       `Failed to get database stats: ${error.message}`,
