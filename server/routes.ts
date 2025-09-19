@@ -2017,14 +2017,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Alerts routes
   app.get("/api/alerts", async (req, res) => {
     try {
-      // Check if master alerts are disabled
-      const masterAlertsEnabled = await storage.getMasterAlertEnabled();
-      if (!masterAlertsEnabled) {
-        // Return empty array if master alerts are disabled
-        res.json([]);
-        return;
-      }
-
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
@@ -2061,6 +2053,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return;
       }
 
+      // Get user's alert preferences
+      const userAlertPrefs = await storage.getUserAlertPreferences(currentUserId);
+      const enabledAlertTypes = new Set();
+      
+      // Build set of enabled alert types for this user
+      for (const pref of userAlertPrefs) {
+        if (pref.enabled) {
+          enabledAlertTypes.add(`${pref.sport.toUpperCase()}_${pref.alertType}`);
+        }
+      }
+      
+      console.log(`🔍 ALERTS API: User ${currentUserId} has ${enabledAlertTypes.size} enabled alert types`);
+
       // Get alerts from database - filter by monitored game IDs using Drizzle syntax
       const result = await db.select({
         id: alerts.id,
@@ -2074,7 +2079,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       .from(alerts)
       .where(inArray(alerts.gameId, monitoredGameIds))
       .orderBy(desc(alerts.createdAt))
-      .limit(limit)
+      .limit(limit * 2) // Get more alerts to account for filtering
       .offset(offset);
 
       const alertsData = [];
@@ -2083,7 +2088,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         const sport = String(row.sport || 'MLB');
         const alertType = String(row.type || '');
 
-        // Process alerts normally when master alerts are enabled
+        // USER-PREFERENCE-ONLY FILTERING: Check if user has this alert type enabled
+        const fullAlertType = `${sport.toUpperCase()}_${alertType}`;
+        if (!enabledAlertTypes.has(fullAlertType)) {
+          console.log(`🚫 ALERTS API: Filtering out ${fullAlertType} - not enabled in user preferences`);
+          continue; // Skip this alert - user has disabled this alert type
+        }
+
+        // Process alerts based on user preferences only
         try {
           let payload: any = {};
           try {
@@ -2125,11 +2137,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             // Include full payload for V3 message access
             payload: payload
           });
+
+          // Stop processing if we've reached the requested limit
+          if (alertsData.length >= limit) {
+            break;
+          }
         } catch (error) {
           console.error(`Error processing alert for ${row.id}:`, error);
         }
       }
 
+      console.log(`✅ ALERTS API: Returning ${alertsData.length} alerts filtered by user preferences`);
       res.json(alertsData);
     } catch (error) {
       console.error("Error fetching alerts:", error);
@@ -2157,12 +2175,25 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       console.log(`📸 Snapshot request: userId=${currentUserId}, since=${since}, seq=${sinceSeq}`);
 
-      // Get monitored games and filter alerts
-      const monitoredGames = await storage.getAllMonitoredGames();
+      // Get user's monitored games (specific to this user, not all monitored games)
+      const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
       if (monitoredGames.length === 0) {
         res.json([]);
         return;
       }
+
+      // Get user's alert preferences for filtering
+      const userAlertPrefs = await storage.getUserAlertPreferences(currentUserId);
+      const enabledAlertTypes = new Set();
+      
+      // Build set of enabled alert types for this user
+      for (const pref of userAlertPrefs) {
+        if (pref.enabled) {
+          enabledAlertTypes.add(`${pref.sport.toUpperCase()}_${pref.alertType}`);
+        }
+      }
+      
+      console.log(`📸 Snapshot: User ${currentUserId} has ${enabledAlertTypes.size} enabled alert types`);
 
       const monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
       
@@ -2184,10 +2215,22 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         FROM alerts
         WHERE ${whereClause}
         ORDER BY sequence_number ASC
-        LIMIT 200
+        LIMIT 400
       `));
 
-      const alerts = result.rows.map((row: any) => {
+      const alerts = [];
+
+      for (const row of result.rows) {
+        const sport = String(row.sport || 'MLB');
+        const alertType = String(row.type || '');
+
+        // USER-PREFERENCE-ONLY FILTERING: Check if user has this alert type enabled
+        const fullAlertType = `${sport.toUpperCase()}_${alertType}`;
+        if (!enabledAlertTypes.has(fullAlertType)) {
+          console.log(`🚫 SNAPSHOT: Filtering out ${fullAlertType} - not enabled in user preferences`);
+          continue; // Skip this alert - user has disabled this alert type
+        }
+
         let payload: any = {};
         try {
           payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
@@ -2195,7 +2238,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           payload = {};
         }
 
-        return {
+        alerts.push({
           id: row.id,
           alertKey: `${row.game_id}_${row.type}`,
           sequenceNumber: row.sequence_number,
@@ -2212,10 +2255,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           createdAt: row.created_at,
           timestamp: row.created_at,
           payload: payload
-        };
-      });
+        });
 
-      console.log(`📸 Snapshot response: ${alerts.length} alerts since ${since || sinceSeq}`);
+        // Stop at 200 filtered results
+        if (alerts.length >= 200) {
+          break;
+        }
+      }
+
+      console.log(`📸 Snapshot response: ${alerts.length} alerts filtered by user preferences since ${since || sinceSeq}`);
       res.json(alerts);
     } catch (error) {
       console.error("Error fetching alert snapshot:", error);
