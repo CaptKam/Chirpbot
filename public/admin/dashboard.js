@@ -774,24 +774,29 @@ async function toggleGlobalAlertSetting(sport, alertType, enabled) {
                 'Content-Type': 'application/json',
             },
             credentials: 'include',
-            body: JSON.stringify({ sport, alertType, enabled })
+            body: JSON.stringify({ 
+                sport: sport.toLowerCase(), 
+                alertType: alertType, 
+                enabled: enabled 
+            })
         });
         
         if (response.ok) {
             const data = await response.json();
-            showNotification(data.message, 'success');
+            showNotification(`${enabled ? 'Enabled' : 'Disabled'} ${formatAlertName(alertType)} for ${sport.toUpperCase()}`, 'success');
             loadAlertStatistics();
         } else {
-            showNotification(`Failed to update ${alertType}`, 'error');
+            const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+            showNotification(`Failed to update ${formatAlertName(alertType)}: ${errorData.message}`, 'error');
             // Revert toggle
-            const toggle = event.target;
+            const toggle = document.querySelector(`[onchange*="${alertType}"]`);
             if (toggle) toggle.checked = !enabled;
         }
     } catch (error) {
         console.error('Failed to toggle alert setting:', error);
-        showNotification(`Failed to update ${alertType}`, 'error');
+        showNotification(`Failed to update ${formatAlertName(alertType)}`, 'error');
         // Revert toggle
-        const toggle = event.target;
+        const toggle = document.querySelector(`[onchange*="${alertType}"]`);
         if (toggle) toggle.checked = !enabled;
     }
 }
