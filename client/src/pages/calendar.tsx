@@ -79,7 +79,6 @@ import { PageHeader } from '@/components/PageHeader';
 import { getSeasonAwareSports } from '@shared/season-manager';
 
 const SPORTS = getSeasonAwareSports();
-const TEST_USER_ID = "test-user-123"; // Fallback user ID
 
 // Enhanced Game Display Component for Live MLB Games
 function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
@@ -233,8 +232,8 @@ export default function Calendar() {
   
 
 
-  // Load persisted monitored games
-  const userId = user?.id || TEST_USER_ID;
+  // Load persisted monitored games - require proper authentication
+  const userId = user?.id;
   const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
     queryKey: [`/api/user/${userId}/monitored-games`, { sport: activeSport }],
     queryFn: async ({ queryKey }) => {
@@ -246,6 +245,7 @@ export default function Calendar() {
       if (!response.ok) throw new Error("Failed to fetch monitored games");
       return response.json();
     },
+    enabled: !!userId, // Only run query if user is authenticated
   });
 
   // Sync selected games with persisted monitored games
