@@ -270,21 +270,8 @@ app.use(cors({
 app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 
-// In-memory session store - no database/WebSocket dependencies!
-app.use(session({
-  name: 'cb.sid', // Unique session name to avoid conflicts
-  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025', // Stable secret for dev
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    path: '/',
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: 'lax', // Restored for same-origin admin authentication
-    domain: undefined, // Force undefined for proper localhost cookie handling
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for better persistence
-  }
-}));
+// Session middleware removed from here - handled route-specifically in routes.ts
+// This prevents conflicts between user and admin sessions
 
 app.use((req, res, next) => {
   const start = Date.now();

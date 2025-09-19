@@ -139,7 +139,7 @@ function validateSportName(sport: string): { valid: boolean; normalized: string;
 // USER session parser - for regular app users only
 const userSessionParser = session({
   name: 'cb.sid',
-  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025',
+  secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -155,11 +155,11 @@ const userSessionParser = session({
 // ADMIN session parser - separate admin-only sessions
 const adminSessionParser = session({
   name: 'cb_admin.sid',
-  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025',
+  secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    path: '/', // Must be root path to reach /api/admin* endpoints
+    path: '/', // Admin cookie needs global access for both /admin and /api/admin* routes
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'strict', // More restrictive for admin
@@ -187,7 +187,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.use('/admin*', adminSessionParser);      // Admin static files use admin session
   
   // Universal CSRF protection for all admin API routes
-  app.use('/api/admin', requireAdminAuth, (req, res, next) => {
+  app.use('/api/admin/*', requireAdminAuth, generateCSRFToken, (req, res, next) => {
     // Apply CSRF validation to all non-GET admin API requests
     if (req.method !== 'GET') {
       return validateCSRF(req, res, next);
