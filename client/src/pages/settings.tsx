@@ -101,7 +101,7 @@ export default function Settings() {
   });
 
   // Clear optimistic preferences when fresh data arrives from server
-  // BUT only for items that aren't currently being mutated
+  // This is the ONLY place optimistic state should be cleared (data-driven, not time-based)
   useEffect(() => {
     if (!preferencesLoading && alertPreferences) {
       // Only clear optimistic state for items that aren't being mutated
@@ -110,6 +110,10 @@ export default function Settings() {
         // Keep optimistic state for items that are still pending
         Object.keys(newState).forEach(key => {
           if (!pendingToggles.has(key)) {
+            // Clear optimistic state only when:
+            // 1. Fresh data has arrived (!preferencesLoading)
+            // 2. Not currently mutating (!pendingToggles.has(key))
+            // This prevents race conditions and toggle reversion
             delete newState[key];
           }
         });
@@ -387,15 +391,9 @@ export default function Settings() {
               return newSet;
             });
             
-            // Clear optimistic state for this item after a slight delay
-            // This ensures fresh data has time to arrive and prevents flicker
-            setTimeout(() => {
-              setOptimisticPreferences(prev => {
-                const newState = { ...prev };
-                delete newState[alertType];
-                return newState;
-              });
-            }, 150);
+            // REMOVED: No longer using setTimeout to clear optimistic state
+            // The existing useEffect will handle clearing when fresh server data arrives
+            // This prevents race conditions and ensures toggles don't revert
             
             debounceTimers.current.delete(alertType);
           }
