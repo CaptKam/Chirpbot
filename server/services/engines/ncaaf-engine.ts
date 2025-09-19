@@ -524,8 +524,7 @@ export class NCAAFEngine extends BaseSportEngine {
         'NCAAF_CLOSE_GAME': './alert-cylinders/ncaaf/close-game-module.ts',
         'NCAAF_SCORING_PLAY': './alert-cylinders/ncaaf/scoring-play-module.ts',
         'NCAAF_FOURTH_QUARTER': './alert-cylinders/ncaaf/fourth-quarter-module.ts',
-        'NCAAF_HALFTIME': './alert-cylinders/ncaaf/halftime-module.ts',
-        'TEST_ALERT': './alert-cylinders/test-alert-module.ts'
+        'NCAAF_HALFTIME': './alert-cylinders/ncaaf/halftime-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
