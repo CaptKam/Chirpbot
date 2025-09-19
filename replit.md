@@ -4,6 +4,14 @@ ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time
 
 # Recent Changes
 
+## September 19, 2025 - ADMIN ALERT CONTROL COMPLETELY DISABLED ✅
+- **ADMIN CONTROL ELIMINATED:** Modified `isAlertVisible()` method to always return `true` - users now see all alert toggles
+- **USER AUTONOMY:** All 24+ alert types are always visible in settings regardless of admin configurations
+- **API UPDATED:** Available alerts endpoint now shows all alerts as `globallyEnabled: true` with admin control disabled messaging
+- **DIAGNOSTICS PRESERVED:** Admin routes maintained for read-only system statistics and health monitoring
+- **SEPARATION MAINTAINED:** Alert generation remains completely independent of UI visibility controls
+- **VERIFIED WORKING:** No LSP errors, application stable, all engines operational with 18 games being tracked
+
 ## September 17, 2025 - MLB GAME START MODULE PERFECTED ✅
 - **CRITICAL FIX:** extractLastPlay and extractLastPitch methods added to MLBApiService to resolve TypeError crashes
 - **GAME START TIMING:** Now triggers exactly once at top of inning 1 with proper duplicate prevention
