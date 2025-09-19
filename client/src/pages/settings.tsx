@@ -256,15 +256,7 @@ export default function Settings() {
       // Extract meaningful error message
       const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
       
-      // Only show toast for critical authentication errors
-      if (errorMessage.includes('401') || errorMessage.includes('not authenticated') || errorMessage.includes('ID missing')) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to save your alert preferences.",
-          variant: "destructive",
-        });
-      }
-      // Other errors are handled silently - the toggle will revert automatically due to optimistic updates
+      // Errors are handled silently - the toggle will revert automatically due to optimistic updates
     },
   });
 
@@ -350,11 +342,6 @@ export default function Settings() {
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
     // Early validation
     if (!user?.id) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to change alert preferences.",
-        variant: "destructive",
-      });
       return;
     }
 
