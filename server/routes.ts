@@ -3368,6 +3368,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Actually persist the master alerts setting to the database
       const userId = req.session?.adminUserId || req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'User session required' });
+      }
       await storage.setMasterAlertEnabled(enabled, userId);
 
       res.json({
@@ -3387,6 +3390,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Update the category settings which will apply to all users
       const userId = req.session?.adminUserId || req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'User session required' });
+      }
       await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, userId);
 
       res.json({
@@ -3427,6 +3433,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const results = [];
       const userId = req.session?.adminUserId || req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'User session required' });
+      }
       for (const alertType of criticalAlerts) {
         await storage.updateGlobalAlertSetting('MLB', alertType, true, userId);
         results.push({ alertType, enabled: true });
@@ -3456,6 +3465,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const results = [];
       const userId = req.session?.adminUserId || req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'User session required' });
+      }
       for (const alertType of allAlerts) {
         await storage.updateGlobalAlertSetting('MLB', alertType, true, userId);
         results.push({ alertType, enabled: true });
@@ -3521,6 +3533,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         for (const alertType of alertTypes) {
           try {
             const userId = req.session?.adminUserId || req.session?.userId;
+            if (!userId) {
+              results.push({ sport, alertType, disabled: false, error: 'User session required' });
+              continue;
+            }
             await storage.updateGlobalAlertSetting(sport, alertType, false, userId);
             results.push({ sport, alertType, disabled: true });
             totalDisabled++;
@@ -3605,6 +3621,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Use the storage method to apply settings to all users
       const userId = req.session?.adminUserId || req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'User session required' });
+      }
       const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, userId);
 
       res.json({
@@ -3753,7 +3772,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { gameId } = req.params;
       // Find game across all sports via migration adapter
       const allGames = migrationAdapter ? migrationAdapter.getGameData() : [];
-      const game = allGames.find(g => g.gameId === gameId);
+      const game = allGames.find((g: any) => g.gameId === gameId);
       
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
@@ -4326,7 +4345,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           hasCalendarMetrics: !!metrics.calendarSync,
           hasIngestionMetrics: !!metrics.dataIngestion
         },
-        recommendations: []
+        recommendations: [] as string[]
       };
 
       // Add health recommendations
