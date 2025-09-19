@@ -17,7 +17,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { AuthLoading } from "@/components/sports-loading";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isAdminSession, isLoading } = useAuth();
 
   if (isLoading) {
     return <AuthLoading />;
@@ -27,13 +27,26 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return <Redirect to="/" />;
   }
 
+  // Redirect admin users to admin panel - they cannot access user pages
+  // Check both user admin role AND admin session
+  if (isAdmin || isAdminSession) {
+    window.location.href = '/admin-panel';
+    return <AuthLoading />;
+  }
+
   return <Component />;
 }
 
 function PublicRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isAdminSession, isLoading } = useAuth();
 
   if (isLoading) {
+    return <AuthLoading />;
+  }
+
+  // Redirect admins to admin panel first, even if they don't have user session
+  if (isAdminSession || isAdmin) {
+    window.location.href = '/admin-panel';
     return <AuthLoading />;
   }
 

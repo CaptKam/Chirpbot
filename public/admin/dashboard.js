@@ -5,6 +5,7 @@ let filteredUsers = [];
 let currentSport = 'MLB';
 let alertSettings = {};
 let isLoadingAlerts = false;
+let csrfToken = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
@@ -33,6 +34,7 @@ async function checkAuthentication() {
             const data = await response.json();
             if (data.authenticated && data.user) {
                 currentUser = data.user;
+                await fetchCSRFToken(); // Fetch CSRF token after authentication
                 await initializeDashboard();
                 showDashboard();
             } else {
@@ -45,6 +47,63 @@ async function checkAuthentication() {
         console.error('Authentication check failed:', error);
         redirectToLogin();
     }
+}
+
+async function fetchCSRFToken() {
+    try {
+        const response = await fetch('/api/admin-auth/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            csrfToken = data.csrfToken;
+        } else {
+            console.warn('Failed to fetch CSRF token:', response.status);
+        }
+    } catch (error) {
+        console.warn('CSRF token fetch error:', error);
+    }
+}
+
+// Helper function for making authenticated admin requests with CSRF protection
+async function adminRequest(url, options = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    
+    // Add CSRF token for state-changing requests
+    if (options.method && options.method !== 'GET' && csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+    
+    const response = await fetch(url, {
+        credentials: 'include',
+        ...options,
+        headers
+    });
+    
+    // Handle CSRF token expiration
+    if (response.status === 403) {
+        const errorData = await response.json();
+        if (errorData.message && errorData.message.includes('CSRF')) {
+            console.log('CSRF token expired, refreshing...');
+            await fetchCSRFToken();
+            // Retry request with new token
+            if (csrfToken && options.method && options.method !== 'GET') {
+                headers['X-CSRF-Token'] = csrfToken;
+                return fetch(url, {
+                    credentials: 'include',
+                    ...options,
+                    headers
+                });
+            }
+        }
+    }
+    
+    return response;
 }
 
 function redirectToLogin() {
@@ -220,12 +279,8 @@ function renderUsers() {
 
 async function updateUserRole(userId, newRole) {
     try {
-        const response = await fetch('/api/admin/users/' + userId + '/role', {
+        const response = await adminRequest('/api/admin/users/' + userId + '/role', {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
             body: JSON.stringify({ role: newRole })
         });
         
@@ -252,9 +307,8 @@ async function deleteUser(userId) {
     }
     
     try {
-        const response = await fetch('/api/admin/users/' + userId, {
-            method: 'DELETE',
-            credentials: 'include'
+        const response = await adminRequest('/api/admin/users/' + userId, {
+            method: 'DELETE'
         });
         
         if (response.ok) {

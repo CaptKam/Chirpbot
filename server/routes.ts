@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 // WebSocket imports removed - using HTTP polling architecture
 import session from "express-session";
 import bcrypt from "bcryptjs";
+import csrf from "csrf";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
@@ -24,8 +25,12 @@ declare module 'express-session' {
   interface SessionData {
     userId?: string;
     adminUserId?: string;
+    csrfSecret?: string;  // CSRF secret for token generation
   }
 }
+
+// Create CSRF tokens instance for admin security
+const tokens = csrf();
 
 // Extend Express Request interface to include user property
 declare global {
@@ -33,6 +38,7 @@ declare global {
     interface Request {
       user?: any;
       isApiRequest?: boolean;
+      csrfToken?: string;
     }
   }
 }
@@ -49,25 +55,65 @@ async function requireAuthentication(req: express.Request, res: express.Response
   res.status(401).json({ message: 'Authentication required' });
 }
 
-// Middleware to ensure user is authenticated AND has admin role
-async function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+// Middleware to ensure user is authenticated AND NOT an admin (users only)
+async function requireUserAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   if (req.session?.userId) {
     const user = await storage.getUserById(req.session.userId);
     if (user) {
-      req.user = user; // Attach user to request for convenience
-      
-      // Check if user has admin role
+      // Block admin users from accessing user routes
       if (user.role === 'admin') {
-        return next();
-      } else {
         return res.status(403).json({ 
-          error: 'Admin access required',
-          message: `Access denied. This endpoint requires admin role, but user has role: ${user.role}`
+          error: 'User access only',
+          message: 'Administrators must use the admin panel. Regular users only.'
         });
       }
+      req.user = user; // Attach user to request for convenience
+      return next();
     }
   }
   res.status(401).json({ message: 'Authentication required' });
+}
+
+// Middleware to ensure admin is authenticated using ADMIN session
+async function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (req.session?.adminUserId) {
+    const admin = await storage.getUserById(req.session.adminUserId);
+    if (admin && admin.role === 'admin') {
+      req.user = admin; // Attach admin to request for convenience
+      return next();
+    }
+  }
+  res.status(401).json({ message: 'Admin authentication required' });
+}
+
+// CSRF middleware for admin routes
+function generateCSRFToken(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (req.session?.adminUserId) {
+    // Generate or reuse existing CSRF secret
+    if (!req.session.csrfSecret) {
+      req.session.csrfSecret = tokens.secretSync();
+    }
+    
+    const token = tokens.create(req.session.csrfSecret);
+    req.csrfToken = token;
+  }
+  next();
+}
+
+// CSRF validation middleware for admin POST/PUT/DELETE requests
+function validateCSRF(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const token = req.headers['x-csrf-token'] || req.body._csrf;
+  const secret = req.session?.csrfSecret;
+  
+  if (!token || !secret) {
+    return res.status(403).json({ message: 'CSRF token missing' });
+  }
+  
+  if (!tokens.verify(secret, token)) {
+    return res.status(403).json({ message: 'Invalid CSRF token' });
+  }
+  
+  next();
 }
 
 // Helper function for validating and normalizing sport names
@@ -90,10 +136,10 @@ function validateSportName(sport: string): { valid: boolean; normalized: string;
   return { valid: true, normalized: normalizedSport };
 }
 
-// In-memory session parser - no database/WebSocket dependencies!
-const sessionParser = session({
-  name: 'cb.sid', // Same session name as main app
-  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025', // Same secret as main app
+// USER session parser - for regular app users only
+const userSessionParser = session({
+  name: 'cb.sid',
+  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -103,6 +149,22 @@ const sessionParser = session({
     sameSite: 'lax',
     domain: process.env.COOKIE_DOMAIN || undefined,
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for better persistence
+  }
+});
+
+// ADMIN session parser - separate admin-only sessions
+const adminSessionParser = session({
+  name: 'cb_admin.sid',
+  secret: process.env.SESSION_SECRET || 'chirpbot-stable-dev-secret-2025',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    path: '/', // Must be root path to reach /api/admin* endpoints
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'strict', // More restrictive for admin
+    domain: process.env.COOKIE_DOMAIN || undefined,
+    maxAge: 4 * 60 * 60 * 1000 // 4 hours (shorter for security)
   }
 });
 
@@ -118,6 +180,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     // Mark this as an API request so it doesn't get caught by Vite's catch-all
     req.isApiRequest = true;
     next();
+  });
+
+  // Apply separate session parsers for admin vs user routes
+  app.use('/api/admin*', adminSessionParser);  // Admin routes use admin session
+  app.use('/admin*', adminSessionParser);      // Admin static files use admin session
+  
+  // Universal CSRF protection for all admin API routes
+  app.use('/api/admin', requireAdminAuth, (req, res, next) => {
+    // Apply CSRF validation to all non-GET admin API requests
+    if (req.method !== 'GET') {
+      return validateCSRF(req, res, next);
+    }
+    next();
+  });
+  
+  // User session parser - CRITICAL: Skip admin paths to prevent session collision
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin')) {
+      return next(); // Skip user session parser for admin paths
+    }
+    return userSessionParser(req, res, next);
   });
 
   // MigrationAdapter diagnostic endpoint for runtime verification
@@ -171,7 +254,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // REMOVED: Broken /api/admin/statistics route - replaced with working /api/admin/stats endpoint
 
   // Admin API to enable master alerts globally
-  app.post('/api/admin/enable-master-alerts', async (req, res) => {
+  app.post('/api/admin/enable-master-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       console.log('🔧 Admin: Enabling master alerts globally...');
 
@@ -228,7 +311,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // WebSocket test endpoint removed - using HTTP polling architecture
 
   // Admin API to specifically enable MLB_FIRST_AND_SECOND for all users
-  app.post('/api/admin/enable-first-and-second', async (req, res) => {
+  app.post('/api/admin/enable-first-and-second', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       console.log('🔧 Admin: Enabling MLB_FIRST_AND_SECOND for all users...');
 
@@ -294,12 +377,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   console.log('📡 Alert delivery via SSE and HTTP endpoints');
 
   // 📡 SSE FALLBACK ENDPOINT - Server-Sent Events for reliable alert delivery
-  app.get('/realtime-alerts-sse', async (req, res) => {
-    // 🔒 Session authentication check
-    if (!req.session?.userId) {
-      console.log('🚫 SSE connection rejected - no valid session');
-      return res.status(401).json({ message: 'Authentication required' });
-    }
+  app.get('/realtime-alerts-sse', requireUserAuth, async (req, res) => {
+    // 🔒 Authentication handled by requireUserAuth middleware
 
     const userId = req.session.userId;
     console.log(`📡 SSE connection establishing for user: ${userId}`);
@@ -1052,7 +1131,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.post('/api/user/:userId/alert-preferences', requireAuthentication, async (req, res) => {
+  app.post('/api/user/:userId/alert-preferences', requireUserAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const { sport, alertType, enabled } = req.body;
@@ -1083,7 +1162,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.post('/api/user/:userId/alert-preferences/bulk', requireAuthentication, async (req, res) => {
+  app.post('/api/user/:userId/alert-preferences/bulk', requireUserAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const { sport, preferences } = req.body;
@@ -1124,6 +1203,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Authentication routes
   app.get('/api/auth/user', async (req, res) => {
     try {
+      // Check for regular user session first
       if (req.session?.userId) {
         const user = await storage.getUserById(req.session.userId);
         if (user) {
@@ -1132,6 +1212,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           return res.json(userWithoutPassword);
         }
       }
+      
+      // Check for admin session (for frontend route guard compatibility)
+      if (req.session?.adminUserId) {
+        const admin = await storage.getUserById(req.session.adminUserId);
+        if (admin && admin.role === 'admin') {
+          // Return admin user data without sensitive fields
+          const { password, ...adminWithoutPassword } = admin;
+          return res.json(adminWithoutPassword);
+        }
+      }
+      
       res.status(401).json({ message: 'Not authenticated' });
     } catch (error) {
       console.error('Error checking authentication:', error);
@@ -1344,7 +1435,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Test Telegram connection
-  app.post('/api/telegram/test', requireAuthentication, async (req, res) => {
+  app.post('/api/telegram/test', requireUserAuth, async (req, res) => {
     try {
       const { botToken, chatId } = req.body;
 
@@ -1672,20 +1763,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Admin middleware
+  // Admin middleware (DEPRECATED - use requireAdminAuth instead)
   async function requireAdmin(req: any, res: any, next: any) {
     try {
-      // Check for admin session (adminUserId) first, then fall back to regular session
-      const userId = req.session?.adminUserId || req.session?.userId;
+      // Check for admin session ONLY - no fallback to regular users
+      const adminUserId = req.session?.adminUserId;
 
-      if (!userId) {
-        console.log('🔒 Admin middleware: No session found');
-        return res.status(401).json({ message: 'Authentication required' });
+      if (!adminUserId) {
+        console.log('🔒 Admin middleware: No admin session found');
+        return res.status(401).json({ message: 'Admin authentication required' });
       }
 
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUserById(adminUserId);
       if (!user || user.role !== 'admin') {
-        console.log(`🔒 Admin middleware: User ${userId} is not admin (role: ${user?.role})`);
+        console.log(`🔒 Admin middleware: User ${adminUserId} is not admin (role: ${user?.role})`);
         return res.status(403).json({ message: 'Admin access required' });
       }
 
@@ -1699,7 +1790,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   }
 
   // Admin API routes
-  app.post('/api/admin/cleanup-alerts', requireAdmin, async (req, res) => {
+  app.post('/api/admin/cleanup-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { alertCleanupService } = await import('./services/alert-cleanup');
 
@@ -1725,7 +1816,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get('/api/admin/cleanup-stats', requireAdmin, async (req, res) => {
+  app.get('/api/admin/cleanup-stats', requireAdminAuth, async (req, res) => {
     try {
       const { alertCleanupService } = await import('./services/alert-cleanup');
       const stats = await alertCleanupService.getCleanupStats();
@@ -1742,7 +1833,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
 
-  app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  app.get('/api/admin/users', requireAdminAuth, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       // Remove passwords from response
@@ -1757,7 +1848,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get('/api/admin/users/role/:role', requireAdmin, async (req, res) => {
+  app.get('/api/admin/users/role/:role', requireAdminAuth, async (req, res) => {
     try {
       const { role } = req.params;
       const users = await storage.getUsersByRole(role);
@@ -1773,7 +1864,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/users/:userId/role', requireAdmin, async (req, res) => {
+  app.put('/api/admin/users/:userId/role', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { userId } = req.params;
       const { role } = req.body;
@@ -1797,7 +1888,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // PATCH handler for admin dashboard compatibility - client sends PATCH requests
-  app.patch('/api/admin/users/:userId/role', requireAdmin, async (req, res) => {
+  app.patch('/api/admin/users/:userId/role', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { userId } = req.params;
       const { role } = req.body;
@@ -1820,7 +1911,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
+  app.delete('/api/admin/users/:userId', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { userId } = req.params;
       const currentUser = req.user; // from requireAdmin middleware
@@ -1874,7 +1965,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Force delete endpoint for stubborn test users
-  app.delete('/api/admin/users/:userId/force', requireAdmin, async (req, res) => {
+  app.delete('/api/admin/users/:userId/force', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { userId } = req.params;
       const currentUser = req.user;
@@ -1911,7 +2002,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get('/api/admin/users/:userId/alert-preferences', requireAdmin, async (req, res) => {
+  app.get('/api/admin/users/:userId/alert-preferences', requireAdminAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const preferences = await storage.getUserAlertPreferences(userId);
@@ -1922,7 +2013,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/users/:userId/alert-preferences', requireAdmin, async (req, res) => {
+  app.put('/api/admin/users/:userId/alert-preferences', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { userId } = req.params;
       const { sport, preferences } = req.body;
@@ -1939,7 +2030,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  app.get('/api/admin/stats', requireAdminAuth, async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       const adminUsers = await storage.getUsersByRole('admin');
@@ -1973,7 +2064,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
 
   // System status endpoint for admin dashboard
-  app.get('/api/admin/system-status', requireAdmin, async (req, res) => {
+  app.get('/api/admin/system-status', requireAdminAuth, async (req, res) => {
     try {
       // Check alert engine status
       const masterAlertsEnabled = await storage.getMasterAlertEnabled();
@@ -2352,7 +2443,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Weather-on-Live monitoring status endpoint
-  app.get('/api/weather-on-live/status', requireAuthentication, async (req, res) => {
+  app.get('/api/weather-on-live/status', requireUserAuth, async (req, res) => {
     try {
       const { weatherOnLiveService } = await import('./services/weather-on-live-service');
       const status = weatherOnLiveService.getMonitoringStatus();
@@ -2369,7 +2460,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Weather-on-Live monitoring control endpoint
-  app.post('/api/weather-on-live/control/:gameId/:action', requireAuthentication, async (req, res) => {
+  app.post('/api/weather-on-live/control/:gameId/:action', requireUserAuth, async (req, res) => {
     try {
       const { weatherOnLiveService } = await import('./services/weather-on-live-service');
       const { gameId, action } = req.params;
@@ -2482,9 +2573,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
-      // Store both admin and regular session for flexibility
+      // Store ONLY admin session - admins cannot be regular users
       req.session.adminUserId = user.id;
-      req.session.userId = user.id;
+      // No regular userId - admins are separate from users
 
       console.log('✅ Admin login successful:', username);
       res.json({
@@ -2502,30 +2593,34 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // CSRF token endpoint for admin panel
+  app.get('/api/admin-auth/csrf-token', requireAdminAuth, generateCSRFToken, (req, res) => {
+    res.json({ 
+      csrfToken: req.csrfToken,
+      message: 'CSRF token generated successfully'
+    });
+  });
+
   app.get('/api/admin-auth/verify', async (req, res) => {
     try {
-      // Check admin session first, then fall back to regular session
+      // Check ONLY admin session - no fallback to regular users
       const adminUserId = req.session?.adminUserId;
-      const regularUserId = req.session?.userId;
-      const userId = adminUserId || regularUserId;
 
       console.log('🔍 Admin verify check:', {
         hasAdminSession: !!adminUserId,
-        hasRegularSession: !!regularUserId,
         sessionId: req.sessionID?.slice(0, 8)
       });
 
-      if (!userId) {
-        console.log('❌ No user session found');
+      if (!adminUserId) {
+        console.log('❌ No admin session found');
         return res.status(401).json({ authenticated: false });
       }
 
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUserById(adminUserId);
       if (!user || user.role !== 'admin') {
-        console.log('❌ User not admin or not found:', { userId, role: user?.role });
-        // Clear invalid sessions
+        console.log('❌ User not admin or not found:', { adminUserId, role: user?.role });
+        // Clear invalid admin session
         req.session.adminUserId = undefined;
-        req.session.userId = undefined;
         return res.status(401).json({ authenticated: false });
       }
 
@@ -3098,7 +3193,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
   
   // NEW: Public endpoint for all authenticated users to see global settings (read-only)
-  app.get('/api/global-alert-settings/:sport', requireAuthentication, async (req, res) => {
+  app.get('/api/global-alert-settings/:sport', requireUserAuth, async (req, res) => {
     try {
       const { sport } = req.params;
       
@@ -3125,11 +3220,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Update individual global alert setting
-  app.put('/api/admin/global-alert-setting', async (req, res) => {
+  app.put('/api/admin/global-alert-setting', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport, alertType, enabled } = req.body;
 
@@ -3315,11 +3407,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/master-alerts', async (req, res) => {
+  app.put('/api/admin/master-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { enabled } = req.body;
 
@@ -3336,11 +3425,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/global-alert-category', async (req, res) => {
+  app.put('/api/admin/global-alert-category', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport, category, alertKeys, enabled } = req.body;
 
@@ -3375,11 +3461,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Quick fix endpoint to enable critical MLB alerts
-  app.post('/api/admin/quick-enable-mlb', async (req, res) => {
+  app.post('/api/admin/quick-enable-mlb', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const criticalAlerts = [
         'MLB_GAME_START',
@@ -3407,11 +3490,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Enable all alerts for testing
-  app.post('/api/admin/enable-all-alerts', async (req, res) => {
+  app.post('/api/admin/enable-all-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const allAlerts = [
         'MLB_GAME_START', 'MLB_SEVENTH_INNING_STRETCH'
@@ -3438,11 +3518,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Disable ALL alerts across entire system
-  app.post('/api/admin/disable-all-alerts', async (req, res) => {
+  app.post('/api/admin/disable-all-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       console.log('🚫 ADMIN REQUEST: Disabling all alerts globally');
 
@@ -3533,11 +3610,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Reset global alert settings to defaults (clears all database overrides)
-  app.post('/api/admin/reset-global-alerts', async (req, res) => {
+  app.post('/api/admin/reset-global-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport } = req.body;
       if (!sport) {
@@ -3565,11 +3639,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.put('/api/admin/apply-global-settings', async (req, res) => {
+  app.put('/api/admin/apply-global-settings', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
 
       const { sport, settings } = req.body;
 
@@ -3766,7 +3837,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Force refresh specific sport
-  app.post('/api/calendar/force-refresh/:sport', requireAuthentication, async (req, res) => {
+  app.post('/api/calendar/force-refresh/:sport', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { sport } = req.params;
       
@@ -3798,7 +3869,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Start calendar sync service
-  app.post('/api/calendar/start', requireAuthentication, async (req, res) => {
+  app.post('/api/calendar/start', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       // Only admins can start/stop the service
       if (req.user?.role !== 'admin') {
@@ -3829,7 +3900,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Stop calendar sync service
-  app.post('/api/calendar/stop', requireAuthentication, async (req, res) => {
+  app.post('/api/calendar/stop', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       // Only admins can start/stop the service
       if (req.user?.role !== 'admin') {
@@ -4333,7 +4404,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Reset metrics and comparison data
-  app.post('/api/migration/reset', requireAdminAuth, async (req, res) => {
+  app.post('/api/migration/reset', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
         return res.status(503).json({ 
@@ -4386,7 +4457,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // === MISSING CRITICAL ENDPOINTS ===
 
   // Admin-only mode change endpoint with safety checks and force option
-  app.post('/api/migration/mode', requireAdminAuth, async (req, res) => {
+  app.post('/api/migration/mode', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
         return res.status(503).json({ 
