@@ -1,0 +1,459 @@
+{
+  "suite": "Suite 2 - Alert Generation Scenarios",
+  "timestamp": "2025-09-19T01:35:24.273Z",
+  "duration": 1719,
+  "scenarios": 17,
+  "passed": 17,
+  "failed": 0,
+  "success": true,
+  "passRate": 100,
+  "details": [
+    {
+      "name": "Game Start",
+      "module": "NCAAF_GAME_START",
+      "gameState": {
+        "gameId": "999999999_game_start",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 0,
+        "awayScore": 0,
+        "quarter": 1,
+        "timeRemaining": "15:00",
+        "fieldPosition": 50,
+        "down": 1,
+        "yardsToGo": 10
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid game start conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_GAME_START"
+      },
+      "success": true
+    },
+    {
+      "name": "Halftime",
+      "module": "NCAAF_HALFTIME",
+      "gameState": {
+        "gameId": "999999999_halftime",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 14,
+        "awayScore": 10,
+        "quarter": 2,
+        "timeRemaining": "0:00",
+        "fieldPosition": null
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid halftime conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_HALFTIME"
+      },
+      "success": true
+    },
+    {
+      "name": "Second Half Kickoff",
+      "module": "NCAAF_SECOND_HALF_KICKOFF",
+      "gameState": {
+        "gameId": "999999999_second_half_kickoff",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 14,
+        "awayScore": 10,
+        "quarter": 3,
+        "timeRemaining": "15:00",
+        "fieldPosition": 35,
+        "down": 1,
+        "yardsToGo": 10
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid general game state structure",
+        "expectedAlert": true,
+        "alertType": "NCAAF_SECOND_HALF_KICKOFF"
+      },
+      "success": true
+    },
+    {
+      "name": "Two Minute Warning Q2",
+      "module": "NCAAF_TWO_MINUTE_WARNING",
+      "gameState": {
+        "gameId": "999999999_two_minute_warning_q2",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 7,
+        "awayScore": 7,
+        "quarter": 2,
+        "timeRemaining": "2:00",
+        "fieldPosition": 45,
+        "down": 1,
+        "yardsToGo": 10
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid two-minute warning conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_TWO_MINUTE_WARNING"
+      },
+      "success": true
+    },
+    {
+      "name": "Two Minute Warning Q4",
+      "module": "NCAAF_TWO_MINUTE_WARNING",
+      "gameState": {
+        "gameId": "999999999_two_minute_warning_q4",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 21,
+        "awayScore": 17,
+        "quarter": 4,
+        "timeRemaining": "1:55",
+        "fieldPosition": 32,
+        "down": 2,
+        "yardsToGo": 7
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid two-minute warning conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_TWO_MINUTE_WARNING"
+      },
+      "success": true
+    },
+    {
+      "name": "Red Zone Entry",
+      "module": "NCAAF_RED_ZONE",
+      "gameState": {
+        "gameId": "999999999_red_zone_entry",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 14,
+        "awayScore": 7,
+        "quarter": 3,
+        "timeRemaining": "8:34",
+        "fieldPosition": 18,
+        "down": 1,
+        "yardsToGo": 10
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid red zone conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_RED_ZONE"
+      },
+      "success": true
+    },
+    {
+      "name": "Goal Line Stand",
+      "module": "NCAAF_RED_ZONE",
+      "gameState": {
+        "gameId": "999999999_goal_line_stand",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 21,
+        "awayScore": 21,
+        "quarter": 4,
+        "timeRemaining": "3:45",
+        "fieldPosition": 3,
+        "down": 3,
+        "yardsToGo": 3
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid red zone conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_RED_ZONE"
+      },
+      "success": true
+    },
+    {
+      "name": "Fourth Down Decision",
+      "module": "NCAAF_FOURTH_DOWN_DECISION",
+      "gameState": {
+        "gameId": "999999999_fourth_down_decision",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 17,
+        "awayScore": 20,
+        "quarter": 4,
+        "timeRemaining": "4:12",
+        "fieldPosition": 15,
+        "down": 4,
+        "yardsToGo": 2
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid general game state structure",
+        "expectedAlert": true,
+        "alertType": "NCAAF_FOURTH_DOWN_DECISION"
+      },
+      "success": true
+    },
+    {
+      "name": "Close Game Q3",
+      "module": "NCAAF_CLOSE_GAME",
+      "gameState": {
+        "gameId": "999999999_close_game_q3",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 14,
+        "awayScore": 17,
+        "quarter": 3,
+        "timeRemaining": "10:45",
+        "fieldPosition": 40,
+        "down": 2,
+        "yardsToGo": 8
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid close game conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_CLOSE_GAME"
+      },
+      "success": true
+    },
+    {
+      "name": "Close Game Q4",
+      "module": "NCAAF_CLOSE_GAME",
+      "gameState": {
+        "gameId": "999999999_close_game_q4",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 24,
+        "awayScore": 21,
+        "quarter": 4,
+        "timeRemaining": "6:20",
+        "fieldPosition": 28,
+        "down": 1,
+        "yardsToGo": 10
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid close game conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_CLOSE_GAME"
+      },
+      "success": true
+    },
+    {
+      "name": "Fourth Quarter Alert",
+      "module": "NCAAF_FOURTH_QUARTER",
+      "gameState": {
+        "gameId": "999999999_fourth_quarter_alert",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 28,
+        "awayScore": 14,
+        "quarter": 4,
+        "timeRemaining": "14:32",
+        "fieldPosition": 55,
+        "down": 2,
+        "yardsToGo": 5
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid fourth quarter conditions",
+        "expectedAlert": true,
+        "alertType": "NCAAF_FOURTH_QUARTER"
+      },
+      "success": true
+    },
+    {
+      "name": "Comeback Potential",
+      "module": "NCAAF_COMEBACK_POTENTIAL",
+      "gameState": {
+        "gameId": "999999999_comeback_potential",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 7,
+        "awayScore": 21,
+        "quarter": 4,
+        "timeRemaining": "8:45",
+        "fieldPosition": 25,
+        "down": 1,
+        "yardsToGo": 10
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid general game state structure",
+        "expectedAlert": true,
+        "alertType": "NCAAF_COMEBACK_POTENTIAL"
+      },
+      "success": true
+    },
+    {
+      "name": "Upset Opportunity",
+      "module": "NCAAF_UPSET_OPPORTUNITY",
+      "gameState": {
+        "gameId": "999999999_upset",
+        "sport": "NCAAF",
+        "homeTeam": "Alabama Crimson Tide",
+        "awayTeam": "Vanderbilt Commodores",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 14,
+        "awayScore": 17,
+        "quarter": 4,
+        "timeRemaining": "5:30",
+        "fieldPosition": 42,
+        "down": 3,
+        "yardsToGo": 6
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid general game state structure",
+        "expectedAlert": true,
+        "alertType": "NCAAF_UPSET_OPPORTUNITY"
+      },
+      "success": true
+    },
+    {
+      "name": "Scoring Play TD",
+      "module": "NCAAF_SCORING_PLAY",
+      "gameState": {
+        "gameId": "999999999_scoring_play_td",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 14,
+        "awayScore": 7,
+        "quarter": 2,
+        "timeRemaining": "9:15",
+        "fieldPosition": 0,
+        "down": null,
+        "yardsToGo": null,
+        "lastPlay": "TOUCHDOWN"
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid general game state structure",
+        "expectedAlert": true,
+        "alertType": "NCAAF_SCORING_PLAY"
+      },
+      "success": true
+    },
+    {
+      "name": "Scoring Play FG",
+      "module": "NCAAF_SCORING_PLAY",
+      "gameState": {
+        "gameId": "999999999_scoring_play_fg",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 10,
+        "awayScore": 7,
+        "quarter": 3,
+        "timeRemaining": "11:22",
+        "fieldPosition": 20,
+        "lastPlay": "FIELD_GOAL"
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid general game state structure",
+        "expectedAlert": true,
+        "alertType": "NCAAF_SCORING_PLAY"
+      },
+      "success": true
+    },
+    {
+      "name": "Red Zone Efficiency",
+      "module": "NCAAF_RED_ZONE_EFFICIENCY",
+      "gameState": {
+        "gameId": "999999999_red_zone_efficiency",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 21,
+        "awayScore": 14,
+        "quarter": 3,
+        "timeRemaining": "7:18",
+        "fieldPosition": 12,
+        "down": 2,
+        "yardsToGo": 6,
+        "redZoneAttempts": 3,
+        "redZoneTouchdowns": 2
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid general game state structure",
+        "expectedAlert": true,
+        "alertType": "NCAAF_RED_ZONE_EFFICIENCY"
+      },
+      "success": true
+    },
+    {
+      "name": "Massive Weather",
+      "module": "NCAAF_MASSIVE_WEATHER",
+      "gameState": {
+        "gameId": "999999999_massive_weather",
+        "sport": "NCAAF",
+        "homeTeam": "Texas Longhorns",
+        "awayTeam": "Oklahoma Sooners",
+        "status": "live",
+        "isLive": true,
+        "homeScore": 10,
+        "awayScore": 3,
+        "quarter": 2,
+        "timeRemaining": "5:45",
+        "fieldPosition": 35,
+        "down": 1,
+        "yardsToGo": 10,
+        "weather": {
+          "condition": "Heavy Rain",
+          "windSpeed": 35,
+          "temperature": 38
+        }
+      },
+      "result": {
+        "success": true,
+        "reason": "Valid general game state structure",
+        "expectedAlert": true,
+        "alertType": "NCAAF_MASSIVE_WEATHER"
+      },
+      "success": true
+    }
+  ]
+}
