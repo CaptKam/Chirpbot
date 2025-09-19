@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle, Monitor, BarChart3, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { SportTabs } from '@/components/SportTabs';
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
@@ -53,7 +52,6 @@ export default function Settings() {
     // Persist active sport selection in localStorage
     return localStorage.getItem('settings-active-sport') || "MLB";
   });
-  const { toast } = useToast();
 
   // Get dynamic colors based on active sport
   const sportColors = getSportTabColors(activeSport);
@@ -242,11 +240,6 @@ export default function Settings() {
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
       });
       
-      // Show success toast for preference updates
-      toast({
-        title: "Alert Preference Updated",
-        description: `${variables.alertType} alerts ${variables.enabled ? 'enabled' : 'disabled'} for ${activeSport}`,
-      });
     },
     onError: (error: any, variables, context) => {
       // Rollback cache to previous state
@@ -268,14 +261,6 @@ export default function Settings() {
       // Extract meaningful error message
       const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
       
-      // Only show toast for critical authentication errors
-      if (errorMessage.includes('401') || errorMessage.includes('not authenticated') || errorMessage.includes('ID missing')) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to save your alert preferences.",
-          variant: "destructive",
-        });
-      }
       // Other errors are handled silently - the toggle will revert automatically due to optimistic updates
     },
   });
@@ -294,28 +279,14 @@ export default function Settings() {
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/telegram`]
       });
-      toast({
-        title: "Telegram settings updated",
-        description: "Your Telegram configuration has been saved.",
-      });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update Telegram settings. Please try again.",
-        variant: "destructive",
-      });
     },
   });
 
   // Test Telegram connection
   const testTelegramConnection = async () => {
     if (!telegramBotToken || !telegramChatId) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both bot token and chat ID before testing.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -331,25 +302,11 @@ export default function Settings() {
 
       if (response.ok && result) {
         setConnectionTestResult('success');
-        toast({
-          title: "Connection Successful",
-          description: "Your Telegram bot is working correctly!",
-        });
       } else {
         setConnectionTestResult('error');
-        toast({
-          title: "Connection Failed",
-          description: "Please check your bot token and chat ID.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       setConnectionTestResult('error');
-      toast({
-        title: "Connection Failed",
-        description: "Please check your bot token and chat ID.",
-        variant: "destructive",
-      });
     } finally {
       setTestingConnection(false);
     }
@@ -362,11 +319,6 @@ export default function Settings() {
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
     // Early validation
     if (!user?.id) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to change alert preferences.",
-        variant: "destructive",
-      });
       return;
     }
 

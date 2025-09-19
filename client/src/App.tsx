@@ -1,7 +1,6 @@
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "./pages/not-found";
@@ -13,8 +12,6 @@ import Login from "./pages/login";
 import Alerts from "./pages/alerts";
 import Admin from "./pages/admin";
 import { BottomNavigation } from "@/components/bottom-navigation";
-import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { AuthLoading } from "@/components/sports-loading";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -47,7 +44,6 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
 
 function RegularAppContent() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const { isAuthenticated } = useAuth();
 
   // Get settings to check if push notifications are enabled
@@ -84,7 +80,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <div className="bg-gradient-to-b from-[#0B1220] to-[#0F1A32] min-h-screen text-slate-100 antialiased">
-          <Toaster />
           <AppContent />
         </div>
       </TooltipProvider>

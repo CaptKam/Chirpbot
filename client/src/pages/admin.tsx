@@ -24,7 +24,6 @@ import {
   Trophy,
   Clock
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 
@@ -91,7 +90,6 @@ export default function Admin() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [selectedSport, setSelectedSport] = useState<string>("MLB");
-  const { toast } = useToast();
   const { user: currentUser, isAuthenticated } = useAuth();
 
   // Redirect to web admin panel
@@ -144,17 +142,8 @@ export default function Admin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
-      toast({
-        title: "Role updated",
-        description: "User role has been updated successfully.",
-      });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update user role. Please try again.",
-        variant: "destructive",
-      });
     },
   });
 
@@ -169,17 +158,8 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${selectedUser?.id}/alert-preferences`] });
-      toast({
-        title: "Alert preferences updated",
-        description: "User alert preferences have been updated successfully.",
-      });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update alert preferences. Please try again.",
-        variant: "destructive",
-      });
     },
   });
 
