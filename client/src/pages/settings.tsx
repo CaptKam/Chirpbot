@@ -77,7 +77,7 @@ export default function Settings() {
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
     queryKey: [`/api/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 30 * 1000, // Cache for 30 seconds (reduced to match server cache)
     refetchInterval: 30 * 1000, // Refetch every 30 seconds (less aggressive)
   });
   
@@ -229,9 +229,12 @@ export default function Settings() {
       // Don't clear optimistic state immediately - let it persist until fresh data arrives
       // This prevents flicker during the invalidation/refetch cycle
       
-      // Invalidate to trigger refetch with fresh data
+      // Invalidate user preferences AND global settings to ensure cache coherency
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
+      });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/global-alert-settings/${activeSport}`]
       });
       
       // Toast notification disabled to prevent popup spam during setting adjustments
@@ -399,7 +402,7 @@ export default function Settings() {
           }
         }
       );
-    }, 300); // 300ms debounce
+    }, 100); // 100ms debounce (reduced from 300ms to minimize race conditions)
 
     debounceTimers.current.set(alertType, debounceTimer);
   };
@@ -700,7 +703,7 @@ export default function Settings() {
                               </div>
                               <p className={`text-xs mt-1 ${isGloballyDisabled ? 'text-red-400/70' : 'text-slate-400'}`}>
                                 {isGloballyDisabled 
-                                  ? 'This alert type has been disabled by an administrator and cannot be enabled.' 
+                                  ? `Admin disabled system-wide. ${userPreference ? 'Your preference: ON, but overridden → Effective: OFF' : 'Your preference: OFF (matches system)'}` 
                                   : alertType.description
                                 }
                               </p>
