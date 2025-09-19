@@ -214,7 +214,7 @@ export class UnifiedAlertGenerator {
       return false;
     }
 
-    return this.settingsCache.isAlertEnabledForGeneration(sport, alertType);
+    return this.settingsCache.isAlertEnabled(sport, alertType);
   }
 
   async startMonitoring(): Promise<void> {
@@ -315,8 +315,18 @@ export class UnifiedAlertGenerator {
     try {
       // Use cached settings with intelligent TTL - no need to clear cache every cycle
 
-      // REMOVED: Global alert check - now using user preferences only
-      // Alert generation is now based purely on user preferences, not global admin settings
+      // Check if any alerts are globally enabled
+      const hasAnyEnabledAlerts = await this.hasAnyGloballyEnabledAlerts().catch(error => {
+        console.error('❌ Error checking globally enabled alerts:', error);
+        this.healthMonitor?.recordError(error);
+        return false;
+      });
+
+      if (!hasAnyEnabledAlerts) {
+        console.log('🚫 No alert types are globally enabled by admin - skipping all alert generation');
+        this.healthMonitor?.recordSuccessfulPoll();
+        return 0;
+      }
 
       // Process each sport in parallel for better performance
       const sports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
@@ -326,7 +336,23 @@ export class UnifiedAlertGenerator {
       const sportProcessingPromises = sports.map(async (sport) => {
         let sportAlerts = 0;
         try {
-          // CHANGED: Check user preferences first, not global settings
+          // Use cached settings to avoid sequential blocking
+          const enabledAlerts: string[] = await Promise.race([
+            this.settingsCache!.getEnabledAlertTypes(sport),
+            new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('Settings timeout')), 5000))
+          ]).catch(error => {
+            console.error(`❌ Error getting ${sport} settings:`, error);
+            this.healthMonitor?.recordError(error);
+            return [] as string[];
+          });
+
+          if (enabledAlerts.length === 0) {
+            if (['MLB', 'NFL'].includes(sport)) {
+              console.log(`🚫 No ${sport} alert types enabled globally - skipping ${sport} monitoring`);
+            }
+            return 0;
+          }
+
           const usersWithActiveMonitoring = await this.getUsersWithActiveMonitoring(sport).catch(error => {
             console.error(`❌ Error checking active monitoring for ${sport}:`, error);
             this.healthMonitor?.recordError(error);
@@ -340,18 +366,8 @@ export class UnifiedAlertGenerator {
             return 0;
           }
 
-          // CHANGED: Only get global settings for logging purposes, don't block on them
-          const enabledAlerts: string[] = await Promise.race([
-            this.settingsCache!.getEnabledAlertTypes(sport),
-            new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('Settings timeout')), 5000))
-          ]).catch(error => {
-            console.error(`❌ Error getting ${sport} settings:`, error);
-            this.healthMonitor?.recordError(error);
-            return [] as string[]; // Return empty array but don't block processing
-          });
-
           if (this.logLevel !== 'quiet') {
-            console.log(`✅ ${sport} monitoring: ${usersWithActiveMonitoring.length} active users, ${enabledAlerts.length} global alert types`);
+            console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled, ${usersWithActiveMonitoring.length} active users`);
           }
 
           // V3: Dynamic game data sourcing based on engine state
@@ -901,10 +917,11 @@ export class UnifiedAlertGenerator {
     }
 
     try {
-      // CHANGED: Initialize engine with ALL available alert modules instead of global settings
-      // Users' individual preferences will be applied when alerts are generated and sent
-      // This ensures we don't miss any alerts that users might want to see
-      await engine.initializeUserAlertModules([]);
+      // Get enabled alert types for this sport
+      const enabledAlerts = await this.settingsCache!.getEnabledAlertTypes(sport);
+
+      // Initialize the engine with user alert modules
+      await engine.initializeUserAlertModules(enabledAlerts);
 
       // Process each game
       for (const game of games) {

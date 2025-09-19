@@ -6,11 +6,6 @@ let currentSport = 'MLB';
 let alertSettings = {};
 let isLoadingAlerts = false;
 
-// Debouncing and race condition prevention for toggles
-let pendingToggles = {}; // Tracks pending API calls by unique key
-let debounceTimers = {}; // Tracks debounce timers by unique key
-const DEBOUNCE_DELAY = 300; // 300ms debounce delay
-
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
     
@@ -693,7 +688,7 @@ function renderSportSettings(sport, settings) {
                                 <div class="alert-item-toggle">
                                     <label class="toggle-switch" data-testid="toggle-${alert.key.toLowerCase()}">
                                         <input type="checkbox" ${alert.enabled ? 'checked' : ''} 
-                                               onchange="toggleGlobalAlertSetting('${sport}', '${alert.key}', this.checked, this)">
+                                               onchange="toggleGlobalAlertSetting('${sport}', '${alert.key}', this.checked)">
                                         <span class="slider"></span>
                                     </label>
                                 </div>
@@ -771,87 +766,34 @@ function getAlertDescription(alertKey) {
     return 'Advanced game situation alert';
 }
 
-async function toggleGlobalAlertSetting(sport, alertType, enabled, toggleElement) {
-    // Create unique key for this toggle
-    const toggleKey = `${sport}_${alertType}`;
-    
-    // If this toggle is already pending, ignore the request
-    if (pendingToggles[toggleKey]) {
-        console.log(`Toggle for ${toggleKey} is already pending, ignoring request`);
-        return;
-    }
-    
-    // Clear any existing debounce timer for this toggle
-    if (debounceTimers[toggleKey]) {
-        clearTimeout(debounceTimers[toggleKey]);
-        delete debounceTimers[toggleKey];
-    }
-    
-    // Set up debounced execution
-    debounceTimers[toggleKey] = setTimeout(async () => {
-        // Clear the debounce timer
-        delete debounceTimers[toggleKey];
+async function toggleGlobalAlertSetting(sport, alertType, enabled) {
+    try {
+        const response = await fetch('/api/admin/global-alert-setting', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ sport, alertType, enabled })
+        });
         
-        // Mark this toggle as pending
-        pendingToggles[toggleKey] = true;
-        
-        // Apply visual feedback - disable toggle and add loading state
-        if (toggleElement) {
-            toggleElement.disabled = true;
-            const toggleContainer = toggleElement.closest('.toggle-switch');
-            if (toggleContainer) {
-                toggleContainer.classList.add('loading');
-                toggleContainer.style.opacity = '0.6';
-                toggleContainer.style.pointerEvents = 'none';
-                toggleContainer.style.cursor = 'not-allowed';
-            }
+        if (response.ok) {
+            const data = await response.json();
+            showNotification(data.message, 'success');
+            loadAlertStatistics();
+        } else {
+            showNotification(`Failed to update ${alertType}`, 'error');
+            // Revert toggle
+            const toggle = event.target;
+            if (toggle) toggle.checked = !enabled;
         }
-        
-        try {
-            const response = await fetch('/api/admin/global-alert-setting', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({ sport, alertType, enabled })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                showNotification(data.message, 'success');
-                loadAlertStatistics();
-            } else {
-                const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-                showNotification(`Failed to update ${alertType}: ${errorData.message || 'Server error'}`, 'error');
-                // Revert toggle state
-                if (toggleElement) {
-                    toggleElement.checked = !enabled;
-                }
-            }
-        } catch (error) {
-            console.error('Failed to toggle alert setting:', error);
-            showNotification(`Failed to update ${alertType}: Network error`, 'error');
-            // Revert toggle state
-            if (toggleElement) {
-                toggleElement.checked = !enabled;
-            }
-        } finally {
-            // Always clean up the pending state and visual feedback
-            delete pendingToggles[toggleKey];
-            
-            if (toggleElement) {
-                toggleElement.disabled = false;
-                const toggleContainer = toggleElement.closest('.toggle-switch');
-                if (toggleContainer) {
-                    toggleContainer.classList.remove('loading');
-                    toggleContainer.style.opacity = '';
-                    toggleContainer.style.pointerEvents = '';
-                    toggleContainer.style.cursor = '';
-                }
-            }
-        }
-    }, DEBOUNCE_DELAY);
+    } catch (error) {
+        console.error('Failed to toggle alert setting:', error);
+        showNotification(`Failed to update ${alertType}`, 'error');
+        // Revert toggle
+        const toggle = event.target;
+        if (toggle) toggle.checked = !enabled;
+    }
 }
 
 async function loadAlertStatistics() {

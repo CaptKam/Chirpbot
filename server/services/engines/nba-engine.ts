@@ -138,9 +138,7 @@ export class NBAEngine extends BaseSportEngine {
         return false;
       }
 
-      // Always return true for valid alert types - global settings removed to allow generation
-      // Only user preferences will control actual alert delivery  
-      return true;
+      return await unifiedSettings.isAlertEnabled(this.sport, alertType);
     } catch (error) {
       console.error(`NBA Settings cache error for ${alertType}:`, error);
       return true; // Default to true if cache fails

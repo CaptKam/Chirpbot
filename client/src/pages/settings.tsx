@@ -141,23 +141,15 @@ export default function Settings() {
     });
   }
 
-  // Helper to check if an alert toggle should be visible in UI (based on global settings)
-  const isAlertVisible = (sport: string, alertType: string): boolean => {
-    // Return false while loading to hide toggles until we know their visibility
-    if (globalSettingsLoading) return false;
-
-    // Check if the alert is globally disabled by admin (controls UI visibility only)
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false; // Hide this toggle from the UI
-    }
-
-    return true; // Show this toggle in the UI
-  };
-
-  // Helper to get alert preference with optimistic state layering (USER CONTROL ONLY)
+  // Helper to get alert preference with optimistic state layering
   const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
     // Return undefined while loading to show skeleton UI
     if (isSettingsLoading) return undefined;
+
+    // Check if the alert is globally disabled by admin (highest priority)
+    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
+      return false;
+    }
 
     // Priority order: optimistic state > server state > default
     // Check optimistic state first (user's intended state during mutations)
@@ -237,16 +229,12 @@ export default function Settings() {
       // Don't clear optimistic state immediately - let it persist until fresh data arrives
       // This prevents flicker during the invalidation/refetch cycle
       
-      // Invalidate to trigger refresh with fresh data
+      // Invalidate to trigger refetch with fresh data
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
       });
       
-      // Show success toast for preference updates
-      toast({
-        title: "Alert Preference Updated",
-        description: `${variables.alertType} alerts ${variables.enabled ? 'enabled' : 'disabled'} for ${activeSport}`,
-      });
+      // Toast notification disabled to prevent popup spam during setting adjustments
     },
     onError: (error: any, variables, context) => {
       // Rollback cache to previous state
@@ -656,11 +644,11 @@ export default function Settings() {
                       {activeSport === 'MLB' ? '⚾' : activeSport === 'NFL' ? '🏈' : activeSport === 'NCAAF' ? '🏈' : activeSport === 'WNBA' ? '🏀' : activeSport === 'CFL' ? '🏈' : '🏀'} {activeSport} Game Alerts
                     </h3>
                     <div className="space-y-3">
-                      {(availableAlerts as any[] || []).filter((alertType) => {
-                        // Only show alerts that are globally visible (admin hasn't hidden them)
-                        return isAlertVisible(activeSport, alertType.key);
-                      }).map((alertType) => {
+                      {(availableAlerts as any[] || []).map((alertType) => {
                         const isEnabled = getAlertPreference(activeSport, alertType.key);
+                        // Check if this alert is globally disabled from the globalSettings we fetched
+                        const isGloballyDisabled = globalSettings && typeof globalSettings === 'object' 
+                          && (globalSettings as Record<string, boolean>)[alertType.key] === false;
                         
                         // Show skeleton if preference is still loading
                         if (isEnabled === undefined) {
@@ -682,24 +670,40 @@ export default function Settings() {
                         }
                         
                         return (
-                          <div key={alertType.key} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${getCardBgClass()} ${getCardBorderClass()} ${getCardHoverBgClass()} hover:ring-1 ${getHoverRingClass()}`}>
+                          <div key={alertType.key} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${
+                            isGloballyDisabled 
+                              ? 'bg-red-500/5 border-red-500/20 opacity-60' 
+                              : `${getCardBgClass()} ${getCardBorderClass()} ${getCardHoverBgClass()} hover:ring-1 ${getHoverRingClass()}`
+                          }`}>
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
-                                <h4 className={`text-sm font-semibold transition-colors text-slate-100 ${getGroupHoverTextClass()}`}>
+                                <h4 className={`text-sm font-semibold transition-colors ${
+                                  isGloballyDisabled 
+                                    ? 'text-red-400' 
+                                    : `text-slate-100 ${getGroupHoverTextClass()}`
+                                }`}>
                                   {alertType.label}
+                                  {isGloballyDisabled && (
+                                    <span className="ml-2 text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full">
+                                      Globally Disabled
+                                    </span>
+                                  )}
                                 </h4>
                                 {(updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key)) && (
                                   <div className={`w-4 h-4 border-2 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
                                 )}
                               </div>
-                              <p className="text-xs mt-1 text-slate-400">
-                                {alertType.description}
+                              <p className={`text-xs mt-1 ${isGloballyDisabled ? 'text-red-400/70' : 'text-slate-400'}`}>
+                                {isGloballyDisabled 
+                                  ? 'This alert type has been disabled by an administrator and cannot be enabled.' 
+                                  : alertType.description
+                                }
                               </p>
                             </div>
                             <Switch
-                              checked={isEnabled}
+                              checked={isEnabled && !isGloballyDisabled}
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key)}
+                              disabled={updateAlertPreferenceMutation.isPending || pendingToggles.has(alertType.key) || isGloballyDisabled}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
                               className={`${getCheckedBgClass()} transition-all duration-200`}
                             />
@@ -709,18 +713,19 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Show message when no alerts are available */}
+                  {/* Show message when no alerts are available or all are disabled */}
                   {(!availableAlerts || (availableAlerts as any[]).length === 0) && (
                     <div className="text-center py-8">
                       <p className="text-slate-400">No alert cylinders available for {activeSport}.</p>
                     </div>
                   )}
 
-                  {/* Show admin disabled message when all alerts are globally hidden */}
-                  {(availableAlerts as any[] || []).length > 0 && 
-                   (availableAlerts as any[] || []).filter((alertType) => isAlertVisible(activeSport, alertType.key)).length === 0 && (
+                  {/* Show admin disabled message only for admin users */}
+                  {user?.role === 'admin' && (availableAlerts as any[] || []).filter((alertType) => {
+                    return globalSettings && typeof globalSettings === 'object' ? (globalSettings as Record<string, boolean>)[alertType.key] !== false : false;
+                  }).length === 0 && (availableAlerts as any[] || []).length > 0 && (
                     <div className="text-center py-8">
-                      <p className="text-slate-400">All {activeSport} alert types have been hidden by your administrator.</p>
+                      <p className="text-slate-400">All {activeSport} alert types have been disabled by your administrator.</p>
                     </div>
                   )}
                 </div>
