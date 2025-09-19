@@ -771,9 +771,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           sampleUser: null as any
         },
         session: {
-          authenticated: !!req.session?.userId,
+          authenticated: !!(req.session?.userId || req.session?.adminUserId),
           sessionId: req.sessionID ? 'present' : 'missing',
-          userId: req.session?.userId || null,
+          userId: req.session?.userId || req.session?.adminUserId || null,
           hasSession: !!req.session
         },
         analysis: {

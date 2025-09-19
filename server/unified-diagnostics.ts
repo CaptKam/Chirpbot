@@ -897,7 +897,7 @@ export function createDiagnosticsRouter(): express.Router {
       };
 
       const session: SessionInfo = {
-        authenticated: !!req.session?.userId,
+        authenticated: !!(req.session?.userId || req.session?.adminUserId),
         sessionId: req.sessionID ? 'present' : 'missing',
         user: req.session?.user || null,
       };
