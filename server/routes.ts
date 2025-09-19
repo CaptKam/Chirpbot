@@ -16,7 +16,8 @@ import { registerHealthRoutes } from "./services/unified-health-monitor";
 import { unifiedSettings } from "./storage";
 import { alerts as alertsTable, alerts, settings } from "../shared/schema";
 import { eq, desc, and, gte, inArray } from "drizzle-orm";
-import { getCalendarSyncService } from "./services/calendar-sync-service";
+// Migration Adapter replaces direct CalendarSyncService usage
+// import { getCalendarSyncService } from "./services/calendar-sync-service";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -46,6 +47,47 @@ async function requireAuthentication(req: express.Request, res: express.Response
     }
   }
   res.status(401).json({ message: 'Authentication required' });
+}
+
+// Middleware to ensure user is authenticated AND has admin role
+async function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (req.session?.userId) {
+    const user = await storage.getUserById(req.session.userId);
+    if (user) {
+      req.user = user; // Attach user to request for convenience
+      
+      // Check if user has admin role
+      if (user.role === 'admin') {
+        return next();
+      } else {
+        return res.status(403).json({ 
+          error: 'Admin access required',
+          message: `Access denied. This endpoint requires admin role, but user has role: ${user.role}`
+        });
+      }
+    }
+  }
+  res.status(401).json({ message: 'Authentication required' });
+}
+
+// Helper function for validating and normalizing sport names
+function validateSportName(sport: string): { valid: boolean; normalized: string; error?: string } {
+  const supportedSports = ['MLB', 'NFL', 'NBA', 'WNBA', 'NCAAF', 'CFL'];
+  const normalizedSport = sport.toUpperCase().trim();
+  
+  if (!normalizedSport) {
+    return { valid: false, normalized: '', error: 'Sport name cannot be empty' };
+  }
+  
+  if (!supportedSports.includes(normalizedSport)) {
+    return { 
+      valid: false, 
+      normalized: normalizedSport, 
+      error: `Unsupported sport: ${normalizedSport}. Supported sports: ${supportedSports.join(', ')}`
+    };
+  }
+  
+  return { valid: true, normalized: normalizedSport };
 }
 
 // In-memory session parser - no database/WebSocket dependencies!
@@ -78,44 +120,44 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     next();
   });
 
-  // DataIngestionService diagnostic endpoint for runtime verification
+  // MigrationAdapter diagnostic endpoint for runtime verification
   app.get('/api/diagnostics/ingestion-status', async (req, res) => {
     try {
-      const di = (global as any).dataIngestionIntegration;
+      const migrationAdapter = (global as any).migrationAdapter;
       
-      if (!di) {
+      if (!migrationAdapter) {
         return res.json({
           initialized: false,
           status: 'NOT_INITIALIZED',
-          message: 'DataIngestionService has not been initialized',
+          message: 'MigrationAdapter has not been initialized',
           timestamp: new Date().toISOString()
         });
       }
 
-      // Check if the service is operational
-      const isOperational = typeof di.getStatus === 'function';
+      // Get adapter status (safe access within request handler)
+      const adapterStatus = migrationAdapter.getStatus ? migrationAdapter.getStatus() : null;
+      const isOperational = !!adapterStatus;
       
       const response = {
         initialized: true,
         status: isOperational ? 'OPERATIONAL' : 'PARTIALLY_INITIALIZED',
-        uptimeMs: Date.now() - (di.startTime || Date.now()),
-        metrics: {
-          healthCheckIntervalMs: di.config?.healthCheckIntervalMs || 30000,
-          shadowMode: di.config?.shadowMode || false,
-          enableMetrics: di.config?.enableMetrics || false,
-          logLevel: di.config?.logLevel || 'unknown'
+        adapterStatus,
+        services: {
+          calendarSync: adapterStatus?.services?.calendarSync || { healthy: false, running: false },
+          dataIngestion: adapterStatus?.services?.dataIngestion || { healthy: false, running: false }
         },
+        rollout: adapterStatus?.rollout || { mode: 'unknown', sportPercentages: {}, migrationProgress: 0 },
+        uptime: adapterStatus?.uptime || 0,
         timestamp: new Date().toISOString(),
-        serviceReference: !!di,
-        hasGetStatusMethod: typeof di.getStatus === 'function',
-        hasConfigObject: !!di.config
+        serviceReference: !!migrationAdapter,
+        hasGetStatusMethod: typeof migrationAdapter.getStatus === 'function'
       };
 
-      console.log('📊 DataIngestionService diagnostic check:', response);
+      console.log('📊 MigrationAdapter diagnostic check:', response);
       res.json(response);
       
     } catch (error) {
-      console.error('❌ Error in ingestion-status diagnostic:', error);
+      console.error('❌ Error in migration-adapter diagnostic:', error);
       res.status(500).json({
         initialized: false,
         status: 'ERROR',
@@ -4036,20 +4078,33 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
 
   // === CALENDAR SYNC API ROUTES ===
-  // Initialize calendar sync service
-  const calendarService = getCalendarSyncService();
+  // Use MigrationAdapter instead of direct CalendarSyncService
+  const migrationAdapter = (global as any).migrationAdapter;
+  
+  if (!migrationAdapter) {
+    console.warn('⚠️ MigrationAdapter not available - calendar API may not work properly');
+  }
 
   // Get all calendar data
   app.get('/api/calendar', async (req, res) => {
     try {
       const { sport } = req.query;
-      const games = calendarService.getCalendarData(sport as string);
+      
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Calendar service is initializing'
+        });
+      }
+
+      const games = migrationAdapter.getGameData(sport as string);
       
       res.json({
         success: true,
         games,
         count: games.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        source: 'migration-adapter'
       });
     } catch (error: any) {
       console.error('❌ Calendar API: Error fetching calendar data:', error);
@@ -4061,14 +4116,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/calendar/:sport', async (req, res) => {
     try {
       const { sport } = req.params;
-      const games = calendarService.getCalendarData(sport.toLowerCase());
+      
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Calendar service is initializing'
+        });
+      }
+
+      const games = migrationAdapter.getGameData(sport.toLowerCase());
       
       res.json({
         success: true,
         sport: sport.toUpperCase(),
         games,
         count: games.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        source: 'migration-adapter'
       });
     } catch (error: any) {
       console.error(`❌ Calendar API: Error fetching ${req.params.sport} calendar data:`, error);
@@ -4080,7 +4144,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/calendar/game/:gameId', async (req, res) => {
     try {
       const { gameId } = req.params;
-      const game = calendarService.getGameData(gameId);
+      // Find game across all sports via migration adapter
+      const allGames = migrationAdapter ? migrationAdapter.getGameData() : [];
+      const game = allGames.find(g => g.gameId === gameId);
       
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
@@ -4100,7 +4166,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Get calendar sync metrics
   app.get('/api/calendar/metrics', async (req, res) => {
     try {
-      const metrics = calendarService.getMetrics();
+      const metrics = migrationAdapter ? migrationAdapter.getMetrics() : null;
+      
+      if (!metrics) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Calendar service is initializing'
+        });
+      }
       
       res.json({
         success: true,
@@ -4123,7 +4196,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(403).json({ error: 'Admin access required for force refresh' });
       }
       
-      await calendarService.forceRefresh(sport.toLowerCase());
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Calendar service is initializing'
+        });
+      }
+      
+      await migrationAdapter.forceRefresh(sport.toLowerCase());
       
       console.log(`📅 Calendar API: Admin ${req.user.id} force refreshed ${sport.toUpperCase()} calendar data`);
       
@@ -4146,7 +4226,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(403).json({ error: 'Admin access required' });
       }
       
-      await calendarService.start();
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Calendar service is initializing'
+        });
+      }
+      
+      // MigrationAdapter starts both services
+      await migrationAdapter.start();
       
       console.log(`📅 Calendar API: Admin ${req.user.id} started calendar sync service`);
       
@@ -4169,7 +4257,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(403).json({ error: 'Admin access required' });
       }
       
-      await calendarService.stop();
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Calendar service is initializing'
+        });
+      }
+      
+      // MigrationAdapter stops both services
+      await migrationAdapter.stop();
       
       console.log(`📅 Calendar API: Admin ${req.user.id} stopped calendar sync service`);
       
@@ -4204,6 +4300,656 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     console.log('⚠️ Fallback health routes registered due to initialization failure');
   }
+
+  // Migration Adapter Status and Diagnostics Endpoints
+  app.get('/api/migration/status', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+      
+      const status = migrationAdapter.getStatus();
+      res.json({
+        ...status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error fetching migration status:', error);
+      res.status(500).json({ error: 'Failed to fetch migration status' });
+    }
+  });
+
+  app.get('/api/migration/diagnostics', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+      
+      const status = migrationAdapter.getStatus();
+      const metrics = migrationAdapter.getMetrics();
+      
+      res.json({
+        status: status.status,
+        services: status.services,
+        rollout: status.rollout,
+        health: status.health,
+        comparison: status.comparison || {
+          eventsProcessed: 0,
+          productionEvents: 0,
+          shadowEvents: 0,
+          divergenceRate: 0,
+          averageLatencyDiff: 0,
+          matchSuccessRate: 0,
+          errorRate: 0,
+          lastUpdate: new Date()
+        },
+        metrics,
+        uptime: status.uptime,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error fetching migration diagnostics:', error);
+      res.status(500).json({ error: 'Failed to fetch migration diagnostics' });
+    }
+  });
+
+  app.get('/api/migration/comparison-metrics', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available'
+        });
+      }
+      
+      const status = migrationAdapter.getStatus();
+      const comparisonMetrics = status.comparison;
+      
+      if (!comparisonMetrics) {
+        return res.json({
+          message: 'No comparison metrics available - comparison system may not be initialized',
+          eventsProcessed: 0,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      res.json({
+        ...comparisonMetrics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error fetching comparison metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch comparison metrics' });
+    }
+  });
+
+  // === CONTROL PLANE ENDPOINTS FOR MIGRATIONADAPTER ===
+  
+  // ROLLOUT MANAGEMENT ENDPOINTS
+  
+  // Set rollout percentage for specific sport (0-100%)
+  app.post('/api/migration/rollout/sport/:sport', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const { sport } = req.params;
+      const { percentage } = req.body;
+
+      // Validation
+      if (typeof percentage !== 'number') {
+        return res.status(400).json({ 
+          error: 'Invalid input',
+          message: 'Percentage must be a number'
+        });
+      }
+
+      if (percentage < 0 || percentage > 100) {
+        return res.status(400).json({ 
+          error: 'Invalid percentage',
+          message: 'Percentage must be between 0 and 100'
+        });
+      }
+
+      const rolloutController = migrationAdapter.getRolloutController();
+      
+      // Set the rollout percentage
+      rolloutController.setSportPercentage(sport.toUpperCase(), percentage);
+      
+      const newStatus = rolloutController.getStatus();
+      
+      console.log(`🎛️ Control Plane: Set ${sport.toUpperCase()} rollout to ${percentage}% via API`);
+      
+      res.json({
+        success: true,
+        message: `Rollout percentage for ${sport.toUpperCase()} set to ${percentage}%`,
+        sport: sport.toUpperCase(),
+        oldPercentage: rolloutController.getSportPercentage(sport.toUpperCase()),
+        newPercentage: percentage,
+        rolloutStatus: newStatus,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Control Plane: Error setting sport rollout percentage:', error);
+      res.status(400).json({ 
+        error: 'Failed to set rollout percentage',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Get current rollout status for all sports
+  app.get('/api/migration/rollout', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const rolloutController = migrationAdapter.getRolloutController();
+      const rolloutStatus = rolloutController.getStatus();
+      const savedState = rolloutController.getSavedRolloutState();
+      
+      res.json({
+        success: true,
+        rollout: {
+          ...rolloutStatus,
+          savedState
+        },
+        supportedSports: ['MLB', 'NFL', 'NBA', 'WNBA', 'NCAAF', 'CFL'],
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Control Plane: Error fetching rollout status:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch rollout status',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Pause all rollouts (saves current state and sets all to 0%)
+  app.post('/api/migration/rollout/pause', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const rolloutController = migrationAdapter.getRolloutController();
+      
+      // Save current state before pausing
+      const preState = rolloutController.getStatus();
+      rolloutController.pauseAllRollouts();
+      const postState = rolloutController.getStatus();
+      
+      console.log('⏸️ Control Plane: All rollouts paused via API');
+      
+      res.json({
+        success: true,
+        message: 'All rollouts paused - switched to legacy mode',
+        previousState: preState,
+        currentState: postState,
+        canResume: true,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Control Plane: Error pausing rollouts:', error);
+      res.status(500).json({ 
+        error: 'Failed to pause rollouts',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Resume rollouts to previously saved state
+  app.post('/api/migration/rollout/resume', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const rolloutController = migrationAdapter.getRolloutController();
+      const savedState = rolloutController.getSavedRolloutState();
+      
+      if (!savedState.hasSavedState) {
+        return res.status(400).json({ 
+          error: 'No saved state to resume',
+          message: 'No previous rollout state has been saved. Use pause first or set individual sport percentages.',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Resume to saved state
+      rolloutController.resumeAllRollouts();
+      const newState = rolloutController.getStatus();
+      
+      console.log('▶️ Control Plane: All rollouts resumed via API');
+      
+      res.json({
+        success: true,
+        message: 'Rollouts resumed to previous state',
+        restoredState: newState,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Control Plane: Error resuming rollouts:', error);
+      res.status(500).json({ 
+        error: 'Failed to resume rollouts',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // MIGRATION CONTROL ENDPOINTS
+  
+  // Enable MigrationAdapter components
+  app.post('/api/migration/enable', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const preStatus = migrationAdapter.getStatus();
+      
+      if (preStatus.status === 'running') {
+        return res.json({
+          success: true,
+          message: 'Migration adapter is already running',
+          status: preStatus,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Start the migration adapter
+      await migrationAdapter.start();
+      const postStatus = migrationAdapter.getStatus();
+      
+      console.log('🚀 Control Plane: MigrationAdapter enabled via API');
+      
+      res.json({
+        success: true,
+        message: 'MigrationAdapter components enabled successfully',
+        previousStatus: preStatus.status,
+        currentStatus: postStatus,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Control Plane: Error enabling migration adapter:', error);
+      res.status(500).json({ 
+        error: 'Failed to enable MigrationAdapter',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Disable MigrationAdapter components  
+  app.post('/api/migration/disable', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const preStatus = migrationAdapter.getStatus();
+      
+      if (preStatus.status === 'stopped') {
+        return res.json({
+          success: true,
+          message: 'Migration adapter is already stopped',
+          status: preStatus,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Stop the migration adapter
+      await migrationAdapter.stop();
+      const postStatus = migrationAdapter.getStatus();
+      
+      console.log('🛑 Control Plane: MigrationAdapter disabled via API');
+      
+      res.json({
+        success: true,
+        message: 'MigrationAdapter components disabled successfully',
+        previousStatus: preStatus.status,
+        currentStatus: postStatus,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Control Plane: Error disabling migration adapter:', error);
+      res.status(500).json({ 
+        error: 'Failed to disable MigrationAdapter',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Comprehensive health check of all components
+  app.get('/api/migration/health', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing',
+          healthy: false,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      const status = migrationAdapter.getStatus();
+      const metrics = migrationAdapter.getMetrics();
+      const rolloutController = migrationAdapter.getRolloutController();
+      const rolloutStatus = rolloutController.getStatus();
+      
+      // Determine overall health
+      const isHealthy = status.status === 'running' && 
+                       status.health.overall === 'healthy' &&
+                       (status.services.calendarSync.healthy || status.services.dataIngestion.healthy);
+      
+      const healthCheck = {
+        healthy: isHealthy,
+        status: status.status,
+        uptime: status.uptime,
+        services: {
+          calendarSync: {
+            healthy: status.services.calendarSync.healthy,
+            running: status.services.calendarSync.running,
+            errorCount: status.services.calendarSync.errorCount,
+            lastCheck: status.services.calendarSync.lastCheck,
+            responseTime: status.services.calendarSync.responseTimeMs
+          },
+          dataIngestion: {
+            healthy: status.services.dataIngestion.healthy,
+            running: status.services.dataIngestion.running,
+            errorCount: status.services.dataIngestion.errorCount,
+            lastCheck: status.services.dataIngestion.lastCheck,
+            responseTime: status.services.dataIngestion.responseTimeMs
+          }
+        },
+        health: {
+          overall: status.health.overall,
+          checksPerformed: status.health.checksPerformed,
+          checksPassed: status.health.checksPassed,
+          successRate: status.health.checksPerformed > 0 
+            ? (status.health.checksPassed / status.health.checksPerformed * 100).toFixed(1) + '%'
+            : '0%',
+          failureStreak: status.health.failureStreak,
+          lastCheck: status.health.lastCheckTime
+        },
+        rollout: rolloutStatus,
+        comparison: status.comparison || {
+          eventsProcessed: 0,
+          message: 'Comparison system not available'
+        },
+        metrics: {
+          migration: metrics.migration,
+          hasCalendarMetrics: !!metrics.calendarSync,
+          hasIngestionMetrics: !!metrics.dataIngestion
+        },
+        recommendations: []
+      };
+
+      // Add health recommendations
+      if (!isHealthy) {
+        healthCheck.recommendations.push('System is not fully healthy - check service status');
+      }
+      if (status.health.failureStreak > 0) {
+        healthCheck.recommendations.push(`Health check failure streak: ${status.health.failureStreak} - investigate service issues`);
+      }
+      if (!status.services.calendarSync.healthy && !status.services.dataIngestion.healthy) {
+        healthCheck.recommendations.push('Both calendar sync and data ingestion services are unhealthy - immediate attention required');
+      }
+      if (rolloutStatus.mode !== 'legacy' && rolloutStatus.migrationProgress === 0) {
+        healthCheck.recommendations.push('Migration mode is not legacy but no sports have rollout configured');
+      }
+
+      res.json({
+        success: true,
+        ...healthCheck,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Control Plane: Error performing health check:', error);
+      res.status(500).json({ 
+        error: 'Health check failed',
+        healthy: false,
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Reset metrics and comparison data
+  app.post('/api/migration/reset', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const preStatus = migrationAdapter.getStatus();
+      
+      // Reset all metrics and comparison data
+      await migrationAdapter.resetMetricsAndComparison();
+      
+      const postStatus = migrationAdapter.getStatus();
+      
+      console.log('🔄 Control Plane: Metrics and comparison data reset via API');
+      
+      res.json({
+        success: true,
+        message: 'All metrics and comparison data have been reset successfully',
+        resetItems: [
+          'MetricsCollector data',
+          'EventComparator comparison results',
+          'OutputRouter metrics',
+          'Health check counters'
+        ],
+        statusBefore: {
+          healthChecksPerformed: preStatus.health.checksPerformed,
+          healthChecksPassed: preStatus.health.checksPassed,
+          comparisonMetrics: preStatus.comparison ? 'Available' : 'Not available'
+        },
+        statusAfter: {
+          healthChecksPerformed: postStatus.health.checksPerformed,
+          healthChecksPassed: postStatus.health.checksPassed,
+          comparisonMetrics: postStatus.comparison ? 'Available' : 'Reset'
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Control Plane: Error resetting metrics:', error);
+      res.status(500).json({ 
+        error: 'Failed to reset metrics and comparison data',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // === MISSING CRITICAL ENDPOINTS ===
+
+  // Admin-only mode change endpoint with safety checks and force option
+  app.post('/api/migration/mode', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const { mode, force, reason, minimumThreshold } = req.body;
+      
+      // Validate mode parameter
+      const validModes = ['legacy', 'ingestion', 'hybrid'];
+      if (!mode || !validModes.includes(mode)) {
+        return res.status(400).json({
+          error: 'Invalid mode parameter',
+          message: `Mode must be one of: ${validModes.join(', ')}`,
+          providedMode: mode
+        });
+      }
+
+      // Get current status
+      const currentStatus = migrationAdapter.getStatus();
+      const rolloutController = (migrationAdapter as any).rolloutController;
+      
+      if (!rolloutController) {
+        return res.status(503).json({
+          error: 'Rollout controller not available'
+        });
+      }
+
+      try {
+        // Attempt mode change with safety checks
+        rolloutController.setMode(mode, {
+          force: force === true,
+          operator: req.user?.username || req.user?.email || 'UNKNOWN_ADMIN',
+          reason: reason || `API mode change to ${mode}`,
+          minimumThreshold: minimumThreshold || 10
+        });
+
+        // Get updated status
+        const newStatus = migrationAdapter.getStatus();
+        const modeChangeLog = rolloutController.getModeChangeLog();
+        const latestChange = modeChangeLog[modeChangeLog.length - 1];
+
+        console.log(`🎛️ Admin Control Plane: Mode changed from ${currentStatus.rollout.mode} to ${mode} via API`);
+
+        res.json({
+          success: true,
+          message: `Migration mode successfully changed from '${currentStatus.rollout.mode}' to '${mode}'`,
+          modeChange: {
+            oldMode: currentStatus.rollout.mode,
+            newMode: mode,
+            forced: force === true,
+            operator: req.user?.username || req.user?.email || 'UNKNOWN_ADMIN',
+            reason: reason || `API mode change to ${mode}`,
+            timestamp: new Date().toISOString()
+          },
+          rolloutStatus: newStatus.rollout,
+          modeChangeRecord: latestChange,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (safetyError: any) {
+        console.warn(`🚨 Admin Control Plane: Mode change safety check failed:`, safetyError.message);
+        
+        res.status(400).json({
+          error: 'Mode change safety check failed',
+          message: safetyError.message,
+          safetyCheckFailed: true,
+          currentMode: currentStatus.rollout.mode,
+          requestedMode: mode,
+          forceRequired: !force && safetyError.message.includes('SAFETY_CHECK_FAILED'),
+          suggestion: force ? 'Safety checks still failed even with force=true' : 'Add force:true to override safety checks',
+          currentRolloutStatus: currentStatus.rollout,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+    } catch (error: any) {
+      console.error('❌ Admin Control Plane: Mode change error:', error);
+      res.status(500).json({ 
+        error: 'Mode change failed',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Get saved rollout state for inspection 
+  app.get('/api/migration/rollout/saved', requireAdminAuth, async (req, res) => {
+    try {
+      if (!migrationAdapter) {
+        return res.status(503).json({ 
+          error: 'Migration adapter not available', 
+          message: 'Migration adapter is initializing'
+        });
+      }
+
+      const rolloutController = (migrationAdapter as any).rolloutController;
+      
+      if (!rolloutController) {
+        return res.status(503).json({
+          error: 'Rollout controller not available'
+        });
+      }
+
+      const savedState = rolloutController.getSavedRolloutState();
+      const currentStatus = migrationAdapter.getStatus();
+      const isPaused = rolloutController.isPausedState();
+
+      res.json({
+        success: true,
+        savedState: {
+          ...savedState,
+          savedAt: savedState.hasSavedState ? 'Available' : 'No saved state',
+        },
+        currentState: {
+          mode: currentStatus.rollout.mode,
+          percentages: currentStatus.rollout.sportPercentages,
+          isPaused: isPaused,
+          migrationProgress: currentStatus.rollout.migrationProgress
+        },
+        comparison: {
+          hasChanges: savedState.hasSavedState && (
+            savedState.mode !== currentStatus.rollout.mode ||
+            JSON.stringify(savedState.percentages) !== JSON.stringify(currentStatus.rollout.sportPercentages)
+          ),
+          canResume: savedState.hasSavedState && isPaused,
+          canPause: !isPaused
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Admin Control Plane: Error fetching saved rollout state:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch saved rollout state',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
 
   return httpServer;
 }

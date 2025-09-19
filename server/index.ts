@@ -33,30 +33,59 @@ if (!lockAcquired) {
 
 console.log(`🔒 Single instance lock acquired for PID ${process.pid}`);
 
-// 🚀 DATAINGESTIONSERVICE: TOP-LEVEL BOOTSTRAP (Architect's Fix)
-console.log("🔍 DEBUG: About to check __di_bootstrapped__ flag");
-if (!(globalThis as any).__di_bootstrapped__) {
-  console.log("🔍 DEBUG: __di_bootstrapped__ is false, starting bootstrap");
-  (globalThis as any).__di_bootstrapped__ = true;
-  console.log("📋 DATAINGESTIONSERVICE: BOOTSTRAP FIRING (top‑level)");
+// 🔄 MIGRATION ADAPTER: TOP-LEVEL BOOTSTRAP (Replaces DataIngestion bootstrap)
+console.log("🔍 DEBUG: About to check __migration_adapter_bootstrapped__ flag");
+if (!(globalThis as any).__migration_adapter_bootstrapped__) {
+  console.log("🔍 DEBUG: __migration_adapter_bootstrapped__ is false, starting bootstrap");
+  (globalThis as any).__migration_adapter_bootstrapped__ = true;
+  console.log("📋 MIGRATION ADAPTER: BOOTSTRAP FIRING (top‑level)");
   void (async () => {
     try {
-      console.log("🔍 DEBUG: About to import DataIngestionIntegration");
-      const { DataIngestionIntegration } = await import('./services/data-ingestion-integration');
+      console.log("🔍 DEBUG: About to import MigrationAdapter");
+      const { MigrationAdapter } = await import('./services/migration-adapter');
       console.log("🔍 DEBUG: Import successful, creating instance");
-      const di = new DataIngestionIntegration({ shadowMode: true, enableMetrics: true, healthCheckIntervalMs: 30_000, logLevel: 'detailed' });
+      
+      // Initialize MigrationAdapter with safe defaults
+      const migrationAdapter = new MigrationAdapter({
+        calendarSync: {
+          sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
+          enableMetrics: true
+        },
+        dataIngestion: {
+          shadowMode: true,
+          enableMetrics: true,
+          healthCheckIntervalMs: 30_000,
+          logLevel: 'detailed'
+        },
+        rollout: {
+          percentages: {}, // Start with 0% for all sports
+          mode: 'legacy', // Start in legacy mode
+          enableSafetyChecks: true,
+          maxRolloutPercentage: 50,
+          rolloutStepSize: 10
+        },
+        enableRolloutController: true,
+        enableHealthMonitoring: true,
+        enableMetrics: true,
+        enableOutputRouter: true,
+        logLevel: 'detailed'
+      });
+      
       console.log("🔍 DEBUG: Instance created, calling initialize()");
-      await di.initialize();
-      console.log("🔍 DEBUG: Initialize completed, storing global reference");
-      (global as any).dataIngestionIntegration = di;
-      console.log("✅ DATAINGESTIONSERVICE: STARTED");
+      await migrationAdapter.initialize();
+      console.log("🔍 DEBUG: Initialize completed, calling start()");
+      await migrationAdapter.start();
+      console.log("🔍 DEBUG: Start completed, storing global reference");
+      
+      (global as any).migrationAdapter = migrationAdapter;
+      console.log("✅ MIGRATION ADAPTER: STARTED - Both systems under adapter control");
     } catch (e) { 
-      console.error("❌ DATAINGESTIONSERVICE: FAILED", e); 
-      console.error("❌ DATAINGESTIONSERVICE: ERROR STACK:", e?.stack);
+      console.error("❌ MIGRATION ADAPTER: FAILED", e); 
+      console.error("❌ MIGRATION ADAPTER: ERROR STACK:", e?.stack);
     }
   })();
 } else {
-  console.log("🔍 DEBUG: __di_bootstrapped__ is true, skipping bootstrap");
+  console.log("🔍 DEBUG: __migration_adapter_bootstrapped__ is true, skipping bootstrap");
 }
 
 // Startup guard to prevent double initialization within same process
@@ -117,6 +146,17 @@ const gracefulShutdown = async (signal: string) => {
         console.log('✅ DataIngestionService gracefully shut down');
       } catch (err) {
         console.error('⚠️ Error shutting down DataIngestionService:', err);
+      }
+    }
+
+    // 🔄 GRACEFUL SHUTDOWN: MigrationAdapter cleanup
+    const migrationAdapter = (global as any).migrationAdapter;
+    if (migrationAdapter && typeof migrationAdapter.stop === 'function') {
+      try {
+        await migrationAdapter.stop();
+        console.log('✅ MigrationAdapter gracefully shut down');
+      } catch (err) {
+        console.error('⚠️ Error shutting down MigrationAdapter:', err);
       }
     }
 
