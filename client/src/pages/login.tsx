@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,16 +13,26 @@ export default function Login() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const loginMutation = useMutation({
     mutationFn: async ({ usernameOrEmail, password }: { usernameOrEmail: string; password: string }) => {
       return apiRequest("POST", "/api/auth/login", { usernameOrEmail, password });
     },
     onSuccess: () => {
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in to ChirpBot.",
+      });
       // Redirect to dashboard
       window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid username or password.",
+        variant: "destructive",
+      });
     },
     onSettled: () => {
       setIsLoading(false);
@@ -32,10 +43,20 @@ export default function Login() {
     e.preventDefault();
     
     if (!usernameOrEmail.trim()) {
+      toast({
+        title: "Username or email required",
+        description: "Please enter your username or email.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!password) {
+      toast({
+        title: "Password required",
+        description: "Please enter your password.",
+        variant: "destructive",
+      });
       return;
     }
 

@@ -3318,11 +3318,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           availableAlerts = await tempEngine.getAvailableAlertTypes();
         }
 
-        // ADMIN CONTROL DISABLED: All alerts are always available to users
-        // Users have complete control over their alert preferences
+        // Get global settings but show all alerts (don't filter out disabled ones)
+        const globalSettings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
 
-        // Convert to the format expected by the frontend - all alerts always available
+        // Convert to the format expected by the frontend, including globally disabled alerts
         const alertConfig = availableAlerts.map(alertType => {
+          const isGloballyEnabled = globalSettings[alertType] === true;
           const displayName = alertType
             .replace(`${sport.toUpperCase()}_`, '')
             .split('_')
@@ -3333,11 +3334,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             key: alertType,
             label: displayName,
             description: `${displayName} alerts for ${sport.toUpperCase()} games`,
-            globallyEnabled: true // Always true - admin control disabled
+            globallyEnabled: isGloballyEnabled
           };
         });
 
-        console.log(`📋 Available alerts for ${sport.toUpperCase()}: ${availableAlerts.length} alerts available (admin control disabled)`);
+        const globallyEnabledCount = alertConfig.filter(alert => alert.globallyEnabled).length;
+        console.log(`📋 Available alerts for ${sport.toUpperCase()}: ${globallyEnabledCount}/${availableAlerts.length} globally enabled, ${availableAlerts.length - globallyEnabledCount} globally disabled`);
         res.json(alertConfig);
       } catch (error) {
         console.error(`❌ Error getting available alerts for ${sport}:`, error);

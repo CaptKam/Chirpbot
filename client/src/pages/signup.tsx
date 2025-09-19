@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,16 +16,26 @@ export default function Signup() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const signupMutation = useMutation({
     mutationFn: async ({ usernameOrEmail, password, firstName, lastName }: { usernameOrEmail: string; password: string; firstName?: string; lastName?: string }) => {
       return apiRequest("POST", "/api/auth/signup", { usernameOrEmail, password, firstName, lastName });
     },
     onSuccess: () => {
+      toast({
+        title: "Account created!",
+        description: "Your ChirpBot account has been created successfully. You can now sign in.",
+      });
       // Redirect to dashboard after signup
       window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
+      toast({
+        title: "Signup failed",
+        description: error.message || "Failed to create account. Please try again.",
+        variant: "destructive",
+      });
     },
     onSettled: () => {
       setIsLoading(false);
@@ -35,22 +46,47 @@ export default function Signup() {
     e.preventDefault();
     
     if (!usernameOrEmail.trim()) {
+      toast({
+        title: "Username or email required",
+        description: "Please enter a username or email.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (usernameOrEmail.length < 3) {
+      toast({
+        title: "Username or email too short",
+        description: "Username or email must be at least 3 characters long.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!password) {
+      toast({
+        title: "Password required",
+        description: "Please enter a password.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (password !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure both passwords are the same.",
+        variant: "destructive",
+      });
       return;
     }
 

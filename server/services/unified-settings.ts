@@ -131,16 +131,20 @@ export class UnifiedSettings {
   }
 
   /**
-   * Check if specific alert type should be visible in UI (admin control disabled)
-   * This method now always returns true - admin alert control has been disabled
-   * All alert toggles are visible to users regardless of admin settings
+   * Check if specific alert type should be visible in UI (checks global admin settings only)
+   * This method is specifically for UI visibility - does not consider user preferences
+   * 🔧 CACHE FIX: Sport normalization handled in getGlobalSettings
    */
   async isAlertVisible(sport: string, alertType: string): Promise<boolean> {
-    // ADMIN CONTROL DISABLED: Always show all alert toggles to users
-    // Users have complete control over their alert preferences
-    console.log(`👁️ Alert always visible: ${alertType} (${sport.toLowerCase()}) - admin control disabled`);
+    const settings = await this.getGlobalSettings(sport);
+    const isVisible = settings[alertType] !== false; // Default to visible if not explicitly disabled
     
-    return true; // Always visible - admin control disabled
+    // Debug logging for hidden alerts
+    if (!isVisible) {
+      console.log(`👁️ Alert hidden from UI: ${alertType} (${sport.toLowerCase()}) - disabled by admin`);
+    }
+    
+    return isVisible;
   }
 
   /**
