@@ -524,6 +524,12 @@ export class DataIngestionService extends EventEmitter {
       return;
     }
 
+    // CRITICAL FIX: In shadow mode, do NOT emit events to prevent downstream alert generation
+    if (this.config.shadowMode) {
+      console.log(`🌊 DataIngestion: [SHADOW] Skipping event emission for ${game.gameId} - shadow mode active`);
+      return;
+    }
+
     const event: GameStateChangedEvent = {
       id: uuidv4(),
       type: 'game_state_changed',
@@ -550,12 +556,7 @@ export class DataIngestionService extends EventEmitter {
     try {
       this.eventStream.emitEvent(event);
       this.metrics.eventsEmitted++;
-      
-      if (this.config.shadowMode) {
-        console.log(`🌊 DataIngestion: [SHADOW] Emitted state change event for ${game.gameId}`);
-      } else {
-        console.log(`📢 DataIngestion: Emitted state change event for ${game.gameId}`);
-      }
+      console.log(`📢 DataIngestion: Emitted state change event for ${game.gameId}`);
     } catch (error) {
       console.error(`❌ DataIngestion: Failed to emit event for game ${game.gameId}:`, error);
       this.metrics.errorsEncountered++;

@@ -137,11 +137,23 @@ export abstract class BaseProcessor implements IAlertProcessor {
     const startTime = Date.now();
     
     try {
-      // Generate alerts using subclass implementation
-      const alerts = await this.generateAlerts(context.gameState, context);
+      let alerts: AlertResult[] = [];
+      let filteredAlerts: AlertResult[] = [];
       
-      // Filter alerts based on settings
-      const filteredAlerts = await this.filterAlertsBySettings(alerts, context);
+      // CRITICAL FIX: Only generate alerts if NOT in shadow mode
+      // This prevents duplicate alert generation when running parallel systems
+      if (!this.config.shadowMode) {
+        // Generate alerts using subclass implementation
+        alerts = await this.generateAlerts(context.gameState, context);
+        
+        // Filter alerts based on settings
+        filteredAlerts = await this.filterAlertsBySettings(alerts, context);
+        
+        this.log('info', `Generated ${filteredAlerts.length} alerts for game ${context.gameId}`);
+      } else {
+        // In shadow mode: process for comparison but don't generate user-facing alerts
+        this.log('debug', `Shadow mode: Skipping alert generation for game ${context.gameId}`);
+      }
       
       // Update stats
       this.updateSuccessStats(Date.now() - startTime);
@@ -156,6 +168,7 @@ export abstract class BaseProcessor implements IAlertProcessor {
           alertsGenerated: alerts.length,
           alertsFiltered: filteredAlerts.length,
           shadowMode: this.config.shadowMode,
+          alertGenerationSkipped: this.config.shadowMode,
           timestamp: Date.now()
         }
       };

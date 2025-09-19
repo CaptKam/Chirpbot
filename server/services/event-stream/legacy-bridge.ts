@@ -359,11 +359,14 @@ export class LegacyBridge extends EventEmitter {
       const result = await this.mlbProcessor.processGameState(context);
       
       if (result.success) {
-        // Emit alert events
-        for (const alert of result.alerts) {
-          const alertEvent = alertResultToEvent(alert, gameState, this.mlbProcessor.id);
-          await this.eventStream.emitEvent(alertEvent);
+        // CRITICAL FIX: In shadow mode, do NOT emit alert events to prevent duplicates
+        // Only log for comparison purposes
+        if (this.config.logDifferences && result.alerts.length > 0) {
+          console.log(`🌊 [Shadow Mode] Event stream would have generated ${result.alerts.length} alerts for ${gameState.gameId} (not emitted)`);
         }
+        
+        // REMOVED: Alert event emission to prevent duplicate alerts
+        // The legacy system should be the only one emitting alerts until full migration
         
         return result.alerts;
       }
