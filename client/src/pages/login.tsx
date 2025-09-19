@@ -88,23 +88,6 @@ export default function Login() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Demo Account Button */}
-              <Button
-                type="button"
-                onClick={() => {
-                  setUsernameOrEmail("demo@chirpbot.com");
-                  setPassword("demo2024");
-                  toast({
-                    title: "Demo Account Loaded",
-                    description: "Demo credentials have been filled in. Click 'Sign In' to continue.",
-                  });
-                }}
-                className="w-full h-12 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium border border-emerald-500/30"
-                data-testid="button-demo-account"
-              >
-                ▶️ Try Demo Account
-              </Button>
-
               <div className="space-y-2">
                 <Label htmlFor="usernameOrEmail" className="text-sm font-medium text-slate-200">
                   Username or Email

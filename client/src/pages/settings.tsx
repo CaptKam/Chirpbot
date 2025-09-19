@@ -144,34 +144,27 @@ export default function Settings() {
   // Helper to get alert preference with optimistic state layering
   const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
     // Return undefined while loading to show skeleton UI
-    if (isSettingsLoading) {
-      console.log(`⏳ LOADING: ${alertType} preferences still loading...`);
-      return undefined;
-    }
+    if (isSettingsLoading) return undefined;
 
     // Check if the alert is globally disabled by admin (highest priority)
     if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      console.log(`🚫 GLOBALLY DISABLED: ${alertType} is disabled by admin`);
       return false;
     }
 
     // Priority order: optimistic state > server state > default
-    const optimisticValue = optimisticPreferences[alertType];
-    const serverValue = preferenceMap.get(alertType);
-    
-    let result: boolean;
+    // Check optimistic state first (user's intended state during mutations)
     if (alertType in optimisticPreferences) {
-      result = optimisticPreferences[alertType];
-      console.log(`✨ OPTIMISTIC STATE: ${alertType} = ${result} (overriding server: ${serverValue})`);
-    } else if (serverValue !== undefined) {
-      result = serverValue;
-      console.log(`💾 SERVER STATE: ${alertType} = ${result}`);
-    } else {
-      result = false;
-      console.log(`🔄 DEFAULT STATE: ${alertType} = ${result} (no server or optimistic data)`);
+      return optimisticPreferences[alertType];
     }
 
-    return result;
+    // Then check server state from preference map
+    const serverPreference = preferenceMap.get(alertType);
+    if (serverPreference !== undefined) {
+      return serverPreference;
+    }
+
+    // Default to false for new preferences
+    return false;
   };
 
   const logoutMutation = useMutation({
@@ -188,22 +181,17 @@ export default function Settings() {
   // Alert preferences mutation with optimistic updates
   const updateAlertPreferenceMutation = useMutation({
     mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
-      console.log(`🚀 MUTATION START: ${alertType} → ${enabled} for sport ${activeSport}`);
-      
       // Check if user is authenticated and has an ID
       if (!user?.id) {
-        console.error(`❌ MUTATION FAILED: No user ID`);
         throw new Error('User not authenticated or ID missing');
       }
 
-      const payload = { sport: activeSport, alertType, enabled };
-      console.log(`📤 SENDING POST REQUEST:`, payload);
-
-      const response = await apiRequest("POST", `/api/user/${user.id}/alert-preferences`, payload);
-      const result = await response.json();
-      
-      console.log(`✅ MUTATION RESPONSE:`, result);
-      return result;
+      const response = await apiRequest("POST", `/api/user/${user.id}/alert-preferences`, {
+        sport: activeSport,
+        alertType,
+        enabled
+      });
+      return response.json();
     },
     onMutate: async ({ alertType, enabled }) => {
       // Cancel any outgoing refetches to prevent overwriting optimistic update
@@ -360,16 +348,8 @@ export default function Settings() {
   };
 
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
-    console.log(`🔄 TOGGLE CLICKED: ${alertType} → ${enabled}`, { 
-      currentState: getAlertPreference(activeSport, alertType),
-      pendingToggles: Array.from(pendingToggles),
-      userId: user?.id,
-      activeSport
-    });
-    
     // Early validation
     if (!user?.id) {
-      console.error(`❌ TOGGLE BLOCKED: No user authentication`);
       toast({
         title: "Authentication Required",
         description: "Please log in to change alert preferences.",
@@ -380,7 +360,6 @@ export default function Settings() {
 
     // Prevent rapid toggles of the same alert type while mutation is pending
     if (pendingToggles.has(alertType)) {
-      console.warn(`⚠️ TOGGLE BLOCKED: ${alertType} is already pending`);
       return;
     }
 
