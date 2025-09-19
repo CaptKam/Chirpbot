@@ -1023,14 +1023,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // User alert preferences routes
-  app.get('/api/user/:userId/alert-preferences', requireAuthentication, async (req, res) => {
+  app.get('/api/user/:userId/alert-preferences', async (req, res) => {
     try {
-      // SECURITY FIX: Always use session userId instead of URL parameter
-      const sessionUserId = req.session.userId;
-      if (!sessionUserId) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-      const preferences = await storage.getUserAlertPreferences(sessionUserId);
+      const { userId } = req.params;
+      const preferences = await storage.getUserAlertPreferences(userId);
       res.json(preferences);
     } catch (error) {
       console.error('Error fetching alert preferences:', error);
@@ -1038,17 +1034,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get('/api/user/:userId/alert-preferences/:sport', requireAuthentication, async (req, res) => {
+  app.get('/api/user/:userId/alert-preferences/:sport', async (req, res) => {
     try {
-      // SECURITY FIX: Always use session userId instead of URL parameter
-      const sessionUserId = req.session.userId;
-      const { sport } = req.params;
-      if (!sessionUserId) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-      console.log(`🔍 Fetching alert preferences for user ${sessionUserId}, sport ${sport}`);
-      const preferences = await storage.getUserAlertPreferencesBySport(sessionUserId, sport.toLowerCase());
-      console.log(`📋 Found ${preferences.length} preferences for user ${sessionUserId} in ${sport}:`, preferences.map(p => `${p.alertType}=${p.enabled}`));
+      const { userId, sport } = req.params;
+      console.log(`🔍 Fetching alert preferences for user ${userId}, sport ${sport}`);
+      const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toLowerCase());
+      console.log(`📋 Found ${preferences.length} preferences for user ${userId} in ${sport}:`, preferences.map(p => `${p.alertType}=${p.enabled}`));
       res.json(preferences);
     } catch (error) {
       console.error('Error fetching alert preferences for sport:', error);
@@ -1058,12 +1049,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   app.post('/api/user/:userId/alert-preferences', requireAuthentication, async (req, res) => {
     try {
-      // SECURITY FIX: Always use session userId instead of URL parameter
-      const sessionUserId = req.session.userId;
+      const { userId } = req.params;
       const { sport, alertType, enabled } = req.body;
 
-      if (!sessionUserId) {
-        return res.status(401).json({ message: 'Authentication required' });
+      // Verify user can only modify their own preferences
+      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Can only modify your own alert preferences' });
       }
 
       if (!sport || !alertType || typeof enabled !== 'boolean') {
@@ -1079,7 +1070,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         });
       }
 
-      const preference = await storage.setUserAlertPreference(sessionUserId, sport.toLowerCase(), alertType, enabled);
+      const preference = await storage.setUserAlertPreference(userId, sport.toLowerCase(), alertType, enabled);
       res.json(preference);
     } catch (error) {
       console.error('Error setting alert preference:', error);
@@ -1089,12 +1080,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   app.post('/api/user/:userId/alert-preferences/bulk', requireAuthentication, async (req, res) => {
     try {
-      // SECURITY FIX: Always use session userId instead of URL parameter
-      const sessionUserId = req.session.userId;
+      const { userId } = req.params;
       const { sport, preferences } = req.body;
 
-      if (!sessionUserId) {
-        return res.status(401).json({ message: 'Authentication required' });
+      // Verify user can only modify their own preferences
+      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Can only modify your own alert preferences' });
       }
 
       if (!sport || !preferences || !Array.isArray(preferences)) {
@@ -1113,7 +1104,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         filteredPreferences.push(pref);
       }
 
-      const result = await storage.bulkSetUserAlertPreferences(sessionUserId, sport.toLowerCase(), filteredPreferences);
+      const result = await storage.bulkSetUserAlertPreferences(userId, sport.toLowerCase(), filteredPreferences);
       res.json({
         message: 'Alert preferences updated successfully',
         count: result.length,

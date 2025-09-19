@@ -256,7 +256,15 @@ export default function Settings() {
       // Extract meaningful error message
       const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
       
-      // Errors are handled silently - the toggle will revert automatically due to optimistic updates
+      // Only show toast for critical authentication errors
+      if (errorMessage.includes('401') || errorMessage.includes('not authenticated') || errorMessage.includes('ID missing')) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to save your alert preferences.",
+          variant: "destructive",
+        });
+      }
+      // Other errors are handled silently - the toggle will revert automatically due to optimistic updates
     },
   });
 
@@ -342,17 +350,24 @@ export default function Settings() {
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
     // Early validation
     if (!user?.id) {
-      console.log('No user ID, cannot toggle');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to change alert preferences.",
+        variant: "destructive",
+      });
       return;
     }
 
     // Prevent rapid toggles of the same alert type while mutation is pending
     if (pendingToggles.has(alertType)) {
-      console.log('Toggle already pending for', alertType);
       return;
     }
 
-    console.log('Toggling alert:', alertType, 'to', enabled);
+    // Clear any existing debounce timer for this alert type
+    const existingTimer = debounceTimers.current.get(alertType);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
 
     // Immediately update optimistic state for instant UI feedback
     setOptimisticPreferences(prev => ({
@@ -363,21 +378,30 @@ export default function Settings() {
     // Add to pending toggles
     setPendingToggles(prev => new Set([...prev, alertType]));
     
-    // Fire mutation immediately - no debouncing to avoid issues
-    updateAlertPreferenceMutation.mutate(
-      { alertType, enabled },
-      {
-        onSettled: () => {
-          // Remove from pending toggles when mutation completes (success or error)
-          setPendingToggles(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(alertType);
-            return newSet;
-          });
-          console.log('Mutation settled for', alertType);
+    // Debounced mutation - the actual mutation handles cache updates via onMutate
+    const debounceTimer = setTimeout(() => {
+      updateAlertPreferenceMutation.mutate(
+        { alertType, enabled },
+        {
+          onSettled: () => {
+            // Remove from pending toggles when mutation completes (success or error)
+            setPendingToggles(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(alertType);
+              return newSet;
+            });
+            
+            // REMOVED: No longer using setTimeout to clear optimistic state
+            // The existing useEffect will handle clearing when fresh server data arrives
+            // This prevents race conditions and ensures toggles don't revert
+            
+            debounceTimers.current.delete(alertType);
+          }
         }
-      }
-    );
+      );
+    }, 300); // 300ms debounce
+
+    debounceTimers.current.set(alertType, debounceTimer);
   };
 
   // Clear optimistic preferences when switching sports

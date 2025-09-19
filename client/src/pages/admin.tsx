@@ -90,6 +90,7 @@ type User = {
 export default function Admin() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [selectedSport, setSelectedSport] = useState<string>("MLB");
   const { toast } = useToast();
   const { user: currentUser, isAuthenticated } = useAuth();
 
@@ -128,6 +129,11 @@ export default function Admin() {
     queryKey: ['/api/admin/stats'],
   });
 
+  // Fetch user alert preferences when user is selected
+  const { data: userAlertPreferences, isLoading: preferencesLoading } = useQuery({
+    queryKey: [`/api/admin/users/${selectedUser?.id}/alert-preferences`],
+    enabled: !!selectedUser?.id,
+  });
 
   // Role update mutation
   const updateRoleMutation = useMutation({
@@ -152,6 +158,30 @@ export default function Admin() {
     },
   });
 
+  // Alert preferences update mutation
+  const updateAlertPreferencesMutation = useMutation({
+    mutationFn: async ({ userId, sport, preferences }: { userId: string; sport: string; preferences: any[] }) => {
+      const response = await apiRequest("PUT", `/api/admin/users/${userId}/alert-preferences`, {
+        sport,
+        preferences
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${selectedUser?.id}/alert-preferences`] });
+      toast({
+        title: "Alert preferences updated",
+        description: "User alert preferences have been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update alert preferences. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleRoleChange = (userId: string, newRole: string) => {
     updateRoleMutation.mutate({ userId, role: newRole });
@@ -331,7 +361,7 @@ export default function Admin() {
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               {selectedUser && getRoleIcon(selectedUser.role)}
-              <span>Manage User: {selectedUser?.username || 'Unknown User'}</span>
+              <span>Manage User: {selectedUser?.username}</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -343,47 +373,108 @@ export default function Admin() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-400">Email:</span>
-                    <span className="text-slate-100 ml-2">{selectedUser?.email || 'N/A'}</span>
+                    <span className="text-slate-100 ml-2">{selectedUser.email}</span>
                   </div>
                   <div>
                     <span className="text-slate-400">Role:</span>
-                    <Badge className={`ml-2 ${selectedUser?.role ? getRoleBadgeColor(selectedUser.role) : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
-                      {selectedUser?.role?.toUpperCase() || 'UNKNOWN'}
+                    <Badge className={`ml-2 ${getRoleBadgeColor(selectedUser.role)}`}>
+                      {selectedUser.role.toUpperCase()}
                     </Badge>
                   </div>
                   <div>
                     <span className="text-slate-400">Auth Method:</span>
-                    <span className="text-slate-100 ml-2">{selectedUser?.authMethod || 'N/A'}</span>
+                    <span className="text-slate-100 ml-2">{selectedUser.authMethod}</span>
                   </div>
                   <div>
                     <span className="text-slate-400">Telegram:</span>
-                    <span className={`ml-2 ${selectedUser?.telegramEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                      {selectedUser?.telegramEnabled ? 'Enabled' : 'Disabled'}
+                    <span className={`ml-2 ${selectedUser.telegramEnabled ? 'text-green-400' : 'text-red-400'}`}>
+                      {selectedUser.telegramEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
                 </div>
               </Card>
 
-              {/* Alert Preferences Management - DISABLED TO PREVENT CONFLICTS */}
+              {/* Alert Preferences Management */}
               <Card className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-md font-bold text-slate-100">Alert Preferences</h3>
-                  <div className="text-sm text-slate-400">
-                    Managed via user settings page
-                  </div>
+                  <Select value={selectedSport} onValueChange={setSelectedSport}>
+                    <SelectTrigger className="w-32 bg-white/10 border-white/20 text-slate-100">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectItem value="MLB">MLB</SelectItem>
+                      <SelectItem value="NFL">NFL</SelectItem>
+                      <SelectItem value="NBA">NBA</SelectItem>
+                      <SelectItem value="NHL">NHL</SelectItem>
+                      <SelectItem value="CFL">CFL</SelectItem>
+                      <SelectItem value="NCAAF">NCAAF</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="text-center py-8">
-                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                    <p className="text-yellow-400 text-sm mb-2">
-                      🚧 Alert preference management has been moved to the user settings page
-                    </p>
-                    <p className="text-slate-400 text-xs">
-                      Users can manage their own alert preferences in Settings. 
-                      This prevents conflicts and ensures consistent behavior.
-                    </p>
+                {preferencesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    {ALERT_TYPE_CONFIG[selectedSport as keyof typeof ALERT_TYPE_CONFIG] ? (
+                      Object.entries(ALERT_TYPE_CONFIG[selectedSport as keyof typeof ALERT_TYPE_CONFIG]).map(([category, alerts]) => (
+                        <div key={category} className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            {getCategoryIcon(category)}
+                            <h4 className="text-sm font-bold text-slate-100 uppercase tracking-wide">
+                              {category}
+                            </h4>
+                          </div>
+                          <div className="space-y-2 ml-6">
+                            {alerts.map((alert) => {
+                              const preference = (userAlertPreferences as any[] || []).find((p: any) => 
+                                p.alertType === alert.key && p.sport === selectedSport
+                              );
+                              const isEnabled = preference?.enabled ?? true;
+
+                              return (
+                                <div key={alert.key} className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10">
+                                  <div className="flex-1">
+                                    <h5 className="text-xs font-semibold text-slate-100">{alert.label}</h5>
+                                    <p className="text-xs text-slate-400">{alert.description}</p>
+                                  </div>
+                                  <Switch
+                                    checked={isEnabled}
+                                    onCheckedChange={(enabled) => {
+                                      const updatedPreferences = alerts.map(a => ({
+                                        alertType: a.key,
+                                        enabled: a.key === alert.key ? enabled : 
+                                          (userAlertPreferences as any[] || []).find((p: any) => p.alertType === a.key && p.sport === selectedSport)?.enabled ?? true
+                                      }));
+                                      updateAlertPreferencesMutation.mutate({
+                                        userId: selectedUser.id,
+                                        sport: selectedSport,
+                                        preferences: updatedPreferences
+                                      });
+                                    }}
+                                    disabled={updateAlertPreferencesMutation.isPending}
+                                    className="data-[state=checked]:bg-emerald-500"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {Object.keys(ALERT_TYPE_CONFIG[selectedSport as keyof typeof ALERT_TYPE_CONFIG]).indexOf(category) < 
+                           Object.keys(ALERT_TYPE_CONFIG[selectedSport as keyof typeof ALERT_TYPE_CONFIG]).length - 1 && (
+                            <Separator className="bg-white/10 my-3" />
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-slate-400 text-sm">No alert types configured for {selectedSport} yet.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </Card>
             </div>
           )}
