@@ -111,7 +111,7 @@ export abstract class BaseSportApi {
     return true;
   }
 
-  // Shared caching logic
+  // OPTIMIZED: Faster caching logic with reduced overhead
   protected getCached(key: string, forceCheck: boolean = false): any | null {
     const cached = this.cache[key];
     if (cached) {
@@ -122,7 +122,10 @@ export abstract class BaseSportApi {
         if (this.performanceMetrics) {
           this.performanceMetrics.cacheHits++;
         }
-        console.log(`📋 ${this.config.sportTag} API: Using cached data for ${key} (${Math.round(age/1000)}s old, TTL: ${Math.round(cached.ttl/1000)}s)`);
+        // OPTIMIZED: Reduced console logging for performance
+        if (age > 5000) { // Only log if cache is older than 5s
+          console.log(`📋 ${this.config.sportTag} API: Using cached data for ${key} (${Math.round(age/1000)}s old, TTL: ${Math.round(cached.ttl/1000)}s)`);
+        }
         return cached.data;
       }
     }
@@ -133,14 +136,24 @@ export abstract class BaseSportApi {
     return null;
   }
 
-  // Shared cache setting logic
+  // OPTIMIZED: Enhanced cache setting with automatic cleanup
   protected setCache(key: string, data: any, cacheType: string = 'default'): void {
     const ttl = this.config.cacheTtl[cacheType as keyof typeof this.config.cacheTtl] || this.config.cacheTtl.default;
+    
+    // OPTIMIZED: For live games, use shorter TTL for fresher data
+    const optimizedTtl = cacheType === 'live' && this.config.sportTag === 'NCAAF' ? 
+      Math.min(ttl, 5000) : ttl; // NCAAF live games get max 5s cache
+    
     this.cache[key] = { 
       data, 
       timestamp: Date.now(),
-      ttl
+      ttl: optimizedTtl
     };
+    
+    // OPTIMIZED: Periodic cache cleanup to prevent memory bloat (every 50 cache sets)
+    if (Object.keys(this.cache).length % 50 === 0) {
+      this.cleanupExpiredCache();
+    }
   }
 
   // Shared request logic with circuit breaker integration
@@ -176,6 +189,22 @@ export abstract class BaseSportApi {
   }
 
   // Shared game status mapping logic
+  // OPTIMIZED: Automatic cache cleanup
+  protected cleanupExpiredCache(): void {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+    
+    for (const [key, entry] of Object.entries(this.cache)) {
+      if (now - entry.timestamp >= entry.ttl) {
+        keysToDelete.push(key);
+      }
+    }
+    
+    for (const key of keysToDelete) {
+      delete this.cache[key];
+    }
+  }
+
   protected mapGameStatus(statusName: string): string {
     const lowerStatus = statusName.toLowerCase();
     

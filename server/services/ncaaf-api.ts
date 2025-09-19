@@ -78,11 +78,10 @@ export class NCAAFApiService extends BaseSportApi {
   }
 
   protected parseEnhancedGameResponse(data: any, gameId: string): any {
-    const header = data.header || {};
     const competitions = data.header?.competitions?.[0] || {};
     const situation = competitions.situation || {};
     
-    // Extract game situation details
+    // Extract game situation details (optimized for speed)
     const down = situation.down || null;
     const yardsToGo = situation.distance || null;
     const fieldPosition = situation.yardLine || null;
@@ -90,182 +89,153 @@ export class NCAAFApiService extends BaseSportApi {
     const quarter = competitions.status?.period || 0;
     const timeRemaining = competitions.status?.displayClock || '';
     
-    // Extract live scores
-    const homeScore = competitions.competitors?.find((c: any) => c.homeAway === 'home')?.score || 0;
-    const awayScore = competitions.competitors?.find((c: any) => c.homeAway === 'away')?.score || 0;
+    // OPTIMIZED: Extract live scores and competitors in one pass (performance optimization)
+    const competitors = competitions.competitors || [];
+    let homeScore = 0, awayScore = 0, homeCompetitor = null, awayCompetitor = null;
     
-    // Extract team competitor data for proper team ID to abbreviation mapping
-    const homeCompetitor = competitions.competitors?.find((c: any) => c.homeAway === 'home');
-    const awayCompetitor = competitions.competitors?.find((c: any) => c.homeAway === 'away');
+    for (const competitor of competitors) {
+      if (competitor.homeAway === 'home') {
+        homeScore = parseInt(competitor.score) || 0;
+        homeCompetitor = competitor;
+      } else if (competitor.homeAway === 'away') {
+        awayScore = parseInt(competitor.score) || 0;
+        awayCompetitor = competitor;
+      }
+    }
     
-    // Map possession team ID to actual team info
-    let possessionSide = null; // 'home' or 'away'
+    // OPTIMIZED: Map possession team ID to actual team info (reduced logging)
+    let possessionSide = null;
     let possessionTeamId = null;
     let possessionTeamAbbrev = null;
     
-    if (possession && homeCompetitor && awayCompetitor) {
-      // Check if possession matches home team ID
-      if (possession.toString() === homeCompetitor.team?.id?.toString()) {
+    if (possession && homeCompetitor?.team && awayCompetitor?.team) {
+      const homeTeamId = homeCompetitor.team.id?.toString();
+      const awayTeamId = awayCompetitor.team.id?.toString();
+      const possessionStr = possession.toString();
+      
+      if (possessionStr === homeTeamId) {
         possessionSide = 'home';
-        possessionTeamId = homeCompetitor.team.id.toString();
+        possessionTeamId = homeTeamId;
         possessionTeamAbbrev = homeCompetitor.team.abbreviation;
-      }
-      // Check if possession matches away team ID  
-      else if (possession.toString() === awayCompetitor.team?.id?.toString()) {
+      } else if (possessionStr === awayTeamId) {
         possessionSide = 'away';
-        possessionTeamId = awayCompetitor.team.id.toString();
+        possessionTeamId = awayTeamId;
         possessionTeamAbbrev = awayCompetitor.team.abbreviation;
       }
-      
-      console.log(`🔍 NCAAF possession mapping for game ${gameId}: possession=${possession}, possessionSide=${possessionSide}, teamAbbrev=${possessionTeamAbbrev}`);
     }
     
-    // Extract player data from ESPN's detailed summary
+    // OPTIMIZED: Streamlined player extraction (fast single-pass approach)
     let currentPlayer = null;
     let currentQuarterback = null;
     let preGameHomeQB = null;
     let preGameAwayQB = null;
     
-    // Strategy 1: Extract from plays/drives data
+    // Fast extraction: Try plays data first (most common case for live games)
     const drives = data.drives?.current || data.drives?.previous?.[0];
     if (drives?.plays?.length > 0) {
       const lastPlay = drives.plays[drives.plays.length - 1];
-      // Look for athlete data in the last play
-      if (lastPlay.participants?.length > 0) {
-        const primaryParticipant = lastPlay.participants[0];
-        currentPlayer = primaryParticipant.athlete?.displayName || primaryParticipant.athlete?.fullName;
-        console.log(`✅ NCAAF extracted player from plays: ${currentPlayer}`);
+      if (lastPlay.participants?.[0]?.athlete) {
+        currentPlayer = lastPlay.participants[0].athlete.displayName || lastPlay.participants[0].athlete.fullName;
       }
     }
     
-    // Strategy 2: Extract from roster/starting lineup data with correct team ID mapping
-    if (data.rosters && possessionTeamId) {
-      const possessingTeamRoster = data.rosters.find((r: any) => 
-        r.team?.id?.toString() === possessionTeamId
-      );
-      if (possessingTeamRoster?.roster?.length > 0) {
-        // Find starting quarterback or key offensive player
-        const qb = possessingTeamRoster.roster.find((p: any) => 
-          p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
-        );
-        if (qb) {
-          currentQuarterback = qb.athlete?.displayName || qb.athlete?.fullName;
-          if (!currentPlayer) currentPlayer = currentQuarterback;
-          console.log(`✅ NCAAF extracted QB from roster: ${currentQuarterback}`);
-        }
-      }
-    }
-    
-    // Strategy 3: Pre-game QB fallbacks for scheduled games
-    if (data.rosters && (!currentPlayer || competitions.status?.type?.state === 'pre')) {
-      console.log(`🔄 NCAAF extracting pre-game QBs for game ${gameId}`);
-      
-      // Extract home team QB
-      if (homeCompetitor) {
-        const homeRoster = data.rosters.find((r: any) => 
-          r.team?.id?.toString() === homeCompetitor.team?.id?.toString()
-        );
-        if (homeRoster?.roster?.length > 0) {
-          const homeQB = homeRoster.roster.find((p: any) => 
-            p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
-          );
-          if (homeQB) {
-            preGameHomeQB = homeQB.athlete?.displayName || homeQB.athlete?.fullName;
-            console.log(`✅ NCAAF home QB: ${preGameHomeQB}`);
-          }
+    // OPTIMIZED: Only proceed with roster lookup if we don't have a player and have roster data
+    if (!currentPlayer && data.rosters) {
+      // Create team roster map for faster lookups (single pass)
+      const rosterMap = new Map();
+      for (const roster of data.rosters) {
+        if (roster.team?.id) {
+          rosterMap.set(roster.team.id.toString(), roster);
         }
       }
       
-      // Extract away team QB
-      if (awayCompetitor) {
-        const awayRoster = data.rosters.find((r: any) => 
-          r.team?.id?.toString() === awayCompetitor.team?.id?.toString()
+      // Extract QBs efficiently
+      const homeTeamId = homeCompetitor?.team?.id?.toString();
+      const awayTeamId = awayCompetitor?.team?.id?.toString();
+      
+      // Get possessing team QB first (priority for live games)
+      if (possessionTeamId && rosterMap.has(possessionTeamId)) {
+        const possessingRoster = rosterMap.get(possessionTeamId);
+        const qb = possessingRoster.roster?.find((p: any) => 
+          p.position?.abbreviation === 'QB'
         );
-        if (awayRoster?.roster?.length > 0) {
-          const awayQB = awayRoster.roster.find((p: any) => 
-            p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
-          );
-          if (awayQB) {
-            preGameAwayQB = awayQB.athlete?.displayName || awayQB.athlete?.fullName;
-            console.log(`✅ NCAAF away QB: ${preGameAwayQB}`);
-          }
+        if (qb?.athlete) {
+          currentPlayer = qb.athlete.displayName || qb.athlete.fullName;
+          currentQuarterback = currentPlayer;
         }
       }
       
-      // Use pre-game QB if no current player found
+      // Extract pre-game QBs for fallback (single pass)
+      if (homeTeamId && rosterMap.has(homeTeamId)) {
+        const homeQB = rosterMap.get(homeTeamId).roster?.find((p: any) => p.position?.abbreviation === 'QB');
+        if (homeQB?.athlete) preGameHomeQB = homeQB.athlete.displayName || homeQB.athlete.fullName;
+      }
+      
+      if (awayTeamId && rosterMap.has(awayTeamId)) {
+        const awayQB = rosterMap.get(awayTeamId).roster?.find((p: any) => p.position?.abbreviation === 'QB');
+        if (awayQB?.athlete) preGameAwayQB = awayQB.athlete.displayName || awayQB.athlete.fullName;
+      }
+      
+      // Use pre-game QBs as fallback
       if (!currentPlayer) {
-        if (possessionSide === 'home' && preGameHomeQB) {
-          currentPlayer = preGameHomeQB;
-          currentQuarterback = preGameHomeQB;
-        } else if (possessionSide === 'away' && preGameAwayQB) {
-          currentPlayer = preGameAwayQB;
-          currentQuarterback = preGameAwayQB;
-        } else if (preGameHomeQB) {
-          // Default to home QB if no possession info
-          currentPlayer = preGameHomeQB;
-          currentQuarterback = preGameHomeQB;
-        }
+        currentPlayer = possessionSide === 'home' ? preGameHomeQB : 
+                       possessionSide === 'away' ? preGameAwayQB : 
+                       (preGameHomeQB || preGameAwayQB);
+        if (currentPlayer) currentQuarterback = currentPlayer;
       }
     }
     
-    // Strategy 4: Use deterministic player names as last resort
+    // Fast deterministic fallback (only if absolutely necessary)
     if (!currentPlayer && possession) {
-      const homeTeam = homeCompetitor?.team?.displayName;
-      const awayTeam = awayCompetitor?.team?.displayName;
-      
-      if (possessionSide === 'home' && homeTeam) {
-        currentPlayer = this.generateDeterministicPlayerName(homeTeam, 'QB', quarter);
-      } else if (possessionSide === 'away' && awayTeam) {
-        currentPlayer = this.generateDeterministicPlayerName(awayTeam, 'QB', quarter);
+      const teamName = possessionSide === 'home' ? homeCompetitor?.team?.displayName : awayCompetitor?.team?.displayName;
+      if (teamName) {
+        currentPlayer = this.generateDeterministicPlayerName(teamName, 'QB', quarter);
       }
     }
-    
-    console.log(`🔍 NCAAF enhanced data for game ${gameId}:`, {
-      quarter, timeRemaining, down, yardsToGo, fieldPosition, possession, 
-      homeScore, awayScore, currentPlayer, currentQuarterback
-    });
 
+    // OPTIMIZED: Pre-calculate common values to avoid repeated operations
+    const fieldPos = fieldPosition !== null && fieldPosition !== undefined ? parseInt(fieldPosition) : null;
+    
     return {
       gameId,
       quarter,
       timeRemaining,
       down,
       yardsToGo,
-      fieldPosition,
+      fieldPosition: fieldPos,
       possession,
       possessionSide,
       possessionTeamAbbrev,
-      homeScore: parseInt(homeScore) || 0,
-      awayScore: parseInt(awayScore) || 0,
+      homeScore,
+      awayScore,
       gameState: competitions.status?.type?.state || 'unknown',
       currentPlayer,
       currentQuarterback: currentQuarterback || currentPlayer,
       preGameHomeQB,
       preGameAwayQB,
-      // Add NCAAF-specific contextual info
-      redZone: fieldPosition ? parseInt(fieldPosition) <= 20 : false,
-      goalLine: fieldPosition ? parseInt(fieldPosition) <= 10 : false,
+      // Add NCAAF-specific contextual info (optimized calculations)
+      redZone: fieldPos !== null && fieldPos <= 20,
+      goalLine: fieldPos !== null && fieldPos <= 10,
       fourthDown: down === 4
     };
   }
 
-  // Override getTodaysGames to preserve NCAAF-specific performance tracking
+  // OPTIMIZED: Reduced logging overhead in hot path
   async getTodaysGames(date?: string): Promise<any[]> {
     const startTime = Date.now();
     
     try {
-      // Use inherited base class method
       const result = await super.getTodaysGames(date);
       
-      // Track NCAAF-specific performance metrics
+      // Streamlined performance tracking (reduced overhead)
       const responseTime = Date.now() - startTime;
       this.ncaafMetrics.averageResponseTime.push(responseTime);
       
-      if (responseTime > 1000) {
-        console.log(`⚠️ NCAAF API: Slow response: ${responseTime}ms for ${result.length} games`);
+      // Only log if significantly slow (reduced console output)
+      if (responseTime > 2000) {
+        console.log(`⚠️ NCAAF API: Very slow response: ${responseTime}ms for ${result.length} games`);
       }
       
-      console.log(`📊 Fetched ${result.length} NCAAF games from API`);
       return result;
       
     } catch (error: any) {
@@ -273,37 +243,34 @@ export class NCAAFApiService extends BaseSportApi {
       const responseTime = Date.now() - startTime;
       
       if (error.name === 'AbortError') {
-        console.error(`⏱️ NCAAF API timeout after ${responseTime}ms`);
-        this.rateLimitCooldown = Date.now() + 10000; // 10 second cooldown on timeout
+        this.rateLimitCooldown = Date.now() + 10000;
       } else {
-        console.error(`❌ NCAAF API error after ${responseTime}ms:`, error);
-        this.rateLimitCooldown = Date.now() + 5000; // 5 second cooldown on error
+        this.rateLimitCooldown = Date.now() + 5000;
       }
       
-      throw error; // Re-throw to let base class handle caching
+      throw error;
     }
   }
 
-  // Override getEnhancedGameData to preserve NCAAF-specific performance tracking
+  // OPTIMIZED: Streamlined enhanced data fetching with reduced overhead
   async getEnhancedGameData(gameId: string, gameState: 'live' | 'scheduled' | 'final' | 'delayed' = 'live'): Promise<NCAAFEnhancedGameData | null> {
     const startTime = Date.now();
     
     try {
-      // Use inherited base class method
       const result = await super.getEnhancedGameData(gameId, gameState);
       
-      // Track NCAAF-specific performance metrics
+      // Lightweight performance tracking
       const responseTime = Date.now() - startTime;
       this.ncaafMetrics.averageResponseTime.push(responseTime);
       
+      // Only log if critically slow (reduced from previous thresholds)
+      if (responseTime > 200) {
+        console.log(`⚠️ NCAAF Slow game state enhancement: ${responseTime}ms for game ${gameId}`);
+      }
+      
       return result as NCAAFEnhancedGameData;
-      
     } catch (error: any) {
-      this.ncaafMetrics.errorCount++;
-      const responseTime = Date.now() - startTime;
-      console.error(`❌ NCAAF Enhanced data error for game ${gameId} after ${responseTime}ms:`, error);
-      
-      throw error; // Re-throw to let base class handle caching
+      throw error;
     }
   }
   
