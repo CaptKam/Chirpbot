@@ -123,6 +123,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     next();
   });
 
+  // Basic API root endpoint - fixes HEAD /api 404 spam
+  app.all('/api', (req, res) => {
+    res.json({ 
+      status: 'ChirpBot API v3.1.2',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
   // MigrationAdapter diagnostic endpoint for runtime verification
   app.get('/api/diagnostics/ingestion-status', async (req, res) => {
     try {
