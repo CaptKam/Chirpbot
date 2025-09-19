@@ -237,12 +237,16 @@ export default function Settings() {
       // Don't clear optimistic state immediately - let it persist until fresh data arrives
       // This prevents flicker during the invalidation/refetch cycle
       
-      // Invalidate to trigger refetch with fresh data
+      // Invalidate to trigger refresh with fresh data
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
       });
       
-      // Toast notification disabled to prevent popup spam during setting adjustments
+      // Show success toast for preference updates
+      toast({
+        title: "Alert Preference Updated",
+        description: `${variables.alertType} alerts ${variables.enabled ? 'enabled' : 'disabled'} for ${activeSport}`,
+      });
     },
     onError: (error: any, variables, context) => {
       // Rollback cache to previous state
