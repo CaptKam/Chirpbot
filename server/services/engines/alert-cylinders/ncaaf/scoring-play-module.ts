@@ -75,6 +75,10 @@ export default class ScoringPlayModule extends BaseAlertModule {
         awayScore,
         quarter: gameState.quarter,
         timeRemaining: gameState.timeRemaining,
+        down: gameState.down || null,
+        yardsToGo: gameState.yardsToGo || null,
+        fieldPosition: gameState.fieldPosition || null,
+        possession: gameState.possession || scoringTeam,
         scoringTeam,
         pointsScored: points
       },

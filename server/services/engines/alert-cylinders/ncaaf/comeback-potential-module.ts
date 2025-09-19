@@ -69,12 +69,16 @@ export default class ComebackPotentialModule extends BaseAlertModule {
         awayTeam: gameState.awayTeam,
         homeScore: gameState.homeScore,
         awayScore: gameState.awayScore,
+        quarter: gameState.quarter,
+        timeRemaining: gameState.timeRemaining,
+        down: gameState.down || null,
+        yardsToGo: gameState.yardsToGo || null,
+        fieldPosition: gameState.fieldPosition || null,
+        possession: gameState.possession || trailingTeam,
         trailingTeam,
         leadingTeam: this.getLeadingTeam(gameState),
         deficit: deficitInfo.deficit,
         deficitType: deficitInfo.type,
-        quarter: gameState.quarter,
-        timeRemaining: gameState.timeRemaining,
         comebackProbability: Math.round(comebackProbability),
         confidenceLevel,
         comebackFactors,
@@ -246,7 +250,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
   }
 
   private isValidComebackSituation(gameState: GameState): boolean {
-    if (!gameState.homeScore !== undefined || gameState.awayScore === undefined) return false;
+    if (gameState.homeScore === undefined || gameState.awayScore === undefined) return false;
     
     const deficit = Math.abs(gameState.homeScore - gameState.awayScore);
     

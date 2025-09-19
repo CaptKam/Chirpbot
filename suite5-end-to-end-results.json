@@ -1,0 +1,190 @@
+{
+  "suite": "Suite 5 - End-to-End Pipeline",
+  "timestamp": "2025-09-19T01:44:24.287Z",
+  "duration": 1548,
+  "scenarios": [
+    {
+      "name": "Red Zone Entry Scenario",
+      "alertType": "NCAAF_RED_ZONE",
+      "gameId": "777777777_e2e_redzone",
+      "phases": {
+        "generation": {
+          "success": true,
+          "duration": 0,
+          "alertsGenerated": 1,
+          "alerts": [
+            {
+              "alertKey": "777777777_e2e_redzone_red_zone_1758246262738",
+              "type": "NCAAF_RED_ZONE",
+              "gameId": "777777777_e2e_redzone",
+              "priority": 85,
+              "message": "Red Zone Alert: Alabama Crimson Tide at 18 yard line",
+              "context": {
+                "gameId": "777777777_e2e_redzone",
+                "fieldPosition": 18,
+                "down": 2,
+                "yardsToGo": 5,
+                "probability": 75
+              }
+            }
+          ],
+          "errors": []
+        },
+        "enhancement": {
+          "success": true,
+          "duration": 62,
+          "alertsEnhanced": 1,
+          "errors": []
+        },
+        "storage": {
+          "success": true,
+          "duration": 61,
+          "alertsPersisted": 1,
+          "errors": []
+        },
+        "delivery": {
+          "success": true,
+          "duration": 103,
+          "alertsDelivered": 1,
+          "errors": []
+        }
+      },
+      "totalLatency": 229,
+      "success": true,
+      "errors": []
+    },
+    {
+      "name": "Two Minute Warning Final",
+      "alertType": "NCAAF_TWO_MINUTE_WARNING",
+      "gameId": "777777778_e2e_twominute",
+      "phases": {
+        "generation": {
+          "success": true,
+          "duration": 1,
+          "alertsGenerated": 1,
+          "alerts": [
+            {
+              "alertKey": "777777778_e2e_twominute_two_minute_warning_1758246263272",
+              "type": "NCAAF_TWO_MINUTE_WARNING",
+              "gameId": "777777778_e2e_twominute",
+              "priority": 88,
+              "message": "Two Minute Warning: Ohio State Buckeyes leads 21-17",
+              "context": {
+                "gameId": "777777778_e2e_twominute",
+                "quarter": 4,
+                "timeRemaining": "1:45",
+                "twoMinuteWarning": true,
+                "timeSeconds": 105
+              }
+            }
+          ],
+          "errors": []
+        },
+        "enhancement": {
+          "success": true,
+          "duration": 115,
+          "alertsEnhanced": 1,
+          "errors": []
+        },
+        "storage": {
+          "success": true,
+          "duration": 20,
+          "alertsPersisted": 1,
+          "errors": []
+        },
+        "delivery": {
+          "success": true,
+          "duration": 111,
+          "alertsDelivered": 1,
+          "errors": []
+        }
+      },
+      "totalLatency": 248,
+      "success": true,
+      "errors": []
+    },
+    {
+      "name": "Close Game Fourth Quarter",
+      "alertType": "NCAAF_CLOSE_GAME",
+      "gameId": "777777779_e2e_closegame",
+      "phases": {
+        "generation": {
+          "success": true,
+          "duration": 0,
+          "alertsGenerated": 1,
+          "alerts": [
+            {
+              "alertKey": "777777779_e2e_closegame_close_game_1758246263820",
+              "type": "NCAAF_CLOSE_GAME",
+              "gameId": "777777779_e2e_closegame",
+              "priority": 87,
+              "message": "Close Game: Texas Longhorns leads by 3",
+              "context": {
+                "gameId": "777777779_e2e_closegame",
+                "homeTeam": "Texas Longhorns",
+                "awayTeam": "Oklahoma Sooners",
+                "scoreDifference": 3,
+                "leadingTeam": "Texas Longhorns",
+                "quarter": 4
+              }
+            }
+          ],
+          "errors": []
+        },
+        "enhancement": {
+          "success": true,
+          "duration": 74,
+          "alertsEnhanced": 1,
+          "errors": []
+        },
+        "storage": {
+          "success": true,
+          "duration": 25,
+          "alertsPersisted": 1,
+          "errors": []
+        },
+        "delivery": {
+          "success": true,
+          "duration": 65,
+          "alertsDelivered": 1,
+          "errors": []
+        }
+      },
+      "totalLatency": 165,
+      "success": true,
+      "errors": []
+    }
+  ],
+  "performance": {
+    "avgLatency": 214,
+    "p95Latency": 248,
+    "targetLatency": 3000
+  },
+  "phaseStats": {
+    "generation": {
+      "passed": 3,
+      "total": 3
+    },
+    "enhancement": {
+      "passed": 3,
+      "total": 3
+    },
+    "storage": {
+      "passed": 3,
+      "total": 3
+    },
+    "delivery": {
+      "passed": 3,
+      "total": 3
+    }
+  },
+  "summary": {
+    "tested": 3,
+    "passed": 3,
+    "failed": 0,
+    "passRate": 100,
+    "performanceMet": true,
+    "pipelineIntegrity": true,
+    "overallSuccess": true
+  }
+}

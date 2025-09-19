@@ -26,6 +26,10 @@ export default class NCAAFSecondHalfKickoffModule extends BaseAlertModule {
         awayScore: gameState.awayScore,
         quarter: gameState.quarter,
         timeRemaining: gameState.timeRemaining,
+        down: gameState.down || null,
+        yardsToGo: gameState.yardsToGo || null,
+        fieldPosition: gameState.fieldPosition || null,
+        possession: gameState.possession || null,
         isSecondHalf: true
       },
       priority: 85
