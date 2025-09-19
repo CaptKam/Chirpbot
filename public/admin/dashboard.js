@@ -494,12 +494,8 @@ async function loadMasterAlertStatus() {
 
 async function toggleMasterAlerts(enabled) {
     try {
-        const response = await fetch('/api/admin/master-alerts', {
+        const response = await adminRequest('/api/admin/master-alerts', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
             body: JSON.stringify({ enabled })
         });
         
@@ -822,12 +818,8 @@ function getAlertDescription(alertKey) {
 
 async function toggleGlobalAlertSetting(sport, alertType, enabled) {
     try {
-        const response = await fetch('/api/admin/global-alert-setting', {
+        const response = await adminRequest('/api/admin/global-alert-setting', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
             body: JSON.stringify({ 
                 sport: sport.toLowerCase(), 
                 alertType: alertType, 
