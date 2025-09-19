@@ -24,8 +24,8 @@ export function useAuth() {
     },
     retry: false,
     refetchInterval: false,
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnWindowFocus: true, // Enable refetch on window focus for better session detection
+    staleTime: 30 * 1000, // Cache for 30 seconds for fresher session detection
   });
 
   return {

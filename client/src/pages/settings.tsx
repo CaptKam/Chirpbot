@@ -66,6 +66,9 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
+  // Auth error state for inline banner
+  const [authError, setAuthError] = useState<string | null>(null);
+
   // Toggle management state with optimistic updates
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
   const [optimisticPreferences, setOptimisticPreferences] = useState<Record<string, boolean>>({});
@@ -119,6 +122,13 @@ export default function Settings() {
       });
     }
   }, [alertPreferences, preferencesLoading, pendingToggles]);
+
+  // Clear auth errors when user becomes authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setAuthError(null);
+    }
+  }, [isAuthenticated, user]);
 
   // Telegram settings query
   const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
@@ -261,7 +271,10 @@ export default function Settings() {
       // Extract meaningful error message
       const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
       
-      // Other errors are handled silently - the toggle will revert automatically due to optimistic updates
+      // Check for auth errors and show in banner
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('User not authenticated')) {
+        setAuthError('Authentication session expired. Your changes could not be saved.');
+      }
     },
   });
 
@@ -280,7 +293,14 @@ export default function Settings() {
         queryKey: [`/api/user/${user?.id}/telegram`]
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      // Extract meaningful error message
+      const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
+      
+      // Check for auth errors and show in banner
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('User not authenticated')) {
+        setAuthError('Authentication session expired. Please log in again.');
+      }
     },
   });
 
@@ -573,6 +593,25 @@ export default function Settings() {
           localStorage.setItem('settings-active-sport', newSport);
         }}
       />
+
+      {/* Auth Error Banner */}
+      {authError && (
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-2">
+          <div className="bg-red-900/80 backdrop-blur-sm border border-red-500/30 rounded-lg p-3 flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <span className="text-red-100">{authError}</span>
+            </div>
+            <button
+              onClick={() => setAuthError(null)}
+              className="text-red-300 hover:text-red-100 transition-colors"
+              data-testid="dismiss-auth-error"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Settings Content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">

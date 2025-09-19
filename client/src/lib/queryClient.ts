@@ -19,6 +19,12 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  if (res.status === 401) {
+    // Handle 401s by clearing auth state and redirecting
+    handle401Error();
+    throw new Error("401: Unauthorized");
+  }
+
   await throwIfResNotOk(res);
   return res;
 }
@@ -45,8 +51,13 @@ export const getQueryFn: <T>(options: {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      } else {
+        handle401Error();
+        throw new Error("401: Unauthorized");
+      }
     }
 
     await throwIfResNotOk(res);
@@ -71,3 +82,11 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Global 401 handler - defined after queryClient to avoid circular dependency
+function handle401Error() {
+  // Clear auth state
+  queryClient.setQueryData(["/api/auth/user"], null);
+  // Redirect to login
+  window.location.href = "/login";
+}

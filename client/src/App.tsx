@@ -22,7 +22,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   }
 
   if (!isAuthenticated) {
-    return <Redirect to="/" />;
+    return <Redirect to="/login" />;
   }
 
   return <Component />;
