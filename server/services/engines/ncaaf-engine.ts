@@ -125,15 +125,10 @@ export class NCAAFEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // CRITICAL FIX: Only check settings for NCAAF alert types with actual cylinder modules
-      const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
-        'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY',
-        'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL',
-        'NCAAF_SECOND_HALF_KICKOFF', 'NCAAF_MASSIVE_WEATHER'
-      ];
-
-      if (!validNCAAFAlerts.includes(alertType)) {
+      // Get available alert types dynamically from filesystem (like MLB does)
+      const availableTypes = await this.getAvailableAlertTypes();
+      
+      if (!availableTypes.includes(alertType)) {
         console.log(`❌ ${alertType} is not a valid NCAAF alert type (no cylinder module exists) - rejecting`);
         return false;
       }
@@ -463,20 +458,6 @@ export class NCAAFEngine extends BaseSportEngine {
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
   }
 
-  // Get available alert types from cylinders (only implemented modules)
-  async getAvailableAlertTypes(): Promise<string[]> {
-    return [
-      'NCAAF_GAME_START',
-      'NCAAF_TWO_MINUTE_WARNING',
-      'NCAAF_RED_ZONE',
-      'NCAAF_FOURTH_DOWN_DECISION',
-      'NCAAF_UPSET_OPPORTUNITY',
-      'NCAAF_RED_ZONE_EFFICIENCY',
-      'NCAAF_COMEBACK_POTENTIAL',
-      'NCAAF_SECOND_HALF_KICKOFF',
-      'NCAAF_MASSIVE_WEATHER'
-    ];
-  }
 
   // Get performance metrics for monitoring and debugging
   getPerformanceMetrics() {
