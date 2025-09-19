@@ -348,8 +348,15 @@ export default function Settings() {
   };
 
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
+    console.log(`🔄 TOGGLE DEBUG: ${alertType} → ${enabled}`, { 
+      userId: user?.id, 
+      pendingToggles: Array.from(pendingToggles),
+      activeSport
+    });
+    
     // Early validation
     if (!user?.id) {
+      console.log(`❌ TOGGLE BLOCKED: No user ID`);
       toast({
         title: "Authentication Required",
         description: "Please log in to change alert preferences.",
@@ -360,6 +367,7 @@ export default function Settings() {
 
     // Prevent rapid toggles of the same alert type while mutation is pending
     if (pendingToggles.has(alertType)) {
+      console.log(`❌ TOGGLE BLOCKED: ${alertType} already pending`);
       return;
     }
 
