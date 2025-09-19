@@ -650,6 +650,11 @@ export default function Settings() {
                         const isGloballyDisabled = globalSettings && typeof globalSettings === 'object' 
                           && (globalSettings as Record<string, boolean>)[alertType.key] === false;
                         
+                        // Get user preference regardless of global override to show true user intent
+                        const userPreference = optimisticPreferences[alertType.key] !== undefined 
+                          ? optimisticPreferences[alertType.key]
+                          : preferenceMap.get(alertType.key) ?? true;
+                        
                         // Show skeleton if preference is still loading
                         if (isEnabled === undefined) {
                           return (
