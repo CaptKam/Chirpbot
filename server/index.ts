@@ -222,6 +222,44 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // For nodemon restart
 
+// 🔒 SECURITY: Startup validation for critical secrets
+function validateSecurityConfig() {
+  console.log('🔒 Validating security configuration...');
+  
+  // SESSION_SECRET is absolutely critical for security
+  if (!process.env.SESSION_SECRET) {
+    console.error('❌ CRITICAL SECURITY ERROR: SESSION_SECRET environment variable is not set!');
+    console.error('   This is required for secure session management.');
+    console.error('   Please set SESSION_SECRET to a strong random value (at least 32 characters).');
+    if (process.env.NODE_ENV === 'production') {
+      console.error('   FATAL: Cannot start in production without SESSION_SECRET.');
+      process.exit(1); // Fail fast in production
+    } else {
+      console.error('   WARNING: Development server will continue but sessions will be insecure.');
+    }
+  } else {
+    const secret = process.env.SESSION_SECRET;
+    if (secret.length < 32) {
+      console.warn('⚠️  SESSION_SECRET is shorter than 32 characters. Consider using a longer secret for better security.');
+    }
+    console.log(`✅ SESSION_SECRET validation passed (${secret.length} characters)`);
+  }
+  
+  // Validate other critical security settings
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.DATABASE_URL) {
+      console.error('❌ CRITICAL: DATABASE_URL is required in production');
+      process.exit(1);
+    }
+    console.log('✅ Production security validation passed');
+  }
+  
+  console.log('🔒 Security configuration validation complete');
+}
+
+// Validate security configuration before starting
+validateSecurityConfig();
+
 const app = express();
 
 // Security and CORS

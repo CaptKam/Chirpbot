@@ -4043,7 +4043,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // ROLLOUT MANAGEMENT ENDPOINTS
   
   // Set rollout percentage for specific sport (0-100%)
-  app.post('/api/migration/rollout/sport/:sport', requireAdminAuth, async (req, res) => {
+  app.post('/api/migration/rollout/sport/:sport', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
         return res.status(503).json({ 
@@ -4134,7 +4134,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Pause all rollouts (saves current state and sets all to 0%)
-  app.post('/api/migration/rollout/pause', requireAdminAuth, async (req, res) => {
+  app.post('/api/migration/rollout/pause', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
         return res.status(503).json({ 
@@ -4172,7 +4172,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Resume rollouts to previously saved state
-  app.post('/api/migration/rollout/resume', requireAdminAuth, async (req, res) => {
+  app.post('/api/migration/rollout/resume', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
         return res.status(503).json({ 
@@ -4218,7 +4218,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // MIGRATION CONTROL ENDPOINTS
   
   // Enable MigrationAdapter components
-  app.post('/api/migration/enable', requireAdminAuth, async (req, res) => {
+  app.post('/api/migration/enable', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
         return res.status(503).json({ 
@@ -4263,7 +4263,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Disable MigrationAdapter components  
-  app.post('/api/migration/disable', requireAdminAuth, async (req, res) => {
+  app.post('/api/migration/disable', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
         return res.status(503).json({ 
