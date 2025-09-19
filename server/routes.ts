@@ -662,6 +662,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Basic health check
   app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+  // Add HEAD /api endpoint to stop 404 floods
+  app.head('/api', (req, res) => {
+    res.status(200).end();
+  });
+
   // Environment and database diagnostics endpoint for production debugging
   app.get('/api/environment-status', async (req, res) => {
     try {

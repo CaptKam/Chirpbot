@@ -35,25 +35,25 @@ export interface HealthMetrics {
   lastSuccessfulPoll: Date | null;
   lastHeartbeat: Date;
   lastError: { message: string; timestamp: Date } | null;
-  
+
   // Counters
   checksPerformed: number;
   alertsGenerated: number;
   consecutiveFailures: number;
   uptimeSeconds: number;
-  
+
   // Recovery state
   isAutoRecovering: boolean;
   recoveryAttempts: number;
-  
+
   // Configuration
   pollingIntervalMs: number;
-  
+
   // Memory integration
   memoryUsageMB: number;
   memoryStatus: 'healthy' | 'warning' | 'critical';
   lastGcTime: Date | null;
-  
+
   // Engine and cylinder failures
   engineFailures: Map<string, EngineFailureRecord>;
   cylinderFailures: Map<string, CylinderFailureRecord>;
@@ -68,20 +68,20 @@ export interface PublicHealthMetrics {
   lastSuccessfulPoll: string | null;
   lastHeartbeat: string;
   lastError: { message: string; timestamp: string } | null;
-  
+
   checksPerformed: number;
   alertsGenerated: number;
   consecutiveFailures: number;
   uptimeSeconds: number;
-  
+
   isAutoRecovering: boolean;
   recoveryAttempts: number;
   pollingIntervalMs: number;
-  
+
   memoryUsageMB: number;
   memoryStatus: 'healthy' | 'warning' | 'critical';
   lastGcTime: string | null;
-  
+
   engineFailures: Array<EngineFailureRecord & { sport: string }>;
   cylinderFailures: Array<CylinderFailureRecord>;
   fallbackPollingActive: string[];
@@ -102,11 +102,11 @@ export interface HealthInitOptions {
 
 export class UnifiedHealthMonitor {
   private static instance: UnifiedHealthMonitor | null = null;
-  
+
   private metrics: HealthMetrics;
   private healthCheckInterval: NodeJS.Timeout | null = null;
   private callbacks: HealthCallbacks = {};
-  
+
   // Configuration thresholds - More lenient to prevent recovery loops
   private readonly MAX_TIME_WITHOUT_CHECK = 600000; // 10 minutes - more tolerant
   private readonly MAX_TIME_WITHOUT_ALERT = 3600000; // 60 minutes - games may not have alerts
@@ -118,7 +118,7 @@ export class UnifiedHealthMonitor {
 
   private constructor() {
     const startTime = new Date();
-    
+
     this.metrics = {
       status: 'healthy',
       startTime,
@@ -127,26 +127,26 @@ export class UnifiedHealthMonitor {
       lastSuccessfulPoll: null,
       lastHeartbeat: startTime,
       lastError: null,
-      
+
       checksPerformed: 0,
       alertsGenerated: 0,
       consecutiveFailures: 0,
       uptimeSeconds: 0,
-      
+
       isAutoRecovering: false,
       recoveryAttempts: 0,
-      
+
       pollingIntervalMs: 30000,
-      
+
       memoryUsageMB: 0,
       memoryStatus: 'healthy',
       lastGcTime: null,
-      
+
       engineFailures: new Map(),
       cylinderFailures: new Map(),
       fallbackPollingActive: new Set()
     };
-    
+
     this.startHealthMonitoring();
   }
 
@@ -163,11 +163,11 @@ export class UnifiedHealthMonitor {
     if (options.pollingIntervalMs) {
       this.metrics.pollingIntervalMs = options.pollingIntervalMs;
     }
-    
+
     if (options.callbacks) {
       this.callbacks = { ...this.callbacks, ...options.callbacks };
     }
-    
+
     this.metrics.lastCheckTime = new Date();
     console.log('🏥 Unified Health Monitor initialized', {
       pollingInterval: this.metrics.pollingIntervalMs,
@@ -190,7 +190,7 @@ export class UnifiedHealthMonitor {
     this.metrics.checksPerformed++;
     this.metrics.consecutiveFailures = 0;
     this.metrics.lastHeartbeat = new Date();
-    
+
     // Update memory usage during checks
     this.updateMemoryMetrics();
   }
@@ -213,7 +213,7 @@ export class UnifiedHealthMonitor {
     };
     this.metrics.consecutiveFailures++;
     console.error(`⚠️ Health Monitor: Error recorded (${this.metrics.consecutiveFailures} consecutive failures):`, error.message);
-    
+
     // Trigger auto-recovery if needed
     if (this.metrics.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
       this.triggerAutoRecovery();
@@ -229,7 +229,7 @@ export class UnifiedHealthMonitor {
   public reportEngineFailure(sport: string): void {
     const existing = this.metrics.engineFailures.get(sport);
     const now = new Date();
-    
+
     const record: EngineFailureRecord = {
       sport,
       failureCount: (existing?.failureCount || 0) + 1,
@@ -238,7 +238,7 @@ export class UnifiedHealthMonitor {
       nextRetryTime: new Date(now.getTime() + this.ENGINE_RECOVERY_DELAY),
       recovered: false
     };
-    
+
     this.metrics.engineFailures.set(sport, record);
     console.log(`📊 Health Monitor: ${sport} engine failure #${record.failureCount} recorded`);
   }
@@ -257,14 +257,14 @@ export class UnifiedHealthMonitor {
   public reportCylinderFailure(cylinderName: string): void {
     const existing = this.metrics.cylinderFailures.get(cylinderName);
     const now = new Date();
-    
+
     const record: CylinderFailureRecord = {
       cylinderName,
       failureCount: (existing?.failureCount || 0) + 1,
       lastFailureTime: now,
       totalFailures: (existing?.totalFailures || 0) + 1
     };
-    
+
     this.metrics.cylinderFailures.set(cylinderName, record);
     console.log(`📊 Health Monitor: Alert cylinder ${cylinderName} failure #${record.failureCount} recorded`);
   }
@@ -272,18 +272,18 @@ export class UnifiedHealthMonitor {
   public clearCylinderFailuresOlderThan(maxAgeMs: number = this.CYLINDER_CLEANUP_AGE): number {
     const now = new Date();
     let cleared = 0;
-    
+
     for (const [key, failure] of this.metrics.cylinderFailures.entries()) {
       if (now.getTime() - failure.lastFailureTime.getTime() > maxAgeMs) {
         this.metrics.cylinderFailures.delete(key);
         cleared++;
       }
     }
-    
+
     if (cleared > 0) {
       console.log(`🧹 Health Monitor: Cleared ${cleared} old cylinder failures`);
     }
-    
+
     return cleared;
   }
 
@@ -304,11 +304,11 @@ export class UnifiedHealthMonitor {
   private updateMemoryMetrics(): void {
     const memUsage = process.memoryUsage();
     this.metrics.memoryUsageMB = Math.round(memUsage.heapUsed / 1024 / 1024);
-    
+
     const memStats = memoryManager.getStats();
     this.metrics.memoryStatus = memStats.status as 'healthy' | 'warning' | 'critical';
     this.metrics.lastGcTime = memStats.lastGC ? new Date(memStats.lastGC) : null;
-    
+
     // Trigger cleanup if needed and status is critical
     if (this.metrics.memoryStatus === 'critical' && memStats.needsCleanup) {
       console.log('🧹 Health Monitor: Triggering memory cleanup due to critical status');
@@ -320,10 +320,10 @@ export class UnifiedHealthMonitor {
 
   public computeStatus(): HealthStatus {
     const now = new Date();
-    
+
     // Update uptime
     this.metrics.uptimeSeconds = Math.floor((now.getTime() - this.metrics.startTime.getTime()) / 1000);
-    
+
     // Time-based checks
     const timeSinceLastCheck = this.metrics.lastCheckTime 
       ? now.getTime() - this.metrics.lastCheckTime.getTime()
@@ -340,13 +340,13 @@ export class UnifiedHealthMonitor {
         activeEngineFailures++;
       }
     });
-    
+
     const recentCylinderFailures = Array.from(this.metrics.cylinderFailures.values())
       .filter(f => now.getTime() - f.lastFailureTime.getTime() < this.CYLINDER_CLEANUP_AGE)
       .length;
-    
+
     // Determine status priority order: critical -> unhealthy -> degraded -> healthy
-    
+
     // Critical: No checks in configured time OR critical memory
     if (timeSinceLastCheck > this.MAX_TIME_WITHOUT_CHECK) {
       return 'critical';
@@ -357,12 +357,12 @@ export class UnifiedHealthMonitor {
     if (activeEngineFailures >= 3) {
       return 'critical';
     }
-    
+
     // Unhealthy: Multiple consecutive failures
     if (this.metrics.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
       return 'unhealthy';
     }
-    
+
     // Degraded: Various warning conditions
     if (timeSinceLastAlert > this.MAX_TIME_WITHOUT_ALERT && this.metrics.checksPerformed > 0) {
       return 'degraded';
@@ -377,7 +377,7 @@ export class UnifiedHealthMonitor {
         (now.getTime() - this.metrics.lastError.timestamp.getTime()) < 60000) {
       return 'degraded';
     }
-    
+
     return 'healthy';
   }
 
@@ -398,14 +398,14 @@ export class UnifiedHealthMonitor {
   private performHealthCheck(): void {
     // Update memory metrics
     this.updateMemoryMetrics();
-    
+
     // Clean old cylinder failures
     this.clearCylinderFailuresOlderThan();
-    
+
     // Compute current status
     const previousStatus = this.metrics.status;
     this.metrics.status = this.computeStatus();
-    
+
     // Log status changes and warnings
     if (this.metrics.status !== 'healthy') {
       const warnings = this.generateWarnings();
@@ -413,7 +413,7 @@ export class UnifiedHealthMonitor {
         console.log(`🏥 Health Status: ${this.metrics.status.toUpperCase()} - ${warnings.join(', ')}`);
       }
     }
-    
+
     // Check if we need auto-recovery
     if (this.metrics.status === 'critical' && !this.metrics.isAutoRecovering) {
       this.triggerAutoRecovery();
@@ -423,69 +423,69 @@ export class UnifiedHealthMonitor {
   private generateWarnings(): string[] {
     const now = new Date();
     const warnings: string[] = [];
-    
+
     const timeSinceLastCheck = this.metrics.lastCheckTime 
       ? now.getTime() - this.metrics.lastCheckTime.getTime()
       : Number.MAX_SAFE_INTEGER;
-    
+
     const timeSinceLastAlert = this.metrics.lastAlertGeneratedTime
       ? now.getTime() - this.metrics.lastAlertGeneratedTime.getTime()
       : 0; // Default to 0 instead of MAX_SAFE_INTEGER for new systems
-    
+
     if (timeSinceLastCheck > this.MAX_TIME_WITHOUT_CHECK) {
       const seconds = Math.floor(timeSinceLastCheck / 1000);
       warnings.push(`No health checks for ${seconds}s`);
     }
-    
+
     if (timeSinceLastAlert > this.MAX_TIME_WITHOUT_ALERT && this.metrics.checksPerformed > 0) {
       const minutes = Math.floor(timeSinceLastAlert / 60000);
-      // Only warn if time calculation is reasonable (less than 24 hours)
-      if (minutes < 1440) {
-        warnings.push(`No alerts generated for ${minutes} minutes`);
-        
-        // Reduce log spam - only warn every 30 minutes
-        if (timeSinceLastAlert % 1800000 < this.HEALTH_CHECK_INTERVAL) {
-          console.warn(`⚠️ WARNING: No alerts generated in last ${minutes} minutes. System may be working but no alert conditions met.`);
+      // Only log if time calculation is reasonable (less than 24 hours)
+        if (minutes < 1440) {
+          warnings.push(`No alerts generated for ${minutes} minutes`);
+
+          // Reduce log spam - only warn every 60 minutes instead of 30
+          if (timeSinceLastAlert % 3600000 < this.HEALTH_CHECK_INTERVAL) {
+            console.warn(`⚠️ WARNING: No alerts generated in last ${minutes} minutes. System may be working but no alert conditions met.`);
+          }
+        } else {
+          // Reset the timestamp if it's unreasonably large
+          console.log('🔧 Resetting invalid alert timestamp');
+          this.metrics.lastAlertGeneratedTime = now;
         }
-      } else {
-        // Reset the timestamp if it's unreasonably large
-        console.log('🔧 Resetting invalid alert timestamp');
-        this.metrics.lastAlertGeneratedTime = now;
-      }
     }
-    
+
     if (this.metrics.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
       warnings.push(`${this.metrics.consecutiveFailures} consecutive failures`);
     }
-    
+
     let activeEngineFailures = 0;
     this.metrics.engineFailures.forEach(failure => {
       if (!failure.recovered) {
         activeEngineFailures++;
       }
     });
-    
+
     if (activeEngineFailures > 0) {
       warnings.push(`${activeEngineFailures} engine failures`);
     }
-    
+
     const recentCylinderFailures = Array.from(this.metrics.cylinderFailures.values())
       .filter(f => now.getTime() - f.lastFailureTime.getTime() < this.CYLINDER_CLEANUP_AGE)
       .length;
-      
+
     if (recentCylinderFailures > 0) {
       warnings.push(`${recentCylinderFailures} cylinder failures`);
     }
-    
+
     if (this.metrics.lastError && 
         (now.getTime() - this.metrics.lastError.timestamp.getTime()) < 60000) {
       warnings.push('Recent errors detected');
     }
-    
+
     if (this.metrics.memoryStatus !== 'healthy') {
       warnings.push(`Memory ${this.metrics.memoryStatus} (${this.metrics.memoryUsageMB}MB)`);
     }
-    
+
     return warnings;
   }
 
@@ -499,7 +499,7 @@ export class UnifiedHealthMonitor {
 
     this.metrics.isAutoRecovering = true;
     this.metrics.recoveryAttempts++;
-    
+
     console.log(`🚑 INITIATING AUTO-RECOVERY (Attempt #${this.metrics.recoveryAttempts})`);
 
     try {
@@ -522,13 +522,13 @@ export class UnifiedHealthMonitor {
       this.metrics.consecutiveFailures = 0;
       this.metrics.status = this.computeStatus();
       this.recordSuccessfulPoll();
-      
+
       console.log('✅ AUTO-RECOVERY SUCCESSFUL! Monitoring restored.');
-      
+
     } catch (error: any) {
       console.error('❌ Auto-recovery failed:', error.message);
       this.recordError(error);
-      
+
       // Schedule retry after longer delay
       setTimeout(() => {
         this.metrics.isAutoRecovering = false;
@@ -555,20 +555,20 @@ export class UnifiedHealthMonitor {
         message: this.metrics.lastError.message,
         timestamp: this.metrics.lastError.timestamp.toISOString()
       } : null,
-      
+
       checksPerformed: this.metrics.checksPerformed,
       alertsGenerated: this.metrics.alertsGenerated,
       consecutiveFailures: this.metrics.consecutiveFailures,
       uptimeSeconds: this.metrics.uptimeSeconds,
-      
+
       isAutoRecovering: this.metrics.isAutoRecovering,
       recoveryAttempts: this.metrics.recoveryAttempts,
       pollingIntervalMs: this.metrics.pollingIntervalMs,
-      
+
       memoryUsageMB: this.metrics.memoryUsageMB,
       memoryStatus: this.metrics.memoryStatus,
       lastGcTime: this.metrics.lastGcTime?.toISOString() || null,
-      
+
       engineFailures: Array.from(this.metrics.engineFailures.values()),
       cylinderFailures: Array.from(this.metrics.cylinderFailures.values()),
       fallbackPollingActive: Array.from(this.metrics.fallbackPollingActive)
@@ -584,18 +584,18 @@ export class UnifiedHealthMonitor {
     warnings: string[];
   } {
     const now = new Date();
-    
+
     const timeSinceLastCheck = this.metrics.lastCheckTime
       ? Math.floor((now.getTime() - this.metrics.lastCheckTime.getTime()) / 1000)
       : -1;
-      
+
     const timeSinceLastAlert = this.metrics.lastAlertGeneratedTime
       ? Math.floor((now.getTime() - this.metrics.lastAlertGeneratedTime.getTime()) / 1000)
       : -1;
 
     const warnings = this.generateWarnings();
     const recommendations: string[] = [];
-    
+
     if (this.metrics.status === 'critical') {
       recommendations.push('URGENT: Critical system issues detected. Auto-recovery initiated.');
     }
@@ -656,7 +656,7 @@ export function getHealthMonitor(): UnifiedHealthMonitor {
 
 export function registerHealthRoutes(app: Express): void {
   const monitor = getHealthMonitor();
-  
+
   // GET /api/health/status → {status, uptimeSeconds, warnings}
   app.get('/api/health/status', (req, res) => {
     try {
@@ -672,7 +672,7 @@ export function registerHealthRoutes(app: Express): void {
       res.status(500).json({ error: error.message });
     }
   });
-  
+
   // GET /api/health/metrics → getPublicMetrics()
   app.get('/api/health/metrics', (req, res) => {
     try {
@@ -682,7 +682,7 @@ export function registerHealthRoutes(app: Express): void {
       res.status(500).json({ error: error.message });
     }
   });
-  
+
   // GET /api/health/memory → memoryManager.getStats()
   app.get('/api/health/memory', (req, res) => {
     try {
@@ -692,7 +692,7 @@ export function registerHealthRoutes(app: Express): void {
       res.status(500).json({ error: error.message });
     }
   });
-  
+
   // POST /api/health/heartbeat → monitor.heartbeat()
   app.post('/api/health/heartbeat', (req, res) => {
     try {
@@ -702,7 +702,7 @@ export function registerHealthRoutes(app: Express): void {
       res.status(500).json({ error: error.message });
     }
   });
-  
+
   // POST /api/health/recover → triggerAutoRecovery() (admin/auth protected)
   app.post('/api/health/recover', async (req, res) => {
     try {
@@ -713,6 +713,6 @@ export function registerHealthRoutes(app: Express): void {
       res.status(500).json({ error: error.message });
     }
   });
-  
+
   console.log('🔗 Health monitoring API routes registered');
 }

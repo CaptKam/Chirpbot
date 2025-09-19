@@ -111,7 +111,7 @@ export class UnifiedAlertGenerator {
   private calendarSyncService?: CalendarSyncService;
   private weatherOnLiveService?: WeatherOnLiveService;
   private gameStateManager?: GameStateManager;
-  
+
   // Core services
   private deduplication = unifiedDeduplicator;
   private settingsCache?: SettingsCache;
@@ -121,7 +121,7 @@ export class UnifiedAlertGenerator {
   private adaptivePollingManagers: Map<string, any> = new Map();
   private engineFailures: Map<string, EngineFailureRecord> = new Map();
 
-  // Backward compatibility API services (used only for fallback when needed)
+  // Backward compatibility API services (used for fallback only)
   private mlbApi?: MLBApiService;
   private ncaafApi?: NCAAFApiService;
   private wnbaApi?: WNBAApiService;
@@ -149,7 +149,7 @@ export class UnifiedAlertGenerator {
 
   private initializeProductionServices(): void {
     console.log('🔧 Initializing UnifiedAlertGenerator with V3 Weather-on-Live architecture...');
-    
+
     try {
       // Initialize core services first
       this.settingsCache = new SettingsCache(storage);
@@ -181,10 +181,10 @@ export class UnifiedAlertGenerator {
       this.gameStateManager.setEngineLifecycleManager(this.engineLifecycleManager);
       this.gameStateManager.setCalendarSyncService(this.calendarSyncService);
       this.gameStateManager.setWeatherOnLiveService(this.weatherOnLiveService);
-      
+
       // Connect CalendarSyncService to GameStateManager for state transitions
       this.calendarSyncService.setGameStateManager(this.gameStateManager);
-      
+
       console.log('🔗 GameStateManager connected to EngineLifecycleManager - engines will start when games go LIVE');
 
       // Initialize backward compatibility API services (used for fallback only)
@@ -195,7 +195,7 @@ export class UnifiedAlertGenerator {
       this.cflApi = new CFLApiService();
 
       console.log('✅ V3 Weather-on-Live architecture initialized successfully');
-      
+
     } catch (error) {
       console.error('❌ Failed to initialize V3 architecture:', error);
       throw error;
@@ -219,7 +219,7 @@ export class UnifiedAlertGenerator {
 
   async startMonitoring(): Promise<void> {
     console.log('⚡ Starting V3 Weather-on-Live alert monitoring...');
-    
+
     try {
       // Start health monitoring
       if (this.healthMonitor) {
@@ -234,13 +234,13 @@ export class UnifiedAlertGenerator {
 
       // V3 Architecture: Weather service starts automatically when games go LIVE
       // (No manual initialization needed - weather-on-live architecture handles this)
-      
+
       // V3 Architecture: Engine Lifecycle Manager handles engine state transitions
       // (Engines are started/stopped based on game states automatically)
-      
+
       console.log('✅ V3 Weather-on-Live monitoring started successfully!');
       console.log('🎯 Alert generation will be dynamically activated when games transition to LIVE state');
-      
+
     } catch (error) {
       console.error('❌ Failed to start V3 monitoring:', error);
       throw error;
@@ -249,7 +249,7 @@ export class UnifiedAlertGenerator {
 
   async stopMonitoring(): Promise<void> {
     console.log('🛑 Stopping V3 Weather-on-Live monitoring...');
-    
+
     try {
       // Stop calendar sync service
       if (this.calendarSyncService) {
@@ -266,9 +266,9 @@ export class UnifiedAlertGenerator {
         clearInterval(interval);
       }
       this.fallbackPollingActive.clear();
-      
+
       console.log('✅ V3 Weather-on-Live monitoring stopped successfully');
-      
+
     } catch (error) {
       console.error('❌ Error stopping V3 monitoring:', error);
     }
@@ -407,7 +407,7 @@ export class UnifiedAlertGenerator {
       totalAlerts = sportResults
         .filter(result => result.status === 'fulfilled')
         .reduce((sum, result) => sum + (result as PromiseFulfilledResult<number>).value, 0);
-      
+
       // Log any sport processing failures
       const failures = sportResults.filter(result => result.status === 'rejected');
       if (failures.length > 0) {
@@ -538,7 +538,7 @@ export class UnifiedAlertGenerator {
    */
   private async getEngineStatus(sport: string): Promise<SportEngineStatus | null> {
     const now = Date.now();
-    
+
     // Check cache first (TTL: 5 seconds)
     if (now - this.lastEngineStatusCheck < this.engineStatusCacheTTL) {
       const cached = this.engineStatusCache.get(sport);
@@ -573,7 +573,7 @@ export class UnifiedAlertGenerator {
       }
 
       return status;
-      
+
     } catch (error) {
       console.error(`❌ Error getting engine status for ${sport}:`, error);
       return null;
@@ -596,7 +596,7 @@ export class UnifiedAlertGenerator {
 
     // Check engine availability first
     const isEngineReady = await this.isEngineReadyForProcessing(sport);
-    
+
     if (isEngineReady) {
       // Use traditional API when engine is ACTIVE
       return await this.getGameDataFromApi(sport);
@@ -617,7 +617,7 @@ export class UnifiedAlertGenerator {
       }
 
       const calendarData = this.calendarSyncService.getCalendarData(sport);
-      
+
       // Check for valid calendar data before processing
       if (!calendarData || !Array.isArray(calendarData)) {
         if (this.logLevel !== 'quiet') {
@@ -625,7 +625,7 @@ export class UnifiedAlertGenerator {
         }
         return { games: [], source: 'calendar' };
       }
-      
+
       // Convert calendar data to unified format
       const games = calendarData.map((game: ImportedCalendarGameData) => ({
         gameId: game.gameId,
@@ -647,7 +647,7 @@ export class UnifiedAlertGenerator {
       }
 
       return { games, source: 'calendar' };
-      
+
     } catch (error) {
       console.error(`❌ Error getting calendar data for ${sport}:`, error);
       return { games: [], source: 'calendar' };
@@ -660,7 +660,7 @@ export class UnifiedAlertGenerator {
   private async getGameDataFromApi(sport: string): Promise<{ games: any[], source: 'engine' | 'fallback' }> {
     try {
       let games: any[] = [];
-      
+
       switch (sport) {
         case 'MLB':
           if (this.mlbApi) {
@@ -688,7 +688,7 @@ export class UnifiedAlertGenerator {
       }
 
       return { games: Array.isArray(games) ? games : [], source: 'engine' };
-      
+
     } catch (error) {
       console.error(`❌ Error getting API data for ${sport}:`, error);
       return { games: [], source: 'fallback' };
@@ -704,7 +704,7 @@ export class UnifiedAlertGenerator {
     sport: string
   ): Promise<WeatherEnhancedAlert[]> {
     if (!alerts || alerts.length === 0) return [];
-    
+
     // V3: Only enhance with weather for live games
     if (!gameState.isLive) {
       // Return alerts without weather enhancement for non-live games
@@ -731,10 +731,10 @@ export class UnifiedAlertGenerator {
       const enhancedAlerts: WeatherEnhancedAlert[] = alerts.map(alert => {
         // Check if this alert type benefits from weather enhancement
         const isWeatherRelevant = this.isAlertWeatherRelevant(alert.type, sport);
-        
+
         if (isWeatherRelevant) {
           const severity = this.calculateWeatherSeverity(weatherContext);
-          
+
           return {
             ...alert,
             weatherContext,
@@ -744,7 +744,7 @@ export class UnifiedAlertGenerator {
             priority: alert.priority + (severity === 'high' ? 10 : severity === 'extreme' ? 20 : 0)
           };
         }
-        
+
         return { ...alert };
       });
 
@@ -754,7 +754,7 @@ export class UnifiedAlertGenerator {
       }
 
       return enhancedAlerts;
-      
+
     } catch (error) {
       console.error(`❌ Error enhancing alerts with weather context:`, error);
       // Return original alerts on error
@@ -769,7 +769,7 @@ export class UnifiedAlertGenerator {
     // V3: Use RUNTIME config to determine weather relevance
     const sportConfig = RUNTIME.cylinders[sport];
     if (!sportConfig) return false;
-    
+
     // Check if alert type relates to weather-sensitive situations
     const weatherKeywords = ['WIND', 'WEATHER', 'RAIN', 'TEMP'];
     return weatherKeywords.some((trigger: string) => 
@@ -786,22 +786,22 @@ export class UnifiedAlertGenerator {
     const windSpeed = currentWeather?.windSpeed || 0;
     const temperature = currentWeather?.temperature || 70;
     const precipitation = currentWeather?.precipitation || 0;
-    
+
     let severityScore = 0;
-    
+
     // Wind impact
     if (windSpeed > 25) severityScore += 3;
     else if (windSpeed > 15) severityScore += 2;
     else if (windSpeed > 10) severityScore += 1;
-    
+
     // Temperature impact
     if (temperature > 95 || temperature < 40) severityScore += 2;
     else if (temperature > 90 || temperature < 50) severityScore += 1;
-    
+
     // Precipitation impact
     if (precipitation && precipitation > 0.5) severityScore += 2;
     else if (precipitation && precipitation > 0.1) severityScore += 1;
-    
+
     if (severityScore >= 5) return 'extreme';
     if (severityScore >= 3) return 'high';
     if (severityScore >= 1) return 'moderate';
@@ -892,7 +892,7 @@ export class UnifiedAlertGenerator {
     if (this.mode === 'demo') return 0;
 
     let totalAlerts = 0;
-    
+
     // V3: Check engine state before processing
     const engineStatus = await this.getEngineStatus(sport);
     if (!engineStatus) {
@@ -911,7 +911,7 @@ export class UnifiedAlertGenerator {
     }
 
     const engine = engineStatus.engine;
-    
+
     if (this.logLevel !== 'quiet') {
       console.log(`🎯 ${sport}: Engine ACTIVE - processing ${games.length} games for alerts`);
     }
@@ -1119,7 +1119,7 @@ export class UnifiedAlertGenerator {
                           botToken: user.telegramBotToken,
                           chatId: user.telegramChatId
                         };
-                        
+
                         // Create properly structured alert for Telegram with gameInfo context
                         const telegramAlert = {
                           type: alertData.type,
@@ -1150,7 +1150,7 @@ export class UnifiedAlertGenerator {
                           message: alertResult.message,
                           payload: alertData.payload
                         };
-                        
+
                         await sendTelegramAlert(telegramConfig, telegramAlert);
                       }
                     } catch (telegramError) {
@@ -1164,6 +1164,11 @@ export class UnifiedAlertGenerator {
                 // Alert successfully processed and deduplication handled by shouldSendAlert()
               }
             }
+          } else {
+            // Debug logging if no alerts generated but live games exist
+            if (this.logLevel !== 'quiet' && games.length > 0) {
+              console.log(`🔍 DEBUG: No alerts generated for ${sport} despite ${games.length} live games`);
+            }
           }
         } catch (gameError) {
           console.error(`❌ Error processing ${sport} game ${game.gameId || game.id}:`, gameError);
@@ -1173,11 +1178,11 @@ export class UnifiedAlertGenerator {
       return totalAlerts;
     } catch (error) {
       console.error(`❌ Critical error in V3 processGamesWithEngine for ${sport}:`, error);
-      
+
       // V3: Enhanced error handling - invalidate cache and check service availability
       this.engineStatusCache.delete(sport);
       this.lastEngineStatusCheck = 0;
-      
+
       // Check if this is a service availability error (non-critical)
       if ((error as Error).message?.includes('not available') || (error as Error).message?.includes('unavailable')) {
         if (this.logLevel !== 'quiet') {
@@ -1185,7 +1190,7 @@ export class UnifiedAlertGenerator {
         }
         return 0; // Return 0 alerts instead of throwing
       }
-      
+
       throw error;
     }
   }

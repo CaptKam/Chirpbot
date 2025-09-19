@@ -37,6 +37,7 @@ console.log(`🔒 Single instance lock acquired for PID ${process.pid}`);
 console.log("🔍 DEBUG: About to check __migration_adapter_bootstrapped__ flag");
 if (!(globalThis as any).__migration_adapter_bootstrapped__) {
   console.log("🔍 DEBUG: __migration_adapter_bootstrapped__ is false, starting bootstrap");
+  console.log("🔄 DataIngestionService already running - MigrationAdapter will coordinate");
   (globalThis as any).__migration_adapter_bootstrapped__ = true;
   console.log("📋 MIGRATION ADAPTER: BOOTSTRAP FIRING (top‑level)");
   void (async () => {
