@@ -110,8 +110,11 @@ class UltimateServerManager {
   }
   
   async checkServerHealth() {
+    // Use the same port logic as the server (PORT env var or default to 3000)
+    const port = process.env.PORT || 3000;
+    
     return new Promise((resolve) => {
-      const req = http.get('http://localhost:5000/api/health', { timeout: 5000 }, (res) => {
+      const req = http.get(`http://localhost:${port}/api/health`, { timeout: 5000 }, (res) => {
         resolve(res.statusCode === 200);
       });
       
