@@ -131,7 +131,7 @@ export class NCAAFEngine extends BaseSportEngine {
         return false;
       }
 
-      return await unifiedSettings.isAlertEnabled(this.sport, alertType);
+      return await unifiedSettings.isAlertEnabledForGeneration(this.sport, alertType);
     } catch (error) {
       console.error(`NCAAF Settings cache error for ${alertType}:`, error);
       return true; // Default to true if cache fails

@@ -214,7 +214,7 @@ export class UnifiedAlertGenerator {
       return false;
     }
 
-    return this.settingsCache.isAlertEnabled(sport, alertType);
+    return this.settingsCache.isAlertEnabledForGeneration(sport, alertType);
   }
 
   async startMonitoring(): Promise<void> {

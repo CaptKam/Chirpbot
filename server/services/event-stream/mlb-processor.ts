@@ -187,7 +187,7 @@ export class MLBProcessor extends BaseProcessor {
         try {
           // Check if alert type is enabled in settings
           const unifiedSettings = getUnifiedSettings();
-          const isAlertEnabled = await unifiedSettings.isAlertEnabled('mlb', alertType);
+          const isAlertEnabled = await unifiedSettings.isAlertEnabledForGeneration('mlb', alertType);
           if (!isAlertEnabled) {
             if (this.config.shadowMode) {
               this.log('debug', `Alert type ${alertType} disabled by settings`);

@@ -646,7 +646,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       const enabledAlerts = [];
       
       for (const alertType of allAlerts) {
-        if (await unifiedSettings.isAlertEnabled(sportUpper, alertType)) {
+        if (await unifiedSettings.isAlertEnabledForGeneration(sportUpper, alertType)) {
           enabledAlerts.push(alertType);
         }
       }

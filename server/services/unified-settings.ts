@@ -131,35 +131,72 @@ export class UnifiedSettings {
   }
 
   /**
-   * Check if specific alert type is enabled (with caching)
+   * Check if specific alert type should be visible in UI (checks global admin settings only)
+   * This method is specifically for UI visibility - does not consider user preferences
    * 🔧 CACHE FIX: Sport normalization handled in getGlobalSettings
    */
+  async isAlertVisible(sport: string, alertType: string): Promise<boolean> {
+    const settings = await this.getGlobalSettings(sport);
+    const isVisible = settings[alertType] !== false; // Default to visible if not explicitly disabled
+    
+    // Debug logging for hidden alerts
+    if (!isVisible) {
+      console.log(`👁️ Alert hidden from UI: ${alertType} (${sport.toLowerCase()}) - disabled by admin`);
+    }
+    
+    return isVisible;
+  }
+
+  /**
+   * Check if specific alert type is enabled for generation (with caching)
+   * This method is specifically for alert generation logic - includes all overrides
+   * 🔧 CACHE FIX: Sport normalization handled in getGlobalSettings
+   * @deprecated Consider using isAlertEnabledForGeneration() for clarity
+   */
   async isAlertEnabled(sport: string, alertType: string): Promise<boolean> {
-    // FORCE ENABLE OVERRIDE - bypass all caching for emergency recovery
+    return this.isAlertEnabledForGeneration(sport, alertType);
+  }
+
+  /**
+   * Check if specific alert type is enabled for alert generation
+   * This method is specifically for backend alert generation - INDEPENDENT of admin UI visibility controls
+   * Only checks emergency overrides - global settings ONLY control UI visibility, NOT generation
+   * 
+   * CRITICAL: This method should NEVER consult global admin settings to ensure alert generation
+   * is completely separate from UI visibility controls per system requirements.
+   */
+  async isAlertEnabledForGeneration(sport: string, alertType: string): Promise<boolean> {
+    // FORCE ENABLE OVERRIDE - bypass all checks for emergency recovery
     if (process.env.CHIRPBOT_ALERTS_FORCE_ENABLE === 'true') {
       console.log(`🚨 FORCE ENABLE: ${alertType} (emergency override active)`);
       return true;
     }
 
-    const settings = await this.getGlobalSettings(sport);
-    const isEnabled = settings[alertType] !== false; // Default to enabled
+    // CRITICAL FIX: Alert generation is now completely independent of global admin settings
+    // Global settings ONLY control UI visibility, NOT alert generation
+    // This ensures alerts are always generated and only filtered at the UI level
+    console.log(`✅ Alert generation enabled: ${alertType} (${sport.toLowerCase()}) - independent of UI settings`);
     
-    // Debug logging for suppressed alerts
-    if (!isEnabled) {
-      console.log(`❌ Alert suppressed by settings: ${alertType} (${sport.toLowerCase()})`);
-    }
-    
-    return isEnabled;
+    return true; // Always return true for generation (except emergency overrides)
   }
 
   /**
-   * Pre-filter disabled alert types to skip processing entirely
+   * Get all available alert types for generation processing
+   * CRITICAL: This method returns ALL alert types for generation, independent of UI visibility settings
+   * Global settings ONLY control UI visibility, NOT generation filtering
+   * 
+   * @deprecated This method should not be used for pre-filtering generation.
+   * Alert generation should process all alert types and filter only at UI level.
    */
   async getEnabledAlertTypes(sport: string): Promise<string[]> {
-    const settings = await this.getGlobalSettings(sport);
-    return Object.entries(settings)
-      .filter(([_, enabled]) => enabled !== false)
-      .map(([alertType, _]) => alertType);
+    // CRITICAL FIX: Return all available alert types for the sport, not filtered by global settings
+    // Global settings should only affect UI visibility, not generation processing
+    const defaults = this.getDefaultAlertSettings(sport.toLowerCase());
+    const allAlertTypes = Object.keys(defaults);
+    
+    console.log(`📋 Available alert types for generation (${sport.toLowerCase()}): ${allAlertTypes.length} types - independent of UI settings`);
+    
+    return allAlertTypes;
   }
 
   // ===================================
