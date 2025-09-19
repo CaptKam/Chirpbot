@@ -366,7 +366,7 @@ export class NCAAFApiService extends BaseSportApi {
         console.error(`❌ NCAAF Error processing game ${event.id}:`, error);
         return null;
       }
-    }).filter((game): game is BaseGameData => game !== null);
+    }).filter((game) => game !== null) as BaseGameData[];
   }
 
   // Calculate intelligent cache TTL based on game states
