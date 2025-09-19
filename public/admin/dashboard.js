@@ -688,7 +688,7 @@ function renderSportSettings(sport, settings) {
                                 <div class="alert-item-toggle">
                                     <label class="toggle-switch" data-testid="toggle-${alert.key.toLowerCase()}">
                                         <input type="checkbox" ${alert.enabled ? 'checked' : ''} 
-                                               onchange="toggleGlobalAlertSetting('${sport}', '${alert.key}', this.checked)">
+                                               onchange="toggleGlobalAlertSetting('${sport}', '${alert.key}', this.checked, this)">
                                         <span class="slider"></span>
                                     </label>
                                 </div>
@@ -766,7 +766,7 @@ function getAlertDescription(alertKey) {
     return 'Advanced game situation alert';
 }
 
-async function toggleGlobalAlertSetting(sport, alertType, enabled) {
+async function toggleGlobalAlertSetting(sport, alertType, enabled, toggleElement) {
     try {
         const response = await fetch('/api/admin/global-alert-setting', {
             method: 'PUT',
@@ -783,16 +783,18 @@ async function toggleGlobalAlertSetting(sport, alertType, enabled) {
             loadAlertStatistics();
         } else {
             showNotification(`Failed to update ${alertType}`, 'error');
-            // Revert toggle
-            const toggle = event.target;
-            if (toggle) toggle.checked = !enabled;
+            // Revert toggle - use the passed toggle element
+            if (toggleElement) {
+                toggleElement.checked = !enabled;
+            }
         }
     } catch (error) {
         console.error('Failed to toggle alert setting:', error);
         showNotification(`Failed to update ${alertType}`, 'error');
-        // Revert toggle
-        const toggle = event.target;
-        if (toggle) toggle.checked = !enabled;
+        // Revert toggle - use the passed toggle element
+        if (toggleElement) {
+            toggleElement.checked = !enabled;
+        }
     }
 }
 
