@@ -59,6 +59,30 @@ const ALERT_TYPE_CONFIG: Record<string, any[]> = {
     { key: 'WNBA_COMEBACK_POTENTIAL', label: 'Comeback Potential', description: 'Identifies potential comeback scenarios and momentum shifts' },
     { key: 'WNBA_CRUNCH_TIME_DEFENSE', label: 'Crunch Time Defense', description: 'Critical defensive stops needed in clutch situations' },
     { key: 'WNBA_CHAMPIONSHIP_IMPLICATIONS', label: 'Championship Implications', description: 'Games with playoff positioning and championship impact' }
+  ],
+  NBA: [
+    // Core NBA game situation alerts
+    { key: 'NBA_GAME_START', label: 'Game Start', description: 'Alert when NBA game begins' },
+    { key: 'NBA_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Official two-minute warning in NBA games' },
+    { key: 'NBA_FINAL_MINUTES', label: 'Final Minutes', description: 'Alert during final minutes of close games' },
+    { key: 'NBA_FOURTH_QUARTER', label: 'Fourth Quarter', description: 'Alert when fourth quarter begins' },
+    { key: 'NBA_RED_ZONE', label: 'Red Zone Entry', description: 'Team enters scoring position' },
+    { key: 'NBA_COMEBACK_POTENTIAL', label: 'Comeback Potential', description: 'Team positioned for comeback' },
+    { key: 'NBA_CLOSE_GAME', label: 'Close Game', description: 'Tight game in final quarters' },
+    { key: 'NBA_CLUTCH_TIME', label: 'Clutch Time', description: 'Critical moments in close games' },
+    { key: 'NBA_OVERTIME', label: 'Overtime', description: 'Game extends to overtime' }
+  ],
+  CFL: [
+    // Core CFL game situation alerts
+    { key: 'CFL_GAME_START', label: 'Game Start', description: 'Alert when CFL game begins' },
+    { key: 'CFL_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Final 2 minutes of each half' },
+    { key: 'CFL_RED_ZONE', label: 'Red Zone Entry', description: 'Team enters the red zone (20-yard line)' },
+    { key: 'CFL_FOURTH_DOWN_DECISION', label: 'Fourth Down Decision', description: 'Critical fourth down situations' },
+    { key: 'CFL_COMEBACK_POTENTIAL', label: 'Comeback Potential', description: 'Team positioned for comeback' },
+    { key: 'CFL_CLOSE_GAME', label: 'Close Game', description: 'Tight game in final quarters' },
+    { key: 'CFL_FOURTH_QUARTER', label: 'Fourth Quarter', description: 'Final quarter begins in close games' },
+    { key: 'CFL_HALFTIME', label: 'Halftime', description: 'Halftime break and adjustments' },
+    { key: 'CFL_ROUGE_OPPORTUNITY', label: 'Rouge Opportunity', description: 'Single point scoring opportunity' }
   ]
 };
 
@@ -100,7 +124,7 @@ export default function Settings() {
 
   // Available alert types query from cylinders (accessible to all authenticated users)
   const { data: availableAlerts, isLoading: availableAlertsLoading } = useQuery({
-    queryKey: [`/api/available-alerts/${activeSport}`],
+    queryKey: [`/api/available-alerts/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes (rarely changes)
     refetchInterval: 60 * 1000, // Refetch every 60 seconds
@@ -650,7 +674,8 @@ export default function Settings() {
                       {activeSport === 'MLB' ? '⚾' : activeSport === 'NFL' ? '🏈' : activeSport === 'NCAAF' ? '🏈' : activeSport === 'WNBA' ? '🏀' : activeSport === 'CFL' ? '🏈' : '🏀'} {activeSport} Game Alerts
                     </h3>
                     <div className="space-y-3">
-                      {(availableAlerts as any[] || []).map((alertType) => {
+                      {/* Defensive fallback: Use API data if available, otherwise fallback to local config */}
+                      {(Array.isArray(availableAlerts) && availableAlerts.length > 0 ? availableAlerts : ALERT_TYPE_CONFIG[activeSport] || []).map((alertType: any) => {
                         const isEnabled = getAlertPreference(activeSport, alertType.key);
                         // Check if this alert is globally disabled from the globalSettings we fetched
                         const isGloballyDisabled = globalSettings && typeof globalSettings === 'object' 
