@@ -429,7 +429,14 @@ export default function Settings() {
     updateAlertPreferenceMutation.mutate(
       { alertType, enabled },
       {
+        onSuccess: () => {
+          console.log(`Toggle ${alertType} succeeded`);
+        },
+        onError: (error) => {
+          console.error(`Toggle ${alertType} failed:`, error);
+        },
         onSettled: () => {
+          console.log(`Toggle ${alertType} settled, clearing pending state`);
           // Remove from pending toggles when mutation completes (success or error)
           setPendingToggles(prev => {
             const newSet = new Set(prev);
@@ -445,6 +452,21 @@ export default function Settings() {
   useEffect(() => {
     setPendingToggles(new Set());
   }, [activeSport]);
+
+  // Emergency timeout to clear stuck pending toggles
+  useEffect(() => {
+    const clearStuckToggles = () => {
+      if (pendingToggles.size > 0) {
+        console.warn('Clearing stuck pending toggles:', Array.from(pendingToggles));
+        setPendingToggles(new Set());
+        setToggleErrors(new Map());
+        setToggleSuccess(new Map());
+      }
+    };
+
+    const timeoutId = setTimeout(clearStuckToggles, 10000); // Clear after 10 seconds
+    return () => clearTimeout(timeoutId);
+  }, [pendingToggles]);
 
   // Populate Telegram settings from query data
   useEffect(() => {
