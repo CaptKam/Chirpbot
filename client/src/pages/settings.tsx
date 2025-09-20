@@ -82,8 +82,10 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Simplified toggle management without complex optimistic state
+  // Enhanced toggle management with status tracking
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
+  const [toggleSuccess, setToggleSuccess] = useState<Map<string, boolean>>(new Map());
+  const [toggleErrors, setToggleErrors] = useState<Map<string, string>>(new Map());
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
@@ -112,12 +114,13 @@ export default function Settings() {
     refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
-  // Clear pending toggles when fresh data arrives from server
+  // Clear pending toggles and status indicators when fresh data arrives from server
   useEffect(() => {
     if (!preferencesLoading && alertPreferences) {
-      // Clear pending state only when fresh data has arrived
-      // This is much simpler than complex optimistic state management
+      // Clear all pending states when fresh data has arrived
       setPendingToggles(new Set());
+      setToggleSuccess(new Map());
+      setToggleErrors(new Map());
     }
   }, [alertPreferences, preferencesLoading]);
 
@@ -219,18 +222,37 @@ export default function Settings() {
       return { previousData, alertType };
     },
     onSuccess: (data, variables, context) => {
-      // Don't clear optimistic state immediately - let it persist until fresh data arrives
-      // This prevents flicker during the invalidation/refetch cycle
+      // Show success indicator
+      if (variables?.alertType) {
+        setToggleSuccess(prev => new Map(prev).set(variables.alertType, true));
+        
+        // Clear success indicator after 2 seconds
+        setTimeout(() => {
+          setToggleSuccess(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(variables.alertType);
+            return newMap;
+          });
+        }, 2000);
+      }
       
-      // Invalidate user preferences AND global settings to ensure cache coherency
+      // 🚀 MULTI-TAB CONSISTENCY: Invalidate with explicit cache busting
       queryClient.invalidateQueries({
-        queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`]
+        queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
+        exact: true
       });
       queryClient.invalidateQueries({
-        queryKey: [`/api/global-alert-settings/${activeSport}`]
+        queryKey: [`/api/global-alert-settings/${activeSport}`],
+        exact: true
       });
       
-      // Toast notification disabled to prevent popup spam during setting adjustments
+      // Also invalidate the broader patterns for cross-tab consistency
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.includes('alert-preferences') || key?.includes('global-alert-settings');
+        }
+      });
     },
     onError: (error: any, variables, context) => {
       // Rollback cache to previous state
@@ -239,14 +261,19 @@ export default function Settings() {
         queryClient.setQueryData(queryKey, context.previousData);
       }
       
-      // Clear optimistic state for this alert type on error
-      // This reverts the toggle back to its previous state
+      // 🚨 ENHANCED ERROR FEEDBACK: Show inline error indicator
       if (variables?.alertType) {
-        setOptimisticPreferences(prev => {
-          const newState = { ...prev };
-          delete newState[variables.alertType];
-          return newState;
-        });
+        const errorMessage = error?.message || error?.toString?.() || 'Update failed';
+        setToggleErrors(prev => new Map(prev).set(variables.alertType, errorMessage));
+        
+        // Clear error indicator after 5 seconds
+        setTimeout(() => {
+          setToggleErrors(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(variables.alertType);
+            return newMap;
+          });
+        }, 5000);
       }
       
       // Extract meaningful error message
@@ -260,7 +287,7 @@ export default function Settings() {
           variant: "destructive",
         });
       }
-      // Other errors are handled silently - the toggle will revert automatically due to optimistic updates
+      // Other errors show inline feedback instead of toast spam
     },
   });
 
@@ -354,10 +381,22 @@ export default function Settings() {
       return;
     }
 
-    // Prevent rapid toggles of the same alert type while mutation is pending
+    // 🛡️ PRODUCTION SAFE: Prevent rapid toggles while mutation is pending
     if (pendingToggles.has(alertType)) {
       return;
     }
+
+    // Clear any previous status indicators for this alert
+    setToggleSuccess(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(alertType);
+      return newMap;
+    });
+    setToggleErrors(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(alertType);
+      return newMap;
+    });
 
     // Add to pending toggles for immediate UI feedback
     setPendingToggles(prev => new Set([...prev, alertType]));

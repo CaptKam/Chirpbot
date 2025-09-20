@@ -1,6 +1,9 @@
 import { storage } from '../storage';
 import { AlertResult } from './engines/base-engine';
 
+// 🛡️ SECURITY: Schema validation and XSS protection
+import { z } from 'zod';
+
 // === UNIFIED INTERFACES ===
 export interface CrossSportContext {
   sport: 'MLB' | 'NFL' | 'NCAAF' | 'WNBA' | 'NBA' | 'CFL';
@@ -91,6 +94,32 @@ export interface UnifiedAIResponse {
   confidence: number;
   sportSpecificData: any;
 }
+
+// 🛡️ SECURITY: Strict schema validation for AI responses
+const AIResponseSchema = z.object({
+  sport: z.string().max(10),
+  enhancedTitle: z.string().max(200),
+  enhancedMessage: z.string().max(500),
+  contextualInsights: z.array(z.string().max(150)).max(5),
+  actionableRecommendation: z.string().max(200),
+  urgencyLevel: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+  bettingContext: z.object({
+    recommendation: z.string().max(150),
+    confidence: z.number().min(0).max(100),
+    reasoning: z.array(z.string().max(100)).max(3)
+  }).optional(),
+  gameProjection: z.object({
+    winProbability: z.object({
+      home: z.number().min(0).max(100),
+      away: z.number().min(0).max(100)
+    }),
+    keyFactors: z.array(z.string().max(100)).max(3),
+    nextCriticalMoment: z.string().max(100)
+  }).optional(),
+  aiProcessingTime: z.number(),
+  confidence: z.number().min(0).max(100),
+  sportSpecificData: z.any()
+});
 
 interface AIJob {
   id: string;
@@ -665,6 +694,39 @@ export class UnifiedAIProcessor {
     };
   }
 
+  // === SECURITY METHODS ===
+  
+  // 🛡️ SECURITY: Input sanitization to prevent injection attacks
+  private sanitizeInput(input: string): string {
+    if (!input) return '';
+    
+    // Remove potentially dangerous characters and sequences
+    return input
+      .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '') // Remove iframe tags
+      .replace(/javascript:/gi, '') // Remove javascript: protocols
+      .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      .replace(/[<>"']/g, '') // Remove HTML characters
+      .trim()
+      .substring(0, 2000); // Limit length
+  }
+
+  // 🛡️ SECURITY: AI response sanitization to prevent XSS
+  private sanitizeAIResponse(response: string): string {
+    if (!response) return '';
+    
+    // Sanitize AI response content
+    return response
+      .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '') // Remove iframe tags  
+      .replace(/javascript:/gi, '') // Remove javascript: protocols
+      .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      .replace(/data:/gi, '') // Remove data: URIs
+      .replace(/vbscript:/gi, '') // Remove vbscript: protocols
+      .trim()
+      .substring(0, 1000); // Limit response length
+  }
+
   // === PLACEHOLDER METHODS (to be implemented) ===
   
   private async callOpenAI(prompt: string): Promise<string | null> {
@@ -672,6 +734,13 @@ export class UnifiedAIProcessor {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) {
         console.warn('⚠️ Unified AI: OPENAI_API_KEY not configured');
+        return null;
+      }
+
+      // 🛡️ SECURITY: Validate and sanitize prompt input
+      const sanitizedPrompt = this.sanitizeInput(prompt);
+      if (!sanitizedPrompt || sanitizedPrompt.length > 2000) {
+        console.error('🚨 Security: Invalid or oversized prompt rejected');
         return null;
       }
 
@@ -686,7 +755,7 @@ export class UnifiedAIProcessor {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: prompt },
+            { role: 'system', content: sanitizedPrompt },
             { 
               role: 'user', 
               content: 'Provide a concise, contextual analysis (2-3 sentences max) with betting insights and key factors to watch. Focus on actionable information.' 
@@ -707,8 +776,10 @@ export class UnifiedAIProcessor {
       const aiResponse = data.choices?.[0]?.message?.content;
       
       if (aiResponse && aiResponse.trim().length > 0) {
+        // 🛡️ SECURITY: Sanitize AI response before processing
+        const sanitizedResponse = this.sanitizeAIResponse(aiResponse);
         console.log('✅ Unified AI: Successfully got AI response');
-        return aiResponse;
+        return sanitizedResponse;
       }
       
       console.warn('⚠️ Unified AI: Empty response from OpenAI');

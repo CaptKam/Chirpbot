@@ -31,6 +31,8 @@ interface CacheEntry {
   data: CachedSettings[string];
   timestamp: number;
   lastRefresh: number;
+  staleTimestamp?: number; // For stale-while-revalidate
+  isRevalidating?: boolean; // For cache-stampede protection
 }
 
 interface SettingsStats {
@@ -52,14 +54,21 @@ interface DiagnosticsResult {
 
 export class UnifiedSettings {
   private cache = new Map<string, CacheEntry>();
-  private readonly CACHE_DURATION = 5 * 1000; // 5 seconds (reduced to prevent toggle persistence conflicts)
+  private readonly CACHE_DURATION = 45 * 1000; // 45 seconds fresh TTL
+  private readonly STALE_DURATION = 5 * 60 * 1000; // 5 minutes stale TTL
   private readonly MAX_CACHE_SIZE = 50;
   private storage: any;
+  
+  // Cache-stampede protection: track in-flight requests
+  private inflightRequests = new Map<string, Promise<Record<string, boolean>>>();
 
   // Performance tracking
   private metrics = {
     cacheHits: 0,
     cacheMisses: 0,
+    staleServed: 0,
+    backgroundRefresh: 0,
+    stampedesPrevented: 0,
     databaseQueries: 0,
     cacheEvictions: 0,
     settingsRequests: 0
@@ -79,8 +88,8 @@ export class UnifiedSettings {
   // ===================================
 
   /**
-   * Get settings with smart caching - Enhanced from original SettingsCache
-   * 🔧 CACHE FIX: Normalize sport keys to lowercase for consistency
+   * Get settings with stale-while-revalidate caching and cache-stampede protection
+   * 🚀 PRODUCTION READY: Implements proper stale-while-revalidate with conservative fallbacks
    */
   async getGlobalSettings(sport: string): Promise<Record<string, boolean>> {
     // 🔧 CACHE FIX: Normalize sport to lowercase for consistent cache keys
@@ -90,24 +99,98 @@ export class UnifiedSettings {
     
     this.metrics.settingsRequests++;
 
-    // Return cached if fresh
+    // Cache-stampede protection: if request is in-flight, wait for it
+    const inflightRequest = this.inflightRequests.get(canonicalSport);
+    if (inflightRequest) {
+      this.metrics.stampedesPrevented++;
+      console.log(`🛡️ Cache stampede prevented for ${canonicalSport}`);
+      return await inflightRequest;
+    }
+
+    // Return fresh cache if available
     if (cached && (now - cached.timestamp) < this.CACHE_DURATION) {
       this.metrics.cacheHits++;
       return cached.data;
     }
 
-    this.metrics.cacheMisses++;
-    this.metrics.databaseQueries++;
+    // Stale-while-revalidate: return stale data and refresh in background
+    if (cached && (now - cached.timestamp) < this.STALE_DURATION && !cached.isRevalidating) {
+      this.metrics.staleServed++;
+      console.log(`📦 Serving stale cache for ${canonicalSport}, refreshing in background`);
+      
+      // Mark as revalidating to prevent multiple background refreshes
+      cached.isRevalidating = true;
+      
+      // Background refresh (fire and forget)
+      this.backgroundRefresh(canonicalSport).catch(error => {
+        console.error(`Background refresh failed for ${canonicalSport}:`, error);
+        // Reset revalidating flag on error
+        if (this.cache.has(canonicalSport)) {
+          this.cache.get(canonicalSport)!.isRevalidating = false;
+        }
+      });
+      
+      return cached.data;
+    }
 
-    // Fetch fresh data
+    // No valid cache: fetch fresh data with stampede protection
+    const fetchPromise = this.fetchFreshSettings(canonicalSport);
+    this.inflightRequests.set(canonicalSport, fetchPromise);
+
+    try {
+      const result = await fetchPromise;
+      return result;
+    } finally {
+      // Always clean up inflight request
+      this.inflightRequests.delete(canonicalSport);
+    }
+  }
+
+  /**
+   * Background refresh for stale-while-revalidate pattern
+   */
+  private async backgroundRefresh(canonicalSport: string): Promise<void> {
+    this.metrics.backgroundRefresh++;
+    
     try {
       const freshData = await this.storage.getGlobalAlertSettings(canonicalSport);
+      const now = Date.now();
       
-      // 🔧 CACHE FIX: Cache with normalized key
       this.cache.set(canonicalSport, {
         data: freshData,
         timestamp: now,
-        lastRefresh: now
+        lastRefresh: now,
+        isRevalidating: false
+      });
+      
+      console.log(`🔄 Background refresh completed for ${canonicalSport}`);
+    } catch (error) {
+      console.error(`Background refresh failed for ${canonicalSport}:`, error);
+      // Reset revalidating flag
+      const cached = this.cache.get(canonicalSport);
+      if (cached) {
+        cached.isRevalidating = false;
+      }
+    }
+  }
+
+  /**
+   * Fetch fresh settings with conservative error handling
+   */
+  private async fetchFreshSettings(canonicalSport: string): Promise<Record<string, boolean>> {
+    this.metrics.cacheMisses++;
+    this.metrics.databaseQueries++;
+    const now = Date.now();
+
+    try {
+      const freshData = await this.storage.getGlobalAlertSettings(canonicalSport);
+      
+      // Cache fresh data
+      this.cache.set(canonicalSport, {
+        data: freshData,
+        timestamp: now,
+        lastRefresh: now,
+        isRevalidating: false
       });
 
       // Cleanup old cache entries
@@ -117,22 +200,26 @@ export class UnifiedSettings {
 
       return freshData;
     } catch (error) {
-      console.error(`Unified Settings cache error for ${canonicalSport}:`, error);
+      console.error(`Unified Settings fetch error for ${canonicalSport}:`, error);
       
-      // Return stale cache if available, otherwise emergency defaults
-      if (cached) {
-        console.log(`⚠️ Using stale cache for ${canonicalSport} due to error`);
+      // Conservative fallback: check for any stale cache first
+      const cached = this.cache.get(canonicalSport);
+      if (cached && (now - cached.timestamp) < this.STALE_DURATION) {
+        console.log(`⚠️ Using stale cache for ${canonicalSport} due to fetch error`);
+        // Reset revalidating flag since we're using stale data
+        cached.isRevalidating = false;
         return cached.data;
       }
       
-      // CRITICAL FIX: Return fallback defaults for key alert types instead of empty {}
-      return this.getDefaultAlertSettings(canonicalSport);
+      // CONSERVATIVE DEFAULTS: "disabled unless known true" approach
+      console.log(`🚨 Using conservative defaults for ${canonicalSport} - no cache available`);
+      return this.getConservativeDefaults(canonicalSport);
     }
   }
 
   /**
-   * Check if specific alert type is enabled (with caching)
-   * 🔧 CACHE FIX: Sport normalization handled in getGlobalSettings
+   * Check if specific alert type is enabled (with conservative defaults)
+   * 🛡️ PRODUCTION SAFE: Conservative "disabled unless known true" approach
    */
   async isAlertEnabled(sport: string, alertType: string): Promise<boolean> {
     // FORCE ENABLE OVERRIDE - bypass all caching for emergency recovery
@@ -142,11 +229,15 @@ export class UnifiedSettings {
     }
 
     const settings = await this.getGlobalSettings(sport);
-    const isEnabled = settings[alertType] !== false; // Default to enabled
+    
+    // CONSERVATIVE APPROACH: Only enable if explicitly set to true
+    // This prevents alert bursts when cache fails or settings are incomplete
+    const isEnabled = settings[alertType] === true;
     
     // Debug logging for suppressed alerts
     if (!isEnabled) {
-      console.log(`❌ Alert suppressed by settings: ${alertType} (${sport.toLowerCase()})`);
+      const reason = settings[alertType] === false ? 'explicitly disabled' : 'not explicitly enabled (conservative default)';
+      console.log(`❌ Alert suppressed: ${alertType} (${sport.toLowerCase()}) - ${reason}`);
     }
     
     return isEnabled;
@@ -471,7 +562,51 @@ export class UnifiedSettings {
   // ===================================
 
   /**
-   * EMERGENCY DEFAULTS - Critical alert modules that should ALWAYS be enabled
+   * CONSERVATIVE DEFAULTS - Only enable core alerts, disabled unless known true
+   * 🛡️ PRODUCTION SAFE: Prevents alert bursts on cache failure
+   */
+  private getConservativeDefaults(sport: string): Record<string, boolean> {
+    const canonicalSport = sport.toLowerCase();
+    
+    // Conservative approach: only enable absolutely essential alerts
+    if (canonicalSport === 'mlb') {
+      return {
+        'MLB_GAME_START': true, // Core game event
+        'MLB_SEVENTH_INNING_STRETCH': true, // Core game event
+      };
+    } else if (canonicalSport === 'nfl') {
+      return {
+        'NFL_GAME_START': true, // Core game event
+        'NFL_TWO_MINUTE_WARNING': true, // Core game event
+      };
+    } else if (canonicalSport === 'nba') {
+      return {
+        'NBA_GAME_START': true, // Core game event
+        'NBA_TWO_MINUTE_WARNING': true, // Core game event
+      };
+    } else if (canonicalSport === 'ncaaf') {
+      return {
+        'NCAAF_GAME_START': true, // Core game event
+        'NCAAF_TWO_MINUTE_WARNING': true, // Core game event
+      };
+    } else if (canonicalSport === 'wnba') {
+      return {
+        'WNBA_GAME_START': true, // Core game event
+        'WNBA_TWO_MINUTE_WARNING': true, // Core game event
+      };
+    } else if (canonicalSport === 'cfl') {
+      return {
+        'CFL_GAME_START': true, // Core game event
+        'CFL_TWO_MINUTE_WARNING': true, // Core game event
+      };
+    }
+    
+    // Ultra-conservative fallback for unknown sports
+    return {};
+  }
+  
+  /**
+   * LEGACY DEFAULTS - For backward compatibility with existing fallback logic
    * 🔧 CACHE FIX: Normalize sport input to lowercase
    */
   private getDefaultAlertSettings(sport: string): Record<string, boolean> {
