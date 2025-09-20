@@ -30,7 +30,7 @@ declare module 'express-session' {
 }
 
 // Create CSRF tokens instance for admin security
-const tokens = csrf();
+const tokens = new csrf();
 
 // Extend Express Request interface to include user property
 declare global {
@@ -1093,8 +1093,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Settings routes
-  app.get('/api/settings', async (req, res) => {
+  // Settings routes - require authentication
+  app.get('/api/settings', requireAuthentication, async (req, res) => {
     try {
       const settings = await storage.getAllSettings();
       res.json(settings);
@@ -1104,7 +1104,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.post('/api/settings', async (req, res) => {
+  app.post('/api/settings', requireAuthentication, async (req, res) => {
     try {
       const settings = await storage.upsertSettings(req.body);
       res.json(settings);
