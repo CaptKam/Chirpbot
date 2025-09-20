@@ -3319,6 +3319,53 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Environment diagnostics endpoint - read-only database info
+  app.get('/api/diagnostics/db-info', async (req, res) => {
+    try {
+      if (!req.session.userId && !req.session.adminUserId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const databaseUrl = process.env.DATABASE_URL || 'Not set';
+      const maskedUrl = databaseUrl.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
+      
+      // Count records by sport
+      const globalSettingsCount = await storage.getGlobalAlertSettings('ncaaf');
+      const ncaafGlobalCount = Object.keys(globalSettingsCount || {}).length;
+      
+      const mlbGlobalSettings = await storage.getGlobalAlertSettings('mlb');
+      const mlbGlobalCount = Object.keys(mlbGlobalSettings || {}).length;
+
+      // Count user preferences for current user
+      const userId = req.session.userId || req.session.adminUserId;
+      const userPrefsCount: Record<string, number> = { NCAAF: 0, MLB: 0, WNBA: 0, NFL: 0, CFL: 0, NBA: 0 };
+      
+      for (const sport of Object.keys(userPrefsCount)) {
+        try {
+          const prefs = await storage.getUserAlertPreferences(userId!, sport.toLowerCase());
+          userPrefsCount[sport] = prefs.length;
+        } catch (e) {
+          userPrefsCount[sport] = 0;
+        }
+      }
+
+      res.json({
+        environment: process.env.NODE_ENV || 'development',
+        database: { url: maskedUrl },
+        globalSettings: {
+          NCAAF: ncaafGlobalCount,
+          MLB: mlbGlobalCount,
+          total: ncaafGlobalCount + mlbGlobalCount
+        },
+        userPreferences: userPrefsCount,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Database diagnostics error:', error);
+      res.status(500).json({ message: 'Diagnostics failed', error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   // Get available alert types from cylinders - accessible to all authenticated users and admins
   app.get('/api/available-alerts/:sport', async (req, res) => {
     try {
