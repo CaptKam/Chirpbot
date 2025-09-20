@@ -3342,7 +3342,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       for (const sport of Object.keys(userPrefsCount)) {
         try {
-          const prefs = await storage.getUserAlertPreferences(userId!, sport.toLowerCase());
+          if (!userId) continue;
+          const prefs = await storage.getUserAlertPreferences(userId, sport.toLowerCase());
           userPrefsCount[sport] = prefs.length;
         } catch (e) {
           userPrefsCount[sport] = 0;
