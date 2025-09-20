@@ -643,7 +643,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           
           const userPrefs = await storage.getUserAlertPreferencesBySport(userGame.userId, sportKey);
           const alertPref = userPrefs.find(p => p.alertType === alert.type);
-          const isEnabled = alertPref ? !!alertPref.enabled : true;
+          // CRITICAL FIX: Change default from true to false - opt-in instead of opt-out
+          const isEnabled = alertPref ? !!alertPref.enabled : false;
+          
+          // Enhanced logging to track preference behavior
+          if (!alertPref) {
+            console.log(`🔍 NO_PREFERENCE_SET for user ${userGame.userId} alert ${alert.type} - defaulting to DISABLED (opt-in behavior)`);
+          } else {
+            console.log(`🔧 EXPLICIT_PREFERENCE for user ${userGame.userId} alert ${alert.type} = ${alertPref.enabled}`);
+          }
           
           if (!isEnabled) {
             skippedCount++;
