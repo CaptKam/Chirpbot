@@ -216,16 +216,20 @@ export default function Settings() {
     onMutate: async ({ alertType, enabled }) => {
       // Cancel any outgoing refetches to prevent overwriting optimistic update
       const queryKey = [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`];
+      console.log('🔄 Optimistic Update: Starting for', alertType, 'enabled:', enabled);
       await queryClient.cancelQueries({ queryKey });
       
       // Snapshot the previous value for potential rollback
       const previousData = queryClient.getQueryData(queryKey);
+      console.log('📸 Previous cache data:', previousData);
       
       // Optimistically update the cache
       queryClient.setQueryData(queryKey, (oldData: any) => {
         if (!oldData || !Array.isArray(oldData)) {
           // If no data exists, create initial array with the new preference
-          return [{ alertType, enabled, sport: activeSport }];
+          const newData = [{ alertType, enabled, sport: activeSport }];
+          console.log('🆕 Creating new cache data:', newData);
+          return newData;
         }
         
         // Find existing preference for this alert type
@@ -235,10 +239,13 @@ export default function Settings() {
           // Update existing preference
           const newData = [...oldData];
           newData[existingIndex] = { ...newData[existingIndex], enabled };
+          console.log('✏️ Updated existing cache data:', newData);
           return newData;
         } else {
           // Add new preference
-          return [...oldData, { alertType, enabled, sport: activeSport }];
+          const newData = [...oldData, { alertType, enabled, sport: activeSport }];
+          console.log('➕ Added new preference to cache:', newData);
+          return newData;
         }
       });
       
@@ -246,6 +253,8 @@ export default function Settings() {
       return { previousData, alertType };
     },
     onSuccess: (data, variables, context) => {
+      console.log('✅ Toggle Success for', variables?.alertType, 'Response data:', data);
+      
       // Show success indicator
       if (variables?.alertType) {
         setToggleSuccess(prev => new Map(prev).set(variables.alertType, true));
@@ -260,9 +269,13 @@ export default function Settings() {
         }, 2000);
       }
       
+      const queryKey = [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`];
+      const currentCache = queryClient.getQueryData(queryKey);
+      console.log('📊 Current cache before invalidation:', currentCache);
+      
       // 🚀 MULTI-TAB CONSISTENCY: Invalidate with explicit cache busting
       queryClient.invalidateQueries({
-        queryKey: [`/api/user/${user?.id}/alert-preferences/${activeSport.toLowerCase()}`],
+        queryKey: queryKey,
         exact: true
       });
       queryClient.invalidateQueries({
@@ -277,6 +290,8 @@ export default function Settings() {
           return key?.includes('alert-preferences') || key?.includes('global-alert-settings');
         }
       });
+      
+      console.log('🚀 Invalidated queries for toggle success');
     },
     onError: (error: any, variables, context) => {
       // Rollback cache to previous state
