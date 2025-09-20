@@ -42,7 +42,7 @@ export async function sendTelegramAlert(config: TelegramConfig, alert: any): Pro
     });
 
     if (response.ok) {
-      const sport = alert.gameInfo?.sport || 'UNKNOWN';
+      const sport = alert.context?.sport || alert.gameInfo?.sport || 'UNKNOWN';
       console.log(`📱 ✅ Telegram alert sent successfully for ${sport}`);
       return true;
     } else {
@@ -61,8 +61,8 @@ export async function sendTelegramAlert(config: TelegramConfig, alert: any): Pro
  * Follows V3 Law #7: Consistent Alert Structure & 3-Second Readability
  */
 function formatUniversalTelegramMessage(alert: any): string {
-  // Null-safe gameInfo extraction
-  const gameInfo = alert?.gameInfo ?? {};
+  // Null-safe gameInfo extraction - check both context and gameInfo for compatibility
+  const gameInfo = alert?.context ?? alert?.gameInfo ?? {};
   const sport = gameInfo?.sport || 'UNKNOWN';
   const emoji = getSportEmoji(sport);
 
