@@ -3343,7 +3343,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       for (const sport of Object.keys(userPrefsCount)) {
         try {
           if (!userId) continue;
-          const prefs = await storage.getUserAlertPreferences(userId, sport.toLowerCase());
+          const prefs = await storage.getUserAlertPreferencesBySport(userId, sport.toLowerCase());
           userPrefsCount[sport] = prefs.length;
         } catch (e) {
           userPrefsCount[sport] = 0;
@@ -3527,7 +3527,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const results = [];
       for (const alertType of criticalAlerts) {
-        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId!);
         results.push({ alertType, enabled: true });
       }
       
@@ -3555,7 +3555,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const results = [];
       for (const alertType of allAlerts) {
-        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId);
+        await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId!);
         results.push({ alertType, enabled: true });
       }
       
@@ -3618,7 +3618,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       for (const [sport, alertTypes] of Object.entries(allAlertTypes)) {
         for (const alertType of alertTypes) {
           try {
-            await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId);
+            await storage.updateGlobalAlertSetting(sport, alertType, false, req.session.adminUserId!);
             results.push({ sport, alertType, disabled: true });
             totalDisabled++;
           } catch (error) {
@@ -3701,7 +3701,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { sport, settings } = req.body;
 
       // Use the storage method to apply settings to all users
-      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId);
+      const result = await storage.applyGlobalSettingsToAllUsers(sport, settings, req.session.adminUserId!);
 
       res.json({
         message: `Global settings applied to ${result.usersUpdated} users successfully`,
@@ -3852,7 +3852,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { gameId } = req.params;
       // Find game across all sports via migration adapter
       const allGames = migrationAdapter ? migrationAdapter.getGameData() : [];
-      const game = allGames.find(g => g.gameId === gameId);
+      const game = allGames.find((g: any) => g.gameId === gameId);
       
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
@@ -4425,7 +4425,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           hasCalendarMetrics: !!metrics.calendarSync,
           hasIngestionMetrics: !!metrics.dataIngestion
         },
-        recommendations: []
+        recommendations: [] as string[]
       };
 
       // Add health recommendations
