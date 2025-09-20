@@ -1048,7 +1048,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // User monitored games routes
-  app.get('/api/user/:userId/monitored-games', async (req, res) => {
+  app.get('/api/user/:userId/monitored-games', requireAuthentication, async (req, res) => {
     try {
       const { userId } = req.params;
       const { sport } = req.query;
@@ -1060,7 +1060,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.post('/api/user/:userId/monitored-games', async (req, res) => {
+  app.post('/api/user/:userId/monitored-games', requireAuthentication, async (req, res) => {
     try {
       const { userId } = req.params;
       const { gameId, sport, homeTeamName, awayTeamName } = req.body;
@@ -1082,7 +1082,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.delete('/api/user/:userId/monitored-games/:gameId', async (req, res) => {
+  app.delete('/api/user/:userId/monitored-games/:gameId', requireAuthentication, async (req, res) => {
     try {
       const { userId, gameId } = req.params;
       await storage.removeUserMonitoredTeam(userId, gameId);

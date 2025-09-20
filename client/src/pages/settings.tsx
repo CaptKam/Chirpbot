@@ -82,17 +82,15 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Toggle management state with optimistic updates
+  // Simplified toggle management without complex optimistic state
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
-  const [optimisticPreferences, setOptimisticPreferences] = useState<Record<string, boolean>>({});
-  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
     queryKey: [`/api/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 30 * 1000, // Cache for 30 seconds (reduced to match server cache)
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds (less aggressive)
+    staleTime: 5 * 1000, // Cache for 5 seconds (reduced to match server cache)
+    refetchInterval: 10 * 1000, // Refetch every 10 seconds (more responsive)
   });
   
   // Extract settings from response (handles both old admin format and new public format)
@@ -114,27 +112,14 @@ export default function Settings() {
     refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
-  // Clear optimistic preferences when fresh data arrives from server
-  // This is the ONLY place optimistic state should be cleared (data-driven, not time-based)
+  // Clear pending toggles when fresh data arrives from server
   useEffect(() => {
     if (!preferencesLoading && alertPreferences) {
-      // Only clear optimistic state for items that aren't being mutated
-      setOptimisticPreferences(prev => {
-        const newState = { ...prev };
-        // Keep optimistic state for items that are still pending
-        Object.keys(newState).forEach(key => {
-          if (!pendingToggles.has(key)) {
-            // Clear optimistic state only when:
-            // 1. Fresh data has arrived (!preferencesLoading)
-            // 2. Not currently mutating (!pendingToggles.has(key))
-            // This prevents race conditions and toggle reversion
-            delete newState[key];
-          }
-        });
-        return newState;
-      });
+      // Clear pending state only when fresh data has arrived
+      // This is much simpler than complex optimistic state management
+      setPendingToggles(new Set());
     }
-  }, [alertPreferences, preferencesLoading, pendingToggles]);
+  }, [alertPreferences, preferencesLoading]);
 
   // Telegram settings query
   const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
@@ -155,7 +140,7 @@ export default function Settings() {
     });
   }
 
-  // Helper to get alert preference with optimistic state layering
+  // Simplified helper to get alert preference without optimistic state complexity
   const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
     // Return undefined while loading to show skeleton UI
     if (isSettingsLoading) return undefined;
@@ -165,13 +150,7 @@ export default function Settings() {
       return false;
     }
 
-    // Priority order: optimistic state > server state > default
-    // Check optimistic state first (user's intended state during mutations)
-    if (alertType in optimisticPreferences) {
-      return optimisticPreferences[alertType];
-    }
-
-    // Then check server state from preference map
+    // Simple: just check server state from preference map
     const serverPreference = preferenceMap.get(alertType);
     if (serverPreference !== undefined) {
       return serverPreference;
@@ -380,56 +359,27 @@ export default function Settings() {
       return;
     }
 
-    // Clear any existing debounce timer for this alert type
-    const existingTimer = debounceTimers.current.get(alertType);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
-    }
-
-    // Immediately update optimistic state for instant UI feedback
-    setOptimisticPreferences(prev => ({
-      ...prev,
-      [alertType]: enabled
-    }));
-
-    // Add to pending toggles
+    // Add to pending toggles for immediate UI feedback
     setPendingToggles(prev => new Set([...prev, alertType]));
     
-    // Debounced mutation - the actual mutation handles cache updates via onMutate
-    const debounceTimer = setTimeout(() => {
-      updateAlertPreferenceMutation.mutate(
-        { alertType, enabled },
-        {
-          onSettled: () => {
-            // Remove from pending toggles when mutation completes (success or error)
-            setPendingToggles(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(alertType);
-              return newSet;
-            });
-            
-            // REMOVED: No longer using setTimeout to clear optimistic state
-            // The existing useEffect will handle clearing when fresh server data arrives
-            // This prevents race conditions and ensures toggles don't revert
-            
-            debounceTimers.current.delete(alertType);
-          }
+    // Simple immediate mutation without complex debouncing or optimistic state
+    updateAlertPreferenceMutation.mutate(
+      { alertType, enabled },
+      {
+        onSettled: () => {
+          // Remove from pending toggles when mutation completes (success or error)
+          setPendingToggles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(alertType);
+            return newSet;
+          });
         }
-      );
-    }, 100); // 100ms debounce (reduced from 300ms to minimize race conditions)
-
-    debounceTimers.current.set(alertType, debounceTimer);
+      }
+    );
   };
 
-  // Clear optimistic preferences when switching sports
-  // Also clear any pending toggles since we're changing context
+  // Clear pending toggles when switching sports (simplified)
   useEffect(() => {
-    // Cancel any pending debounce timers when switching sports
-    debounceTimers.current.forEach(timer => clearTimeout(timer));
-    debounceTimers.current.clear();
-    
-    // Clear both optimistic state and pending toggles
-    setOptimisticPreferences({});
     setPendingToggles(new Set());
   }, [activeSport]);
 
@@ -668,9 +618,7 @@ export default function Settings() {
                           && (globalSettings as Record<string, boolean>)[alertType.key] === false;
                         
                         // Get user preference regardless of global override to show true user intent
-                        const userPreference = optimisticPreferences[alertType.key] !== undefined 
-                          ? optimisticPreferences[alertType.key]
-                          : preferenceMap.get(alertType.key) ?? true;
+                        const userPreference = preferenceMap.get(alertType.key) ?? true;
                         
                         // Show skeleton if preference is still loading
                         if (isEnabled === undefined) {
