@@ -32,6 +32,20 @@ const ALERT_TYPE_CONFIG: Record<string, any[]> = {
     { key: 'MLB_SECOND_AND_THIRD_ONE_OUT', label: '2nd & 3rd, 1 Out', description: '68% scoring probability situation' },
     { key: 'MLB_BASES_LOADED_ONE_OUT', label: 'Bases Loaded, 1 Out', description: '66% scoring probability situation' }
   ],
+  NCAAF: [
+    { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Alert when NCAAF game begins' },
+    { key: 'NCAAF_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Alert when second half starts' },
+    { key: 'NCAAF_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Final 2 minutes of each half' },
+    { key: 'NCAAF_RED_ZONE', label: 'Red Zone Entry', description: 'Team enters the red zone (20-yard line)' },
+    { key: 'NCAAF_FOURTH_DOWN_DECISION', label: 'Fourth Down Decision', description: 'Critical fourth down situations' },
+    { key: 'NCAAF_RED_ZONE_EFFICIENCY', label: 'Red Zone Efficiency', description: 'Red zone scoring performance analysis' },
+    { key: 'NCAAF_UPSET_OPPORTUNITY', label: 'Upset Opportunity', description: 'Underdog has high upset probability' },
+    { key: 'NCAAF_MASSIVE_WEATHER', label: 'Weather Alert', description: 'Severe weather impacting game conditions' },
+    { key: 'NCAAF_CLOSE_GAME', label: 'Close Game', description: 'Tight game in final quarters' },
+    { key: 'NCAAF_COMEBACK_POTENTIAL', label: 'Comeback Potential', description: 'Team positioned for comeback' },
+    { key: 'NCAAF_FOURTH_QUARTER', label: 'Fourth Quarter', description: 'Final quarter begins in close games' },
+    { key: 'NCAAF_HALFTIME', label: 'Halftime', description: 'Halftime break and adjustments' }
+  ],
   WNBA: [
     // Core WNBA game situation alerts
     { key: 'WNBA_GAME_START', label: 'Game Start', description: 'Alert when WNBA game begins' },

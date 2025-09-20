@@ -3469,7 +3469,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { enabled } = req.body;
 
       // Actually persist the master alerts setting to the database
-      await storage.setMasterAlertEnabled(enabled, req.session.adminUserId);
+      await storage.setMasterAlertEnabled(enabled, req.session.adminUserId!);
 
       res.json({
         message: `Master alerts ${enabled ? 'enabled' : 'disabled'} successfully`,
@@ -3487,7 +3487,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { sport, category, alertKeys, enabled } = req.body;
 
       // Update the category settings which will apply to all users
-      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId);
+      await storage.updateGlobalAlertCategory(sport, alertKeys, enabled, req.session.adminUserId!);
 
       res.json({
         message: `Category ${enabled ? 'enabled' : 'disabled'} successfully`,
