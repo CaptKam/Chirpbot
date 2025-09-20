@@ -1404,7 +1404,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Debug all Telegram configurations
-  app.get('/api/telegram/debug', requireAdmin, async (req, res) => {
+  app.get('/api/telegram/debug', requireAdminAuth, async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       const telegramDebug = allUsers.map(user => ({
@@ -1463,7 +1463,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
 
   // Generate test live alerts - RULE COMPLIANT VERSION - ADMIN ONLY
-  app.post('/api/alerts/force-generate', requireAdmin, async (req, res) => {
+  app.post('/api/alerts/force-generate', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       console.log('🧪 ADMIN FORCING RULE-COMPLIANT TEST LIVE ALERTS');
       console.log('🛡️ NOTE: All generated alerts will respect global admin settings and user preferences');
@@ -1484,7 +1484,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Force send test Telegram alert - RULE COMPLIANT VERSION - ADMIN ONLY
-  app.post('/api/telegram/force-test', requireAdmin, async (req, res) => {
+  app.post('/api/telegram/force-test', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       console.log('🧪 TESTING TELEGRAM ALERT (Rule-Compliant)');
 
@@ -1578,7 +1578,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // AI Cache management endpoint - Admin only
-  app.post('/api/ai/cache/clear', requireAdmin, async (req, res) => {
+  app.post('/api/ai/cache/clear', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       console.log('🧹 Admin requested AI cache clear');
       
@@ -1606,7 +1606,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // AI Performance Dashboard - Admin only  
-  app.get('/api/ai/performance/dashboard', requireAdmin, async (req, res) => {
+  app.get('/api/ai/performance/dashboard', requireAdminAuth, async (req, res) => {
     try {
       const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
       const stats = unifiedAIProcessor.getStats();
@@ -1646,7 +1646,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // AI Cache statistics endpoint - Admin only  
-  app.get('/api/ai/cache/stats', requireAdmin, async (req, res) => {
+  app.get('/api/ai/cache/stats', requireAdminAuth, async (req, res) => {
     try {
       const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
       const stats = unifiedAIProcessor.getStats();
@@ -1665,7 +1665,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Debug endpoint to check user alert preferences
-  app.get('/api/debug/user-preferences/:userId', requireAdmin, async (req, res) => {
+  app.get('/api/debug/user-preferences/:userId', requireAdminAuth, async (req, res) => {
     try {
       const { userId } = req.params;
 
@@ -1720,7 +1720,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Debug endpoint to detect rule bypasses
-  app.get('/api/debug/telegram-bypasses', requireAdmin, async (req, res) => {
+  app.get('/api/debug/telegram-bypasses', requireAdminAuth, async (req, res) => {
     try {
       console.log('🔍 SCANNING FOR TELEGRAM BYPASS ROUTES');
 
@@ -1771,30 +1771,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Admin middleware (DEPRECATED - use requireAdminAuth instead)
-  async function requireAdmin(req: any, res: any, next: any) {
-    try {
-      // Check for admin session ONLY - no fallback to regular users
-      const adminUserId = req.session?.adminUserId;
+  // Parameter validation helper to prevent injection attacks
+  function validateUserId(userId: string): boolean {
+    // UUID v4 format validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(userId);
+  }
 
-      if (!adminUserId) {
-        console.log('🔒 Admin middleware: No admin session found');
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
-      const user = await storage.getUserById(adminUserId);
-      if (!user || user.role !== 'admin') {
-        console.log(`🔒 Admin middleware: User ${adminUserId} is not admin (role: ${user?.role})`);
-        return res.status(403).json({ message: 'Admin access required' });
-      }
-
-      console.log(`✅ Admin middleware: Admin ${user.username} authenticated`);
-      req.user = user;
-      next();
-    } catch (error) {
-      console.error('Error in admin middleware:', error);
-      res.status(500).json({ message: 'Authorization check failed' });
-    }
+  function validateSportName(sport: string): boolean {
+    const validSports = ['mlb', 'nfl', 'ncaaf', 'nba', 'wnba', 'cfl', 'nhl'];
+    return validSports.includes(sport.toLowerCase());
   }
 
   // Admin API routes
@@ -1922,7 +1908,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.delete('/api/admin/users/:userId', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { userId } = req.params;
-      const currentUser = req.user; // from requireAdmin middleware
+      const currentUser = req.user; // from requireAdminAuth middleware
 
       console.log(`🗑️ Admin ${currentUser.username} attempting to delete user ${userId}`);
 
