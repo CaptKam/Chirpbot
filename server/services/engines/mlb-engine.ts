@@ -510,44 +510,9 @@ export class MLBEngine extends BaseSportEngine {
         }
       }
 
-      // ✅ SEND RAW ALERTS TO ASYNCAI PROCESSOR FOR ENHANCEMENT FIRST
-      // Process ALL generated alerts through AI enhancement before deduplication
+      // Return raw alerts - GameStateManager will handle enhancement pipeline
       if (rawAlerts.length > 0) {
-        console.log(`🔄 MLB: Sending ${rawAlerts.length} raw alerts to AsyncAI processor for enhancement`);
-        const { unifiedAIProcessor } = await import('../unified-ai-processor');
-
-        // Send each raw alert to AsyncAI processor with proper context
-        for (const alert of rawAlerts) {
-          const context: CrossSportContext = {
-            sport: 'MLB' as const,
-            alertType: alert.type,
-            gameId: enhancedGameState.gameId,
-            priority: alert.priority || 75,
-            probability: alert.priority || 75,
-            homeTeam: enhancedGameState.homeTeam || 'Home',
-            awayTeam: enhancedGameState.awayTeam || 'Away',
-            homeScore: enhancedGameState.homeScore || 0,
-            awayScore: enhancedGameState.awayScore || 0,
-            isLive: enhancedGameState.isLive || false,
-            inning: enhancedGameState.inning || 1,
-            outs: enhancedGameState.outs || 0,
-            balls: enhancedGameState.balls || 0,
-            strikes: enhancedGameState.strikes || 0,
-            baseRunners: {
-              first: enhancedGameState.hasFirst || false,
-              second: enhancedGameState.hasSecond || false,
-              third: enhancedGameState.hasThird || false
-            },
-            originalMessage: alert.message,
-            originalContext: alert.context
-          };
-
-          console.log(`🎯 MLB AsyncAI: Queuing ${alert.type} alert for enhancement`);
-          // NON-BLOCKING: Queue for AI enhancement in background
-          unifiedAIProcessor.queueAlert(alert, context, enhancedGameState.gameId).catch(error => {
-            console.warn(`⚠️ MLB AI Queue failed for ${alert.type}:`, error);
-          });
-        }
+        console.log(`🔄 MLB: Generated ${rawAlerts.length} raw alerts - GameStateManager will handle enhancement`);
       } else {
         console.log(`🔄 MLB: No alerts generated for game ${enhancedGameState.gameId}`);
       }
@@ -565,7 +530,7 @@ export class MLBEngine extends BaseSportEngine {
 
       this.performanceMetrics.totalAlerts += rawAlerts.length;
 
-      // Return raw alerts for tracking (AsyncAI will handle the actual broadcasting)
+      // Return raw alerts for GameStateManager enhancement pipeline
       return rawAlerts;
     } finally {
       const alertTime = Date.now() - startTime;

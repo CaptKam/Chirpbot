@@ -205,38 +205,9 @@ export class NCAAFEngine extends BaseSportEngine {
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
 
-      // OPTIMIZED: Streamlined AI processing with reduced logging
+      // Return raw alerts - GameStateManager will handle enhancement pipeline
       if (rawAlerts.length > 0) {
-        const { unifiedAIProcessor } = await import('../unified-ai-processor');
-
-        // Send each raw alert to AsyncAI processor with optimized context creation
-        for (const alert of rawAlerts) {
-          const context: CrossSportContext = {
-            sport: 'NCAAF' as const,
-            alertType: alert.type,
-            gameId: enhancedGameState.gameId,
-            priority: alert.priority || 75,
-            probability: alert.priority || 75,
-            homeTeam: enhancedGameState.homeTeam || 'Home',
-            awayTeam: enhancedGameState.awayTeam || 'Away',
-            homeScore: enhancedGameState.homeScore || 0,
-            awayScore: enhancedGameState.awayScore || 0,
-            isLive: enhancedGameState.isLive || false,
-            quarter: enhancedGameState.quarter || 1,
-            timeRemaining: enhancedGameState.timeRemaining || '15:00',
-            down: enhancedGameState.down || 1,
-            yardsToGo: enhancedGameState.yardsToGo || 10,
-            fieldPosition: enhancedGameState.fieldPosition ?? 50,
-            possession: enhancedGameState.possession || enhancedGameState.homeTeam,
-            redZone: (enhancedGameState.fieldPosition ?? 50) <= 20,
-            goalLine: (enhancedGameState.fieldPosition ?? 50) <= 5,
-            originalMessage: alert.message,
-            originalContext: alert.context
-          };
-
-          // NON-BLOCKING: Queue for AI enhancement in background
-          unifiedAIProcessor.queueAlert(alert, context, enhancedGameState.gameId).catch(() => {});
-        }
+        console.log(`🔄 NCAAF: Generated ${rawAlerts.length} raw alerts - GameStateManager will handle enhancement`);
       }
 
       // OPTIMIZED: Lightweight metrics tracking

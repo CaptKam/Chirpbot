@@ -247,44 +247,9 @@ export class WNBAEngine extends BaseSportEngine {
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
 
-      // ✅ SEND RAW ALERTS TO UNIFIED AI PROCESSOR FOR ENHANCEMENT (standardized from MLB)
-      // Process ALL generated alerts through AI enhancement before deduplication
+      // Return raw alerts - GameStateManager will handle enhancement pipeline
       if (rawAlerts.length > 0) {
-        console.log(`🔄 WNBA: Sending ${rawAlerts.length} raw alerts to AsyncAI processor for enhancement`);
-        const { unifiedAIProcessor } = await import('../unified-ai-processor');
-
-        // Send each raw alert to AsyncAI processor with proper context
-        for (const alert of rawAlerts) {
-          const context: CrossSportContext = {
-            sport: 'WNBA' as const,
-            alertType: alert.type,
-            gameId: enhancedGameState.gameId,
-            priority: alert.priority || 75,
-            probability: alert.priority || 75,
-            homeTeam: enhancedGameState.homeTeam || 'Home',
-            awayTeam: enhancedGameState.awayTeam || 'Away',
-            homeScore: enhancedGameState.homeScore || 0,
-            awayScore: enhancedGameState.awayScore || 0,
-            isLive: enhancedGameState.isLive || false,
-            quarter: enhancedGameState.quarter || 1,
-            timeRemaining: enhancedGameState.timeRemaining || '',
-            timeLeft: enhancedGameState.timeRemaining || '',
-            shotClock: (enhancedGameState as any).shotClock || 24,
-            fouls: {
-              home: (enhancedGameState as any).homeFouls || 0,
-              away: (enhancedGameState as any).awayFouls || 0
-            },
-            possession: enhancedGameState.possession,
-            originalMessage: alert.message,
-            originalContext: alert.context
-          };
-
-          console.log(`🎯 WNBA AsyncAI: Queuing ${alert.type} alert for enhancement`);
-          // NON-BLOCKING: Queue for AI enhancement in background
-          unifiedAIProcessor.queueAlert(alert, context, enhancedGameState.gameId).catch(error => {
-            console.warn(`⚠️ WNBA AI Queue failed for ${alert.type}:`, error);
-          });
-        }
+        console.log(`🔄 WNBA: Generated ${rawAlerts.length} raw alerts - GameStateManager will handle enhancement`);
       } else {
         console.log(`🔄 WNBA: No alerts generated for game ${enhancedGameState.gameId}`);
       }
@@ -305,7 +270,7 @@ export class WNBAEngine extends BaseSportEngine {
 
       this.performanceMetrics.totalAlerts += rawAlerts.length;
 
-      // Return raw alerts for tracking (AsyncAI will handle the actual broadcasting)
+      // Return raw alerts for GameStateManager enhancement pipeline
       return rawAlerts;
     } finally {
       const alertTime = Date.now() - startTime;
