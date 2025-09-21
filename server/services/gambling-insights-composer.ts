@@ -1300,13 +1300,13 @@ export class GamblingInsightsComposer {
     // Extract game state from alert context
     const gameState: GameStateData = {
       sport: sport,
-      gameId: alert.gameId || '',
-      homeTeam: alert.homeTeam || '',
-      awayTeam: alert.awayTeam || '',
-      homeScore: alert.homeScore || 0,
-      awayScore: alert.awayScore || 0,
-      status: alert.status || 'live',
-      isLive: alert.isLive || true,
+      gameId: (alert as any).gameId || '',
+      homeTeam: (alert as any).homeTeam || '',
+      awayTeam: (alert as any).awayTeam || '',
+      homeScore: (alert as any).homeScore || 0,
+      awayScore: (alert as any).awayScore || 0,
+      status: (alert as any).status || 'live',
+      isLive: (alert as any).isLive || true,
       // Extract sport-specific fields from alert context if available
       ...this.extractSportSpecificFields(alert, sport)
     };
@@ -1371,8 +1371,8 @@ export class GamblingInsightsComposer {
     }
 
     // Add weather context if available
-    if (alert.weatherContext) {
-      fields.weatherContext = alert.weatherContext;
+    if ((alert as any).weatherContext) {
+      fields.weatherContext = (alert as any).weatherContext;
     }
 
     return fields;
