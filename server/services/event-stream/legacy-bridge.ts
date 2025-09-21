@@ -135,7 +135,7 @@ export class LegacyBridge extends EventEmitter {
       this.setupEventStreamSubscriptions();
       
       // Set up legacy system hooks
-      this.setupLegacyIntegration();
+      await this.setupLegacyIntegration();
       
       this.isInitialized = true;
       console.log('✅ Legacy Bridge initialized successfully');
@@ -266,14 +266,14 @@ export class LegacyBridge extends EventEmitter {
   /**
    * Set up legacy system integration hooks
    */
-  private setupLegacyIntegration(): void {
+  private async setupLegacyIntegration(): Promise<void> {
     try {
       // Hook into existing UnifiedAlertGenerator - import it lazily to avoid circular imports
-      const { UnifiedAlertGenerator } = require('../unified-alert-generator');
+      const { UnifiedAlertGenerator } = await import('../unified-alert-generator');
       this.legacyGenerator = new UnifiedAlertGenerator({ logLevel: 'quiet' });
       
       // Hook into GameStateManager events
-      const { gameStateManager } = require('../game-state-manager');
+      const { gameStateManager } = await import('../game-state-manager');
       
       // Set up game state change listener
       if (gameStateManager && typeof gameStateManager.on === 'function') {
