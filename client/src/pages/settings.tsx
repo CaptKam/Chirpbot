@@ -110,6 +110,12 @@ export default function Settings() {
   // Gambling insights settings state
   const [gamblingInsightsEnabled, setGamblingInsightsEnabled] = useState(true);
 
+  // Odds API settings state
+  const [oddsApiEnabled, setOddsApiEnabled] = useState(false);
+  const [oddsApiKey, setOddsApiKey] = useState("");
+  const [testingOddsConnection, setTestingOddsConnection] = useState(false);
+  const [oddsConnectionTestResult, setOddsConnectionTestResult] = useState<'success' | 'error' | null>(null);
+
   // Enhanced toggle management with status tracking
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
   const [toggleSuccess, setToggleSuccess] = useState<Map<string, boolean>>(new Map());
@@ -164,6 +170,13 @@ export default function Settings() {
   // Gambling insights settings query
   const { data: gamblingInsightsSettings, isLoading: gamblingInsightsLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/settings/gambling-insights`],
+    enabled: !!user?.id && isAuthenticated,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Odds API settings query
+  const { data: oddsApiSettings, isLoading: oddsApiLoading } = useQuery({
+    queryKey: [`/api/user/${user?.id}/settings/odds-api`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });

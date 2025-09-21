@@ -23,6 +23,9 @@ export const users = pgTable("users", {
   telegramBotToken: text("telegram_bot_token"),
   telegramChatId: text("telegram_chat_id"),
   telegramEnabled: boolean("telegram_enabled").notNull().default(false),
+  // Odds API preferences for enhanced gambling insights
+  oddsApiEnabled: boolean("odds_api_enabled").notNull().default(false),
+  oddsApiKey: text("odds_api_key"), // User's personal Odds API key (optional)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

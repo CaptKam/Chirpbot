@@ -9,6 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
+import { oddsApiService } from './services/odds-api-service';
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { UnifiedAlertGenerator } from "./services/unified-alert-generator";
 import { unifiedDeduplicator } from "./services/unified-deduplicator";

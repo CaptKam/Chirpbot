@@ -1,4 +1,5 @@
 import type { AlertResult, GamblingInsights } from '../../shared/schema';
+import { oddsApiService, type ProcessedOdds } from './odds-api-service';
 
 // Weather interface to match existing system
 interface WeatherData {
@@ -56,7 +57,7 @@ interface GameStateData {
 // Abstract base class for sport-specific mappers
 abstract class BaseSportMapper {
   abstract sport: string;
-  abstract generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData): string[];
+  abstract generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string[]>;
   abstract calculateConfidence(alert: AlertResult, gameState: GameStateData): number;
   abstract generateTags(alert: AlertResult, gameState: GameStateData): string[];
 
@@ -94,7 +95,7 @@ abstract class BaseSportMapper {
 class MLBInsightsMapper extends BaseSportMapper {
   sport = 'MLB';
 
-  generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData): string[] {
+  async generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string[]> {
     const bullets: string[] = [];
 
     // On-deck batter analysis
@@ -130,7 +131,54 @@ class MLBInsightsMapper extends BaseSportMapper {
       bullets.push(this.formatBulletPoint(baserunningThreat));
     }
 
+    // Add market data bullets if odds available
+    if (oddsData && oddsData.dataQuality !== 'poor') {
+      const marketBullets = this.generateMarketDataBullets(oddsData, gameState);
+      bullets.push(...marketBullets);
+    }
+
     return bullets.slice(0, 5); // Max 5 bullets
+  }
+
+  // Generate market data bullets for MLB
+  private generateMarketDataBullets(oddsData: ProcessedOdds, gameState: GameStateData): string[] {
+    const bullets: string[] = [];
+
+    // Moneyline analysis
+    if (oddsData.markets.moneyline) {
+      const { home, away, bookmaker } = oddsData.markets.moneyline;
+      const homeTeam = oddsData.homeTeam;
+      const awayTeam = oddsData.awayTeam;
+      
+      const homeOdds = home > 0 ? `+${home}` : `${home}`;
+      const awayOdds = away > 0 ? `+${away}` : `${away}`;
+      
+      bullets.push(this.formatBulletPoint(
+        `${bookmaker} moneyline: ${homeTeam} ${homeOdds}, ${awayTeam} ${awayOdds} - reflects current market sentiment on game outcome`
+      ));
+    }
+
+    // Spread analysis  
+    if (oddsData.markets.spread) {
+      const { points, home, away, bookmaker } = oddsData.markets.spread;
+      const homeTeam = oddsData.homeTeam;
+      
+      const spreadText = points > 0 ? `+${points}` : `${points}`;
+      bullets.push(this.formatBulletPoint(
+        `${bookmaker} spread: ${homeTeam} ${spreadText} at ${home} odds - current scoring situation may impact spread value`
+      ));
+    }
+
+    // Over/under analysis
+    if (oddsData.markets.total) {
+      const { points, over, under, bookmaker } = oddsData.markets.total;
+      
+      bullets.push(this.formatBulletPoint(
+        `${bookmaker} total: ${points} runs (Over ${over}, Under ${under}) - scoring opportunity directly affects over/under potential`
+      ));
+    }
+
+    return bullets;
   }
 
   private analyzeOnDeckBatter(gameState: GameStateData): string {
@@ -300,7 +348,7 @@ class MLBInsightsMapper extends BaseSportMapper {
 class NFLNCAAFInsightsMapper extends BaseSportMapper {
   sport = 'NFL'; // Handles both NFL and NCAAF
 
-  generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData): string[] {
+  async generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string[]> {
     const bullets: string[] = [];
 
     // Down-distance situation
@@ -478,7 +526,7 @@ class NFLNCAAFInsightsMapper extends BaseSportMapper {
 class NBAWNBAInsightsMapper extends BaseSportMapper {
   sport = 'NBA'; // Handles both NBA and WNBA
 
-  generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData): string[] {
+  async generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string[]> {
     const bullets: string[] = [];
 
     // Clutch time performance
@@ -642,7 +690,7 @@ class NBAWNBAInsightsMapper extends BaseSportMapper {
 class CFLInsightsMapper extends BaseSportMapper {
   sport = 'CFL';
 
-  generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData): string[] {
+  async generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string[]> {
     const bullets: string[] = [];
 
     // Rouge scoring opportunity
@@ -771,7 +819,7 @@ export class GamblingInsightsComposer {
    * @param weather - Optional weather data
    * @returns GamblingInsights object with bullet points, confidence, and tags
    */
-  compose(alert: AlertResult, gameState: GameStateData, weather?: WeatherData): GamblingInsights {
+  async compose(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, userOddsEnabled: boolean = false, userApiKey?: string): Promise<GamblingInsights> {
     try {
       const sport = gameState.sport?.toUpperCase();
       const mapper = this.mappers.get(sport);
@@ -781,8 +829,27 @@ export class GamblingInsightsComposer {
         return this.createFallbackInsights(alert, gameState);
       }
 
-      // Generate sport-specific bullet points
-      const bullets = mapper.generateBulletPoints(alert, gameState, weather);
+      // Fetch odds data if enabled and available
+      let oddsData: ProcessedOdds | null = null;
+      if (userOddsEnabled && oddsApiService.isAvailable(userApiKey)) {
+        try {
+          const oddsArray = await oddsApiService.getOddsForSport(gameState.sport, userApiKey);
+          // Find odds for this specific game
+          oddsData = oddsArray.find(odds => 
+            this.matchGameToOdds(gameState, odds)
+          ) || null;
+          
+          if (oddsData) {
+            console.log(`📊 Odds Data: Found market data for ${gameState.sport} game ${gameState.gameId}`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Odds API: Failed to fetch odds for ${gameState.sport}:`, error);
+          // Continue without odds data (graceful fallback)
+        }
+      }
+
+      // Generate sport-specific bullet points with market data
+      const bullets = await mapper.generateBulletPoints(alert, gameState, weather, oddsData);
       
       // Calculate confidence based on data availability
       const confidence = mapper.calculateConfidence(alert, gameState);
@@ -794,7 +861,9 @@ export class GamblingInsightsComposer {
       const insights: GamblingInsights = {
         bullets: bullets.length > 0 ? bullets : ['Limited game state data available for detailed gambling insights'],
         confidence,
-        tags: [...tags, 'gambling-insights', 'auto-generated']
+        tags: [...tags, 'gambling-insights', 'auto-generated'],
+        // Market data from odds API
+        market: oddsData ? this.processMarketData(oddsData) : undefined
       };
 
       // Add optional fields if relevant data is available
@@ -942,8 +1011,8 @@ export class GamblingInsightsComposer {
         // Build game state from alert data
         const gameState: GameStateData = this.buildGameStateFromAlert(alert, sport);
         
-        // Get gambling insights using the compose method
-        const gamblingInsights = this.compose(alert, gameState);
+        // Get gambling insights using the compose method (with user odds preferences)
+        const gamblingInsights = await this.compose(alert, gameState, undefined, false, undefined);
         
         // Log bullet points for each alert as requested
         console.log(`🎯 Composer bullets: sport=${sport}, type=${alert.type}, bullets=${gamblingInsights.bullets.length}`);
@@ -1054,6 +1123,54 @@ export class GamblingInsightsComposer {
     }
 
     return fields;
+  }
+
+  /**
+   * Match game state to odds data
+   */
+  private matchGameToOdds(gameState: GameStateData, odds: ProcessedOdds): boolean {
+    // Simple team name matching - can be enhanced with more sophisticated matching
+    const normalizeTeam = (name: string) => name.toLowerCase().replace(/[^a-z]/g, '');
+    
+    const stateHome = normalizeTeam(gameState.homeTeam);
+    const stateAway = normalizeTeam(gameState.awayTeam);
+    const oddsHome = normalizeTeam(odds.homeTeam);
+    const oddsAway = normalizeTeam(odds.awayTeam);
+    
+    return (stateHome.includes(oddsHome) || oddsHome.includes(stateHome)) &&
+           (stateAway.includes(oddsAway) || oddsAway.includes(stateAway));
+  }
+
+  /**
+   * Process market data from odds API into GamblingInsights format
+   */
+  private processMarketData(oddsData: ProcessedOdds): GamblingInsights['market'] {
+    const market: GamblingInsights['market'] = {};
+
+    if (oddsData.markets.moneyline) {
+      market.moneyline = {
+        home: oddsData.markets.moneyline.home,
+        away: oddsData.markets.moneyline.away
+      };
+    }
+
+    if (oddsData.markets.spread) {
+      market.spread = {
+        points: oddsData.markets.spread.points,
+        home: oddsData.markets.spread.home,
+        away: oddsData.markets.spread.away
+      };
+    }
+
+    if (oddsData.markets.total) {
+      market.total = {
+        points: oddsData.markets.total.points,
+        over: oddsData.markets.total.over,
+        under: oddsData.markets.total.under
+      };
+    }
+
+    return market;
   }
 }
 
