@@ -359,11 +359,4 @@ export class WNBAProcessor extends BaseProcessor {
     };
   }
 
-  /**
-   * Custom logging with WNBA processor prefix
-   */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]): void {
-    const prefix = this.config.shadowMode ? '[Shadow][wnba_processor]' : '[wnba_processor]';
-    console.log(`${prefix} ${message}`, ...args);
-  }
 }

@@ -355,11 +355,4 @@ export class NFLProcessor extends BaseProcessor {
     };
   }
 
-  /**
-   * Custom logging with NFL processor prefix
-   */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]): void {
-    const prefix = this.config.shadowMode ? '[Shadow][nfl_processor]' : '[nfl_processor]';
-    console.log(`${prefix} ${message}`, ...args);
-  }
 }

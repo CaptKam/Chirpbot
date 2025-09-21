@@ -178,37 +178,37 @@ export class LegacyBridge extends EventEmitter {
       { 
         name: 'MLB', 
         processorClass: MLBProcessor, 
-        instance: () => this.mlbProcessor = new MLBProcessor(),
+        instance: () => this.mlbProcessor = new MLBProcessor('mlb_legacy_bridge_processor', 'MLB'),
         id: 'mlb_legacy_bridge_processor'
       },
       { 
         name: 'NFL', 
         processorClass: NFLProcessor, 
-        instance: () => this.nflProcessor = new NFLProcessor(),
+        instance: () => this.nflProcessor = new NFLProcessor('nfl_legacy_bridge_processor', 'NFL'),
         id: 'nfl_legacy_bridge_processor'
       },
       { 
         name: 'NBA', 
         processorClass: NBAProcessor, 
-        instance: () => this.nbaProcessor = new NBAProcessor(),
+        instance: () => this.nbaProcessor = new NBAProcessor('nba_legacy_bridge_processor', 'NBA'),
         id: 'nba_legacy_bridge_processor'
       },
       { 
         name: 'WNBA', 
         processorClass: WNBAProcessor, 
-        instance: () => this.wnbaProcessor = new WNBAProcessor(),
+        instance: () => this.wnbaProcessor = new WNBAProcessor('wnba_legacy_bridge_processor', 'WNBA'),
         id: 'wnba_legacy_bridge_processor'
       },
       { 
         name: 'NCAAF', 
         processorClass: NCAAFProcessor, 
-        instance: () => this.ncaafProcessor = new NCAAFProcessor(),
+        instance: () => this.ncaafProcessor = new NCAAFProcessor('ncaaf_legacy_bridge_processor', 'NCAAF'),
         id: 'ncaaf_legacy_bridge_processor'
       },
       { 
         name: 'CFL', 
         processorClass: CFLProcessor, 
-        instance: () => this.cflProcessor = new CFLProcessor(),
+        instance: () => this.cflProcessor = new CFLProcessor('cfl_legacy_bridge_processor', 'CFL'),
         id: 'cfl_legacy_bridge_processor'
       }
     ];

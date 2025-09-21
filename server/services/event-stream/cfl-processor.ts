@@ -359,11 +359,4 @@ export class CFLProcessor extends BaseProcessor {
     };
   }
 
-  /**
-   * Custom logging with CFL processor prefix
-   */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]): void {
-    const prefix = this.config.shadowMode ? '[Shadow][cfl_processor]' : '[cfl_processor]';
-    console.log(`${prefix} ${message}`, ...args);
-  }
 }

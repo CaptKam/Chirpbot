@@ -357,11 +357,4 @@ export class NBAProcessor extends BaseProcessor {
     };
   }
 
-  /**
-   * Custom logging with NBA processor prefix
-   */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]): void {
-    const prefix = this.config.shadowMode ? '[Shadow][nba_processor]' : '[nba_processor]';
-    console.log(`${prefix} ${message}`, ...args);
-  }
 }
