@@ -1390,6 +1390,36 @@ export class MigrationAdapter {
         defaultRoute: 'both',
         forceProductionSports: [],
         forceShadowSports: [],
+        productionStreamConfig: {
+          enabled: true,
+          name: 'production',
+          maxBacklog: 10000,
+          batchSize: 100,
+          flushIntervalMs: 1000,
+          retryAttempts: 3,
+          retryDelayMs: 1000
+        },
+        shadowStreamConfig: {
+          enabled: true,
+          name: 'shadow',
+          maxBacklog: 20000,
+          batchSize: 200,
+          flushIntervalMs: 2000,
+          retryAttempts: 3,
+          retryDelayMs: 1000
+        },
+        deduplication: {
+          maxFingerprints: 50000,
+          fingerprintTtlMs: 300000,
+          enableSizeBasedCleanup: true,
+          enableTimeBasedCleanup: true
+        },
+        healthCheck: {
+          intervalMs: 30000,
+          timeoutMs: 5000,
+          maxErrorRate: 0.1,
+          maxBacklogSize: 5000
+        },
         ...config.outputRouter
       },
       rollout: {
@@ -1563,6 +1593,10 @@ export class MigrationAdapter {
         this.outputRouter = new OutputRouter({
           ...this.config.outputRouter
         });
+        
+        // Connect the streams to OutputRouter
+        this.outputRouter.setProductionStream(productionStream);
+        this.outputRouter.setShadowStream(shadowStream);
         
         // Wire comparison system to OutputRouter
         this.outputRouter.setEventComparator(this.eventComparator);

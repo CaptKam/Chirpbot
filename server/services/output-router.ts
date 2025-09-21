@@ -736,16 +736,20 @@ export class OutputRouter extends EventEmitter {
 
     // Subscribe to data ingestion events
     if (this.dataIngestionService) {
-      // DataIngestionService extends EventEmitter
-      this.dataIngestionService.on('game_state_changed', (event: GameStateChangedEvent) => {
-        this.processIngestionEvent(event);
-      });
-      
-      this.dataIngestionService.on('alert_generated', (event: AlertGeneratedEvent) => {
-        this.processIngestionEvent(event);
-      });
+      // Check if the service has event emitter capabilities
+      if (typeof this.dataIngestionService.on === 'function') {
+        this.dataIngestionService.on('game_state_changed', (event: GameStateChangedEvent) => {
+          this.processIngestionEvent(event);
+        });
+        
+        this.dataIngestionService.on('alert_generated', (event: AlertGeneratedEvent) => {
+          this.processIngestionEvent(event);
+        });
 
-      console.log('📤 OutputRouter: Subscribed to DataIngestionService events');
+        console.log('📤 OutputRouter: Subscribed to DataIngestionService events');
+      } else {
+        console.log('📤 OutputRouter: DataIngestionService does not support event subscriptions - polling mode will be used');
+      }
     }
   }
 
