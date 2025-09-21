@@ -1270,13 +1270,6 @@ export class GamblingInsightsComposer {
         // Log bullet points for each alert as requested
         console.log(`🎯 Composer bullets: sport=${sport}, type=${alert.type}, bullets=${gamblingInsights.bullets?.length || 0}`);
         
-        // DEBUG: Log what we're actually generating
-        console.log(`🔍 DEBUG Gambling Insights:`, JSON.stringify({
-          structuredTemplate: gamblingInsights.structuredTemplate?.substring(0, 100),
-          bulletsLength: gamblingInsights.bullets?.length,
-          confidence: gamblingInsights.confidence,
-          tagsLength: gamblingInsights.tags?.length
-        }));
         
         // Attach gambling insights to the alert
         const enhancedAlert: AlertResult = {
