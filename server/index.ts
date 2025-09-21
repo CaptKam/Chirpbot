@@ -12,7 +12,7 @@ import { seedDatabase } from "./seed-database";
 import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
-import { EmergencyMemoryMonitor } from "./emergency-memory-monitor";
+import { EmergencyMemoryMonitor } from "./emergency-memorymonitor";
 
 // 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
 console.log('🔒 Checking for existing ChirpBot instances...');
@@ -45,7 +45,7 @@ if (!(globalThis as any).__migration_adapter_bootstrapped__) {
       console.log("🔍 DEBUG: About to import MigrationAdapter");
       const { MigrationAdapter } = await import('./services/migration-adapter');
       console.log("🔍 DEBUG: Import successful, creating instance");
-      
+
       // Initialize MigrationAdapter with safe defaults
       const migrationAdapter = new MigrationAdapter({
         calendarSync: {
@@ -71,17 +71,17 @@ if (!(globalThis as any).__migration_adapter_bootstrapped__) {
         enableOutputRouter: true,
         logLevel: 'detailed'
       });
-      
+
       console.log("🔍 DEBUG: Instance created, calling initialize()");
       await migrationAdapter.initialize();
       console.log("🔍 DEBUG: Initialize completed, calling start()");
       await migrationAdapter.start();
       console.log("🔍 DEBUG: Start completed, storing global reference");
-      
+
       (global as any).migrationAdapter = migrationAdapter;
       console.log("✅ MIGRATION ADAPTER: STARTED - Both systems under adapter control");
-    } catch (e) { 
-      console.error("❌ MIGRATION ADAPTER: FAILED", e); 
+    } catch (e) {
+      console.error("❌ MIGRATION ADAPTER: FAILED", e);
       console.error("❌ MIGRATION ADAPTER: ERROR STACK:", e?.stack);
     }
   })();
@@ -221,11 +221,12 @@ process.on('uncaughtException', (error: any) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // For nodemon restart
+process.on('SIGQUIT', () => gracefulShutdown('SIGQUIT'));
 
 // 🔒 SECURITY: Startup validation for critical secrets
 function validateSecurityConfig() {
   console.log('🔒 Validating security configuration...');
-  
+
   // SESSION_SECRET is absolutely critical for security
   if (!process.env.SESSION_SECRET) {
     console.error('❌ CRITICAL SECURITY ERROR: SESSION_SECRET environment variable is not set!');
@@ -244,7 +245,7 @@ function validateSecurityConfig() {
     }
     console.log(`✅ SESSION_SECRET validation passed (${secret.length} characters)`);
   }
-  
+
   // Validate other critical security settings
   if (process.env.NODE_ENV === 'production') {
     if (!process.env.DATABASE_URL) {
@@ -253,7 +254,7 @@ function validateSecurityConfig() {
     }
     console.log('✅ Production security validation passed');
   }
-  
+
   console.log('🔒 Security configuration validation complete');
 }
 
@@ -430,7 +431,7 @@ async function startServer() {
     // 🔒 FALLBACK: Add 'listening' event handler for reliability
     server.on('listening', () => {
       console.log('📡 HTTP Server listening event triggered - DataIngestionService should be operational');
-      
+
       // Verify DataIngestionService is running
       const di = (global as any).dataIngestionIntegration;
       if (di) {
@@ -467,7 +468,7 @@ async function startServer() {
         try {
           console.log('🌟 Starting UnifiedEventStream in shadow mode...');
           const { LegacyBridge } = await import('./services/event-stream/legacy-bridge');
-          
+
           // Create and initialize the legacy bridge
           const legacyBridge = new LegacyBridge({
             enableComparison: true,
@@ -479,16 +480,16 @@ async function startServer() {
               sampleRate: 1.0
             }
           });
-          
+
           // Initialize the bridge (this will set up the event stream and processors)
           await legacyBridge.initialize();
-          
+
           console.log('✅ UnifiedEventStream initialized in shadow mode');
           console.log('🌟 Event stream running alongside existing system for validation');
-          
+
           // Store reference globally for potential shutdown
           (global as any).legacyBridge = legacyBridge;
-          
+
         } catch (error) {
           console.error('❌ Failed to start UnifiedEventStream:', error);
           console.log('🔄 Continuing with legacy system only');
@@ -500,11 +501,11 @@ async function startServer() {
         try {
           console.log('🌤️ Starting Weather-on-Live service...');
           const { weatherOnLiveService } = await import('./services/weather-on-live-service');
-          
+
           // WebSocket functionality removed - using HTTP polling architecture
           console.log(`✅ Weather-on-Live service started`);
           console.log(`📡 Using HTTP polling architecture for real-time updates`);
-          
+
           console.log(`🌤️ Weather monitoring will start automatically when games go LIVE`);
         } catch (error) {
           console.error('❌ Failed to start Weather-on-Live service:', error);

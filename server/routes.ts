@@ -63,7 +63,7 @@ async function requireUserAuth(req: express.Request, res: express.Response, next
     if (user) {
       // Block admin users from accessing user routes
       if (user.role === 'admin') {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: 'User access only',
           message: 'Administrators must use the admin panel. Regular users only.'
         });
@@ -94,7 +94,7 @@ function generateCSRFToken(req: express.Request, res: express.Response, next: ex
     if (!req.session.csrfSecret) {
       req.session.csrfSecret = tokens.secretSync();
     }
-    
+
     const token = tokens.create(req.session.csrfSecret);
     req.csrfToken = token;
   }
@@ -105,15 +105,15 @@ function generateCSRFToken(req: express.Request, res: express.Response, next: ex
 function validateCSRF(req: express.Request, res: express.Response, next: express.NextFunction) {
   const token = req.headers['x-csrf-token'] || req.body._csrf;
   const secret = req.session?.csrfSecret;
-  
+
   if (!token || !secret) {
     return res.status(403).json({ message: 'CSRF token missing' });
   }
-  
+
   if (!tokens.verify(secret, token)) {
     return res.status(403).json({ message: 'Invalid CSRF token' });
   }
-  
+
   next();
 }
 
@@ -121,19 +121,19 @@ function validateCSRF(req: express.Request, res: express.Response, next: express
 function validateSportName(sport: string): { valid: boolean; normalized: string; error?: string } {
   const supportedSports = ['MLB', 'NFL', 'NBA', 'WNBA', 'NCAAF', 'CFL'];
   const normalizedSport = sport.toUpperCase().trim();
-  
+
   if (!normalizedSport) {
     return { valid: false, normalized: '', error: 'Sport name cannot be empty' };
   }
-  
+
   if (!supportedSports.includes(normalizedSport)) {
-    return { 
-      valid: false, 
-      normalized: normalizedSport, 
+    return {
+      valid: false,
+      normalized: normalizedSport,
       error: `Unsupported sport: ${normalizedSport}. Supported sports: ${supportedSports.join(', ')}`
     };
   }
-  
+
   return { valid: true, normalized: normalizedSport };
 }
 
@@ -186,7 +186,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Apply separate session parsers for admin vs user routes
   app.use('/api/admin*', adminSessionParser);  // Admin routes use admin session
   app.use('/admin*', adminSessionParser);      // Admin static files use admin session
-  
+
   // Universal CSRF protection for all admin API routes
   app.use('/api/admin/*', requireAdminAuth, generateCSRFToken, (req, res, next) => {
     // Apply CSRF validation to all non-GET admin API requests
@@ -195,7 +195,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
     next();
   });
-  
+
   // User session parser - CRITICAL: Skip admin paths to prevent session collision
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin')) {
@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/diagnostics/ingestion-status', async (req, res) => {
     try {
       const migrationAdapter = (global as any).migrationAdapter;
-      
+
       if (!migrationAdapter) {
         return res.json({
           initialized: false,
@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Get adapter status (safe access within request handler)
       const adapterStatus = migrationAdapter.getStatus ? migrationAdapter.getStatus() : null;
       const isOperational = !!adapterStatus;
-      
+
       const response = {
         initialized: true,
         status: isOperational ? 'OPERATIONAL' : 'PARTIALLY_INITIALIZED',
@@ -239,7 +239,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       console.log('📊 MigrationAdapter diagnostic check:', response);
       res.json(response);
-      
+
     } catch (error) {
       console.error('❌ Error in migration-adapter diagnostic:', error);
       res.status(500).json({
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   console.log(`📡 HTTP polling architecture enabled for real-time updates`);
 
   // WebSocket upgrade handler removed - using HTTP polling architecture
-  
+
   // Initialize health monitor without WebSocket dependency
   const healthMonitor = getHealthMonitor();
   healthMonitor.initialize({
@@ -506,7 +506,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Broadcast function to send alerts to all connected SSE clients
   function broadcast(data: any) {
     const sseClientCount = sseClients.size;
-    
+
     if (sseClientCount === 0) {
       console.log('📡 No SSE clients connected for broadcast');
       return;
@@ -545,7 +545,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     // Send to SSE clients
     const sseMessage = `data: ${message}\n\n`;
     const clientsToRemove: express.Response[] = [];
-    
+
     sseClients.forEach((res) => {
       try {
         if (!res.destroyed && !res.finished) {
@@ -579,16 +579,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   unifiedAIProcessor.setOnEnhancedAlert(async (alert, userId, sport, wasActuallyEnhanced) => {
     try {
       console.log(`💾 Saving enhanced alert to database: ${alert.alertKey}`);
-      
+
       // Extract gameId from alertKey for all sports
       let gameId = 'unknown';
       if (alert.alertKey) {
         const parts = alert.alertKey.split('_');
-        
+
         // Pattern 1: Direct gameId at start (e.g., "776312_pitching_change_..." or "401772715_turnover_risk_...")
         if (parts[0] && /^\d+$/.test(parts[0])) {
           gameId = parts[0];
-        } 
+        }
         // Pattern 2: Sport prefix with gameId (e.g., "mlb_game_start_776319_1")
         else if (parts.length >= 4) {
           // Check for pattern: sport_alert_type_gameId_...
@@ -614,18 +614,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           }
         }
       }
-      
+
       console.log(`📌 Extracted gameId: ${gameId} from alertKey: ${alert.alertKey}`);
-      
+
       // Get all users monitoring this game
       const usersMonitoring = await storage.getUsersMonitoringGame(gameId);
       console.log(`👥 Found ${usersMonitoring.length} users monitoring game ${gameId}`);
-      
+
       // FIXED: Always save enhanced alerts with gambling insights to database
       // Only skip user-specific deliveries if no users are monitoring
       if (usersMonitoring.length === 0) {
         console.log(`⚠️ No users monitoring game ${gameId}, skipping user deliveries but saving enhanced alert for analytics`);
-        
+
         // Save the enhanced alert without user association for data completeness
         try {
           await storage.createAlert({
@@ -653,42 +653,42 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
         return;
       }
-      
+
       // Create an alert for each user monitoring the game
       let savedCount = 0;
       let skippedCount = 0;
-      
+
       for (const userGame of usersMonitoring) {
         try {
           // 🔎 CRITICAL FIX: Check user preferences FIRST before ANY other checks (including deduplication)
           const sportKey = (sport || '').toString().toLowerCase();
           console.log(`🔎 PrefCheck start for user ${userGame.userId} type=${alert.type} sport=${sportKey}`);
-          
+
           if (!sportKey) {
             console.log(`⚠️ No sport key found for alert ${alert.type}, skipping user ${userGame.userId}`);
             continue;
           }
-          
+
           const userPrefs = await storage.getUserAlertPreferencesBySport(userGame.userId, sportKey);
           const alertPref = userPrefs.find(p => p.alertType === alert.type);
           // CRITICAL FIX: Change default from true to false - opt-in instead of opt-out
           const isEnabled = alertPref ? !!alertPref.enabled : false;
-          
+
           // Enhanced logging to track preference behavior
           if (!alertPref) {
             console.log(`🔍 NO_PREFERENCE_SET for user ${userGame.userId} alert ${alert.type} - defaulting to DISABLED (opt-in behavior)`);
           } else {
             console.log(`🔧 EXPLICIT_PREFERENCE for user ${userGame.userId} alert ${alert.type} = ${alertPref.enabled}`);
           }
-          
+
           if (!isEnabled) {
             skippedCount++;
             console.log(`🚫 Alert ${alert.type} disabled for user ${userGame.userId}, skipping`);
             continue;
           }
-          
+
           console.log(`✅ Alert ${alert.type} enabled for user ${userGame.userId}, proceeding to duplicate check`);
-          
+
           // FIXED DEDUPLICATION BUG: Check if this specific alert already exists AND is still active (non-expired)
           const existingAlerts = await db.select()
             .from(alertsTable)
@@ -698,13 +698,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
               gte(alertsTable.expiresAt, new Date()) // Only check non-expired alerts
             ))
             .limit(1);
-          
+
           if (existingAlerts.length > 0) {
             skippedCount++;
             console.log(`⏭️ Active alert already exists for user ${userGame.userId}, skipping`);
             continue;
           }
-          
+
           await storage.createAlert({
             alertKey: alert.alertKey,  // Keep original alert key for deduplication
             userId: userGame.userId,    // CRITICAL: Associate alert with the user!
@@ -724,7 +724,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
               hasComposerEnhancement: alert.hasComposerEnhancement || false
             })
           });
-          
+
           savedCount++;
           console.log(`✅ Alert saved for user ${userGame.userId}: ${alert.alertKey}`);
 
@@ -749,15 +749,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           } catch (telegramError) {
             console.error(`⚠️ Telegram notification failed for user ${userGame.userId}:`, telegramError);
           }
-          
+
         } catch (error: any) {
           // Handle any other database errors
           console.error(`❌ Failed to save alert for user ${userGame.userId}:`, error);
         }
       }
-      
+
       console.log(`📊 Alert save summary: ${savedCount} saved, ${skippedCount} skipped (already existed)`);
-      
+
       // Broadcast to frontend via SSE (once for all users)
       if (savedCount > 0) {
         broadcast({
@@ -766,13 +766,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           alertKey: alert.alertKey
         });
       }
-      
+
     } catch (error) {
       console.error(`❌ Failed to process enhanced alert:`, error);
     }
   });
 
-  // Store broadcast function globally for unified-alert-generator to use AFTER database save  
+  // Store broadcast function globally for unified-alert-generator to use AFTER database save
   (global as any).broadcastAlertAfterSave = broadcast;
   console.log('🚀 SSE broadcast function stored for post-database-save broadcasting');
 
@@ -864,7 +864,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           email: users.email,
           role: users.role
         }).from(users).limit(1);
-        
+
         diagnostics.database.sampleUserExists = sampleUserResult.length > 0;
         if (sampleUserResult.length > 0) {
           diagnostics.database.sampleUser = {
@@ -977,12 +977,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/games/today', async (req, res) => {
     try {
       const { sport = 'MLB' } = req.query;
-      
+
       // Validate sport parameter
       if (typeof sport !== 'string' || sport.includes('[object')) {
         return res.status(400).json({ error: 'Invalid sport parameter', games: [], date: new Date().toISOString().split('T')[0] });
       }
-      
+
       let games = [];
 
       const { getSeasonAwareSports } = await import('../shared/season-manager');
@@ -1061,12 +1061,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/games/:gameId/live", async (req, res) => {
     try {
       const { gameId } = req.params;
-      
+
       // Validate gameId parameter
       if (!gameId || gameId === '[object Object]' || gameId.includes('[object') || gameId.length > 50) {
         return res.status(400).json({ error: 'Invalid gameId parameter' });
       }
-      
+
       const { MLBApiService } = await import('./services/mlb-api');
       const mlbService = new MLBApiService();
       const liveData = await mlbService.getEnhancedGameData(gameId);
@@ -1250,7 +1250,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           return res.json(userWithoutPassword);
         }
       }
-      
+
       // Check for admin session (for frontend route guard compatibility)
       if (req.session?.adminUserId) {
         const admin = await storage.getUserById(req.session.adminUserId);
@@ -1260,7 +1260,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           return res.json(adminWithoutPassword);
         }
       }
-      
+
       res.status(401).json({ message: 'Not authenticated' });
     } catch (error) {
       console.error('Error checking authentication:', error);
@@ -1327,7 +1327,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Handle usernameOrEmail field from frontend
       let finalUsername = username;
       let finalEmail = email;
-      
+
       if (usernameOrEmail && !username && !email) {
         // Determine if usernameOrEmail is an email or username
         if (usernameOrEmail.includes('@')) {
@@ -1611,16 +1611,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/ai/cache/clear', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       console.log('🧹 Admin requested AI cache clear');
-      
+
       // Import the unified AI processor
       const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
-      
+
       // Clear the cache
       unifiedAIProcessor.clearCache();
-      
+
       // Get current stats after clearing
       const stats = unifiedAIProcessor.getStats();
-      
+
       res.json({
         message: 'AI cache cleared successfully',
         stats: {
@@ -1635,17 +1635,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // AI Performance Dashboard - Admin only  
+  // AI Performance Dashboard - Admin only
   app.get('/api/ai/performance/dashboard', requireAdminAuth, async (req, res) => {
     try {
       const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
       const stats = unifiedAIProcessor.getStats();
-      
+
       // Calculate AI utilization metrics
       const totalRequests = stats.performance.totalRequests;
-      const aiUtilization = totalRequests > 0 ? 
+      const aiUtilization = totalRequests > 0 ?
         (stats.performance.successRate / 100) : 0;
-      
+
       const recommendations = [];
       if (stats.cache.hitRate < 30) {
         recommendations.push("Cache hit rate low - consider longer TTL or better key generation");
@@ -1656,7 +1656,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (aiUtilization < 0.5) {
         recommendations.push("Low AI utilization - expand enhancement to more alert types");
       }
-      
+
       res.json({
         utilization: {
           aiEnhancementRate: aiUtilization,
@@ -1675,12 +1675,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // AI Cache statistics endpoint - Admin only  
+  // AI Cache statistics endpoint - Admin only
   app.get('/api/ai/cache/stats', requireAdminAuth, async (req, res) => {
     try {
       const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
       const stats = unifiedAIProcessor.getStats();
-      
+
       res.json({
         cache: stats.cache,
         queue: stats.queue,
@@ -2274,7 +2274,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const since = req.query.since as string;
       const sinceSeq = req.query.seq ? parseInt(req.query.seq as string) : null;
-      
+
       console.log(`📸 Snapshot request: userId=${currentUserId}, since=${since}, seq=${sinceSeq}`);
 
       // Get monitored games and filter alerts
@@ -2285,7 +2285,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       const monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
-      
+
       // Build parameterized query to prevent SQL injection
       const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
       const params = [...monitoredGameIds];
@@ -2474,7 +2474,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { weatherOnLiveService } = await import('./services/weather-on-live-service');
       const status = weatherOnLiveService.getMonitoringStatus();
-      
+
       res.json({
         ...status,
         healthMetrics: weatherOnLiveService.getHealthMetrics(),
@@ -2491,26 +2491,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { weatherOnLiveService } = await import('./services/weather-on-live-service');
       const { gameId, action } = req.params;
-      
+
       let result = false;
       let message = '';
-      
+
       switch (action) {
         case 'arm':
           const { WeatherArmReason } = await import('./config/runtime');
           result = await weatherOnLiveService.armWeatherMonitoring(gameId, WeatherArmReason.CUSTOM);
           message = result ? 'Weather monitoring armed' : 'Failed to arm weather monitoring';
           break;
-        
+
         case 'disarm':
           result = await weatherOnLiveService.disarmWeatherMonitoring(gameId);
           message = result ? 'Weather monitoring disarmed' : 'Failed to disarm weather monitoring';
           break;
-        
+
         default:
           return res.status(400).json({ error: 'Invalid action. Use "arm" or "disarm"' });
       }
-      
+
       res.json({
         success: result,
         message,
@@ -2622,7 +2622,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // CSRF token endpoint for admin panel
   app.get('/api/admin-auth/csrf-token', requireAdminAuth, generateCSRFToken, (req, res) => {
-    res.json({ 
+    res.json({
       csrfToken: req.csrfToken,
       message: 'CSRF token generated successfully'
     });
@@ -2776,8 +2776,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
         const alertGenerator = new UnifiedAlertGenerator({ mode: 'production' });
         debugResults.services.alertGenerator = {
-          status: 'INITIALIZED',
-          class: 'UnifiedAlertGenerator'
+          status: 'OK',
+          mode: 'production',
+          stats: alertGenerator.getStats()
         };
       } catch (error: any) {
         debugResults.services.alertGenerator = { status: 'FAIL', error: error.message };
@@ -3047,25 +3048,25 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Get settings through the unified settings system (this uses cache)
       const cachedSettings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
-      
+
       // Get settings directly from storage (bypasses cache to show DB state)
       const dbSettings = await storage.getGlobalAlertSettings(sport);
-      
+
       // Get cache metrics
       const cacheMetrics = unifiedSettings.getCacheMetrics();
-      
+
       // Count differences
       const cacheKeys = Object.keys(cachedSettings);
       const dbKeys = Object.keys(dbSettings);
       const allKeys = [...new Set([...cacheKeys, ...dbKeys])];
-      
+
       const differences = [];
       const mismatches = [];
-      
+
       for (const key of allKeys) {
         const cacheValue = cachedSettings[key];
         const dbValue = dbSettings[key];
-        
+
         if (cacheValue !== dbValue) {
           mismatches.push({
             alertType: key,
@@ -3074,7 +3075,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             issue: 'CACHE_DB_MISMATCH'
           });
         }
-        
+
         differences.push({
           alertType: key,
           cache: cacheValue ?? 'undefined',
@@ -3087,9 +3088,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const globalAlertSettingsCount = await db.execute(sql`
         SELECT COUNT(*) as count FROM global_alert_settings WHERE sport = ${canonicalSport}
       `);
-      
+
       const enabledCount = await db.execute(sql`
-        SELECT COUNT(*) as count FROM global_alert_settings 
+        SELECT COUNT(*) as count FROM global_alert_settings
         WHERE sport = ${canonicalSport} AND enabled = true
       `);
 
@@ -3135,7 +3136,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json(diagnostics);
     } catch (error: any) {
       console.error(`❌ Global Settings Diagnostics error for ${req.params.sport}:`, error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: error.message || 'Unknown error occurred',
         sport: req.params.sport,
         timestamp: new Date().toISOString(),
@@ -3199,7 +3200,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Global Alert Management Endpoints
-  
+
   // Admin-only endpoint to get global settings (legacy, kept for backward compatibility)
   app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
     try {
@@ -3218,27 +3219,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.status(500).json({ message: 'Failed to fetch global alert settings' });
     }
   });
-  
+
   // NEW: Public endpoint for all authenticated users to see global settings (read-only)
   app.get('/api/global-alert-settings/:sport', requireUserAuth, async (req, res) => {
     try {
       const { sport } = req.params;
-      
+
       // Get the global settings from storage (read-only for non-admins)
       const settings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
-      
+
       // Add metadata to indicate read-only status for non-admins
       const response = {
         sport: sport.toUpperCase(),
         settings,
         readOnly: req.user?.role !== 'admin',
-        message: req.user?.role !== 'admin' ? 
-          'These are global settings managed by administrators. You can see which alerts are disabled globally.' : 
+        message: req.user?.role !== 'admin' ?
+          'These are global settings managed by administrators. You can see which alerts are disabled globally.' :
           'You can manage these global settings as an administrator.'
       };
-      
+
       console.log(`📋 Global settings fetched for ${sport} by user ${req.user?.id} (${req.user?.role || 'user'})`);
-      
+
       res.json(response);
     } catch (error) {
       console.error('Error fetching global alert settings:', error);
@@ -3264,7 +3265,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       console.log(`✅ Admin toggled ${sport} ${alertType} to ${enabled ? 'enabled' : 'disabled'}`);
 
-      res.json({ 
+      res.json({
         message: `${alertType} ${enabled ? 'enabled' : 'disabled'} for ${sport}`,
         sport,
         alertType,
@@ -3299,7 +3300,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Get memory management stats
       const memoryStats = memoryManager.getStats();
-      
+
       // WebSocket stats removed - using HTTP polling architecture
       console.log('📡 HTTP polling architecture active - no WebSocket stats needed');
 
@@ -3347,18 +3348,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const databaseUrl = process.env.DATABASE_URL || 'Not set';
       const maskedUrl = databaseUrl.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
-      
+
       // Count records by sport
       const globalSettingsCount = await storage.getGlobalAlertSettings('ncaaf');
       const ncaafGlobalCount = Object.keys(globalSettingsCount || {}).length;
-      
+
       const mlbGlobalSettings = await storage.getGlobalAlertSettings('mlb');
       const mlbGlobalCount = Object.keys(mlbGlobalSettings || {}).length;
 
       // Count user preferences for current user
       const userId = req.session.userId || req.session.adminUserId;
       const userPrefsCount: Record<string, number> = { NCAAF: 0, MLB: 0, WNBA: 0, NFL: 0, CFL: 0, NBA: 0 };
-      
+
       for (const sport of Object.keys(userPrefsCount)) {
         try {
           if (!userId) continue;
@@ -3549,7 +3550,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId!);
         results.push({ alertType, enabled: true });
       }
-      
+
       // Invalidate cache so changes show immediately in user settings
       await unifiedSettings.invalidateCache('MLB');
 
@@ -3577,7 +3578,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         await storage.updateGlobalAlertSetting('MLB', alertType, true, req.session.adminUserId!);
         results.push({ alertType, enabled: true });
       }
-      
+
       // Invalidate cache so changes show immediately in user settings
       await unifiedSettings.invalidateCache('MLB');
 
@@ -3645,7 +3646,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             results.push({ sport, alertType, disabled: false, error: (error as Error).message });
           }
         }
-        
+
         // Invalidate cache for this sport so changes show immediately in user settings
         await unifiedSettings.invalidateCache(sport);
       }
@@ -3805,7 +3806,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // === CALENDAR SYNC API ROUTES ===
   // Use MigrationAdapter instead of direct CalendarSyncService
   const migrationAdapter = (global as any).migrationAdapter;
-  
+
   if (!migrationAdapter) {
     console.warn('⚠️ MigrationAdapter not available - calendar API may not work properly');
   }
@@ -3814,22 +3815,21 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/calendar', async (req, res) => {
     try {
       const { sport } = req.query;
-      
+
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Calendar service is initializing'
         });
       }
 
       const games = migrationAdapter.getGameData(sport as string);
-      
+
       res.json({
         success: true,
-        games,
-        count: games.length,
-        timestamp: new Date().toISOString(),
-        source: 'migration-adapter'
+        games: games || [],
+        sport: sport || 'all',
+        timestamp: new Date().toISOString()
       });
     } catch (error: any) {
       console.error('❌ Calendar API: Error fetching calendar data:', error);
@@ -3841,16 +3841,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/calendar/:sport', async (req, res) => {
     try {
       const { sport } = req.params;
-      
+
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Calendar service is initializing'
         });
       }
 
       const games = migrationAdapter.getGameData(sport.toLowerCase());
-      
+
       res.json({
         success: true,
         sport: sport.toUpperCase(),
@@ -3872,11 +3872,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Find game across all sports via migration adapter
       const allGames = migrationAdapter ? migrationAdapter.getGameData() : [];
       const game = allGames.find((g: any) => g.gameId === gameId);
-      
+
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
       }
-      
+
       res.json({
         success: true,
         game,
@@ -3892,14 +3892,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/calendar/metrics', async (req, res) => {
     try {
       const metrics = migrationAdapter ? migrationAdapter.getMetrics() : null;
-      
+
       if (!metrics) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Calendar service is initializing'
         });
       }
-      
+
       res.json({
         success: true,
         metrics,
@@ -3915,23 +3915,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/calendar/force-refresh/:sport', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { sport } = req.params;
-      
+
       // Only admins can force refresh
       if (req.user?.role !== 'admin') {
         return res.status(403).json({ error: 'Admin access required for force refresh' });
       }
-      
+
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Calendar service is initializing'
         });
       }
-      
+
       await migrationAdapter.forceRefresh(sport.toLowerCase());
-      
+
       console.log(`📅 Calendar API: Admin ${req.user.id} force refreshed ${sport.toUpperCase()} calendar data`);
-      
+
       res.json({
         success: true,
         message: `${sport.toUpperCase()} calendar data refresh initiated`,
@@ -3950,19 +3950,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (req.user?.role !== 'admin') {
         return res.status(403).json({ error: 'Admin access required' });
       }
-      
+
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Calendar service is initializing'
         });
       }
-      
+
       // MigrationAdapter starts both services
       await migrationAdapter.start();
-      
+
       console.log(`📅 Calendar API: Admin ${req.user.id} started calendar sync service`);
-      
+
       res.json({
         success: true,
         message: 'Calendar sync service started',
@@ -3981,19 +3981,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (req.user?.role !== 'admin') {
         return res.status(403).json({ error: 'Admin access required' });
       }
-      
+
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Calendar service is initializing'
         });
       }
-      
+
       // MigrationAdapter stops both services
       await migrationAdapter.stop();
-      
+
       console.log(`📅 Calendar API: Admin ${req.user.id} stopped calendar sync service`);
-      
+
       res.json({
         success: true,
         message: 'Calendar sync service stopped',
@@ -4016,10 +4016,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     // Fallback: Register basic health routes manually if needed
     app.get('/api/health/status', (req, res) => {
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Health monitoring system failed to initialize',
         message: error.message,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       });
     });
 
@@ -4030,12 +4030,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/migration/status', requireAdminAuth, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
-          message: 'Migration adapter is initializing'
+        return res.status(503).json({
+          error: 'Migration adapter not available',
+          message: 'Migration adapter is initializing',
+          timestamp: new Date().toISOString()
         });
       }
-      
+
       const status = migrationAdapter.getStatus();
       res.json({
         ...status,
@@ -4050,15 +4051,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/migration/diagnostics', requireAdminAuth, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
-      
+
       const status = migrationAdapter.getStatus();
       const metrics = migrationAdapter.getMetrics();
-      
+
       res.json({
         status: status.status,
         services: status.services,
@@ -4087,14 +4088,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/migration/comparison-metrics', requireAdminAuth, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
+        return res.status(503).json({
           error: 'Migration adapter not available'
         });
       }
-      
+
       const status = migrationAdapter.getStatus();
       const comparisonMetrics = status.comparison;
-      
+
       if (!comparisonMetrics) {
         return res.json({
           message: 'No comparison metrics available - comparison system may not be initialized',
@@ -4102,7 +4103,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           timestamp: new Date().toISOString()
         });
       }
-      
+
       res.json({
         ...comparisonMetrics,
         timestamp: new Date().toISOString()
@@ -4114,15 +4115,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // === CONTROL PLANE ENDPOINTS FOR MIGRATIONADAPTER ===
-  
+
   // ROLLOUT MANAGEMENT ENDPOINTS
-  
+
   // Set rollout percentage for specific sport (0-100%)
   app.post('/api/migration/rollout/sport/:sport', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
@@ -4132,28 +4133,28 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Validation
       if (typeof percentage !== 'number') {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Invalid input',
           message: 'Percentage must be a number'
         });
       }
 
       if (percentage < 0 || percentage > 100) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Invalid percentage',
           message: 'Percentage must be between 0 and 100'
         });
       }
 
       const rolloutController = migrationAdapter.getRolloutController();
-      
+
       // Set the rollout percentage
       rolloutController.setSportPercentage(sport.toUpperCase(), percentage);
-      
+
       const newStatus = rolloutController.getStatus();
-      
+
       console.log(`🎛️ Control Plane: Set ${sport.toUpperCase()} rollout to ${percentage}% via API`);
-      
+
       res.json({
         success: true,
         message: `Rollout percentage for ${sport.toUpperCase()} set to ${percentage}%`,
@@ -4166,7 +4167,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error setting sport rollout percentage:', error);
-      res.status(400).json({ 
+      res.status(400).json({
         error: 'Failed to set rollout percentage',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -4178,8 +4179,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/migration/rollout', requireAdminAuth, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
@@ -4187,7 +4188,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const rolloutController = migrationAdapter.getRolloutController();
       const rolloutStatus = rolloutController.getStatus();
       const savedState = rolloutController.getSavedRolloutState();
-      
+
       res.json({
         success: true,
         rollout: {
@@ -4200,7 +4201,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error fetching rollout status:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to fetch rollout status',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -4212,21 +4213,21 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/migration/rollout/pause', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
 
       const rolloutController = migrationAdapter.getRolloutController();
-      
+
       // Save current state before pausing
       const preState = rolloutController.getStatus();
       rolloutController.pauseAllRollouts();
       const postState = rolloutController.getStatus();
-      
+
       console.log('⏸️ Control Plane: All rollouts paused via API');
-      
+
       res.json({
         success: true,
         message: 'All rollouts paused - switched to legacy mode',
@@ -4238,7 +4239,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error pausing rollouts:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to pause rollouts',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -4250,29 +4251,29 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/migration/rollout/resume', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
 
       const rolloutController = migrationAdapter.getRolloutController();
       const savedState = rolloutController.getSavedRolloutState();
-      
+
       if (!savedState.hasSavedState) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'No saved state to resume',
           message: 'No previous rollout state has been saved. Use pause first or set individual sport percentages.',
           timestamp: new Date().toISOString()
         });
       }
-      
+
       // Resume to saved state
       rolloutController.resumeAllRollouts();
-      const newState = rolloutController.getStatus();
-      
+      const newState = migrationAdapter.getStatus();
+
       console.log('▶️ Control Plane: All rollouts resumed via API');
-      
+
       res.json({
         success: true,
         message: 'Rollouts resumed to previous state',
@@ -4282,7 +4283,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error resuming rollouts:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to resume rollouts',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -4291,19 +4292,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // MIGRATION CONTROL ENDPOINTS
-  
+
   // Enable MigrationAdapter components
   app.post('/api/migration/enable', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
 
       const preStatus = migrationAdapter.getStatus();
-      
+
       if (preStatus.status === 'running') {
         return res.json({
           success: true,
@@ -4316,9 +4317,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Start the migration adapter
       await migrationAdapter.start();
       const postStatus = migrationAdapter.getStatus();
-      
+
       console.log('🚀 Control Plane: MigrationAdapter enabled via API');
-      
+
       res.json({
         success: true,
         message: 'MigrationAdapter components enabled successfully',
@@ -4329,7 +4330,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error enabling migration adapter:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to enable MigrationAdapter',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -4337,18 +4338,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Disable MigrationAdapter components  
+  // Disable MigrationAdapter components
   app.post('/api/migration/disable', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
 
       const preStatus = migrationAdapter.getStatus();
-      
+
       if (preStatus.status === 'stopped') {
         return res.json({
           success: true,
@@ -4361,9 +4362,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Stop the migration adapter
       await migrationAdapter.stop();
       const postStatus = migrationAdapter.getStatus();
-      
+
       console.log('🛑 Control Plane: MigrationAdapter disabled via API');
-      
+
       res.json({
         success: true,
         message: 'MigrationAdapter components disabled successfully',
@@ -4374,7 +4375,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error disabling migration adapter:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to disable MigrationAdapter',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -4386,8 +4387,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/migration/health', requireAdminAuth, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing',
           healthy: false,
           timestamp: new Date().toISOString()
@@ -4398,12 +4399,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const metrics = migrationAdapter.getMetrics();
       const rolloutController = migrationAdapter.getRolloutController();
       const rolloutStatus = rolloutController.getStatus();
-      
+
       // Determine overall health
-      const isHealthy = status.status === 'running' && 
+      const isHealthy = status.status === 'running' &&
                        status.health.overall === 'healthy' &&
                        (status.services.calendarSync.healthy || status.services.dataIngestion.healthy);
-      
+
       const healthCheck = {
         healthy: isHealthy,
         status: status.status,
@@ -4428,7 +4429,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           overall: status.health.overall,
           checksPerformed: status.health.checksPerformed,
           checksPassed: status.health.checksPassed,
-          successRate: status.health.checksPerformed > 0 
+          successRate: status.health.checksPerformed > 0
             ? (status.health.checksPassed / status.health.checksPerformed * 100).toFixed(1) + '%'
             : '0%',
           failureStreak: status.health.failureStreak,
@@ -4469,7 +4470,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error performing health check:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Health check failed',
         healthy: false,
         message: error.message,
@@ -4482,21 +4483,21 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/migration/reset', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
 
       const preStatus = migrationAdapter.getStatus();
-      
+
       // Reset all metrics and comparison data
       await migrationAdapter.resetMetricsAndComparison();
-      
+
       const postStatus = migrationAdapter.getStatus();
-      
+
       console.log('🔄 Control Plane: Metrics and comparison data reset via API');
-      
+
       res.json({
         success: true,
         message: 'All metrics and comparison data have been reset successfully',
@@ -4521,7 +4522,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error resetting metrics:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to reset metrics and comparison data',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -4535,14 +4536,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/migration/mode', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
 
       const { mode, force, reason, minimumThreshold } = req.body;
-      
+
       // Validate mode parameter
       const validModes = ['legacy', 'ingestion', 'hybrid'];
       if (!mode || !validModes.includes(mode)) {
@@ -4556,7 +4557,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Get current status
       const currentStatus = migrationAdapter.getStatus();
       const rolloutController = (migrationAdapter as any).rolloutController;
-      
+
       if (!rolloutController) {
         return res.status(503).json({
           error: 'Rollout controller not available'
@@ -4597,7 +4598,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       } catch (safetyError: any) {
         console.warn(`🚨 Admin Control Plane: Mode change safety check failed:`, safetyError.message);
-        
+
         res.status(400).json({
           error: 'Mode change safety check failed',
           message: safetyError.message,
@@ -4613,7 +4614,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Admin Control Plane: Mode change error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Mode change failed',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -4621,18 +4622,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get saved rollout state for inspection 
+  // Get saved rollout state for inspection
   app.get('/api/migration/rollout/saved', requireAdminAuth, async (req, res) => {
     try {
       if (!migrationAdapter) {
-        return res.status(503).json({ 
-          error: 'Migration adapter not available', 
+        return res.status(503).json({
+          error: 'Migration adapter not available',
           message: 'Migration adapter is initializing'
         });
       }
 
       const rolloutController = (migrationAdapter as any).rolloutController;
-      
+
       if (!rolloutController) {
         return res.status(503).json({
           error: 'Rollout controller not available'
@@ -4668,7 +4669,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
     } catch (error: any) {
       console.error('❌ Admin Control Plane: Error fetching saved rollout state:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to fetch saved rollout state',
         message: error.message,
         timestamp: new Date().toISOString()
