@@ -58,6 +58,7 @@ interface GameStateData {
 abstract class BaseSportMapper {
   abstract sport: string;
   abstract generateBulletPoints(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string[]>;
+  abstract generateStructuredTemplate(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string>;
   abstract calculateConfidence(alert: AlertResult, gameState: GameStateData): number;
   abstract generateTags(alert: AlertResult, gameState: GameStateData): string[];
 
@@ -138,6 +139,75 @@ class MLBInsightsMapper extends BaseSportMapper {
     }
 
     return bullets.slice(0, 5); // Max 5 bullets
+  }
+
+  async generateStructuredTemplate(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string> {
+    // Generate alert header
+    const alertType = (alert.type || 'MLB').toUpperCase().replace(/_/g, ' ');
+    
+    // Generate key information line with scoring probability
+    const scoringProb = this.calculateScoringProbability(gameState);
+    const outs = gameState.outs || 0;
+    const keyLine = `💎 ${this.getBaseStateDescription(gameState.hasFirst || false, gameState.hasSecond || false, gameState.hasThird || false)} (${scoringProb}% scoring chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${outs} out${outs !== 1 ? 's' : ''}`;
+    
+    // Generate game situation
+    const inningStr = gameState.inning ? `${gameState.isTopInning ? 'Top' : 'Bot'} ${gameState.inning}` : 'Live';
+    const countStr = (gameState.balls !== undefined && gameState.strikes !== undefined) ? `${gameState.balls}-${gameState.strikes} count` : '';
+    const runnersStr = this.formatRunners(gameState.hasFirst || false, gameState.hasSecond || false, gameState.hasThird || false);
+    
+    let situationSection = `🎮 GAME SITUATION\n${gameState.awayTeam} ${gameState.awayScore} @ ${gameState.homeTeam} ${gameState.homeScore}\n📍 ${inningStr} • ${outs} out${outs !== 1 ? 's' : ''}`;
+    
+    if (countStr) {
+      situationSection += ` • ${countStr}`;
+    }
+    
+    if (runnersStr) {
+      situationSection += `\n🏃 ${runnersStr}`;
+    }
+    
+    // Add weather or pitcher info if available
+    if (weather?.windSpeed && weather.windSpeed > 10) {
+      situationSection += `\n🌬️ ${weather.windSpeed}mph winds affecting play`;
+    } else if (gameState.pitchCount && gameState.pitchCount > 90) {
+      situationSection += `\n⚡ Pitcher: ${gameState.pitchCount} pitches (fatigue zone)`;
+    }
+    
+    return `${alertType} Alert\n\n${keyLine}\n\n${situationSection}`;
+  }
+
+  // Helper methods for structured template
+  private calculateScoringProbability(gameState: GameStateData): number {
+    const hasFirst = gameState.hasFirst || false;
+    const hasSecond = gameState.hasSecond || false;
+    const hasThird = gameState.hasThird || false;
+    const outs = gameState.outs || 0;
+
+    // RE24 lookup table (simplified)
+    const re24Map: Record<string, number> = {
+      '000_0': 0.461, '000_1': 0.243, '000_2': 0.095,
+      '100_0': 0.831, '100_1': 0.473, '100_2': 0.178,
+      '010_0': 1.068, '010_1': 0.644, '010_2': 0.305,
+      '001_0': 1.277, '001_1': 0.897, '001_2': 0.382,
+      '110_0': 1.437, '110_1': 0.908, '110_2': 0.420,
+      '101_0': 1.784, '101_1': 1.171, '101_2': 0.494,
+      '011_0': 2.052, '011_1': 1.426, '011_2': 0.661,
+      '111_0': 2.254, '111_1': 1.541, '111_2': 0.815
+    };
+
+    const baseState = `${hasThird ? '1' : '0'}${hasSecond ? '1' : '0'}${hasFirst ? '1' : '0'}_${outs}`;
+    const re24Value = re24Map[baseState] || 0.5;
+    return Math.round(re24Value * 100 / 2.254); // Normalize to percentage
+  }
+
+  private formatRunners(hasFirst: boolean, hasSecond: boolean, hasThird: boolean): string {
+    const bases = [];
+    if (hasFirst) bases.push('1st');
+    if (hasSecond) bases.push('2nd');
+    if (hasThird) bases.push('3rd');
+    
+    if (bases.length === 0) return '';
+    if (bases.length === 3) return 'Runners: bases loaded';
+    return `Runners: ${bases.join(', ')}`;
   }
 
   // Generate market data bullets for MLB
@@ -387,6 +457,64 @@ class NFLNCAAFInsightsMapper extends BaseSportMapper {
     return bullets.slice(0, 5);
   }
 
+  async generateStructuredTemplate(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string> {
+    // Generate alert header
+    const alertType = (alert.type || 'FOOTBALL').toUpperCase().replace(/_/g, ' ');
+    
+    // Generate key information line with TD probability
+    const tdProb = this.calculateTouchdownProbability(gameState);
+    const down = gameState.down || 1;
+    const yardsToGo = gameState.yardsToGo || 10;
+    const possession = gameState.possession || 'Team';
+    const keyLine = `💎 ${this.getOrdinal(down)} & ${yardsToGo} (${tdProb}% TD chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${possession} ball`;
+    
+    // Generate game situation
+    const quarter = gameState.quarter || 1;
+    const timeRemaining = gameState.timeRemaining || 'Live';
+    const fieldPos = gameState.fieldPosition !== undefined ? gameState.fieldPosition : 50;
+    
+    let situationSection = `🎮 GAME SITUATION\n${gameState.awayTeam} ${gameState.awayScore} @ ${gameState.homeTeam} ${gameState.homeScore}\n📍 Q${quarter} • ${timeRemaining} • ${this.getOrdinal(down)} & ${yardsToGo}\n🏟️ Field position: ${fieldPos}-yard line`;
+    
+    // Add context info
+    if (fieldPos <= 20) {
+      situationSection += `\n🎯 Red zone opportunity`;
+    } else if (fieldPos >= 80) {
+      situationSection += `\n⚠️ Deep in own territory`;
+    }
+    
+    // Add weather if significant
+    if (weather?.windSpeed && weather.windSpeed >= 15) {
+      situationSection += `\n🌬️ ${weather.windSpeed}mph winds affecting throws/kicks`;
+    }
+    
+    return `${alertType} Alert\n\n${keyLine}\n\n${situationSection}`;
+  }
+
+  private calculateTouchdownProbability(gameState: GameStateData): number {
+    const down = gameState.down || 1;
+    const yardsToGo = gameState.yardsToGo || 10;
+    const fieldPosition = gameState.fieldPosition || 50;
+    
+    let baseProbability = 50; // Base probability
+    
+    // Adjust for field position
+    if (fieldPosition <= 10) baseProbability = 75;
+    else if (fieldPosition <= 20) baseProbability = 65;
+    else if (fieldPosition <= 35) baseProbability = 55;
+    else if (fieldPosition >= 80) baseProbability = 20;
+    
+    // Adjust for down
+    if (down === 1) baseProbability += 10;
+    else if (down === 4) baseProbability += 15; // High stakes
+    else if (down === 3) baseProbability -= 5;
+    
+    // Adjust for distance
+    if (yardsToGo <= 3) baseProbability += 10;
+    else if (yardsToGo >= 8) baseProbability -= 10;
+    
+    return Math.min(Math.max(baseProbability, 15), 85);
+  }
+
   private analyzeDownDistance(gameState: GameStateData): string {
     const down = gameState.down || 1;
     const yardsToGo = gameState.yardsToGo ?? 10;
@@ -562,6 +690,65 @@ class NBAWNBAInsightsMapper extends BaseSportMapper {
     return bullets.slice(0, 5);
   }
 
+  async generateStructuredTemplate(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string> {
+    // Generate alert header
+    const alertType = (alert.type || 'BASKETBALL').toUpperCase().replace(/_/g, ' ');
+    
+    // Generate key information line
+    const quarter = gameState.quarter || 1;
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    const winProb = this.calculateWinProbability(gameState);
+    const quarterStr = quarter <= 4 ? `Q${quarter}` : 'OT';
+    const keyLine = `💎 ${quarterStr} action (${winProb}% win chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${scoreDiff}pt margin`;
+    
+    // Generate game situation
+    const timeRemaining = gameState.timeRemaining || 'Live';
+    let situationSection = `🎮 GAME SITUATION\n${gameState.awayTeam} ${gameState.awayScore} @ ${gameState.homeTeam} ${gameState.homeScore}\n📍 ${quarterStr} • ${timeRemaining} remaining`;
+    
+    // Add context info
+    if (quarter >= 4 && scoreDiff <= 5) {
+      situationSection += `\n🔥 Clutch time - tight game`;
+    }
+    
+    // Add foul situation if available
+    if (gameState.fouls) {
+      const { home, away } = gameState.fouls;
+      if (home >= 7 || away >= 7) {
+        situationSection += `\n⚠️ Fouls: ${away}-${home} (bonus situation)`;
+      }
+    }
+    
+    // Add timeouts if available
+    if (gameState.timeouts) {
+      const { home, away } = gameState.timeouts;
+      if (home <= 2 || away <= 2) {
+        situationSection += `\n⏰ Timeouts: ${away}-${home} remaining`;
+      }
+    }
+    
+    return `${alertType} Alert\n\n${keyLine}\n\n${situationSection}`;
+  }
+
+  private calculateWinProbability(gameState: GameStateData): number {
+    const quarter = gameState.quarter || 1;
+    const scoreDiff = gameState.homeScore - gameState.awayScore;
+    const timeRemaining = this.parseTimeToSeconds(gameState.timeRemaining || '12:00');
+    
+    let baseProbability = 50; // Even game
+    
+    // Adjust for score differential
+    if (Math.abs(scoreDiff) >= 15) baseProbability = scoreDiff > 0 ? 80 : 20;
+    else if (Math.abs(scoreDiff) >= 10) baseProbability = scoreDiff > 0 ? 70 : 30;
+    else if (Math.abs(scoreDiff) >= 5) baseProbability = scoreDiff > 0 ? 60 : 40;
+    
+    // Adjust for game time (home team perspective)
+    if (quarter >= 4 && timeRemaining < 300) { // Under 5 minutes
+      if (Math.abs(scoreDiff) <= 3) baseProbability = 50; // Anyone's game
+    }
+    
+    return Math.min(Math.max(baseProbability, 15), 85);
+  }
+
   private analyzeClutchPerformance(gameState: GameStateData): string {
     const quarter = gameState.quarter || 4;
     const timeRemaining = gameState.timeRemaining || '';
@@ -722,6 +909,67 @@ class CFLInsightsMapper extends BaseSportMapper {
     return bullets.slice(0, 5);
   }
 
+  async generateStructuredTemplate(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, oddsData?: ProcessedOdds | null): Promise<string> {
+    // Generate alert header
+    const alertType = (alert.type || 'CFL').toUpperCase().replace(/_/g, ' ');
+    
+    // Generate key information line
+    const down = gameState.down || 1;
+    const yardsToGo = gameState.yardsToGo || 10;
+    const touchdownProb = this.calculateCFLTouchdownProbability(gameState);
+    const possession = gameState.possession || 'Team';
+    const keyLine = `💎 ${this.getOrdinal(down)} & ${yardsToGo} (${touchdownProb}% TD chance) ${gameState.awayTeam} vs ${gameState.homeTeam} - ${possession} ball`;
+    
+    // Generate game situation
+    const quarter = gameState.quarter || 1;
+    const timeRemaining = gameState.timeRemaining || 'Live';
+    const fieldPos = gameState.fieldPosition !== undefined ? gameState.fieldPosition : 55; // CFL 110-yard field
+    
+    let situationSection = `🎮 GAME SITUATION\n${gameState.awayTeam} ${gameState.awayScore} @ ${gameState.homeTeam} ${gameState.homeScore}\n📍 Q${quarter} • ${timeRemaining} • ${this.getOrdinal(down)} & ${yardsToGo}\n🏟️ Field position: ${fieldPos}-yard line (110yd field)`;
+    
+    // Add CFL-specific context
+    if (down === 3) {
+      situationSection += `\n⚡ Critical 3rd down - must convert or punt`;
+    }
+    
+    // Add rouge opportunity
+    if (down === 3 && fieldPos <= 45) {
+      situationSection += `\n🎯 Rouge opportunity (1pt guaranteed on missed FG)`;
+    }
+    
+    // Add singles opportunity
+    if (fieldPos <= 45) {
+      situationSection += `\n⭐ Singles scoring opportunity`;
+    }
+    
+    return `${alertType} Alert\n\n${keyLine}\n\n${situationSection}`;
+  }
+
+  private calculateCFLTouchdownProbability(gameState: GameStateData): number {
+    const down = gameState.down || 1;
+    const yardsToGo = gameState.yardsToGo || 10;
+    const fieldPosition = gameState.fieldPosition || 55;
+    
+    let baseProbability = 45; // Base probability for CFL
+    
+    // Adjust for field position (110-yard field)
+    if (fieldPosition <= 10) baseProbability = 75;
+    else if (fieldPosition <= 20) baseProbability = 65;
+    else if (fieldPosition <= 35) baseProbability = 55;
+    else if (fieldPosition >= 90) baseProbability = 15;
+    
+    // Adjust for down (3-down system)
+    if (down === 1) baseProbability += 15;
+    else if (down === 3) baseProbability += 10; // All-or-nothing
+    else if (down === 2) baseProbability += 5;
+    
+    // Adjust for distance
+    if (yardsToGo <= 3) baseProbability += 15;
+    else if (yardsToGo >= 10) baseProbability -= 10;
+    
+    return Math.min(Math.max(baseProbability, 15), 85);
+  }
+
   private analyzeRougeOpportunity(gameState: GameStateData): string {
     const fieldPosition = gameState.fieldPosition ?? 45;
     const yardsToGo = gameState.yardsToGo || 10;
@@ -817,7 +1065,7 @@ export class GamblingInsightsComposer {
    * @param alert - The alert result to enhance
    * @param gameState - Current game state data
    * @param weather - Optional weather data
-   * @returns GamblingInsights object with bullet points, confidence, and tags
+   * @returns GamblingInsights object with structured template format
    */
   async compose(alert: AlertResult, gameState: GameStateData, weather?: WeatherData, userOddsEnabled: boolean = false, userApiKey?: string): Promise<GamblingInsights> {
     try {
@@ -848,8 +1096,8 @@ export class GamblingInsightsComposer {
         }
       }
 
-      // Generate sport-specific bullet points with market data
-      const bullets = await mapper.generateBulletPoints(alert, gameState, weather, oddsData);
+      // Generate structured template instead of bullet points
+      const structuredContent = await mapper.generateStructuredTemplate(alert, gameState, weather, oddsData);
       
       // Calculate confidence based on data availability
       const confidence = mapper.calculateConfidence(alert, gameState);
@@ -857,9 +1105,9 @@ export class GamblingInsightsComposer {
       // Generate relevant tags
       const tags = mapper.generateTags(alert, gameState);
 
-      // Build gambling insights object
+      // Build gambling insights object with new structured format
       const insights: GamblingInsights = {
-        bullets: bullets.length > 0 ? bullets : ['Limited game state data available for detailed gambling insights'],
+        bullets: [structuredContent], // Single structured template
         confidence,
         tags: [...tags, 'gambling-insights', 'auto-generated'],
         // Market data from odds API
@@ -892,12 +1140,16 @@ export class GamblingInsightsComposer {
   }
 
   private createFallbackInsights(alert: AlertResult, gameState: GameStateData): GamblingInsights {
+    const fallbackTemplate = `${(alert.type || 'GAME').toUpperCase().replace(/_/g, ' ')} Alert
+
+💎 ${gameState.homeTeam} vs ${gameState.awayTeam} (${gameState.homeScore}-${gameState.awayScore})
+
+🎮 GAME SITUATION
+📍 Live game in progress
+🎯 Monitor for betting opportunities`;
+
     return {
-      bullets: [
-        `${gameState.sport} alert triggered for ${gameState.homeTeam} vs ${gameState.awayTeam} - monitor for betting implications`,
-        `Current score ${gameState.homeScore}-${gameState.awayScore} creates specific market movement opportunities in live betting`,
-        'General gambling advice: Consider game context, team form, and situational factors before placing any wagers'
-      ],
+      bullets: [fallbackTemplate],
       confidence: 0.3,
       tags: ['gambling-insights', 'fallback', gameState.sport?.toLowerCase() || 'unknown']
     };
