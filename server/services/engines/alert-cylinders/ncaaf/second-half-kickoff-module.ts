@@ -40,7 +40,7 @@ export default class NCAAFSecondHalfKickoffModule extends BaseAlertModule {
         riskReward: {
           probability: 100
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

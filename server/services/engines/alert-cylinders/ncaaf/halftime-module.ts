@@ -58,7 +58,7 @@ export default class HalftimeModule extends BaseAlertModule {
         riskReward: {
           probability: 80
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

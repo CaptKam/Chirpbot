@@ -311,6 +311,7 @@ export interface AlertResult {
   alertKey: string;
   type: string;
   message: string;
+  displayMessage?: string;
   context: any;
   priority: number;
   gamblingInsights?: GamblingInsights;
@@ -365,6 +366,7 @@ export const alertResultSchema = z.object({
   alertKey: z.string(),
   type: z.string(),
   message: z.string(),
+  displayMessage: z.string().optional(),
   context: z.any(),
   priority: z.number(),
   gamblingInsights: gamblingInsightsSchema.optional(),
