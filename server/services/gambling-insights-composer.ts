@@ -1264,8 +1264,8 @@ export class GamblingInsightsComposer {
         // Build game state from alert data
         const gameState: GameStateData = this.buildGameStateFromAlert(alert, sport);
         
-        // Get gambling insights using the compose method (with user odds preferences)
-        const gamblingInsights = await this.compose(alert, gameState, undefined, false, undefined);
+        // Get gambling insights using compose method (no user odds preferences)
+        const gamblingInsights = await this.compose(alert, gameState, undefined, false);
         
         // Log bullet points for each alert as requested
         console.log(`🎯 Composer bullets: sport=${sport}, type=${alert.type}, bullets=${gamblingInsights.bullets?.length || 0}`);
