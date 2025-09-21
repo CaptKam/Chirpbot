@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class StrikeoutModule extends BaseAlertModule {
   alertType = 'MLB_STRIKEOUT';
@@ -156,12 +157,25 @@ export default class StrikeoutModule extends BaseAlertModule {
       message += ` | ${leverageIndicators.join(', ')}`;
     }
     
-    return {
+    const alertResult = {
       alertKey,
       type: 'MLB_STRIKEOUT',
       priority,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Strikeout`,
       context
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

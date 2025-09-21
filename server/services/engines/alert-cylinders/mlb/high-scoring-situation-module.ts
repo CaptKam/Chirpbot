@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class RunnersOnHighScoringModule extends BaseAlertModule {
   alertType = 'MLB_HIGH_SCORING_SITUATION';
@@ -83,10 +84,10 @@ export default class RunnersOnHighScoringModule extends BaseAlertModule {
     // Priority: raise for favorable wind or slugger on deck
     let priority = 85 + (windImpact === 'favorable' ? 5 : 0) + (gameState.onDeckBatter ? 5 : 0);
 
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_high_scoring_${baseKey}_${outs}_${Date.now()}`,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | High scoring situation`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -105,6 +106,19 @@ export default class RunnersOnHighScoringModule extends BaseAlertModule {
         pitcherPerformance: pitcherPerf,
       },
       priority,
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

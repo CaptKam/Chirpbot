@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { weatherAlertIntegration } from '../../../weather-alert-integration';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class StealLikelihoodModule extends BaseAlertModule {
   alertType = 'MLB_STEAL_LIKELIHOOD';
@@ -111,10 +112,10 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     const baseConfiguration = this.getBaseConfiguration(gameState);
     const alertKey = `${gameState.gameId}_steal_likelihood_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bottom'}_${baseConfiguration}_${gameState.balls}_${gameState.strikes}`;
 
-    return {
+    const alertResult = {
       alertKey,
       type: this.alertType,
-      message: alertMessage,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Steal likelihood`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -146,6 +147,19 @@ export default class StealLikelihoodModule extends BaseAlertModule {
         optimalStealWindow: this.calculateOptimalStealWindow(gameState)
       },
       priority: Math.min(95, 55 + Math.round(stealProbability * 0.4))
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

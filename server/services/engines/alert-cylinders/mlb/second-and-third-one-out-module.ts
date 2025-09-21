@@ -1,5 +1,6 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class SecondAndThirdOneOutModule extends BaseAlertModule {
   alertType = 'MLB_SECOND_AND_THIRD_ONE_OUT';
@@ -16,10 +17,10 @@ export default class SecondAndThirdOneOutModule extends BaseAlertModule {
 
   generateAlert(gameState: GameState): AlertResult | null {
     // isTriggered() already called by engine - removed duplicate check
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_second_third_one_out`,
       type: this.alertType,
-      message: `Runners on 2nd & 3rd, 1 out | 68% scoring chance | Sac fly scores | Wild pitch scores 2`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Runners on 2nd & 3rd, 1 out`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -36,6 +37,19 @@ export default class SecondAndThirdOneOutModule extends BaseAlertModule {
         scoringProbability: 68
       },
       priority: 50
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

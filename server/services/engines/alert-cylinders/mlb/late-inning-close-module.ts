@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class LateInningCloseModule extends BaseAlertModule {
   alertType = 'MLB_LATE_INNING_CLOSE';
@@ -121,10 +122,10 @@ export default class LateInningCloseModule extends BaseAlertModule {
       message += ` | ${contexts.join(' | ')}`;
     }
     
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_late_close_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${scoreDiff}`,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Late inning close game`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -137,6 +138,19 @@ export default class LateInningCloseModule extends BaseAlertModule {
         outs: gameState.outs
       },
       priority: gameState.inning === 9 ? 55 : 50
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: this.alertType,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class GameStartModule extends BaseAlertModule {
   alertType = 'MLB_GAME_START';
@@ -76,12 +77,25 @@ export default class GameStartModule extends BaseAlertModule {
     // Mark this game as triggered to prevent duplicates
     this.triggeredGames.add(gameState.gameId);
 
-    return {
+    const alertResult = {
       alertKey,
       type: 'MLB_GAME_START',
       priority: 40,
-      message: this.generateEnhancedGameStartMessage(gameState),
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Game starting`,
       context
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

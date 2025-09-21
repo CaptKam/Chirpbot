@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
   alertType = 'MLB_BASES_LOADED_TWO_OUTS';
@@ -48,10 +49,10 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
     // Pitcher pressure analysis
     const pressureContext = this.analyzePressureSituation(gameState);
 
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_bases_loaded_two_outs_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${gameState.outs}`,
       type: this.alertType,
-      message: this.buildEnhancedMessage(gameState, batterPerformance, pitcherPerformance, teamMomentum, patterns),
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Bases loaded, 2 outs`,
       context: {
         // Core game state
         gameId: gameState.gameId,
@@ -120,6 +121,19 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
         momentumSwing: isLateInning ? 'Game-deciding potential' : 'Major momentum shift possible'
       },
       priority: 88
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: this.alertType,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
   

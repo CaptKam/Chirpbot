@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class FirstAndThirdOneOutModule extends BaseAlertModule {
   alertType = 'MLB_FIRST_AND_THIRD_ONE_OUT';
@@ -46,10 +47,10 @@ export default class FirstAndThirdOneOutModule extends BaseAlertModule {
     // Create unique alert key including batter and out count
     const alertKey = `${gameState.gameId}_first_third_one_out_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bottom'}_${currentBatter.replace(/\s+/g, '_')}`;
 
-    return {
+    const alertResult = {
       alertKey,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Runners on 1st & 3rd, 1 out`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -73,6 +74,19 @@ export default class FirstAndThirdOneOutModule extends BaseAlertModule {
         scoringProbability: totalProbability
       },
       priority: Math.min(90, 80 + Math.floor(totalProbability / 15))
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class ScoringOpportunityModule extends BaseAlertModule {
   alertType = 'MLB_SCORING_OPPORTUNITY';
@@ -124,10 +125,10 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
       }
     }
     
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_scoring_opp_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${hasRunnerSecond ? '2' : ''}${hasRunnerThird ? '3' : ''}_${gameState.outs}out`,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Scoring opportunity`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -144,6 +145,19 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
         currentPitcher: gameState.currentPitcher
       },
       priority: hasRunnerThird ? 88 : 85
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

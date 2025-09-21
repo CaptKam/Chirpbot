@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class PitchingChangeModule extends BaseAlertModule {
   alertType = 'MLB_PITCHING_CHANGE';
@@ -83,10 +84,10 @@ export default class PitchingChangeModule extends BaseAlertModule {
       message += ` | Standard substitution`;
     }
     
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_pitching_change_${gameState.currentPitcher}_${Date.now()}`,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Pitching change`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -99,6 +100,19 @@ export default class PitchingChangeModule extends BaseAlertModule {
         currentBatter: gameState.currentBatter
       },
       priority: 50
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: this.alertType,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

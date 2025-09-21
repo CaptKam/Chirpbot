@@ -1,6 +1,7 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class BasesLoadedOneOutModule extends BaseAlertModule {
   alertType = 'MLB_BASES_LOADED_ONE_OUT';
@@ -28,10 +29,10 @@ export default class BasesLoadedOneOutModule extends BaseAlertModule {
       gameState.isTopInning ? 'away' : 'home'
     );
     
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_bases_loaded_one_out`,
       type: this.alertType,
-      message: this.buildEnhancedMessage(gameState, batterPerformance, pitcherPerformance, teamMomentum),
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Bases loaded, 1 out`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -48,6 +49,19 @@ export default class BasesLoadedOneOutModule extends BaseAlertModule {
         scoringProbability: 66
       },
       priority: 75
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: this.alertType,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

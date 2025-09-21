@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class OnDeckPredictionModule extends BaseAlertModule {
   alertType = 'MLB_ON_DECK_PREDICTION';
@@ -81,10 +82,10 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
 
     const alertKey = `${gameId}_on_deck_${onDeckBatter.replace(/\s+/g, '_')}_${situationKey}_${gameState.inning}_${gameState.outs}`;
 
-    return {
+    const alertResult = {
       alertKey,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | On deck`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -109,6 +110,19 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
         )
       },
       priority: Math.min(95, 80 + Math.floor(totalProbability / 5))
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

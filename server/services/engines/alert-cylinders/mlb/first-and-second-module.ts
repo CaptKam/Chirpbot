@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class FirstAndSecondModule extends BaseAlertModule {
   alertType = 'MLB_FIRST_AND_SECOND';
@@ -31,10 +32,10 @@ export default class FirstAndSecondModule extends BaseAlertModule {
     const scoringProb = gameState.outs === 0 ? 68 : gameState.outs === 1 ? 58 : 42;
     const priority = gameState.outs === 0 ? 40 : gameState.outs === 1 ? 35 : 30;
 
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_first_second_${gameState.outs}_out`,
       type: this.alertType,
-      message: `Runners on 1st & 2nd, ${gameState.outs} out${gameState.outs !== 1 ? 's' : ''} | ${scoringProb}% scoring chance | Double scores 2 | Single scores 1`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Runners on 1st & 2nd`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -51,6 +52,19 @@ export default class FirstAndSecondModule extends BaseAlertModule {
         scoringProbability: scoringProb
       },
       priority
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 

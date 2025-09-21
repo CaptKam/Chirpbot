@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class BasesLoadedNoOutsModule extends BaseAlertModule {
   alertType = 'MLB_BASES_LOADED_NO_OUTS';
@@ -48,10 +49,10 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
     // Batter matchup insight
     const batterContext = this.analyzeBatterSituation(gameState);
 
-    return {
+    const alertResult = {
       alertKey: `${gameState.gameId}_bases_loaded_no_outs_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${gameState.outs}`,
       type: this.alertType,
-      message: this.buildEnhancedMessage(gameState, batterPerformance, pitcherPerformance, teamMomentum),
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Bases loaded, 0 outs`,
       context: {
         // Core game state
         gameId: gameState.gameId,
@@ -107,6 +108,19 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
         sharpAction: 'Historical sharp money on OVER in this spot'
       },
       priority: 97
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: this.alertType,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
   

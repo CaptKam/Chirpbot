@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class WindChangeModule extends BaseAlertModule {
   alertType = 'MLB_WIND_CHANGE';
@@ -108,10 +109,10 @@ export default class WindChangeModule extends BaseAlertModule {
 
     const alertKey = `${gameId}_wind_change_${currentWind.windSpeed}_${currentWind.windDirection}_${Date.now()}`;
 
-    return {
+    const alertResult = {
       alertKey,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Wind change`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -130,6 +131,19 @@ export default class WindChangeModule extends BaseAlertModule {
         situationType: 'WIND_CHANGE'
       },
       priority: this.calculatePriority(impact)
+    };
+
+    // Add clean display message
+    const displayMessage = cleanAlertFormatter.format({
+      type: alertResult.type,
+      sport: 'MLB',
+      context: alertResult.context,
+      gameState: gameState
+    });
+
+    return {
+      ...alertResult,
+      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
     };
   }
 
